@@ -1,7 +1,8 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 export const CONTRACT_CASES = {
-  'phone-child-containment': { description: 'Actual paid phone-tab geometry disables redundant parent clipping while zero/narrow surfaces retain it; shadow fill experiment is withdrawn; no native raster claim.', resources: [] },
+  'phone-first-measurement': { description: 'Unavailable initial viewport emits no native Tab material; the real navigation frame admits the first finite positive material. Native fan causality remains open.', resources: [] },
+  'phone-child-containment': { description: 'Actual paid phone-tab geometry disables redundant parent clipping, narrow valid surfaces retain it and unavailable geometry emits no native material; no native raster claim.', resources: [] },
   'current-phone-shape': { description: 'Current phone Tab and six exact callers have one measured Native border/radius/clip/shadow owner, reject stale geometry and cannot restore phone Canvas; no Native raster claim.', resources: [] },
   'measurement-identity': { description: 'Actual phone shape and footer handlers retain accepted geometry while rejecting retired measurement callbacks.', resources: [] },
   'footer-propagation': { description: 'Actual nonstandard bookshelf and standard settings consume measured occupied footer extent, including all three bookshelf states.', resources: [] },
@@ -57,6 +58,7 @@ async function context() {
     const deps = { ...properties.sdk, ...page, ...floating, ...layout,
       ...load('ui/foundation/ReaderTokens.ets'), ...load('ui/foundation/ReaderTypography.ets'),
       ...load('ui/foundation/ReaderWindowMetrics.ts'), ...load('ui/layout/ReaderRaisedShape.ts'),
+      ...load('app/ReaderStartupTrace.ts'),
       ...load('ui/surfaces/ReaderSurfaceSpecs.ets'), ...load('ui/layout/ReaderFrameStyle.ts'),
       ...actualReaderMainTabs(), ReaderWindowCoordinator: coordinator, AppStorage };
     Object.assign(deps, actualReaderPhoneNavigationGeometry({ ...deps, readerVisualSafeTop: deps.readerVisualSafeTop }));
@@ -372,18 +374,25 @@ async function phoneChildContainment(overrides={}) {
   const scales=[1,1.3,1.6,2];
   const frames=[[320,0,0],[366,0,0],[320,48,32],[366,90,90],[320,90,90],[320,200,200],[0,0,0]];
   const originalMetrics={width:metrics.windowRect.width,left:metrics.systemInsets.left,right:metrics.systemInsets.right};
-  let composed=0,contained=0,clipped=0,arcPoints=0;
+  let composed=0,contained=0,clipped=0,unavailable=0,arcPoints=0;
   function createTab(width,scale) {
     const tab=builder(path,c.methods(path,['surfaceWidth','fontScale','raisedShape']),{},source).owner;
     Object.assign(tab,{mounted:true,appearanceEpoch:1,metricsRevision:0,items,current:'bookshelf',scheme:'day',
       surfaceWidth:width,fontScale:scale,inputEnabled:true,bottomInset:15,translateX:0,raisedShape:undefined});
     tab.initialRender();
     const row=nodes(tab,'Row').find(node=>Object.is(node.width,width)&&node.border);
-    assert.ok(row,'actual phone builder emits its material owner');
+    if (Number.isFinite(width) && width > 0) assert.ok(row,'actual phone builder emits its valid material owner');
+    else assert.equal(row, undefined, 'unavailable geometry has no native material owner');
     return {tab,row};
   }
   function checkComposition(width,scale,expectedClip) {
     const {tab,row}=createTab(width,scale);
+    if (!Number.isFinite(width) || width <= 0) {
+      assert.equal(row, undefined);
+      assert.equal(nodes(tab, 'Button').length, 0);
+      unavailable++;
+      return;
+    }
     assert.equal(row.clip,expectedClip,'paid containment domain controls the actual Row clip modifier');
     assert.equal(row.padding,8,'actual parent pays the approved8vp inset');
     assert.equal(row.border.width,1,'actual border pays1vp');
@@ -469,11 +478,14 @@ async function phoneChildContainment(overrides={}) {
       const threshold=2*Math.ceil(50+18*(scale-1))+26;
       checkComposition(threshold,scale,false);
       checkComposition(threshold-.01,scale,true);
-      for(const width of [-1,NaN,Infinity])assert.equal(createTab(width,scale).row.clip,true,'invalid/unmeasured width retains its original clipping');
+      for(const width of [-1,NaN,Infinity]) {
+        const invalid = createTab(width,scale);
+        assert.equal(invalid.row,undefined,'invalid width has no native material');
+      }
     }
-    const retained=createTab(0,1),retainedId=retained.row.id;
-    assert.equal(retained.row.clip,true);
-    for(const [width,scale,expectedClip]of [[196,1,false],[150,2,true],[162,2,false],[0,2,true]]){
+    const retained=createTab(196,1),retainedId=retained.row.id;
+    assert.equal(retained.row.clip,false);
+    for(const [width,scale,expectedClip]of [[196,1,false],[150,2,true],[162,2,false]]){
       retained.tab.updateStateVars({surfaceWidth:width,fontScale:scale});c.properties.flush();
       assert.equal(nodes(retained.tab,'Row').find(node=>node.border),retained.row,'responsive input updates keep the actual Row identity');
       assert.equal(retained.row.id,retainedId);
@@ -508,7 +520,7 @@ async function phoneChildContainment(overrides={}) {
   if(!overrides.negative){
     for(const [name,before,after]of [
       ['paid-phone-clip-restored','.clip(this.requiresChildClip())','.clip(true)'],
-      ['zero-width-unclipped','.clip(this.requiresChildClip())','.clip(false)'],
+      ['unpaid-positive-width-unclipped','.clip(this.requiresChildClip())','.clip(false)'],
       ['unpaid-width-admitted','count * Math.max(44, itemHeight)','count * 44'],
       ['font-shrink-radius-guard-removed','this.materialRadius() > maximumRadius','false'],
     ]){
@@ -516,9 +528,97 @@ async function phoneChildContainment(overrides={}) {
       await rejected(c,name,()=>phoneChildContainment({negative:true,source:mutant}),/paid containment domain|font shrink retains/);
     }
   }
-  console.log(JSON.stringify({case:'phone-child-containment',status:'PASS',composed,contained,clipped,arcPoints,
+  console.log(JSON.stringify({case:'phone-child-containment',status:'PASS',composed,contained,clipped,unavailable,arcPoints,
     nativeRaster:'NOT_RUN',hypothesis:'OPEN',rejectedHypothesis:'opaque-shadow-fill'}));
 }
 
-const implementations={'phone-child-containment':phoneChildContainment,'current-phone-shape':currentPhoneShape,'measurement-identity':measurementIdentity,'footer-propagation':footerPropagation};
+async function phoneFirstMeasurement(overrides = {}) {
+  const c = await context();
+  const { assert, deps, builder, children, nodes, metrics } = c;
+  const path = 'ui/patterns/ReaderBottomTabBar.ets';
+  const source = overrides.source ?? c.read(path);
+  const previousWidth = metrics.windowRect.width;
+  const traceSamples = [];
+  if (!overrides.negative) deps.ReaderStartupTrace.install(() => 0, sample => traceSamples.push(sample), true);
+  const items = deps.MAIN_TABS.map(tab => ({ ...tab, icon: { id: tab.key } }));
+  const createTab = (width, onGeometryTrace = () => {}) => {
+    const tab = builder(path, undefined, {}, source).owner;
+    Object.assign(tab, { mounted: true, appearanceEpoch: 1, metricsRevision: 0, items,
+      current: 'bookshelf', scheme: 'day', surfaceWidth: width, fontScale: 1,
+      inputEnabled: true, bottomInset: 15, translateX: 0, raisedShape: undefined, onGeometryTrace });
+    tab.aboutToAppear();
+    tab.initialRender();
+    return tab;
+  };
+  try {
+    deps.AppStorage.setOrCreate('readerMainViewport', undefined);
+    metrics.windowRect.width = 0;
+    const navigation = builder('app/navigation/ReaderBottomNavigation.ets', undefined,
+      { ReaderBottomTabBar: class extends c.Child {} }).owner;
+    Object.assign(navigation, { mounted: true, foreground: true, inputEnabled: true,
+      current: 'bookshelf', appThemeScheme: 'day', mainViewportRevision: 0, readerWindowMetricsRevision: 0 });
+    navigation.initialRender();
+    const initialInput = children(navigation).find(child => Array.isArray(child.params?.items))?.params;
+    assert.ok(initialInput, 'actual navigation constructs its initial input');
+    assert.equal(initialInput.surfaceWidth, 0, 'unavailable real viewport reaches the initial Tab input');
+    const initial = createTab(initialInput.surfaceWidth, initialInput.onGeometryTrace);
+    assert.equal(nodes(initial, 'Row').filter(node => node.border).length, 0,
+      'unavailable initial geometry emits no native material');
+    assert.equal(nodes(initial, 'Button').length, 0, 'initial unavailable surface emits no Tab targets');
+    assert.deepEqual(nodes(initial, 'Stack')[0].constraintSize, { minHeight: 68 },
+      'the existing footer slot retains its height while native paint waits for width');
+    const oldArea = initial.measurementHandler(0, 1);
+    metrics.windowRect.width = 390;
+    deps.publishReaderMainViewport(390, 844);
+    assert.equal(navigation.bottomBarFrame().width, 196, 'the production geometry reads the newly published viewport');
+    const measuredNavigation = builder('app/navigation/ReaderBottomNavigation.ets', undefined,
+      { ReaderBottomTabBar: class extends c.Child {} }).owner;
+    Object.assign(measuredNavigation, { mounted: true, foreground: true, inputEnabled: true,
+      current: 'bookshelf', appThemeScheme: 'day', mainViewportRevision: 1, readerWindowMetricsRevision: 0 });
+    measuredNavigation.initialRender();
+    const measuredInput = children(measuredNavigation).find(child => Array.isArray(child.params?.items))?.params;
+    assert.equal(measuredInput.surfaceWidth, 196, 'actual measured frame admits the ordinary Tab width');
+    const measured = createTab(measuredInput.surfaceWidth, measuredInput.onGeometryTrace);
+    const material = nodes(measured, 'Row').find(node => node.border);
+    assert.ok(material, 'first valid material is emitted');
+    assert.equal(material.width, 196);
+    assert.equal(material.border.width, 1);
+    assert.equal(material.borderRadius, 34);
+    assert.equal(material.clip, false);
+    assert.deepEqual(material.shadow, deps.readerSurfaceElevation('raised', 'day'));
+    initial.surfaceWidth = 196;
+    oldArea({}, { width: 0, height: 68 });
+    assert.equal(initial.raisedShape, undefined, 'old unavailable Area cannot publish a shape after width changes');
+    for (const width of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const invalid = createTab(width);
+      assert.equal(nodes(invalid, 'Row').filter(node => node.border).length, 0,
+        'invalid geometry emits no native material');
+      assert.equal(nodes(invalid, 'Stack')[0].width, 0, 'outer frame resolves unavailable width to finite zero');
+    }
+    if (!overrides.negative) {
+      assert.ok(traceSamples.some(sample => sample.stage === 'main-tab.geometry' && sample.status === 'width=0,paint=false'));
+      assert.ok(traceSamples.some(sample => sample.stage === 'main-tab.geometry' && sample.status === 'width=196,paint=true'));
+    }
+    const observerFailure = createTab(196, () => { throw new Error('synthetic diagnostic observer failure'); });
+    assert.ok(nodes(observerFailure, 'Row').find(node => node.border), 'diagnostic observer failure preserves valid material admission');
+  } finally {
+    metrics.windowRect.width = previousWidth;
+    deps.publishReaderMainViewport(390, 844);
+  }
+  if (!overrides.negative) {
+    const mutant = replaceOnce(c, source, 'if (this.hasPaintGeometry()) {', 'if (true) {');
+    await rejected(c, 'unconditional-zero-width-material',
+      () => phoneFirstMeasurement({ negative: true, source: mutant }), /unavailable initial geometry emits no native material/);
+    const missingSlot = replaceOnce(c, source,
+      '.constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) }).clip(false)', '.clip(false)');
+    await rejected(c, 'unavailable-footer-slot-shrinks',
+      () => phoneFirstMeasurement({ negative: true, source: missingSlot }), /existing footer slot retains its height/);
+  }
+  console.log(JSON.stringify({ case: 'phone-first-measurement', status: 'PASS',
+    actualNavigationWidths: [0, 196], invalidInputs: 4, nativeRaster: 'NOT_RUN',
+    storageLinkDelivery: 'FINITE_PORT_NOT_SIMULATED',
+    zeroToPositiveNativeInstance: 'NOT_SIMULATED', fanCausality: 'OPEN' }));
+}
+
+const implementations={'phone-first-measurement':phoneFirstMeasurement,'phone-child-containment':phoneChildContainment,'current-phone-shape':currentPhoneShape,'measurement-identity':measurementIdentity,'footer-propagation':footerPropagation};
 for(const id of selectContractCases(CONTRACT_CASES)){await implementations[id]();recordContractCasePass(id);}

@@ -196,3 +196,49 @@ opaque候选 `20261113T135236Z-eaf26f92-b1a9f492`，App `0.2.0.DEV.23a27c337416`
 App52353cad4ec0的安装后首帧仍有Tab边框色扇形。其PhoneTab相关16个输入与前次188同字节，实际父盒686×238px、Row/Stack clip=false。按同64837个父材料内部样本，初始坏帧有5463点为精确边框色D0C5B4。正常进入阅读后返回书架，无源码/安装改变，后继Row的该计数为0；同包一次普通冷启动仍为0。首次私有诊断入口在任何stop前因读取appVersion嵌套字段错误而中止，已保留失败；纠正后只执行一次实际冷启动。
 
 RenderService RSTree已读回正常返回及普通冷启节点，二者均为686×238px、四角119px、四边3px、SOLID/D0C5B4，clipBounds/Frame=false，shadowY42、native sigma57.1、fill=false。普通冷启Row编号58与首次坏帧相同，但进程不同；返回Row编号4214，属于后继挂载。当前缺少首次坏态同期RS属性与录制drawing命令，不能宣称引擎bug或仅由clip开关解释。后续必要源码候选安装时应在首次启动立即读取同态帧和RS，复用实际交付机会。本阶段已停止控制栏后续VM导航、未改生产代码，也未因这些审计再构建或重装。
+
+## 体系性修复与代码侧独立验收（2026-11-14）
+
+本批覆盖Home及目录、朗读、外观、设置、搜索、自动翻页、替换规则七个模块，连同独立完整目录、共享Header、IconButton、SearchField、Select、PageState和书架Tab的实际消费者。前述204项登记继续作为源库存，体系性完成结论以本节的准确范围重新建立。
+
+### 几何职责与原稿比例
+
+producer和profile显式区分可见paint、内容slot、文字测量、原生response和父预算。默认1×恢复原有宏观位置与比例，真实字体增长沿各模块自然流和既有Scroll支付。TTS Quick恢复66高播放卡和190内容，Settings Quick恢复30选择条及190内容，Appearance恢复24主题绘制与28步距。Search、AutoPage、Replace同步恢复原角色尺寸。完整目录恢复32/40章节行、168×32控制栏查询区、32绘制/16字形工具，工具响应按各自实际父空间单独分配。
+
+相邻响应先选择可分离轴，再按真实间隔分配各自范围，完整保留原paint。父空间不足时记录实际约束与E2缺口。多个紧邻小控件保持原稿密度，部分实际响应小于44。目录E2继续FAIL，未用外层Common尺寸替代原生响应。漫画目录的44查询和既有工具响应作为独立消费者保留。
+
+Full外壳恢复原736优选值，由实际安全区和视口截限。844高、39状态栏、28手势区得到705上限。原先额外的80%/87%硬比例及模块最小预算对整壳的干预已移除。各模块的内容高度仍由自身事实和自然流决定。
+
+准确入口 `authored-allocation-sdk` 最终22记录通过。原稿端点实际读取冻结fixture，覆盖七模块默认宏观几何、84个producer profile、实际目录NavigationList各lane及锚点、共享消费者和131个受影响Builder与10个root build的SDK前端编译。测量采用有限明确端口，实际系统字号、字形和像素另行验收。冻结原稿未改写。
+
+### 单次呈现交付与保留实例
+
+目标模块先生成带当前业务身份的只读facts和profile，pending导航保留目标、源owner和代次。原已提交页面在候选准备期间继续持有原输入资格，目标与profile通过同一提交切换。Back、后继导航、换书和退役分别使旧请求失效。Home始终使用同一Scroll子树。相同几何的元信息在安全帧采用，保留原logical key、profile及原生actor，重复事实不再派发测量帧。
+
+Runtime继续独占当前Quick/Full形态和既有时钟，metadata与resize回执采用当前形态，导航提交基于最新合法Runtime样本。SecondaryQuick在零时长导航时复用原可见时钟，保留正在进行的开合进度。foreground和blocked参与输入资格，几何身份只接收实际影响布局的输入。
+
+SDK真实Watch可以发生在父render内部，当前提交避免在该阶段直接改Host响应式State。大列表facts通过捕获原不可变快照的只读函数传递，避免Prop深复制两次遍历全量行。缓存使用已采用的完整logical pair，半套新旧输入继续保留上一完整呈现，并按原owner谓词决定输入资格。
+
+Host/Panel/Runtime的11个准确生命周期用例通过，另有owner、同实例Full形态、导航时钟和元信息零重测补充。独立审修见 `architecture-history/measurement-lifecycle-development.json` 及其owner/navigation补充、`primary-crossreview-measurement-lifecycle-final.json`。记录中的早期失败按原输入保留。
+
+### 原生动作与消息代次
+
+保留子组件的普通callback字段继续持有构造期函数。共享动作改为长期receiver与可观察身份交接，旧按下、拖动、取消、消息重试均核对原书籍、opening、Runtime或query scope。顶部只保留一个原生cap宿主与三个响应区域，Home章节IconButton通过actionScope刷新原生动作。旧Pan结束不能清除后继拖动。
+
+Search原Publication的raw snapshot与resultScope在同一facts中取得，实际State代理继续承担显示依赖。formal旧结果仍显示期间保持原按钮代次，后继结果采用后才交接。同query busy/ready保留同一native ID。Directory书签Error/Empty及PageState主次动作同步采用expected代次，空catalog与书签读取失败共存时仍可重试。原未决书签记录核对与继续次数仍为0。
+
+准确Recovery14用例使用真实SDK装饰器、保留实例及八个负控，独立审修通过。共享角色与准入共17个选定用例通过，Pan最后增量和Search admission06分别有补充回执。五个改变消息入口的选定AST登记检查5/5通过，全树消息及其余生命周期本批未重跑。消息规范已同步可观察actionGeneration与原owner核对规则。
+
+### Tab首测量路径
+
+代码追出独立缺陷。启动windowReady返回false仍可能进入Admission，Area前窗口事实可为0，旧Tab会创建0宽且68高的带border/radius/shadow原生材料。旧containment测试甚至要求该退化Row保留，属于错误oracle。
+
+当前只在有限正宽时创建材料和按钮，外层透明宿主及68高占位保留。已有正常材料随宽度变化复用。App层将纯几何观察接回既有startup trace，UI组件只接收可选observer。选定first-measurement与containment第07记录通过，含非法宽、父占位、实际首个有效材料、旧Area拒绝、28个材料组合与六个负控。该代码缺陷与既有523首帧扇形的物理因果仍待同期原生回执。
+
+下一份必要源码候选在同一安装会话内记录首次书架PNG、UI树及前后RS，诊断失败与安装结果分别保留。记录器六个本地session double通过并经独审，精确绑定run、HAP、server和target，失败后停止派发。全部开发与独立代码验收完成后才执行该候选。
+
+### 保留的证据边界
+
+正式control登记19→20，修正14个控件事实，四族21项登记各递增一次并消费control20。266个唯一源路径按最终字节刷新。Root随后只清理七个Content共14处尾空白，保留逐文件before/current及严格trim等价证明，64处关联pin同步更新，本批revision保持一次。既有SDK及独审按语义等价复用。最终refs03通过，register03保留39项诊断，包括21项E2与5项E3失败、13项NOT_RUN，无新增source drift、reference或query viewport错误。21项visual继续NOT_RUN。独审又将八个漫画派生登记中24处混合旧44 bundle撤出当前PASS，保留实际漫画44事实与独立准确焦点等范围。
+
+本节代码与选定SDK已完成独立审修，新增HAP、安装和原生结果在后续单列。Source E2/E3维持原FAIL。系统大字号、读屏、全目标真实命中及用户接受维持原范围。Replace缺完整原稿的子级字号沿既有recipe，TTS颜色和pressed语义沿现有色板，均保留来源缺口。当前在线Figma授权失效及本地衍生页的边界沿上节记录，未产生新的独立设计批准。

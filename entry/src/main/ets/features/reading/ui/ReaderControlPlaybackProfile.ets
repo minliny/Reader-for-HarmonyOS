@@ -1,13 +1,15 @@
 import type { ReaderControlCandidateWidths, ReaderControlLayoutSnapshot } from './ReaderLayoutGeometry';
 import type { ReaderControlMotionBounds } from './ReaderControlMotionGeometry';
-import type { ReaderTtsMinimumProfile } from './ReaderControlTtsMinimum';
-import type { ReaderControlAutoPageMinimumProfile } from './ReaderControlAutoPageMinimum';
+import type { ReaderTtsMinimumProfile, ReaderTtsMinimumFacts } from './ReaderControlTtsMinimum';
+import type { ReaderControlAutoPageMinimumProfile, ReaderControlAutoPageMinimumFacts } from './ReaderControlAutoPageMinimum';
 import type { ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
 
 /** Already measured, finite playback projections. No task or measurement port. */
 export interface ReaderControlPlaybackProfileData {
   tts?: ReaderTtsMinimumProfile;
+  ttsFacts?: ReaderTtsMinimumFacts;
   autoPage?: ReaderControlAutoPageMinimumProfile;
+  autoPageFacts?: ReaderControlAutoPageMinimumFacts;
   ttsPlaybackErrorHeight?: number;
 }
 
@@ -55,6 +57,6 @@ export function readerControlPlaybackProfileMatches(receipt: ReaderControlPlayba
     (receipt.data.ttsPlaybackErrorHeight !== undefined && (!Number.isFinite(receipt.data.ttsPlaybackErrorHeight) ||
       receipt.data.ttsPlaybackErrorHeight < 0))) return false;
   return module === 'tts' ? receipt.data.tts !== undefined && receipt.data.tts.minimum.module === 'tts' &&
-    receipt.data.autoPage === undefined : receipt.data.autoPage !== undefined &&
-    receipt.data.autoPage.minimum.module === 'autoPage' && receipt.data.tts === undefined;
+    receipt.data.autoPage === undefined && receipt.data.autoPageFacts === undefined : receipt.data.autoPage !== undefined &&
+    receipt.data.autoPage.minimum.module === 'autoPage' && receipt.data.tts === undefined && receipt.data.ttsFacts === undefined;
 }

@@ -14,12 +14,14 @@ export class ReaderControlSettingsOptionModifier implements AttributeModifier<Co
   private enabled: boolean = false;
   private accessibility: string = '';
   private action: () => void;
+  private response: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
 
   constructor(action: () => void) { this.action = action; }
 
   update(actor: ReaderControlActorFrame, paint: ReaderControlMotionPresentation,
-    active: boolean, enabled: boolean, accessibility: string, appScheme: string = 'day'): ReaderControlSettingsOptionModifier {
+    active: boolean, enabled: boolean, accessibility: string, appScheme: string = 'day', response?: Rectangle): ReaderControlSettingsOptionModifier {
     this.actor = actor;
+    this.response = response ?? { x: 0, y: 0, width: actor.width, height: actor.height };
     this.appScheme = appScheme;
     this.opacity = paint.contentOpacity;
     this.blur = paint.contentBlur;
@@ -40,6 +42,7 @@ export class ReaderControlSettingsOptionModifier implements AttributeModifier<Co
       .backgroundColor(this.active ? readerAppColor('TOK_READ_ELEVATED', this.appScheme) : Color.Transparent)
       .borderRadius(6)
       .border({ width: 0.5, color: readerAppColor('TOK_LINE', this.appScheme) })
+      .responseRegion(this.response)
       .enabled(this.enabled).accessibilityText(this.accessibility).onClick(this.action);
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 19,
+  "revision": 20,
   "controls": [
     {
       "controlId": "page-back",
@@ -859,13 +859,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": 44,
+        "height": 36,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "目录/书签 + ReaderActionAccessibility selected",
       "status": "partial",
-      "knownGap": "Actual44 tab plus5 top padding and1 divider consume50 in the real parent/list budget. SDK parent checks pass; native glyph/focus/hit remain OPEN."
+      "knownGap": "FullDirectory tabs retain their authored36vp lane and15vp glyph. Reference width160vp follows the actual parent allocation. The actual native response equals the tab lane.44vp is an unpaid vertical goal. Current authored-allocation-sdk and revised native-row/toolbar leaves provide scoped code/SDK evidence. Native hit, focus and glyph acceptance remain OPEN."
     },
     {
       "controlId": "directory-query-full",
@@ -890,13 +890,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": 44,
+        "height": 32,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "ReaderSearchField.accessibilityLabel(searchPlaceholder)",
       "status": "partial",
-      "knownGap": "Actual readerDirectory TextInput grows from44; actor innerWidth, not global window width, chooses inline versus separate query/tools rows. Parent list budget pays the same extra height. SDK pass; native glyph/focus remain OPEN."
+      "knownGap": "Standalone FullDirectory passes field32vp and no separate naturalInputHeight. With the zero-border readerDirectory field the actual TextInput is32vp high. Reference field168vp leaves129vp native input after39vp icon/gap/padding. Actor width selects stacked tools. Current authored-allocation-sdk checks this caller distinction. Native hit, IME, glyphs and focus remain OPEN."
     },
     {
       "controlId": "directory-tools-full",
@@ -925,14 +925,14 @@
         "descending"
       ],
       "hitTarget": {
-        "width": 44,
+        "width": 32,
         "height": 44,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "ReaderDirectoryToolbar.toolLabel(search/top/bottom/sort)",
       "status": "partial",
-      "knownGap": "At least44vp native action targets contain the original32vp paint and16vp glyph for the full-directory role. Query and navigation groups use12vp separation and4vp navigation spacing. Actual editable width pays39vp inner field chrome plus the production-font text minimum. Shared row height, list budget and first-frame fallback grow together. Focused SDK checks pass; native hit/focus remain OPEN."
+      "knownGap": "The full-directory role uses32x32vp passive paint,16x16vp glyph and32x44vp actual native response. Four actions plus three5vp gaps occupy143vp, preserving the reference168vp query field. Horizontal44 would conflict with adjacent owners or the query. Real parent50vp pays vertical44. Current authored-allocation-sdk and revised editable-budget/sdk-actions supersede the former uniform44 carrier assertion. Native hit/focus remain OPEN."
     },
     {
       "controlId": "directory-tabs-control",
@@ -954,13 +954,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": 44,
+        "height": 31,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "章节/书签 + ReaderActionAccessibility selected",
       "status": "partial",
-      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+      "knownGap": "Quick/Full actual tab lanes are31/36vp with15vp glyph and reference widths127/160vp. Natural text growth is measured through the admitted typed profile. Short-window assembly moves this same native lane into the existing List prefix.44vp is an unpaid vertical goal. Native hit, IME, focus and readout remain OPEN."
     },
     {
       "controlId": "directory-query-control",
@@ -983,13 +983,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": 44,
+        "height": 30,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "ReaderSearchField.accessibilityLabel(搜索章节名称/搜索书签内容)",
       "status": "partial",
-      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+      "knownGap": "Formal Control Directory passes field32vp and separate native TextInput30vp from the same admitted module profile. Reference field168vp leaves129vp input width after39vp icon/gap/padding. It differs from the standalone32vp input and Manga44vp input. Short-window prefix retains the same caller. Current authored-allocation-sdk covers actual shared input consumption. Native hit, glyphs, IME and focus remain OPEN."
     },
     {
       "controlId": "directory-tools-control",
@@ -1012,14 +1012,14 @@
         "disabled"
       ],
       "hitTarget": {
-        "width": 44,
+        "width": 32,
         "height": 44,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "ReaderDirectoryToolbar.tool(title)",
       "status": "partial",
-      "knownGap": "ReaderDirectoryToolbar.tool uses the full-directory role with16vp glyph,32vp paint and44vp native target. ReaderControlDirectoryContent owns deferred catalog action admission. Short clear keeps its14vp glyph. Selected SDK role/parent checks passed; native glyph, hit, IME, focus and readout remain OPEN."
+      "knownGap": "The real full-directory tool role uses16vp glyph,32vp paint and32x44vp native response, with5vp gaps. Deferred catalog action admission stays with ReaderControlDirectoryContent. Compact horizontal payment remains below44; native hit, IME, focus and readout remain OPEN."
     },
     {
       "controlId": "directory-control-collapse",
@@ -1027,7 +1027,11 @@
       "sources": [
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-          "symbol": "controlHeader"
+          "symbol": "headerAction"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts",
+          "symbol": "readerControlHeaderTargetFrame"
         }
       ],
       "states": [
@@ -1040,9 +1044,9 @@
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "ReaderControlPanel.controlHeader accessibilityText=收起${contentTitle()}，目录为收起目录，书签为收起书签",
+      "accessibleNameSource": "ReaderControlPanel.headerAction title/action role; 收起目录 or 收起书签",
       "status": "partial",
-      "knownGap": "The real owner is ReaderControlPanel.controlHeader. Its native target is at least44vp. The transparent carrier contains compact paint height=max(26,collapseLabelHeight+12),26vp at normal scale and40vp at2x. Title and16vp header glyph center in the measured header. Selected SDK parent/paint/label checks passed; native hit, focus and visual acceptance remain OPEN."
+      "knownGap": "The real native owner is ReaderControlPanel.headerAction, dock-local and separate from the30vp visual controlHeader. The reference UI paint is40x26vp inside a44x44vp target. The original cap keeps one native touch host with the action corner subtracted from its response array. Role/text growth and actual dock bounds may constrain the target. Current header-roles-sdk provides scoped SDK evidence. Native hit, focus and visual acceptance remain OPEN."
     },
     {
       "controlId": "directory-back-manga",
@@ -1096,7 +1100,7 @@
       },
       "accessibleNameSource": "ReaderSearchField(搜索章名或序号)",
       "status": "partial",
-      "knownGap": "Real readerDirectory TextInput and parent query/toolbar minimum44 with system font growth. Native hit/clipping/focus remain unverified."
+      "knownGap": "Manga explicitly supplies naturalFieldHeight44vp and naturalInputHeight44vp to the shared readerDirectory variant. Its actual native TextInput and parent remain44vp at baseline with existing text growth. The Control default32/30 change does not shrink this caller. Current authored-allocation-sdk verifies the real caller-to-input path. Native hit, clipping, IME and focus remain OPEN."
     },
     {
       "controlId": "directory-sort-manga",
@@ -1165,13 +1169,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": null,
+        "height": 32,
         "unit": "vp",
-        "status": "unverified"
+        "status": "spec"
       },
       "accessibleNameSource": "readerDirectoryAccessibilityText(entry) + selected",
       "status": "partial",
-      "knownGap": "Current chapter/ListItem minimum44 and scaled bookmark motion/legacy extents share production font budgets; current Tree renderer retains entity/proof guards. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified."
+      "knownGap": "The actual flat chapter title and its parent share their own row lane,32vp Quick and40vp Full at baseline, growing only from real text. The full-height response stays inside that row. Reference flat316vp with two26vp accessories and standalone5vp trailing margin leaves259vp title lane. Revised text-row-target and current authored-allocation-sdk supersede the former max44 row oracle. Native upper-edge delivery, glyphs, clipping and focus remain OPEN."
     },
     {
       "controlId": "directory-bookmark-row",
@@ -1188,13 +1192,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": null,
+        "height": 54,
         "unit": "vp",
-        "status": "unverified"
+        "status": "spec"
       },
       "accessibleNameSource": "打开书签：chapterTitle positionLabel timeLabel，待确认",
       "status": "partial",
-      "knownGap": "Motion and standalone bookmark variants retain distinct budgets. Standalone natural title/excerpt measurements are shared by the actual row, virtual List extent and positioning; short-window prefix transfer preserves a fractional anchor. Precise local SDK/method evidence exists. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified."
+      "knownGap": "Control bookmark rows retain authored54vp Quick and74vp Full at baseline, with actual title/excerpt growth and the same virtual list/positioning extent. Standalone bookmark geometry remains its distinct natural recipe. Short-window prefix retains one List and fractional anchor. Current authored-allocation-sdk covers the module profile; native glyphs, clipping, focus and whole-target touch acceptance remain OPEN."
     },
     {
       "controlId": "directory-bookmark-marker",
@@ -1216,14 +1220,14 @@
         "write-blocked"
       ],
       "hitTarget": {
-        "width": 44,
-        "height": 44,
+        "width": 26,
+        "height": 32,
         "unit": "vp",
-        "status": "unverified"
+        "status": "spec"
       },
       "accessibleNameSource": "添加本章章首书签/删除本章已有书签",
       "status": "partial",
-      "knownGap": "Native marker enabled and current parent mutation ports consume the readonly global Host bookmarkWriteEnabled fact, including unread intent, foreign pending, busy and stale projection. Readonly manga/detail-preview callers explicitly pass false. Chapter/bookmark reading and download admission remain independent. Precise local owner and SDK actor evidence exists. Native delivery, focus, glyphs and user acceptance remain OPEN."
+      "knownGap": "Flat text chapter markers retain26x26vp native paint and15vp glyph. The actual non-overlapping response is26x32vp Quick or26x40vp Full, confined to that row. The separate hierarchical accessory lane remains44vp wide by row32/40vp. Mutation admission still consumes the readonly Host bookmarkWriteEnabled fact and current entity/proof. Readonly Manga/detail-preview callers keep false. Native hit/focus/glyphs and E2 remain OPEN/FAIL."
     },
     {
       "controlId": "directory-download-marker-text",
@@ -1231,7 +1235,11 @@
       "sources": [
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
-          "symbol": "marker"
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
+          "symbol": "downloadActionEnabled"
         }
       ],
       "states": [
@@ -1244,14 +1252,14 @@
         "unknown"
       ],
       "hitTarget": {
-        "width": 44,
-        "height": 44,
+        "width": 26,
+        "height": 32,
         "unit": "vp",
-        "status": "unverified"
+        "status": "spec"
       },
       "accessibleNameSource": "下载章节/已下载及downloadMarkerLabel",
       "status": "partial",
-      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+      "knownGap": "Flat text chapter download markers retain26x26vp native paint and15vp glyph. Their actual response is26xrowHeight,32/40vp at baseline. Hierarchical text accessories use their existing44vp horizontal lane with the same rowHeight. Current owner and download-state guards remain independent of bookmark mutation. Revised text-row-target and current authored-allocation-sdk provide scoped code/SDK evidence; Native delivery, glyphs and focus remain OPEN."
     },
     {
       "controlId": "directory-navigation-row",
@@ -1273,13 +1281,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": null,
+        "height": 32,
         "unit": "vp",
-        "status": "unverified"
+        "status": "spec"
       },
       "accessibleNameSource": "树节点层级、章节标题、当前/分组/展开状态名称",
       "status": "partial",
-      "knownGap": "Current chapter/ListItem minimum44 and scaled bookmark motion/legacy extents share production font budgets; current Tree renderer retains entity/proof guards. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified. HAP7 Native chapter-title upper-edge tap failed with natural16vp Text inside44vp Row. Fixed actual text carrier and response to the same parent max(44,rowHeight), with16 scoped SDK samples at1/1.3/1.45/2 and old-carrier negative; actual post-fix Native edge/glyph/focus remains pending. Manga rendering is unchanged by this text-only fix."
+      "knownGap": "Non-Manga hierarchical row/ListItem, text response, rank-offset and placement math all consume the same actual32/40vp baseline rowHeight. This corrects the former max44 consumer floor without changing Core tree identities/proofs. Revised text-row-target covers full-parent title response and independent accessories. Historical HAP7/HAP12 native edge receipts do not transfer to this current candidate. Manga Grid remains its own branch. Native edge delivery, glyphs and focus remain OPEN."
     },
     {
       "controlId": "directory-manga-entry",
@@ -1451,7 +1459,7 @@
       },
       "accessibleNameSource": "加载完整目录/重试加载目录",
       "status": "partial",
-      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+      "knownGap": "Catalog recovery remains its own current presentation/session operation with busy/loading admission. Geometry is supplied by the current status/action profile. Short-window assembly uses one List prefix; compact tabs/query/tools in that prefix have their distinct actual31/36,30 and32x44 targets. The whole prefix has no uniform44 guarantee. Current retained-recovery exact SDK leaf covers same-child generation refresh and retired catalog rejection; native hit/IME/focus remain OPEN."
     },
     {
       "controlId": "directory-bookmark-state-actions",

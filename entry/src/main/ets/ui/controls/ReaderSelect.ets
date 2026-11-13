@@ -35,9 +35,9 @@ const CHEVRON_GAP = 8;
 const CHEVRON_W = 12;
 const CHEVRON_H = 8;
 const SELECT_CHROME = SELECT_PAD * 2 + CHEVRON_GAP + CHEVRON_W; // 40
-const APPEARANCE_TRIGGER_H = 44;
+const APPEARANCE_TRIGGER_H = 30;
 const APPEARANCE_VALUE_VERTICAL_SPACE = 15; // Original 30vp frame around the 15fp value line.
-const APPEARANCE_HIT_OUTSET = 0;
+const APPEARANCE_HIT_OUTSET = 6;
 
 export type ReaderSelectVariant =
   | 'default'

@@ -1,4 +1,5 @@
 import { ReaderWindowCoordinator } from '../ReaderWindowCoordinator';
+import { ReaderStartupTrace } from '../ReaderStartupTrace';
 import { MAIN_TABS, type MainTabDef, readerMainTabIconResource } from './ReaderMainTabs';
 import { mainTabBottomWidth, readerMainViewport } from '../../features/shell/MainNavigationSpec';
 import { ReaderBottomTabBar, type ReaderBottomTabItem } from '../../ui/patterns/ReaderBottomTabBar';
@@ -34,6 +35,7 @@ export struct ReaderBottomNavigation {
       bottomInset: this.bottomInset(), fontScale: this.navigationFontScale(), inputEnabled: this.inputIsEnabled(),
       onSelect: (key: string): void => { if (this.acceptsInput(key)) this.onSelect(key); },
       onCurrentTap: (key: string): void => { if (this.acceptsInput(key)) this.onCurrentTap(key); },
+      onGeometryTrace: (width: number, paintReady: boolean): void => this.recordTabGeometry(width, paintReady),
     });
   }
 
@@ -43,6 +45,11 @@ export struct ReaderBottomNavigation {
   }
 
   private inputIsEnabled(): boolean { return this.mounted && this.foreground && this.inputEnabled; }
+
+  private recordTabGeometry(width: number, paintReady: boolean): void {
+    if (!this.mounted) return;
+    ReaderStartupTrace.current()?.mark('main-tab.geometry', `width=${width},paint=${paintReady}`);
+  }
 
   private acceptsInput(key: string): boolean {
     return this.inputIsEnabled() && MAIN_TABS.some((tab: MainTabDef): boolean => tab.key === key);

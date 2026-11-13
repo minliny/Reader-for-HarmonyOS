@@ -14,6 +14,7 @@ export struct ReaderPageState {
   @Prop loading: boolean = false;
   @Prop loadingActive: boolean = true;
   @Prop actionLabel: string = '';
+  @Prop actionGeneration: number = 0;
   @Prop actionFocusId: string = '';
   @Prop secondaryActionLabel: string = '';
   @Prop actionEnabled: boolean = true;
@@ -24,8 +25,8 @@ export struct ReaderPageState {
   @BuilderParam actionContent: () => void = this.emptySlot;
   @Prop inkColor: ResourceColor | undefined = undefined;
   @Prop mutedColor: ResourceColor | undefined = undefined;
-  onAction: () => void = (): void => {};
-  onSecondaryAction: () => void = (): void => {};
+  onAction: (generation: number) => void = (_generation: number): void => {};
+  onSecondaryAction: (generation: number) => void = (_generation: number): void => {};
 
   @Builder
   private emptySlot() {}
@@ -58,11 +59,13 @@ export struct ReaderPageState {
         Flex({ justifyContent: FlexAlign.Center, wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(10), cross: LengthMetrics.vp(10) } }) {
           if (this.actionLabel.length > 0) {
             ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.actionLabel, actionEnabled: this.actionEnabled, focusId: this.actionFocusId,
-              onReconcile: (): void => this.onAction() });
+              generation: this.actionGeneration,
+              onReconcile: (expected: number): void => this.onAction(expected) });
           }
           if (this.secondaryActionLabel.length > 0) {
             ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.secondaryActionLabel, actionEnabled: this.secondaryActionEnabled,
-              onReconcile: (): void => this.onSecondaryAction() });
+              generation: this.actionGeneration,
+              onReconcile: (expected: number): void => this.onSecondaryAction(expected) });
           }
         }.width('100%').margin({ top: this.variant === 'readingBookmark' ? 23 : 0 });
       }

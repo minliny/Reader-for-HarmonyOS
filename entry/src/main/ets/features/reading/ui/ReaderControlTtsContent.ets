@@ -1,5 +1,8 @@
-import { TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, TYPE_READER_TTS_QUICK_SETTING_LABEL, TYPE_READER_TTS_SECTION_META, TYPE_READER_TTS_SECTION_SPEED_META } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_TTS_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE, TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL, TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS, TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE, TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE, TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_META, TYPE_READER_TTS_RETAINED_SPEED_VALUE, TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_LABEL, TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_META, TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE, TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE, TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
+import { readerControlTtsPlaybackLabel, readerControlTtsStatusLabel, readerControlTtsTwoDigits, readerControlTtsTimerSummary, readerControlTtsTimerCaption, readerControlTtsEngineLabel, readerControlTtsVoiceLabel, readerControlTtsMinimumFacts, measureReaderTtsMinimum, sampleReaderTtsTextMinimum, readerTtsTimerCardLayout, type ReaderTtsTimerCardLayout, type ReaderTtsMinimumFacts, type ReaderTtsMinimumProfile, type ReaderTtsTextMinimum } from './ReaderControlTtsMinimum';
+
+import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
+import { TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, TYPE_READER_TTS_QUICK_SETTING_LABEL, TYPE_READER_TTS_SECTION_META, TYPE_READER_TTS_SECTION_SPEED_META, TYPE_READER_TTS_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE, TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL, TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS, TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE, TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE, TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_META, TYPE_READER_TTS_RETAINED_SPEED_VALUE, TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_LABEL, TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_META, TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE, TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE, TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
+
 import { ReaderTtsWaveform } from './ReaderTtsWaveform';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -29,12 +32,11 @@ import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum, ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
-import { measureReaderTtsMinimum, sampleReaderTtsTextMinimum, readerTtsTimerCardLayout, type ReaderTtsTimerCardLayout, type ReaderTtsMinimumFacts,
-  type ReaderTtsMinimumProfile, type ReaderTtsTextMinimum } from './ReaderControlTtsMinimum';
+
 import { readerControlPlaybackProfileMatches, type ReaderControlPlaybackProfileData,
   type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileReceipt } from './ReaderControlPlaybackProfile';
 import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
-import { readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
+import { readerControlUnit, readerControlActor, readerControlPaidResponses, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import {
   sampleReaderControlTts, readerControlPlaybackSourceKind, readerControlPlaybackMeasuredSource,
   readerControlTtsTimerVisibleRects,
@@ -109,6 +111,10 @@ export struct ReaderControlTtsContent {
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
   @Prop sourceOnly: 'none' | 'quick' | 'full' = 'none';
+  @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
+  @Prop preparedMinimumRequired: boolean = false;
+  onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
+    (_identity: string, _facts: ReaderControlModuleFacts): void => {};
   @Prop @Watch('onSourceMinimumChanged') sourceMinimum: ReaderControlPlaybackProfileReceipt | undefined = undefined;
   @Prop @Watch('onSourceMinimumChanged') sourceMinimumIdentity: string = '';
   @Prop @Watch('onSourceMinimumChanged') sourceMinimumKey: string = '';
@@ -120,8 +126,54 @@ export struct ReaderControlTtsContent {
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
+  private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
+  private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
+    const current = this.preparedMinimum;
+    if (current !== undefined && current.identity === this.minimumIdentity && current.key === this.minimumKey &&
+      readerControlModuleProfileMatches(current.moduleData, 'tts') && readerControlModuleFactsMatch(current.facts, 'tts')) return current;
+    const adopted = this.adoptedPrepared;
+    return this.preparedMinimumRequired && adopted !== undefined &&
+      readerControlModuleProfileMatches(adopted.moduleData, 'tts') && readerControlModuleFactsMatch(adopted.facts, 'tts') ? adopted : undefined;
+  }
+  private preparedProfile(): ReaderTtsMinimumProfile | undefined {
+    return this.presentationPrepared()?.moduleData.tts;
+  }
+  private displayTimerMode(): ReaderTtsTimerMode { return this.displayedFacts()?.viewTimerMode ?? this.timerMode; }
+  private displayTimerMinutes(): number { return this.displayedFacts()?.viewTimerMinutes ?? this.timerMinutes; }
+  private displayTimerSeconds(): number { return this.displayedFacts()?.viewTimerSeconds ?? this.timerSeconds; }
+  private displayTimerDigits(minutes: boolean): string {
+    const displayed = this.displayedFacts();
+    return displayed === undefined ? this.twoDigits(minutes ? this.timerMinutes : this.timerSeconds) :
+      minutes ? displayed.minutes : displayed.seconds;
+  }
+  private displayHasActiveQueue(): boolean {
+    const state = this.displayState();
+    return state.status === 'preparing' || state.status === 'playing' || state.status === 'paused' ||
+      state.status === 'resuming' || state.status === 'interrupted';
+  }
+  private displayError(): string { return this.displayState().errorMessage ?? ''; }
+  private displayState(): ReaderTtsState {
+    return this.displayedFacts()?.readViewState() ?? this.state;
+  }
+  private displayedFacts(): ReaderTtsMinimumFacts | undefined {
+    if (this.sourceOnly !== 'none' && this.sourceMinimumCurrent()) return this.sourceMinimum?.data.ttsFacts;
+    return this.preparedMinimumRequired && this.preparedProfile() !== undefined ? this.presentationPrepared()?.facts.tts : undefined;
+  }
+  private adoptedPreparedKey: string = '';
+  private onPreparedMinimumChanged(): void {
+    if (!this.preparedMinimumRequired) { this.onMinimumKeyChanged(); return; }
+    const prepared = this.preparedMinimum;
+    if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
+      !readerControlModuleProfileMatches(prepared.moduleData, 'tts') || !readerControlModuleFactsMatch(prepared.facts, 'tts')) return;
+    this.adoptedPrepared = prepared;
+    const adopted = `${prepared.identity}|${prepared.key}`;
+    if (adopted === this.adoptedPreparedKey) return;
+    this.adoptedPreparedKey = adopted;
+    this.onMinimumKeyChanged();
+  }
   private currentInputEnabled(): boolean {
-    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private onSourceDetachedChanged(): void {
@@ -146,7 +198,7 @@ export struct ReaderControlTtsContent {
   inputCurrent?: () => boolean;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
   @Prop @Watch('onMinimumIdentityChanged') minimumIdentity: string = '';
-  @Prop @Watch('onMinimumKeyChanged') minimumKey: string = '';
+  @Prop @Watch('onPreparedMinimumChanged') minimumKey: string = '';
   onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
     profileReader?: ReaderControlPlaybackProfileReader) => void =
     (_identity: string, _measurer: ReaderControlModuleMeasurer | undefined,
@@ -237,17 +289,16 @@ export struct ReaderControlTtsContent {
   private registeredMinimumIdentity: string = '';
 
   private minimumFacts(): ReaderTtsMinimumFacts {
-    return { playbackLabel: this.playbackLabel(), status: this.statusText(), voice: this.currentVoiceLabel(),
-      timerCaption: this.timerCaption(), timerSummary: this.timerSummary(), minutes: this.twoDigits(this.timerMinutes),
-      seconds: this.twoDigits(this.timerSeconds), rate: this.effectiveRate().toFixed(2) + 'x',
-      error: this.state.errorMessage ?? '', seek: this.state.totalSlices > 1, online: this.onlineServicePage(),
-      serviceDescription: this.onlineServiceDescription(), manageLabel: this.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置',
-      engineValue: this.fieldValue('engine'), languageValue: this.fieldValue('language'), failureValue: this.fieldValue('failure') };
+    return readerControlTtsMinimumFacts({ state: this.state, timerMode: this.timerMode, timerMinutes: this.timerMinutes,
+      timerSeconds: this.timerSeconds, failurePolicy: this.failurePolicy, allowMixing: this.allowMixing, engine: this.engine,
+      httpEngines: this.httpEngines, voiceOptions: this.voiceOptions, language: this.language, person: this.person,
+      ratePreview: this.ratePreview, serviceTab: this.serviceTab });
   }
 
   private publishMinimumMeasurer(): void {
     if (!this.configMounted || this.sourceOnly !== 'none' || this.minimumIdentity.length === 0) return;
     const identity = this.minimumIdentity, context = this.getUIContext(), facts = this.minimumFacts();
+    if (this.preparedMinimumRequired) { this.onMinimumFactsChanged(identity, { module: 'tts', tts: facts }); return; }
     const cache = new Map<string, ReaderTtsMinimumProfile>();
     let measurer: ReaderControlModuleMeasurer;
     measurer = (widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined => {
@@ -276,7 +327,7 @@ export struct ReaderControlTtsContent {
         this.minimumMeasurer !== measurer) return undefined;
       // Read only this exact measurer's completed candidates, never measure or
       // mix a retained previous-ticket selection into the current receipt.
-      return { tts: cache.get(key), ttsPlaybackErrorHeight: this.measuredPlaybackErrorHeight };
+      return { tts: cache.get(key), ttsFacts: facts, ttsPlaybackErrorHeight: this.measuredPlaybackErrorHeight };
     };
     this.onMinimumMeasurerReady(identity, measurer, profileReader);
   }
@@ -293,7 +344,7 @@ export struct ReaderControlTtsContent {
   private onSourceMinimumChanged(): void { this.cachedProgress = -1; }
 
   private selectedMinimum(): ReaderTtsMinimumProfile | undefined {
-    if (this.sourceOnly === 'none') return this.minimumProfiles.get(this.minimumKey);
+    if (this.sourceOnly === 'none') return this.preparedMinimumRequired ? this.preparedProfile() : this.preparedProfile() ?? this.minimumProfiles.get(this.minimumKey);
     return this.sourceMinimumCurrent() ? this.sourceMinimum?.data.tts : undefined;
   }
   private textMinimum(): ReaderTtsTextMinimum | undefined {
@@ -324,12 +375,13 @@ export struct ReaderControlTtsContent {
 
   private p(): number { return readerControlUnit(this.motionProgress); }
   private playbackExtraHeight(): number {
+    const displayState = this.displayState();
     const sourceHeight = this.sourceMinimum?.data.ttsPlaybackErrorHeight;
     const errorHeight = this.sourceOnly === 'none' ? this.measuredPlaybackErrorHeight :
       this.sourceMinimumCurrent() && sourceHeight !== undefined && Number.isFinite(sourceHeight) && sourceHeight >= 0 ?
         sourceHeight : 42;
-    return (this.state.totalSlices > 1 ? 32 : 0) +
-      (this.state.errorMessage ? errorHeight + 12 : 0);
+    return (displayState.totalSlices > 1 ? 32 : 0) +
+      (displayState.errorMessage ? errorHeight + 12 : 0);
   }
   private frame(): ReaderControlTtsFrame {
     const rate = (this.effectiveRate() - READER_TTS_RATE_MIN) / (READER_TTS_RATE_MAX - READER_TTS_RATE_MIN);
@@ -357,8 +409,13 @@ export struct ReaderControlTtsContent {
     if (!this.sharedInput()) this.ratePreview = -1;
     if (!this.fullInput()) this.dismissConfiguration();
   }
-  aboutToAppear(): void { this.configMounted = this.sourceOnly === 'none'; this.publishMinimumMeasurer(); }
+  aboutToAppear(): void { this.configMounted = this.sourceOnly === 'none'; this.publishMinimumMeasurer();
+    if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
+  }
   aboutToDisappear(): void {
+    this.adoptedPrepared = undefined;
+    this.adoptedPreparedKey = '';
+
     const identity = this.registeredMinimumIdentity;
     this.minimumMeasurer = undefined;
     if (identity.length > 0) this.onMinimumMeasurerReady(identity, undefined);
@@ -524,8 +581,10 @@ export struct ReaderControlTtsContent {
     (path: string): PathShape => new PathShape().commands(path));
   private clipMinimumKey: string = '';
   private sharedClip(kind: ReaderControlTtsSection): PathShape {
-    if (this.clipMinimumKey !== this.minimumKey) {
-      this.clipMinimumKey = this.minimumKey;
+    const key = this.sourceOnly !== 'none' ? (this.sourceMinimumCurrent() ? this.sourceMinimumKey : '') :
+      this.preparedMinimumRequired ? this.presentationPrepared()?.key ?? '' : this.minimumKey;
+    if (this.clipMinimumKey !== key) {
+      this.clipMinimumKey = key;
       this.pathCache = new ReaderControlMotionPathCache<PathShape>((path: string): PathShape => new PathShape().commands(path));
     }
     const density = this.getUIContext().vp2px(1);
@@ -548,15 +607,7 @@ export struct ReaderControlTtsContent {
   }
   private sharedInput(): boolean { return this.currentInputEnabled() && (this.p() === 0 || this.p() === 1); }
   private playbackLabel(): string {
-    if (this.state.status === 'playing') return '朗读中';
-    if (this.state.status === 'preparing' || this.state.status === 'resuming') return '准备中';
-    if (this.state.status === 'paused' || this.state.status === 'interrupted') return '继续';
-    if (this.state.status === 'error' || this.state.status === 'failed') return '失败·重试';
-    if (this.state.status === 'unavailable') return '不可用';
-    if (this.state.status === 'stopping') return '停止中';
-    if (this.state.status === 'completed') return '已完成';
-    if (this.state.status === 'probing') return '检查中';
-    return '未开始';
+    return this.displayedFacts()?.playbackLabel ?? readerControlTtsPlaybackLabel(this.state);
   }
   private actorId(full: boolean): string {
     if (this.sourceOnly !== 'none') return '';
@@ -621,6 +672,15 @@ export struct ReaderControlTtsContent {
     return this.frame().next;
   }
 
+  private transportResponse(kind: ReaderControlTransportKind): Rectangle {
+    const frame = this.frame();
+    const paints = [frame.previous, frame.toggle, frame.stop, frame.next];
+    const allocation = readerControlPaidResponses(paints, readerControlActor(0, 0, frame.playback.width, frame.playback.height));
+    const index = kind === 'previous' ? 0 : kind === 'toggle' ? 1 : kind === 'stop' ? 2 : 3;
+    const paint = paints[index], response = allocation[index].response;
+    return { x: response.x - paint.x, y: response.y - paint.y, width: response.width, height: response.height };
+  }
+
   private transportPaint(kind: ReaderControlTransportKind): ReaderControlActorFrame {
     const p = this.p();
     const target = this.transport(kind);
@@ -643,13 +703,15 @@ export struct ReaderControlTtsContent {
   }
 
   build() {
+    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     if (this.sourceOnly !== 'none') {
       this.launchSourceContent();
     } else {
       this.normalContent();
     }
-  }
 
+    }
+  }
 
   @Builder
   private launchSourceContent() {
@@ -870,7 +932,7 @@ export struct ReaderControlTtsContent {
         }
         Text(this.headerMeta(kind)).fontFamily(kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontFamily : TYPE_READER_TTS_SECTION_META.fontFamily)
           .fontWeight(kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontWeight : TYPE_READER_TTS_SECTION_META.fontWeight, { enableVariableFontWeight: true }).fontSize(kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontSizeFp : TYPE_READER_TTS_SECTION_META.fontSizeFp)
-          .lineHeight((kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.lineHeightFp : TYPE_READER_TTS_SECTION_META.lineHeightFp) as number).fontColor(kind === 'timer' && this.timerMode === 'off' ? readerAppColor('TOK_TTS_MUTED', this.appScheme) :
+          .lineHeight((kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.lineHeightFp : TYPE_READER_TTS_SECTION_META.lineHeightFp) as number).fontColor(kind === 'timer' && this.displayTimerMode() === 'off' ? readerAppColor('TOK_TTS_MUTED', this.appScheme) :
             kind === 'playback' && !this.isActivelySpeaking() ? readerAppColor('TOK_TTS_MUTED', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.height(this.textMinimum()?.header ?? 18).padding({ left: kind === 'playback' ? 8 : 0, right: kind === 'playback' ? 8 : 0 })
@@ -959,8 +1021,8 @@ export struct ReaderControlTtsContent {
         }.width(this.frame().voice.width).height(this.frame().voice.height).alignItems(VerticalAlign.Center)
           .position({ x: this.frame().voice.x, y: this.frame().voice.y })
           .opacity(this.frame().voice.opacity).hitTestBehavior(HitTestMode.None);
-        if (this.state.totalSlices > 1) {
-          Slider({ value: this.state.sliceIndex ?? 0, min: 0, max: this.state.totalSlices - 1,
+        if (this.displayState().totalSlices > 1) {
+          Slider({ value: this.displayState().sliceIndex ?? 0, min: 0, max: this.displayState().totalSlices - 1,
             step: 1, style: SliderStyle.OutSet, direction: Axis.Horizontal, reverse: false })
             .width(this.frame().playback.width - 32).height(44).position({ x: 16, y: this.textMinimum()?.seekY ?? 198 })
             .selectedColor(readerAppColor('TOK_TTS_TEAL', this.appScheme)).enabled(this.fullInput()).opacity(this.p())
@@ -969,12 +1031,12 @@ export struct ReaderControlTtsContent {
               this.changeSeekSlider(value, mode);
             });
         }
-        if (this.state.errorMessage !== undefined && this.state.errorMessage.length > 0) {
-          Text(this.state.errorMessage).width(this.frame().playback.width - 32)
+        if (this.displayError().length > 0) {
+          Text(this.displayError()).width(this.frame().playback.width - 32)
             .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
             .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_TTS_CLAY', this.appScheme)).wordBreak(WordBreak.BREAK_WORD)
-            .position({ x: 16, y: this.textMinimum()?.errorY ?? (this.state.totalSlices > 1 ? 230 : 198) }).opacity(this.p())
+            .position({ x: 16, y: this.textMinimum()?.errorY ?? (this.displayState().totalSlices > 1 ? 230 : 198) }).opacity(this.p())
             .onAreaChange((_old: Area, area: Area): void => {
               if (this.sourceOnly !== 'none') return;
               // The persistent playback task keeps its error in context. Its
@@ -1036,10 +1098,11 @@ export struct ReaderControlTtsContent {
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.width(this.transport(kind).width).height(this.transport(kind).height).padding(0).clip(false)
       .position({ x: this.transport(kind).x, y: this.transport(kind).y })
+      .responseRegion(this.transportResponse(kind))
       .backgroundColor(Color.Transparent)
       .enabled(this.sharedInput() && !this.serviceBusy && !(this.onlineServicePage() && !this.isHttpEngineSelected()) && (kind === 'toggle' ?
         this.state.status !== 'stopping' : this.hasActiveQueue()))
-      .opacity((kind === 'toggle' || this.hasActiveQueue()) ? 1 : 0.42)
+      .opacity((kind === 'toggle' || this.displayHasActiveQueue()) ? 1 : 0.42)
       .accessibilityText(this.controlText(kind)).onClick((): void => {
         if (!this.sharedInput() || this.serviceBusy || (this.onlineServicePage() && !this.isHttpEngineSelected())) return;
         if (kind === 'toggle' && this.state.status === 'stopping') return;
@@ -1062,12 +1125,10 @@ export struct ReaderControlTtsContent {
   }
 
   private timerPresetSelected(minutes: number): boolean {
-    return this.timerMode === 'duration' && this.timerMinutes === minutes && this.timerSeconds === 0;
+    return this.displayTimerMode() === 'duration' && this.displayTimerMinutes() === minutes && this.displayTimerSeconds() === 0;
   }
   private timerCaption(): string {
-    if (this.timerMode === 'chapterEnd') return '本章结束';
-    if (this.timerMode === 'off' || (this.timerMinutes === 0 && this.timerSeconds === 0)) return '不开启';
-    return this.timerSeconds === 0 ? `${this.timerMinutes} 分钟` : this.timerSummary();
+    return this.displayedFacts()?.timerCaption ?? readerControlTtsTimerCaption(this.timerMode, this.timerMinutes, this.timerSeconds);
   }
   private chooseTimerPreset(minutes: number | 'chapterEnd'): void {
     if (!this.fullInput() || this.configField !== '') return;
@@ -1162,19 +1223,19 @@ export struct ReaderControlTtsContent {
   }
 
   private timerPresetIsSelected(minutes: number | 'chapterEnd'): boolean {
-    return minutes === 'chapterEnd' ? this.timerMode === 'chapterEnd' :
-      (this.timerMode === 'off' ? minutes === 0 : this.timerPresetSelected(minutes));
+    return minutes === 'chapterEnd' ? this.displayTimerMode() === 'chapterEnd' :
+      (this.displayTimerMode() === 'off' ? minutes === 0 : this.timerPresetSelected(minutes));
   }
   @Builder
   private timerStepper(minutes: boolean) {
     Row({ space: 1 }) {
       this.timerStepButton(minutes, -5);
-      Text(this.twoDigits(minutes ? this.timerMinutes : this.timerSeconds))
+      Text(this.displayTimerDigits(minutes))
         .fontFamily(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontWeight).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme))
         .width(this.textMinimum()?.timerDigitWidth ?? 23).height(this.textMinimum()?.timerDigit ?? 24).textAlign(TextAlign.Center);
       this.timerStepButton(minutes, 5);
     }.height(this.textMinimum()?.timerStepper ?? 32).alignItems(VerticalAlign.Center)
-      .accessibilityText(minutes ? `${this.timerMinutes}分（每次五分钟）` : `${this.timerSeconds}秒（每次五秒）`);
+      .accessibilityText(minutes ? `${this.displayTimerMinutes()}分（每次五分钟）` : `${this.displayTimerSeconds()}秒（每次五秒）`);
   }
   @Builder
   private timerStepButton(minutes: boolean, delta: number) {
@@ -1337,12 +1398,12 @@ export struct ReaderControlTtsContent {
   @Builder
   private ttsClosedConfigPanel() {
     Column({ space: 0 }) {
-      if (this.onlineServicePage()) {
+      if ((this.displayedFacts()?.online ?? this.onlineServicePage())) {
         this.onlineServiceInfoRow();
       } else {
         this.ttsClosedConfigRow('engine'); this.ttsClosedConfigRow('language');
       }
-    }.width('100%').height((this.textMinimum()?.configRow ?? 48) * (this.onlineServicePage() ? 1 : 2));
+    }.width('100%').height((this.textMinimum()?.configRow ?? 48) * ((this.displayedFacts()?.online ?? this.onlineServicePage()) ? 1 : 2));
   }
   @Builder
   private ttsClosedConfigRow(kind: ReaderControlTtsField) {
@@ -1386,6 +1447,8 @@ export struct ReaderControlTtsContent {
       }.width('100%').alignItems(VerticalAlign.Center)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.width(this.fieldWidth(kind)).height(this.fieldHeight(kind)).flexShrink(0).opacity(1)
+      .responseRegion({ x: 0, y: kind === 'voice' ? -(Math.min(44, this.textMinimum()?.voiceRow ?? 52) - this.fieldHeight(kind)) / 2 : 0,
+        width: this.fieldWidth(kind), height: kind === 'voice' ? Math.min(44, this.textMinimum()?.voiceRow ?? 52) : this.fieldHeight(kind) })
       .padding({ left: kind === 'voice' ? 4 : 0, right: kind === 'voice' ? 8 : 0, top: 0, bottom: 0 })
       .backgroundColor(kind === 'voice' ? readerAppColor('TOK_TTS_FIELD', this.appScheme) : Color.Transparent)
       .border({ width: kind === 'voice' ? 0.5 : 0, color: readerAppColor('TOK_TTS_LINE', this.appScheme) })
@@ -1421,10 +1484,10 @@ export struct ReaderControlTtsContent {
 
   private fieldValue(kind: ReaderControlTtsField): string {
     if (kind === 'voice') return this.currentVoiceLabel();
-    if (kind === 'engine') return this.systemEngineDisplay();
-    if (kind === 'language') return this.isHttpEngineSelected() ? '由在线服务提供' : readerTtsLanguageLabel(this.language);
+    if (kind === 'engine') return this.displayedFacts()?.engineValue ?? this.systemEngineDisplay();
+    if (kind === 'language') return this.displayedFacts()?.languageValue ?? (this.isHttpEngineSelected() ? '由在线服务提供' : readerTtsLanguageLabel(this.language));
     if (kind === 'session') return this.allowMixing ? '混音播放' : '语音播放';
-    return this.failurePolicy === 'skip' ? '跳过不可用内容' : '停止并提示';
+    return this.displayedFacts()?.failureValue ?? (this.failurePolicy === 'skip' ? '跳过不可用内容' : '停止并提示');
   }
 
   private fieldWidth(kind: ReaderControlTtsField): number {
@@ -1455,7 +1518,7 @@ export struct ReaderControlTtsContent {
     const measured = context.getMeasureUtils().measureTextSize({ textContent: this.fieldValue(kind) || '字',
       fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight });
     const height = context.px2vp(Number(measured.height));
-    return Math.max(kind === 'voice' ? 44 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
+    return Math.max(kind === 'voice' ? 30 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
   }
 
   private toggleValue(kind: ReaderControlTtsToggle): boolean {
@@ -1483,7 +1546,7 @@ export struct ReaderControlTtsContent {
   }
 
   private timerSummary(): string {
-    return `${this.twoDigits(this.timerMinutes)}:${this.twoDigits(this.timerSeconds)}`;
+    return this.displayedFacts()?.timerSummary ?? readerControlTtsTimerSummary(this.timerMinutes, this.timerSeconds);
   }
 
   private stepTimer(minutes: boolean, delta: number): void {
@@ -1507,12 +1570,11 @@ export struct ReaderControlTtsContent {
   }
 
   private twoDigits(value: number): string {
-    const normalized = Math.max(READER_TTS_TIMER_MIN, Math.trunc(value));
-    return normalized < 10 ? `0${normalized}` : `${normalized}`;
+    return readerControlTtsTwoDigits(value);
   }
 
   private effectiveRate(): number {
-    return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.state.rate;
+    return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.displayedFacts()?.viewRate ?? this.state.rate;
   }
 
   private changeRateSlider(value: number, mode: SliderChangeMode): void {
@@ -1556,13 +1618,15 @@ export struct ReaderControlTtsContent {
   }
 
   private onlineServiceDescription(): string {
+    const displayed = this.displayedFacts();
+    if (displayed !== undefined) return displayed.serviceDescription;
     const id = this.onlineEngineId();
     return this.httpEngines.find((option: ReaderHttpTtsConfig): boolean => `http-tts:${option.id}` === id)?.name ??
       '第三方语音服务';
   }
 
   private isTtsServiceTabSelected(http: boolean): boolean {
-    return http === this.onlineServicePage();
+    return http === (this.displayedFacts()?.online ?? this.onlineServicePage());
   }
 
   private selectTtsServiceType(http: boolean): void {
@@ -1590,7 +1654,7 @@ export struct ReaderControlTtsContent {
         .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
       Button({ type: ButtonType.Capsule, stateEffect: false }) {
         Row({ space: 6 }) {
-        Text(this.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置').layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
+        Text(this.displayedFacts()?.manageLabel ?? (this.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置')).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontSizeFp)
           .fontColor(this.httpEngines.length > 0 ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.FFFAF4', this.appScheme));
         Image(this.httpEngines.length === 0 ?
@@ -1619,44 +1683,28 @@ export struct ReaderControlTtsContent {
   }
 
   private currentEngineLabel(): string {
-    if (!this.isHttpEngineSelected()) return '系统离线';
-    const id = Number(this.engine.slice('http-tts:'.length));
-    return this.httpEngines.find((option: ReaderHttpTtsConfig): boolean => option.id === id)?.name ?? '在线配置失效';
+    return readerControlTtsEngineLabel(this.engine, this.httpEngines);
   }
 
   private currentVoiceLabel(): string {
-    if (this.onlineServicePage() && !this.isHttpEngineSelected()) return '尚未配置在线服务';
-    if (this.isHttpEngineSelected()) return '由在线服务提供';
-    if (this.voiceOptions.length === 0) return '暂无可用音色';
-    return this.voiceOptions.find((option: ReaderTtsVoiceOption): boolean =>
-      option.language === this.language && option.person === this.person)?.label ??
-      `${this.language} · 音色 ${this.person}`;
+    return this.displayedFacts()?.voice ?? readerControlTtsVoiceLabel(this.engine, this.onlineServicePage(), this.voiceOptions, this.language, this.person);
   }
 
   private statusText(): string {
-    if (this.state.status === 'playing') return '朗读中';
-    if (this.state.status === 'paused') return '已暂停';
-    if (this.state.status === 'interrupted') return '已中断';
-    if (this.state.status === 'probing') return '正在检查朗读可用性';
-    if (this.state.status === 'preparing' || this.state.status === 'resuming') return '准备中';
-    if (this.state.status === 'completed') return '已完成';
-    if (this.state.status === 'stopping') return '停止中';
-    if (this.state.status === 'error') return '播放失败';
-    if (this.state.status === 'failed') return '播放失败';
-    if (this.state.status === 'unavailable') return '当前引擎不可用';
-    return '未开始';
+    return this.displayedFacts()?.status ?? readerControlTtsStatusLabel(this.state);
   }
 
   private controlText(kind: 'previous' | 'toggle' | 'stop' | 'next'): string {
     if (kind === 'previous') return '上一句';
     if (kind === 'next') return '下一句';
     if (kind === 'stop') return '停止朗读';
-    if (kind === 'toggle' && (this.state.status === 'error' || this.state.status === 'failed' || this.state.status === 'unavailable')) return '重试朗读';
+    if (kind === 'toggle' && (this.displayState().status === 'error' || this.displayState().status === 'failed' || this.displayState().status === 'unavailable')) return '重试朗读';
     return this.isActivelySpeaking() ? '暂停朗读' : '开始或继续朗读';
   }
 
   private isActivelySpeaking(): boolean {
-    return this.state.status === 'preparing' || this.state.status === 'playing' || this.state.status === 'resuming';
+    const state = this.displayedFacts()?.readViewState() ?? this.state;
+    return state.status === 'preparing' || state.status === 'playing' || state.status === 'resuming';
   }
 
   private hasActiveQueue(): boolean {

@@ -10,7 +10,7 @@ import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './Rea
 export struct ReaderDirectoryChapterRow {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop entry: LocalReadingTocEntry;
-  @Prop rowHeight: number = 44;
+  @Prop rowHeight: number = 32;
   @Prop currentChapterIndex: number = -1;
   @Prop variant: 'control' | 'standalone' | 'detail-preview' = 'control';
   @Prop previewNested: boolean = false;
@@ -112,16 +112,16 @@ export struct ReaderDirectoryChapterRow {
     Row() {
       Row() {
         if (this.entry.index === this.currentChapterIndex) {
-          Row().width(3).height(Math.max(44, this.rowHeight)).borderRadius(1.5).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
+          Row().width(3).height(this.rowHeight).borderRadius(1.5).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
         if (this.variant === 'standalone') {
-          Stack({ alignContent: Alignment.Center }) { this.chapterTitle(); }.layoutWeight(1).height(Math.max(44, this.rowHeight));
+          Stack({ alignContent: Alignment.Center }) { this.chapterTitle(); }.layoutWeight(1).height(this.rowHeight);
         } else {
           this.chapterTitle();
         }
-      }.layoutWeight(1).height(Math.max(44, this.rowHeight)).accessibilityText(readerDirectoryAccessibilityText(this.entry))
+      }.layoutWeight(1).height(this.rowHeight).accessibilityText(readerDirectoryAccessibilityText(this.entry))
         .enabled(this.entry.navigable !== false)
-        .responseRegion(readerActionTouchRegion('100%', Math.max(44, this.rowHeight)))
+        .responseRegion({ x: 0, y: 0, width: '100%', height: this.rowHeight })
         .onClick((): void => {
           if (this.entry.navigable !== false && this.canActOnEntry?.(this.entry) !== false) this.onSelectChapter(this.entry.index);
         });
@@ -129,7 +129,8 @@ export struct ReaderDirectoryChapterRow {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(this.entry.downloadState === 'completed' ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
             (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download'))).width(15).height(15).accessibilityLevel('no');
-        }.width(44).height(Math.max(44, this.rowHeight))
+        }.width(26).height(Math.min(26, this.rowHeight))
+          .responseRegion({ x: 0, y: -(this.rowHeight - Math.min(26, this.rowHeight)) / 2, width: 26, height: this.rowHeight })
           .padding(0).backgroundColor(Color.Transparent)
           .borderRadius(this.variant === 'standalone' ? 6 : 0).accessibilityText(this.downloadActionLabel())
           .enabled(this.downloadActionEnabled())
@@ -141,7 +142,8 @@ export struct ReaderDirectoryChapterRow {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(this.entry.bookmarks.length > 0 ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
             (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark'))).width(15).height(15).accessibilityLevel('no');
-        }.width(44).height(Math.max(44, this.rowHeight))
+        }.width(26).height(Math.min(26, this.rowHeight))
+          .responseRegion({ x: 0, y: -(this.rowHeight - Math.min(26, this.rowHeight)) / 2, width: 26, height: this.rowHeight })
           .padding(0)
           .backgroundColor(this.variant === 'standalone' && (this.entry.bookmarks?.length ?? 0) > 0 ?
             readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
@@ -150,7 +152,7 @@ export struct ReaderDirectoryChapterRow {
           .enabled(this.bookmarkActionEnabled())
           .onClick((): void => this.marker());
       }
-    }.width('100%').height(Math.max(44, this.rowHeight)).borderRadius(6)
+    }.width('100%').height(this.rowHeight).borderRadius(6)
       .backgroundColor(this.entry.index === this.currentChapterIndex ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent);
     }
   }

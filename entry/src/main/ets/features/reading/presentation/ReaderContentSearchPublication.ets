@@ -10,7 +10,7 @@ interface ReaderQuickSearchLoadingState {
   keyword: string;
 }
 
-interface ReaderQuickSearchResultsState {
+export interface ReaderQuickSearchResultsState {
   kind: 'results';
   keyword: string;
   results: ReadingContentSearchResult[];

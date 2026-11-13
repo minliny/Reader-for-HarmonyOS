@@ -2470,3 +2470,7 @@ Current-session original system font has been restored: actual Settings sliders2
 ## 体系性重审状态（2026-11-14）
 
 控制栏全量完成结论重新开放。当前明确两组框架问题，包括模块/profile两阶段交付及测量代际耦合，以及31536cfb将44响应预算映射进默认paint/slot。此前目录调整随全部模块共同重审，代码原因、七域量化、历史合流契约与同包Tab原生边界见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)最新补充。204项清单和既有局部SDK只在原准确范围内保留。后续先完成统一语义及生命周期修复、默认macro与中间帧代码验收和独立审修，再绑定一个实际源码候选。当前原生Tab根因仍OPEN，当前候选全页visual与Source E2/E3维持原判定。
+
+2026-11-14 体系性修复已完成代码与选定SDK独立审修。七模块的paint/slot/response和父支付已分离，默认比例恢复冻结原稿。Host预先准备只读facts与profile，原子提交目标模块，元信息采用保留原logical pair。Runtime形态及时钟继续由原owner持有。共享Header、Home、Pan及Search/Directory恢复动作通过当前身份交接保留实例回调。Recovery14覆盖真实SDK代理与装饰器，源码范围、失败历史和复用结果详见同一修复文档。
+
+正式控制登记已从19更新到20，四族21项source/sourceInputs绑定266个唯一当前文件，各项revision本批递增一次。最终refs03通过，register03保留39项既有开放诊断。紧凑目录部分响应小于44，E2继续FAIL，旧44绘制证据保留历史判定并退出当前证明。全页visual、Source E2/E3及原生大字号等范围各守原判定。当前仅书架Tab首测量0宽原生材料缺陷在代码侧闭合，523首帧扇形原因继续OPEN。下次必要候选复用实际安装机会取得首次书架同期帧与RS，所有agent开发和独审完成后才进入该阶段。

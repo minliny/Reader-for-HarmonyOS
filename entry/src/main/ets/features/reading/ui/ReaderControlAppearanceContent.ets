@@ -1,3 +1,6 @@
+import { readerControlAppearanceSelectValue, readerControlAppearanceMetricLabel, readerControlAppearanceMetricValue, readerControlAppearanceThemeSummary, readerControlAppearanceThemeActionLabel, readerControlAppearanceMinimumFacts, measureReaderControlAppearanceMinimum, type ReaderControlAppearanceMinimumInput, type ReaderControlAppearanceFontMinimumInput, type ReaderControlAppearanceMeasuredMinimum } from './ReaderControlAppearanceMinimum';
+
+import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE } from '../../../ui/foundation/ReaderTypography';
@@ -20,8 +23,7 @@ import { ReaderSelectPanel } from '../../../ui/controls/ReaderSelectPanel';
 import { ReaderSelect } from '../../../ui/controls/ReaderSelect';
 import { APPEARANCE_SELECT_MENU_WIDTH,
   appearanceSelectMenuPosition } from '../../../ui/controls/ReaderSelectAppearanceStyle';
-import { measureReaderControlAppearanceMinimum, type ReaderControlAppearanceMinimumInput,
-  type ReaderControlAppearanceFontMinimumInput, type ReaderControlAppearanceMeasuredMinimum } from './ReaderControlAppearanceMinimum';
+
 import type { ReaderControlCandidateWidths, ReaderControlModuleMeasurer,
   ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
 import { APPEARANCE_LAYOUT_SURFACE, APPEARANCE_LAYOUT_BORDER, APPEARANCE_LAYOUT_CAPTION,
@@ -87,11 +89,45 @@ class ReaderFontMotionFrameCallback extends FrameCallback {
  */
 @Component
 export struct ReaderControlAppearanceContent {
+  private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
+  private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
+    const current = this.preparedMinimum;
+    if (current !== undefined && current.identity === this.minimumIdentity && current.key === this.minimumKey &&
+      readerControlModuleProfileMatches(current.moduleData, 'appearance') && readerControlModuleFactsMatch(current.facts, 'appearance')) return current;
+    const adopted = this.adoptedPrepared;
+    return this.preparedMinimumRequired && adopted !== undefined &&
+      readerControlModuleProfileMatches(adopted.moduleData, 'appearance') && readerControlModuleFactsMatch(adopted.facts, 'appearance') ? adopted : undefined;
+  }
+  private preparedProfile(): ReaderControlAppearanceMinimumProfile | undefined {
+    return this.presentationPrepared()?.moduleData.appearance;
+  }
+  private displaySnapshot(): ReaderAppearanceSnapshot {
+    return this.displayedFacts()?.readViewSnapshot() ?? this.snapshot;
+  }
+  private displayedFacts(): ReaderControlAppearanceMinimumInput | undefined {
+    return this.preparedMinimumRequired && this.preparedProfile() !== undefined ? this.presentationPrepared()?.facts.appearance : undefined;
+  }
+  private adoptedPreparedKey: string = '';
+  private onPreparedMinimumChanged(): void {
+    if (!this.preparedMinimumRequired) { this.onMinimumKeyChanged(); return; }
+    const prepared = this.preparedMinimum;
+    if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
+      !readerControlModuleProfileMatches(prepared.moduleData, 'appearance') || !readerControlModuleFactsMatch(prepared.facts, 'appearance')) return;
+    this.adoptedPrepared = prepared;
+    const adopted = `${prepared.identity}|${prepared.key}`;
+    if (adopted === this.adoptedPreparedKey) return;
+    this.adoptedPreparedKey = adopted;
+    this.onMinimumKeyChanged();
+  }
   private feedbackMounted: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('publishMinimumMeasurer') private minimumMetricsRevision: number = 0;
 
+  @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
+  @Prop preparedMinimumRequired: boolean = false;
+  onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
+    (_identity: string, _facts: ReaderControlModuleFacts): void => {};
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
@@ -104,7 +140,7 @@ export struct ReaderControlAppearanceContent {
   @Prop @Watch('requestSelectClose') dismissTemporaryRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop @Watch('publishMinimumMeasurer') minimumIdentity: string = '';
-  @Prop @Watch('onMinimumKeyChanged') minimumKey: string = '';
+  @Prop @Watch('onPreparedMinimumChanged') minimumKey: string = '';
   onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined) => void =
     (_identity: string, _measurer: ReaderControlModuleMeasurer | undefined): void => {};
   @Prop chineseConversionIdentity: string = '';
@@ -192,8 +228,13 @@ export struct ReaderControlAppearanceContent {
   aboutToAppear(): void { this.feedbackMounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.publishMinimumMeasurer();
+
+    if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
   aboutToDisappear(): void {
+    this.adoptedPrepared = undefined;
+    this.adoptedPreparedKey = '';
+
     this.feedbackMounted = false; this.transientFeedback.reset();
     if (this.minimumPublishedIdentity.length > 0)
       this.onMinimumMeasurerReady(this.minimumPublishedIdentity, undefined);
@@ -210,25 +251,28 @@ export struct ReaderControlAppearanceContent {
   }
 
   private currentInputEnabled(): boolean {
-    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private minimumInput(): ReaderControlAppearanceMinimumInput {
-    const fonts: ReaderControlAppearanceFontMinimumInput[] = this.fontIds().map(
-      (font: ReaderAppearanceFontSlot): ReaderControlAppearanceFontMinimumInput =>
-        ({ label: readerAppearanceFontSlotLabel(this.snapshot, font), family: this.visiblePreviewFamily(font) }));
-    return { themes: this.themeIds().map((theme: ReaderAppearanceTheme): string => this.themeLabel(theme)),
-      themeSummary: this.themeSummary(), themeActions: [this.defaultThemeActionLabel(true), this.defaultThemeActionLabel(false)],
-      fonts, indentValue: this.selectValue('indent'), languageValue: this.selectValue('language'),
-      indentOptions: this.selectOptions('indent'), languageOptions: this.selectOptions('language'),
-      metricLabels: ['fontSize', 'lineHeightMultiplier', 'paragraphSpacing', 'letterSpacing'].map(
-        (metric: string): string => this.metricLabel(metric as ReaderAppearanceMetric)),
-      metricValues: ['fontSize', 'lineHeightMultiplier', 'paragraphSpacing', 'letterSpacing'].map(
-        (metric: string): string => this.metricValue(metric as ReaderAppearanceMetric)) };
+    const order = this.draggedFontId === '' ? normalizeReaderAppearanceFontOrder(this.snapshot.fontOrder) : this.previewFontOrder.slice();
+    const fonts: ReaderControlAppearanceFontMinimumInput[] = order.map((font: ReaderAppearanceFontSlot): ReaderControlAppearanceFontMinimumInput => {
+      const saved = readerAppearanceFontSlotFamily(this.snapshot, font);
+      const family = saved === 'ReaderNotoSansSC' ? 'ReaderNotoSansSCUIRegular' : saved;
+      return { label: readerAppearanceFontSlotLabel(this.snapshot, font),
+        family: this.readyPreviewFamilies.includes(family) || readerFontFamilyReady(family) ? family : 'HarmonyOS Sans' };
+    });
+    return readerControlAppearanceMinimumFacts({ snapshot: this.snapshot, chineseConversionMode: this.chineseConversionMode,
+      fonts: fonts, fontOrder: order });
   }
 
   private publishMinimumMeasurer(): void {
     if (!this.feedbackMounted) return;
+    if (this.preparedMinimumRequired) {
+      if (this.minimumIdentity.length > 0) this.onMinimumFactsChanged(this.minimumIdentity, { module: 'appearance', appearance: this.minimumInput() });
+      return;
+    }
     const generation = ++this.minimumMeasurerGeneration;
     const identity = this.minimumIdentity;
     if (this.minimumPublishedIdentity.length > 0 && this.minimumPublishedIdentity !== identity)
@@ -258,18 +302,20 @@ export struct ReaderControlAppearanceContent {
   }
 
   private minimumProfile(): ReaderControlAppearanceMinimumProfile | undefined {
+    if (this.preparedMinimumRequired) return this.preparedProfile();
     const measured = this.minimumProfiles.get(this.minimumKey);
-    return measured?.profile ?? this.acceptedMinimum;
+    return this.preparedProfile() ?? measured?.profile ?? this.acceptedMinimum;
   }
 
   private onMinimumKeyChanged(): void {
-    const measured = this.minimumProfiles.get(this.minimumKey);
-    if (measured !== undefined) {
+    const measured = this.preparedMinimumRequired ? undefined : this.minimumProfiles.get(this.minimumKey);
+    const profile = this.preparedProfile() ?? measured?.profile;
+    if (profile !== undefined) {
       const previous = this.acceptedMinimum;
       const previousFonts = this.acceptedMinimumFonts;
-      this.acceptedMinimum = measured.profile;
+      this.acceptedMinimum = profile;
       this.acceptedMinimumFonts = this.fontIds().slice();
-      if (previous !== undefined) this.restoreMinimumScroll(previous, measured.profile, previousFonts);
+      if (previous !== undefined) this.restoreMinimumScroll(previous, profile, previousFonts);
     }
     // A new cell geometry retires an uncommitted pointer mapping, never a saved order.
     if (this.draggedFontId !== '' || this.fontPointerId >= 0 || this.fontTracks.size > 0) this.cancelFontDrag();
@@ -577,7 +623,7 @@ export struct ReaderControlAppearanceContent {
 
   private onSnapshotChanged(): void {
     if (this.draggedFontId === '' && this.previewFontOrder.join('|') ===
-      normalizeReaderAppearanceFontOrder(this.snapshot.fontOrder).join('|')) this.previewFontOrder = [];
+      normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder).join('|')) this.previewFontOrder = [];
     this.publishMinimumMeasurer();
   }
 
@@ -605,6 +651,7 @@ export struct ReaderControlAppearanceContent {
   }
 
   build() {
+    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Stack({ alignContent: Alignment.TopStart }) {
       Scroll(this.scroller) {
         Stack({ alignContent: Alignment.TopStart }) {
@@ -645,6 +692,8 @@ export struct ReaderControlAppearanceContent {
       .onKeyEvent((event: KeyEvent): void => {
         if (event.type === KeyType.Down) this.selectInputRevision += 1;
       });
+
+    }
   }
 
   @Builder
@@ -685,8 +734,8 @@ export struct ReaderControlAppearanceContent {
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center).maxLines(1)
         .position({ x: 5, y: 39 });
     }.width(this.frame().themeShells[index].width).height(this.frame().themeShells[index].height).borderRadius(8)
-      .backgroundColor(this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: this.snapshot.activeTheme === theme ? TOK_BORDER_W : 0,
+      .backgroundColor(this.displaySnapshot().activeTheme === theme ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: this.displaySnapshot().activeTheme === theme ? TOK_BORDER_W : 0,
         color: readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) })
       .position(this.actorPosition(this.frame().themeShells[index]))
       .opacity(this.frame().themeShells[index].opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -700,8 +749,8 @@ export struct ReaderControlAppearanceContent {
     Stack({ alignContent: Alignment.TopStart }) {
       Row().width(46).height(18).backgroundColor(this.themeColor(theme))
         .borderRadius(6)
-        .border({ width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
-          color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
+        .border({ width: this.displaySnapshot().activeTheme === theme ? 2 : TOK_BORDER_W,
+          color: this.displaySnapshot().activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
         .position({ x: 8.25, y: 2 })
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
     }.width(62.5).height(this.frame().themeSwatches[index].height);
@@ -738,20 +787,18 @@ export struct ReaderControlAppearanceContent {
   }
 
   private defaultThemeActionLabel(day: boolean): string {
-    const current = day ? this.snapshot.dayTheme : this.snapshot.nightTheme;
-    return current === this.snapshot.activeTheme ? (day ? '已设为日间' : '已设为夜间') :
-      (day ? '设为日间主题' : '设为夜间主题');
+    return readerControlAppearanceThemeActionLabel(this.displaySnapshot(), day);
   }
 
   private requestDefaultTheme(day: boolean): void {
     if (!this.fullInput()) return;
     const scheme = day ? 'day' : 'night';
-    if (readerControlAppearanceThemeScheme(this.snapshot.activeTheme) !== scheme) {
+    if (readerControlAppearanceThemeScheme(this.displaySnapshot().activeTheme) !== scheme) {
       this.transientFeedback.show(() => this.getUIContext(), { message: day ? '请先选择日间阅读主题' : '请先选择夜间阅读主题' }, (): boolean => this.feedbackMounted && this.fullInput());
       return;
     }
-    if (day) this.onSetDayTheme(this.snapshot.activeTheme);
-    else this.onSetNightTheme(this.snapshot.activeTheme);
+    if (day) this.onSetDayTheme(this.displaySnapshot().activeTheme);
+    else this.onSetNightTheme(this.displaySnapshot().activeTheme);
   }
 
   @Builder
@@ -778,11 +825,13 @@ export struct ReaderControlAppearanceContent {
   }
 
   private fontIds(): ReaderAppearanceFontSlot[] {
-    const key = this.draggedFontId === '' ? `saved:${this.snapshot.fontOrder.join(',')}` :
+    const displayed = this.displayedFacts();
+    if (this.draggedFontId === '' && displayed !== undefined) return displayed.readViewFontOrder();
+    const key = this.draggedFontId === '' ? `saved:${this.displaySnapshot().fontOrder.join(',')}` :
       `drag:${this.draggedFontId}:${this.previewFontOrder.join(',')}`;
     if (key !== this.fontOrderKey) {
       this.fontOrderKey = key;
-      this.cachedFontIds = this.draggedFontId === '' ? normalizeReaderAppearanceFontOrder(this.snapshot.fontOrder) :
+      this.cachedFontIds = this.draggedFontId === '' ? normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder) :
         this.previewFontOrder.slice();
     }
     return this.cachedFontIds;
@@ -801,11 +850,11 @@ export struct ReaderControlAppearanceContent {
       font === 'import', this.importLayout);
   }
   private activeFont(font: ReaderAppearanceFontSlot): boolean {
-    return font !== 'import' && this.snapshot.font === font;
+    return font !== 'import' && this.displaySnapshot().font === font;
   }
 
   private previewFamily(font: ReaderAppearanceFontSlot): string {
-    const family = readerAppearanceFontSlotFamily(this.snapshot, font);
+    const family = readerAppearanceFontSlotFamily(this.displaySnapshot(), font);
     return family === 'ReaderNotoSansSC' ? 'ReaderNotoSansSCUIRegular' : family;
   }
 
@@ -815,6 +864,9 @@ export struct ReaderControlAppearanceContent {
   }
 
   private visiblePreviewFamily(font: ReaderAppearanceFontSlot): string {
+    const displayed = this.displayedFacts();
+    const index = displayed?.readViewFontOrder().indexOf(font) ?? -1;
+    if (displayed !== undefined && index >= 0) return displayed.fonts[index]?.family ?? 'HarmonyOS Sans';
     return this.fontPreviewReady(font) ? this.previewFamily(font) : 'HarmonyOS Sans';
   }
 
@@ -859,7 +911,7 @@ export struct ReaderControlAppearanceContent {
         .border({ width: this.activeFont(font) ? 0 : TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme),
           style: font === 'import' ? BorderStyle.Dashed : BorderStyle.Solid })
         .borderRadius(12).clip(false).hitTestBehavior(HitTestMode.None);
-      Text(readerAppearanceFontSlotLabel(this.snapshot, font))
+      Text(readerAppearanceFontSlotLabel(this.displaySnapshot(), font))
         .width(this.fontActor(font).width).height(this.fontActor(font).height)
         .fontFamily(this.visiblePreviewFamily(font)).fontSize(TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW.fontWeight as number, { enableVariableFontWeight: true })
@@ -875,7 +927,7 @@ export struct ReaderControlAppearanceContent {
       .hitTestBehavior(this.fontInput(font) ? HitTestMode.Default : HitTestMode.None)
       .attributeModifier(new ReaderActionAccessibility(font === 'import' && this.importLayout === 'source-overlap-pending' ?
         '原始设计重叠位置，仅供对照' : font === 'import' ? '导入自定义字体' :
-        `切换到${readerAppearanceFontSlotLabel(this.snapshot, font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`,
+        `切换到${readerAppearanceFontSlotLabel(this.displaySnapshot(), font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`,
         this.fontInput(font), this.activeFont(font)))
       .onVisibleAreaChange([0, 0.25], (visible: boolean, ratio: number): void => {
         if (visible && ratio >= 0.25) this.requestVisibleFontPreview(font);
@@ -1062,11 +1114,11 @@ export struct ReaderControlAppearanceContent {
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.width(this.minimumProfile()?.stepButtonWidth ?? 44).height(this.stepperRowHeight() - this.stepperOffset())
       .padding(0).backgroundColor(Color.Transparent).borderRadius(0).position({ x: x, y: this.stepperOffset() })
-      .opacity(readerAppearanceCanStep(this.snapshot, metric, direction) ? 1 : 0.38)
-      .enabled(this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction))
+      .opacity(readerAppearanceCanStep(this.displaySnapshot(), metric, direction) ? 1 : 0.38)
+      .enabled(this.fullInput() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction))
       .accessibilityText(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`)
       .onClick((): void => {
-        if (this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction))
+        if (this.fullInput() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction))
           this.onMetricStep(metric, direction);
       });
   }
@@ -1080,29 +1132,23 @@ export struct ReaderControlAppearanceContent {
     return [];
   }
   private selectValue(kind: string): string {
-    if (kind === 'indent') return this.snapshot.indent === 'none' ? '无' :
-      (this.snapshot.indent === 'single' ? '1字符' : '2字符');
-    if (kind === 'language') return this.chineseConversionMode === 'none' ? '原文' :
-      (this.chineseConversionMode === 't2s' ? '繁转简' : '简转繁');
-    return '';
+    return kind === 'indent' ? this.displayedFacts()?.indentValue ?? readerControlAppearanceSelectValue(this.snapshot, this.chineseConversionMode, kind) :
+      this.displayedFacts()?.languageValue ?? readerControlAppearanceSelectValue(this.snapshot, this.chineseConversionMode, kind);
   }
   private applySelect(kind: string, value: string, conversionIdentity: string = this.chineseConversionIdentity): void {
     if (kind === 'indent') {
       const indent: ReaderAppearanceIndent = value === '无' ? 'none' : (value === '1字符' ? 'single' : 'firstLine');
-      if (indent !== this.snapshot.indent) this.onIndentRequest(indent);
+      if (indent !== this.displaySnapshot().indent) this.onIndentRequest(indent);
     } else if (kind === 'language') {
       const mode: ReaderChineseConversionMode = value === '繁转简' ? 't2s' : (value === '简转繁' ? 's2t' : 'none');
       this.onChineseConversionChange(mode, conversionIdentity);
     }
   }
   private metricLabel(metric: ReaderAppearanceMetric): string {
-    return metric === 'fontSize' ? '字号' : (metric === 'lineHeightMultiplier' ? '行距' :
-      (metric === 'paragraphSpacing' ? '段距' : '字距'));
+    return readerControlAppearanceMetricLabel(metric);
   }
   private metricValue(metric: ReaderAppearanceMetric): string {
-    if (metric === 'fontSize') return `${this.snapshot.fontSize}px`;
-    if (metric === 'lineHeightMultiplier') return this.snapshot.lineHeightMultiplier.toFixed(2);
-    return metric === 'paragraphSpacing' ? `${this.snapshot.paragraphSpacing}px` : `${this.snapshot.letterSpacing}px`;
+    return readerControlAppearanceMetricValue(this.displaySnapshot(), metric);
   }
   private themeIds(): ReaderAppearanceTheme[] {
     return READER_CONTROL_APPEARANCE_THEMES;
@@ -1114,13 +1160,13 @@ export struct ReaderControlAppearanceContent {
     return readerControlAppearanceThemeSwatch(theme);
   }
   private themeSummary(): string {
-    return `日间：${this.themeLabel(this.snapshot.dayTheme)} · 夜间：${this.themeLabel(this.snapshot.nightTheme)}`;
+    return readerControlAppearanceThemeSummary(this.displaySnapshot());
   }
 
   private beginFontDrag(font: ReaderAppearanceFontSlot): void {
     if (!this.fullInput() || !this.fontInput(font) || this.fontPointerId < 0 || this.draggedFontId !== '') return;
     const visible = this.fontCellPosition(font);
-    this.fontOriginalOrder = normalizeReaderAppearanceFontOrder(this.snapshot.fontOrder);
+    this.fontOriginalOrder = normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder);
     this.previewFontOrder = this.fontOriginalOrder.slice();
     this.fontOriginalIndex = this.fontOriginalOrder.indexOf(font);
     this.fontOrigin = visible;
@@ -1258,7 +1304,7 @@ export struct ReaderControlAppearanceContent {
     if (this.draggedFontId === '') { this.cancelFontDrag(); return; }
     const positions = this.captureFontPositions();
     const next = this.previewFontOrder.slice();
-    const changed = next.join('|') !== normalizeReaderAppearanceFontOrder(this.snapshot.fontOrder).join('|');
+    const changed = next.join('|') !== normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder).join('|');
     this.cancelFontDrag();
     // Keep the intended layout while the host admits the new order.
     if (commit) this.previewFontOrder = next;

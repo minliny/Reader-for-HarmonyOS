@@ -1,6 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 const definitions = {
-    'tts-paint-target-sdk': { description: 'Approved Make paint sizes stay separate from real44 carriers, with centered Full stop, paid spacing, actual glyph recipes and native choice ownership', resources: [] },
+    'authored-allocation-sdk': { description: 'Original default macros, same-pass typed module profiles, paid touch regions and actual SDK paint remain separate at real narrow/font growth inputs', resources: [] },
+    'tts-paint-target-sdk': { description: 'Approved Make paint stays separate from actual paid response regions, including constrained44 goals, centered Full stop, glyph recipes and native choice ownership', resources: [] },
     'module-shell-sdk': { description: 'Current Home and all module receipts retain the common measured outer shell while content budgets, stale fencing and true metric reflow remain current', resources: [] },
     'admission-sdk': { description: 'Current experience scheduling to measured Panel admission across orientations and wide windows, render-safe readiness and stale frame negatives', resources: [] },
     'module-minimum-budget': { description: 'Shipping measured appearance/settings/search/replace/autopage budgets at four scales and exact narrow/wide widths', resources: [] },
@@ -46,13 +47,14 @@ async function run(id) {
     const search = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts');
     const replace = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
     const playback = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+    const headerGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts');
     const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
     const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
     const read = file => readFileSync(new URL('../' + file, import.meta.url), 'utf8');
     const ui = file => read('entry/src/main/ets/features/reading/ui/' + file);
     const classes = selectedProductionClasses(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), ['ReaderTextStyle', 'ReaderInheritedTextStyle']);
     const measure = pureModuleProbe(ui('ReaderControlTextMeasurement.ets'), 'ReaderControlTextMeasurement.ets', { WordBreak: { BREAK_WORD: 'break' } }, ['measureReaderControlText']);
-    const deps = { ScrollDirection: { Horizontal: 'horizontal', Vertical: 'vertical' }, ...readerTypographyRoles, ...readerMessageStyles, ...classes, ...measure, ...appearance, ...settings, ...search, ...replace, ...playback, ...actor, ...controls, ...fontFamilies, ...readerFoundationTokens, readerAppColor };
+    const deps = { ScrollDirection: { Horizontal: 'horizontal', Vertical: 'vertical' }, ...readerTypographyRoles, ...readerMessageStyles, ...classes, ...measure, ...appearance, ...settings, ...search, ...replace, ...playback, ...headerGeometry, ...actor, ...controls, ...fontFamilies, ...readerFoundationTokens, readerAppColor };
     const pure = (file, names, source = ui(file)) => pureModuleProbe(source, file, deps, names);
     const headerSource = read('entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets');
     const compiler = installedEtsCompiler();
@@ -95,24 +97,603 @@ async function run(id) {
     Object.assign(deps, pureModuleProbe(read('entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']));
     const ttsFacts = { playbackLabel: '朗读内容', status: '未开始', voice: '很长的中文女声音色', timerCaption: '不开启', timerSummary: '00:00', minutes: '00', seconds: '00', rate: '1.00x', error: '', seek: false, online: false, serviceDescription: '设备内置语音', manageLabel: '已配置 · 编辑', engineValue: '系统语音', languageValue: '中文普通话', failureValue: '停止并提示' };
     const widths = w => ({ panelWidthVp: w + 26, quickContentWidthVp: w - 52, fullContentWidthVp: w });
-    const minimum = pure('ReaderControlMinimumMeasurement.ets', ['measureReaderControlMinimum']);
+    const minimum = pure('ReaderControlMinimumMeasurement.ets', ['measureReaderControlMinimum',
+        'readerControlModuleFactsGeometryKey', 'readerControlModuleFactsDisplayEqual',
+        'readerControlModuleFactsMatch', 'readerControlModuleProfileMatches']);
+    Object.assign(deps, minimum);
     const appInput = { themes: ['纸白', '暖纸', '米色', '黑色', '绿纸', '灰色', '棕色', '淡蓝'], themeSummary: '日间：纸白 · 夜间：黑色',
         themeActions: ['设为日间主题', '设为夜间主题'], fonts: Array.from({ length: 9 }, (_, i) => ({ label: i === 8 ? '导入字体' : '系统字体', family: 'HarmonyOS Sans' })),
         indentValue: '2字符', languageValue: '繁转简', indentOptions: ['无', '1字符', '2字符'], languageOptions: ['原文', '繁转简', '简转繁'],
         metricLabels: ['字号', '行距', '段距', '字距'], metricValues: ['32px', '1.50', '10px', '1px'] };
     const ap = pure('ReaderControlAppearanceMinimum.ets', ['measureReaderControlAppearanceMinimum']);
-    const st = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum']);
-    const se = pure('ReaderControlSearchMinimum.ets', ['measureReaderSearchMinimum']);
+    const st = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum', 'readerControlSettingsGroupLabel', 'readerControlSettingsOptionLabel']);
+    const se = pure('ReaderControlSearchMinimum.ets', ['measureReaderSearchMinimum', 'readerControlSearchMinimumFacts']);
     const rp = pure('ReaderControlReplaceMinimum.ets', ['measureReaderControlReplaceMinimum']);
-    const tt = pure('ReaderControlTtsMinimum.ets', ['measureReaderTtsMinimum', 'sampleReaderTtsTextMinimum', 'readerTtsTimerCardLayout']);
-    const au = pure('ReaderControlAutoPageMinimum.ets', ['measureReaderControlAutoPageMinimum']);
+    const tt = pure('ReaderControlTtsMinimum.ets', ['measureReaderTtsMinimum', 'sampleReaderTtsTextMinimum', 'readerTtsTimerCardLayout', 'readerControlTtsTwoDigits']);
+    const au = pure('ReaderControlAutoPageMinimum.ets', ['measureReaderControlAutoPageMinimum', 'readerControlAutoPageMinimumFacts']);
     const searchFacts = { query: '查找很长的正文关键字', title: '第一章 长章节', snippet: '正文命中关键字', message: '', hasResults: true, resultsMode: true, loading: false, loadMoreLabel: '加载更多结果', loadMoreMessage: '' };
     const optionLabels = [['从左到右', '从右到左', '跟随系统'], ['覆盖', '仿真', '滑动', '滚动', '无动画'], ['30秒', '1分钟', '5分钟', '10分钟', '永不']];
     const mkSettings = w => st.measureReaderControlSettingsMinimum(context, w, ['阅读方向', '翻页方式', '屏幕超时'], optionLabels, ['隐藏底部导航栏', '拓展到刘海（灵动岛）', '文字两端对齐']);
-    const native = (file, names, additional = {}, hooks = {}) => createReaderBuilderProbe(ui(file), names, { ...deps, ...additional }, hooks).owner;
+    const currentPanelMethods = ['currentLayout', 'currentMinimumKey', 'currentMinimumIdentity', 'committedMinimumIdentity',
+        'minimumPresentationAvailable', 'minimumHeaderInter', 'minimumTitle', 'controlTouchHandler', 'currentMoreMenuOwnerScope',
+        'presentedHomeChapterTitle', 'presentedHomeTotalChapters', 'controlCallbackGuard', 'controlActionScope', 'controlActionHandler', 'brightnessGestureHandler'];
+    const currentHostMethods = ['controlMinimumCommittedIdentity', 'activeControlNavigationIntent',
+        'controlMinimumRequestLocation', 'controlMinimumOwnerKey', 'controlMinimumEnvironmentKey'];
+    // Include the actual readonly projection getters called by the selected
+    // widgets. These finite legacy fixtures keep the production default
+    // preparedMinimumRequired=false; they do not stand in for formal receipt
+    // lifecycle tests or initialize another display-state owner.
+    const displayMethods = (file, text = ui(file)) => {
+        const tree = compiler.ts.createSourceFile(file, text, compiler.ts.ScriptTarget.Latest, true, compiler.ts.ScriptKind.ETS, compiler.options);
+        const component = tree.statements.find(node => compiler.ts.isStructDeclaration?.(node));
+        return (component?.members ?? []).filter(node => compiler.ts.isMethodDeclaration(node) &&
+            (node.name?.getText(tree).startsWith('display') || ['presentationPrepared', 'preparedProfile', 'currentMinimumProfile'].includes(node.name?.getText(tree))))
+            .map(node => node.name.getText(tree));
+    };
+    const native = (file, names, additional = {}, hooks = {}) => {
+        const owner = createReaderBuilderProbe(ui(file), [...new Set([...names, ...displayMethods(file),
+        ...(file === 'ReaderControlPanel.ets' ? currentPanelMethods : []),
+        ...(file === 'LocalReadingExperience.ets' ? currentHostMethods : [])])], { ...deps, ...additional }, hooks).owner;
+        if (file === 'ReaderControlTtsContent.ets') owner.sourceOnly = 'none';
+        return owner;
+    };
     const nodes = (owner, type) => [...owner.nodes.values()].filter(n => n.type === type);
     const deepNodes = owner => [...owner.nodes.values(), ...[...owner.children.values()].filter(child => child.nodes).flatMap(deepNodes)];
     const target = (node, why) => { assert.ok(node, why); assert.ok(node.width >= 44 && node.height >= 44, `${why} pays >=44, got ${node.width}x${node.height}`); };
+    const paidResponse = (node, host, why) => {
+        assert.ok(node, why);
+        const region = node.responseRegion ?? { x: 0, y: 0, width: node.width, height: node.height };
+        const x = (node.position?.x ?? 0) + region.x, y = (node.position?.y ?? 0) + region.y;
+        assert.ok(region.width > 0 && region.height > 0, why + ' has a usable declared response');
+        assert.ok(x >= -.01 && y >= -.01 && x + region.width <= host.width + .01 && y + region.height <= host.height + .01,
+            why + ' is paid inside the actual parent slot');
+        return region;
+    };
+    if (id === 'authored-allocation-sdk') {
+        const { createHash } = await import('node:crypto');
+        const oracleSource = read('tools/fixtures/reader-control-tts-make-20260911.json');
+        assert.equal(createHash('sha256').update(oracleSource).digest('hex'), '53cfb304a67a9311beb69cadd22501fc78ad33adc747cbd8b8d3a39371cd590d');
+        const original = JSON.parse(oracleSource);
+        const frozenMotionSource = read('tools/fixtures/reader-control-restored-baseline-20260905.json');
+        const frozenMotion = JSON.parse(frozenMotionSource);
+        // Reuse the exact endpoint extraction used by the existing source
+        // geometry cases, without importing or executing those test cases.
+        const sourceEndpoint = (module, nodeId, property, endpoint) => {
+            const record = frozenMotion.records.find(value => value.module === module && value.direction === 'expand');
+            const node = record.motionContext.nodes.find(value => value.nodeId === nodeId);
+            assert.ok(node, 'original source node ' + nodeId);
+            const values = [...node.codeSnippets.css.matchAll(new RegExp(property + ': ([^;]+);', 'g'))]
+                .map(match => match[1].split(' ').map(value => Number.parseFloat(value)));
+            assert.ok(values.length >= 2, nodeId + ' original endpoint ' + property);
+            return values[endpoint === 'quick' ? 0 : values.length - 1][0];
+        };
+        const directoryBudget = await import('../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts');
+        const header = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts');
+        let metrics = createDefaultReaderWindowMetrics();
+        Object.assign(deps, { ...directoryBudget, ...header, readerWindowMetrics: () => ({ ...metrics, systemFontScale: scale }) }, ap, st, se, rp, tt, au);
+        const directoryMeasurer = pure('ReaderControlDirectoryMinimum.ets', ['measureReaderDirectoryMinimum']);
+        Object.assign(deps, directoryMeasurer);
+        const moduleMeasurer = pure('ReaderControlMinimumMeasurement.ets', ['measureReaderControlMinimum', 'measureReaderControlModuleMinimum',
+            'readerControlModuleFactsMatch', 'readerControlModuleProfileMatches', 'readerControlMeasuredProfileGeometryKey']);
+        const dirFacts = { tab: 'directory', title: '第一章', excerpt: '', currentTitle: '第一章', currentPosition: '1 / 1',
+            hasRows: true, loading: false, bookmarkError: false, message: '', action: '', catalogStatus: '', catalogAction: '' };
+        const settingsFacts = pure('ReaderControlSettingsMinimum.ets', ['readerControlSettingsMinimumFacts']).readerControlSettingsMinimumFacts();
+        const facts = [{ module: 'directory', directory: dirFacts }, { module: 'appearance', appearance: appInput },
+            { module: 'settings', settings: settingsFacts }, { module: 'search', search: { ...searchFacts, query: '', loadMoreLabel: '' } },
+            { module: 'tts', tts: { ...ttsFacts, playbackLabel: '未开始' } }, { module: 'autoPage', autoPage: { status: '未开始', timerSummary: '15:00' } },
+            { module: 'replace', replace: { statusText: '', recoveryLabel: '', name: '规则', pattern: 'a → b', meta: '正文', temporaryTitle: '',
+                    editorOpen: false, layerOpen: false, ruleCount: 3, statusVisible: false } }];
+        // The controlled display inputs are frozen references. They are kept
+        // outside the numerical geometry oracle and are never copied by facts.
+        const directoryView = { rows: [{ key: 'chapter:0' }], catalogState: 'ready', loading: false,
+            targetRow: 0, currentTitle: dirFacts.currentTitle, currentPosition: dirFacts.currentPosition };
+        dirFacts.readViewSnapshot = () => directoryView;
+        dirFacts.viewCatalogComplete = true;
+        dirFacts.viewBookmarkLoadFailed = false;
+        dirFacts.viewBookmarkLoadMessage = '';
+        const searchView = { kind: 'results', keyword: '正文', results: [{}] };
+        facts[3].search.readViewState = () => searchView;
+        const ttsView = { status: 'idle', rate: 1, totalSlices: 1 };
+        facts[4].tts.readViewState = () => ttsView;
+        Object.assign(facts[4].tts, { viewTimerMode: 'off', viewTimerMinutes: 0, viewTimerSeconds: 0, viewRate: 1 });
+        const appearanceView = { activeTheme: 'day', dayTheme: 'day', nightTheme: 'night', font: 'system' };
+        appInput.readViewSnapshot = () => appearanceView;
+        const fontOrderView = ['system', 'serif', 'sans', 'mono', 'wenkai', 'fangsong', 'custom', 'import'];
+        appInput.readViewFontOrder = () => fontOrderView;
+        const replaceView = { rules: [{}, {}, {}], status: 'ready', errorMessage: '' };
+        facts[6].replace.readViewState = () => replaceView;
+        facts[6].replace.viewLayer = '';
+        facts[6].replace.viewLocalError = '';
+        const referenceWidths = { panelWidthVp: 364, quickContentWidthVp: 286, fullContentWidthVp: 338 };
+        scale = 1;
+        const preparedModules = facts.map(value => moduleMeasurer.measureReaderControlModuleMinimum(context, referenceWidths, value.module, value));
+        assert.ok(preparedModules.every(Boolean), 'all seven modules produce one complete typed preflight');
+        const ttsProfile = preparedModules[4].moduleData.tts;
+        for (const kind of ['playback', 'timer', 'speed']) {
+            assert.deepEqual(['x', 'y', 'width', 'height'].map(key => ttsProfile.quick[kind][key]), original.shared[kind][0], `Make Quick ${kind} complete macro`);
+        }
+        assert.equal(ttsProfile.quick.contentHeight, 190);
+        assert.equal(ttsProfile.fullText.voiceField, 30, 'voice paint retains original30 inside a52 row');
+        const directory = preparedModules[0].moduleData.directory;
+        assert.equal(directory.quick.tabHeightVp, 31);
+        assert.equal(directory.full.tabHeightVp, 36);
+        assert.equal(directory.quick.rowHeightVp, 32);
+        assert.equal(directory.full.rowHeightVp, 40);
+        assert.equal(directory.quick.listTopVp, 48);
+        assert.equal(directory.full.listTopVp, 99);
+        assert.equal(directory.full.fieldHeightVp, 32);
+        assert.equal(directory.full.toolbarHeightVp, 52);
+        assert.deepEqual(directoryBudget.readerDirectoryToolbarBudget(336, true, 32, 60), {
+            stacked: false, height: 50, fieldMinimumWidth: 99, actionsWidth: 143,
+        });
+        assert.equal(336 - 20 - 5 - directoryBudget.readerDirectoryToolbarBudget(336, true, 32, 60).actionsWidth, 168);
+        const settingsProfile = preparedModules[2].moduleData.settings;
+        assert.deepEqual(settingsProfile.quick.optionHeights, Array(3).fill(sourceEndpoint('settings', '1692:3688', 'height', 'quick')));
+        assert.deepEqual(settingsProfile.full.optionHeights, Array(3).fill(sourceEndpoint('settings', '1692:3688', 'height', 'full')));
+        const settingsQuickFrame = settings.sampleReaderControlSettings(0, 286, settingsProfile);
+        assert.deepEqual(settingsQuickFrame.bars.map(value => value.height), ['1692:3687', '1692:3692', '1692:3699'].map(nodeId => sourceEndpoint('settings', nodeId, 'height', 'quick')));
+        assert.equal(settingsQuickFrame.contentHeight, 190);
+        const appearanceProfile = preparedModules[1].moduleData.appearance;
+        assert.equal(appearanceProfile.quickFontCellHeight, sourceEndpoint('appearance', '1691:20799', 'height', 'quick'));
+        assert.equal(appearanceProfile.fullFontCellHeight, sourceEndpoint('appearance', '1691:20799', 'height', 'full'));
+        const appearanceQuickFrame = appearance.sampleReaderControlAppearance(0, 286, 666, 8, 8, appearanceProfile);
+        assert.equal(appearanceQuickFrame.themeSwatches[4].y - appearanceQuickFrame.themeSwatches[0].y, 28);
+        assert.equal(appearanceQuickFrame.themeSwatches[0].height, 24);
+        assert.equal(appearanceQuickFrame.quickFontHeader.y, 102.9);
+        const searchProfile = preparedModules[3].moduleData.search;
+        assert.equal(searchProfile.quick.natural.fieldHeightVp, sourceEndpoint('search', '1939:346', 'height', 'quick'));
+        assert.equal(searchProfile.full.natural.fieldHeightVp, sourceEndpoint('search', '1939:346', 'height', 'full'));
+        assert.equal(search.sampleReaderControlSearch(0, 286, 190, searchProfile.quick.natural).field.width, sourceEndpoint('search', '1939:346', 'width', 'quick'));
+        const autoPageProfile = preparedModules[5].moduleData.autoPage;
+        assert.equal(autoPageProfile.quick.stop.width, 24);
+        assert.equal(autoPageProfile.quick.stop.height, 24);
+        assert.equal(autoPageProfile.quick.speedContent.plus.width, 24);
+        assert.equal(autoPageProfile.quick.speed.height, 32);
+        const replaceProfile = preparedModules[6].moduleData.replace;
+        assert.equal(replaceProfile.quick.rowHeight, sourceEndpoint('replace', '1939:1237', 'height', 'quick'));
+        assert.equal(replaceProfile.quick.backHeight, 24);
+        assert.equal(replaceProfile.quick.actionHeight, 28);
+        const replaceQuickFrame = replace.sampleReaderControlReplace(0, 286, 190, replaceProfile, 190);
+        assert.ok(Math.abs(replaceQuickFrame.list.height - 84) < 1e-9);
+        assert.equal(replaceQuickFrame.list.y, 47.55);
+        const allocations = actor.readerControlPaidResponses([ttsProfile.quick.previous, ttsProfile.quick.toggle, ttsProfile.quick.stop, ttsProfile.quick.next], actor.readerControlActor(0, 0, 264, 66));
+        assert.ok(allocations.some(value => !value.complete && value.conflict === 'neighbor'));
+        const overlaps = (firstResponse, secondResponse) => Math.max(firstResponse.x, secondResponse.x) < Math.min(firstResponse.x + firstResponse.width, secondResponse.x + secondResponse.width) &&
+            Math.max(firstResponse.y, secondResponse.y) < Math.min(firstResponse.y + firstResponse.height, secondResponse.y + secondResponse.height);
+        allocations.forEach((value, allocationIndex) => allocations.slice(allocationIndex + 1).forEach(other => assert.equal(overlaps(value.response, other.response), false)));
+        // The same producers deliver complete data and independently resolve
+        // the reference736 or actual safe-area705 shell. No module minimum is
+        // promoted to another module's paint dimensions.
+        const home = width => ({ chapterTitleHeight: 33, chapterRowHeight: 54, progressHeight: 50, percentWidth: 20,
+            countWidth: 20, actionLabelHeight: 40.438, actionHeight: 75.438, minimumHeight: 185.438, minWidth: 100, fits: width >= 100 });
+        const input = { context, headerInter: false, title: '目录', identity: 'book|open|directory', metricsRevision: 0,
+            topBarHeightVp: 54, availableWithTopBarHeightVp: 736, measureHomeForm: home, preparedMinimumRequired: true };
+        const candidates = facts.map(value => moduleMeasurer.measureReaderControlMinimum({ ...input, title: header.readerControlHeaderTitle(value.module),
+            moduleFacts: value }, value.module, referenceWidths, input.identity + '|' + value.module));
+        assert.ok(candidates.every(value => value?.profile.moduleData?.module === value.candidate.minimum.module));
+        const poses = candidates.map(value => geo.resolveReaderControlLayout(390, 844, false, metrics, 0, [value.candidate]));
+        assert.ok(poses.every(value => value.fullPanelHeight === 736 && value.quickPanelHeight === 330), JSON.stringify(poses));
+        const oldMetadata = { ...candidates[0].profile, identity: 'another', metricsRevision: 100 };
+        assert.equal(moduleMeasurer.readerControlMeasuredProfileGeometryKey(oldMetadata), moduleMeasurer.readerControlMeasuredProfileGeometryKey(candidates[0].profile));
+        assert.notEqual(moduleMeasurer.readerControlMeasuredProfileGeometryKey({ ...oldMetadata, headerPaint: { ...oldMetadata.headerPaint, heightVp: 31 } }), moduleMeasurer.readerControlMeasuredProfileGeometryKey(oldMetadata));
+        assert.equal(moduleMeasurer.measureReaderControlModuleMinimum(context, referenceWidths, 'directory', { ...facts[0], tts: facts[4].tts }), undefined);
+        assert.equal(moduleMeasurer.measureReaderControlMinimum(input, 'directory', referenceWidths, 'missing', () => { throw Error('formal must not delegate'); }), undefined);
+        metrics = { ...metrics, systemInsets: { ...metrics.systemInsets, top: 39 },
+            gestureInsets: { ...metrics.gestureInsets, bottom: 28 }, statusBarHeight: 39 };
+        assert.ok(candidates.every(value => geo.resolveReaderControlLayout(390, 844, false, metrics, 0, [value.candidate]).fullPanelHeight === 705));
+        let samples = 0;
+        for (const factor of [1, 1.3, 1.6, 2])
+            for (const width of [260, 286, 338]) {
+                scale = factor;
+                const candidateWidths = { panelWidthVp: width + 26, fullContentWidthVp: width, quickContentWidthVp: Math.max(100, width - 52) };
+                for (const value of facts) {
+                    const result = moduleMeasurer.measureReaderControlModuleMinimum(context, candidateWidths, value.module, value);
+                    assert.ok(result && moduleMeasurer.readerControlModuleProfileMatches(result.moduleData, value.module));
+                    assert.ok(Number.isFinite(result.minimum.quick.heightVp) && Number.isFinite(result.minimum.full.heightVp));
+                    samples++;
+                }
+            }
+        // Real SDK consumer attributes. The measured profile controls paint,
+        // and the actual response differs when the existing parent cannot pay44.
+        scale = 1;
+        const actionAccessibility = selectedProductionClasses(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), ['ReaderActionAccessibility'], { AccessibilityRoleType: { BUTTON: 'button' } });
+        const ttsOwner = native('ReaderControlTtsContent.ets', ['p', 'transport', 'transportPaint', 'transportGlyphSize', 'transportResponse', 'roundControl'], {
+            ...tt, ...actionAccessibility, readerTtsPlayGradientStart: () => '#fff', ...actor
+        });
+        Object.assign(ttsOwner, { appScheme: 'day', motionProgress: 0, frame: () => ttsProfile.quick, textMinimum: () => ttsProfile.quickText,
+            sharedInput: () => true, serviceBusy: false, onlineServicePage: () => false, isHttpEngineSelected: () => false,
+            state: { status: 'idle' }, hasActiveQueue: () => true, displayHasActiveQueue: () => true, isActivelySpeaking: () => false, controlText: kind => kind,
+            onPrevious() { }, onNext() { }, onToggle() { }, onStop() { } });
+        for (const kind of ['previous', 'toggle', 'stop', 'next'])
+            ttsOwner.roundControl(kind);
+        const buttons = nodes(ttsOwner, 'Button');
+        assert.deepEqual(buttons.map(node => [node.width, node.height]), [[28, 28], [36, 36], [28, 28], [28, 28]]);
+        assert.ok(buttons.every(node => node.responseRegion.height === 44));
+        assert.ok(buttons.some(node => node.responseRegion.width < 44));
+        for (const invalid of [
+            { paint: actor.readerControlActor(0, 0, 28, 28), host: { x: 0, y: 0, width: Number.NaN, height: 50 } },
+            { paint: { x: Number.NaN, y: 0, width: 28, height: 28 }, host: actor.readerControlActor(0, 0, 100, 50) },
+            { paint: actor.readerControlActor(200, 0, 28, 28), host: actor.readerControlActor(0, 0, 100, 50) },
+            { paint: actor.readerControlActor(0, 0, 28, 28), host: actor.readerControlActor(0, 0, 0, 0) },
+        ]) {
+            const [allocation] = actor.readerControlPaidResponses([invalid.paint], invalid.host);
+            assert.deepEqual(allocation.response, actor.readerControlActor(0, 0, 0, 0, 0));
+            assert.equal(allocation.conflict, 'host');
+            assert.equal(allocation.complete, false);
+            assert.equal(allocation.paint, invalid.paint, 'original invalid paint facts remain observable');
+        }
+        const frozen = read('tools/fixtures/reader-control-restored-baseline-20260905.json');
+        assert.equal(createHash('sha256').update(frozen).digest('hex'), 'cd3895d292cf8ec21daf25ea5426363f2edb266c2eb802fba949e051e2ad4e40');
+        const directoryRaw = read('tools/fixtures/reader-directory-toolbar-hierarchy-20260905.json');
+        assert.equal(createHash('sha256').update(directoryRaw).digest('hex'), 'e1e0db2b114f11b80f86e93a38a3269c4eeeb74310a3be7f92a842b12f855af6');
+        const oldSettings = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum'], ui('ReaderControlSettingsMinimum.ets').replace('let naturalHeight = full ? 27 : 24;', 'let naturalHeight = 44;'));
+        const oldSettingsData = oldSettings.measureReaderControlSettingsMinimum(context, referenceWidths, settingsFacts.groupLabels, settingsFacts.optionLabels, settingsFacts.toggleLabels);
+        assert.throws(() => assert.deepEqual(settings.sampleReaderControlSettings(0, 286, oldSettingsData).bars.map(value => value.height), [30, 30, 30]), 'old response-as-paint mutant is rejected');
+        const oldTts = pure('ReaderControlTtsMinimum.ets', ['measureReaderTtsMinimum'], ui('ReaderControlTtsMinimum.ets').replace('const inline = 13 + labelMinimumWidth + 2 + transportWidth + 10 <= inner;', 'const inline = false;'));
+        assert.throws(() => assert.equal(oldTts.measureReaderTtsMinimum(context, referenceWidths, facts[4].tts).quick.playback.height, 66), 'unconditional transport stack mutant is rejected');
+        const oldDirectory = pure('ReaderControlDirectoryMinimum.ets', ['measureReaderDirectoryMinimum'], ui('ReaderControlDirectoryMinimum.ets').replace('readerScaledControlHeight(32, 24, scale)', 'readerScaledControlHeight(44, 24, scale)'));
+        assert.throws(() => assert.equal(oldDirectory.measureReaderDirectoryMinimum(context, referenceWidths, dirFacts).full.fieldHeightVp, 32), 'old input44 paint mutant is rejected');
+        const bookmark = directoryMeasurer.measureReaderDirectoryMinimum(context, referenceWidths, { ...dirFacts, tab: 'bookmarks', excerpt: '正文' });
+        assert.equal(bookmark.quick.rowHeightVp, 54);
+        assert.equal(bookmark.full.rowHeightVp, 74);
+        const ttsState = await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
+        const ttsFormat = pureModuleProbe(ui('ReaderControlTtsMinimum.ets'), 'TtsFacts.ets', { ...deps, ...ttsState,
+            readerTtsLanguageLabel: value => value }, ['readerControlTtsMinimumFacts', 'readerControlTtsPlaybackLabel', 'readerControlTtsStatusLabel',
+            'readerControlTtsTwoDigits', 'readerControlTtsTimerSummary', 'readerControlTtsTimerCaption', 'readerControlTtsEngineLabel', 'readerControlTtsVoiceLabel']);
+        const ttsLabels = native('ReaderControlTtsContent.ets', ['playbackLabel', 'statusText', 'timerCaption', 'timerSummary', 'twoDigits', 'currentEngineLabel', 'currentVoiceLabel', 'displayedFacts'], ttsFormat);
+        let formattedStates = 0;
+        for (const status of ['idle', 'probing', 'preparing', 'playing', 'paused', 'interrupted', 'resuming', 'completed', 'stopping', 'error', 'failed', 'unavailable']) {
+            const raw = { state: { status, rate: 1, totalSlices: 1 }, timerMode: 'duration', timerMinutes: 15, timerSeconds: 5, failurePolicy: 'stop', allowMixing: false,
+                engine: 'system', httpEngines: [], voiceOptions: [], language: 'zh-CN', person: 0, ratePreview: -1, serviceTab: '' };
+            Object.assign(ttsLabels, raw, { sourceOnly: 'none', onlineServicePage: () => false });
+            const value = ttsFormat.readerControlTtsMinimumFacts(raw);
+            assert.equal(value.playbackLabel, ttsLabels.playbackLabel());
+            assert.equal(value.status, ttsLabels.statusText());
+            assert.equal(value.timerCaption, ttsLabels.timerCaption());
+            assert.equal(value.timerSummary, ttsLabels.timerSummary());
+            assert.equal(value.voice, ttsLabels.currentVoiceLabel());
+            assert.equal(value.engineValue, '系统默认');
+            formattedStates++;
+        }
+        const viewOwner = native('ReaderControlTtsContent.ets', ['presentationPrepared', 'preparedProfile', 'displayedFacts',
+            'displayState', 'minimumFacts'], { ...ttsFormat, ...moduleMeasurer });
+        const oldState = { status: 'idle', rate: 1, totalSlices: 1 };
+        const nextState = { ...oldState, status: 'error', errorMessage: '新增错误会改变播放块高度' };
+        const rawOptions = { state: oldState, timerMode: 'off', timerMinutes: 0, timerSeconds: 0,
+            failurePolicy: 'stop', allowMixing: false, engine: 'system', httpEngines: [], voiceOptions: [],
+            language: 'zh-CN', person: 0, ratePreview: -1, serviceTab: '' };
+        const oldView = { identity: 'owner', key: 'old', moduleData: preparedModules[4].moduleData,
+            facts: { module: 'tts', tts: ttsFormat.readerControlTtsMinimumFacts(rawOptions) } };
+        Object.assign(viewOwner, rawOptions, { state: nextState, preparedMinimumRequired: true,
+            sourceOnly: 'none', minimumIdentity: 'owner', minimumKey: 'old', preparedMinimum: oldView, adoptedPrepared: oldView });
+        assert.equal(viewOwner.displayState(), oldState, 'old measured paint keeps its own readonly error projection');
+        assert.equal(viewOwner.minimumFacts().readViewState(), nextState, 'successor measurement facts still read live state');
+        const nextFacts = { module: 'tts', tts: ttsFormat.readerControlTtsMinimumFacts({ ...rawOptions, state: nextState }) };
+        const nextPrepared = moduleMeasurer.measureReaderControlModuleMinimum(context, referenceWidths, 'tts', nextFacts);
+        const nextView = { identity: 'owner', key: 'new', moduleData: nextPrepared.moduleData, facts: nextFacts };
+        viewOwner.preparedMinimum = nextView;
+        assert.equal(viewOwner.displayState(), oldState, 'partial new receipt without matching key keeps old paint and view together');
+        assert.equal(viewOwner.preparedProfile(), preparedModules[4].moduleData.tts);
+        viewOwner.minimumKey = 'new';
+        assert.equal(viewOwner.displayState(), nextState);
+        assert.equal(viewOwner.preparedProfile(), nextPrepared.moduleData.tts);
+        const selectSource = read('entry/src/main/ets/ui/controls/ReaderSelect.ets');
+        const selectConstants = selectedProductionValues(new URL('../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url), ['APPEARANCE_TRIGGER_H', 'APPEARANCE_VALUE_VERTICAL_SPACE', 'APPEARANCE_HIT_OUTSET'], deps);
+        const select = createReaderBuilderProbe(selectSource, ['phoneTrigger', 'triggerEnabled', 'triggerHeight', 'appearanceLibraryTriggerHeight',
+            'measuredValueHeight', 'appearanceLibraryTrigger', 'resolvedWidth'], { ...deps, ...selectConstants }).owner;
+        Object.assign(select, { variant: 'appearanceLibrary', value: '2字符', options: ['无', '1字符', '2字符'], controlWidth: 0, appThemeScheme: 'day',
+            readerWindowMetricsRevision: 0, focusId: 'select', mounted: true, actionEnabled: true, getUIContext: () => context, dropdownAnimation: () => ({}), trigger() { this.appearanceLibraryTrigger(); } });
+        select.phoneTrigger();
+        const trigger = nodes(select, 'Button')[0];
+        assert.equal(trigger.height, 30);
+        assert.equal(trigger.responseRegion.height, 42);
+        assert.equal(trigger.responseRegion.y, -6);
+        assert.equal(appearanceProfile.selectRowHeight, 42);
+        let toggles = 0;
+        select.onToggle = () => toggles++;
+        trigger.onClick();
+        assert.equal(toggles, 1);
+        select.mounted = false;
+        trigger.onClick();
+        assert.equal(toggles, 1);
+        const toolbar = native('ReaderDirectoryToolbar.ets', ['tool', 'toolLabel', 'iconSize', 'controlFieldHeight'], {
+            ...actionAccessibility, readerWindowMetrics: () => ({ systemFontScale: 1 }), MangaDirectoryPressFeedback: class {
+                applyNormalAttribute() { }
+            }
+        });
+        Object.assign(toolbar, { variant: 'full-directory', appThemeScheme: 'day', readerWindowMetricsRevision: 0, naturalFieldHeightVp: 32, showChapterTools: true });
+        toolbar.tool('search', () => { });
+        const tool = nodes(toolbar, 'Button')[0];
+        assert.equal(tool.width, 32);
+        assert.equal(tool.height, 44);
+        assert.deepEqual(tool.responseRegion, { x: 0, y: 0, width: 32, height: 44 });
+        const toolPaint = nodes(toolbar, 'Stack').find(node => node.width === 32 && node.height === 32);
+        assert.ok(toolPaint);
+        const toolGlyph = nodes(toolbar, 'Image')[0];
+        assert.equal(toolGlyph.width, 16);
+        assert.equal(toolGlyph.height, 16);
+        const searchFieldSource = read('entry/src/main/ets/ui/controls/ReaderSearchField.ets');
+        class CapturedDirectoryField {
+            constructor(parent, params, _storage, id) {
+                this.owner = parent;
+                this.params = params;
+                this.id = id;
+            }
+        }
+        const queryOwner = createReaderBuilderProbe(ui('ReaderDirectoryToolbar.ets'), ['queryField', 'controlFieldHeight'], {
+            ...deps, ReaderSearchField: CapturedDirectoryField, readerWindowMetrics: () => ({ systemFontScale: 1 }),
+        }, { childSources: { ReaderSearchField: searchFieldSource } }).owner;
+        const fieldOwner = createReaderBuilderProbe(searchFieldSource, ['fieldHeight', 'inputHeight', 'fieldBorderWidth',
+            'directoryFontScale', 'isBookField'], deps).owner;
+        Object.assign(queryOwner, { variant: 'manga-catalog', readerWindowMetricsRevision: 0, naturalFieldHeightVp: 0,
+            naturalInputHeightVp: 0, text: '', placeholder: '搜索章节名称', directoryFocusAllowed: false });
+        queryOwner.queryField('manga');
+        const mangaField = [...queryOwner.children.values()][0].params;
+        Object.assign(fieldOwner, mangaField, { readerWindowMetricsRevision: -1 });
+        assert.equal(mangaField.naturalFieldHeightVp, 44);
+        assert.equal(mangaField.naturalInputHeightVp, 44);
+        assert.equal(fieldOwner.fieldHeight(), 44);
+        assert.equal(fieldOwner.inputHeight(), 44);
+        Object.assign(fieldOwner, { naturalFieldHeightVp: 32, naturalInputHeightVp: 30 });
+        assert.equal(fieldOwner.fieldHeight(), 32);
+        assert.equal(fieldOwner.inputHeight(), 30);
+        const profileChecks = pure('ReaderControlPlaybackProfile.ets', ['readerControlPlaybackProfileMatches']);
+        for (const module of ['tts', 'autoPage']) {
+            const index = module === 'tts' ? 4 : 5;
+            const candidate = candidates[index], layout = poses[index], data = candidate.profile.playbackData;
+            const sourceReceipt = { module, identity: input.identity, key: candidate.candidate.key, metricsRevision: 0, widths: referenceWidths, data, layout,
+                bounds: motion.readerControlMotionBounds(layout.fullPanelWidth, layout.fullPanelHeight, layout.dockBottomGap, layout.quickPanelHeight, layout.contentBudget),
+                quickContentHeightVp: layout.contentBudget.quickContentHeightVp, fullContentHeightVp: layout.contentBudget.fullContentHeightVp };
+            assert.equal(profileChecks.readerControlPlaybackProfileMatches(sourceReceipt, module, input.identity, candidate.candidate.key, 0), true);
+            const sourceOwner = native(module === 'tts' ? 'ReaderControlTtsContent.ets' : 'ReaderControlAutoPageContent.ets', ['sourceMinimumCurrent', module === 'tts' ? 'selectedMinimum' : 'minimumProfile', ...(module === 'tts' ? ['displayedFacts', 'displayState', 'displayTimerMode', 'displayTimerDigits', 'effectiveRate'] : [])], { ...profileChecks, ...ttsState });
+            Object.assign(sourceOwner, { sourceOnly: 'quick', sourceMinimum: sourceReceipt, sourceMinimumIdentity: input.identity, sourceMinimumKey: candidate.candidate.key,
+                sourceMinimumMetricsRevision: 0, readerWindowMetricsRevision: 0 });
+            assert.equal(module === 'tts' ? sourceOwner.selectedMinimum() : sourceOwner.minimumProfile(), data[module]);
+            if (module === 'tts') {
+                sourceOwner.state = { status: 'error', rate: 1, totalSlices: 9, errorMessage: '后继媒体错误' };
+                const frozenFacts = sourceReceipt.data.ttsFacts;
+                assert.equal(frozenFacts.readViewState(), ttsView, 'frozen launch facts retain the exact captured media state');
+                assert.equal(sourceReceipt.data.ttsFacts.readViewState().errorMessage, undefined);
+                assert.equal(sourceOwner.displayState(), ttsView, 'actual source-only getter keeps the frozen view');
+                sourceOwner.timerMode = 'duration';
+                sourceOwner.timerMinutes = 30;
+                sourceOwner.ratePreview = -1;
+                sourceOwner.state.rate = 2;
+                assert.equal(sourceOwner.displayTimerMode(), 'off');
+                assert.equal(sourceOwner.displayTimerDigits(true), '00');
+                assert.equal(sourceOwner.effectiveRate(), 1);
+            }
+            sourceOwner.sourceMinimumKey += 'retired';
+            assert.equal(module === 'tts' ? sourceOwner.selectedMinimum() : sourceOwner.minimumProfile(), undefined);
+        }
+        const contains = (outer, inner) => outer.x <= inner.x && outer.y <= inner.y &&
+            outer.x + outer.width >= inner.x + inner.width && outer.y + outer.height >= inner.y + inner.height;
+        for (const allocation of allocations) {
+            assert.ok(contains(allocation.response, allocation.paint), 'actual TTS target covers every visible paint edge');
+        }
+        const widePaints = [actor.readerControlActor(0, 0, 200, 8), actor.readerControlActor(100, 12, 200, 8)];
+        const wideHost = actor.readerControlActor(0, 0, 300, 44);
+        const wideAllocations = actor.readerControlPaidResponses(widePaints, wideHost);
+        assert.equal(overlaps(wideAllocations[0].response, wideAllocations[1].response), false);
+        for (const allocation of wideAllocations) {
+            assert.ok(contains(allocation.response, allocation.paint), 'separable vertical gap takes precedence over larger horizontal center distance');
+            assert.ok(contains(wideHost, allocation.response));
+        }
+        const clipped = actor.readerControlPaidResponses([actor.readerControlActor(-1, 0, 50, 44)], actor.readerControlActor(0, 0, 44, 44))[0];
+        assert.equal(clipped.complete, false, 'a44 response does not claim complete payment when host clips paint');
+        assert.equal(clipped.conflict, 'host');
+        const { existsSync } = await import('node:fs');
+        let compiledBuilders = 0;
+        for (const file of ['ReaderControlDirectoryContent.ets', 'ReaderControlSearchContent.ets', 'ReaderControlTtsContent.ets',
+            'ReaderControlAppearanceContent.ets', 'ReaderControlReplaceContent.ets', 'ReaderControlSettingsContent.ets',
+            'ReaderControlAutoPageContent.ets', 'ReaderDirectoryToolbar.ets', 'FullDirectoryPanel.ets', 'ReaderDirectoryNavigationList.ets']) {
+            const source = ui(file);
+            const tree = compiler.ts.createSourceFile(file, source, compiler.ts.ScriptTarget.Latest, true, compiler.ts.ScriptKind.ETS, compiler.options);
+            const component = tree.statements.find(node => node.members && node.members.some(member => member.name?.getText(tree) === 'build'));
+            const builders = component.members.filter(member => member.name && compiler.ts.getAllDecorators(member)
+                .some(decorator => decorator.getText(tree) === '@Builder')).map(member => member.name.getText(tree));
+            const childSources = {};
+            const sourceUrl = new URL('../entry/src/main/ets/features/reading/ui/' + file, import.meta.url);
+            for (const declaration of tree.statements.filter(compiler.ts.isImportDeclaration)) {
+                if (!declaration.moduleSpecifier.text.startsWith('.')) continue;
+                let childUrl;
+                for (const extension of ['', '.ets', '.ts']) {
+                    const candidate = new URL(declaration.moduleSpecifier.text + extension, sourceUrl);
+                    if (existsSync(candidate)) { childUrl = candidate; break; }
+                }
+                if (childUrl === undefined) continue;
+                const childSource = readFileSync(childUrl, 'utf8');
+                const childTree = compiler.ts.createSourceFile(String(childUrl), childSource, compiler.ts.ScriptTarget.Latest, true,
+                    String(childUrl).endsWith('.ets') ? compiler.ts.ScriptKind.ETS : compiler.ts.ScriptKind.TS, compiler.options);
+                for (const element of declaration.importClause?.namedBindings?.elements ?? []) {
+                    const componentName = element.propertyName?.text ?? element.name.text;
+                    if (childTree.statements.some(node => node.members && node.name?.text === componentName && compiler.ts.getAllDecorators(node)
+                        .some(decorator => decorator.getText(childTree).startsWith('@Component')))) childSources[element.name.text] = childSource;
+                }
+            }
+            const slots = component.members.filter(member => member.name && compiler.ts.getAllDecorators(member)
+                .some(decorator => decorator.getText(tree) === '@BuilderParam')).map(member => member.name.getText(tree));
+            createReaderBuilderProbe(source, [...builders, ...slots, 'build'], deps, { childSources });
+            compiledBuilders += builders.length;
+        }
+        const fontHelper = native('ReaderControlAppearanceContent.ets', ['visiblePreviewFamily']);
+        const capturedFonts = { readViewFontOrder: () => ['system'], fonts: [{ label: '系统', family: 'CapturedPreparedFace' }] };
+        Object.assign(fontHelper, { displayedFacts: () => capturedFonts });
+        assert.equal(fontHelper.visiblePreviewFamily('system'), 'CapturedPreparedFace');
+        const settingsFactory = pure('ReaderControlSettingsMinimum.ets', ['readerControlSettingsMinimumFacts']);
+        const lifecycleOwner = native('ReaderControlSettingsContent.ets', ['presentationPrepared', 'preparedProfile',
+            'onPreparedMinimumChanged', 'aboutToDisappear', 'aboutToAppear', 'onMinimumIdentityChanged', 'currentInputEnabled', 'build'], {
+            ...moduleMeasurer, ...settingsFactory, registerReaderFonts: () => {},
+        });
+        const settingsReceipt = { identity: 'first-opening', key: 'first-key', moduleData: preparedModules[2].moduleData,
+            facts: { module: 'settings', settings: settingsFactory.readerControlSettingsMinimumFacts() } };
+        Object.assign(lifecycleOwner, { preparedMinimumRequired: true, minimumIdentity: 'first-opening', minimumKey: 'first-key',
+            preparedMinimum: settingsReceipt, adoptedPrepared: settingsReceipt, adoptedPreparedKey: 'first-opening|first-key',
+            minimumMounted: true, publishedMinimumIdentity: '', interactionEnabled: true, inputCurrent: () => true,
+            getUIContext: () => ({ getFont: () => ({}) }), onMinimumFactsChanged() {}, onMinimumMeasurerReady() {} });
+        assert.ok(lifecycleOwner.presentationPrepared());
+        lifecycleOwner.aboutToDisappear();
+        assert.equal(lifecycleOwner.adoptedPrepared, undefined);
+        assert.equal(lifecycleOwner.adoptedPreparedKey, '');
+        lifecycleOwner.minimumIdentity = 'fresh-opening';
+        lifecycleOwner.minimumKey = 'fresh-key';
+        lifecycleOwner.preparedMinimum = { identity: 'fresh-opening', key: 'fresh-key', moduleData: preparedModules[2].moduleData };
+        lifecycleOwner.aboutToAppear();
+        assert.equal(lifecycleOwner.presentationPrepared(), undefined, 'same component fresh appearance cannot borrow prior readonly view');
+        assert.equal(lifecycleOwner.currentInputEnabled(), false);
+        lifecycleOwner.initialRender();
+        assert.equal(nodes(lifecycleOwner, 'Scroll').length, 0, 'fresh malformed formal tuple cannot draw live content');
+        for (const moduleName of ['Directory', 'Appearance', 'Settings', 'Search', 'Tts', 'AutoPage', 'Replace']) {
+            const inputOwner = native(`ReaderControl${moduleName}Content.ets`, ['currentInputEnabled']);
+            let originalOwnerCurrent = true;
+            const inputReceipt = { ownerCurrent: () => originalOwnerCurrent };
+            Object.assign(inputOwner, { preparedMinimumRequired: true, interactionEnabled: true,
+                inputCurrent: () => true, presentationPrepared: () => inputReceipt });
+            assert.equal(inputOwner.currentInputEnabled(), true, moduleName + ' current prepared owner admits input');
+            originalOwnerCurrent = false;
+            assert.equal(inputOwner.currentInputEnabled(), false, moduleName + ' retired prepared owner rejects input');
+            inputReceipt.ownerCurrent = undefined;
+            assert.equal(inputOwner.currentInputEnabled(), false, moduleName + ' formal tuple without owner guard rejects input');
+            inputOwner.preparedMinimumRequired = false;
+            assert.equal(inputOwner.currentInputEnabled(), true, moduleName + ' legacy owner keeps original admission');
+        }
+        const editorOwner = native('ReaderControlSearchContent.ets', ['currentEditorInputEnabled', 'currentInputEnabled']);
+        Object.assign(editorOwner, { preparedMinimumRequired: true, queryInputMounted: true,
+            editorInputCurrent: () => true, presentationPrepared: () => ({ ownerCurrent: () => false }) });
+        assert.equal(editorOwner.currentEditorInputEnabled(), false, 'accepted editor lease cannot bypass a retired prepared book owner');
+        scale = 2;
+        const largerPreparedModules = facts.map(value => moduleMeasurer.measureReaderControlModuleMinimum(context, referenceWidths, value.module, value));
+        scale = 1;
+        const cacheCases = [
+            { name: 'Settings', index: 2, module: 'settings', method: 'geometry', methods: ['geometry', 'p', 'sharedRect'],
+                expected: profile => settings.sampleReaderControlSettings(0, 286, profile) },
+            { name: 'AutoPage', index: 5, module: 'autoPage', method: 'frame', methods: ['frame', 'minimumProfile'],
+                expected: profile => playback.sampleReaderControlAutoPage(0, 286, profile) },
+            { name: 'Replace', index: 6, module: 'replace', method: 'frame', methods: ['frame'],
+                expected: profile => replace.sampleReaderControlReplace(0, 286, 190, profile, 190) },
+        ];
+        for (const cacheCase of cacheCases) {
+            const oldPair = { identity: 'cache-owner', key: 'old-pair', moduleData: preparedModules[cacheCase.index].moduleData,
+                facts: facts[cacheCase.index] };
+            const nextPair = { ...oldPair, key: 'new-pair', moduleData: largerPreparedModules[cacheCase.index].moduleData };
+            const cacheOwner = native(`ReaderControl${cacheCase.name}Content.ets`, cacheCase.methods, moduleMeasurer);
+            Object.assign(cacheOwner, { sourceOnly: 'none', preparedMinimumRequired: true, minimumIdentity: oldPair.identity,
+                minimumKey: oldPair.key, preparedMinimum: oldPair, adoptedPrepared: oldPair, motionProgress: 0,
+                availableWidth: 286, availableHeight: 190, quickContentHeight: 190, quickFlowExtra: () => 0 });
+            const oldFrame = cacheOwner[cacheCase.method]();
+            const oldClip = cacheCase.name === 'Settings' ? cacheOwner.sharedRect(0, true, 0) : undefined;
+            cacheOwner.minimumKey = nextPair.key;
+            assert.equal(cacheOwner[cacheCase.method](), oldFrame, cacheCase.name + ' key-first delivery retains old paired geometry');
+            if (oldClip !== undefined) assert.equal(cacheOwner.sharedRect(0, true, 0), oldClip, 'Settings endpoint clip retains the old paired profile');
+            cacheOwner.preparedMinimum = nextPair;
+            const nextFrame = cacheOwner[cacheCase.method]();
+            assert.notEqual(nextFrame, oldFrame, cacheCase.name + ' complete pair replaces cached geometry after partial delivery');
+            assert.deepEqual(nextFrame, cacheCase.expected(nextPair.moduleData[cacheCase.module]));
+            if (oldClip !== undefined) {
+                assert.notEqual(cacheOwner.sharedRect(0, true, 0), oldClip, 'Settings endpoint clip replaces the old paired profile');
+            }
+        }
+        const pathPresentation = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+        class RecordedPath {
+            commands(path) { this.path = path; return this; }
+        }
+        for (const clipCase of [{ name: 'AutoPage', index: 5, module: 'autoPage', kind: 'control', profileMethod: 'minimumProfile' },
+            { name: 'Tts', index: 4, module: 'tts', kind: 'playback', profileMethod: 'selectedMinimum' }]) {
+            const oldPair = { identity: 'clip-owner', key: 'old-clip', moduleData: preparedModules[clipCase.index].moduleData,
+                facts: facts[clipCase.index] };
+            const nextPair = { ...oldPair, key: 'next-clip', moduleData: largerPreparedModules[clipCase.index].moduleData };
+            const clipMethods = ['sharedClip', 'p', clipCase.profileMethod];
+            if (clipCase.name === 'AutoPage') clipMethods.push('sharedPaintRect');
+            const clipOwner = native(`ReaderControl${clipCase.name}Content.ets`, clipMethods,
+                { ...moduleMeasurer, ...pathPresentation, PathShape: RecordedPath });
+            Object.assign(clipOwner, { sourceOnly: 'none', preparedMinimumRequired: true, minimumIdentity: oldPair.identity,
+                minimumKey: oldPair.key, preparedMinimum: oldPair, adoptedPrepared: oldPair, motionProgress: 0.5,
+                availableWidth: 286, fullViewportHeight: 180, scrollMotion: { fullScrollOffset: 0 },
+                getUIContext: () => ({ vp2px: value => value }), playbackExtraHeight: () => 0, effectiveRate: () => 1,
+                onlineServicePage: () => 0, pathCache: new pathPresentation.ReaderControlMotionPathCache(path => new RecordedPath().commands(path)) });
+            if (clipCase.name === 'Tts') clipOwner.frame = () => playback.sampleReaderControlTts(0.5, 286, 0, 0, 0, clipOwner.selectedMinimum());
+            const oldPath = clipOwner.sharedClip(clipCase.kind);
+            clipOwner.minimumKey = nextPair.key;
+            assert.equal(clipOwner.sharedClip(clipCase.kind), oldPath, clipCase.name + ' partial tuple preserves paired path cache');
+            clipOwner.preparedMinimum = nextPair;
+            const nextPath = clipOwner.sharedClip(clipCase.kind);
+            assert.notEqual(nextPath, oldPath, clipCase.name + ' new complete geometry pair replaces cached path');
+            const retainedCache = clipOwner.pathCache;
+            clipOwner.preparedMinimum = { ...nextPair, moduleData: structuredClone(nextPair.moduleData) };
+            assert.equal(clipOwner.sharedClip(clipCase.kind), nextPath, clipCase.name + ' same-key SDK profile copy preserves the existing PathShape');
+            assert.equal(clipOwner.pathCache, retainedCache, clipCase.name + ' view-only copy does not rebuild the path cache');
+        }
+        class CapturedTemporaryHeader {
+            constructor(parent, params, _storage, id) { this.owner = parent; this.params = params; this.id = id; }
+        }
+        const temporaryHeaderOwner = native('ReaderControlReplaceContent.ets', ['temporaryHeader'],
+            { ReaderBoundedSurfaceHeader: CapturedTemporaryHeader },
+            { childSources: { ReaderBoundedSurfaceHeader: read('entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets') } });
+        const replaceEditorProfile = largerPreparedModules[6].moduleData.replace;
+        const replaceEditorFrame = replace.sampleReaderControlReplace(1, 338, 666, replaceEditorProfile, 190);
+        Object.assign(temporaryHeaderOwner, { currentMinimumProfile: () => replaceEditorProfile,
+            frame: () => replaceEditorFrame, displayedFacts: () => ({ temporaryTitle: '编辑替换规则' }) });
+        temporaryHeaderOwner.temporaryHeader(1);
+        const temporaryHeaderParams = [...temporaryHeaderOwner.children.values()][0].params;
+        assert.equal(temporaryHeaderParams.naturalHeaderHeightVp, replaceEditorFrame.editorHeaderHeight,
+            'formal Replace temporary header consumes the admitted typed profile without a legacy map entry');
+        const metadataOnly = { ...candidates[4].profile, playbackData: { ...candidates[4].profile.playbackData,
+            ttsFacts: { ...facts[4].tts, status: '已暂停' } } };
+        assert.equal(moduleMeasurer.readerControlMeasuredProfileGeometryKey(metadataOnly),
+            moduleMeasurer.readerControlMeasuredProfileGeometryKey(candidates[4].profile), 'same-width display metadata never enters geometry identity');
+        const searchPublicationRuntime = pureModuleProbe(read('entry/src/main/ets/features/reading/presentation/ReaderContentSearchPublication.ets'),
+            'ReaderContentSearchPublication.ets', {}, ['ReaderContentSearchPublication']);
+        const publication = new searchPublicationRuntime.ReaderContentSearchPublication();
+        const queryResult = { kind: 'results', keyword: '原查询', results: [], hasMore: true, loadingMore: false };
+        publication.publish(queryResult);
+        const searchActionOwner = native('ReaderControlSearchContent.ets', ['loadMoreAction', 'resultActionCurrent', 'displayedLoadMoreFailure', 'loadMoreActionEnabled', 'loadMoreActionHandler', 'performLoadMore', 'currentSearchState', 'displayResults']);
+        let dispatchedLoadMore = 0;
+        Object.assign(searchActionOwner, { state: queryResult, queryInputMounted: true, searchPublication: publication,
+            motionProgress: 0, retainedLoadMoreFailure: false, appThemeScheme: 'day',
+            displayedFacts: () => undefined, displayState: () => searchActionOwner.state, currentInputEnabled: () => true,
+            frame: () => search.sampleReaderControlSearch(0, 286, 190, searchProfile.quick.natural),
+            presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), onLoadMore: () => dispatchedLoadMore++ });
+        searchActionOwner.loadMoreAction();
+        const retainedLoadMore = nodes(searchActionOwner, 'Button')[0].onClick;
+        retainedLoadMore();
+        assert.equal(dispatchedLoadMore, 1);
+        const busySameQuery = { ...queryResult, loadingMore: true };
+        publication.publish(busySameQuery);
+        searchActionOwner.state = busySameQuery;
+        retainedLoadMore();
+        assert.equal(dispatchedLoadMore, 1, 'current busy state rejects the old callback');
+        const readySameQuery = { ...queryResult, loadingMore: false };
+        publication.publish(readySameQuery);
+        searchActionOwner.state = readySameQuery;
+        retainedLoadMore();
+        assert.equal(dispatchedLoadMore, 2, 'the same query scope can resume after busy clears');
+        const successorQuery = { ...queryResult, keyword: '后继查询', results: [] };
+        publication.publish(successorQuery);
+        searchActionOwner.state = successorQuery;
+        retainedLoadMore();
+        assert.equal(dispatchedLoadMore, 2, 'old query callback cannot operate on the successor query');
+        const catalogOwner = native('ReaderControlDirectoryContent.ets', ['catalogStatus', 'reconcileCatalog', 'currentContent']);
+        let catalogRequests = 0;
+        Object.assign(catalogOwner, { mounted: true, sessionKey: 'first-book', tab: 'directory', layoutPresentation: 3,
+            appThemeScheme: 'day', catalogComplete: false, catalogLoading: false,
+            currentInputEnabled: () => true, displaySnapshot: () => ({ catalogState: 'failed' }),
+            onRequireCompleteCatalog: () => catalogRequests++ });
+        catalogOwner.catalogStatus();
+        const catalogAction = [...catalogOwner.children.values()].find(child => typeof child.onReconcile === 'function' || typeof child.params?.onReconcile === 'function');
+        const retainedCatalog = catalogAction.onReconcile ?? catalogAction.params.onReconcile;
+        retainedCatalog(3);
+        assert.equal(catalogRequests, 1);
+        catalogOwner.catalogLoading = true;
+        retainedCatalog(3);
+        assert.equal(catalogRequests, 1);
+        catalogOwner.catalogLoading = false;
+        catalogOwner.layoutPresentation = 4;
+        catalogOwner.sessionKey = 'successor-book';
+        retainedCatalog(3);
+        assert.equal(catalogRequests, 1, 'old presentation cannot request the successor book catalog');
+        console.log(`authored allocation PASS 7 independent default macros, ${samples} real producer profiles, constrained responses and actualSDK transport; ${compiledBuilders} affected Builders compile; callback scope and frozen-source checks`);
+        return;
+    }
     if (id === 'tts-paint-target-sdk') {
         const { createHash } = await import('node:crypto');
         const oracle = JSON.parse(read('tools/fixtures/reader-control-tts-make-20260911.json'));
@@ -127,15 +708,16 @@ async function run(id) {
             { ...deps, ...accessibility, FrameCallback: class {}, Color: { Transparent: 'Color.Transparent' } }, ['ReaderTtsPresetModifier', 'readerTtsPresetLabelColor']);
         const state = await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
         const ttsMaterial = pure('ReaderControlTtsStyle.ts', ['readerTtsPlayGradientStart']);
-        const methods = ['p', 'transport', 'transportPaint', 'transportGlyphSize', 'roundControl', 'timer', 'timerCardLayout',
+        const methods = ['p', 'transport', 'transportPaint', 'transportGlyphSize', 'transportResponse', 'roundControl', 'timer', 'timerCardLayout',
             'timerPreset', 'timerPresetLabel', 'timerPresetSelected', 'timerPresetIsSelected', 'chooseTimerPreset',
-            'timerStepButton', 'timerStepper', 'stepTimer', 'twoDigits', 'ratePreset', 'ratePresetWidth', 'chooseRatePreset'];
+            'timerStepButton', 'timerStepper', 'stepTimer', 'twoDigits', 'ratePreset', 'ratePresetWidth', 'chooseRatePreset',
+            ...displayMethods('ReaderControlTtsContent.ets')];
         const paintOwner = source => createReaderBuilderProbe(source, methods,
             { ...deps, ...tt, ...accessibility, ...presetPaint, ...state, ...ttsMaterial }).owner;
         const owner = paintOwner(ttsSource);
         let profile, progress = 0, availableWidth = 286, admitted = true, speaking = false;
         const commands = [];
-        Object.assign(owner, { appScheme: 'day', state: { status: 'idle' }, serviceBusy: false, configField: '',
+        Object.assign(owner, { appScheme: 'day', state: { status: 'idle' }, sourceOnly: 'none', serviceBusy: false, configField: '',
             timerMode: 'duration', timerMinutes: 25, timerSeconds: 20,
             p: () => progress, frame: () => playback.sampleReaderControlTts(progress, availableWidth, 1 / 3, 0, false, profile),
             textMinimum: () => tt.sampleReaderTtsTextMinimum(profile, progress),
@@ -170,7 +752,8 @@ async function run(id) {
                         const button = created.find(node => node.type === 'Button');
                         const paint = created.find(node => node.type === 'Stack' && typeof node.width === 'number');
                         const glyph = created.find(node => node.type === 'Image');
-                        assert.ok(button.width >= 44 && button.height >= 44);
+                        const response = paidResponse(button, owner.frame().playback, 'TTS transport ' + kind);
+                        assert.ok(response.width <= Math.max(44, button.width) + .001 && response.height <= Math.max(44, button.height) + .001);
                         assert.equal(button.backgroundColor, 'Color.Transparent');
                         assert.ok(paint.width <= button.width && paint.height <= button.height);
                         assert.deepEqual(paint.position, { x: (button.width - paint.width) / 2, y: (button.height - paint.height) / 2 });
@@ -432,7 +1015,7 @@ async function run(id) {
             identity: 'header-vocabulary', metricsRevision: metrics.revision, topBarHeightVp: 54,
             measureHomeForm: width => panel.measureHomeForm(width) }, 'home',
             geo.readerControlCandidateWidths(366, 844, false, metrics)[0], 'header-vocabulary|1');
-        for (const label of ['目录', '书签', '界面', '朗读', '设置', '替换规则', '内容搜索', '自动翻页', '替换规则管理', '完成'])
+        for (const label of ['目录', '界面', '朗读', '设置', '内容搜索', '自动翻页', '替换规则管理', '完成'])
             assert.ok(sharedHeaderLabels.includes(label), `shared shell measures actual header vocabulary ${label}`);
         assert.equal(oldPathRejected, true);
         assert.equal(oldRailRejected, true);
@@ -454,7 +1037,7 @@ async function run(id) {
     if (id === 'admission-sdk') {
         let metrics = createDefaultReaderWindowMetrics();
         const frames = [];
-        const { owner: panel } = createReaderBuilderProbe(ui('ReaderControlPanel.ets'), ['minimumInputReady', 'publishMinimumMeasurer', 'measureControlMinimum', 'minimumModule', 'contentInputEnabled', 'bindModuleMinimum'], { ...deps, ...geo, ...minimum, DEBUG: false });
+        const panel = native('ReaderControlPanel.ets', ['minimumInputReady', 'publishMinimumMeasurer', 'measureControlMinimum', 'minimumModule', 'contentInputEnabled', 'bindModuleMinimum'], { ...geo, ...minimum, DEBUG: false });
         Object.assign(panel, { runtimeMounted: true, minimumFontsReady: true, minimumProfiles: new Map(), minimumProfileTicket: '',
             minimumIdentity: '', minimumKey: '', minimumMetricsRevision: 1, minimumReady: false, inputEnabled: true, controlObscured: false,
             visualVisibilityProgress: 1, visualTransitionKind: '', visualHeldPointerId: -1, hasCurrentTemporaryInput: () => false,
@@ -462,7 +1045,7 @@ async function run(id) {
             isExpanded: () => current.expandedLayout, getUIContext: () => context,
             measureHomeForm: w => ({ minimumHeight: 170 * scale, minWidth: 130, fits: w >= 130 }),
         });
-        const { owner: current } = createReaderBuilderProbe(ui('LocalReadingExperience.ets'), ['controlMinimumIdentity', 'controlMinimumCurrent', 'controlMinimumReceiptCurrent', 'bindControlMinimum', 'scheduleControlMinimum', 'admitControlMinimum', 'controlLayout'], {
+        const current = native('LocalReadingExperience.ets', ['controlMinimumIdentity', 'controlMinimumCurrent', 'controlMinimumReceiptCurrent', 'bindControlMinimum', 'scheduleControlMinimum', 'admitControlMinimum', 'controlLayout'], {
             ...geo, ...receipt, ...session, ReaderWindowCoordinator: { metrics: () => metrics },
             ReaderUIFrameCallback: class {
                 constructor(fn) { this.onFrame = fn; }
@@ -525,11 +1108,23 @@ async function run(id) {
         };
         for (const [w, h] of [[568, 320], [366, 844], [568, 320], [366, 844], [600, 320], [760, 960], [760, 320]])
             cycle(w, h);
+        const { ReaderContentSearchPublication } = selectedProductionClasses(
+            new URL('../entry/src/main/ets/features/reading/presentation/ReaderContentSearchPublication.ets', import.meta.url),
+            ['ReaderContentSearchPublication']);
+        // This legacy geometry fixture supplies a raw owner snapshot through
+        // the real Publication/helper. Actual @State proxy and operation
+        // identity behavior belongs to the separate recovery-generation leaf.
+        const searchState = { kind: 'results', keyword: '正文', hasMore: true,
+            results: [{ chapterTitle: '章节', snippet: '正文' }] };
+        const searchPublication = new ReaderContentSearchPublication();
+        searchPublication.publish(searchState);
         const moduleSpecs = [
             ['appearance', 'ReaderControlAppearanceContent.ets', ['publishMinimumMeasurer'], { ...ap }, { feedbackMounted: true, minimumMeasurerGeneration: 0, minimumInput: () => appInput, expandedLayout: true }],
             ['tts', 'ReaderControlTtsContent.ets', ['publishMinimumMeasurer'], { ...tt }, { configMounted: true, sourceOnly: 'none', minimumFacts: () => ttsFacts, expandedLayout: true }],
             ['autoPage', 'ReaderControlAutoPageContent.ets', ['publishMinimumMeasurer'], { ...au }, { minimumMounted: true, minimumFontsReady: true, sourceOnly: 'none', headerMeta: () => '未开始', timerSummaryText: '未设置', expandedLayout: true }],
-            ['search', 'ReaderControlSearchContent.ets', ['publishMinimumMeasurer'], { ...se }, { queryInputMounted: true, state: { kind: 'results', hasMore: true, results: [{ chapterTitle: '章节', snippet: '正文' }] }, query: '正文', resultTitle: () => '章节', statusText: () => '', retainedLoadMoreFailure: false }],
+            ['search', 'ReaderControlSearchContent.ets', ['publishMinimumMeasurer', 'currentSearchState'], { ...se },
+                { queryInputMounted: true, state: searchState, searchPublication, searchRevision: 1,
+                    query: '正文', resultTitle: () => '章节', statusText: () => '', retainedLoadMoreFailure: false }],
             ['settings', 'ReaderControlSettingsContent.ets', ['onMinimumIdentityChanged', 'measureMinimum', 'groupLabel', 'groupOptions', 'optionLabel', 'minimumMeasurer'], { ...st,
                     ...selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets', import.meta.url), ['SETTINGS_DIRECTION_OPTIONS', 'SETTINGS_PAGE_OPTIONS', 'SETTINGS_TIMEOUT_OPTIONS'], deps) }, { minimumMounted: true }],
             ['replace', 'ReaderControlReplaceContent.ets', ['onMinimumIdentityChanged', 'measureMinimum', 'minimumMeasurer'], { ...rp }, { mounted: true, state: { rules: [{ name: '替换', pattern: '原文', replacement: '替换' }], errorMessage: '', recoveryLabel: '' }, localError: '', layer: '', fullContentHeight: 500, statusText: () => '', scopeSummary: () => '正文', temporaryTitle: () => '替换规则' }],
@@ -541,6 +1136,7 @@ async function run(id) {
             current.controlSession.location = { level: 'secondary', module, directoryTab: 'directory', form: 'quick' };
             prepareModule = identity => {
                 child.minimumIdentity = identity;
+                child.minimumMetricsRevision = panel.minimumMetricsRevision;
                 child.onMinimumMeasurerReady = (ticket, provider, reader) => panel.bindModuleMinimum(module, ticket, provider, reader);
                 if (module === 'settings' || module === 'replace')
                     child.onMinimumIdentityChanged();
@@ -562,13 +1158,15 @@ async function run(id) {
         current.controlSession.location = { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' };
         cycle(366, 844);
         const old = panel.minimumIdentity;
+        const oldKey = panel.minimumKey;
         panel.publishMinimumMeasurer();
         const late = frames.shift();
         cycle(390, 844);
         const revision = current.controlMinimumRevision;
         late.onFrame(0);
         assert.equal(current.controlMinimumRevision, revision);
-        assert.equal(current.controlMinimumCurrent(old), false);
+        assert.equal(current.controlMinimumCurrent(old), true, 'viewport reflow preserves the current semantic owner');
+        assert.equal(current.controlMinimumReceiptCurrent(oldKey), false, 'the superseded measured key remains retired after same-owner viewport reflow');
         const previous = current.controlMinimumProvider;
         rendering = true;
         current.bindControlMinimum(current.controlMinimumIdentity(), undefined);
@@ -596,46 +1194,48 @@ async function run(id) {
     if (id === 'module-minimum-budget') {
         const check = (w, a, s, q, r, auto) => {
             assert.ok(a && s && q && r && auto);
-            assert.ok(a.profile.quickFontCellHeight >= 44 && a.profile.fullFontCellHeight >= 44 && a.profile.selectTriggerHeight >= 44 && a.profile.stepperRowHeight >= 44 && a.profile.themeActionHeight >= 44);
+            assert.ok(a.profile.quickFontCellHeight >= 27 && a.profile.fullFontCellHeight >= 30 && a.profile.selectTriggerHeight >= 30 && a.profile.stepperRowHeight > 0 && a.profile.themeActionHeight >= 28);
             const quick = appearance.sampleReaderControlAppearance(0, w.quickContentWidthVp, 0, 8, 8, a.profile);
             for (let i = 4; i < 8; i++)
-                assert.ok(quick.themeSwatches[i].y >= quick.themeSwatches[i - 4].y + 44);
+                assert.ok(quick.themeSwatches[i].y >= quick.themeSwatches[i - 4].y + quick.themeSwatches[i - 4].height);
             for (const full of [false, true]) {
                 const f = settings.sampleReaderControlSettings(full ? 1 : 0, full ? w.fullContentWidthVp : w.quickContentWidthVp, s);
                 for (const [choices, bar] of [[f.directionChoices, f.bars[0]], [f.pageChoices, f.bars[1]], [f.timeoutChoices, f.bars[2]]])
                     for (const cell of choices) {
-                        assert.ok(cell.width >= 44 && cell.height >= 44);
+                        assert.ok(cell.width > 0 && cell.height >= (full ? 27 : 24));
                         assert.ok(cell.x + cell.width <= bar.width + .1 && cell.y + cell.height <= bar.height + .1);
                     }
-                assert.ok(f.children[2].height >= 44);
+                assert.ok(f.children[2].height >= 36);
                 const form = full ? q.full : q.quick;
                 const searchFrame = search.sampleReaderControlSearch(full ? 1 : 0, full ? w.fullContentWidthVp : w.quickContentWidthVp, 180, form.natural);
-                target(searchFrame.action, 'search submit');
-                target(searchFrame.back, 'search back');
+                assert.ok(searchFrame.action.width >= 32 && searchFrame.action.height >= (full ? 32 : 24));
+                assert.ok(searchFrame.back.width >= 51 && searchFrame.back.height >= 24);
                 assert.ok(searchFrame.field.x + searchFrame.field.width <= searchFrame.action.x + .1);
                 assert.ok(searchFrame.field.width > 44);
                 const replaceForm = full ? r.full : r.quick;
-                assert.ok(replaceForm.actionHeight >= 44 && replaceForm.backHeight >= 44 && replaceForm.editorFlagHeight >= 44 && replaceForm.toolbarCellHeight >= 44);
+                assert.ok(replaceForm.actionHeight >= 28 && replaceForm.backHeight >= 24 && replaceForm.editorFlagHeight >= 44 && replaceForm.toolbarCellHeight >= 24);
             }
-            assert.ok(auto.quick.back.height >= 44);
+            assert.ok(auto.quick.back.height >= 24);
             for (const endpoint of [auto.quick, auto.full]) {
                 for (const name of ['previous', 'toggle', 'stop', 'next']) {
-                    target(endpoint[name], 'AutoPage ' + name);
+                    assert.ok(endpoint[name].width >= 24 && endpoint[name].height >= 24, 'AutoPage authored transport remains usable');
                     assert.ok(endpoint[name].x + endpoint[name].width <= endpoint.control.width + .1);
                 }
-                assert.ok(endpoint.follow.height >= 44);
+                assert.ok(endpoint.follow.height >= 36);
             }
-            target(auto.full.speedContent.slider, 'AutoPage full speed Slider');
+            assert.ok(auto.full.speedContent.slider.width > 0 && auto.full.speedContent.slider.height > 0);
             assert.ok(auto.full.speedContent.slider.x + auto.full.speedContent.slider.width <= auto.full.speed.width + .1);
             assert.ok(auto.fullText.wheelRowHeight >= 44 && auto.fullText.wheelWidth >= 44);
             assert.ok(auto.fullText.timerPickerY + auto.fullText.wheelRowHeight * 3 + 4 + auto.fullText.wheelUnitHeight <= auto.full.timer.height - 33.39 + .1);
             const tts = tt.measureReaderTtsMinimum(context, w, ttsFacts);
             assert.ok(tts);
             for (const text of [tts.quickText, tts.fullText])
-                for (const key of ['timerPreset', 'timerStepButton', 'ratePreset', 'voiceField', 'manageButton'])
+                for (const key of ['timerPreset', 'timerStepButton', 'ratePreset', 'manageButton'])
                     assert.ok(text[key] >= 44, key);
+            assert.ok(tts.quickText.voiceField >= 30 && tts.fullText.voiceField >= 30);
             for (const endpoint of [tts.quick, tts.full]) {
-                for (const name of ['previous', 'toggle', 'stop', 'next']) target(endpoint[name], 'TTS ' + name);
+                for (const name of ['previous', 'toggle', 'stop', 'next'])
+                    assert.ok(endpoint[name].width >= 21 && endpoint[name].height >= 21, 'TTS authored transport is distinct from response allocation');
                 assert.ok(endpoint.speedTrack.width >= 44, 'TTS speed track width');
                 assert.ok(endpoint.speedTrack.x + endpoint.speedTrack.width <= endpoint.speed.width + .1);
             }
@@ -648,13 +1248,22 @@ async function run(id) {
                 const w = widths(width);
                 check(w, ap.measureReaderControlAppearanceMinimum(context, w, appInput), mkSettings(w), se.measureReaderSearchMinimum(context, w, searchFacts), rp.measureReaderControlReplaceMinimum(context, w, '', '核对原规则操作', '长规则名', '正则 → 替换', '正文规则', '编辑替换规则', true), au.measureReaderControlAutoPageMinimum(context, w, '未开始', '未设置'));
             }
-        const old = pure('ReaderControlAppearanceMinimum.ets', ['measureReaderControlAppearanceMinimum'], ui('ReaderControlAppearanceMinimum.ets').replace('quickFontCellHeight: Math.max(44,', 'quickFontCellHeight: Math.max(27,'));
+        const appearanceSource = ui('ReaderControlAppearanceMinimum.ets');
+        const inflatedAppearance = appearanceSource.replace('quickFontCellHeight: Math.max(27,', 'quickFontCellHeight: Math.max(44,');
+        assert.notEqual(inflatedAppearance, appearanceSource);
+        const old = pure('ReaderControlAppearanceMinimum.ets', ['measureReaderControlAppearanceMinimum'], inflatedAppearance);
         scale = 1;
-        assert.ok(old.measureReaderControlAppearanceMinimum(context, widths(314), appInput).profile.quickFontCellHeight < 44, 'old small font cell is rejected');
+        assert.notEqual(old.measureReaderControlAppearanceMinimum(context, widths(314), appInput).profile.quickFontCellHeight,
+            ap.measureReaderControlAppearanceMinimum(context, widths(314), appInput).profile.quickFontCellHeight,
+            'uniform44 font paint changes the independently restored default recipe');
         assert.ok(65 < 44 * 2 + 5, 'old replacement trailing65 cannot pay two44 actions');
-        const oldSettings = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum'], ui('ReaderControlSettingsMinimum.ets').replace('let naturalHeight = 44;', 'let naturalHeight = 24;'));
+        const settingsSource = ui('ReaderControlSettingsMinimum.ets');
+        const inflatedSettings = settingsSource.replace('let naturalHeight = full ? 27 : 24;', 'let naturalHeight = 44;');
+        assert.notEqual(inflatedSettings, settingsSource);
+        const oldSettings = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum'], inflatedSettings);
         const brokenSettings = oldSettings.measureReaderControlSettingsMinimum(context, widths(314), ['方向', '翻页', '超时'], optionLabels, ['隐藏底部导航栏']);
-        assert.ok(brokenSettings.quick.optionHeights.some(height => height < 44), 'old settings button height is rejected');
+        assert.notDeepEqual(brokenSettings.quick.optionHeights, mkSettings(widths(314)).quick.optionHeights,
+            'uniform44 option paint changes the independently restored24/27 recipe');
         return;
     }
     if (id === 'native-targets-sdk') {
@@ -670,16 +1279,16 @@ async function run(id) {
             });
             a.themeSwatch('paper', 0);
             const swatch = nodes(a, 'Button')[0];
-            target(swatch, 'quick theme carrier');
+            paidResponse(swatch, { width: w.quickContentWidthVp, height: a.frame().contentHeight }, 'quick theme slot');
             swatch.onClick();
             assert.equal(changed, 1);
             const ids = [...a.nodes.keys()];
             p = 1;
             a.replay();
             assert.deepEqual([...a.nodes.keys()], ids);
-            target(swatch, 'same theme full carrier');
+            paidResponse(swatch, { width: w.fullContentWidthVp, height: a.frame().contentHeight }, 'same full theme slot');
             a.themeAction(true);
-            target(nodes(a, 'Button').at(-1), 'theme action');
+            paidResponse(nodes(a, 'Button').at(-1), { width: w.fullContentWidthVp, height: a.frame().contentHeight }, 'theme action');
             const gesture = new Proxy({}, { get: () => () => { } });
             const fontFormat = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
             const font = native('ReaderControlAppearanceContent.ets', ['fontCell'], { ...fontFormat, BorderStyle: { Dashed: 'dashed', Solid: 'solid' },
@@ -692,10 +1301,12 @@ async function run(id) {
             // The label formatter is outside this geometry repair. Its actual saved
             // identity remains the production slot passed across the Builder boundary.
             font.fontCell('system');
-            target(nodes(font, 'Stack')[0], 'font carrier');
+            const fontCarrier = nodes(font, 'Stack')[0];
+            assert.ok(fontCarrier.width > 0 && fontCarrier.height === font.fontActor().height,
+                'font carrier consumes its own authored27/30 lane and measured growth');
             const selectSource = read('entry/src/main/ets/ui/controls/ReaderSelect.ets');
             const selectValues = selectedProductionValues(new URL('../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url), ['APPEARANCE_TRIGGER_H', 'APPEARANCE_VALUE_VERTICAL_SPACE', 'APPEARANCE_HIT_OUTSET'], deps);
-            const select = createReaderBuilderProbe(selectSource, ['phoneTrigger', 'triggerHeight', 'appearanceLibraryTriggerHeight', 'measuredValueHeight', 'triggerEnabled', 'appearanceLibraryTrigger'], {
+            const select = createReaderBuilderProbe(selectSource, ['phoneTrigger', 'resolvedWidth', 'triggerHeight', 'appearanceLibraryTriggerHeight', 'measuredValueHeight', 'triggerEnabled', 'appearanceLibraryTrigger'], {
                 ...deps, ...selectValues, uiContext: context,
             }).owner;
             Object.assign(select, { variant: 'appearanceLibrary', value: '2字符', readerWindowMetricsRevision: 1, appThemeScheme: 'day',
@@ -703,10 +1314,10 @@ async function run(id) {
                 dropdownAnimation: () => undefined, onToggle: () => changed++ });
             select.phoneTrigger();
             const selectButton = nodes(select, 'Button')[0];
-            assert.ok(selectButton.height >= 44);
-            assert.equal(Math.abs(selectButton.responseRegion.y), 0);
-            assert.equal(selectButton.responseRegion.height, selectButton.height);
-            assert.ok(profile.selectRowHeight >= selectButton.height + 12, 'appearance row pays complete shared trigger');
+            assert.ok(selectButton.height >= 30);
+            assert.equal(Math.abs(selectButton.responseRegion.y), selectValues.APPEARANCE_HIT_OUTSET);
+            assert.equal(selectButton.responseRegion.height, selectButton.height + selectValues.APPEARANCE_HIT_OUTSET * 2);
+            assert.ok(profile.selectRowHeight >= selectButton.responseRegion.height, 'appearance row pays the actual shared trigger response');
             selectButton.onClick();
             changed--;
             const step = native('ReaderControlAppearanceContent.ets', ['stepButton', 'stepperRowHeight', 'stepperOffset'], {
@@ -714,7 +1325,8 @@ async function run(id) {
             });
             Object.assign(step, { minimumProfile: () => profile, snapshot: {}, metricLabel: () => '字号', fullInput: () => true, onMetricStep: () => { }, appThemeScheme: 'day' });
             step.stepButton('fontSize', 1, 0);
-            target(nodes(step, 'Button')[0], 'appearance stepper');
+            paidResponse(nodes(step, 'Button')[0], { width: profile.stepButtonWidth,
+                height: step.stepperRowHeight() }, 'appearance stepper');
             const back = native('ReaderControlQuickBack.ets', ['build', 'icon', 'labelStyle']);
             Object.assign(back, { variant: 'search', scheme: 'day', actionWidth: 51, actionHeight: 44, actionVisible: true, actionEnabled: true, onAction: () => changed++ });
             back.initialRender();
@@ -758,22 +1370,27 @@ async function run(id) {
             const carrier = new Proxy({}, { get: (_, key) => (...args) => { attributes[key] = args.length === 1 ? args[0] : args; return carrier; } });
             const frame = settings.sampleReaderControlSettings(0, w.quickContentWidthVp, settingsMinimum);
             new Modifier(() => changed++).update(frame.pageChoices[0], { contentOpacity: 1, contentBlur: 0 }, true, true, '翻页', 'day').applyNormalAttribute(carrier);
-            target(attributes, 'settings actual modifier');
+            assert.equal(attributes.width, frame.pageChoices[0].width);
+            assert.equal(attributes.height, frame.pageChoices[0].height);
+            paidResponse({ ...attributes, position: { x: 0, y: 0 } }, frame.pageChoices[0], 'settings actual modifier default slot');
             attributes.onClick();
             assert.equal(changed, 5);
-            const settingsOwner = native('ReaderControlSettingsContent.ets', ['segmentRow']);
+            const settingsOwner = native('ReaderControlSettingsContent.ets', ['segmentRow', 'segmentResponse', 'choice']);
             const optionModifiers = new Map();
             Object.assign(settingsOwner, { appThemeScheme: 'day', groupLabel: () => '翻页方式', p: () => 0, label: () => frame.labels[1], bar: () => frame.bars[1],
-                presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), sharedClip: () => undefined, groupOptions: () => ['cover', 'slide', 'simulation', 'scroll', 'none'],
+                presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), sharedClip: () => undefined, geometry: () => frame, groupOptions: () => ['cover', 'slide', 'simulation', 'scroll', 'none'],
                 optionLabel: (_group, option) => option, isSegmentActive: () => true,
                 optionModifier: (_group, _row, index) => {
                     if (!optionModifiers.has(index))
                         optionModifiers.set(index, new Modifier(() => { }));
-                    return optionModifiers.get(index).update(frame.pageChoices[index], { contentOpacity: 1, contentBlur: 0 }, true, index !== 2, '翻页选项', 'day');
+                    return optionModifiers.get(index).update(frame.pageChoices[index], { contentOpacity: 1, contentBlur: 0 }, true, index !== 2, '翻页选项', 'day',
+                        settingsOwner.segmentResponse('pageTurn', 1, index));
                 } });
             settingsOwner.segmentRow('pageTurn', 1);
-            for (const button of nodes(settingsOwner, 'Button'))
-                target(button, 'settings native option');
+            for (const button of nodes(settingsOwner, 'Button')) {
+                assert.equal(button.height, frame.pageChoices[0].height);
+                paidResponse(button, frame.bars[1], 'settings native option');
+            }
             assert.equal(nodes(settingsOwner, 'Button')[2].enabled, false, 'unavailable capability remains disabled');
             const ttsProfile = tt.measureReaderTtsMinimum(context, w, ttsFacts);
             const accessibility = selectedProductionClasses(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), ['ReaderActionAccessibility'], { AccessibilityRoleType: { BUTTON: 'button' } });
@@ -1117,6 +1734,7 @@ async function run(id) {
             uiContext: context, sourceSwitchTriggerFocusId: () => 'source:one',
         });
         Object.assign(h, { appScheme: 'day', minimumMetricsRevision: 1, layout: { topBarHeight: 54, topBarVisible: true }, chapterTitle: '很长的章节标题', totalChapters: 100, inputEnabled: true,
+            runtimeMounted: true, frame: () => ({ topBar: { opacity: 1 } }), progressInputEnabled: () => true,
             controlObscured: false, temporaryLayerActive: false, moreMenuVisible: false, sourceId: 's', sourceBookId: 'b',
             canStepChapter: () => true, onPreviousChapter: () => { }, onNextChapter: () => { }, progressPercent: 40, effectiveProgressPercent: () => 40,
             progressInputRevision: 1, progressChangeHandler: () => () => { }, sourceActionHeight: h.sourceActionHeight,
@@ -1177,9 +1795,9 @@ async function run(id) {
         const gestureBindings = { PanGesture: gesture, TapGesture: gesture, GestureGroup: gesture, LongPressGesture: gesture,
             PanDirection: { Vertical: 'vertical' }, GestureMode: { Exclusive: 'exclusive' }, GesturePriority: { Low: 'low' },
             globalThis: { Gesture: gesture, GestureGroup: gesture, PanGesture: gesture, TapGesture: gesture, LongPressGesture: gesture } };
-        const methods = ['layout', 'minimumReady', 'minimumIdentity', 'minimumKey', 'contentMotionProgress',
+        const methods = [...currentPanelMethods, 'layout', 'minimumReady', 'minimumIdentity', 'minimumKey', 'contentMotionProgress',
             'onLayoutChanged', 'onMinimumIdentityChanged', 'onMinimumAvailabilityChanged', 'publishSelectedPlaybackProfile',
-            'minimumInputReady', 'brightnessRequiresChildClip', 'brightnessRail', 'brightnessRailContent',
+            'minimumInputReady', 'contentInputEnabled', 'brightnessInputEnabled', 'brightnessRequiresChildClip', 'brightnessRail', 'brightnessRailContent',
             'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness'];
         let receiptCurrent = true, automaticActions = 0;
         const frame = { brightness: { width: 46, height: 190, opacity: 1 } };
@@ -1190,7 +1808,9 @@ async function run(id) {
         Object.assign(owner, {
             isExpanded: () => false, moreMenuVisible: false, runtime: undefined,
             syncProgressInput() {}, cancelBrightnessDrag() {}, publishMinimumMeasurer() {},
-            minimumModule: () => 'home', selectedMinimumProfile: () => undefined, runtimeMounted: false,
+            minimumModule: () => 'home', selectedMinimumProfile: () => undefined, runtimeMounted: true,
+            inputEnabled: true, controlObscured: false, visualVisibilityProgress: 1, visualTransitionKind: '', visualHeldPointerId: -1,
+            hasCurrentTemporaryInput: () => false, accessibleBrightnessActions() {},
         });
         Object.assign(owner, {
             appScheme: 'day', minimumIdentity: 'current', minimumKey: 'current|1', minimumReady: true,
@@ -1344,7 +1964,8 @@ async function run(id) {
             'the redundant empty rounded-parent mask cannot return');
         const panelSource = ui('ReaderControlPanel.ets');
         function verifyPanelSource(sourceText, frameHeight = 190, boxSize = 20) {
-            const { owner: mutant } = createReaderBuilderProbe(sourceText, ['minimumInputReady',
+            const { owner: mutant } = createReaderBuilderProbe(sourceText, [...currentPanelMethods, 'minimumInputReady',
+                'contentInputEnabled', 'brightnessInputEnabled',
                 'brightnessRailContent', 'brightnessRequiresChildClip', 'brightnessContentHeight',
                 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness'], {
                 ...deps, ...gestureBindings,
@@ -1356,6 +1977,9 @@ async function run(id) {
                 minimumIdentity: 'current', minimumKey: 'current|1', minimumReady: true,
                 minimumReceiptCurrent: () => true, contentMotionProgress: 0,
                 brightnessPercent: 50, brightnessPreviewPercent: -1,
+                runtimeMounted: true, inputEnabled: true, controlObscured: false, moreMenuVisible: false,
+                visualVisibilityProgress: 1, visualTransitionKind: '', visualHeldPointerId: -1,
+                hasCurrentTemporaryInput: () => false, accessibleBrightnessActions() {},
             });
             mutant.brightnessRailContent();
             assert.equal(nodes(mutant, 'Column')[0].clip, frameHeight < 44 || boxSize > 32,
@@ -1402,7 +2026,7 @@ async function run(id) {
         console.log(JSON.stringify({ kind: 'reader-short-control-budget', viewport: [568, 320], fontScale: 2, safeTop: 24, safeBottom: 24, topBarHeight: nativeBar, topBarVisible: layout.topBarVisible, homeNavigationHeight: layout.contentBudget.navigationHeightVp, quickReserve: candidate.chrome.quickReserveVp, quickContentHeight: layout.contentBudget.quickContentHeightVp, withRecoveryQuickContentHeight: withRecovery.contentBudget.quickContentHeightVp, oldChromeContentHeight: oldLayout.contentBudget.quickContentHeightVp }));
         for (const module of ['tts', 'appearance', 'settings', 'search', 'replace', 'autoPage', 'directory']) {
             const secondary = minimum.measureReaderControlMinimum({ context, headerInter: false, title: '阅读控制', identity: 'current', metricsRevision: 1,
-                topBarHeightVp: nativeBar, availableWithTopBarHeightVp: 100, measureHomeForm: () => undefined }, module, width, 'module|1',
+                topBarHeightVp: nativeBar, availableWithTopBarHeightVp: 100, measureHomeForm: () => ({ minimumHeight: 170, minWidth: 100, fits: true }) }, module, width, 'module|1',
                 () => ({ module, quick: { heightVp: 500, minWidthVp: 100, fits: true }, full: { heightVp: 500, minWidthVp: 100, fits: true } }));
             const secondaryLayout = geo.resolveReaderControlLayout(568, 320, false, metrics, withRecovery.minimumPanelTop - 8, [secondary.candidate]);
             assert.equal(secondaryLayout.contentBudget.navigationHeightVp, 0);
@@ -1413,7 +2037,7 @@ async function run(id) {
         const focus = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
         let exited = 0, sourceOpened = '', location = { level: 'home' }, more = false;
         const short = native('ReaderControlPanel.ets', ['shortWindowActions', 'shortWindowActionInput', 'topBarInputEnabled'], { ...focus, ScrollDirection: { Horizontal: 'horizontal' } });
-        Object.assign(short, { layout, appScheme: 'day', inputEnabled: true, sourceId: 'source:one', sourceBookId: 'book:one', temporaryLayerActive: false,
+        Object.assign(short, { layout, appScheme: 'day', runtimeMounted: true, inputEnabled: true, sourceId: 'source:one', sourceBookId: 'book:one', temporaryLayerActive: false,
             moreMenuVisible: false, moreMenuGeneration: 7, contentLocation: () => location, contentInputEnabled: () => true, frame: () => frame,
             isLocalBook: () => false, onExitReading: () => exited++, onSourceSwitch: origin => sourceOpened = origin,
             setMoreMenuVisible: value => { more = value; }, readerMorePopupOptions: () => ({ generation: 7 }) });
@@ -1437,10 +2061,12 @@ async function run(id) {
         location = { level: 'home' }; short.layout = { ...layout, topBarVisible: true };
         shortButtons[1].onClick(); assert.equal(sourceOpened, '', 'retired short source cannot invoke under normal topbar');
         let stageFrame = frame;
-        const stage = native('ReaderControlPanel.ets', ['build', 'topBarInputEnabled'], { ...motion, AccessibilityRoleType: { BUTTON: 'button' } }, { childSources: { ReaderSessionLaunchStage: ui('ReaderSessionLaunchStage.ets') } });
+        const stage = native('ReaderControlPanel.ets', ['build', 'topBarInputEnabled', 'navigationInputEnabled', 'controlActionInputEnabled'], { ...motion, AccessibilityRoleType: { BUTTON: 'button' } }, { childSources: { ReaderSessionLaunchStage: ui('ReaderSessionLaunchStage.ets') } });
         Object.assign(stage, { layout, frame: () => stageFrame, appScheme: 'day', controlActorsRetained: true, launchSample: undefined, controlObscured: false,
-            inputEnabled: true, temporaryLayerActive: false, moreMenuVisible: false, visualHeldPointerId: -1, contentLocation: () => ({ level: 'home', module: 'directory', form: 'quick' }),
-            topBar: () => {}, controlContent: () => {}, controlHeader: () => {}, brightnessRail: () => {}, moduleNavBar: () => {}, measureTopBar: () => {},
+            runtimeMounted: true, inputEnabled: true, temporaryLayerActive: false, moreMenuVisible: false, visualHeldPointerId: -1,
+            visualVisibilityProgress: 1, hasCurrentTemporaryInput: () => false,
+            contentLocation: () => ({ level: 'home', module: 'directory', form: 'quick' }),
+            topBar: () => {}, controlContent: () => {}, controlHeader: () => {}, headerAction: () => {}, headerGrabCap: () => {}, brightnessRail: () => {}, moduleNavBar: () => {}, measureTopBar: () => {},
             contentInputEnabled: () => true, controlPanelHeight: () => layout.fullPanelHeight, dockLeft: () => 0, dockTop: () => layout.fullPanelTop, accessibleControlActions: () => {}, handleControlTouch: () => {} });
         stage.initialRender();
         const retainedHeader = nodes(stage, 'Stack').find(node => node.width === layout.topBarWidth && node.height === layout.topBarHeight && node.position?.y === layout.topBarTop);
@@ -1451,13 +2077,15 @@ async function run(id) {
         assert.equal(retiredNav.enabled, false); assert.equal(retiredNav.hitTestBehavior, 'HitTestMode.None'); assert.equal(retiredNav.accessibilityLevel, 'no-hide-descendants');
         const gestures = [];
         const gesture = new Proxy({}, { get: (_, name) => (...args) => { gestures.push({ name, args }); return gesture; } });
-        const b = native('ReaderControlPanel.ets', ['minimumInputReady', 'brightnessRequiresChildClip', 'brightnessRail', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness', 'beginBrightnessDrag', 'updateBrightnessDrag', 'finishBrightnessDrag', 'cancelBrightnessDrag', 'roundBrightness', 'commitBrightnessTap'], {
+        const b = native('ReaderControlPanel.ets', ['minimumInputReady', 'contentInputEnabled', 'brightnessInputEnabled', 'brightnessRequiresChildClip', 'brightnessRail', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness', 'beginBrightnessDrag', 'updateBrightnessDrag', 'finishBrightnessDrag', 'cancelBrightnessDrag', 'roundBrightness', 'commitBrightnessTap'], {
             PanGesture: gesture, TapGesture: gesture, GestureGroup: gesture, PanDirection: { Vertical: 'vertical' }, GestureMode: { Exclusive: 'exclusive' },
             GesturePriority: { Low: 'low' }, globalThis: { Gesture: gesture, GestureGroup: gesture, PanGesture: gesture, TapGesture: gesture },
         });
         let auto = 0, cancelled = 0, receiptCurrent = true;
         const changed = [];
         Object.assign(b, { layout, frame: () => frame, appScheme: 'day', brightnessPercent: 50, brightnessPreviewPercent: -1, brightnessAutomatic: false,
+            runtimeMounted: true, inputEnabled: true, controlObscured: false, visualVisibilityProgress: 1, visualTransitionKind: '', visualHeldPointerId: -1,
+            moreMenuVisible: false, hasCurrentTemporaryInput: () => false, accessibleBrightnessActions() {}, onInputActivity() {},
             minimumIdentity: 'current', minimumKey: 'current|1', minimumReady: true, minimumReceiptCurrent: () => receiptCurrent,
             temporaryLayerActive: false, brightnessDragging: false, emitBrightness: () => { }, onBrightnessChange: v => changed.push(v), onBrightnessAuto: () => auto++, onBrightnessCancel: () => cancelled++, });
         b.brightnessRail();

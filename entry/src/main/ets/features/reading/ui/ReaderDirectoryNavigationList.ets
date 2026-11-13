@@ -663,7 +663,7 @@ export struct ReaderDirectoryNavigationList {
         // viewport geometry; canonical Core ranks and target proofs stay intact.
         this.scroller.scrollToIndex(displayIndex, plan.smooth === true, ScrollAlign.START,
           { extraOffset: LengthMetrics.vp(plan.currentInset === undefined ?
-            startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : Math.max(44, this.rowHeight)) :
+            startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : this.rowHeight) :
             startOffset - visibleTop - plan.currentInset) });
       } else if (this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive) {
         this.scroller.scrollToIndex(displayIndex, false, ScrollAlign.CENTER);
@@ -912,7 +912,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private positionRowHeight(index: number): number {
-    if (!this.mangaDisplay) return Math.max(44, this.rowHeight);
+    if (!this.mangaDisplay) return this.rowHeight;
     try {
       const displayIndex = this.nativeDisplayIndex(index);
       const rect = displayIndex === undefined ? undefined : this.scroller?.getItemRect(displayIndex);
@@ -1390,11 +1390,11 @@ export struct ReaderDirectoryNavigationList {
         Text('…').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       } else {
         if (this.isCurrentNode(item)) {
-          Row().width(3).height(Math.max(44, this.rowHeight)).borderRadius(1.5)
+          Row().width(3).height(this.rowHeight).borderRadius(1.5)
             .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
         Text(item.node.title)
-          .height(Math.max(44, this.rowHeight))
+          .height(this.rowHeight)
           .layoutWeight(1)
           .padding({ left: 9 + Math.min(3, this.displayLevel(item.node) - 1) * 12, right: 9 })
           .fontFamily(TYPE_READER_DIRECTORY_TITLE.fontFamily).fontSize(TYPE_READER_DIRECTORY_TITLE.fontSizeFp).fontWeight(TYPE_READER_DIRECTORY_TITLE.fontWeight)
@@ -1403,7 +1403,7 @@ export struct ReaderDirectoryNavigationList {
           .accessibilityText(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(item.node)}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(item.node)}级，打开${item.node.title}`)
-      .responseRegion( readerActionTouchRegion('100%', Math.max(44, this.rowHeight)))
+      .responseRegion( { x: 0, y: 0, width: '100%', height: this.rowHeight })
       .attributeModifier(new ReaderActionAccessibility(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(item.node)}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(item.node)}级，打开${item.node.title}`, this.interactionEnabled && item.node.kind !== 'disabled', false))
@@ -1419,9 +1419,9 @@ export struct ReaderDirectoryNavigationList {
               .width(34).height(this.rowHeight).fontSize(TYPE_READER_DIRECTORY_DISCLOSURE.fontSizeFp)
               .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
               .textAlign(TextAlign.Center).accessibilityLevel('no');
-          }.width(44).height(Math.max(44, this.rowHeight)).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+          }.width(44).height(this.rowHeight).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`)
-      .responseRegion( readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
+      .responseRegion( { x: 0, y: 0, width: 44, height: this.rowHeight })
       .attributeModifier(new ReaderActionAccessibility(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`, true, false))
             .onClick((): void => { if (item.node !== undefined) this.toggleNode(item.node); });
         }
@@ -1434,12 +1434,12 @@ export struct ReaderDirectoryNavigationList {
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
               .width(15).height(15).accessibilityLevel('no');
-          }.width(44).height(Math.max(44, this.rowHeight))
+          }.width(44).height(this.rowHeight)
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ? '已下载' : '下载章节')
             .enabled(this.canDownloadTarget(item.node))
-      .responseRegion( readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
+      .responseRegion( { x: 0, y: 0, width: 44, height: this.rowHeight })
       .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(item.node), false))
             .onClick((): void => { if (item.node !== undefined) this.downloadTarget(item.node); });
@@ -1451,12 +1451,12 @@ export struct ReaderDirectoryNavigationList {
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
               .width(15).height(15).accessibilityLevel('no');
-          }.width(44).height(Math.max(44, this.rowHeight))
+          }.width(44).height(this.rowHeight)
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText((this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks?.length ?? 0) > 0 ?
               '删除本章已有书签' : '添加本章章首书签')
             .enabled(this.bookmarkActionEnabled(this.chapterByIndex.get(item.node.chapterIndex)))
-      .responseRegion( readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
+      .responseRegion( { x: 0, y: 0, width: 44, height: this.rowHeight })
       .attributeModifier(new ReaderActionAccessibility((this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks?.length ?? 0) > 0 ?
               '删除本章已有书签' : '添加本章章首书签', this.bookmarkActionEnabled(this.chapterByIndex.get(item.node.chapterIndex)), false))
             .onClick((): void => {
@@ -1466,7 +1466,7 @@ export struct ReaderDirectoryNavigationList {
         }
       }
     }
-    .width('100%').height(Math.max(44, this.rowHeight)).borderRadius(6)
+    .width('100%').height(this.rowHeight).borderRadius(6)
     .backgroundColor(this.isCurrentNode(item) ?
       readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent);
   }
@@ -1523,7 +1523,7 @@ export struct ReaderDirectoryNavigationList {
         ListItem() {
           if (this.mangaDisplay) this.mangaRow(item);
           else this.row(item);
-        }.width('100%').height(this.mangaDisplay ? undefined : Math.max(44, this.rowHeight));
+        }.width('100%').height(this.mangaDisplay ? undefined : this.rowHeight);
       }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
     }
     .width('100%').height('100%')

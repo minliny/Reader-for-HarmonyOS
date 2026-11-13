@@ -54,7 +54,7 @@ export struct ReaderDirectoryToolbar {
   private iconSize(): number { return this.variant === 'standard' ? 24 : 16; }
   private controlFieldHeight(): number {
     const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerReadableFontScale(readerWindowMetrics().systemFontScale);
-    return Math.max(readerScaledControlHeight(44, 24, scale),
+    return Math.max(readerScaledControlHeight(this.variant === 'full-directory' ? 32 : 44, 24, scale),
       Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
   }
   private controlToolbarHeight(): number {
@@ -124,12 +124,12 @@ export struct ReaderDirectoryToolbar {
           readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }
-      .width(44).height(this.controlFieldHeight())
+      .width(this.variant === 'full-directory' ? 32 : 44).height(Math.max(44, this.controlFieldHeight()))
       .padding(0)
       .backgroundColor(Color.Transparent).borderRadius(8)
       .attributeModifier(new ReaderActionAccessibility(this.toolLabel(kind), true, false, true,
         new MangaDirectoryPressFeedback(true, this.variant === 'manga-catalog', this.appThemeScheme, 'nativeButton'), 'nativeButton'))
-      .responseRegion({ x: 0, y: 0, width: 44, height: this.controlFieldHeight() })
+      .responseRegion({ x: 0, y: 0, width: this.variant === 'full-directory' ? 32 : 44, height: Math.max(44, this.controlFieldHeight()) })
       .onClick(action);
   }
 
@@ -148,8 +148,8 @@ export struct ReaderDirectoryToolbar {
   private queryField(inputFocusId: string) {
       Row() {
         ReaderSearchField({ variant: 'readerDirectory', mode: this.variant === 'manga-catalog' ? 'live' : 'submit', text: this.text,
-          naturalFieldHeightVp: this.variant !== 'manga-catalog' ? this.naturalFieldHeightVp : 0,
-          naturalInputHeightVp: this.variant !== 'manga-catalog' ? this.naturalInputHeightVp : 0,
+          naturalFieldHeightVp: this.variant === 'manga-catalog' ? this.controlFieldHeight() : this.naturalFieldHeightVp,
+          naturalInputHeightVp: this.variant === 'manga-catalog' ? this.controlFieldHeight() : this.naturalInputHeightVp,
           placeholder: this.placeholder, accessibilityLabel: this.placeholder,
           clearable: this.variant === 'manga-catalog',
           directoryFocusId: inputFocusId, directoryFocusAllowed: this.directoryFocusAllowed,
@@ -171,16 +171,16 @@ export struct ReaderDirectoryToolbar {
       if (this.variant === 'manga-catalog') {
         this.tool('sort', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onToggleSort(); });
       } else {
-        Row({ space: 0 }) {
+        Row({ space: this.variant === 'full-directory' ? 5 : 0 }) {
           this.tool('search', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onSearch(); });
           if (this.showChapterTools) {
-            Row({ space: 0 }) {
+            Row({ space: this.variant === 'full-directory' ? 5 : 0 }) {
               this.tool('top', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onTop(); });
               this.tool('bottom', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onBottom(); });
               this.tool('sort', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onToggleSort(); });
             }
           }
-        }.height(this.controlFieldHeight()).flexShrink(0);
+        }.height(Math.max(44, this.controlFieldHeight())).flexShrink(0);
       }
   }
 
@@ -188,14 +188,14 @@ export struct ReaderDirectoryToolbar {
   private searchRow(inputFocusId: string = '') {
     if (this.queryStacked()) {
       Column({ space: 8 }) {
-        Row() { this.queryField(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 6)
+        Row() { this.queryField(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 18)
           .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });
-        Row() { this.queryTools(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 6)
+        Row() { this.queryTools(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 18)
           .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 })
           .justifyContent(FlexAlign.End);
       }.width('100%').height(this.controlToolbarHeight());
     } else {
-      Row({ space: this.variant === 'manga-catalog' ? 5 : 8 }) { this.queryField(inputFocusId); this.queryTools(inputFocusId); }
+      Row({ space: this.variant === 'standard' ? 8 : 5 }) { this.queryField(inputFocusId); this.queryTools(inputFocusId); }
         .width('100%').height(this.controlToolbarHeight())
         .padding(this.variant === 'manga-catalog' ? { left: 0, right: 0 } :
           { left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });

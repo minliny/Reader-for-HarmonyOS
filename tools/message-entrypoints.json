@@ -912,8 +912,8 @@
       "member": "catalogStatus",
       "family": "shared.recovery-action",
       "category": "保留目录内容时加载完整目录/重试读取",
-      "effectiveHost": "当前阅读控制面板snapshot.catalogState，非loading且interactionEnabled时onRequireCompleteCatalog；已有rows保留，不重置阅读进度。",
-      "retireRule": "控制面板关闭/切实体或presentation变化由父owner退役；本组件Action默认generation0，调用者已有准入仍须保留，登记不替代原生生命周期验收。",
+      "effectiveHost": "当前已提交控制栏目录的只读snapshot决定加载与失败展示。ReaderRecoveryAction.generation绑定当前layoutPresentation，长期onReconcile接expected；原目录owner继续决定读取准入。",
+      "retireRule": "native handler核expected generation，调用方另核当前presentation、session与prepared ownerCurrent及catalog读取条件。旧控件/旧展示回调拒绝后继上下文，关闭提示沿原消息框架生命周期。",
       "status": "registered-source-entry"
     },
     {
@@ -923,8 +923,8 @@
       "member": "flatCatalog",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前 reader 控制栏目录 family 的 mounted/session、临时目录呈现和 entries/busy/empty 事实。",
-      "retireRule": "临时目录页切换/reader 身份失效则卸载；重试沿原 onRetry 与目录 operation 准入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "当前已提交目录只读snapshot决定局部PageState。actionGeneration由当前layoutPresentation提供，经公共ReaderPageState透传到ReaderRecoveryAction；长期receiver消费expected。",
+      "retireRule": "loading转failed及同实例新presentation继续使用当前generation。旧native handler与当前owner不匹配时拒绝，读取重试交回原目录owner。静态登记保留其入口范围。",
       "status": "registered-source-entry"
     },
     {
@@ -934,8 +934,8 @@
       "member": "listBody",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前 reader 控制栏目录 family 的 mounted/session、临时目录呈现和 entries/busy/empty 事实。",
-      "retireRule": "临时目录页切换/reader 身份失效则卸载；重试沿原 onRetry 与目录 operation 准入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "当前reader控制栏目录family的已提交只读snapshot及bookmark加载事实决定页态，mounted/session与prepared ownerCurrent决定原动作准入。",
+      "retireRule": "reader实体、opening、模块展示退役时停止旧动作。读取结果更新只读展示和对应profile，重试继续由原书签/目录owner处理。",
       "status": "registered-source-entry"
     },
     {
@@ -945,8 +945,8 @@
       "member": "loadMoreAction",
       "family": "shared.recovery-action",
       "category": "阅读内搜索保留结果时的分页失败重试/重新搜索",
-      "effectiveHost": "当前state.kind=results与retainedLoadMoreFailure；loadingMore驱动busy，interactionEnabled且motionProgress端点才可操作；hasMore选择onLoadMore或onSearch。",
-      "retireRule": "query/operation/presentation代次准入由父reader search owner负责；点击另复核仍为results，不因分页失败重放写入。默认generation0不自证旧query回调拒绝。",
+      "effectiveHost": "已提交只读search results决定分页失败展示，原Publication提供raw查询scope和busy。RecoveryAction generation与长期expected receiver绑定该查询，端点及当前owner决定动作准入。",
+      "retireRule": "原查询scope、keyword、current raw Publication与当前prepared owner共同核对。旧native generation及旧查询动作拒绝后继；busy去重沿原search owner。当前SDK生命周期证据与入口登记分别记账。",
       "status": "registered-source-entry"
     },
     {
@@ -956,8 +956,8 @@
       "member": "resultsBody",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前 reader 内搜索临时页及原 quickSearch publication/state；结果页态不重建搜索 owner。",
-      "retireRule": "关键词/搜索 generation 或临时页失效后更新/卸载，onSearch/retry 仍由原 reader 搜索 owner 准入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "当前reader内搜索的已提交只读Publication投影决定结果页态，原search owner继续拥有实际查询、busy和结果。",
+      "retireRule": "关键词/查询scope、reader实体或模块展示失效后，旧owner动作退役。当前搜索/重试仍回原reader搜索owner，显示投影与对应profile共同采纳。",
       "status": "registered-source-entry"
     },
     {

@@ -62,7 +62,8 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
     this.keyboardOnFocus = keyboardOnFocus;
   }
   applyNormalAttribute(instance: TextInputAttribute): void {
-    if (this.variant === 'sourceManagement' || this.variant === 'readerDirectory') instance.responseRegion(readerActionTouchRegion('100%', this.height));
+    if (this.variant === 'sourceManagement') instance.responseRegion(readerActionTouchRegion('100%', this.height));
+    if (this.variant === 'readerDirectory') instance.responseRegion({ x: 0, y: 0, width: '100%', height: this.height });
     if (this.variant === 'sourceManagement' || this.variant === 'readerDirectory') {
       instance.minFontScale(1);
       instance.maxFontScale(this.fontScale);
@@ -514,7 +515,7 @@ export struct ReaderSearchField {
         TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, this.directoryFontScale());
     }
     if (this.variant === 'readerDirectory') {
-      return Math.max(readerScaledControlHeight(44, 24, this.directoryFontScale()),
+      return Math.max(readerScaledControlHeight(32, 24, this.directoryFontScale()),
         Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
     }
     return 44;
@@ -528,8 +529,8 @@ export struct ReaderSearchField {
       return this.fieldHeight() - this.fieldBorderWidth() * 2;
     }
     if (this.variant === 'readerDirectory') {
-      return Math.max(this.fieldHeight() - this.fieldBorderWidth() * 2,
-        Number.isFinite(this.naturalInputHeightVp) ? this.naturalInputHeightVp : 0);
+      return Number.isFinite(this.naturalInputHeightVp) && this.naturalInputHeightVp > 0 ?
+        this.naturalInputHeightVp : this.fieldHeight() - this.fieldBorderWidth() * 2;
     }
     return this.fieldHeight();
   }

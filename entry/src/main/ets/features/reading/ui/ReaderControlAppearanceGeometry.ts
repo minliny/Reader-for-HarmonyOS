@@ -150,7 +150,7 @@ function sampleNaturalAppearance(progress: number, viewportWidth: number, fullCo
   const fullStride = minimum.themeLabelHeight + 51.8;
   const quickTop = 34.9 + minimum.quickThemeHeaderHeight - 15.898;
   const fullTop = 43.39 + minimum.fullThemeHeaderHeight - 20;
-  const quickThemeStride = 48;
+  const quickThemeStride = 28;
   const quickFontTop = quickTop + quickRows * quickThemeStride + 12;
   const actionTop = fullTop + fullRows * fullStride + 10.01;
   const dividerTop = actionTop + minimum.themeActionHeight + 9;
@@ -175,7 +175,7 @@ function sampleNaturalAppearance(progress: number, viewportWidth: number, fullCo
       Math.max(0, (quickSectionWidth - 64.5) / (minimum.quickThemeColumns - 1)) : 0;
     themeShells.push(actor(fullX, fullY, fullCellWidth, minimum.themeLabelHeight + 45.8, p));
     themeSwatches.push(actor(lerp(12 + quickColumn * quickStride, fullX + (fullCellWidth - 62.5) / 2, p),
-      lerp(quickTop + quickRow * quickThemeStride, fullY + 10, p), 62.5, 44, 1));
+      lerp(quickTop + quickRow * quickThemeStride, fullY + 10, p), 62.5, 24, 1));
   }
   return {
     progress: p, fullViewportWidth: fullWidth, sectionWidth,

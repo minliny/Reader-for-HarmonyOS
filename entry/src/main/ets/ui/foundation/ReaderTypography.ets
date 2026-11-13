@@ -1003,6 +1003,8 @@ export const TYPE_READER_CONTROL_COLLAPSE_INTER = new ReaderTextStyle(
   'ReaderInter', 700, 10, 12, undefined, 'system', 'appBaseline');
 export const TYPE_READER_CONTROL_COLLAPSE_UI = new ReaderTextStyle(
   'ReaderNotoSansSCUIBold', 700, 10, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_CONTROL_COLLAPSE_TTS = new ReaderTextStyle(
+  'ReaderNotoSansSCUIBold', 700, 10, 10, undefined, 'system', 'figmaNode');
 export const TYPE_READER_REPLACE_RULE_NAME = TYPE_SOURCE_TOOLS_ACTION;
 export const TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK = TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_COLLAPSE;
 export const TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL = TYPE_READER_TTS_FULL_COMPAT_TOGGLE_ROW_LABEL;

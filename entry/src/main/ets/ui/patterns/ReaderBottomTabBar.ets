@@ -18,39 +18,49 @@ export struct ReaderBottomTabBar {
   @Prop items: ReaderBottomTabItem[] = [];
   @Prop current: string = '';
   @Prop scheme: string = 'day';
-  @Prop surfaceWidth: number = 0;
+  @Prop @Watch('traceGeometry') surfaceWidth: number = 0;
   @Prop translateX: number = 0;
   @Prop bottomInset: number = 0;
   @Prop fontScale: number = 1;
   @Prop inputEnabled: boolean = true;
   onSelect: (key: string) => void = (_key: string): void => {};
   onCurrentTap: (key: string) => void = (_key: string): void => {};
+  onGeometryTrace: (width: number, paintReady: boolean) => void =
+    (_width: number, _paintReady: boolean): void => {};
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @State private raisedShape: ReaderRaisedShape | undefined = undefined;
   private mounted: boolean = false;
   private appearanceEpoch: number = 0;
 
-  aboutToAppear(): void { this.appearanceEpoch += 1; this.raisedShape = undefined; this.mounted = true; }
+  aboutToAppear(): void {
+    this.appearanceEpoch += 1;
+    this.raisedShape = undefined;
+    this.mounted = true;
+    this.traceGeometry();
+  }
   aboutToDisappear(): void { this.mounted = false; }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row({ space: TOK_SPACE_XS }) {
-        ForEach(this.items, (tab: ReaderBottomTabItem): void => {
-          this.tabItem(tab);
-        }, (tab: ReaderBottomTabItem): string => `main-tab-${tab.key}`);
+      if (this.hasPaintGeometry()) {
+        Row({ space: TOK_SPACE_XS }) {
+          ForEach(this.items, (tab: ReaderBottomTabItem): void => {
+            this.tabItem(tab);
+          }, (tab: ReaderBottomTabItem): string => `main-tab-${tab.key}`);
+        }
+        .width(this.surfaceWidth)
+        .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) })
+        .padding(TOK_SPACE_XS)
+        .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.scheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
+        .borderRadius(this.materialRadius())
+        .shadow(readerSurfaceElevation('raised', this.scheme))
+        .clip(this.requiresChildClip())
+        .hitTestBehavior(HitTestMode.Transparent)
+        .onAreaChange(this.measurementHandler(this.surfaceWidth, this.fontScale));
       }
-      .width(this.surfaceWidth)
-      .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) })
-      .padding(TOK_SPACE_XS)
-      .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.scheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
-      .borderRadius(this.materialRadius())
-      .shadow(readerSurfaceElevation('raised', this.scheme))
-      .clip(this.requiresChildClip())
-      .hitTestBehavior(HitTestMode.Transparent)
-      .onAreaChange(this.measurementHandler(this.surfaceWidth, this.fontScale));
-    }.width(this.surfaceWidth).clip(false)
+    }.width(this.hasPaintGeometry() ? this.surfaceWidth : 0)
+      .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) }).clip(false)
       .hitTestBehavior(HitTestMode.Transparent)
       .margin({ bottom: this.bottomInset })
       .translate({ x: this.translateX });
@@ -90,6 +100,17 @@ export struct ReaderBottomTabBar {
     if (!this.mounted || !this.inputEnabled || !this.items.some((item: ReaderBottomTabItem): boolean => item.key === key)) return;
     if (key === this.current) this.onCurrentTap(key);
     else this.onSelect(key);
+  }
+
+  private hasPaintGeometry(): boolean {
+    return Number.isFinite(this.surfaceWidth) && this.surfaceWidth > 0;
+  }
+
+  private traceGeometry(): void {
+    if (!this.mounted) return;
+    try {
+      this.onGeometryTrace(this.surfaceWidth, this.hasPaintGeometry());
+    } catch (_) { /* Diagnostic observers are isolated from material admission. */ }
   }
 
   private requiresChildClip(): boolean {

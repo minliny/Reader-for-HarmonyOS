@@ -1,3 +1,6 @@
+import { readerControlSearchResultTitle, readerControlSearchStatusText, readerControlSearchMinimumFacts, measureReaderSearchMinimum, type ReaderSearchMinimumFacts, type ReaderSearchMinimumProfile } from './ReaderControlSearchMinimum';
+
+import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, readerControlModuleFactsGeometryKey, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import hilog from '@ohos.hilog';
 import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
@@ -6,8 +9,8 @@ import { ReaderControlQuickBack } from './ReaderControlQuickBack';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { MESSAGE_BODY, MESSAGE_ACTION } from '../../../ui/foundation/ReaderMessageStyle';
-import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../../../ui/foundation/ReaderTypography';
+
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -18,7 +21,7 @@ import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,
   TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT } from '../../../ui/foundation/ReaderTokens';
 import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
-import { ReaderContentSearchPublication, type ReaderQuickSearchState } from '../presentation/ReaderContentSearchPublication';
+import { ReaderContentSearchPublication, type ReaderQuickSearchState, type ReaderQuickSearchResultsState } from '../presentation/ReaderContentSearchPublication';
 import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';
 import { READER_SEARCH_LIST_ITEM_HEIGHT, READER_SEARCH_LIST_CACHE_COUNT, readerControlSearchListProjection,
   readerControlSearchListRowTranslation, readerControlSearchListScrollDelta,
@@ -27,7 +30,7 @@ import { splitReaderSearchSnippet, type ReaderSearchSnippetParts } from '../pres
 import { sampleReaderControlSearch, type ReaderControlSearchFrame,
   type ReaderControlSearchNaturalSize } from './ReaderControlSearchGeometry';
 import type { ReaderControlModuleMeasurer, ReaderControlModuleMinimum, ReaderControlCandidateWidths } from './ReaderLayoutGeometry';
-import { measureReaderSearchMinimum, type ReaderSearchMinimumFacts, type ReaderSearchMinimumProfile } from './ReaderControlSearchMinimum';
+
 import { createReaderControlSearchScroll, resetReaderControlSearchScroll, sampleReaderControlSearchScroll,
   observeReaderControlSearchScroll, prepareReaderControlSearchScrollRebase,
   confirmReaderControlSearchScrollRebase, cancelReaderControlSearchScrollRebase,
@@ -52,8 +55,12 @@ class ReaderSearchMeasuredMessageFrame implements AttributeModifier<TextAttribut
 export struct ReaderControlSearchContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('publishMinimumMeasurer') private minimumMetricsRevision: number = 0;
+  @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
+  @Prop preparedMinimumRequired: boolean = false;
+  onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
+    (_identity: string, _facts: ReaderControlModuleFacts): void => {};
   @Prop @Watch('publishMinimumMeasurer') minimumIdentity: string = '';
-  @Prop @Watch('onResultLayoutChanged') minimumKey: string = '';
+  @Prop @Watch('onPreparedMinimumChanged') minimumKey: string = '';
   onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined) => void =
     (_identity: string, _measurer: ReaderControlModuleMeasurer | undefined): void => {};
 
@@ -70,6 +77,46 @@ export struct ReaderControlSearchContent {
   @Prop @Watch('acceptSearchPublication') searchRevision: number = 0;
   @State @Watch('onResultDataChanged') private state: ReaderQuickSearchState = { kind: 'idle' };
   @State private retainedLoadMoreFailure: boolean = false;
+  private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
+  private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
+    const current = this.preparedMinimum;
+    if (current !== undefined && current.identity === this.minimumIdentity && current.key === this.minimumKey &&
+      readerControlModuleProfileMatches(current.moduleData, 'search') && readerControlModuleFactsMatch(current.facts, 'search')) return current;
+    const adopted = this.adoptedPrepared;
+    return this.preparedMinimumRequired && adopted !== undefined &&
+      readerControlModuleProfileMatches(adopted.moduleData, 'search') && readerControlModuleFactsMatch(adopted.facts, 'search') ? adopted : undefined;
+  }
+  private preparedProfile(): ReaderSearchMinimumProfile | undefined {
+    return this.presentationPrepared()?.moduleData.search;
+  }
+  private currentMinimumProfile(): ReaderSearchMinimumProfile | undefined {
+    return this.preparedMinimumRequired ? this.preparedProfile() : this.preparedProfile() ?? this.minimumProfiles.get(this.minimumKey);
+  }
+  private displayState(): ReaderQuickSearchState {
+    // Keep the existing observable read. Accepted snapshots retain the raw
+    // Publication identity used by its cursor and operation scope.
+    const observed = this.state;
+    return this.displayedFacts()?.readViewState() ?? this.acceptedSearchState ?? observed;
+  }
+  private currentSearchState(): ReaderQuickSearchState {
+    return this.searchPublication.stateAt(this.searchRevision);
+  }
+  private displayedFacts(): ReaderSearchMinimumFacts | undefined {
+    return this.preparedMinimumRequired && this.preparedProfile() !== undefined ? this.presentationPrepared()?.facts.search : undefined;
+  }
+  private adoptedPreparedKey: string = '';
+  private onPreparedMinimumChanged(): void {
+    if (!this.preparedMinimumRequired) { this.onResultLayoutChanged(); return; }
+    const prepared = this.preparedMinimum;
+    if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
+      !readerControlModuleProfileMatches(prepared.moduleData, 'search') || !readerControlModuleFactsMatch(prepared.facts, 'search')) return;
+    this.adoptedPrepared = prepared;
+    this.onResultDataChanged();
+    const adopted = `${prepared.identity}|${prepared.key}`;
+    if (adopted === this.adoptedPreparedKey) return;
+    this.adoptedPreparedKey = adopted;
+    this.onResultLayoutChanged();
+  }
   private acceptedSearchState: ReaderQuickSearchState | undefined = undefined;
   private acceptedResultScrollScope: number = 0;
   onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
@@ -115,9 +162,14 @@ export struct ReaderControlSearchContent {
     this.resultScrollVisit = this.searchPublication.attachResultScroll();
     this.acceptSearchPublication();
     this.onResultDataChanged();
+
+    if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
 
   aboutToDisappear(): void {
+    this.adoptedPrepared = undefined;
+    this.adoptedPreparedKey = '';
+
     const identity = this.registeredMinimumIdentity;
     this.minimumMeasurer = undefined;
     if (identity.length > 0) this.onMinimumMeasurerReady(identity, undefined);
@@ -133,8 +185,16 @@ export struct ReaderControlSearchContent {
     this.onResultScrollDisappear();
   }
 
+  editorInputCurrent: (() => boolean) | undefined = undefined;
+
+  private currentEditorInputEnabled(): boolean {
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.queryInputMounted && (this.editorInputCurrent?.() ?? this.currentInputEnabled());
+  }
+
   private currentInputEnabled(): boolean {
-    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private acceptSearchPublication(): void {
@@ -172,7 +232,7 @@ export struct ReaderControlSearchContent {
         String(editing), String(this.queryEditing), String(this.queryInputMounted), String(this.currentInputEnabled()));
     }
     if (!this.queryInputMounted) return;
-    if (editing && !this.currentInputEnabled()) {
+    if (editing && !this.currentEditorInputEnabled()) {
       this.stopQueryEditing();
       return;
     }
@@ -182,7 +242,7 @@ export struct ReaderControlSearchContent {
   }
 
   private focusQueryField(): void {
-    if (!this.queryInputMounted || !this.currentInputEnabled()) return;
+    if (!this.currentEditorInputEnabled()) return;
     try {
       this.getUIContext().getFocusController().requestFocus(this.queryInputId);
     } catch (_) {
@@ -191,7 +251,7 @@ export struct ReaderControlSearchContent {
   }
 
   private onInputChanged(): void {
-    if (!this.currentInputEnabled()) this.dismissTemporaryLayer();
+    if (!this.currentEditorInputEnabled()) this.dismissTemporaryLayer();
     this.onResultLayoutChanged();
   }
 
@@ -202,16 +262,11 @@ export struct ReaderControlSearchContent {
   private publishMinimumMeasurer(): void {
     if (!this.queryInputMounted || this.minimumIdentity.length === 0) return;
     const identity = this.minimumIdentity;
-    const state = this.state, first = state.kind === 'results' ? state.results[0] : undefined;
-    const pagination = state.kind === 'results' && (state.hasMore === true || state.loadMoreError !== undefined || state.paginationRetired === true);
-    const retainedFailure = pagination && this.retainedLoadMoreFailure;
-    const facts: ReaderSearchMinimumFacts = { query: this.query, title: this.resultTitle(first), snippet: first?.snippet ?? '',
-      message: this.statusText(), hasResults: first !== undefined, resultsMode: state.kind === 'results', loading: state.kind === 'loading',
-      loadMoreLabel: !pagination ? '' : retainedFailure ? state.kind === 'results' && state.hasMore === true ? '重试' : '重新搜索' :
-        state.kind === 'results' && state.loadingMore === true ? '正在加载…' :
-          state.kind === 'results' && state.loadMoreError !== undefined ? '加载失败，重试' : '加载更多结果',
-      loadMoreMessage: retainedFailure ? state.kind === 'results' && state.paginationRetired === true ? '需重新搜索才能加载更多' : '后续结果加载失败' : '' };
-    const signature = JSON.stringify([identity, this.minimumMetricsRevision, facts]);
+    const state = this.currentSearchState();
+    const facts = readerControlSearchMinimumFacts({ query: this.query, state: state,
+      resultScope: this.searchPublication.resultScrollScopeFor(state), retainedLoadMoreFailure: this.retainedLoadMoreFailure });
+    if (this.preparedMinimumRequired) { this.onMinimumFactsChanged(identity, { module: 'search', search: facts }); return; }
+    const signature = JSON.stringify([identity, this.minimumMetricsRevision, readerControlModuleFactsGeometryKey({ module: 'search', search: facts })]);
     if (this.minimumMeasurer !== undefined && this.registeredMinimumIdentity === identity &&
       this.minimumFactsSignature === signature) return;
     const context = this.getUIContext();
@@ -227,7 +282,7 @@ export struct ReaderControlSearchContent {
       }
       const ticket = key.slice(0, key.lastIndexOf('|'));
       if (ticket !== this.minimumProfileTicket) {
-        const selected = this.minimumProfiles.get(this.minimumKey);
+        const selected = this.currentMinimumProfile();
         this.minimumProfiles.clear();
         if (selected !== undefined) this.minimumProfiles.set(this.minimumKey, selected);
         this.minimumProfileTicket = ticket;
@@ -242,7 +297,7 @@ export struct ReaderControlSearchContent {
   }
 
   private naturalSize(progress: number): ReaderControlSearchNaturalSize | undefined {
-    const profile = this.minimumProfiles.get(this.minimumKey);
+    const profile = this.currentMinimumProfile();
     if (profile === undefined) return undefined;
     const q = profile.quick.natural, f = profile.full.natural;
     return { fieldHeightVp: q.fieldHeightVp + (f.fieldHeightVp - q.fieldHeightVp) * progress,
@@ -258,10 +313,11 @@ export struct ReaderControlSearchContent {
   }
 
   private resultLayout(): ReaderControlSearchScrollLayout {
+    const displayState = this.displayState();
     return { rowHeightVp: this.frame().rowHeight, viewportHeightVp: Math.max(0, this.frame().results.height - this.frame().loadMoreHeightVp -
       (this.frame().loadMoreHeightVp > 0 ? 4 : 0)),
       contentOriginVp: this.frame().firstResult.y, contentEndPaddingVp: this.frame().resultEndPadding,
-      resultCount: this.state.kind === 'results' ? this.state.results.length : 0 };
+      resultCount: displayState.kind === 'results' ? displayState.results.length : 0 };
   }
 
   private resultListFrame(): ReaderControlSearchListProjection {
@@ -313,8 +369,9 @@ export struct ReaderControlSearchContent {
   }
 
   private onResultDataChanged(): void {
+    const displayState = this.displayState();
     this.publishMinimumMeasurer();
-    const state = this.state;
+    const state = displayState;
     const change = this.resultDataSource.publish(state.kind === 'results' ? state.keyword : state.kind,
       state.kind === 'results' ? state.results : []);
     if (change !== 'replace') {
@@ -473,7 +530,8 @@ export struct ReaderControlSearchContent {
   }
 
   private tryResultScrollRebase(): void {
-    if (!this.resultScrollMounted || this.state.kind !== 'results' ||
+    const displayState = this.displayState();
+    if (!this.resultScrollMounted || displayState.kind !== 'results' ||
       Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
     const next = prepareReaderControlSearchScrollRebase(this.resultScrollPosition, this.resultLayout(), {
       progress: this.motionProgress, inputEnabled: this.currentInputEnabled(),
@@ -496,6 +554,7 @@ export struct ReaderControlSearchContent {
   }
 
   private scheduleResultNativeFollow(): void {
+    const displayState = this.displayState();
     if (!this.resultScrollMounted || this.resultNativeFollowTimer >= 0) return;
     const lifecycle = this.resultNativeFollowLifecycle;
     // Coalesce property Watch deliveries outside native List reconciliation.
@@ -503,7 +562,7 @@ export struct ReaderControlSearchContent {
     this.resultNativeFollowTimer = setTimeout((): void => {
       if (lifecycle !== this.resultNativeFollowLifecycle || !this.resultScrollMounted) return;
       this.resultNativeFollowTimer = -1;
-      if (this.state.kind !== 'results' || this.resultPointers.length > 0 || this.resultUserScrolling ||
+      if (displayState.kind !== 'results' || this.resultPointers.length > 0 || this.resultUserScrolling ||
         this.resultListFrame().viewportHeightVp <= 0 || Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
       const endpoint = this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1);
       if (endpoint) { this.tryResultScrollRebase(); return; }
@@ -518,6 +577,7 @@ export struct ReaderControlSearchContent {
   }
 
   build() {
+    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Stack({ alignContent: Alignment.TopStart }) {
       // Query bottom follows the actual input row in both forms.
       Row().height(this.frame().queryDivider.height).width(this.frame().queryDivider.width)
@@ -530,7 +590,9 @@ export struct ReaderControlSearchContent {
     }
     .width(this.availableWidth).height(this.availableHeight)
     .attributeModifier(new ReaderPanelFrame('reader-full-card', this.appThemeScheme))
-    .clip(true).enabled(this.currentInputEnabled());
+    .clip(true).enabled(this.currentInputEnabled() || this.currentEditorInputEnabled());
+
+    }
   }
 
   @Builder
@@ -540,7 +602,7 @@ export struct ReaderControlSearchContent {
         naturalInputHeightVp: this.frame().inputHeightVp,
         text: this.query, placeholder: '搜索正文内容', inputController: this.inputController, inputIdentity: this.queryInputId,
         fieldAccessibilityLabel: '搜索正文内容', onTextChange: (value: string): void => {
-          if (this.queryInputMounted && this.currentInputEnabled()) this.onQueryChange(value);
+          if (this.currentEditorInputEnabled()) this.onQueryChange(value);
         },
         onEditingChange: (editing: boolean): void => this.onQueryEditingChanged(editing), onSubmit: (): void => this.submit() });
     }
@@ -585,7 +647,7 @@ export struct ReaderControlSearchContent {
   @Builder
   private resultsBody() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.state.kind === 'results') {
+      if (this.displayState().kind === 'results') {
         List({ space: 0, scroller: this.resultScroller, initialIndex: this.resultInitialNativeIndex }) {
           LazyForEach(this.resultDataSource, (result: ReadingContentSearchResult, index: number) => {
             ListItem() {
@@ -618,7 +680,7 @@ export struct ReaderControlSearchContent {
         this.loadMoreAction();
       } else {
         Stack({ alignContent: Alignment.Center }) {
-          ReaderPageState({ message: this.statusText(), loading: this.state.kind === 'loading', padded: false,
+          ReaderPageState({ message: this.statusText(), loading: this.displayState().kind === 'loading', padded: false,
             mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
         }.width('100%').height('100%')
           .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
@@ -632,32 +694,67 @@ export struct ReaderControlSearchContent {
    * Keep pagination affordance outside the result extent so adding a page does
    * not alter the authored row trajectory or the quick/full morph geometry.
    */
+  private displayResults(): ReaderQuickSearchResultsState | undefined {
+    const state = this.displayState();
+    return state.kind === 'results' ? state : undefined;
+  }
+  private displayedResultScope(): number {
+    return this.displayedFacts()?.resultScope ?? this.searchPublication.resultScrollScopeFor(this.displayState());
+  }
+  private loadMoreActionEnabled(recovery: boolean): boolean {
+    const displayed = this.displayState();
+    const scope = this.displayedResultScope();
+    const state = this.currentSearchState();
+    return state.kind === 'results' && this.resultActionCurrent(displayed, scope, state) &&
+      (recovery ? state.loadMoreError !== undefined || state.paginationRetired === true : state.hasMore === true);
+  }
+  private loadMoreActionHandler(recovery: boolean): () => void {
+    const scope = this.displayedResultScope();
+    return (): void => this.performLoadMore(recovery, scope);
+  }
+  private performLoadMore(recovery: boolean, expectedScope: number): void {
+    const displayed = this.displayState();
+    const state = this.currentSearchState();
+    if (this.displayedResultScope() !== expectedScope ||
+      state.kind !== 'results' || !this.resultActionCurrent(displayed, expectedScope, state)) return;
+    if (recovery && state.loadMoreError === undefined && state.paginationRetired !== true) return;
+    if (state.hasMore === true) this.onLoadMore();
+    else if (recovery) this.submit();
+  }
+  private resultActionCurrent(displayed: ReaderQuickSearchState, scope: number,
+    state: ReaderQuickSearchState = this.currentSearchState()): boolean {
+    return displayed.kind === 'results' && scope > 0 && this.queryInputMounted && this.currentInputEnabled() &&
+      (this.motionProgress === 0 || this.motionProgress === 1) && state.kind === 'results' &&
+      this.searchPublication.resultScrollScopeFor(state) === scope && state.keyword === displayed.keyword &&
+      state.loadingMore !== true;
+  }
+  private displayedLoadMoreFailure(): boolean {
+    const displayed = this.displayedFacts();
+    return displayed === undefined ? this.retainedLoadMoreFailure : displayed.loadMoreMessage.length > 0;
+  }
+
   @Builder
   private loadMoreAction() {
-    if (this.state.kind === 'results' && (this.state.hasMore === true || this.state.loadMoreError !== undefined ||
-      this.state.paginationRetired === true)) {
-      if (this.retainedLoadMoreFailure) {
+    if (this.displayState().kind === 'results' && (this.displayResults()?.hasMore === true || this.displayResults()?.loadMoreError !== undefined ||
+      this.displayResults()?.paginationRetired === true)) {
+      if (this.displayedLoadMoreFailure()) {
         Row({ space: 10 }) {
-          Text(this.state.paginationRetired === true ? '需重新搜索才能加载更多' : '后续结果加载失败')
+          Text(this.displayResults()?.paginationRetired === true ? '需重新搜索才能加载更多' : '后续结果加载失败')
             .attributeModifier(new ReaderSearchMeasuredMessageFrame(this.frame().loadMoreHeightVp > 0))
             .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
             .lineHeight(MESSAGE_BODY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-          ReaderRecoveryAction({ label: this.state.hasMore === true ? '重试' : '重新搜索', variant: 'text', isBusy: this.state.loadingMore === true,
-            actionEnabled: this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1),
-            onReconcile: (): void => {
-              if (this.state.kind !== 'results' || !this.currentInputEnabled() ||
-                (this.motionProgress !== 0 && this.motionProgress !== 1) || this.state.loadingMore === true ||
-                (this.state.loadMoreError === undefined && this.state.paginationRetired !== true)) return;
-              if (this.state.hasMore === true) this.onLoadMore(); else this.submit();
-            } });
+          ReaderRecoveryAction({ label: this.displayResults()?.hasMore === true ? '重试' : '重新搜索', variant: 'text', isBusy: this.displayResults()?.loadingMore === true,
+            generation: this.displayedResultScope(),
+            actionEnabled: this.loadMoreActionEnabled(true),
+            onReconcile: (expected: number): void => this.performLoadMore(true, expected) });
         }.width(this.frame().results.width).height(Math.max(44, this.frame().loadMoreHeightVp)).justifyContent(FlexAlign.Center)
           .position({ x: 0, y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp)) })
           .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
       } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Text(this.state.loadingMore === true ? '正在加载…' :
-          (this.state.loadMoreError === undefined ? '加载更多结果' : '加载失败，重试'))
+        Text(this.displayResults()?.loadingMore === true ? '正在加载…' :
+          (this.displayResults()?.loadMoreError === undefined ? '加载更多结果' : '加载失败，重试'))
           .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight)
           .fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
@@ -668,14 +765,10 @@ export struct ReaderControlSearchContent {
         y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp) - 4) })
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
-      .enabled(this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1) &&
-        this.state.loadingMore !== true)
-      .accessibilityText(this.state.loadingMore === true ? '正在加载更多搜索结果' :
-        (this.state.loadMoreError === undefined ? '加载更多搜索结果' : '重试加载更多搜索结果'))
-      .onClick((): void => {
-        if (this.state.kind === 'results' && this.state.hasMore === true && this.state.loadingMore !== true && this.currentInputEnabled() &&
-          (this.motionProgress === 0 || this.motionProgress === 1)) this.onLoadMore();
-      });
+      .enabled(this.loadMoreActionEnabled(false))
+      .accessibilityText(this.displayResults()?.loadingMore === true ? '正在加载更多搜索结果' :
+        (this.displayResults()?.loadMoreError === undefined ? '加载更多搜索结果' : '重试加载更多搜索结果'))
+      .onClick(this.loadMoreActionHandler(false));
       }
     }
   }
@@ -720,7 +813,7 @@ export struct ReaderControlSearchContent {
   }
 
   private canSearch(): boolean {
-    return this.queryInputMounted && this.currentInputEnabled() && this.query.trim().length > 0 && this.state.kind !== 'loading';
+    return this.queryInputMounted && this.currentInputEnabled() && this.query.trim().length > 0 && this.currentSearchState().kind !== 'loading';
   }
 
   private submit(): void {
@@ -730,12 +823,13 @@ export struct ReaderControlSearchContent {
   // LazyForEach identity is stable, but a later result set may replace its payload.
   // Builder update closures resolve current owner data, never the first object.
   private currentResultIndex(chapterIndex: number, chapterOffset: number): number {
-    if (this.state.kind !== 'results') {
+    const displayState = this.displayState();
+    if (displayState.kind !== 'results') {
       this.indexedResultRows = undefined;
       this.resultRowIndexes.clear();
       return -1;
     }
-    const rows = this.state.results;
+    const rows = displayState.results;
     if (this.indexedResultRows !== rows) {
       // A result publication may replace the array. Index it once instead of scanning
       // all rows for every title, snippet span, clip and accessibility label.
@@ -752,8 +846,9 @@ export struct ReaderControlSearchContent {
   }
 
   private currentResult(chapterIndex: number, chapterOffset: number): ReadingContentSearchResult | undefined {
+    const displayState = this.displayState();
     const index = this.currentResultIndex(chapterIndex, chapterOffset);
-    return this.state.kind === 'results' && index >= 0 ? this.state.results[index] : undefined;
+    return displayState.kind === 'results' && index >= 0 ? displayState.results[index] : undefined;
   }
 
   private currentSnippet(chapterIndex: number, chapterOffset: number): ReaderSearchSnippetParts {
@@ -763,22 +858,21 @@ export struct ReaderControlSearchContent {
   }
 
   private selectCurrentResult(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = ''): void {
-    const result = this.currentResult(chapterIndex, chapterOffset);
+    const state = this.currentSearchState();
+    const result = state.kind === 'results' ? state.results.find((item: ReadingContentSearchResult): boolean =>
+      item.chapterIndex === chapterIndex && item.chapterOffset === chapterOffset) : undefined;
     if (this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1) &&
       result !== undefined && (sourceId.length === 0 || result.sourceId === sourceId) &&
       (bookId.length === 0 || result.bookId === bookId)) this.onSelectResult(result);
   }
 
   private resultTitle(result: ReadingContentSearchResult | undefined): string {
-    if (result === undefined) return '';
-    return result.chapterTitle.trim().length > 0 ? result.chapterTitle : `第 ${result.chapterIndex + 1} 章`;
+    return readerControlSearchResultTitle(result);
   }
 
   private statusText(): string {
-    if (this.state.kind === 'loading') return '正在搜索…';
-    if (this.state.kind === 'empty') return `未找到“${this.state.keyword}”`;
-    if (this.state.kind === 'error') return this.state.message;
-    return '输入关键词搜索正文内容';
+    const displayState = this.displayState();
+    return readerControlSearchStatusText(displayState);
   }
 
 }

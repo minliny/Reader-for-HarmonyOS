@@ -1,3 +1,4 @@
+import type { ReaderControlDirectorySnapshot } from './ReaderControlDirectoryModel';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import type { UIContext } from '@ohos.arkui.UIContext';
@@ -11,7 +12,39 @@ import type { ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGe
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
 
+export interface ReaderDirectoryMinimumFactsInput {
+  snapshot: ReaderControlDirectorySnapshot;
+  tab: string;
+  catalogComplete: boolean;
+  bookmarkLoadFailed: boolean;
+  bookmarkLoadMessage: string;
+}
+export function readerControlDirectoryMinimumFacts(input: ReaderDirectoryMinimumFactsInput): ReaderDirectoryMinimumFacts {
+  const snapshot = input.snapshot;
+  const representative = input.snapshot.rows[Math.max(0, input.snapshot.targetRow)] ?? input.snapshot.rows[0];
+  const incomplete = input.tab === 'directory' && !input.catalogComplete;
+  const status = incomplete ? input.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :
+    input.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整' : '';
+  const action = incomplete && input.snapshot.catalogState !== 'loading' ?
+    input.snapshot.catalogState === 'failed' ? '重试加载目录' : '加载完整目录' : '';
+  return { readViewSnapshot: (): ReaderControlDirectorySnapshot => snapshot, viewCatalogComplete: input.catalogComplete,
+    viewBookmarkLoadFailed: input.bookmarkLoadFailed, viewBookmarkLoadMessage: input.bookmarkLoadMessage, tab: input.tab, title: representative?.chapter?.title ?? representative?.bookmark?.chapterTitle ?? '',
+    excerpt: representative?.bookmark?.excerpt ?? '', currentTitle: input.snapshot.currentTitle,
+    currentPosition: input.snapshot.currentPosition, hasRows: input.snapshot.rows.length > 0,
+    loading: input.snapshot.loading || incomplete && input.snapshot.catalogState === 'loading',
+    bookmarkError: input.tab === 'bookmarks' && input.bookmarkLoadFailed,
+    message: input.tab === 'bookmarks' ? input.bookmarkLoadFailed ?
+      input.bookmarkLoadMessage.trim().length === 0 || input.bookmarkLoadMessage === '书签载入失败，请稍后重试' ? '请稍后重试。' : input.bookmarkLoadMessage :
+      input.snapshot.loading ? '书签载入中…' : '在阅读页面下拉，收藏当前位置。' : incomplete ? status :
+        input.snapshot.loading ? '目录载入中…' : '没有匹配的章节',
+    action: input.tab === 'bookmarks' ? input.bookmarkLoadFailed ? '重试' : input.snapshot.loading ? '' : '返回目录' : action,
+    catalogStatus: status, catalogAction: action };
+}
 export interface ReaderDirectoryMinimumFacts {
+  readViewSnapshot: () => ReaderControlDirectorySnapshot;
+  viewCatalogComplete: boolean;
+  viewBookmarkLoadFailed: boolean;
+  viewBookmarkLoadMessage: string;
   tab: string;
   title: string;
   excerpt: string;
@@ -77,21 +110,21 @@ function form(context: UIContext, width: number, full: boolean,
     return undefined;
   const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
   const tabBase = full ? 36 : 31;
-  const tabHeight = Math.max(readerScaledControlHeight(44, TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number, scale), tabBase, tab.heightVp, bookmarkTab.heightVp, 15);
-  const inputHeight = readerScaledControlHeight(42, 24, scale);
-  const fieldHeight = Math.max(readerScaledControlHeight(44, 24, scale), inputHeight + 2);
+  const tabHeight = Math.max(readerScaledControlHeight(tabBase, TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number, scale), tabBase, tab.heightVp, bookmarkTab.heightVp, 15);
+  const inputHeight = readerScaledControlHeight(30, 24, scale);
+  const fieldHeight = Math.max(readerScaledControlHeight(32, 24, scale), inputHeight + 2);
   const inputMinimumWidth = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 6 * scale,
     Math.min(field.singleLineWidthVp, fieldGlyph.singleLineWidthVp * 6));
   const toolbarBudget = readerDirectoryToolbarBudget(width - 2, facts.tab === 'directory', fieldHeight,
-    inputMinimumWidth, Math.max(52, fieldHeight + 8) - 2);
+    inputMinimumWidth, Math.max(52, fieldHeight + 20) - 2);
   const toolbarHeight = toolbarBudget.height + 2;
   const bookmark: ReaderControlBookmarkNaturalSize = {
     titleHeightVp: Math.max(14, bookmarkTitle.heightVp, meta.heightVp, pending.heightVp),
-    excerptHeightVp: bookmarkLine.heightVp * 2,
+    excerptHeightVp: (full ? 28 : 24) + Math.max(0, bookmarkLine.heightVp - 14) * 2,
   };
   const bookmarkHeight = Math.max(full ? 74 : 54, (full ? 9 : 7) + bookmark.titleHeightVp +
     (full ? 9 : 2) + bookmark.excerptHeightVp + (full ? 14 : 7));
-  const rowHeight = facts.tab === 'bookmarks' ? bookmarkHeight : Math.max(readerScaledControlHeight(44, 20, scale), title.heightVp);
+  const rowHeight = facts.tab === 'bookmarks' ? bookmarkHeight : Math.max(readerScaledControlHeight(full ? 40 : 32, 20, scale), title.heightVp);
   const listTop = (full ? 99 : facts.tab === 'bookmarks' ? 47 : 48) + tabHeight - tabBase +
     (full ? toolbarHeight - 52 : 0);
   const footerHeight = facts.tab === 'directory' ? Math.max(readerScaledControlHeight(48, 16, scale),

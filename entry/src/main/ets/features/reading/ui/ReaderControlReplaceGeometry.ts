@@ -1,7 +1,7 @@
 import {
   readerControlActor, readerControlLerp, readerControlUnit, sampleReaderControlActor,
   type ReaderControlActorFrame,
-} from './ReaderControlActorGeometry';
+} from './ReaderControlActorGeometry.ts';
 
 export interface ReaderControlReplaceEndpointMinimum {
   width: number;

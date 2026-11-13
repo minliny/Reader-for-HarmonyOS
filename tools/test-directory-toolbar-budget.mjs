@@ -87,7 +87,7 @@ function panel(width, height, scale, tab) {
     readerWindowMetrics: () => metrics, readerFontFamilyReady: () => ready }).owner;
   Object.assign(owner, { panelWidthOverride: width, panelHeightOverride: height, expandedLayout: width > 600,
     embeddedInControl: false, activeTab: tab, readerWindowMetricsRevision: 1, motionProgress: 1,
-    listRowHeight: () => surface.readerScaledControlHeight(44, 20, scale) });
+    listRowHeight: () => surface.readerScaledControlHeight(40, 20, scale) });
   return { owner, measure, metrics, ready: value => { ready = value; } };
 }
 
@@ -96,7 +96,7 @@ function controlGeometry(width, height, scale, tab, profile) {
     'fontScale', 'directoryQueryHeight', 'value'], { ...deps,
     readerWindowMetrics: () => ({ systemFontScale: scale }) }).owner;
   Object.assign(owner, { availableWidth: width, availableHeight: height, tab, progress: 1, minimumMetricsRevision: 1,
-    selectedMinimum: () => profile, tabHeight: () => 44, rowHeight: () => 44, footerHeight: () => 48 });
+    selectedMinimum: () => profile, tabHeight: () => 36, rowHeight: () => 40, footerHeight: () => 48 });
   return owner;
 }
 
@@ -136,7 +136,7 @@ function assertToolbarRows(rendered) {
   const rows = [...owner.nodes.values()].filter(node => node.type === 'Row' && node.padding?.top === 3);
   assert.ok(rows.length > 0);
   for (const row of rows) assert.ok(row.height >= owner.controlFieldHeight() + 6,
-    'both toolbar rows pay the current scaled44vp carrier and vertical padding');
+    'both toolbar rows pay the current glyph growth,44-high tool lane and vertical padding');
 }
 
 for (const id of selected) {
@@ -145,10 +145,10 @@ for (const id of selected) {
       const rendered = panel(width, 736, scale, tab), owner = rendered.owner;
       const minimum = owner.toolbarInputMinimumWidth(), before = rendered.measure.calls();
       const raw = readerDirectoryToolbarBudget(owner.innerWidth(), tab === 'directory', owner.queryHeight(), minimum);
-      const availableField = raw.stacked ? owner.innerWidth() - 20 : owner.innerWidth() - 20 - 8 - raw.actionsWidth;
+      const availableField = raw.stacked ? owner.innerWidth() - 20 : owner.innerWidth() - 20 - 5 - raw.actionsWidth;
       assert.ok(availableField - 39 + .01 >= minimum, 'useful editable text has its own paid lane');
       assert.equal(owner.searchControlsHeight(), raw.height + 1);
-      assert.equal(raw.height, raw.stacked ? (owner.queryHeight() + 6) * 2 + 8 : owner.queryHeight() + 6);
+      assert.equal(raw.height, raw.stacked ? (owner.queryHeight() + 18) * 2 + 8 : owner.queryHeight() + 18);
       const heights = owner.heights();
       assert.ok(owner.tabStripHeight() + owner.searchControlsHeight() + heights.chapterList + owner.standaloneFooterHeight() <= heights.body);
       for (const query of ['', '一', '章节名称']) { owner.searchDraft = query; owner.searchControlsHeight(); }
@@ -182,23 +182,24 @@ for (const id of selected) {
       }
       compatibilitySamples.push({ width, scale, tab, host: 'unmounted-legacy-embedded', result: 'finite-budget-conservation' });
     }
-    // Independent approved normal-composition bounds. Four non-overlapping44
-    // carriers are paid separately from the32vp painted buttons.
+    // The original four32-wide tool lanes keep their five-vp gaps. Their
+    // vertical44 responses remain distinct from32 paint; E2 width stays open.
     const normal = mountedToolbar(336, 1, 'directory');
     assert.equal(normal.owner.queryStacked(), false, 'approved normal width retains one toolbar row');
     assert.equal(normal.owner.controlToolbarHeight(), 50, 'normal toolbar pays44vp targets plus3vp vertical insets; control host adds2vp boundaries');
-    assert.equal(normal.owner.toolbarBudget().actionsWidth, 176);
+    assert.equal(normal.owner.toolbarBudget().actionsWidth, 143);
     assert.equal(mountedToolbar(314, 1, 'directory').owner.queryStacked(), false, 'current366vp phone full-content width retains one row');
     assert.equal(mountedToolbar(314, 2, 'directory').owner.queryStacked(), true, 'real2x text growth selects the narrow variant');
-    assert.equal(336 - 20 - 8 - 176, 132, 'the normal field has132vp instead of the regressed108vp');
+    assert.equal(336 - 20 - 5 - 143, 168, 'independent original toolbar retains168vp field');
     const inflated = readerDirectoryToolbarBudget(336, true, 44, 80);
     assert.equal(inflated.stacked, false);
-    const current = mountedToolbar(294, 1, 'directory');
-    assert.equal(current.owner.queryStacked(), true, 'the genuinely constrained294vp toolbar uses two paid rows');
+    assert.equal(mountedToolbar(294, 1, 'directory').owner.queryStacked(), false, '294vp retains an adequate126vp field');
+    const current = mountedToolbar(240, 1, 'directory');
+    assert.equal(current.owner.queryStacked(), true, 'a genuinely unpaid editable field selects two rows');
     const oldThreshold = toolbarSource.replace(/return this\.variant !== 'manga-catalog' && this\.toolbarBudget\(\)\.stacked;/,
-      "const count = this.showChapterTools ? 4 : 1; return this.variant !== 'manga-catalog' && this.availableWidthVp > 0 && this.availableWidthVp - 20 - count * 49 < 44;");
+      "return this.variant !== 'manga-catalog' && this.availableWidthVp > 0 && this.availableWidthVp - 20 - 5 - (this.showChapterTools ? 143 : 32) < 44;");
     assert.notEqual(oldThreshold, toolbarSource);
-    assert.throws(() => assert.equal(mountedToolbar(294, 1, 'directory', 'full-directory', oldThreshold).owner.queryStacked(), true));
+    assert.throws(() => assert.equal(mountedToolbar(240, 1, 'directory', 'full-directory', oldThreshold).owner.queryStacked(), true));
     const normalMinimum = pureModuleProbe(minimumSource, 'NormalDirectoryMinimum.ets', {
       ...deps, readerWindowMetrics: () => ({ systemFontScale: 1 }) }, ['measureReaderDirectoryMinimum']);
     const normalProfile = normalMinimum.measureReaderDirectoryMinimum(contextAt(1).context,
@@ -218,9 +219,9 @@ for (const id of selected) {
     assert.equal(measured.nominalListTop, profile.full.listTopVp);
     assert.ok(measured.nominalListTop >= measured.toolbarTop + measured.toolbarHeight);
     const firstFrame = controlGeometry(294, 736, 1, 'directory');
-    const legacyGeometry = resolveReaderControlDirectoryGeometry(1, 'directory', 736, 44, 0, 44);
-    assert.ok(firstFrame.contentGeometry().toolbarHeight > legacyGeometry.toolbarHeight,
-      'the new two-row child requires additional first-frame budget');
+    const legacyGeometry = resolveReaderControlDirectoryGeometry(1, 'directory', 736, 36, 44 - 32, 40);
+    assert.ok(firstFrame.contentGeometry().toolbarHeight < legacyGeometry.toolbarHeight,
+      'uniform44 field paint would inflate the independently restored first-frame toolbar');
     assert.ok(contentSource.includes('availableWidthVp: Math.max(0, this.availableWidth - 2)'));
     assert.ok(contentSource.includes('inputMinimumWidthVp: this.selectedMinimum()?.full.inputMinimumWidthVp'));
   }
@@ -231,19 +232,24 @@ for (const id of selected) {
       const nodes = owners.flatMap(value => [...value.nodes.values()]);
       const buttons = nodes.filter(node => node.type === 'Button');
       assert.equal(buttons.length, tab === 'directory' ? 4 : 1);
-      for (const button of buttons) { assert.equal(button.width, 44); assert.equal(button.height, owner.controlFieldHeight()); button.onClick(); }
+      for (const button of buttons) {
+        assert.equal(button.width, 32); assert.equal(button.height, Math.max(44, owner.controlFieldHeight()));
+        assert.deepEqual(button.responseRegion, { x: 0, y: 0, width: 32, height: Math.max(44, owner.controlFieldHeight()) });
+        button.onClick();
+      }
       assert.deepEqual(calls, tab === 'directory' ? ['search', 'top', 'bottom', 'sort'] : ['search']);
       const actionImages = [...owner.nodes.values()].filter(node => node.type === 'Image');
       assert.ok(actionImages.every(node => node.width === 16 && node.height === 16));
       const paints = [...owner.nodes.values()].filter(node => node.type === 'Stack' && node.width === 32);
       assert.equal(paints.length, buttons.length); assert.ok(paints.every(node => node.height === 32));
       const input = nodes.find(node => node.type === 'TextInput'); assert.ok(input);
-      assert.equal(input.height, owner.controlFieldHeight());
+      assert.ok(input.height > 0 && input.height <= owner.controlFieldHeight());
       input.onChange('第十章'); input.onSubmit(); assert.deepEqual(calls.slice(-2), [['text', '第十章'], 'search']);
       const previous = calls.length; owner.aboutToDisappear();
       for (const button of buttons) button.onClick(); input.onChange('旧事件'); input.onSubmit();
       assert.equal(calls.length, previous, 'retired standalone empty-focus callbacks cannot borrow live permission');
-      samples.push({ kind: id, width, scale, tab, buttons: buttons.length, glyph: 16, paint: 32, target: 44 });
+      samples.push({ kind: id, width, scale, tab, buttons: buttons.length, glyph: 16, paint: 32,
+        targetWidth: 32, targetHeight: Math.max(44, owner.controlFieldHeight()), complete44: false, conflict: 'neighbor' });
     }
     const legacy = toolbarSource.replace("return this.directoryMounted && (id.length === 0 || (id === this.directoryFocusId && this.directoryFocusCurrent(id)));",
       "return id.length === 0 || (this.directoryMounted && id === this.directoryFocusId && this.directoryFocusCurrent(id));");
@@ -253,7 +259,7 @@ for (const id of selected) {
     const before = retired.calls.length;
     [...retired.owner.nodes.values()].find(node => node.type === 'Button').onClick();
     assert.ok(retired.calls.length > before, 'the old empty-focus lease admits an already retired actor');
-    const shortToolRow = toolbarSource.replace("Row() { this.queryTools(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 6)",
+    const shortToolRow = toolbarSource.replace("Row() { this.queryTools(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 18)",
       "Row() { this.queryTools(inputFocusId); }.width('100%').height(50)");
     assert.notEqual(shortToolRow, toolbarSource);
     assert.throws(() => assertToolbarRows(mountedToolbar(316, 2, 'directory', 'full-directory', shortToolRow)), /both toolbar rows pay/);
@@ -269,7 +275,7 @@ for (const id of selected) {
   recordContractCasePass(id);
 }
 if (selected.length) {
-  const output = new URL('../.reader-artifacts/vm-ui-feedback-20261113/directory-toolbar-budget/', import.meta.url);
+  const output = new URL('../.reader-artifacts/ui-full-fix-20261113/oracle-directory-toolbar/' + selected.join('+') + '/', import.meta.url);
   mkdirSync(output, { recursive: true });
   writeFileSync(new URL('sdk-report.json', output), JSON.stringify({ result: 'PASS', selected, samples, finiteCompatibility: compatibilitySamples,
     fonts: Object.entries(fonts).map(([family, path]) => ({ family, path: path.pathname, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') })),

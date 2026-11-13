@@ -1,6 +1,8 @@
+import { readerControlReplaceMinimumFacts, measureReaderControlReplaceMinimum } from './ReaderControlReplaceMinimum';
+import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE, TYPE_READER_REPLACE_RULE_NAME, TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE, TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE, TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL } from '../../../ui/foundation/ReaderTypography';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
@@ -8,8 +10,7 @@ import { ReaderControlQuickBack } from './ReaderControlQuickBack';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { ReaderBoundedSurfaceActions } from '../../../ui/surfaces/ReaderBoundedSurfaceActions';
-import { TYPE_READER_REPLACE_RULE_NAME } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE, TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE, TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL } from '../../../ui/foundation/ReaderTypography';
+
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { FrameCallback } from '@kit.ArkUI';
 import { PathShape } from '@ohos.arkui.shape';
@@ -27,13 +28,10 @@ import { ReaderReplacePreview } from '../application/ReaderReplaceQuickGateway';
 import { createReaderControlReplaceDraft, createReaderControlReplaceState,
   type ReaderControlReplaceState } from '../presentation/ReaderControlReplaceState';
 import { readerControlUnit } from './ReaderControlActorGeometry';
-import { sampleReaderControlReplace, readerControlReplaceEndpoint,
-  type ReaderControlReplaceFrame } from './ReaderControlReplaceGeometry';
+import { sampleReaderControlReplace, readerControlReplaceEndpoint, type ReaderControlReplaceFrame, type ReaderControlReplaceMinimumProfile } from './ReaderControlReplaceGeometry';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 
-import { measureReaderControlReplaceMinimum } from './ReaderControlReplaceMinimum';
 import type { ReaderControlCandidateWidths, ReaderControlModuleMeasurer, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
-import type { ReaderControlReplaceMinimumProfile } from './ReaderControlReplaceGeometry';
 
 class ReaderReplaceEditorFocusFrame extends FrameCallback {
   private readonly applyFocus: () => void;
@@ -51,6 +49,10 @@ class ReaderReplaceEditorFocusFrame extends FrameCallback {
 export struct ReaderControlReplaceContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
+  @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
+  @Prop preparedMinimumRequired: boolean = false;
+  onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
+    (_identity: string, _facts: ReaderControlModuleFacts): void => {};
   @Prop @Watch('onSourceChanged') state: ReaderControlReplaceState = createReaderControlReplaceState();
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
   @Prop @Watch('onMinimumIdentityChanged') minimumIdentity: string = '';
@@ -87,6 +89,41 @@ export struct ReaderControlReplaceContent {
   @State @Watch('onMinimumContentChanged') private localError: string = '';
   @State private localPending: boolean = false;
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
+  private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
+  private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
+    const current = this.preparedMinimum;
+    if (current !== undefined && current.identity === this.minimumIdentity && current.key === this.minimumKey &&
+      readerControlModuleProfileMatches(current.moduleData, 'replace') && readerControlModuleFactsMatch(current.facts, 'replace')) return current;
+    const adopted = this.adoptedPrepared;
+    return this.preparedMinimumRequired && adopted !== undefined &&
+      readerControlModuleProfileMatches(adopted.moduleData, 'replace') && readerControlModuleFactsMatch(adopted.facts, 'replace') ? adopted : undefined;
+  }
+  private preparedProfile(): ReaderControlReplaceMinimumProfile | undefined {
+    return this.presentationPrepared()?.moduleData.replace;
+  }
+  private currentMinimumProfile(): ReaderControlReplaceMinimumProfile | undefined {
+    return this.preparedMinimumRequired ? this.preparedProfile() : this.preparedProfile() ?? this.minimumProfiles.get(this.minimumKey);
+  }
+  private displayState(): ReaderControlReplaceState {
+    return this.displayedFacts()?.readViewState() ?? this.state;
+  }
+  private displayLocalError(): string { return this.displayedFacts()?.viewLocalError ?? this.localError; }
+  private displayLayer(): string { return this.displayedFacts()?.viewLayer ?? this.layer; }
+  private displayedFacts(): ReaderControlReplaceMinimumFacts | undefined {
+    return this.preparedMinimumRequired && this.preparedProfile() !== undefined ? this.presentationPrepared()?.facts.replace : undefined;
+  }
+  private adoptedPreparedKey: string = '';
+  private onPreparedMinimumChanged(): void {
+    if (!this.preparedMinimumRequired) { this.onMotionChanged(); return; }
+    const prepared = this.preparedMinimum;
+    if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
+      !readerControlModuleProfileMatches(prepared.moduleData, 'replace') || !readerControlModuleFactsMatch(prepared.facts, 'replace')) return;
+    this.adoptedPrepared = prepared;
+    const adopted = `${prepared.identity}|${prepared.key}`;
+    if (adopted === this.adoptedPreparedKey) return;
+    this.adoptedPreparedKey = adopted;
+    this.onMotionChanged();
+  }
   private readonly scroller: Scroller = new Scroller();
   private readonly quickScroller: Scroller = new Scroller();
   @State private quickScrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
@@ -112,10 +149,13 @@ export struct ReaderControlReplaceContent {
   private readonly minimumMeasurer: ReaderControlModuleMeasurer =
     (widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined => this.measureMinimum(widths, key);
   private currentInputEnabled(): boolean {
-    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private statusText(): string {
+    const displayed = this.displayedFacts();
+    if (displayed !== undefined) return displayed.statusText;
     return this.state.errorMessage || this.localError || (this.state.status === 'loading' || this.state.status === 'idle' ?
       '规则载入中…' : this.emptyStateMessage());
   }
@@ -127,7 +167,7 @@ export struct ReaderControlReplaceContent {
     if (profile === undefined) return undefined;
     const ticket = key.slice(0, key.lastIndexOf('|'));
     if (ticket !== this.minimumCacheTicket) {
-      const selected = this.minimumProfiles.get(this.minimumKey);
+      const selected = this.currentMinimumProfile();
       this.minimumProfiles.clear();
       if (selected !== undefined && this.minimumKey.length > 0) this.minimumProfiles.set(this.minimumKey, selected);
       this.minimumCacheTicket = ticket;
@@ -148,6 +188,11 @@ export struct ReaderControlReplaceContent {
   }
   private onMinimumIdentityChanged(): void {
     if (!this.mounted) return;
+    if (this.preparedMinimumRequired) {
+      if (this.minimumIdentity.length > 0) this.onMinimumFactsChanged(this.minimumIdentity, { module: 'replace', replace: readerControlReplaceMinimumFacts({
+        state: this.state, localError: this.localError, layer: this.layer, temporaryTitle: this.temporaryTitle(), full: this.motionProgress === 1 }) });
+      return;
+    }
     if (this.publishedMinimumIdentity.length > 0 && this.publishedMinimumIdentity !== this.minimumIdentity)
       this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     this.publishedMinimumIdentity = this.minimumIdentity;
@@ -160,8 +205,13 @@ export struct ReaderControlReplaceContent {
     this.lastSessionKey = this.state.sessionKey;
     this.mounted = true;
     this.onMinimumIdentityChanged();
+
+    if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
   aboutToDisappear(): void {
+    this.adoptedPrepared = undefined;
+    this.adoptedPreparedKey = '';
+
     this.mounted = false;
     if (this.publishedMinimumIdentity.length > 0) this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     this.publishedMinimumIdentity = '';
@@ -202,22 +252,24 @@ export struct ReaderControlReplaceContent {
   }
   private frame(): ReaderControlReplaceFrame {
     const quickExtra = this.quickFlowExtra();
+    const minimum = this.currentMinimumProfile();
+    const key = this.preparedMinimumRequired ? this.presentationPrepared()?.key ?? '' : this.minimumKey;
     if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||
-      this.cachedHeight !== this.availableHeight || this.cachedMinimumKey !== this.minimumKey ||
+      this.cachedHeight !== this.availableHeight || this.cachedMinimumKey !== key ||
       this.cachedQuickContentHeight !== this.quickContentHeight || this.cachedQuickFlowExtra !== quickExtra) {
       this.cachedProgress = this.motionProgress;
       this.cachedWidth = this.availableWidth;
       this.cachedHeight = this.availableHeight;
-      this.cachedMinimumKey = this.minimumKey; this.cachedQuickContentHeight = this.quickContentHeight; this.cachedQuickFlowExtra = quickExtra;
-      this.cachedFrame = sampleReaderControlReplace(this.motionProgress, this.availableWidth, this.availableHeight + quickExtra * (1 - readerControlUnit(this.motionProgress)), this.minimumProfiles.get(this.minimumKey), this.quickContentHeight + quickExtra);
+      this.cachedMinimumKey = key; this.cachedQuickContentHeight = this.quickContentHeight; this.cachedQuickFlowExtra = quickExtra;
+      this.cachedFrame = sampleReaderControlReplace(this.motionProgress, this.availableWidth, this.availableHeight + quickExtra * (1 - readerControlUnit(this.motionProgress)), minimum, this.quickContentHeight + quickExtra);
     }
     return this.cachedFrame;
   }
   private quickFlowExtra(): number {
-    const minimum = this.minimumProfiles.get(this.minimumKey)?.quick;
+    const minimum = this.currentMinimumProfile()?.quick;
     if (minimum === undefined) return 0;
-    const count = Math.max(1, Math.min(3, this.state.rules.length));
-    const status = this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0;
+    const count = Math.max(1, Math.min(3, this.displayState().rules.length));
+    const status = this.displayedFacts()?.statusVisible ?? (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0);
     const rowsHeight = Math.max(minimum.rowHeight * count, status ? minimum.statusHeight : 0);
     const listTop = Math.max(47.55, 14.55 + minimum.backHeight + 9);
     return Math.max(0, listTop + rowsHeight + minimum.actionHeight + 30.45 - this.quickContentHeight);
@@ -258,8 +310,8 @@ export struct ReaderControlReplaceContent {
     return sampleReaderControlMotionPresentation(this.motionProgress);
   }
   private rowClip(index: number): PathShape {
-    const f = sampleReaderControlReplace(1, this.availableWidth, this.fullContentHeight, this.minimumProfiles.get(this.minimumKey), this.quickContentHeight);
-    const q = sampleReaderControlReplace(0, this.availableWidth, this.quickContentHeight + this.quickFlowExtra(), this.minimumProfiles.get(this.minimumKey), this.quickContentHeight + this.quickFlowExtra());
+    const f = sampleReaderControlReplace(1, this.availableWidth, this.fullContentHeight, this.currentMinimumProfile(), this.quickContentHeight);
+    const q = sampleReaderControlReplace(0, this.availableWidth, this.quickContentHeight + this.quickFlowExtra(), this.currentMinimumProfile(), this.quickContentHeight + this.quickFlowExtra());
     const b = this.frame();
     const full: ReaderControlMotionClipRect = { x: 0, y: index * (f.rowHeight + f.rowGap) - this.scrollMotion.fullScrollOffset,
       width: f.list.width, height: f.rowHeight };
@@ -434,6 +486,9 @@ export struct ReaderControlReplaceContent {
       this.cachedRuleIndices.set(rule.id, index);
     }
   }
+  private displayRule(snapshot: ReaderReplaceRule): ReaderReplaceRule {
+    return this.displayState().rules.find((rule: ReaderReplaceRule): boolean => rule.id === snapshot.id) ?? snapshot;
+  }
   private currentRule(snapshot: ReaderReplaceRule): ReaderReplaceRule {
     this.refreshRuleLookup();
     // A removed ForEach row can finish rendering its old snapshot until it is
@@ -459,6 +514,7 @@ export struct ReaderControlReplaceContent {
   }
 
   build() {
+    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Stack({ alignContent: Alignment.TopStart }) {
       Row().width(this.availableWidth).height(this.availableHeight)
         .attributeModifier(new ReaderPanelFrame('reader-full-card', this.appThemeScheme)).hitTestBehavior(HitTestMode.None);
@@ -470,10 +526,10 @@ export struct ReaderControlReplaceContent {
             Column({ space: this.frame().rowGap }) {
               // Do not replace this with state.rules.slice(0, 3). Same row identity
               // and same source collection must remain mounted throughout morph.
-              ForEach(this.state.rules, (rule: ReaderReplaceRule) => {
-                this.ruleRow((): ReaderReplaceRule => this.currentRule(rule), (): number => this.currentRuleIndex(rule.id));
+              ForEach(this.displayState().rules, (rule: ReaderReplaceRule) => {
+                this.ruleRow((): ReaderReplaceRule => this.displayRule(rule), (): number => this.currentRuleIndex(rule.id));
               }, (rule: ReaderReplaceRule): string => `control-replace-rule-${rule.id}`);
-              if (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0) {
+              if (this.displayState().rules.length === 0 || this.displayState().errorMessage.length > 0 || (this.displayedFacts()?.statusVisible ?? (this.localError.length > 0))) {
                 this.statusContent();
               }
               // Complete preview business remains reachable without altering the
@@ -490,14 +546,14 @@ export struct ReaderControlReplaceContent {
           }
           .width(this.frame().list.width).height(this.frame().list.height)
           .position({ x: this.frame().list.x, y: this.frame().list.y })
-          .scrollBar(BarState.Off).enableScrollInteraction(this.fullInput() && this.layer === '')
+          .scrollBar(BarState.Off).enableScrollInteraction(this.fullInput() && this.displayLayer() === '')
           .edgeEffect(EdgeEffect.None)
           .onAppear((): void => { this.onSourceChanged(); this.syncMorphScroll(); })
           .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
             this.nativeScrollDelta(y, source))
           .onDidScroll((): void => this.onFullDidScroll())
           .clip(true);
-          if (this.state.rules.length > 0 && (this.state.errorMessage.length > 0 || this.localError.length > 0)) {
+          if (this.displayState().rules.length > 0 && (this.displayState().errorMessage.length > 0 || (this.displayedFacts()?.statusVisible ?? (this.localError.length > 0)))) {
             Column() { this.statusContent(); }
               .width(this.frame().list.width).height(Math.min(this.frame().statusHeight, this.frame().list.height))
               .position({ x: this.frame().list.x, y: this.frame().list.y })
@@ -508,21 +564,23 @@ export struct ReaderControlReplaceContent {
         .width(this.availableWidth)
         .height(Math.max(this.quickFlowContentHeight(), this.availableHeight + readerControlMorphScrollExtent(this.quickScrollMotion)))
         .translate({ y: this.quickScrollTranslation() })
-        .enabled(this.layer === '')
-        .hitTestBehavior(this.layer === '' ? HitTestMode.Default : HitTestMode.None)
-        .accessibilityLevel(this.layer === '' ? 'auto' : 'no-hide-descendants');
+        .enabled(this.displayLayer() === '')
+        .hitTestBehavior(this.displayLayer() === '' ? HitTestMode.Default : HitTestMode.None)
+        .accessibilityLevel(this.displayLayer() === '' ? 'auto' : 'no-hide-descendants');
       }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.quickFlowInput())
         .onAppear((): void => this.syncQuickScroll())
         .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
           this.quickScrollDelta(y, source))
         .onDidScroll((): void => this.onQuickDidScroll()).clip(true);
-      if (this.layer !== '') {
+      if (this.displayLayer() !== '') {
         ForEach([this.presentationRevision], (opening: number): void => {
           this.temporaryOverlay(opening);
         }, (opening: number): string => opening.toString());
       }
     }.width(this.availableWidth).height(this.availableHeight).clip(true);
+
+    }
   }
 
   @Builder
@@ -587,7 +645,7 @@ export struct ReaderControlReplaceContent {
         .accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)
         .onClick((): void => {
           if (this.layer === '' && this.readyInput() && index() >= 0 && (this.fullInput() || index() < 3)) {
-            const current = rule();
+            const current = this.currentRule(rule());
             this.perform(async (): Promise<void> => this.onToggle(current, !current.isEnabled));
           }
         });
@@ -609,9 +667,9 @@ export struct ReaderControlReplaceContent {
         .opacity(this.frame().progress).hitTestBehavior(HitTestMode.None);
       Row({ space: 5 }) {
         this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_edit_theme_night') : $r('app.media.reader_control_replace_edit')), (): string => `编辑${rule().name}`,
-          (): void => this.openEditor(rule()), (): boolean => index() >= 0, (): string => `edit:${rule().id}`);
+          (): void => this.openEditor(this.currentRule(rule())), (): boolean => index() >= 0, (): string => `edit:${rule().id}`);
         this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_delete_theme_night') : $r('app.media.reader_control_replace_delete')), (): string => `删除${rule().name}`,
-          (): void => this.askDelete(rule()), (): boolean => index() >= 0, (): string => `delete:${rule().id}`);
+          (): void => this.askDelete(this.currentRule(rule())), (): boolean => index() >= 0, (): string => `delete:${rule().id}`);
       }.width(93).height(44).position({ x: Math.max(0, this.frame().list.width - 106), y: (this.frame().rowHeight - 44) / 2 })
         .opacity(this.frame().progress).hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)
         .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
@@ -656,7 +714,7 @@ export struct ReaderControlReplaceContent {
     Column({ space: 4 }) {
       Text(this.statusText())
         .fontFamily(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-      if (this.state.errorMessage.length > 0 || this.localError.length > 0 || this.state.status === 'error') {
+      if (this.displayState().errorMessage.length > 0 || this.displayLocalError().length > 0 || this.displayState().status === 'error') {
         this.originalRecoveryAction();
       }
     }.width('100%').constraintSize({ minHeight: this.frame().statusHeight }).justifyContent(FlexAlign.Center)
@@ -673,7 +731,7 @@ export struct ReaderControlReplaceContent {
       .onClick((): void => { if (enabled() && (this.fullInput() || this.quickInput())) action(); });
   }
   private temporaryNeedsFlow(): boolean {
-    const actionsHeight = this.layer === 'editor' ? readerScaledControlHeight(44,
+    const actionsHeight = this.displayLayer() === 'editor' ? readerScaledControlHeight(44,
       TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp ?? 20,
       readerReadableFontScale(readerWindowMetrics().systemFontScale)) : 0;
     return this.availableHeight < 24 + this.frame().editorHeaderHeight + actionsHeight + 16 + 44;
@@ -707,8 +765,8 @@ export struct ReaderControlReplaceContent {
 
   @Builder
   private temporaryHeader(opening: number) {
-    ReaderBoundedSurfaceHeader({ specId: 'reader-replace-editor', title: this.temporaryTitle(),
-      naturalHeaderHeightVp: this.minimumProfiles.has(this.minimumKey) ? this.frame().editorHeaderHeight : 0,
+    ReaderBoundedSurfaceHeader({ specId: 'reader-replace-editor', title: this.displayedFacts()?.temporaryTitle ?? this.temporaryTitle(),
+      naturalHeaderHeightVp: this.currentMinimumProfile() !== undefined ? this.frame().editorHeaderHeight : 0,
       leading: (): void => { this.temporaryLeading(opening); }, accessory: (): void => { this.temporaryAccessory(opening); } });
   }
 
@@ -745,16 +803,16 @@ export struct ReaderControlReplaceContent {
   @Builder
   private temporaryBodyContent(opening: number) {
         Column({ space: 8 }) {
-          if (this.layer === 'editor') {
+          if (this.displayLayer() === 'editor') {
             this.editorFields(opening);
-          } else if (this.layer === 'delete') {
+          } else if (this.displayLayer() === 'delete') {
             Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)
               .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
             this.textAction('确认删除', (): void => {
               const rule = this.deleteCandidate;
               if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);
             }, (): boolean => this.temporaryInputCurrent(opening) && this.readyInput());
-          } else if (this.layer === 'import-confirm') {
+          } else if (this.displayLayer() === 'import-confirm') {
             Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')
               .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
             this.textAction('选择文件并导入', (): void => { this.confirmImport(); },
@@ -762,8 +820,8 @@ export struct ReaderControlReplaceContent {
           } else {
             this.previewContent(opening);
           }
-          if (this.localError.length > 0 || this.state.errorMessage.length > 0) {
-            Text(this.localError || this.state.errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+          if (this.displayLocalError().length > 0 || this.displayState().errorMessage.length > 0) {
+            Text(this.displayLocalError() || this.displayState().errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
           }
           if (this.state.writeUncertain || this.state.writeBlocked) {
             this.originalRecoveryAction(opening);

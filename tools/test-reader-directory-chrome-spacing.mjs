@@ -12,11 +12,14 @@ import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import * as controlGeometry from '../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts';
+import * as headerGeometry from '../entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { readerDirectoryToolbarBudget } from '../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts';
+import { selectedProductionClasses } from './lib/selected-production-methods.mjs';
 
 const selected = selectContractCases({
   'header-spacing': 'Measured control-header title/glyph center, compact painted collapse surface inside native44 carrier, four scales and legacy negatives.',
-  'icon-roles': 'Actual directory toolbar/header images retain per-role dimensions independently of native44 target dimensions.',
+  'icon-roles': 'Actual directory toolbar/header images retain per-role dimensions independently of the paid response rectangle, including constrained targets.',
   'standalone-collapse': 'Actual standalone phone/expanded collapse paint keeps intrinsic compact dimensions inside its paid native carrier and preserves current Back dispatch.',
   'full-directory-font-revision': 'Mounted standalone DirectoryHeader and actual ReadingTopBar retain their Back actor while an existing metrics revision updates its font-aware budget.',
   'full-directory-source-caption': 'The actual phone/expanded source action preserves its glyph, carrier and admission while its single-line caption receives natural CJK width and font-aware height.',
@@ -28,7 +31,10 @@ const toolbarSource = read('features/reading/ui/ReaderDirectoryToolbar.ets');
 const fullSource = read('features/reading/ui/ReaderFullDirectory.ets');
 const contentSource = read('features/reading/ui/ReaderControlDirectoryContent.ets');
 const standaloneSource = read('features/reading/ui/FullDirectoryPanel.ets');
-const deps = { ...readerTypographyRoles, ...readerFoundationTokens, ...controlGeometry, readerAppColor };
+const deps = { ...readerTypographyRoles, ...readerFoundationTokens, ...controlGeometry, ...headerGeometry, readerAppColor,
+  readerDirectoryToolbarBudget,
+  ...selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), ['ReaderControlHeaderLineHeight']),
+  ...pureModuleProbe(toolbarSource.slice(0, toolbarSource.indexOf('@Component')), 'DirectoryToolbarConstants.ets', {}, ['READER_DIRECTORY_TOOLBAR_HEIGHT']) };
 const nodes = owner => [...owner.nodes.values()];
 const samples = [];
 let standaloneSupport;
@@ -70,18 +76,22 @@ function renderHeader(source, headerInter, width, fontScale) {
   scale = fontScale;
   const title = headerInter ? '内容搜索' : '目录';
   const result = minimum.measureReaderControlMinimum({ context, headerInter, title, identity: 'current', metricsRevision: 1,
-    topBarHeightVp: 54, measureHomeForm: () => undefined }, 'directory',
+    topBarHeightVp: 54, measureHomeForm: () => ({ minimumHeight: 190, minWidth: 100, fits: true }) }, headerInter ? 'search' : 'directory',
     { panelWidthVp: width + 26, quickContentWidthVp: width - 52, fullContentWidthVp: width }, 'current|1',
-    () => ({ module: 'directory', quick: { heightVp: 100, minWidthVp: 100, fits: true }, full: { heightVp: 100, minWidthVp: 100, fits: true } }));
+    () => ({ module: headerInter ? 'search' : 'directory', quick: { heightVp: 100, minWidthVp: 100, fits: true }, full: { heightVp: 100, minWidthVp: 100, fits: true } }));
   assert.ok(result, 'production minimum measurer must return the current header profile');
   const profile = result.profile;
-  const owner = createReaderBuilderProbe(source, ['controlHeader'], deps).owner;
+  const owner = createReaderBuilderProbe(source, ['controlHeader', 'headerPaintLayout', 'headerFrame', 'headerRole',
+    'headerInter', 'headerTitleStyle', 'headerActionStyle', 'headerActionPaint', 'headerAction', 'headerActionFrame',
+    'headerActionInputEnabled', 'activateHeaderAction', 'controlCallbackGuard', 'controlActionHandler', 'currentMoreMenuOwnerScope', 'currentMinimumIdentity'], deps).owner;
   let collapsed = 0;
-  Object.assign(owner, { appScheme: 'day', contentLocation: () => ({ module: headerInter ? 'search' : 'directory' }),
-    headerIcon: () => 'module-directory-icon', contentTitle: () => title, headerInter: () => headerInter,
-    headerFrame: () => ({ x: 0, y: 0, width, height: profile.headerHeight }), selectedMinimumProfile: () => profile,
+  Object.assign(owner, { appScheme: 'day', contentLocation: () => ({ level: 'secondary', module: headerInter ? 'search' : 'directory' }),
+    headerIcon: () => 'module-directory-icon', contentTitle: () => title,
+    frame: () => ({ progress: 1, header: { x: 13, y: 19, width, height: profile.headerHeight, opacity: 1 } }),
+    currentLayout: () => ({ fullPanelWidth: width + 26 }), controlPanelHeight: () => 736,
+    controlActionInputEnabled: () => true, selectedMinimumProfile: () => profile,
     collapseControl: () => collapsed++, replaceHeader: () => {} });
-  owner.controlHeader();
+  owner.controlHeader(); owner.headerAction();
   return { owner, profile, title, clicks: () => collapsed };
 }
 function assertHeader(rendered) {
@@ -93,16 +103,19 @@ function assertHeader(rendered) {
   const paint = nodes(owner).find(node => node.type === 'Stack' && node.backgroundColor === readerAppColor('TOK_READ_ACTIVE_SOFT', 'day'));
   assert.equal(image.width, 16, 'header glyph remains the existing16vp role');
   assert.equal(image.height, 16);
-  assert.equal(image.position.y + 8, profile.headerHeight / 2, 'module glyph centers in the measured header');
-  assert.equal(titleNode.position.y + titleNode.height / 2, profile.headerHeight / 2, 'title centers in the measured header');
+  const local = owner.headerPaintLayout();
+  assert.equal(image.position.y + 8, local.frame.y + profile.headerHeight / 2, 'module glyph centers in the measured header');
+  assert.equal(titleNode.position.y + titleNode.height / 2, local.frame.y + profile.headerHeight / 2, 'title centers in the measured header');
   assert.ok(button.width >= 44 && button.height >= 44, 'native collapse carrier retains44 minimum');
-  assert.ok(button.position.y >= 0 && button.position.y + button.height <= profile.headerHeight, 'parent pays the full native carrier');
+  assert.ok(button.position.y >= 0 && button.position.y + button.height <= 19 + profile.headerHeight + 8,
+    'dock sibling pays the carrier before content without inflating the30 paint header');
   assert.equal(button.backgroundColor, 'Color.Transparent', 'native target does not enlarge the painted capsule');
   assert.ok(paint, 'compact collapse paint surface remains distinct');
-  assert.equal(paint.create.alignContent, 'Alignment.Center', 'collapse measured label is centered');
-  assert.equal(paint.height, Math.max(26, profile.collapseLabelHeight + 12), 'paint grows from the approved26vp capsule with measured text');
-  assert.ok(paint.height <= button.height && paint.width <= button.width);
-  assert.equal(label.position, undefined, 'legacy fixed label offsets cannot bias vertical alignment');
+  assert.equal(paint.create.alignContent, 'Alignment.TopStart');
+  assert.equal(paint.height, Math.max(26, profile.collapseLabelHeight), 'authored centered whitespace is not a second fixed vertical padding');
+  assert.ok(paint.height <= button.height + .001 && paint.width <= button.width + .001,
+    `paint${paint.width}x${paint.height} must fit the declared dock carrier${button.width}x${button.height}`);
+  assert.equal(label.position.y + label.height / 2, paint.height / 2, 'legacy fixed label offsets cannot bias vertical alignment');
   assert.ok(label.width >= advance('收起', label.fontSize * scale, label.fontFamily, label.fontWeight), 'both characters fit their measured lane');
   assert.ok(label.height >= profile.collapseLabelHeight);
   button.onClick();
@@ -164,26 +177,28 @@ function assertStandalone(rendered, fontScale = rendered.fontScale) {
   const label = nodes(owner).find(node => node.type === 'Text' && node.create === '收起');
   assert.ok(target); assert.equal(target.type, expanded ? 'Stack' : 'Button');
   assert.equal(target.backgroundColor, 'Color.Transparent', 'the paid standalone target must not become the painted capsule');
-  assert.equal(target.height, surface.readerScaledControlHeight(44, 20, fontScale));
+  assert.equal(target.height, surface.readerScaledControlHeight(30, 20, fontScale));
   assert.equal(target.constraintSize.minWidth, 44); assert.equal(target.flexShrink, 0);
   assert.ok(paint); assert.equal(paint.create.alignContent, 'Alignment.Center');
   assert.equal(paint.width, undefined, 'compact paint uses intrinsic text width');
   assert.equal(paint.height, undefined, 'compact paint retains natural text height');
   assert.equal(paint.constraintSize.minWidth, 40);
   assert.equal(paint.constraintSize.minHeight, surface.readerScaledControlHeight(26, 14, fontScale));
-  assert.deepEqual(paint.padding, { left: 10, right: 10, top: 6, bottom: 6 });
+  assert.deepEqual(paint.padding, { left: 10, right: 10, top: 0, bottom: 0 });
   assert.equal(paint.hitTestBehavior, 'HitTestMode.None');
   assert.equal(paint.accessibilityLevel, 'no-hide-descendants');
   assert.equal(label.width, undefined, 'intrinsic text must not create a cyclic100percent width');
   assert.equal(label.maxLines, 1); assert.equal(label.textAlign, 'TextAlign.Center');
   const glyphWidth = advance('收起', label.fontSize * fontScale, label.fontFamily, label.fontWeight);
   const paintWidth = Math.max(40, glyphWidth + 20), targetWidth = Math.max(44, paintWidth);
-  const paintHeight = Math.max(paint.constraintSize.minHeight, label.lineHeight * fontScale + 12);
+  const paintHeight = Math.max(paint.constraintSize.minHeight, label.lineHeight * fontScale);
   assert.ok(targetWidth <= width - 26 && paintHeight <= target.height, 'the natural paint is paid by the original header lane');
   const heading = nodes(owner).find(node => node.type === 'Text' && ['目录', '书签'].includes(node.create));
   assert.ok(width - 26 - targetWidth >= 16 + deps.TOK_SPACE_XS +
     advance(heading.create, heading.fontSize * fontScale, heading.fontFamily, heading.fontWeight));
-  return { target, paint, label, expectedIntrinsicPaintWidth: paintWidth, expectedIntrinsicPaintHeight: paintHeight, paidTargetWidth: targetWidth };
+  return { target, paint, label, expectedIntrinsicPaintWidth: paintWidth, expectedIntrinsicPaintHeight: paintHeight,
+    paidTargetWidth: targetWidth, responseComplete44: target.height >= 44 && targetWidth >= 44,
+    conflict: target.height < 44 ? 'host' : 'none' };
 }
 
 for (const id of selected) {
@@ -369,18 +384,17 @@ for (const id of selected) {
       const rendered = renderHeader(panelSource, headerInter, width, fontScale);
       samples.push({ kind: 'header', width, fontScale, headerInter, ...assertHeader(rendered) });
     }
-    const oldIcon = panelSource.replace('y: Math.max(0, (this.headerFrame().height - 16) / 2)', 'y: 7');
+    const oldIcon = panelSource.replace('y: this.headerPaintLayout().icon.y', 'y: 7');
     assert.notEqual(oldIcon, panelSource);
-    assert.throws(() => assertHeader(renderHeader(oldIcon, false, 340, 1)), /module glyph centers/, 'old header glyph offset is rejected');
-    const oldSurface = panelSource.replace('.backgroundColor(Color.Transparent).borderRadius(8)\n        .id(\'reader-control-collapse\')',
-      '.backgroundColor(readerAppColor(\'TOK_READ_ACTIVE_SOFT\', this.appScheme)).borderRadius(8)\n        .id(\'reader-control-collapse\')');
+    assert.throws(() => assertHeader(renderHeader(oldIcon, false, 340, 2)), /module glyph centers/, 'old fixed header glyph offset is rejected when text grows');
+    const oldSurface = panelSource.replace('.backgroundColor(Color.Transparent).borderRadius(8).zIndex(2)',
+      '.backgroundColor(readerAppColor(\'TOK_READ_ACTIVE_SOFT\', this.appScheme)).borderRadius(8).zIndex(2)');
     assert.notEqual(oldSurface, panelSource);
     assert.throws(() => assertHeader(renderHeader(oldSurface, false, 340, 1)), /native target does not enlarge/, 'painted native44 target regression is rejected');
-    const oldLabel = panelSource.replace(".fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center);\n      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 44)",
-      ".fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center).position({ x: 10, y: 6 });\n      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 44)");
+    const oldLabel = panelSource.replace('y: this.headerPaintLayout().actionLabel.y - this.headerPaintLayout().actionPaint.y', 'y: 6');
     assert.notEqual(oldLabel, panelSource);
-    assert.throws(() => assertHeader(renderHeader(oldLabel, false, 340, 1)), /legacy fixed label offsets/, 'old label top offset is rejected');
-    const narrowLabel = panelSource.replace("Text('收起').width((this.selectedMinimumProfile()?.collapseWidth ?? 44) - 20)", "Text('收起').width(20)");
+    assert.throws(() => assertHeader(renderHeader(oldLabel, false, 340, 2)), /legacy fixed label offsets/, 'old label top offset is rejected after real growth');
+    const narrowLabel = panelSource.replace('.width(this.headerPaintLayout().actionLabel.width)', '.width(20)');
     assert.notEqual(narrowLabel, panelSource);
     assert.throws(() => assertHeader(renderHeader(narrowLabel, false, 340, 2)), /both characters fit/, 'fixed20vp label lane at2x is rejected');
   }
@@ -397,7 +411,7 @@ for (const id of selected) {
       const buttons = nodes(owner).filter(node => node.type === 'Button');
       assert.equal(buttons.length, images.length);
       for (const button of buttons) {
-        assert.equal(button.width, 44);
+        assert.equal(button.width, variant === 'full-directory' ? 32 : 44);
         assert.ok(button.height >= 44);
         button.onClick();
       }
@@ -454,7 +468,7 @@ for (const id of selected) {
       samples.push({ kind: 'directory-measured-input', fontScale, fieldHeight, inputHeight, naturalToolbar });
     }
     const full = createReaderBuilderProbe(fullSource, ['topBarBackIcon', 'topBarSourceContent', 'topBarMoreIcon'], deps).owner;
-    Object.assign(full, { appThemeScheme: 'day', usesExpandedLayout: () => false });
+    Object.assign(full, { appThemeScheme: 'day', usesExpandedLayout: () => false, fontScale: () => 1 });
     full.topBarBackIcon(); full.topBarSourceContent(); full.topBarMoreIcon();
     assert.deepEqual(nodes(full).filter(node => node.type === 'Image').map(node => [node.width, node.height]), [[24, 24], [20, 20], [20, 20]]);
     const uniform = toolbarSource.replace("return this.variant === 'standard' ? 24 : 16;", 'return 44;');
@@ -475,9 +489,11 @@ if (selected.length > 0) {
     boundary: 'Current production Builder emission, SDK-declared alignment, bundled-font advances and measured line budgets. Native layout, hit testing, glyph paint and user acceptance remain unverified.' };
   const standaloneOnly = selected.length === 1 && ['standalone-collapse', 'full-directory-font-revision', 'full-directory-source-caption'].includes(selected[0]);
   const reportPath = selected[0] === 'standalone-collapse' ? 'standalone-collapse-paint/' : `${selected[0]}/`;
-  const reportDirectory = new URL(standaloneOnly ? `../.reader-artifacts/vm-ui-feedback-20261113/${reportPath}` :
-    '../.reader-artifacts/vm-manual-acceptance-20261113/directory-chrome-repair/', import.meta.url);
-  if (standaloneOnly) mkdirSync(reportDirectory, { recursive: true });
+  const repaired = selected.some(id => ['header-spacing', 'standalone-collapse', 'icon-roles'].includes(id));
+  const reportDirectory = new URL(repaired ? `../.reader-artifacts/ui-full-fix-20261113/oracle-directory-chrome/${selected.join('+')}/` :
+    standaloneOnly ? `../.reader-artifacts/vm-ui-feedback-20261113/${reportPath}` :
+      '../.reader-artifacts/vm-manual-acceptance-20261113/directory-chrome-repair/', import.meta.url);
+  if (standaloneOnly || repaired) mkdirSync(reportDirectory, { recursive: true });
   writeFileSync(new URL('sdk-report.json', reportDirectory), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ kind: 'directory-chrome-repair', selected, samples: samples.length, boundary: report.boundary }));
 }

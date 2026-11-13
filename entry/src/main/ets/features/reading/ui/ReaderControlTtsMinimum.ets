@@ -1,3 +1,7 @@
+import { READER_TTS_RATE_MIN, type ReaderTtsState, type ReaderTtsTimerMode } from '../application/ReaderTtsState';
+import type { ReaderTtsVoiceOption } from '../application/ReaderTtsPreferencesState';
+import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
+import { readerTtsLanguageLabel } from '../presentation/ReaderTtsConfigOptions';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { ReaderTextStyle, ReaderInheritedTextStyle,
   TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, TYPE_READER_TTS_QUICK_SETTING_LABEL,
@@ -25,8 +29,84 @@ import { sampleReaderControlTts, type ReaderControlTtsFrame,
 import { readerControlLerp } from './ReaderControlActorGeometry';
 import { measureReaderControlText, type ReaderControlTextExtent } from './ReaderControlTextMeasurement';
 
+export interface ReaderTtsMinimumFactsInput {
+  state: ReaderTtsState;
+  timerMode: ReaderTtsTimerMode;
+  timerMinutes: number;
+  timerSeconds: number;
+  failurePolicy: 'skip' | 'stop';
+  allowMixing: boolean;
+  engine: string;
+  httpEngines: ReaderHttpTtsConfig[];
+  voiceOptions: ReaderTtsVoiceOption[];
+  language: string;
+  person: number;
+  ratePreview: number;
+  serviceTab: string;
+}
+export function readerControlTtsPlaybackLabel(state: ReaderTtsState): string {
+  const status = state.status;
+  return status === 'playing' ? '朗读中' : status === 'preparing' || status === 'resuming' ? '准备中' :
+    status === 'paused' || status === 'interrupted' ? '继续' : status === 'error' || status === 'failed' ? '失败·重试' :
+    status === 'unavailable' ? '不可用' : status === 'stopping' ? '停止中' : status === 'completed' ? '已完成' : status === 'probing' ? '检查中' : '未开始';
+}
+export function readerControlTtsStatusLabel(state: ReaderTtsState): string {
+  const status = state.status;
+  return status === 'playing' ? '朗读中' : status === 'paused' ? '已暂停' : status === 'interrupted' ? '已中断' :
+    status === 'probing' ? '正在检查朗读可用性' : status === 'preparing' || status === 'resuming' ? '准备中' :
+    status === 'completed' ? '已完成' : status === 'stopping' ? '停止中' : status === 'error' || status === 'failed' ? '播放失败' :
+    status === 'unavailable' ? '当前引擎不可用' : '未开始';
+}
+export function readerControlTtsTwoDigits(value: number): string {
+  const normalized = Math.max(0, Math.trunc(value));
+  return normalized < 10 ? `0${normalized}` : `${normalized}`;
+}
+export function readerControlTtsTimerSummary(minutes: number, seconds: number): string {
+  return `${readerControlTtsTwoDigits(minutes)}:${readerControlTtsTwoDigits(seconds)}`;
+}
+export function readerControlTtsTimerCaption(mode: ReaderTtsTimerMode, minutes: number, seconds: number): string {
+  return mode === 'chapterEnd' ? '本章结束' : mode === 'off' || minutes === 0 && seconds === 0 ?
+    '不开启' : seconds === 0 ? `${minutes} 分钟` : readerControlTtsTimerSummary(minutes, seconds);
+}
+export function readerControlTtsEngineLabel(engine: string, engines: ReaderHttpTtsConfig[]): string {
+  if (!engine.startsWith('http-tts:')) return '系统离线';
+  const id = Number(engine.slice('http-tts:'.length));
+  return engines.find((entry: ReaderHttpTtsConfig): boolean => entry.id === id)?.name ?? '在线配置失效';
+}
+export function readerControlTtsVoiceLabel(engine: string, online: boolean, voices: ReaderTtsVoiceOption[], language: string, person: number): string {
+  if (online && !engine.startsWith('http-tts:')) return '尚未配置在线服务';
+  if (engine.startsWith('http-tts:')) return '由在线服务提供';
+  if (voices.length === 0) return '暂无可用音色';
+  return voices.find((entry: ReaderTtsVoiceOption): boolean => entry.language === language && entry.person === person)?.label ?? `${language} · 音色 ${person}`;
+}
+export function readerControlTtsMinimumFacts(input: ReaderTtsMinimumFactsInput): ReaderTtsMinimumFacts {
+  const state = input.state;
+  const http = input.engine.startsWith('http-tts:');
+  const online = input.serviceTab === '' ? http : input.serviceTab === 'online';
+  const engineId = http ? input.engine : input.httpEngines.length > 0 ? `http-tts:${input.httpEngines[0].id}` : '';
+  const service = input.httpEngines.find((entry: ReaderHttpTtsConfig): boolean => `http-tts:${entry.id}` === engineId);
+  const minutes = readerControlTtsTwoDigits(input.timerMinutes);
+  const seconds = readerControlTtsTwoDigits(input.timerSeconds);
+  const timer = readerControlTtsTimerSummary(input.timerMinutes, input.timerSeconds);
+  return { readViewState: (): ReaderTtsState => state, viewTimerMode: input.timerMode,
+    viewTimerMinutes: input.timerMinutes, viewTimerSeconds: input.timerSeconds,
+    viewRate: input.ratePreview >= READER_TTS_RATE_MIN ? input.ratePreview : input.state.rate, playbackLabel: readerControlTtsPlaybackLabel(input.state), status: readerControlTtsStatusLabel(input.state),
+    voice: readerControlTtsVoiceLabel(input.engine, online, input.voiceOptions, input.language, input.person),
+    timerCaption: readerControlTtsTimerCaption(input.timerMode, input.timerMinutes, input.timerSeconds),
+    timerSummary: timer, minutes: minutes, seconds: seconds,
+    rate: (input.ratePreview >= READER_TTS_RATE_MIN ? input.ratePreview : input.state.rate).toFixed(2) + 'x',
+    error: input.state.errorMessage ?? '', seek: input.state.totalSlices > 1, online: online,
+    serviceDescription: service?.name ?? '第三方语音服务', manageLabel: input.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置',
+    engineValue: http ? readerControlTtsEngineLabel(input.engine, input.httpEngines) : '系统默认', languageValue: http ? '由在线服务提供' : readerTtsLanguageLabel(input.language),
+    failureValue: input.failurePolicy === 'skip' ? '跳过不可用内容' : '停止并提示' };
+}
 /** Display facts captured by the mounted module, never another TTS state owner. */
 export interface ReaderTtsMinimumFacts {
+  readViewState: () => ReaderTtsState;
+  viewTimerMode: ReaderTtsTimerMode;
+  viewTimerMinutes: number;
+  viewTimerSeconds: number;
+  viewRate: number;
   playbackLabel: string;
   status: string;
   voice: string;
@@ -230,7 +310,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     toggleRow: Math.max(48, Math.min(toggle.heightVp, toggleLine.heightVp * 2) + 16),
     detailCard: 340, systemCard: facts.online ? 164 : 212,
     voiceBadge: Math.max(24, voiceBadge.heightVp), voiceBadgeWidth: Math.max(24, voiceBadge.singleLineWidthVp),
-    voiceField: Math.max(44, field.heightVp + 8, voiceBadge.heightVp + 6),
+    voiceField: Math.max(30, field.heightVp + 8, voiceBadge.heightVp + 6),
     configField: Math.max(48, field.heightVp + 8),
     voiceFieldWidth: Math.max(37 + Math.max(24, voiceBadge.singleLineWidthVp) + fieldGlyph.singleLineWidthVp,
       Math.min(cap, Math.ceil(voiceValue.singleLineWidthVp) + 37 + Math.max(24, voiceBadge.singleLineWidthVp))),
@@ -273,22 +353,35 @@ function measureForm(context: UIContext, width: number, full: boolean,
     const statusMinimumWidth = Math.min(qStatus.singleLineWidthVp, statusReadable.singleLineWidthVp);
     const labelMinimumWidth = 34 + 9 + Math.max(qPlayback.singleLineWidthVp, 5 + 4 + statusMinimumWidth);
     frame.quickPlaybackLabel.width = Math.max(frame.quickPlaybackLabel.width, labelMinimumWidth);
-    const columns = inner >= 204 ? 4 : 2;
-    const cellWidth = Math.max(44, (inner - 16 - (columns - 1) * 4) / columns);
-    const controlsTop = frame.quickPlaybackLabel.y + frame.quickPlaybackLabel.height + 10;
+    // The original row fits label + four compact paints at the reference
+    // width. Only real text/width collision triggers a second transport row.
     const transports = [frame.previous, frame.toggle, frame.stop, frame.next];
-    for (let index = 0; index < transports.length; index++) {
-      const target = transports[index];
-      target.x = 8 + index % columns * (cellWidth + 4) + (cellWidth - 44) / 2;
-      target.y = controlsTop + Math.floor(index / columns) * 52;
-      target.width = 44; target.height = 44;
+    const transportWidth = 28 + 3 + 36 + 3 + 28 + 3 + 28;
+    const inline = 13 + labelMinimumWidth + 2 + transportWidth + 10 <= inner;
+    if (inline) {
+      frame.quickPlaybackLabel.width = Math.max(labelMinimumWidth, Math.min(110, inner - 13 - transportWidth - 12));
+      const left = inner - transportWidth - 10;
+      for (let index = 0; index < transports.length; index++) {
+        transports[index].x = left + [0, 31, 70, 101][index];
+        transports[index].y = 15 + (index === 1 ? 0 : 4);
+      }
+      frame.playback.height = Math.max(66, frame.quickPlaybackLabel.y + frame.quickPlaybackLabel.height + 16);
+    } else {
+      const columns = inner >= transportWidth + 16 ? 4 : 2;
+      const cellWidth = Math.max(36, (inner - 16 - (columns - 1) * 4) / columns);
+      const controlsTop = frame.quickPlaybackLabel.y + frame.quickPlaybackLabel.height + 10;
+      for (let index = 0; index < transports.length; index++) {
+        const target = transports[index];
+        target.x = 8 + index % columns * (cellWidth + 4) + (cellWidth - target.width) / 2;
+        target.y = controlsTop + Math.floor(index / columns) * 44 + (36 - target.height) / 2;
+      }
+      const rows = Math.ceil(4 / columns);
+      frame.playback.height = controlsTop + rows * 36 + (rows - 1) * 8 + 8;
     }
-    const controlRows = Math.ceil(4 / columns);
-    frame.playback.height = controlsTop + controlRows * 44 + (controlRows - 1) * 8 + 4;
     frame.playbackCard.height = frame.playback.height;
     frame.quickTimerLabel.height = Math.max(26, text.quickSettingTitle);
     frame.quickTimerLabel.width = Math.max(72, 34 + qSetting.singleLineWidthVp);
-    frame.quickTimerSelect.height = Math.max(44, caption.heightVp + 12);
+    frame.quickTimerSelect.height = Math.max(30, caption.heightVp + 12);
     frame.quickTimerSelect.width = Math.max(78, caption.singleLineWidthVp + 32);
     frame.quickTimerSelect.x = inner - frame.quickTimerSelect.width - 11;
     frame.timer.y = frame.playback.y + frame.playback.height + 8;
@@ -302,11 +395,11 @@ function measureForm(context: UIContext, width: number, full: boolean,
     }
     frame.quickSpeedLabel.height = Math.max(26, text.quickSettingTitle);
     frame.quickSpeedLabel.width = Math.max(72, 34 + qSetting.singleLineWidthVp);
-    frame.quickSpeedValue.height = Math.max(24, rate.heightVp);
-    frame.quickSpeedValue.width = Math.max(40, rate.singleLineWidthVp);
+    frame.quickSpeedValue.height = Math.max(18, rate.heightVp);
+    frame.quickSpeedValue.width = Math.max(34, rate.singleLineWidthVp);
     frame.quickSpeedValue.x = inner - frame.quickSpeedValue.width - 11;
     frame.speed.y = frame.timer.y + frame.timer.height + 8;
-    frame.speed.height = Math.max(42, frame.quickSpeedLabel.height + 16, frame.quickSpeedValue.height + 16, 44);
+    frame.speed.height = Math.max(42, frame.quickSpeedLabel.height + 16, frame.quickSpeedValue.height + 16);
     frame.quickSpeedValue.y = (frame.speed.height - frame.quickSpeedValue.height) / 2;
     frame.speedTrack.y = frame.speed.height / 2 - 3;
     frame.speedTrack.x = Math.max(frame.speedTrack.x, 11 + 34 + qSetting.singleLineWidthVp + 10);
@@ -320,7 +413,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.speedThumb.y = frame.speedTrack.y - 6;
     frame.speedCard.height = frame.speed.height;
     frame.contentHeight = frame.speed.y + frame.speed.height + 11;
-    minWidth = width - inner + Math.max(16 + 44 * 2 + 4, 13 + labelMinimumWidth + 11,
+    minWidth = width - inner + Math.max(16 + 36 * 2 + 4, 13 + labelMinimumWidth + 11,
       frame.quickTimerLabel.width + 22, 44 + 22,
       frame.quickSpeedLabel.width + frame.quickSpeedValue.width + 34);
   } else {

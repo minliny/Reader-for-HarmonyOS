@@ -16,6 +16,7 @@ export struct ReaderIconButton {
   @Prop accessibilityLabel: string = '';
   @Prop focusId: string = '';
   @Prop actionEnabled: boolean = true;
+  @Prop actionScope: string = '';
   @Prop scheme: string = 'auto';
   @Prop selectionState: ReaderIconSelectionState = 'none';
   onTap: () => void = (): void => {};
@@ -48,7 +49,7 @@ export struct ReaderIconButton {
       .id(this.focusId)
       .onFocus((): void => { if (this.mounted) this.onFocused(); })
       .responseRegion(readerActionTouchRegion(resolveReaderIconButtonSpec(this.specId).boxSize, resolveReaderIconButtonSpec(this.specId).boxSize))
-      .onClick((): void => this.commit());
+      .onClick(this.actionHandler());
   }
 
   @Builder
@@ -79,7 +80,7 @@ export struct ReaderIconButton {
       y: Math.min(0, (resolveReaderIconButtonSpec(this.specId).boxSize - 44) / 2),
       width: Math.max(44, resolveReaderIconButtonSpec(this.specId).boxSize),
       height: Math.max(44, resolveReaderIconButtonSpec(this.specId).boxSize) })
-    .onClick((): void => this.commit());
+    .onClick(this.actionHandler());
   }
 
   private canAct(): boolean { return this.mounted && this.actionEnabled && this.accessibilityLabel.trim().length > 0; }
@@ -100,4 +101,8 @@ export struct ReaderIconButton {
       color: readerAppColor(role, this.effectiveScheme()) };
   }
   private commit(): void { if (this.canAct()) this.onTap(); }
+  private actionHandler(): () => void {
+    const scope = this.actionScope;
+    return (): void => { if (scope === this.actionScope) this.commit(); };
+  }
 }

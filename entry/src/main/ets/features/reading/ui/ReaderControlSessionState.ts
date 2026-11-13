@@ -390,6 +390,12 @@ export function resumeReaderControlSessionTarget(state: ReaderControlSessionStat
   const frame = sampleReaderControlSession(state);
   let kind: ReaderControlTransitionKind = 'morph';
   let intent: ReaderControlTransitionIntent = target.form === 'full' ? 'forward' : 'back';
+  if (target.level === 'secondary' && target.form === 'quick' && durationMs <= 0 &&
+    state.transition?.kind === 'open' && state.transition.targetProgress === 1 && frame.expansionProgress === 0) {
+    // Preserve the current opening visibility trajectory for zero-time module navigation.
+    kind = 'navigate';
+    intent = 'forward';
+  }
   if (target.level === 'hidden') {
     kind = 'dismiss';
     intent = 'dismiss';

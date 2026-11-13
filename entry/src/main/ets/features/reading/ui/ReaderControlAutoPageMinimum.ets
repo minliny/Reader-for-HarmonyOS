@@ -19,6 +19,14 @@ import { sampleReaderControlAutoPage, type ReaderControlAutoPageNaturalProfile,
   type ReaderControlAutoPageFrame } from './ReaderControlPlaybackGeometry';
 import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
 
+export interface ReaderControlAutoPageFactsInput { status: string; timerSummary: string; }
+export interface ReaderControlAutoPageMinimumFacts { status: string; timerSummary: string; }
+export function readerControlAutoPageStatusLabel(status: string): string {
+  return status === 'running' ? '运行中' : status === 'paused' ? '已暂停' : '未开始';
+}
+export function readerControlAutoPageMinimumFacts(input: ReaderControlAutoPageFactsInput): ReaderControlAutoPageMinimumFacts {
+  return { status: readerControlAutoPageStatusLabel(input.status), timerSummary: input.timerSummary };
+}
 export interface ReaderControlAutoPageTextMinimum {
   chapterLabelWidth: number; chapterLabelHeight: number;
   runningLabelWidth: number; runningLabelHeight: number;
@@ -105,26 +113,35 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
   const runningWidth = Math.max(36, running.singleLineWidthVp);
   const runningHeight = Math.max(9, running.heightVp);
   const stopHeight = Math.max(9, stop.heightVp);
-  const naturalCellHeight = Math.max(52, 39 + chapterHeight + 4, 39 + runningHeight + 4, 44 + 4 + stopHeight + 4);
+  const naturalCellHeight = Math.max(52, 39 + chapterHeight + 4, 39 + runningHeight + 4, 34.5 + stopHeight + 4);
   const rowWidth = Math.max(0, frame.control.width - 8);
-  const columns = rowWidth >= 224 ? 4 : 2;
-  const cellWidth = Math.max(44, (rowWidth - (columns - 1) * 4) / columns);
   const transports = [frame.previous, frame.toggle, frame.stop, frame.next];
-  for (let index = 0; index < transports.length; index++) {
-    const target = transports[index];
-    target.x = index % columns * (cellWidth + 4);
-    target.y = 5 + Math.floor(index / columns) * (naturalCellHeight + 8);
-    target.width = cellWidth; target.height = naturalCellHeight;
+  // Preserve each original actor and its distinct glyph/label origin while
+  // text fits. A true width collision can use two rows without enlarging paint.
+  let controlExtra = Math.max(0, naturalCellHeight - 52);
+  if (rowWidth < 208 || chapterWidth > frame.previous.width || runningWidth > frame.toggle.width && full) {
+    const columns = rowWidth >= 208 ? 4 : 2;
+    const cellWidth = Math.max(36, (rowWidth - (columns - 1) * 4) / columns);
+    for (let index = 0; index < transports.length; index++) {
+      const target = transports[index];
+      target.x = index % columns * (cellWidth + 4);
+      target.y = 5 + Math.floor(index / columns) * (naturalCellHeight + 8);
+      target.width = index === 2 ? 24 : cellWidth;
+      target.height = index === 2 ? 24 : naturalCellHeight;
+    }
+    frame.stop.x += (cellWidth - 24) / 2;
+    frame.stopLabel.x = frame.stop.x + (24 - stop.singleLineWidthVp) / 2;
+    frame.stopLabel.y = frame.stop.y + 28.5;
+    frame.playIcon.x = (cellWidth - frame.playIcon.width) / 2;
+    controlExtra = 5 + Math.ceil(4 / columns) * (naturalCellHeight + 8) - 8 - 62;
+  } else {
+    frame.previous.height += controlExtra;
+    frame.next.height += controlExtra;
+    if (full) frame.toggle.height += controlExtra;
   }
-  frame.stop.x += (cellWidth - 44) / 2;
-  frame.stop.width = 44; frame.stop.height = 44;
-  frame.playIcon.x = (cellWidth - frame.playIcon.width) / 2;
-  frame.stopLabel.x = frame.stop.x + (44 - stop.singleLineWidthVp) / 2;
-  frame.stopLabel.y = frame.stop.y + 48;
-  const controlExtra = 5 + Math.ceil(4 / columns) * (naturalCellHeight + 8) - 8 - 62;
   const headerExtra = Math.max(0, moduleTitle.heightVp - 14.3906, moduleMeta.heightVp - 14.3906);
   const quickHeaderExtra = Math.max(0, title.heightVp - 24, statusText.heightVp - 24);
-  frame.back.height = Math.max(44, title.heightVp + 12);
+  frame.back.height = Math.max(24, title.heightVp);
   frame.quickHeader.height += quickHeaderExtra;
   if (!full) frame.content.y += quickHeaderExtra;
   frame.controlHeader.height += headerExtra;
@@ -137,7 +154,7 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
   frame.details.y += headerExtra + controlExtra;
   const stepWidth = Math.max(18, step.singleLineWidthVp);
   const stepHeight = Math.max(18, step.heightVp);
-  const stepSize = Math.max(44, stepWidth + 6, stepHeight + 6);
+  const stepSize = Math.max(24, stepWidth + 6, stepHeight + 6);
   const valueWidth = Math.max(full ? 25 : 30, speedValue.singleLineWidthVp);
   const titleWidth = Math.max(full ? 80.56 : 0, speedTitle.singleLineWidthVp);
   const speedTitleWidth = full ? titleWidth : Math.max(1, frame.speed.width - stepSize * 2 - valueWidth - 26);
@@ -199,7 +216,7 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
   const timerBodyExtra = Math.max(0, pickerY + rowHeight * 3 + 4 + unitHeight + 12 - 138, labelY + timerLabelHeight + 12 - 138);
   frame.timer.height += timerHeaderExtra + timerBodyExtra;
   if (full) frame.details.y += timerHeaderExtra + timerBodyExtra;
-  const followHeight = Math.max(44, follow.heightVp + 12);
+  const followHeight = Math.max(36, follow.heightVp + 12);
   frame.follow.height = followHeight;
   frame.follow.y += speedHeight - (full ? 64 : 32);
   frame.details.height += headerExtra + speedHeight - (full ? 64 : 32) + followHeight - 36;

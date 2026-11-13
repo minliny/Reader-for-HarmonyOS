@@ -1,3 +1,7 @@
+import { readerAppearanceFontSlotLabel, readerAppearanceFontSlotFamily } from './ReaderAppearanceRenderStyle';
+import { readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
+import { normalizeReaderAppearanceFontOrder, type ReaderAppearanceFontSlot, type ReaderAppearanceSnapshot } from '../application/ReaderAppearanceState';
+import { READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeLabel } from './ReaderControlAppearanceStyle';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import {
   ReaderTextStyle, TYPE_SELECT_LIBRARY_VALUE,
@@ -23,8 +27,58 @@ import { measureReaderControlText, type ReaderControlTextExtent } from './Reader
 import { sampleReaderControlAppearance, type ReaderControlAppearanceMinimumProfile } from './ReaderControlAppearanceGeometry';
 import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
 
+export interface ReaderControlAppearanceFactsInput {
+  snapshot: ReaderAppearanceSnapshot;
+  chineseConversionMode: string;
+  fonts?: ReaderControlAppearanceFontMinimumInput[];
+  fontOrder?: ReaderAppearanceFontSlot[];
+}
+export function readerControlAppearanceFontMinimumFacts(snapshot: ReaderAppearanceSnapshot): ReaderControlAppearanceFontMinimumInput[] {
+  return normalizeReaderAppearanceFontOrder(snapshot.fontOrder).map((font: ReaderAppearanceFontSlot): ReaderControlAppearanceFontMinimumInput => {
+    const saved = readerAppearanceFontSlotFamily(snapshot, font);
+    const family = saved === 'ReaderNotoSansSC' ? 'ReaderNotoSansSCUIRegular' : saved;
+    return { label: readerAppearanceFontSlotLabel(snapshot, font), family: readerFontFamilyReady(family) ? family : 'HarmonyOS Sans' };
+  });
+}
+export function readerControlAppearanceSelectValue(snapshot: ReaderAppearanceSnapshot, conversionMode: string, kind: string): string {
+  if (kind === 'indent') return snapshot.indent === 'none' ? '无' : snapshot.indent === 'single' ? '1字符' : '2字符';
+  if (kind === 'language') return conversionMode === 'none' ? '原文' : conversionMode === 't2s' ? '繁转简' : '简转繁';
+  return '';
+}
+export function readerControlAppearanceMetricLabel(metric: string): string {
+  return metric === 'fontSize' ? '字号' : metric === 'lineHeightMultiplier' ? '行距' : metric === 'paragraphSpacing' ? '段距' : '字距';
+}
+export function readerControlAppearanceMetricValue(snapshot: ReaderAppearanceSnapshot, metric: string): string {
+  if (metric === 'fontSize') return `${snapshot.fontSize}px`;
+  if (metric === 'lineHeightMultiplier') return snapshot.lineHeightMultiplier.toFixed(2);
+  return metric === 'paragraphSpacing' ? `${snapshot.paragraphSpacing}px` : `${snapshot.letterSpacing}px`;
+}
+export function readerControlAppearanceThemeSummary(snapshot: ReaderAppearanceSnapshot): string {
+  return `日间：${readerControlAppearanceThemeLabel(snapshot.dayTheme)} · 夜间：${readerControlAppearanceThemeLabel(snapshot.nightTheme)}`;
+}
+export function readerControlAppearanceThemeActionLabel(snapshot: ReaderAppearanceSnapshot, day: boolean): string {
+  return (day ? snapshot.dayTheme : snapshot.nightTheme) === snapshot.activeTheme ?
+    (day ? '已设为日间' : '已设为夜间') : (day ? '设为日间主题' : '设为夜间主题');
+}
+export function readerControlAppearanceMinimumFacts(input: ReaderControlAppearanceFactsInput): ReaderControlAppearanceMinimumInput {
+  const snapshot = input.snapshot;
+  const fontOrder = input.fontOrder ?? normalizeReaderAppearanceFontOrder(snapshot.fontOrder);
+  return { readViewSnapshot: (): ReaderAppearanceSnapshot => snapshot, readViewFontOrder: (): ReaderAppearanceFontSlot[] => fontOrder,
+    themes: READER_CONTROL_APPEARANCE_THEMES.map(readerControlAppearanceThemeLabel),
+    themeSummary: readerControlAppearanceThemeSummary(snapshot),
+    themeActions: [readerControlAppearanceThemeActionLabel(snapshot, true), readerControlAppearanceThemeActionLabel(snapshot, false)],
+    fonts: input.fonts ?? readerControlAppearanceFontMinimumFacts(snapshot),
+    indentValue: readerControlAppearanceSelectValue(snapshot, input.chineseConversionMode, 'indent'),
+    languageValue: readerControlAppearanceSelectValue(snapshot, input.chineseConversionMode, 'language'),
+    indentOptions: ['无', '1字符', '2字符'], languageOptions: ['原文', '繁转简', '简转繁'],
+    metricLabels: ['fontSize', 'lineHeightMultiplier', 'paragraphSpacing', 'letterSpacing'].map(readerControlAppearanceMetricLabel),
+    metricValues: ['fontSize', 'lineHeightMultiplier', 'paragraphSpacing', 'letterSpacing'].map(
+      (metric: string): string => readerControlAppearanceMetricValue(snapshot, metric)) };
+}
 export interface ReaderControlAppearanceFontMinimumInput { label: string; family: string; }
 export interface ReaderControlAppearanceMinimumInput {
+  readViewSnapshot: () => ReaderAppearanceSnapshot;
+  readViewFontOrder: () => ReaderAppearanceFontSlot[];
   themes: string[];
   themeSummary: string;
   themeActions: string[];
@@ -149,15 +203,15 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
     if (measured === undefined) return undefined;
     fontHeight = Math.max(fontHeight, Math.ceil(measured.heightVp));
   }
-  const triggerHeight = Math.max(44, Math.ceil(Math.max(indent.heightVp, language.heightVp)) + 15);
+  const triggerHeight = Math.max(30, Math.ceil(Math.max(indent.heightVp, language.heightVp)) + 15);
   const triggerWidth = Math.ceil(Math.max(indent.singleLineWidthVp, language.singleLineWidthVp)) + 38;
   const selectStacked = selectLabel.singleLineWidthVp + triggerWidth + 28 > section;
-  const buttonWidth = Math.max(44, Math.ceil(stepButton.singleLineWidthVp) + 18);
+  const buttonWidth = Math.max(26, Math.ceil(stepButton.singleLineWidthVp));
   const valueWidth = Math.max(44, Math.ceil(metricValue.singleLineWidthVp) + 8);
   const glyphWidth = Math.max(26, Math.ceil(stepButton.singleLineWidthVp));
   const stepperWidth = buttonWidth * 2 + valueWidth - (buttonWidth - glyphWidth);
   const stepperStacked = metricLabel.singleLineWidthVp + stepperWidth + 26 > section;
-  const rowMinimum = Math.max(44, Math.ceil(metricLabel.heightVp) + 24,
+  const rowMinimum = Math.max(42, Math.ceil(metricLabel.heightVp) + 24,
     Math.ceil(metricValue.heightVp) + 17, Math.ceil(stepButton.heightVp) + 17);
   // Quick paints only the 46vp swatch; the 62.5vp transparent motion root is
   // not a minimum column cell. Keep the original root centers and 4vp gap,
@@ -174,12 +228,12 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
     quickFontHeaderHeight: Math.max(10, qFontHeader.heightVp),
     fullFontHeaderHeight: Math.max(16, fFontHeader.heightVp, fFontMeta.heightVp),
     themeLabelHeight: Math.max(13, Math.ceil(theme.heightVp)),
-    themeActionHeight: Math.max(44, Math.ceil(action.heightVp) + 15),
-    quickFontCellHeight: Math.max(44, fontHeight + 10), fullFontCellHeight: Math.max(44, fontHeight + 10),
+    themeActionHeight: Math.max(28, Math.ceil(action.heightVp)),
+    quickFontCellHeight: Math.max(27, fontHeight), fullFontCellHeight: Math.max(30, fontHeight),
     layoutHeaderHeight: Math.max(17, layoutHeader.heightVp, layoutMeta.heightVp),
     selectLabelHeight: Math.max(18, Math.ceil(selectLabel.heightVp)), selectTriggerHeight: triggerHeight,
     selectRowHeight: selectStacked ? Math.max(18, Math.ceil(selectLabel.heightVp)) + triggerHeight + 18 :
-      Math.max(44, triggerHeight + 12, Math.ceil(selectLabel.heightVp) + 24),
+      Math.max(42, triggerHeight + 12, Math.ceil(selectLabel.heightVp) + 24),
     selectStacked, indentTriggerWidth: Math.ceil(indent.singleLineWidthVp) + 38,
     languageTriggerWidth: Math.ceil(language.singleLineWidthVp) + 38, indentMenuHeight, languageMenuHeight,
     stepperLabelHeight: Math.max(18, Math.ceil(metricLabel.heightVp)),

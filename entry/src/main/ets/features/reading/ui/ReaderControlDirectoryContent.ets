@@ -1,10 +1,12 @@
+import { readerControlDirectoryMinimumFacts, measureReaderDirectoryMinimum, type ReaderDirectoryMinimumFacts, type ReaderDirectoryMinimumProfile } from './ReaderControlDirectoryMinimum';
+import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, readerControlModuleFactsGeometryKey, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import hilog from '@ohos.hilog';
 import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
-import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
+import { type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigation';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT } from '../../../ui/foundation/ReaderTypography';
-import { readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigation';
+
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
@@ -31,8 +33,7 @@ import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/
 import { resolveReaderControlDirectoryGeometry, type ReaderControlDirectoryGeometry } from './ReaderControlDirectoryGeometry';
 import { ReaderDirectoryNavigationSurface } from './ReaderDirectoryNavigationSurface';
 import type { ReaderControlModuleMeasurer, ReaderControlCandidateWidths, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
-import { measureReaderDirectoryMinimum, type ReaderDirectoryMinimumFacts,
-  type ReaderDirectoryMinimumProfile } from './ReaderControlDirectoryMinimum';
+
 import type { ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
 import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../presentation/ReaderDirectoryViewport';
 import { TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
@@ -83,8 +84,12 @@ class ControlDirectoryFrame extends FrameCallback {
 export struct ReaderControlDirectoryContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') private minimumMetricsRevision: number = 0;
+  @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
+  @Prop preparedMinimumRequired: boolean = false;
+  onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
+    (_identity: string, _facts: ReaderControlModuleFacts): void => {};
   @Prop @Watch('publishMinimumMeasurer') minimumIdentity: string = '';
-  @Prop @Watch('onProgressChanged') minimumKey: string = '';
+  @Prop @Watch('onPreparedMinimumChanged') minimumKey: string = '';
   onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined) => void =
     (_identity: string, _measurer: ReaderControlModuleMeasurer | undefined): void => {};
 
@@ -130,6 +135,48 @@ export struct ReaderControlDirectoryContent {
   @State private navigationInteracted: boolean = false;
   @State private navigationActive: boolean = false;
   @State private query: string = '';
+  private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
+  private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
+    const current = this.preparedMinimum;
+    if (current !== undefined && current.identity === this.minimumIdentity && current.key === this.minimumKey &&
+      readerControlModuleProfileMatches(current.moduleData, 'directory') && readerControlModuleFactsMatch(current.facts, 'directory')) return current;
+    const adopted = this.adoptedPrepared;
+    return this.preparedMinimumRequired && adopted !== undefined &&
+      readerControlModuleProfileMatches(adopted.moduleData, 'directory') && readerControlModuleFactsMatch(adopted.facts, 'directory') ? adopted : undefined;
+  }
+  private preparedProfile(): ReaderDirectoryMinimumProfile | undefined {
+    return this.presentationPrepared()?.moduleData.directory;
+  }
+  private currentMinimumProfile(): ReaderDirectoryMinimumProfile | undefined {
+    return this.preparedMinimumRequired ? this.preparedProfile() : this.preparedProfile() ?? this.minimumProfiles.get(this.minimumKey);
+  }
+  private displaySnapshot(): ReaderControlDirectorySnapshot {
+    return this.displayedFacts()?.readViewSnapshot() ?? this.snapshot;
+  }
+  private displayCatalogComplete(): boolean { return this.displayedFacts()?.viewCatalogComplete ?? this.catalogComplete; }
+  private displayBookmarkFailed(): boolean { return this.displayedFacts()?.viewBookmarkLoadFailed ?? this.bookmarkLoadFailed; }
+  private displayBookmarkMessage(): string { return this.displayedFacts()?.viewBookmarkLoadMessage ?? this.bookmarkLoadMessage; }
+  private displayedFacts(): ReaderDirectoryMinimumFacts | undefined {
+    return this.preparedMinimumRequired && this.preparedProfile() !== undefined ? this.presentationPrepared()?.facts.directory : undefined;
+  }
+  private adoptedPreparedKey: string = '';
+  private displayedRows: ReaderControlDirectoryRow[] | undefined = undefined;
+  private onPreparedMinimumChanged(): void {
+    if (!this.preparedMinimumRequired) { this.onProgressChanged(); return; }
+    const prepared = this.preparedMinimum;
+    if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
+      !readerControlModuleProfileMatches(prepared.moduleData, 'directory') || !readerControlModuleFactsMatch(prepared.facts, 'directory')) return;
+    this.adoptedPrepared = prepared;
+    const rows = this.displaySnapshot().rows;
+    if (rows !== this.displayedRows) {
+      this.displayedRows = rows;
+      this.dataSource.replace(rows);
+    }
+    const adopted = `${prepared.identity}|${prepared.key}`;
+    if (adopted === this.adoptedPreparedKey) return;
+    this.adoptedPreparedKey = adopted;
+    this.onProgressChanged();
+  }
   private pendingCatalogAction: string = '';
   private scroller: Scroller = new Scroller();
   private dataSource: ControlDirectoryDataSource = new ControlDirectoryDataSource();
@@ -170,8 +217,14 @@ export struct ReaderControlDirectoryContent {
   aboutToAppear(): void {
     this.mounted = true; this.lifecycle += 1; this.layoutPresentation += 1;
     this.syncContentLayout(); this.openList();
+
+    if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
   aboutToDisappear(): void {
+    this.adoptedPrepared = undefined;
+    this.adoptedPreparedKey = '';
+    this.displayedRows = undefined;
+
     const identity = this.registeredMinimumIdentity;
     this.minimumMeasurer = undefined;
     if (identity.length > 0) this.onMinimumMeasurerReady(identity, undefined);
@@ -184,33 +237,20 @@ export struct ReaderControlDirectoryContent {
   }
 
   private currentInputEnabled(): boolean {
-    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private minimumFacts(): ReaderDirectoryMinimumFacts {
-    const representative = this.snapshot.rows[Math.max(0, this.snapshot.targetRow)] ?? this.snapshot.rows[0];
-    const incomplete = this.tab === 'directory' && !this.catalogComplete;
-    const status = incomplete ? this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :
-      this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整' : '';
-    const action = incomplete && this.snapshot.catalogState !== 'loading' ?
-      this.snapshot.catalogState === 'failed' ? '重试加载目录' : '加载完整目录' : '';
-    return { tab: this.tab, title: representative?.chapter?.title ?? representative?.bookmark?.chapterTitle ?? '',
-      excerpt: representative?.bookmark?.excerpt ?? '', currentTitle: this.snapshot.currentTitle,
-      currentPosition: this.snapshot.currentPosition, hasRows: this.snapshot.rows.length > 0,
-      loading: this.snapshot.loading || incomplete && this.snapshot.catalogState === 'loading',
-      bookmarkError: this.tab === 'bookmarks' && this.bookmarkLoadFailed,
-      message: this.tab === 'bookmarks' ? this.bookmarkLoadFailed ?
-        this.bookmarkLoadMessage.trim().length === 0 || this.bookmarkLoadMessage === '书签载入失败，请稍后重试' ? '请稍后重试。' : this.bookmarkLoadMessage :
-        this.snapshot.loading ? '书签载入中…' : '在阅读页面下拉，收藏当前位置。' : incomplete ? status :
-          this.snapshot.loading ? '目录载入中…' : '没有匹配的章节',
-      action: this.tab === 'bookmarks' ? this.bookmarkLoadFailed ? '重试' : this.snapshot.loading ? '' : '返回目录' : action,
-      catalogStatus: status, catalogAction: action };
+    return readerControlDirectoryMinimumFacts({ snapshot: this.snapshot, tab: this.tab,
+      catalogComplete: this.catalogComplete, bookmarkLoadFailed: this.bookmarkLoadFailed, bookmarkLoadMessage: this.bookmarkLoadMessage });
   }
 
   private publishMinimumMeasurer(): void {
     if (!this.mounted || this.minimumIdentity.length === 0) return;
     const identity = this.minimumIdentity, facts = this.minimumFacts();
-    const signature = JSON.stringify([identity, this.minimumMetricsRevision, facts]);
+    if (this.preparedMinimumRequired) { this.onMinimumFactsChanged(identity, { module: 'directory', directory: facts }); return; }
+    const signature = JSON.stringify([identity, this.minimumMetricsRevision, readerControlModuleFactsGeometryKey({ module: 'directory', directory: facts })]);
     // Props may deliver fresh object copies after a measured layout returns.
     // Only actual identity/font/display-fact changes invalidate the provider.
     if (this.minimumMeasurer !== undefined && this.registeredMinimumIdentity === identity &&
@@ -228,7 +268,7 @@ export struct ReaderControlDirectoryContent {
       }
       const ticket = key.slice(0, key.lastIndexOf('|'));
       if (ticket !== this.minimumProfileTicket) {
-        const selected = this.minimumProfiles.get(this.minimumKey);
+        const selected = this.currentMinimumProfile();
         this.minimumProfiles.clear();
         if (selected !== undefined) this.minimumProfiles.set(this.minimumKey, selected);
         this.minimumProfileTicket = ticket;
@@ -249,13 +289,13 @@ export struct ReaderControlDirectoryContent {
   }
 
   private selectedMinimum(): ReaderDirectoryMinimumProfile | undefined {
-    return this.minimumKey.length > 0 ? this.minimumProfiles.get(this.minimumKey) : undefined;
+    return this.minimumKey.length > 0 ? this.currentMinimumProfile() : undefined;
   }
   private tabHeight(): number {
     const profile = this.selectedMinimum();
-    return profile === undefined ? readerScaledControlHeight(44,
+    return profile === undefined ? readerScaledControlHeight(this.value(31, 36),
       TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number, this.fontScale()) :
-      Math.max(44, this.value(profile.quick.tabHeightVp, profile.full.tabHeightVp));
+      this.value(profile.quick.tabHeightVp, profile.full.tabHeightVp);
   }
   private tabGrowth(): number { return this.tabHeight() - this.value(31, 36); }
   private toolbarHeight(): number {
@@ -300,7 +340,7 @@ export struct ReaderControlDirectoryContent {
       const index = next.rows.findIndex((row: ReaderControlDirectoryRow): boolean => row.key === this.leadingKey);
       this.leadingRow = index < 0 ? undefined : index + this.leadingFraction;
     }
-    this.dataSource.replace(next.rows);
+    if (!this.preparedMinimumRequired) this.dataSource.replace(next.rows);
     this.snapshot = next;
     this.publishMinimumMeasurer();
     if (!this.navigationActive) this.queuePosition();
@@ -330,10 +370,10 @@ export struct ReaderControlDirectoryContent {
       if (!this.mounted || lifecycle !== this.lifecycle || this.positionTicket !== ticket) return;
       this.positionQueued = false;
       if (this.navigationActive) return;
-      const offset = this.placement.offset(this.snapshot, this.listHeight(), this.rowHeight(), ticket);
+      const offset = this.placement.offset(this.displaySnapshot(), this.listHeight(), this.rowHeight(), ticket);
       if (offset === undefined) return;
       try {
-        this.scroller.scrollToIndex(this.snapshot.targetRow + this.headerCount(), false, ScrollAlign.CENTER);
+        this.scroller.scrollToIndex(this.displaySnapshot().targetRow + this.headerCount(), false, ScrollAlign.CENTER);
         this.placement.commit(ticket);
       } catch (_error) { /* First layout will retry this same request. */ }
     }));
@@ -400,12 +440,12 @@ export struct ReaderControlDirectoryContent {
         return;
       }
       const index = nativeIndex - this.headerCount();
-      if (index < 0 || index >= this.snapshot.rows.length) return;
+      if (index < 0 || index >= this.displaySnapshot().rows.length) return;
       const rect = this.scroller.getItemRect(nativeIndex);
       if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) return;
       this.leadingFraction = Math.max(0, Math.min(0.999999, -rect.y / rect.height));
       this.leadingRow = index + this.leadingFraction;
-      this.leadingKey = this.snapshot.rows[index]?.key;
+      this.leadingKey = this.displaySnapshot().rows[index]?.key;
       this.leadingPrefixOffset = undefined;
     } catch (_error) { /* No mounted List during loading and empty states. */ }
   }
@@ -424,7 +464,7 @@ export struct ReaderControlDirectoryContent {
       this.directoryKeyboardTransferPending = false;
       this.layoutRestorePending = false; this.layoutRestoreQueued = false;
     }
-    if (!this.mounted || this.snapshot.rows.length === 0) return;
+    if (!this.mounted || this.displaySnapshot().rows.length === 0) return;
     if (!this.currentInputEnabled()) {
       if (this.leadingRow === undefined) this.captureLeadingRow();
       // Native input is disabled and onWillScroll rejects inertia. Do not
@@ -450,7 +490,7 @@ export struct ReaderControlDirectoryContent {
     return !Number.isFinite(this.minimumMetricsRevision) || this.minimumMetricsRevision < 0 ? 1 :
       readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
-  private queryGrowth(): number { return readerScaledControlHeight(44, 24, this.fontScale()) - 44; }
+  private queryGrowth(): number { return readerScaledControlHeight(32, 24, this.fontScale()) - 32; }
   private contentGeometry(): ReaderControlDirectoryGeometry {
     const profile = this.selectedMinimum();
     return resolveReaderControlDirectoryGeometry(this.progress, this.tab, this.availableHeight,
@@ -468,8 +508,8 @@ export struct ReaderControlDirectoryContent {
   }
   private rowHeight(): number {
     const profile = this.selectedMinimum();
-    if (profile !== undefined) return Math.max(44, this.value(profile.quick.rowHeightVp, profile.full.rowHeightVp));
-    if (this.tab !== 'bookmarks') return readerScaledControlHeight(44, 20, this.fontScale());
+    if (profile !== undefined) return this.value(profile.quick.rowHeightVp, profile.full.rowHeightVp);
+    if (this.tab !== 'bookmarks') return readerScaledControlHeight(this.value(32, 40), 20, this.fontScale());
     const scale = this.fontScale();
     // Keep the conservative authored card/metadata budget until a current Native profile returns.
     const metadataGrowth = scale > 1 ? 14 * scale + 4 : 0;
@@ -528,7 +568,7 @@ export struct ReaderControlDirectoryContent {
   }
 
   private directoryQueryHeight(): number {
-    return Math.max(readerScaledControlHeight(44, 24, this.fontScale()), this.selectedMinimum()?.full.fieldHeightVp ?? 0);
+    return Math.max(readerScaledControlHeight(32, 24, this.fontScale()), this.selectedMinimum()?.full.fieldHeightVp ?? 0);
   }
   private shortHeaderHeight(): number {
     const input = this.directoryQueryHeight();
@@ -538,7 +578,7 @@ export struct ReaderControlDirectoryContent {
       (this.tab === 'directory' ? 6 + readerScaledControlHeight(48, 16, this.fontScale()) : 0);
   }
   private shortToolsHeight(): number {
-    const count = this.tab === 'directory' ? (this.catalogComplete ? 5 : 6) : 2;
+    const count = this.tab === 'directory' ? (this.displayCatalogComplete() ? 5 : 6) : 2;
     return Math.ceil(count / Math.max(1, Math.floor(this.rowWidth() / 49))) * 49;
   }
   private prefixHeight(): number {
@@ -657,7 +697,7 @@ export struct ReaderControlDirectoryContent {
     }.width(this.tabWidth()).height(this.tabHeight()).padding(0)
       .borderRadius(8).backgroundColor(Color.Transparent)
       .accessibilityText(title)
-      .responseRegion( readerActionTouchRegion(this.tabWidth(), this.tabHeight()))
+      .responseRegion({ x: 0, y: 0, width: this.tabWidth(), height: this.tabHeight() })
       .attributeModifier(new ReaderActionAccessibility(title, this.tabsInteractive(), this.tab === tab, true, undefined, 'nativeButton'))
       .onClick((): void => {
         if (!this.currentContent(presentation) || !this.tabsInteractive()) return;
@@ -759,10 +799,10 @@ export struct ReaderControlDirectoryContent {
         this.shortTool('search', '搜索', presentation);
         if (this.tab === 'directory') { this.shortTool('top', '到顶部', presentation); this.shortTool('bottom', '到底部', presentation); this.shortTool('sort', '切换排序', presentation); }
         this.shortTool('clear', '清除搜索', presentation);
-        if (this.tab === 'directory' && !this.catalogComplete) this.shortTool('load', '加载完整目录', presentation);
+        if (this.tab === 'directory' && !this.displayCatalogComplete()) this.shortTool('load', '加载完整目录', presentation);
       }.width('100%').height(this.shortToolsHeight());
       if (this.tab === 'directory') {
-        Text(`当前章节 ${this.snapshot.currentTitle} ${this.snapshot.currentPosition}`)
+        Text(`当前章节 ${this.displaySnapshot().currentTitle} ${this.displaySnapshot().currentPosition}`)
           .width('100%').fontFamily(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily)
           .fontSize(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
@@ -774,9 +814,9 @@ export struct ReaderControlDirectoryContent {
   }
 
   private localState(): boolean {
-    return (this.tab === 'bookmarks' && (this.bookmarkLoadFailed || this.snapshot.rows.length === 0)) ||
-      (this.snapshot.loading && !(this.tab === 'directory' && this.catalogComplete === false)) ||
-      (this.snapshot.rows.length === 0 && !this.navigationActive && !(this.tab === 'directory' && this.bookmarkIdentity !== undefined));
+    return (this.tab === 'bookmarks' && (this.displayBookmarkFailed() || this.displaySnapshot().rows.length === 0)) ||
+      (this.displaySnapshot().loading && !(this.tab === 'directory' && this.displayCatalogComplete() === false)) ||
+      (this.displaySnapshot().rows.length === 0 && !this.navigationActive && !(this.tab === 'directory' && this.bookmarkIdentity !== undefined));
   }
 
   @Builder
@@ -815,18 +855,23 @@ export struct ReaderControlDirectoryContent {
       });
   }
 
+  private reconcileCatalog(presentation: number, sessionKey: string): void {
+    if (this.currentContent(presentation) && sessionKey === this.sessionKey && this.currentInputEnabled() &&
+      this.tab === 'directory' && !this.catalogComplete && !this.catalogLoading) this.onRequireCompleteCatalog();
+  }
+
   @Builder
   private catalogStatus() {
     Row({ space: 6 }) {
-      Text(this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :
-        this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整')
+      Text(this.displaySnapshot().catalogState === 'failed' ? '目录加载失败，已保留当前条目' :
+        this.displaySnapshot().catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整')
         .layoutWeight(1).fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
         .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-      if (this.snapshot.catalogState !== 'loading') {
-        ReaderRecoveryAction({ label: this.snapshot.catalogState === 'failed' ? '重试加载目录' : '加载完整目录',
-          actionEnabled: this.currentInputEnabled(),
-          onReconcile: (): void => this.onRequireCompleteCatalog() });
+      if (this.displaySnapshot().catalogState !== 'loading') {
+        ReaderRecoveryAction({ label: this.displaySnapshot().catalogState === 'failed' ? '重试加载目录' : '加载完整目录',
+          generation: this.layoutPresentation, actionEnabled: this.currentInputEnabled(),
+          onReconcile: (expected: number): void => this.reconcileCatalog(expected, this.sessionKey) });
       }
     }.width('100%').padding({ left: 8, right: 8, top: 2, bottom: 2 });
   }
@@ -836,19 +881,20 @@ export struct ReaderControlDirectoryContent {
     if (this.shortContent && allowPrefix) { this.flatList(presentation); }
     else {
     Column() {
-      if (this.tab === 'directory' && this.catalogComplete === false && this.snapshot.rows.length > 0) this.catalogStatus();
+      if (this.tab === 'directory' && this.displayCatalogComplete() === false && this.displaySnapshot().rows.length > 0) this.catalogStatus();
       Stack() {
-        if (this.snapshot.rows.length === 0) {
+        if (this.displaySnapshot().rows.length === 0) {
           ReaderPageState({ padded: false,
-            loading: this.catalogComplete === false && this.snapshot.catalogState === 'loading',
-            message: this.catalogComplete !== false ? '没有匹配的章节' :
-              this.snapshot.catalogState === 'failed' ? '目录加载失败' :
-              this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整',
-            actionLabel: this.catalogComplete === false && this.snapshot.catalogState !== 'loading' ?
-              (this.snapshot.catalogState === 'failed' ? '重试加载目录' : '加载完整目录') : '',
+            loading: this.displayCatalogComplete() === false && this.displaySnapshot().catalogState === 'loading',
+            message: this.displayCatalogComplete() !== false ? '没有匹配的章节' :
+              this.displaySnapshot().catalogState === 'failed' ? '目录加载失败' :
+              this.displaySnapshot().catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整',
+            actionLabel: this.displayCatalogComplete() === false && this.displaySnapshot().catalogState !== 'loading' ?
+              (this.displaySnapshot().catalogState === 'failed' ? '重试加载目录' : '加载完整目录') : '',
             actionEnabled: this.currentInputEnabled(),
+            actionGeneration: this.layoutPresentation,
             mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
-            onAction: (): void => { if (this.currentInputEnabled()) this.onRequireCompleteCatalog(); } });
+            onAction: (expected: number): void => this.reconcileCatalog(expected, this.sessionKey) });
         } else {
           this.flatList(presentation);
         }
@@ -857,13 +903,23 @@ export struct ReaderControlDirectoryContent {
     }
   }
 
+  private retryCurrentBookmarks(): void {
+    if (this.mounted && this.currentInputEnabled() && this.tab === 'bookmarks' &&
+      this.bookmarkLoadFailed) this.onRetryBookmarkLoad();
+  }
+
+  private returnFromEmptyBookmarks(): void {
+    if (this.mounted && this.currentInputEnabled() && this.tab === 'bookmarks' &&
+      !this.bookmarkLoadFailed && !this.snapshot.loading && this.snapshot.rows.length === 0) this.onTabChange('directory');
+  }
+
   @Builder
   private listBody(allowPrefix: boolean = true, presentation: number = this.layoutPresentation ?? 0) {
     if (allowPrefix && this.shortContent && this.localState()) { this.flatList(presentation); }
-    else if (this.tab === 'bookmarks' && this.bookmarkLoadFailed) {
-      ReaderBookmarkErrorState({ message: this.bookmarkLoadMessage,
-        onRetry: (): void => this.onRetryBookmarkLoad() });
-    } else if (this.snapshot.loading && !(this.tab === 'directory' && this.catalogComplete === false)) {
+    else if (this.tab === 'bookmarks' && this.displayBookmarkFailed()) {
+      ReaderBookmarkErrorState({ message: this.displayBookmarkMessage(),
+        onRetry: (): void => this.retryCurrentBookmarks() });
+    } else if (this.displaySnapshot().loading && !(this.tab === 'directory' && this.displayCatalogComplete() === false)) {
       if (this.tab === 'bookmarks') {
         ReaderBookmarkLoadingState();
       } else {
@@ -872,9 +928,9 @@ export struct ReaderControlDirectoryContent {
             mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
         }.width('100%').height('100%').justifyContent(FlexAlign.Center);
       }
-    } else if (this.snapshot.rows.length === 0 && this.tab === 'bookmarks') {
-      ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.onTabChange('directory') });
-    } else if (this.snapshot.rows.length === 0 && !this.navigationActive &&
+    } else if (this.displaySnapshot().rows.length === 0 && this.tab === 'bookmarks') {
+      ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.returnFromEmptyBookmarks() });
+    } else if (this.displaySnapshot().rows.length === 0 && !this.navigationActive &&
       !(this.tab === 'directory' && this.bookmarkIdentity !== undefined)) {
       this.flatCatalog(allowPrefix, presentation);
     } else {
@@ -888,7 +944,7 @@ export struct ReaderControlDirectoryContent {
           interacted: this.navigationInteracted, rowHeight: this.rowHeight(),
           listPaddingX: this.rowPadding(), listPaddingY: 0,
           edgeEffectMode: EdgeEffect.Spring, interactionEnabled: this.currentInputEnabled(),
-          showLoadStatus: this.catalogComplete,
+          showLoadStatus: this.displayCatalogComplete(),
           chapterEntries: this.entries,
           chapterDownloadEnabled: this.chapterDownloadEnabled,
           bookmarkActionsEnabled: this.bookmarkWriteEnabled(),
@@ -917,6 +973,7 @@ export struct ReaderControlDirectoryContent {
   }
 
   build() {
+    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Stack({ alignContent: Alignment.TopStart }) {
       if (!this.shortContent) {
       Stack() { this.tabButton('directory', '章节'); }
@@ -949,10 +1006,10 @@ export struct ReaderControlDirectoryContent {
           Row({ space: 10 }) {
             Text('当前章节').fontFamily(TYPE_READER_DIRECTORY_POSITION.fontFamily as string).fontSize(TYPE_READER_DIRECTORY_POSITION.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
               .flexShrink(0);
-            Text(this.snapshot.currentTitle).layoutWeight(1).fontFamily(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily)
+            Text(this.displaySnapshot().currentTitle).layoutWeight(1).fontFamily(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily)
               .fontWeight(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontWeight).fontSize(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-            Text(this.snapshot.currentPosition).fontFamily(TYPE_READER_DIRECTORY_POSITION.fontFamily as string).fontSize(TYPE_READER_DIRECTORY_POSITION.fontSizeFp)
+            Text(this.displaySnapshot().currentPosition).fontFamily(TYPE_READER_DIRECTORY_POSITION.fontFamily as string).fontSize(TYPE_READER_DIRECTORY_POSITION.fontSizeFp)
               .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0).maxLines(1).textAlign(TextAlign.End);
           }.width('100%').height(this.footerHeight() - 1).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 1 })
             .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme));
@@ -965,5 +1022,7 @@ export struct ReaderControlDirectoryContent {
           .accessibilityLevel(this.progress === 0 ? 'no-hide-descendants' : 'auto');
       }
     }.width(this.availableWidth).height(this.availableHeight).clip(true);
+
+    }
   }
 }

@@ -1,14 +1,48 @@
+import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
+import type { ReaderQuickSearchState } from '../presentation/ReaderContentSearchPublication';
 import type { UIContext } from '@ohos.arkui.UIContext';
-import { ReaderTextStyle, ReaderInheritedTextStyle, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT,
-  TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK } from '../../../ui/foundation/ReaderTypography';
+import { ReaderTextStyle, ReaderInheritedTextStyle, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK } from '../../../ui/foundation/ReaderTypography';
+
 import { MESSAGE_ACTION, MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import type { ReaderControlCandidateWidths, ReaderControlFormMinimum } from './ReaderLayoutGeometry';
-import type { ReaderControlSearchNaturalSize } from './ReaderControlSearchGeometry';
-import { sampleReaderControlSearch } from './ReaderControlSearchGeometry';
+import { type ReaderControlSearchNaturalSize, sampleReaderControlSearch } from './ReaderControlSearchGeometry';
+
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 
+export interface ReaderSearchMinimumFactsInput {
+  query: string;
+  state: ReaderQuickSearchState;
+  resultScope?: number;
+  retainedLoadMoreFailure: boolean;
+}
+export function readerControlSearchResultTitle(result: ReadingContentSearchResult | undefined): string {
+  return result === undefined ? '' : result.chapterTitle.trim().length > 0 ? result.chapterTitle : `第 ${result.chapterIndex + 1} 章`;
+}
+export function readerControlSearchStatusText(state: ReaderQuickSearchState): string {
+  return state.kind === 'loading' ? '正在搜索…' : state.kind === 'empty' ? `未找到“${state.keyword}”` :
+    state.kind === 'error' ? state.message : '输入关键词搜索正文内容';
+}
+export function readerControlSearchMinimumFacts(input: ReaderSearchMinimumFactsInput): ReaderSearchMinimumFacts {
+  const state = input.state;
+  const resultScope = input.resultScope ?? 0;
+  const first = state.kind === 'results' ? state.results[0] : undefined;
+  const pagination = state.kind === 'results' &&
+    (state.hasMore === true || state.loadMoreError !== undefined || state.paginationRetired === true);
+  const retainedFailure = pagination && input.retainedLoadMoreFailure;
+  return { readViewState: (): ReaderQuickSearchState => state,
+    resultScope: state.kind === 'results' && Number.isFinite(resultScope) && resultScope > 0 ? resultScope : 0,
+    query: input.query, title: readerControlSearchResultTitle(first), snippet: first?.snippet ?? '',
+    message: readerControlSearchStatusText(state),
+    hasResults: first !== undefined, resultsMode: state.kind === 'results', loading: state.kind === 'loading',
+    loadMoreLabel: !pagination ? '' : retainedFailure ? state.kind === 'results' && state.hasMore === true ? '重试' : '重新搜索' :
+      state.kind === 'results' && state.loadingMore === true ? '正在加载…' :
+        state.kind === 'results' && state.loadMoreError !== undefined ? '加载失败，重试' : '加载更多结果',
+    loadMoreMessage: retainedFailure ? state.kind === 'results' && state.paginationRetired === true ?
+      '需重新搜索才能加载更多' : '后续结果加载失败' : '' };
+}
 export interface ReaderSearchMinimumFacts {
+  readViewState: () => ReaderQuickSearchState;
+  resultScope: number;
   query: string;
   title: string;
   snippet: string;
@@ -56,13 +90,13 @@ function form(context: UIContext, width: number, full: boolean,
   if (field === undefined || title === undefined || snippet === undefined || match === undefined ||
     loadAction === undefined || loadMessage === undefined || status === undefined || back === undefined || glyph === undefined) return undefined;
   const inputHeight = Math.max(14, field.heightVp);
-  const backHeight = Math.max(44, back.heightVp + 8);
-  const fieldHeight = Math.max(44, inputHeight + 10, full ? 0 : backHeight);
+  const backHeight = Math.max(24, back.heightVp + 8);
+  const fieldHeight = Math.max(full ? 32 : 24, inputHeight, full ? 0 : backHeight);
   const titleHeight = Math.max(13, title.heightVp);
   // The actual Text keeps maxLines(2); both real Span weights share this
   // declared line-height upper bound, including short and long result rows.
   const snippetHeight = Math.max(28, Math.max(snippet.heightVp, match.heightVp) * 2);
-  const rowHeight = Math.max(full ? 72 : 54, 9.09375 + titleHeight + 9 + snippetHeight + 8);
+  const rowHeight = Math.max(full ? 72 : 54, (full ? 72 : 54) + Math.max(0, titleHeight - 13) + Math.max(0, snippetHeight - 28));
   const loadHeight = facts.loadMoreLabel.length > 0 ? Math.max(44,
     loadAction.heightVp + 8, facts.loadMoreMessage.length > 0 ? loadMessage.heightVp : 0) : 0;
   const natural: ReaderControlSearchNaturalSize = { fieldHeightVp: fieldHeight, inputHeightVp: inputHeight,

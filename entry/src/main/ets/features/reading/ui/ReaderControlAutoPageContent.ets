@@ -1,5 +1,8 @@
-import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../../../ui/foundation/ReaderTypography';
+import { readerControlActor, readerControlPaidResponses, readerControlUnit, readerControlLerp, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
+import { readerControlAutoPageMinimumFacts, readerControlAutoPageStatusLabel, measureReaderControlAutoPageMinimum, readerControlAutoPageMinimumFonts, type ReaderControlAutoPageMinimumProfile, type ReaderControlAutoPageTextMinimum } from './ReaderControlAutoPageMinimum';
+import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
+import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK, TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../../../ui/foundation/ReaderTypography';
+
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
@@ -21,7 +24,7 @@ import {
 } from './ReaderAutoPageFullState';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
-import { readerControlUnit, readerControlLerp, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
+
 import {
   sampleReaderControlAutoPage, readerControlPlaybackSourceKind, readerControlPlaybackMeasuredSource,
   type ReaderControlAutoPageFrame, type ReaderControlPlaybackMeasuredRect,
@@ -30,8 +33,7 @@ import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 import { ReaderControlTimerWheel } from './ReaderControlTimerWheel';
 import { FrameCallback } from '@kit.ArkUI';
 import { prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
-import { measureReaderControlAutoPageMinimum, readerControlAutoPageMinimumFonts,
-  type ReaderControlAutoPageMinimumProfile, type ReaderControlAutoPageTextMinimum } from './ReaderControlAutoPageMinimum';
+
 import type { ReaderControlCandidateWidths, ReaderControlModuleMeasurer, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
 import { readerControlPlaybackProfileMatches, type ReaderControlPlaybackProfileReceipt,
   type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileData } from './ReaderControlPlaybackProfile';
@@ -53,16 +55,44 @@ export struct ReaderControlAutoPageContent {
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
   @Prop sourceOnly: 'none' | 'quick' | 'full' = 'none';
+  @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
+  @Prop preparedMinimumRequired: boolean = false;
+  onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
+    (_identity: string, _facts: ReaderControlModuleFacts): void => {};
   @Prop @Watch('onSourceMinimumChanged') sourceMinimum: ReaderControlPlaybackProfileReceipt | undefined = undefined;
   @Prop @Watch('onSourceMinimumChanged') sourceMinimumIdentity: string = '';
   @Prop @Watch('onSourceMinimumChanged') sourceMinimumKey: string = '';
   @Prop @Watch('onSourceMinimumChanged') sourceMinimumMetricsRevision: number = -1;
   @Prop @Watch('publishMinimumMeasurer') minimumIdentity: string = '';
-  @Prop @Watch('onMinimumKeyChanged') minimumKey: string = '';
+  @Prop @Watch('onPreparedMinimumChanged') minimumKey: string = '';
   onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
     profileReader?: ReaderControlPlaybackProfileReader) => void =
     (_identity: string, _measurer: ReaderControlModuleMeasurer | undefined,
       _profileReader?: ReaderControlPlaybackProfileReader): void => {};
+  private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
+  private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
+    const current = this.preparedMinimum;
+    if (current !== undefined && current.identity === this.minimumIdentity && current.key === this.minimumKey &&
+      readerControlModuleProfileMatches(current.moduleData, 'autoPage') && readerControlModuleFactsMatch(current.facts, 'autoPage')) return current;
+    const adopted = this.adoptedPrepared;
+    return this.preparedMinimumRequired && adopted !== undefined &&
+      readerControlModuleProfileMatches(adopted.moduleData, 'autoPage') && readerControlModuleFactsMatch(adopted.facts, 'autoPage') ? adopted : undefined;
+  }
+  private preparedProfile(): ReaderControlAutoPageMinimumProfile | undefined {
+    return this.presentationPrepared()?.moduleData.autoPage;
+  }
+  private adoptedPreparedKey: string = '';
+  private onPreparedMinimumChanged(): void {
+    if (!this.preparedMinimumRequired) { this.onMinimumKeyChanged(); return; }
+    const prepared = this.preparedMinimum;
+    if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
+      !readerControlModuleProfileMatches(prepared.moduleData, 'autoPage') || !readerControlModuleFactsMatch(prepared.facts, 'autoPage')) return;
+    this.adoptedPrepared = prepared;
+    const adopted = `${prepared.identity}|${prepared.key}`;
+    if (adopted === this.adoptedPreparedKey) return;
+    this.adoptedPreparedKey = adopted;
+    this.onMinimumKeyChanged();
+  }
   private minimumMounted: boolean = false;
   private minimumFontsReady: boolean = false;
   private minimumOpening: number = 0;
@@ -78,7 +108,8 @@ export struct ReaderControlAutoPageContent {
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
   private currentInputEnabled(): boolean {
-    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private onSourceDetachedChanged(): void {
@@ -141,10 +172,14 @@ export struct ReaderControlAutoPageContent {
 
   private p(): number { return readerControlUnit(this.motionProgress); }
   private frame(): ReaderControlAutoPageFrame {
-    if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth || this.cachedMinimumKey !== this.minimumKey) {
+    const minimum = this.minimumProfile();
+    const key = this.sourceOnly !== 'none' ? (this.sourceMinimumCurrent() ? this.sourceMinimumKey : '') :
+      this.preparedMinimumRequired ? this.presentationPrepared()?.key ?? '' : this.minimumKey;
+    if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||
+      this.cachedMinimumKey !== key) {
       this.cachedProgress = this.motionProgress; this.cachedWidth = this.availableWidth;
-      this.cachedMinimumKey = this.minimumKey;
-      this.cachedFrame = sampleReaderControlAutoPage(this.motionProgress, this.availableWidth, this.minimumProfile());
+      this.cachedMinimumKey = key;
+      this.cachedFrame = sampleReaderControlAutoPage(this.motionProgress, this.availableWidth, minimum);
     }
     return this.cachedFrame;
   }
@@ -159,9 +194,14 @@ export struct ReaderControlAutoPageContent {
       this.minimumFontsReady = true;
       this.publishMinimumMeasurer();
     }).catch((): void => {});
+
+    if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
 
   aboutToDisappear(): void {
+    this.adoptedPrepared = undefined;
+    this.adoptedPreparedKey = '';
+
     this.minimumMounted = false;
     this.minimumMeasurer = undefined;
     this.minimumOpening += 1;
@@ -175,7 +215,12 @@ export struct ReaderControlAutoPageContent {
       this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     const identity = this.minimumIdentity;
     this.publishedMinimumIdentity = identity;
-    const status = this.headerMeta('control'), timerSummary = this.timerSummaryText;
+    const facts = readerControlAutoPageMinimumFacts({ status: this.status, timerSummary: this.timerSummaryText });
+    const status = facts.status, timerSummary = facts.timerSummary;
+    if (this.preparedMinimumRequired) {
+      this.onMinimumFactsChanged(identity, { module: 'autoPage', autoPage: facts });
+      return;
+    }
     const cache = new Map<string, ReaderControlAutoPageMinimumProfile>();
     let measurer: ReaderControlModuleMeasurer;
     measurer = (widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined => {
@@ -200,14 +245,14 @@ export struct ReaderControlAutoPageContent {
     const profileReader: ReaderControlPlaybackProfileReader = (key: string): ReaderControlPlaybackProfileData | undefined => {
       if (!this.minimumMounted || identity !== this.minimumIdentity || this.minimumMeasurer !== measurer) return undefined;
       const profile = cache.get(key);
-      return profile === undefined ? undefined : { autoPage: profile };
+      return profile === undefined ? undefined : { autoPage: profile, autoPageFacts: facts };
     };
     this.onMinimumMeasurerReady(identity, measurer, profileReader);
   }
 
   private minimumProfile(): ReaderControlAutoPageMinimumProfile | undefined {
     if (this.sourceOnly !== 'none') return this.sourceMinimumCurrent() ? this.sourceMinimum?.data.autoPage : undefined;
-    return this.minimumProfiles.get(this.minimumKey);
+    return this.preparedMinimumRequired ? this.preparedProfile() : this.preparedProfile() ?? this.minimumProfiles.get(this.minimumKey);
   }
 
   private sourceMinimumCurrent(): boolean {
@@ -379,7 +424,14 @@ export struct ReaderControlAutoPageContent {
   }
   private pathCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
     (path: string): PathShape => new PathShape().commands(path));
+  private clipMinimumKey: string = '';
   private sharedClip(kind: 'control' | 'speed'): PathShape {
+    const key = this.sourceOnly !== 'none' ? (this.sourceMinimumCurrent() ? this.sourceMinimumKey : '') :
+      this.preparedMinimumRequired ? this.presentationPrepared()?.key ?? '' : this.minimumKey;
+    if (this.clipMinimumKey !== key) {
+      this.clipMinimumKey = key;
+      this.pathCache = new ReaderControlMotionPathCache<PathShape>((path: string): PathShape => new PathShape().commands(path));
+    }
     const density = this.getUIContext().vp2px(1);
     return this.pathCache.sample(kind, [this.motionProgress, this.availableWidth, this.fullViewportHeight,
       this.minimumProfile()?.quick.contentHeight ?? 0, this.minimumProfile()?.full.contentHeight ?? 0,
@@ -433,14 +485,16 @@ export struct ReaderControlAutoPageContent {
   }
 
   build() {
+    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     if (this.sourceOnly !== 'none') {
       if (this.sourceMinimumCurrent() || (this.sourceMinimum === undefined && this.sourceMinimumIdentity.length === 0 &&
         this.sourceMinimumKey.length === 0 && this.sourceMinimumMetricsRevision === -1)) this.launchSourceContent();
     } else {
       this.normalContent();
     }
-  }
 
+    }
+  }
 
   @Builder
   private launchSourceContent() {
@@ -530,7 +584,8 @@ export struct ReaderControlAutoPageContent {
 
   private headerMeta(kind: 'control' | 'details'): string {
     if (kind === 'details') return '即时生效';
-    return this.status === 'running' ? '运行中' : (this.status === 'paused' ? '已暂停' : '未开始');
+    if (this.sourceOnly !== 'none' && this.sourceMinimumCurrent()) return this.sourceMinimum?.data.autoPageFacts?.status ?? readerControlAutoPageStatusLabel(this.status);
+    return this.presentationPrepared()?.facts.autoPage?.status ?? readerControlAutoPageStatusLabel(this.status);
   }
 
   // Builder arguments are stable identity only. ArkUI's update closures must
@@ -568,6 +623,15 @@ export struct ReaderControlAutoPageContent {
       .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(true, visible, ratio));
   }
 
+  private transportResponse(kind: 'previous' | 'toggle' | 'stop' | 'next'): Rectangle {
+    const frame = this.frame();
+    const paints = [frame.previous, frame.toggle, frame.stop, frame.next];
+    const index = kind === 'previous' ? 0 : kind === 'toggle' ? 1 : kind === 'stop' ? 2 : 3;
+    const paint = paints[index];
+    const response = readerControlPaidResponses(paints, readerControlActor(0, 0, this.sectionInnerWidth(),
+      this.textMetric('controlContentHeight', 62)))[index].response;
+    return { x: response.x - paint.x, y: response.y - paint.y, width: response.width, height: response.height };
+  }
   private chapterActor(previous: boolean): ReaderControlActorFrame {
     return previous ? this.frame().previous : this.frame().next;
   }
@@ -591,6 +655,7 @@ export struct ReaderControlAutoPageContent {
     }.width(this.chapterActor(previous).width).height(this.chapterActor(previous).height)
       .padding(0).backgroundColor(Color.Transparent).borderRadius(0).clip(false)
       .position({ x: this.chapterActor(previous).x, y: this.chapterActor(previous).y })
+      .responseRegion(this.transportResponse(previous ? 'previous' : 'next'))
       .opacity((previous ? this.canPreviousChapter : this.canNextChapter) ? 1 : 0.4)
       .attributeModifier(new ReaderActionAccessibility(previous ? '上一章' : '下一章',
         this.sharedInput() && (previous ? this.canPreviousChapter : this.canNextChapter), false, true, undefined, 'nativeButton'))
@@ -622,6 +687,7 @@ export struct ReaderControlAutoPageContent {
     }.width(this.frame().toggle.width).height(this.frame().toggle.height)
       .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
       .position({ x: this.frame().toggle.x, y: this.frame().toggle.y }).clip(true)
+      .responseRegion(this.transportResponse('toggle'))
       .enabled(this.sharedInput()).accessibilityText(this.status === 'running' ? '暂停自动翻页' :
         (this.status === 'paused' ? '继续自动翻页' : '开始自动翻页'))
       .onClick((): void => { if (this.sharedInput()) this.onToggleRunning(); });
@@ -635,6 +701,7 @@ export struct ReaderControlAutoPageContent {
     }.width(this.frame().stop.width).height(this.frame().stop.height).padding(0)
       .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(12)
       .position({ x: this.frame().stop.x, y: this.frame().stop.y })
+      .responseRegion(this.transportResponse('stop'))
       .enabled(this.sharedInput() && this.status !== 'stopped').opacity(this.status === 'stopped' ? 0.4 : 1)
       .accessibilityText('停止自动翻页').onClick((): void => { if (this.sharedInput() && this.status !== 'stopped') this.onStop(); });
     Text('停止').width(this.frame().stopLabel.width).height(this.frame().stopLabel.height)

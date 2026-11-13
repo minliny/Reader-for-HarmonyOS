@@ -1,5 +1,8 @@
-import { TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
+import { readerControlActor, readerControlPaidResponses, readerControlLerp, readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
+import { readerControlSettingsMinimumFacts, readerControlSettingsGroupLabel, readerControlSettingsOptionLabel, measureReaderControlSettingsMinimum } from './ReaderControlSettingsMinimum';
+import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
+import { TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK, TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
+
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { PathShape, RectShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionClipCache, readerControlMotionSourceFullyVisible,
@@ -16,15 +19,10 @@ import { createDefaultReaderSettingsSnapshot, isReaderPageTurnStyleAvailable,
   isReaderScreenDirectionAvailable, isReaderScreenTimeoutAvailable, isReaderSettingsToggleAvailable,
   readerPageTurnStyle, type ReaderPageTurnStyle, type ReaderScreenDirection,
   type ReaderScreenTimeout, type ReaderSettingsSnapshot, type ReaderSettingsToggleKey } from '../application/ReaderSettingsState';
-import { readerControlLerp, readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
-import { readerControlSettingsLabel, readerControlSettingsBar, readerControlSettingsChoice,
-  readerControlSettingsScreenTitle, readerControlSettingsAddedGroup, readerControlSettingsAddedChild,
-  sampleReaderControlSettings, type ReaderControlSettingsFrame,
-  type ReaderControlSettingsGroup, type ReaderControlSettingsAddedGroup } from './ReaderControlSettingsGeometry';
 
-import { measureReaderControlSettingsMinimum } from './ReaderControlSettingsMinimum';
+import { readerControlSettingsLabel, readerControlSettingsBar, readerControlSettingsChoice, readerControlSettingsScreenTitle, readerControlSettingsAddedGroup, readerControlSettingsAddedChild, sampleReaderControlSettings, type ReaderControlSettingsFrame, type ReaderControlSettingsGroup, type ReaderControlSettingsAddedGroup, type ReaderControlSettingsMinimumProfile } from './ReaderControlSettingsGeometry';
+
 import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum, ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
-import type { ReaderControlSettingsMinimumProfile } from './ReaderControlSettingsGeometry';
 
 const SETTINGS_DIRECTION_OPTIONS: string[] = ['system', 'portrait', 'landscape'];
 const SETTINGS_PAGE_OPTIONS: string[] = ['cover', 'slide', 'simulation', 'scroll', 'none'];
@@ -37,6 +35,10 @@ const SETTINGS_TIMEOUT_OPTIONS: string[] = ['system', 'oneMinute', 'fiveMinutes'
 export struct ReaderControlSettingsContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
+  @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
+  @Prop preparedMinimumRequired: boolean = false;
+  onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
+    (_identity: string, _facts: ReaderControlModuleFacts): void => {};
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
   @Prop @Watch('onMinimumIdentityChanged') minimumIdentity: string = '';
   @Prop minimumKey: string = '';
@@ -60,6 +62,33 @@ export struct ReaderControlSettingsContent {
   onJustifyTextChange: (value: boolean) => void = (_value: boolean): void => {};
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   @Prop fullViewportHeight: number = 666;
+  private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
+  private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
+    const current = this.preparedMinimum;
+    if (current !== undefined && current.identity === this.minimumIdentity && current.key === this.minimumKey &&
+      readerControlModuleProfileMatches(current.moduleData, 'settings') && readerControlModuleFactsMatch(current.facts, 'settings')) return current;
+    const adopted = this.adoptedPrepared;
+    return this.preparedMinimumRequired && adopted !== undefined &&
+      readerControlModuleProfileMatches(adopted.moduleData, 'settings') && readerControlModuleFactsMatch(adopted.facts, 'settings') ? adopted : undefined;
+  }
+  private preparedProfile(): ReaderControlSettingsMinimumProfile | undefined {
+    return this.presentationPrepared()?.moduleData.settings;
+  }
+  private currentMinimumProfile(): ReaderControlSettingsMinimumProfile | undefined {
+    return this.preparedMinimumRequired ? this.preparedProfile() : this.preparedProfile() ?? this.minimumProfiles.get(this.minimumKey);
+  }
+  private adoptedPreparedKey: string = '';
+  private onPreparedMinimumChanged(): void {
+    if (!this.preparedMinimumRequired) { this.onMotionChanged(); return; }
+    const prepared = this.preparedMinimum;
+    if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
+      !readerControlModuleProfileMatches(prepared.moduleData, 'settings') || !readerControlModuleFactsMatch(prepared.facts, 'settings')) return;
+    this.adoptedPrepared = prepared;
+    const adopted = `${prepared.identity}|${prepared.key}`;
+    if (adopted === this.adoptedPreparedKey) return;
+    this.adoptedPreparedKey = adopted;
+    this.onMotionChanged();
+  }
   private scroller: Scroller = new Scroller();
   private minimumQuickScrollOffset: number = 0;
   private minimumScrollPath: ReaderControlMorphScrollPath | undefined = undefined;
@@ -86,7 +115,8 @@ export struct ReaderControlSettingsContent {
   private readonly minimumMeasurer: ReaderControlModuleMeasurer =
     (widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined => this.measureMinimum(widths, key);
   private currentInputEnabled(): boolean {
-    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+    return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private measureMinimum(widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined {
@@ -104,7 +134,7 @@ export struct ReaderControlSettingsContent {
     if (profile === undefined) return undefined;
     const ticket = key.slice(0, key.lastIndexOf('|'));
     if (ticket !== this.minimumCacheTicket) {
-      const selected = this.minimumProfiles.get(this.minimumKey);
+      const selected = this.currentMinimumProfile();
       this.minimumProfiles.clear();
       if (selected !== undefined && this.minimumKey.length > 0) this.minimumProfiles.set(this.minimumKey, selected);
       this.minimumCacheTicket = ticket;
@@ -118,12 +148,19 @@ export struct ReaderControlSettingsContent {
   }
   private onMinimumIdentityChanged(): void {
     if (!this.minimumMounted) return;
+    if (this.preparedMinimumRequired) {
+      if (this.minimumIdentity.length > 0) this.onMinimumFactsChanged(this.minimumIdentity, { module: 'settings', settings: readerControlSettingsMinimumFacts() });
+      return;
+    }
     if (this.publishedMinimumIdentity.length > 0 && this.publishedMinimumIdentity !== this.minimumIdentity)
       this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     this.publishedMinimumIdentity = this.minimumIdentity;
     if (this.minimumIdentity.length > 0) this.onMinimumMeasurerReady(this.minimumIdentity, this.minimumMeasurer);
   }
   aboutToDisappear(): void {
+    this.adoptedPrepared = undefined;
+    this.adoptedPreparedKey = '';
+
     this.minimumMounted = false;
     if (this.publishedMinimumIdentity.length > 0) this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     this.publishedMinimumIdentity = '';
@@ -133,6 +170,8 @@ export struct ReaderControlSettingsContent {
     registerReaderFonts(this.getUIContext().getFont());
     this.minimumMounted = true;
     this.onMinimumIdentityChanged();
+
+    if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
 
   private p(): number { return readerControlUnit(this.motionProgress); }
@@ -214,25 +253,29 @@ export struct ReaderControlSettingsContent {
   }
   private geometry(): ReaderControlSettingsFrame {
     const progress = this.p();
+    const minimum = this.currentMinimumProfile();
+    const key = this.preparedMinimumRequired ? this.presentationPrepared()?.key ?? '' : this.minimumKey;
     if (this.cachedGeometry === undefined || this.geometryProgress !== progress ||
-      this.geometryWidth !== this.availableWidth || this.geometryMinimumKey !== this.minimumKey) {
+      this.geometryWidth !== this.availableWidth || this.geometryMinimumKey !== key) {
       this.geometryProgress = progress;
       this.geometryWidth = this.availableWidth;
-      this.geometryMinimumKey = this.minimumKey;
-      this.cachedGeometry = sampleReaderControlSettings(progress, this.availableWidth, this.minimumProfiles.get(this.minimumKey));
+      this.geometryMinimumKey = key;
+      this.cachedGeometry = sampleReaderControlSettings(progress, this.availableWidth, minimum);
     }
     return this.cachedGeometry;
   }
   private sharedRect(row: number, bar: boolean, p: number): ReaderControlMotionClipRect {
-    if (this.clipEndpointWidth !== this.availableWidth || this.clipMinimumKey !== this.minimumKey) {
-      this.clipMinimumKey = this.minimumKey;
+    const minimum = this.currentMinimumProfile();
+    const key = this.preparedMinimumRequired ? this.presentationPrepared()?.key ?? '' : this.minimumKey;
+    if (this.clipEndpointWidth !== this.availableWidth || this.clipMinimumKey !== key) {
+      this.clipMinimumKey = key;
       this.clipEndpointWidth = this.availableWidth; this.clipFullRects = []; this.clipQuickRects = [];
     }
     const index = row * 2 + (bar ? 1 : 0);
     const cache = p === 1 ? this.clipFullRects : this.clipQuickRects;
     if ((p === 0 || p === 1) && cache[index] !== undefined) return cache[index];
     const geometry = p === this.p() ? this.geometry() :
-      sampleReaderControlSettings(p, this.availableWidth, this.minimumProfiles.get(this.minimumKey));
+      sampleReaderControlSettings(p, this.availableWidth, minimum);
     const actor = bar ? geometry.bars[row] : geometry.labels[row];
     const rect: ReaderControlMotionClipRect = { x: actor.x + 15, y: actor.y + 5, width: actor.width, height: actor.height };
     if (p === 0 || p === 1) cache[index] = rect;
@@ -257,6 +300,13 @@ export struct ReaderControlSettingsContent {
     return group === 'direction' ? this.geometry().directionChoices[index] : group === 'pageTurn' ?
       this.geometry().pageChoices[index] : this.geometry().timeoutChoices[index];
   }
+  private segmentResponse(group: ReaderControlSettingsGroup, row: number, index: number): Rectangle {
+    const paints = this.groupOptions(group).map((_option: string, i: number): ReaderControlActorFrame => this.choice(group, row, i));
+    const bar = this.bar(row);
+    const response = readerControlPaidResponses(paints, readerControlActor(0, 0, bar.width, bar.height))[index].response;
+    const paint = paints[index];
+    return { x: response.x - paint.x, y: response.y - paint.y, width: response.width, height: response.height };
+  }
   private optionModifier(group: ReaderControlSettingsGroup, row: number, index: number,
     option: string): ReaderControlSettingsOptionModifier {
     const slot = row * 5 + index;
@@ -266,7 +316,7 @@ export struct ReaderControlSettingsContent {
     }
     return this.optionModifiers[slot].update(this.choice(group, row, index), this.presentation(),
       this.isSegmentActive(group, option), this.currentInputEnabled() && this.isSegmentAvailable(group, option),
-      this.segmentAccessibilityText(group, option), this.appThemeScheme);
+      this.segmentAccessibilityText(group, option), this.appThemeScheme, this.segmentResponse(group, row, index));
   }
   private group(group: ReaderControlSettingsAddedGroup): ReaderControlActorFrame {
     return this.geometry().groups[group === 'status' ? 0 : group === 'typography' ? 1 : 2];
@@ -276,6 +326,7 @@ export struct ReaderControlSettingsContent {
   }
 
   build() {
+    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Scroll(this.scroller) {
       Stack({ alignContent: Alignment.TopStart }) {
         this.screenGroup();
@@ -295,6 +346,8 @@ export struct ReaderControlSettingsContent {
     .onDidScroll((): void => this.onFullDidScroll())
     .enabled(this.currentInputEnabled())
     .clip(true);
+
+    }
   }
 
   @Builder
@@ -443,50 +496,11 @@ export struct ReaderControlSettingsContent {
   }
 
   private groupLabel(group: ReaderControlSettingsGroup): string {
-    if (group === 'direction') {
-      return '屏幕方向';
-    }
-    if (group === 'pageTurn') {
-      return '翻页样式';
-    }
-    return '屏幕超时';
+    return readerControlSettingsGroupLabel(group);
   }
 
   private optionLabel(group: ReaderControlSettingsGroup, option: string): string {
-    if (group === 'direction') {
-      if (option === 'system') {
-        return '跟随系统';
-      }
-      return option === 'portrait' ? '竖屏' : '横屏';
-    }
-    if (group === 'pageTurn') {
-      if (option === 'simulation') {
-        return '仿真';
-      }
-      if (option === 'cover') {
-        return '覆盖';
-      }
-      if (option === 'slide') {
-        return '滑动';
-      }
-      if (option === 'scroll') {
-        return '滚动';
-      }
-      return '无动画';
-    }
-    if (option === 'system') {
-      return '跟随系统';
-    }
-    if (option === 'oneMinute') {
-      return '1 分钟';
-    }
-    if (option === 'fiveMinutes') {
-      return '5 分钟';
-    }
-    if (option === 'tenMinutes') {
-      return '10 分钟';
-    }
-    return '始终开启';
+    return readerControlSettingsOptionLabel(group, option);
   }
 
   private isSegmentActive(group: ReaderControlSettingsGroup, option: string): boolean {

@@ -504,7 +504,7 @@ export struct FullDirectoryPanel {
       this.collapseLabel();
     }.constraintSize({ minWidth: 40,
       minHeight: readerScaledControlHeight(26, TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number, this.fontScale()) })
-      .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+      .padding({ left: 10, right: 10, top: 0, bottom: 0 })
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
   }
@@ -1454,8 +1454,8 @@ export struct FullDirectoryPanel {
     this.readerWindowMetricsRevision;
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
-  private panelHeaderHeight(): number { return readerScaledControlHeight(44, 20, this.fontScale()); }
-  private queryHeight(): number { return readerScaledControlHeight(44, 24, this.fontScale()); }
+  private panelHeaderHeight(): number { return readerScaledControlHeight(30, 20, this.fontScale()); }
+  private queryHeight(): number { return readerScaledControlHeight(32, 24, this.fontScale()); }
   private tabStripHeight(): number { return this.tabHeight() + 6; }
   private toolbarInputMinimumWidth(): number {
     const scale = this.fontScale();
@@ -1534,7 +1534,7 @@ export struct FullDirectoryPanel {
   }
 
   private directoryRowHeight(): number {
-    return readerScaledControlHeight(44, 20, this.fontScale());
+    return readerScaledControlHeight(40, 20, this.fontScale());
   }
 
   private directoryListRowHeight(): number {
@@ -1688,7 +1688,7 @@ export struct FullDirectoryPanel {
   }
 
   private tabHeight(): number {
-    return readerScaledControlHeight(44, TYPE_READER_DIRECTORY_TAB.lineHeightFp as number, this.fontScale());
+    return readerScaledControlHeight(36, TYPE_READER_DIRECTORY_TAB.lineHeightFp as number, this.fontScale());
   }
 
   private embeddedTabWidth(): number {
