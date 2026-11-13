@@ -242,3 +242,11 @@ Search原Publication的raw snapshot与resultScope在同一facts中取得，实�
 正式control登记19→20，修正14个控件事实，四族21项登记各递增一次并消费control20。266个唯一源路径按最终字节刷新。Root随后只清理七个Content共14处尾空白，保留逐文件before/current及严格trim等价证明，64处关联pin同步更新，本批revision保持一次。既有SDK及独审按语义等价复用。最终refs03通过，register03保留39项诊断，包括21项E2与5项E3失败、13项NOT_RUN，无新增source drift、reference或query viewport错误。21项visual继续NOT_RUN。独审又将八个漫画派生登记中24处混合旧44 bundle撤出当前PASS，保留实际漫画44事实与独立准确焦点等范围。
 
 本节代码与选定SDK已完成独立审修，新增HAP、安装和原生结果在后续单列。Source E2/E3维持原FAIL。系统大字号、读屏、全目标真实命中及用户接受维持原范围。Replace缺完整原稿的子级字号沿既有recipe，TTS颜色和pressed语义沿现有色板，均保留来源缺口。当前在线Figma授权失效及本地衍生页的边界沿上节记录，未产生新的独立设计批准。
+
+### 首次完整ArkTS编译的类型缺口
+
+提交8cb0c447的首次实际编译失败，尝试App为fe5b9a25b368，未发布HAP，VM仍为52353cad4ec0。ReplaceContent新增facts返回类型缺少真实type import，后继局部变量推断触发any/unknown诊断。Panel重复调用currentLayout读取可选Quick高度，编译器无法在两次读取间保留收窄。修复限定于补既有类型导入和单次读取当前layout。选定Builder/SDK前端结果继续保留其原范围，完整工程类型检查由实际编译承担。
+
+失败日志及公开诊断位于 `control-module-height-20261113/build-framework-systemic-01-failure.json`。其中一个诊断被既有签名日志清洗器隐藏，源码缺失导入独立可见，后继完整编译核对修复结果。两处修改独审、当前源pin与准确refs/register更新后再构建后继候选，原业务SDK按未变行为复用。
+
+类型补修只更新两份生产源码，七模块facts类型导入闭包一并只读核对。21处关联pin刷新，13个受影响登记各加一次revision，control20、facts/results/evidence保持。typefix refs01通过，register01继续准确39项开放诊断，diff检查通过。源修复及最小登记差异分别经独立接受后冻结，实际后继编译结果另记。

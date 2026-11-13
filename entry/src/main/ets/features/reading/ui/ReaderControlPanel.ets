@@ -1269,7 +1269,8 @@ export struct ReaderControlPanel {
   }
 
   private controlQuickHeight(): number {
-    if (this.currentLayout().quickPanelHeight !== undefined) return this.currentLayout().quickPanelHeight;
+    const currentQuickHeight = this.currentLayout().quickPanelHeight;
+    if (currentQuickHeight !== undefined) return currentQuickHeight;
     // Both device layouts retain the full 190vp Quick content above the
     // navigation row. Only a genuinely short window limits that endpoint.
     const expanded = this.isExpanded();

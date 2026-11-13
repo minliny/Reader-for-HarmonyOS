@@ -1,4 +1,5 @@
-import { readerControlReplaceMinimumFacts, measureReaderControlReplaceMinimum } from './ReaderControlReplaceMinimum';
+import { readerControlReplaceMinimumFacts, measureReaderControlReplaceMinimum,
+  type ReaderControlReplaceMinimumFacts } from './ReaderControlReplaceMinimum';
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
