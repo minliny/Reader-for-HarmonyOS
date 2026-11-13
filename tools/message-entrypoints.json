@@ -769,7 +769,7 @@
       "member": "readerRecoveryContent",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added.",
+      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved.",
       "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent.",
       "status": "registered-source-entry"
     },
@@ -1022,7 +1022,7 @@
       "member": "build",
       "family": "shared.recovery-action",
       "category": "书签终态确认隐藏及已确认写入后的只读刷新",
-      "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading.",
+      "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading. The original owner recoveryAction assigns reconcile versus continue busy to the corresponding primary or secondary action. Explicit confirmed-readback retries retain the same known-outcome retry actor while reading, including partial/materialization result variants. Same-group admission prevents duplicate recovery actions. The owner confirmation remains qualified throughout readback.",
       "retireRule": "Mounted teardown, inactive presentationActive or an expired immediate caller lease rejects retained retry, continue and local result-dismiss actors. A newly active Prop retries only undelivered current readback feedback, and an already delivered original identity remains deduplicated. Replaced original identity retires its actors. Original intent, receipt and data remain with their business owner. Dismiss is local presentation only and cannot ACK a write.",
       "status": "registered-source-entry"
     },
@@ -1033,7 +1033,7 @@
       "member": "build",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading.",
+      "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading. The original owner recoveryAction assigns reconcile versus continue busy to the corresponding primary or secondary action. Explicit confirmed-readback retries retain the same known-outcome retry actor while reading, including partial/materialization result variants. Same-group admission prevents duplicate recovery actions. The owner confirmation remains qualified throughout readback.",
       "retireRule": "Mounted teardown, inactive presentationActive or an expired immediate caller lease rejects retained retry, continue and local result-dismiss actors. A newly active Prop retries only undelivered current readback feedback, and an already delivered original identity remains deduplicated. Replaced original identity retires its actors. Original intent, receipt and data remain with their business owner. Dismiss is local presentation only and cannot ACK a write.",
       "status": "registered-source-entry"
     },
@@ -1785,7 +1785,7 @@
       "member": "showOfflineDownloadFeedback",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
+      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。 ReaderDirectoryOperations.reconcileBookmarks/reconcileOffline now also forward returned-attempt feedback through this adapter. Only an actually accepted Host attempt and its current returned snapshot supply unresolved, unavailable, confirmed or partial facts. Captured book/session Binding, presentation/generation and current foreground reject late feedback and newer active recovery actions suppress superseded results. Early rejection emits no completed feedback. Confirmed/readback failure retains the existing Surface notifier, and an unknown original receipt keeps its recovery surface and durable intent.",
       "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
@@ -1862,7 +1862,7 @@
       "member": "noticeBody",
       "family": "shared.recovery-action",
       "category": "公共原操作通知的主/次动作及本地展开适配边界",
-      "effectiveHost": "当前已登记RecoveryNotice的view.generation、view.canRetry/busy/secondaryBusy；原operation事实仍归调用者。第三个Action仅切expanded，不执行原操作。",
+      "effectiveHost": "当前已登记RecoveryNotice的view.generation、view.canRetry/busy/secondaryBusy；原operation事实仍归调用者。第三个Action仅切expanded，不执行原操作。 Both busy roles retain the primary actor and its width reservation while group admission blocks duplicates. Only the owner-selected action shows busy. Other registered callers retain the existing secondaryBusy=false behavior.",
       "retireRule": "主次动作按view.generation转交原onReconcile/onSecondaryAction；新generation重置展开测量，关闭/折叠不确认或取消业务。是否仍为当前原operation最终由调用者复核。",
       "status": "registered-adapter-boundary"
     }

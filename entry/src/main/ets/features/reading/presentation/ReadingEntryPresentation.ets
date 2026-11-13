@@ -916,7 +916,7 @@ export class ReadingEntryPresentation {
           operation.book.bookId === book.bookId && operation.book.title === book.title && operation.book.author === book.author) {
           this.directoryOperation = { action: operation.action, book: operation.book, generation: operation.generation,
             requestedCount: operation.requestedCount, confirmedCount: operation.confirmedCount, completion: operation.completion,
-            canContinueOriginal: operation.canContinueOriginal, projection: operation.projection };
+            canContinueOriginal: operation.canContinueOriginal, recoveryAction: operation.recoveryAction, projection: operation.projection };
         }
       },
       cacheDecision: (error: RemoteChapterCacheRefreshError, guard: () => boolean): Promise<boolean> =>

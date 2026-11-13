@@ -3,7 +3,7 @@ import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice'
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery, type ReadingDirectoryMessageKind } from '../presentation/ReadingDirectoryRecovery';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery, type ReadingDirectoryMessageKind, type ReadingDirectoryRecoveryAction } from '../presentation/ReadingDirectoryRecovery';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 
 /** The two finite directory recovery families use the existing notice/action
@@ -52,6 +52,9 @@ export struct ReaderDirectoryRecoverySurface {
   private busy(identity: string): boolean {
     return (this.isBookmarks(identity) ? this.recovery.bookmarksBusy : this.recovery.offlineBusy) === true;
   }
+  private recoveryAction(identity: string): ReadingDirectoryRecoveryAction | undefined {
+    return this.isBookmarks(identity) ? this.recovery.bookmarksRecoveryAction : this.recovery.offlineRecoveryAction;
+  }
   private notifyReadbackFailures(): void {
     if (!this.feedbackMounted || !this.presentationActive) return;
     const active = this.identities().filter((identity: string): boolean => this.readbackFailed(identity));
@@ -83,10 +86,12 @@ export struct ReaderDirectoryRecoverySurface {
     Column({ space: 8 }) {
       ForEach(this.identities(), (identity: string) => {
         if (this.kind(identity) === 'pending') {
-        ReaderRecoveryNotice({ view: this.view(identity), tag: this.isBookmarks(identity) ? '书签' : '离线', busy: this.busy(identity),
+        ReaderRecoveryNotice({ view: this.view(identity), tag: this.isBookmarks(identity) ? '书签' : '离线',
+          busy: this.busy(identity) && this.recoveryAction(identity) !== 'continue',
+          secondaryBusy: this.busy(identity) && this.recoveryAction(identity) === 'continue',
           actionLabel: this.isBookmarks(identity) ? '重新载入核对书签' : '核对离线结果',
           onReconcile: (): void => this.reconcile(identity, false),
-          secondaryActionLabel: this.canContinue(identity) ? '继续原操作' : '',
+          secondaryActionLabel: this.canContinue(identity) || (this.busy(identity) && this.recoveryAction(identity) === 'continue') ? '继续原操作' : '',
           onSecondaryAction: (): void => this.reconcile(identity, true) });
         } else {
           // Offline terminal counts/failures already use the original task's
@@ -102,10 +107,11 @@ export struct ReaderDirectoryRecoverySurface {
               } });
             }.width('100%');
           }
-          if (this.readbackFailed(identity) && this.view(identity).canRetry) {
+          if ((this.readbackFailed(identity) || (this.recoveryAction(identity) === 'reconcile' && this.busy(identity))) && (this.view(identity).canRetry || this.busy(identity))) {
             Row() {
               ReaderRecoveryAction({ variant: 'text', label: this.isBookmarks(identity) ? '重新读取书签' : '重新读取离线状态',
-                generation: this.capturedGeneration(identity), onReconcile: (): void => this.reconcile(identity, false) });
+                generation: this.capturedGeneration(identity), isBusy: this.busy(identity), actionEnabled: !this.busy(identity),
+                onReconcile: (): void => this.reconcile(identity, false) });
             }.width('100%').justifyContent(FlexAlign.End);
           }
         }

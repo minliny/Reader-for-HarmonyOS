@@ -21,8 +21,11 @@ export interface ReadingDirectoryRecovery {
   offlineReadbackFailed?: boolean;
   bookmarksBusy?: boolean;
   offlineBusy?: boolean;
+  bookmarksRecoveryAction?: ReadingDirectoryRecoveryAction;
+  offlineRecoveryAction?: ReadingDirectoryRecoveryAction;
 }
 export type ReadingDirectoryMessageKind = 'pending' | 'result' | 'readback' | 'none';
+export type ReadingDirectoryRecoveryAction = 'reconcile' | 'continue';
 const EMPTY_VIEW: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
 export const EMPTY_READING_DIRECTORY_RECOVERY: ReadingDirectoryRecovery = { presentationId: '',
   bookmarks: EMPTY_VIEW, offline: EMPTY_VIEW, canContinueBookmarks: false, canContinueOffline: false,
@@ -71,14 +74,14 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
     if (dir === undefined || dir.projection.receipt.confirmation === 'unknown' || dir.canContinueOriginal === true) bookmarksKind = 'pending';
     else if (dir.completion === 'partial' ||
       (dir.projection.receipt.confirmation === 'undispatched' && dir.projection.receipt.readback === 'failed')) bookmarksKind = 'result';
-    else if (bookmarksReadbackFailed) bookmarksKind = 'readback';
+    else if (bookmarksReadbackFailed || (dir.recoveryAction !== undefined && dir.projection.receipt.readback === 'reading')) bookmarksKind = 'readback';
   }
   let offlineKind: ReadingDirectoryMessageKind = 'none';
   if (cache.visible) {
     if (cached === undefined || cached.projection.receipt.confirmation === 'unknown' || cached.canContinueOriginal === true) offlineKind = 'pending';
     else if (cached.materializationFailure !== undefined || (cached.progress?.failedChapters ?? 0) > 0 ||
       (cached.projection.receipt.confirmation === 'undispatched' && cached.projection.receipt.readback === 'failed')) offlineKind = 'result';
-    else if (offlineReadbackFailed) offlineKind = 'readback';
+    else if (offlineReadbackFailed || (cached.recoveryAction !== undefined && cached.projection.receipt.readback === 'reading')) offlineKind = 'readback';
   }
   if (cached?.projection.receipt.confirmation === 'unknown' && offlineKind === 'pending' &&
     !cache.message.startsWith('离线操作结果尚未确认')) {
@@ -88,7 +91,9 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
   cache = { ...cache, visible: offlineKind !== 'none' };
   return { presentationId, bookmarks, offline: cache, bookmarksKind, offlineKind, bookmarkWriteEnabled,
     bookmarksReadbackFailed, offlineReadbackFailed,
-    bookmarksBusy: dir?.projection.receipt.readback === 'reading', offlineBusy: cached?.projection.receipt.readback === 'reading',
+    bookmarksBusy: dir?.recoveryAction !== undefined || dir?.projection.receipt.readback === 'reading',
+    offlineBusy: cached?.recoveryAction !== undefined || cached?.projection.receipt.readback === 'reading',
+    bookmarksRecoveryAction: dir?.recoveryAction, offlineRecoveryAction: cached?.recoveryAction,
     canContinueBookmarks: dir?.canContinueOriginal === true, canContinueOffline: cached?.canContinueOriginal === true,
     offlineBlocked: offline?.action === 'clear' && offline.projection.receipt.confirmation === 'unknown' && offline.blockingClear?.active !== false };
 }

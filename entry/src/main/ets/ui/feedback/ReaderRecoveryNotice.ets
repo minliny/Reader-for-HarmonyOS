@@ -74,7 +74,7 @@ export struct ReaderRecoveryNotice {
           else { Blank().height(Math.max(0, this.actionsHeight - this.titleLineHeight)); }
         }.width('100%');
         Flex({ justifyContent: FlexAlign.End, wrap: FlexWrap.Wrap }) {
-          if ((this.view.canRetry || this.busy) && this.actionLabel.length > 0) {
+          if ((this.view.canRetry || this.busy || this.secondaryBusy) && this.actionLabel.length > 0) {
             ReaderRecoveryAction({ variant: 'notice', label: this.actionLabel, generation: this.view.generation,
               isBusy: this.busy, actionEnabled: !this.busy && !this.secondaryBusy,
               onReconcile: this.onReconcile });
@@ -137,7 +137,7 @@ export struct ReaderRecoveryNotice {
       const labelWidth = (label: string): number => Math.max(44, context.px2vp(utils.measureText({ textContent: label,
         fontSize: `${MESSAGE_ACTION.fontSizeFp}fp`, fontFamily: MESSAGE_ACTION.fontFamily,
         fontWeight: MESSAGE_ACTION.fontWeight })) + 4);
-      let actions = (this.view.canRetry || this.busy) && this.actionLabel.length > 0 ? labelWidth(this.actionLabel) : 0;
+      let actions = (this.view.canRetry || this.busy || this.secondaryBusy) && this.actionLabel.length > 0 ? labelWidth(this.actionLabel) : 0;
       if (this.secondaryActionLabel.length > 0) actions += labelWidth(this.secondaryActionLabel);
       const space = context.px2vp(utils.measureText({ textContent: ' ', fontSize: '14fp',
         fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400 }));

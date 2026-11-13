@@ -1890,7 +1890,7 @@
       }
     },
     "test-reader-control-bookmark-mutation-recovery.mjs": {
-      "sourceSha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd",
+      "sourceSha256": "342b3c2119db498ea92566400bb6c0ada21fcd58393b5f33f94fa0bbe01b6f26",
       "cases": {
         "durable-recovery": {
           "resources": [],
@@ -1905,6 +1905,10 @@
           "qualification": "REVIEW_NEEDED"
         },
         "global-write-admission": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "recovery-hit-boundary": {
           "resources": [],
           "qualification": "QUALIFIED"
         }
@@ -11640,6 +11644,41 @@
           "qualification": "QUALIFIED"
         },
         "manga-action-body": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-recovery-action-state.mjs": {
+      "sourceSha256": "ff252536562ee30bc827e081930b1bf7af33d4bd0d45910c9edbad38f24f4954",
+      "cases": {
+        "pending-busy-owner": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "confirmed-readback": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reading-intent-sequence-admission.mjs": {
+      "sourceSha256": "4e2f8cdfac1f0c80ab01cb0b75b6dd75e6c1f77500b26520758fb64abca478fb",
+      "cases": {
+        "exact-next": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-recovery-owner-attempts.mjs": {
+      "sourceSha256": "b26233336b604e7fb93bd2408dddfeb23d12c02b94d55f8c71247d7a092341b0",
+      "cases": {
+        "bookmarks": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "offline": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

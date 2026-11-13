@@ -227,7 +227,7 @@ export class ReaderDirectoryOperations {
       emitOperation: (operation: ReaderDirectoryOperation): void => this.ports.publishBookmarks({ action: operation.action,
         book: operation.book, generation: operation.generation, requestedCount: operation.requestedCount,
         confirmedCount: operation.confirmedCount, completion: operation.completion,
-        canContinueOriginal: operation.canContinueOriginal, projection: operation.projection }),
+        canContinueOriginal: operation.canContinueOriginal, recoveryAction: operation.recoveryAction, projection: operation.projection }),
       emitWriteAdmission: (enabled: boolean): void => this.publishBookmarkAdmission(enabled),
       failed: (error: Error): void => this.ports.diagnostic('bookmarkOperation', error), onSettled };
   }
@@ -242,7 +242,7 @@ export class ReaderDirectoryOperations {
       emitOperation: (operation: ReadingOfflineOperation): void => this.publishOffline({ action: operation.action,
         sourceId: operation.sourceId, bookId: operation.bookId, chapterIndex: operation.chapterIndex, generation: operation.generation,
         materialization: operation.materialization, materializationFailure: operation.materializationFailure,
-        operationFailure: operation.operationFailure, canContinueOriginal: operation.canContinueOriginal, blockingClear: operation.blockingClear,
+        operationFailure: operation.operationFailure, canContinueOriginal: operation.canContinueOriginal, recoveryAction: operation.recoveryAction, blockingClear: operation.blockingClear,
         progress: operation.progress, projection: operation.projection }, operation.materialization === 'running'),
       onProgress: (progress: ReadingOfflineBookProgress, finished: boolean): void => {
         if (finished && current()) this.ports.feedback(offlineDownloadFeedback(session, progress));
@@ -251,6 +251,10 @@ export class ReaderDirectoryOperations {
         const hint = readingOfflineFailureHint(error);
         if (hint.length === 0) return;
         const operation = this.offlineOperation;
+        if (operation?.recoveryAction !== undefined) {
+          this.ports.diagnostic('offlineOperation', error);
+          return;
+        }
         if (operation?.projection.receipt.confirmation === 'unknown') {
           this.ports.feedback(operation.action === 'clear' ? '缓存清理结果尚未确认，请重试核对' : '下载结果尚未确认，请在目录中重试核对');
         } else if (operation?.action === 'clear') {
@@ -310,8 +314,24 @@ export class ReaderDirectoryOperations {
     const host = this.bookmarkHost(owner);
     if (host !== undefined) {
       const binding = this.bookmarkBinding(owner, book);
-      if (continueOriginal) void host.continueOriginal(generation, binding).catch((): void => {});
-      else void host.reconcile(generation, binding).catch((): void => {});
+      const reportResult = (): void => {
+        const current = this.ports.scene(), operation = host.snapshot();
+        if (!binding.current() || !current.foreground || identity !== this.presentationId(current) ||
+          operation === undefined || operation.generation !== generation || operation.recoveryAction !== undefined) return;
+        if (operation.projection.receipt.confirmation === 'unknown') {
+          this.ports.feedback(operation.canContinueOriginal === true ?
+            '书签原操作仍未确认，可重新核对或继续原操作' :
+            '书签原操作仍未确认，继续操作不可用，请查看核对提示');
+        } else if (operation.projection.receipt.confirmation === 'confirmed') {
+          // The existing recovery surface owns the confirmed/readback-failure
+          // feedback. Do not emit a second short message for that same fact.
+          if (operation.projection.receipt.readback === 'failed') return;
+          this.ports.feedback(operation.completion === 'partial' ?
+            '部分书签结果已核实，后续操作未派发' : '书签原操作已核实');
+        } else this.ports.feedback('书签原操作未派发');
+      };
+      const attempt = continueOriginal ? host.continueOriginal(generation, binding) : host.reconcile(generation, binding);
+      void attempt.then((admitted: boolean): void => { if (admitted) reportResult(); }, reportResult);
     }
   }
 
@@ -322,8 +342,22 @@ export class ReaderDirectoryOperations {
     const host = this.offlineHost(owner);
     if (host !== undefined) {
       const binding = this.offlineBinding(owner, session);
-      if (continueOriginal) void host.continueOriginal(generation, binding).catch((): void => {});
-      else void host.reconcile(generation, binding).catch((): void => {});
+      const reportResult = (): void => {
+        const current = this.ports.scene(), operation = host.snapshot();
+        if (!binding.current() || !current.foreground || identity !== this.presentationId(current) ||
+          operation === undefined || operation.generation !== generation || operation.recoveryAction !== undefined) return;
+        if (operation.projection.receipt.confirmation === 'unknown') {
+          this.ports.feedback(operation.canContinueOriginal === true ?
+            '离线原操作仍未确认，可重新核对或继续原操作' :
+            '离线原操作仍未确认，继续操作不可用，请查看核对提示');
+        } else if (operation.projection.receipt.confirmation === 'confirmed') {
+          if (operation.projection.receipt.readback === 'failed') return;
+          this.ports.feedback(operation.materialization === 'failed' ?
+            '离线原操作已确认，缓存整理尚未完成' : '离线原操作已核实');
+        } else this.ports.feedback('离线原操作未派发');
+      };
+      const attempt = continueOriginal ? host.continueOriginal(generation, binding) : host.reconcile(generation, binding);
+      void attempt.then((admitted: boolean): void => { if (admitted) reportResult(); }, reportResult);
     }
   }
 

@@ -16,6 +16,7 @@ export interface ReaderDirectoryOperation {
   confirmedCount: number;
   completion: 'notDispatched' | 'partial' | 'complete' | 'unknown';
   canContinueOriginal?: boolean;
+  recoveryAction?: 'reconcile' | 'continue';
   projection: PersistedReceiptProjection<LocalReadingTocEntry[]>;
 }
 
@@ -69,6 +70,7 @@ export class ReaderDirectoryHost {
    * It never becomes a mutation or obtains a fresh operation identity. */
   private pendingRead: { binding: ReaderDirectoryBinding; resolve: () => void; reject: (error: Error) => void } | undefined;
   private readGeneration: number = 0;
+  private recoveryAttempt: number = 0;
   private operation: ReaderDirectoryOperation | undefined;
   private bookmarkProjectionStale: boolean = false;
   private pendingBookmarkIntent: boolean | undefined;
@@ -166,16 +168,40 @@ export class ReaderDirectoryHost {
     void this.load(pending.binding).then(pending.resolve, pending.reject);
   }
 
-  async reconcile(generation: number, binding: ReaderDirectoryBinding): Promise<void> {
-    if (this.active || this.operation?.generation !== generation || !this.sameBook(this.operation.book, binding.book) ||
-      !this.operation.projection.facts.canRetry) return;
-    await this.load(binding);
+  async reconcile(generation: number, binding: ReaderDirectoryBinding): Promise<boolean> {
+    if (this.active || !this.admitted(binding) || this.operation?.generation !== generation ||
+      this.operation.recoveryAction !== undefined || !this.sameBook(this.operation.book, binding.book) ||
+      !this.operation.projection.facts.canRetry) return false;
+    const attempt = ++this.recoveryAttempt;
+    this.setRecoveryAction(generation, 'reconcile', binding);
+    try { await this.load(binding); return true; }
+    finally {
+      if (attempt === this.recoveryAttempt) this.setRecoveryAction(generation, undefined, binding);
+    }
   }
 
-  async continueOriginal(generation: number, binding: ReaderDirectoryBinding): Promise<void> {
-    if (this.operation?.generation !== generation || !this.sameBook(this.operation.book, binding.book) || !this.operation.canContinueOriginal) return;
-    try { await this.recoverPending(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding); }
-    finally { this.drainPendingRead(); }
+  async continueOriginal(generation: number, binding: ReaderDirectoryBinding): Promise<boolean> {
+    if (this.active || !this.admitted(binding) || this.operation?.generation !== generation ||
+      this.operation.recoveryAction !== undefined || !this.sameBook(this.operation.book, binding.book) ||
+      !this.operation.canContinueOriginal) return false;
+    const attempt = ++this.recoveryAttempt;
+    this.setRecoveryAction(generation, 'continue', binding);
+    try {
+      await this.recoverPending(binding, true);
+      if (!this.active && this.admitted(binding)) await this.load(binding);
+      return true;
+    } finally {
+      if (attempt === this.recoveryAttempt) this.setRecoveryAction(generation, undefined, binding);
+      this.drainPendingRead();
+    }
+  }
+
+  private setRecoveryAction(generation: number, action: ReaderDirectoryOperation['recoveryAction'],
+    binding: ReaderDirectoryBinding): void {
+    const operation = this.operation;
+    if (operation === undefined || operation.generation !== generation) return;
+    operation.recoveryAction = action;
+    this.deliver(binding, (): void => binding.emitOperation?.(operation));
   }
 
   private context(binding: ReaderDirectoryBinding, ownerAction?: ReadingOperationContext['ownerAction']): ReadingOperationContext {
@@ -211,6 +237,7 @@ export class ReaderDirectoryHost {
         const action = pending.context.ownerAction === 'createChapterStart' ? 'createChapterStart' : pending.method === 'bookmark.delete' ? 'delete' : 'createPosition';
         this.operation = { action, book: { ...binding.book }, generation, requestedCount, confirmedCount,
           completion: confirmedCount === requestedCount ? 'complete' : 'partial', canContinueOriginal: false,
+          recoveryAction: previous?.recoveryAction,
           projection: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'idle', generation, canRetry: true,
             message: confirmedCount === requestedCount ? '原书签操作已核实' : '原操作已核实，未派发后续书签操作' }) };
         this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
@@ -222,6 +249,7 @@ export class ReaderDirectoryHost {
         const confirmedCount = confirmed ? Math.min(requestedCount, (previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0) + (previous?.projection.receipt.confirmation === 'confirmed' ? 0 : 1)) : previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0;
         this.operation = { action: pending.context.ownerAction === 'createChapterStart' ? 'createChapterStart' : pending.method === 'bookmark.delete' ? 'delete' : 'createPosition',
           book: { ...binding.book }, generation, requestedCount, confirmedCount, completion: confirmed ? (confirmedCount === requestedCount ? 'complete' : 'partial') : 'unknown', canContinueOriginal: !confirmed && issue.blocked !== true,
+          recoveryAction: previous?.recoveryAction,
           projection: projectPersistedReceipt({ confirmation: confirmed ? 'confirmed' : 'unknown', readback: 'failed', generation, canRetry: true,
             message: issue.message, blockedReason: issue.blocked ? issue.message : undefined, refreshError: issue.message, value: binding.currentEntries(), stale: true }) };
         this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
@@ -240,7 +268,7 @@ export class ReaderDirectoryHost {
       const generation = previous.generation;
       this.operation = { action: previous.action, book: { ...binding.book }, generation,
         requestedCount: previous.requestedCount, confirmedCount: previous.confirmedCount,
-        completion: previous.completion, canContinueOriginal: false,
+        completion: previous.completion, canContinueOriginal: false, recoveryAction: previous.recoveryAction,
         projection: projectPersistedReceipt({ confirmation: previous.projection.receipt.confirmation,
           readback: 'failed', generation, canRetry: true, value: binding.currentEntries(), stale: true,
           blockedReason: issue.message, message: issue.message, refreshError: issue.message }) };

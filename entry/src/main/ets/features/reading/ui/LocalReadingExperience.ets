@@ -2356,6 +2356,7 @@ export struct ReadingExperience {
                 presentationId: this.bookmarkRecovery.presentationId, bookmarks: this.bookmarkRecovery.bookmarks,
                 bookmarksKind: this.bookmarkRecovery.bookmarksKind, bookmarksReadbackFailed: this.bookmarkRecovery.bookmarksReadbackFailed,
                 bookmarksBusy: this.bookmarkRecovery.bookmarksBusy, canContinueBookmarks: this.bookmarkRecovery.canContinueBookmarks,
+                bookmarksRecoveryAction: this.bookmarkRecovery.bookmarksRecoveryAction,
                 bookmarkWriteEnabled: this.bookmarkRecovery.bookmarkWriteEnabled,
                 offline: EMPTY_READING_DIRECTORY_RECOVERY.offline, canContinueOffline: false,
               }, presentationActive: this.readerRecoveryInputCurrent(),
@@ -2405,7 +2406,7 @@ export struct ReadingExperience {
       .opacity(this.readerRecoveryInputCurrent() ? 1 : 0)
       .enabled(this.readerRecoveryInputCurrent())
       .accessibilityLevel(this.readerRecoveryInputCurrent() ? 'auto' : 'no-hide-descendants')
-      .zIndex(8).hitTestBehavior(this.readerRecoveryInputCurrent() ? HitTestMode.Transparent : HitTestMode.None);
+      .zIndex(8).hitTestBehavior(this.readerRecoveryInputCurrent() ? HitTestMode.Default : HitTestMode.None);
     }
   }
 

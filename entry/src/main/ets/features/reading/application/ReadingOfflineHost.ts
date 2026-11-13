@@ -33,6 +33,7 @@ export interface ReadingOfflineOperation {
   materializationFailure?: string;
   operationFailure?: string;
   canContinueOriginal?: boolean;
+  recoveryAction?: 'reconcile' | 'continue';
   /** A foreign fixed intent is a capacity fact, not this book's write ACK. */
   blockingClear?: { scope: 'cache' | 'book'; active: boolean };
   progress?: ReadingOfflineBookProgress;
@@ -90,6 +91,7 @@ export class ReadingOfflineHost {
    * It never becomes a mutation or obtains a fresh operation identity. */
   private pendingRead: { binding: ReadingOfflineBinding; resolve: () => void; reject: (error: Error) => void } | undefined;
   private generation: number = 0;
+  private recoveryAttempt: number = 0;
   private readGeneration: number = 0;
   private operation: ReadingOfflineOperation | undefined;
   private mangaIntent: MangaDownloadIntent | undefined;
@@ -346,17 +348,41 @@ export class ReadingOfflineHost {
     void this.load(pending.binding).then(pending.resolve, pending.reject);
   }
 
-  async reconcile(generation: number, binding: ReadingOfflineBinding): Promise<void> {
-    if (this.operation?.generation !== generation || !this.matches(this.operation, binding) ||
-      !this.operation.projection.facts.canRetry) return;
-    await this.load(binding);
+  async reconcile(generation: number, binding: ReadingOfflineBinding): Promise<boolean> {
+    if (this.busy() || !this.admitted(binding) || this.operation?.generation !== generation ||
+      this.operation.recoveryAction !== undefined || !this.matches(this.operation, binding) ||
+      !this.operation.projection.facts.canRetry) return false;
+    const attempt = ++this.recoveryAttempt;
+    this.setRecoveryAction(generation, 'reconcile', binding);
+    try { await this.load(binding); return true; }
+    finally {
+      if (attempt === this.recoveryAttempt) this.setRecoveryAction(generation, undefined, binding);
+    }
   }
 
-  async continueOriginal(generation: number, binding: ReadingOfflineBinding): Promise<void> {
-    if (this.operation?.generation !== generation || !this.matches(this.operation, binding) || !this.operation.canContinueOriginal) return;
-    try { await this.recoverClear(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding); }
-    finally { this.drainPendingRead(); }
+  async continueOriginal(generation: number, binding: ReadingOfflineBinding): Promise<boolean> {
+    if (this.busy() || !this.admitted(binding) || this.operation?.generation !== generation ||
+      this.operation.recoveryAction !== undefined || !this.matches(this.operation, binding) ||
+      !this.operation.canContinueOriginal) return false;
+    const attempt = ++this.recoveryAttempt;
+    this.setRecoveryAction(generation, 'continue', binding);
+    try {
+      await this.recoverClear(binding, true);
+      if (!this.active && this.admitted(binding)) await this.load(binding);
+      return true;
+    } finally {
+      if (attempt === this.recoveryAttempt) this.setRecoveryAction(generation, undefined, binding);
+      this.drainPendingRead();
+    }
   }
+
+  private setRecoveryAction(generation: number, action: ReadingOfflineOperation['recoveryAction'],
+    binding: ReadingOfflineBinding): void {
+    if (this.operation === undefined || this.operation.generation !== generation) return;
+    this.operation.recoveryAction = action;
+    this.publish(binding);
+  }
+
   private async recoverClear(binding: ReadingOfflineBinding, continueOriginal: boolean): Promise<void> {
     if (this.active || !this.admitted(binding)) return;
     this.active = true; const previous = this.operation !== undefined && this.matches(this.operation, binding) ? this.operation : undefined;
@@ -393,6 +419,7 @@ export class ReadingOfflineHost {
         // Core-only read recovery does not claim the physical image step ran.
         this.operation = { action: 'clear', ...context, generation, materialization: previous?.materialization ?? 'idle',
           materializationFailure: previous?.materializationFailure, canContinueOriginal: false,
+          recoveryAction: previous?.recoveryAction,
           projection: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'idle', generation, canRetry: true,
             message: previous?.materializationFailure ?? '原清理已核实；图片缓存整理保留原执行状态' }) };
         this.publish(binding);
@@ -401,7 +428,7 @@ export class ReadingOfflineHost {
         const confirmed = issue.confirmed === true || previous?.projection.receipt.confirmation === 'confirmed';
         this.operation = { action: 'clear', ...context, generation, materialization: previous?.materialization ?? 'idle',
           materializationFailure: previous?.materializationFailure, operationFailure: issue.message,
-          canContinueOriginal: !confirmed && issue.blocked !== true,
+          canContinueOriginal: !confirmed && issue.blocked !== true, recoveryAction: previous?.recoveryAction,
           projection: projectPersistedReceipt({ confirmation: confirmed ? 'confirmed' : 'unknown', readback: 'failed', generation,
             message: previous?.materializationFailure ?? issue.message, blockedReason: issue.blocked ? issue.message : undefined, refreshError: issue.message, canRetry: true, stale: true }) };
         this.publish(binding); this.deliver(binding, (): void => binding.failed?.(error as Error));
@@ -410,6 +437,7 @@ export class ReadingOfflineHost {
       const issue = error as ReadingOperationPendingError; const generation = previous?.generation ?? ++this.generation;
       this.operation = { action: 'clear', ...context, generation, materialization: previous?.materialization ?? 'idle',
         materializationFailure: previous?.materializationFailure, operationFailure: issue.message, canContinueOriginal: false,
+        recoveryAction: previous?.recoveryAction,
         projection: projectPersistedReceipt({ confirmation: previous?.projection.receipt.confirmation ?? 'unknown',
           readback: 'failed', generation, canRetry: true, blockedReason: issue.message, message: issue.message,
           value: binding.currentEntries(), stale: true }) };

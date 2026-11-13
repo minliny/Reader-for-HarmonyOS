@@ -167,6 +167,8 @@ class ReadingDomainIntent {
       if (intent.phase === 'confirmed') throw new ReadingOperationPendingError('已确认操作的精确回执缺失，已阻断；不能重新写入', intent, true, true);
       if (head !== undefined && head.sequence >= (intent.params['sequence'] as number))
         throw new ReadingOperationPendingError('原操作回执缺失且流水号已越过，已阻断，不能重新派发或猜测成功', intent, true);
+      if (intent.params['sequence'] !== (head?.sequence ?? 0) + 1)
+        throw new ReadingOperationPendingError('原操作流水号与当前回执不连续，已保留并阻断，不能继续派发', intent, true);
       return undefined;
     }
     const receipt = this.object(data['receipt']); const binding = this.binding(receipt['binding']);

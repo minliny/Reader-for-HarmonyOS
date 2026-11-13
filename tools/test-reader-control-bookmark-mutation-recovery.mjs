@@ -3,7 +3,8 @@ const definitions={
  'durable-recovery':{description:'Actual bookmark Index/DirectoryHost exact receipt and committed-write reload recovery via existing Core CLI',resources:[]},
  'host-retry':{description:'Actual bookmark Host/Gateway/Operations and reader list versus unknown-write recovery, input identity and retry without Native',resources:[]},
  'global-write-admission':{description:'Actual global AtomicIntent/Host/Gateway admission and first-page Journey/Entry projection with finite controlled RPC outcomes; no Core CLI or native execution',resources:[]},
- 'recovery-surface-sdk':{description:'SDK-emitted reading recovery Scroll touch boundary and actual retry actors with current, busy and successor identities',resources:[]}
+ 'recovery-surface-sdk':{description:'SDK-emitted reading recovery Scroll touch boundary and actual retry actors with current, busy and successor identities',resources:[]},
+ 'recovery-hit-boundary':{description:'Actual bounded floating recovery Scroll blocks sibling hit collection while preserving its children, current callbacks and inactive None declaration; no native event simulation',resources:[]}
 };
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
@@ -369,6 +370,84 @@ if(selectedCase==='global-write-admission'){
    settlements:f.calls.filter(call=>call.method==='bookmark.operation.settle').map(call=>call.params)}))}));
  } finally {await cleanupDurableFixtures();}
  console.log('PASS global bookmark admission: 9 actual owner scenarios plus first-page and retained initial projection, cold/foreign/same/settled/cleanup/stale/busy/unreadable/old binding/invalid receipt and current/retired first-page rejection ownership');
+}else if(selectedCase==='recovery-hit-boundary'){
+ const {registerHooks}=await import('node:module');
+ registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+  if(error.code==='ERR_MODULE_NOT_FOUND'&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);
+  throw error;
+ }}});
+ const {readFileSync}=await import('node:fs');
+ const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'utf8');
+ const recoverySource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets',import.meta.url),'utf8');
+ function fixture(input,active=true){
+  const sdk=boundedSurfaceSdk(),calls=[];
+  sdk.hooks.childSources.ReaderDirectoryRecoverySurface=recoverySource;
+  sdk.deps.ReaderDirectoryRecoverySurface=createReaderBuilderProbe(recoverySource,boundedMembers(recoverySource),
+   {...sdk.deps,EMPTY_READING_DIRECTORY_RECOVERY},sdk.hooks).Component;
+  const owner=sdk.consumer(input,['readerRecoveryContent','readerRecoveryInputCurrent','hasReaderRecoveryContent',
+   'bookmarkRecoveryIdentity','reconcileBookmarkRecovery','reconcileReaderRecovery','showReaderRecovery','readerRecoveryOwnerKey'],
+   {EMPTY_READING_DIRECTORY_RECOVERY});
+  let controlsVisible=!active;
+  const view=generation=>({visible:true,canRetry:true,generation,message:'当前恢复事实'});
+  Object.assign(owner,{mounted:true,exitRequested:false,lifecycleToken:1,chapterSelectionToken:1,sourceId:book.sourceId,bookId:book.bookId,
+   sourceSwitchPresentationVisible:false,readerRecoveryView:view(21),readerRecoveryActionLabel:'重试加载目录',
+   readerRecoveryAction:()=>calls.push(['catalog']),readerSettingsRecovery:view(22),readerSettingsRecoveryBusy:false,
+   ttsPreferencesRecovery:view(23),ttsPreferencesRecoveryBusy:false,ttsConfigurationRecovery:view(24),replaceRecovery:view(25),
+   bookmarkRecovery:{...EMPTY_READING_DIRECTORY_RECOVERY,presentationId:'opening-1',bookmarks:view(8),
+    bookmarksKind:'pending',bookmarksBusy:false,canContinueBookmarks:true},
+   viewportWidth:366,readerWindowMetricsRevision:0,controlLayout:()=>({topBarWidth:334}),
+   readerRecoveryViewportHeight:()=>180,readerRecoveryTop:()=>100,readerRecoveryOverlayId:()=> 'recovery-test',
+   readerPreferenceModule:()=>'',isSessionActive:()=>true,isControlInputEnabled:()=>true,
+   controlVisible:()=>controlsVisible,controlMotionVisible:()=>controlsVisible,
+   onReconcileBookmarks:(generation,presentation)=>calls.push(['query',generation,presentation]),
+   onContinueBookmarks:(generation,presentation)=>calls.push(['continue',generation,presentation]),
+   retryReaderPreferenceNotice:(domain,generation)=>calls.push([domain,generation]),
+   openTtsConfigurationRecovery:generation=>calls.push(['configuration',generation]),
+   openReplaceRecovery:generation=>calls.push(['replace',generation])});
+  owner.readerRecoveryContent();sdk.properties.flush();
+  const scroll=[...owner.nodes.values()].find(node=>node.type==='Scroll');
+  const actions=sdk.walk(owner).filter(child=>child instanceof sdk.deps.ReaderRecoveryAction);
+  const click=label=>{
+   const action=actions.find(child=>child.label===label);
+   assert.ok(action,label);
+   const button=[...action.nodes.values()].find(node=>node.type==='Button'&&node.onClick);
+   assert.ok(button);assert.ok(button.constraintSize.minWidth>=44&&button.constraintSize.minHeight>=44);
+   button.onClick();
+  };
+  assert.ok(scroll);
+  assert.equal(scroll.hitTestBehavior,active?'HitTestMode.Default':'HitTestMode.None',
+   'the active bounded recovery viewport must block sibling hit collection');
+  assert.equal(scroll.width,334);assert.equal(scroll.height,undefined);
+  assert.deepEqual(scroll.constraintSize,{maxHeight:180});assert.deepEqual(scroll.position,{x:16,y:100});
+  assert.equal(scroll.enabled,active);assert.equal(scroll.opacity,active?1:0);
+  assert.equal(scroll.accessibilityLevel,active?'auto':'no-hide-descendants');
+  let stopped=false;scroll.onTouch({stopPropagation(){stopped=true;}});assert.equal(stopped,true);
+  return{owner,calls,click,actions,controls(value){controlsVisible=value;}};
+ }
+ const current=fixture(source);
+ assert.equal(current.actions.length,7,'all six floating recovery families retain their actual action children');
+ current.click('重新载入核对书签');current.click('继续原操作');current.click('重试保存');
+ current.click('查看设置');current.click('查看规则');
+ const tts=current.actions.find(child=>child.label==='重试保存'&&child.generation===23);
+ assert.ok(tts);[...tts.nodes.values()].find(node=>node.type==='Button'&&node.onClick).onClick();
+ assert.deepEqual(current.calls,[['query',8,'opening-1'],['continue',8,'opening-1'],['settings',22],
+  ['configuration',24],['replace',25],['tts',23]]);
+ current.controls(true);current.click('重新载入核对书签');current.click('查看设置');
+ assert.equal(current.calls.length,6,'retained actors cannot dispatch while the current owner is covered by controls');
+ current.controls(false);current.click('重试加载目录');assert.deepEqual(current.calls.at(-1),['catalog']);
+ current.click('重试加载目录');assert.equal(current.calls.length,7,'retired generic generation cannot replay after its actual clear');
+ current.owner.bookmarkRecovery={...current.owner.bookmarkRecovery,presentationId:'successor'};
+ current.click('重新载入核对书签');assert.equal(current.calls.length,7,'a previous presentation cannot dispatch into its successor');
+ const inactive=fixture(source,false);
+ inactive.click('重新载入核对书签');inactive.click('重试加载目录');assert.deepEqual(inactive.calls,[]);
+ const transparent=source.replace('.zIndex(8).hitTestBehavior(this.readerRecoveryInputCurrent() ? HitTestMode.Default : HitTestMode.None);',
+  '.zIndex(8).hitTestBehavior(this.readerRecoveryInputCurrent() ? HitTestMode.Transparent : HitTestMode.None);');
+ assert.notEqual(transparent,source);
+ assert.throws(()=>fixture(transparent),/bounded recovery viewport must block sibling hit collection/);
+ console.log('PASS bounded recovery hit declarations and seven actual action actors; sibling/native event dispatch and the reported flicker remain outside this proof');
 }else if(selectedCase==='recovery-surface-sdk'){
  const {registerHooks}=await import('node:module');
  registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
