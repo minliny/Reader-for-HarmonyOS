@@ -1,7 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 export const CONTRACT_CASES = {
-  'opaque-tab-shadow': { description: 'Opaque phone-only raised-shadow fill opt-in preserves other surfaces and actual geometry; no native raster claim.', resources: [] },
+  'phone-child-containment': { description: 'Actual paid phone-tab geometry disables redundant parent clipping while zero/narrow surfaces retain it; shadow fill experiment is withdrawn; no native raster claim.', resources: [] },
   'current-phone-shape': { description: 'Current phone Tab and six exact callers have one measured Native border/radius/clip/shadow owner, reject stale geometry and cannot restore phone Canvas; no Native raster claim.', resources: [] },
   'measurement-identity': { description: 'Actual phone shape and footer handlers retain accepted geometry while rejecting retired measurement callbacks.', resources: [] },
   'footer-propagation': { description: 'Actual nonstandard bookshelf and standard settings consume measured occupied footer extent, including all three bookshelf states.', resources: [] },
@@ -146,9 +146,9 @@ async function currentPhoneShape(sources={}) {
   assert.ok(material,'actual Tab builder emits the measured Native material');
   assert.equal(children(tab).filter(child=>child.params?.resolvedShape!==undefined).length,0,'phone Tab has no second painter or geometry output');
   assert.equal(material.borderRadius,tab.currentRaisedShape().radius,'Native material consumes its accepted effective radius');
-  assert.equal(material.clip,true,'the actual Native material clips to its own rounded border');
-  assert.deepEqual(material.shadow,deps.readerSurfaceElevation('raised','day',true),'the actual Native material owns its shared raised shadow');
-  assert.equal(material.shadow.fill,true,'opaque phone material opts into the filled native shadow path');
+  assert.equal(material.clip,false,'the paid Native phone material needs no rounded child clip');
+  assert.deepEqual(material.shadow,deps.readerSurfaceElevation('raised','day'),'the actual Native material owns its shared raised shadow');
+  assert.equal(material.shadow.fill,false,'the rejected opaque-shadow experiment restores the original shadow path');
   assert.equal(material.shadow.type,'ShadowType.COLOR','actual Native shadow uses the SDK color kind');
   const tabButtons=nodes(tab,'Button');
   assert.equal(tabButtons.length,2,'both admitted tabs use the real native Button');
@@ -161,15 +161,15 @@ async function currentPhoneShape(sources={}) {
     for(const [name,before,after,expected] of [
       ['tab-Normal-sentinel-restored','ButtonType.Capsule','ButtonType.Normal',/native tab capsule owns/],
       ['Native-radius-diverges','.borderRadius(this.materialRadius())','.borderRadius(0)',/Native material consumes|effective radius owner/],
-      ['Native-clip-disabled','.clip(true)','.clip(false)',/Native material clips|rounded clip owner/],
-      ['Native-shadow-detached',".shadow(readerSurfaceElevation('raised', this.scheme, true))",'',/owns its shared raised shadow|shared elevation owner|one shadow modifier/],
+      ['Native-clip-restored','.clip(this.requiresChildClip())','.clip(true)',/paid Native phone material|rounded clip owner/],
+      ['Native-shadow-detached',".shadow(readerSurfaceElevation('raised', this.scheme))",'',/owns its shared raised shadow|shared elevation owner|one shadow modifier/],
     ]){
       const mutant=replaceOnce(c,c.read(tabPath),before,after);
       await rejected(c,name,()=>currentPhoneShape({negative:true,[tabPath]:mutant}),expected);
     }
     const canvas=replaceOnce(c,c.read(tabPath),'      Row({ space: TOK_SPACE_XS }) {','      Canvas({});\n      Row({ space: TOK_SPACE_XS }) {');
     await rejected(c,'phone-Canvas-restored',()=>currentPhoneShape({negative:true,[tabPath]:canvas}),/phone cannot restore a second Canvas/);
-    const double=replaceOnce(c,c.read(tabPath),".shadow(readerSurfaceElevation('raised', this.scheme, true))", ".shadow(readerSurfaceElevation('raised', this.scheme, true)).shadow(readerSurfaceElevation('raised', this.scheme, true))");
+    const double=replaceOnce(c,c.read(tabPath),".shadow(readerSurfaceElevation('raised', this.scheme))", ".shadow(readerSurfaceElevation('raised', this.scheme)).shadow(readerSurfaceElevation('raised', this.scheme))");
     await rejected(c,'duplicate-material-shadow',()=>currentPhoneShape({negative:true,[tabPath]:double}),/one shadow modifier/);
   }
 }
@@ -206,7 +206,7 @@ function assertPhoneMaterialOwners(c,sources){
     visit(node);return rows;
   }
   const roles=[
-    ['ui/patterns/ReaderBottomTabBar.ets','build','this.materialRadius()','true',"readerSurfaceElevation('raised', this.scheme, true)",'this.measurementHandler(this.surfaceWidth, this.fontScale)'],
+    ['ui/patterns/ReaderBottomTabBar.ets','build','this.materialRadius()','this.requiresChildClip()',"readerSurfaceElevation('raised', this.scheme)",'this.measurementHandler(this.surfaceWidth, this.fontScale)'],
     ['ui/chrome/PageBackBar.ets','panel','this.panelRadius()','this.framed() || this.raised()',"readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme)",'this.panelAreaChangeHandler()'],
     ['features/search/ui/ReaderLibrarySearchSurface.ets','header','this.headerMaterialRadius()','true',"readerSurfaceElevation(this.headerVeil() ? 'raised' : 'fixed', this.scheme)",'this.headerSurfaceAreaChange()'],
     ['features/downloads/ui/SharedDownloadPage.ets','storageDock','this.dockMaterialRadius(false)','true',"readerSurfaceElevation('raised', this.appThemeScheme)",'this.raisedDockAreaChangeHandler(false)'],
@@ -360,44 +360,165 @@ async function footerPropagation(overrides={}) {
   }
 }
 
-async function opaqueTabShadow() {
-  const c=await context(),{assert,deps,ts,options}=c;
-  const colors=c.load('ui/foundation/ReaderThemeRegistry.ts');
-  for(const scheme of ['day','night']){
-    const color=colors.readerAppColor('app.navigation.floatingSurface',scheme);
-    assert.match(color,/^#FF[0-9A-Fa-f]{6}$/,'the explicit phone material is opaque in both themes');
-    const original=deps.readerSurfaceElevation('raised',scheme);
-    const opted=deps.readerSurfaceElevation('raised',scheme,true);
-    assert.equal(original.fill,false,'existing translucent raised callers retain hollow shadow behavior');
-    assert.equal(opted.fill,true);
-    assert.deepEqual({...opted,fill:false},original,'the experiment changes only shadow fill');
-    for(const kind of ['embedded','fixed','floating','popover','sheet'])
-      assert.deepEqual(deps.readerSurfaceElevation(kind,scheme,true),deps.readerSurfaceElevation(kind,scheme),
-        'opaque opt-in is scoped to raised elevation');
+async function phoneChildContainment(overrides={}) {
+  const c=await context(),{assert,deps,builder,nodes,children,metrics}=c;
+  const path='ui/patterns/ReaderBottomTabBar.ets';
+  const source=overrides.source??c.read(path);
+  const items=deps.MAIN_TABS.map(tab=>({...tab,icon:{id:tab.key}}));
+  assert.equal(items.length,2,'the paid geometry uses the actual two admitted product tabs');
+  assert.deepEqual(items.map(item=>item.label),['书架','设置'],'approved two-character labels retain the independently measured22vp ink budget');
+  assert.equal(deps.TYPE_MAIN_TAB_LABEL.fontFamily,'ReaderNotoSansSCUIBold');
+  assert.equal(deps.TYPE_MAIN_TAB_LABEL.fontSizeFp,11);
+  const scales=[1,1.3,1.6,2];
+  const frames=[[320,0,0],[366,0,0],[320,48,32],[366,90,90],[320,90,90],[320,200,200],[0,0,0]];
+  const originalMetrics={width:metrics.windowRect.width,left:metrics.systemInsets.left,right:metrics.systemInsets.right};
+  let composed=0,contained=0,clipped=0,arcPoints=0;
+  function createTab(width,scale) {
+    const tab=builder(path,c.methods(path,['surfaceWidth','fontScale','raisedShape']),{},source).owner;
+    Object.assign(tab,{mounted:true,appearanceEpoch:1,metricsRevision:0,items,current:'bookshelf',scheme:'day',
+      surfaceWidth:width,fontScale:scale,inputEnabled:true,bottomInset:15,translateX:0,raisedShape:undefined});
+    tab.initialRender();
+    const row=nodes(tab,'Row').find(node=>Object.is(node.width,width)&&node.border);
+    assert.ok(row,'actual phone builder emits its material owner');
+    return {tab,row};
   }
-  const consumers=['ui/patterns/ReaderBottomTabBar.ets','ui/chrome/PageBackBar.ets',
-    'features/search/ui/ReaderLibrarySearchSurface.ets','features/downloads/ui/SharedDownloadPage.ets',
-    'ui/surfaces/ReaderPanelFrame.ets'];
-  const explicit=[];
-  for(const path of consumers){
-    const tree=ts.createSourceFile(path,c.read(path),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
-    function visit(node){
-      if(ts.isCallExpression(node)&&node.expression.getText(tree)==='readerSurfaceElevation'&&node.arguments.length>2)
-        explicit.push({path,value:node.arguments[2].getText(tree)});
-      ts.forEachChild(node,visit);
+  function checkComposition(width,scale,expectedClip) {
+    const {tab,row}=createTab(width,scale);
+    assert.equal(row.clip,expectedClip,'paid containment domain controls the actual Row clip modifier');
+    assert.equal(row.padding,8,'actual parent pays the approved8vp inset');
+    assert.equal(row.border.width,1,'actual border pays1vp');
+    assert.equal(row.create.space,8,'actual parent pays the8vp inter-item gap');
+    const itemHeight=Math.ceil(50+18*(scale-1)),outerHeight=Math.ceil(68+18*(scale-1));
+    assert.deepEqual(row.constraintSize,{minHeight:outerHeight},'actual parent height follows its18fp label growth');
+    const buttons=nodes(tab,'Button');
+    assert.equal(buttons.length,2);
+    for(const button of buttons){
+      assert.equal(button.createWithChild.type,'ButtonType.Capsule');
+      assert.equal(button.layoutWeight,1,'equal native flex payment remains the width owner');
+      assert.equal(button.padding,0);
+      assert.deepEqual(button.constraintSize,{minHeight:itemHeight});
     }
-    visit(tree);
+    const columns=nodes(tab,'Column');
+    assert.equal(columns.length,2);
+    for(const column of columns){assert.equal(column.width,'100%');assert.equal(column.create.space,2);}
+    const labels=nodes(tab,'Text');
+    assert.equal(labels.length,2);
+    for(const label of labels){
+      assert.equal(label.width,'100%');assert.equal(label.maxLines,1);
+      assert.equal(label.textOverflow.overflow,'TextOverflow.Ellipsis');
+      assert.equal(label.lineHeight,'18fp');
+    }
+    for(const image of nodes(tab,'Image')){assert.equal(image.width,24);assert.equal(image.height,24);}
+    for(const stack of nodes(tab,'Stack').filter(node=>node.width===30))assert.equal(stack.height,30);
+    assert.equal(30+2+18*scale<=itemHeight,true,'real single-line column paint fits the admitted item minimum');
+    assert.deepEqual(row.shadow,deps.readerSurfaceElevation('raised','day'),'all original shadow parameters are restored');
+    assert.equal(row.shadow.fill,false);
+    composed++;
+    if(expectedClip){clipped++;return;}
+    const inset=row.padding+row.border.width,gap=row.create.space;
+    const childWidth=(width-2*inset-gap)/buttons.length;
+    assert.ok(childWidth>=Math.max(44,itemHeight),'admitted flex slot pays both the hit target and horizontal capsule');
+    assert.equal(outerHeight-itemHeight,2*inset,'child and parent end-cap centers use the same paid vertical inset');
+    const parentRadius=outerHeight/2,childRadius=itemHeight/2;
+    assert.equal(inset+childRadius,parentRadius,'the left outside cap is exactly concentric with the parent cap');
+    assert.equal(width-inset-childRadius,width-parentRadius,'the right outside cap is exactly concentric with the parent cap');
+    assert.equal(parentRadius-childRadius,inset,'the entire child circle pays the same9vp clearance');
+    function inside(x,y){
+      const dx=Math.max(parentRadius-x,0,x-(width-parentRadius));
+      const dy=Math.max(parentRadius-y,0,y-(outerHeight-parentRadius));
+      return dx*dx+dy*dy<=parentRadius*parentRadius+1e-8;
+    }
+    for(let index=0;index<buttons.length;index++){
+      const left=inset+index*(childWidth+gap),top=inset;
+      for(const [centerX,centerY]of [[left+childRadius,top+childRadius],[left+childWidth-childRadius,top+childRadius]]){
+        for(let degree=0;degree<360;degree+=3){
+          const radians=degree*Math.PI/180;
+          assert.ok(inside(centerX+childRadius*Math.cos(radians),centerY+childRadius*Math.sin(radians)),
+            'the paid mathematical child Capsule boundary is inside its parent capsule');
+          arcPoints++;
+        }
+      }
+    }
+    // The same source callbacks remain the sole business dispatch owners.
+    const selected=[],current=[];tab.onSelect=key=>selected.push(key);tab.onCurrentTap=key=>current.push(key);
+    buttons[0].onClick();buttons[1].onClick();
+    assert.deepEqual(current,['bookshelf']);assert.deepEqual(selected,[items[1].key]);
+    tab.inputEnabled=false;buttons[0].onClick();buttons[1].onClick();
+    assert.deepEqual(current,['bookshelf']);assert.deepEqual(selected,[items[1].key]);
+    contained++;
   }
-  assert.deepEqual(explicit,[{path:consumers[0],value:'true'}],'only the verified opaque phone material requests filled shadow');
-  await currentPhoneShape({negative:true});
-  const path=consumers[0];
-  const mutant=replaceOnce(c,c.read(path),"readerSurfaceElevation('raised', this.scheme, true)",
-    "readerSurfaceElevation('raised', this.scheme)");
-  await rejected(c,'opaque-phone-opt-in-dropped',()=>currentPhoneShape({negative:true,[path]:mutant}),
-    /shared elevation owner|opaque phone material|owns its shared raised shadow/);
-  console.log(JSON.stringify({case:'opaque-tab-shadow',status:'PASS',explicitOpaqueConsumers:1,
-    changedNativeParameter:'shadow.fill',nativeRaster:'NOT_RUN',hypothesis:'OPEN'}));
+  try {
+    for(const [viewport,left,right]of frames){
+      deps.AppStorage.setOrCreate('readerMainViewport',undefined);
+      metrics.windowRect.width=viewport;metrics.systemInsets.left=left;metrics.systemInsets.right=right;
+      for(const scale of scales){
+        metrics.systemFontScale=scale;
+        const nav=builder('app/navigation/ReaderBottomNavigation.ets',undefined,{ReaderBottomTabBar:class extends c.Child{}}).owner;
+        Object.assign(nav,{mounted:true,foreground:true,inputEnabled:true,current:'bookshelf',appThemeScheme:'day',
+          mainViewportRevision:0,readerWindowMetricsRevision:0});
+        nav.initialRender();
+        const input=children(nav).find(child=>Array.isArray(child.params?.items))?.params;
+        assert.ok(input,'actual navigation passes a frame even before the first viewport Area receipt');
+        const expectedWidth=Math.min(196,Math.max(0,viewport-Math.max(32,left)-Math.max(32,right)));
+        assert.equal(input.surfaceWidth,expectedWidth,'actual live viewport/safe-frame width is the paid geometry input');
+        const threshold=2*Math.max(44,Math.ceil(50+18*(scale-1)))+26;
+        checkComposition(input.surfaceWidth,scale,input.surfaceWidth<threshold);
+      }
+    }
+    for(const scale of scales){
+      const threshold=2*Math.ceil(50+18*(scale-1))+26;
+      checkComposition(threshold,scale,false);
+      checkComposition(threshold-.01,scale,true);
+      for(const width of [-1,NaN,Infinity])assert.equal(createTab(width,scale).row.clip,true,'invalid/unmeasured width retains its original clipping');
+    }
+    const retained=createTab(0,1),retainedId=retained.row.id;
+    assert.equal(retained.row.clip,true);
+    for(const [width,scale,expectedClip]of [[196,1,false],[150,2,true],[162,2,false],[0,2,true]]){
+      retained.tab.updateStateVars({surfaceWidth:width,fontScale:scale});c.properties.flush();
+      assert.equal(nodes(retained.tab,'Row').find(node=>node.border),retained.row,'responsive input updates keep the actual Row identity');
+      assert.equal(retained.row.id,retainedId);
+      assert.equal(retained.row.width,width,'the retained native Row receives the changed paid width');
+      assert.equal(retained.row.clip,expectedClip,'retained Row clipping reacts to width and font-scale input changes');
+    }
+    const shrinking=createTab(196,2),shrinkingRow=shrinking.row;
+    const oldArea=shrinking.tab.measurementHandler(196,2);
+    oldArea({},{width:196,height:86});c.properties.flush();
+    assert.equal(shrinkingRow.borderRadius,43);
+    shrinking.tab.updateStateVars({surfaceWidth:196,fontScale:1});c.properties.flush();
+    assert.equal(shrinkingRow.borderRadius,43,'the experiment preserves the existing adopted radius until a current Area arrives');
+    assert.equal(shrinkingRow.clip,true,'font shrink retains the old clip while adopted radius exceeds the new minimum box');
+    oldArea({},{width:196,height:999});c.properties.flush();
+    assert.equal(shrinkingRow.borderRadius,43,'a retired font generation cannot replace the adopted shape');
+    shrinking.tab.measurementHandler(196,1)({},{width:196,height:68});c.properties.flush();
+    assert.equal(nodes(shrinking.tab,'Row').find(node=>node.border),shrinkingRow);
+    assert.equal(shrinkingRow.borderRadius,34,'a current real Area replaces the adopted geometry');
+    assert.equal(shrinkingRow.clip,false,'real State dependency delivery disables clipping after current geometry arrives');
+    const empty=builder(path,undefined,{},source).owner;
+    Object.assign(empty,{items:[],surfaceWidth:196,fontScale:1});
+    assert.equal(empty.requiresChildClip(),true,'an empty/unpaid item set retains clipping');
+  } finally {
+    metrics.windowRect.width=originalMetrics.width;metrics.systemInsets.left=originalMetrics.left;metrics.systemInsets.right=originalMetrics.right;
+    metrics.systemFontScale=1;deps.publishReaderMainViewport(390,844);
+  }
+  const surface=c.read('ui/surfaces/ReaderSurfaceSpecs.ets');
+  assert.equal(surface.includes('opaqueMaterial'),false,'rejected experiment introduces no surviving helper option');
+  assert.equal(deps.readerSurfaceElevation.length,2,'actual helper has the original two-argument API');
+  assertPhoneMaterialOwners(c,{[path]:source});
+  await currentPhoneShape({negative:true,[path]:source});
+  if(!overrides.negative){
+    for(const [name,before,after]of [
+      ['paid-phone-clip-restored','.clip(this.requiresChildClip())','.clip(true)'],
+      ['zero-width-unclipped','.clip(this.requiresChildClip())','.clip(false)'],
+      ['unpaid-width-admitted','count * Math.max(44, itemHeight)','count * 44'],
+      ['font-shrink-radius-guard-removed','this.materialRadius() > maximumRadius','false'],
+    ]){
+      const mutant=replaceOnce(c,source,before,after);
+      await rejected(c,name,()=>phoneChildContainment({negative:true,source:mutant}),/paid containment domain|font shrink retains/);
+    }
+  }
+  console.log(JSON.stringify({case:'phone-child-containment',status:'PASS',composed,contained,clipped,arcPoints,
+    nativeRaster:'NOT_RUN',hypothesis:'OPEN',rejectedHypothesis:'opaque-shadow-fill'}));
 }
 
-const implementations={'opaque-tab-shadow':opaqueTabShadow,'current-phone-shape':currentPhoneShape,'measurement-identity':measurementIdentity,'footer-propagation':footerPropagation};
+const implementations={'phone-child-containment':phoneChildContainment,'current-phone-shape':currentPhoneShape,'measurement-identity':measurementIdentity,'footer-propagation':footerPropagation};
 for(const id of selectContractCases(CONTRACT_CASES)){await implementations[id]();recordContractCasePass(id);}

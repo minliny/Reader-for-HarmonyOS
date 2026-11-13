@@ -32,8 +32,7 @@ function resolveSurfaceElevationSpec(kind: ReaderSurfaceElevationKind): ReaderSu
 
 /** ArkUI ShadowOptions radius/offset are physical px (SDK common.d.ts:7484).
  * Specs are logical vp, resolved once through the live window density. */
-export function readerSurfaceElevation(kind: ReaderSurfaceElevationKind, scheme: string,
-  opaqueMaterial: boolean = false): ShadowOptions {
+export function readerSurfaceElevation(kind: ReaderSurfaceElevationKind, scheme: string): ShadowOptions {
   const spec = resolveSurfaceElevationSpec(kind);
   const observedDensity = readerWindowMetrics().densityPixels;
   const density = Number.isFinite(observedDensity) && observedDensity > 0 ? observedDensity : 1;
@@ -41,7 +40,7 @@ export function readerSurfaceElevation(kind: ReaderSurfaceElevationKind, scheme:
     // The actual material node owns its native border, radius and shadow.
     // No second bitmap, independent bounds or destination-out mask.
     return { radius: spec.radiusVp * density, offsetX: 0, offsetY: spec.offsetYVp * density,
-      color: readerAppColor(spec.shadowRole, scheme), type: ShadowType.COLOR, fill: opaqueMaterial };
+      color: readerAppColor(spec.shadowRole, scheme), type: ShadowType.COLOR, fill: false };
   }
   return { radius: spec.radiusVp * density, offsetX: 0, offsetY: spec.offsetYVp * density,
     color: readerAppColor(spec.shadowRole, scheme) };

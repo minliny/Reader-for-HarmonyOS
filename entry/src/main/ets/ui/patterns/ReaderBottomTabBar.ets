@@ -46,8 +46,8 @@ export struct ReaderBottomTabBar {
       .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.scheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
       .borderRadius(this.materialRadius())
-      .shadow(readerSurfaceElevation('raised', this.scheme, true))
-      .clip(true)
+      .shadow(readerSurfaceElevation('raised', this.scheme))
+      .clip(this.requiresChildClip())
       .hitTestBehavior(HitTestMode.Transparent)
       .onAreaChange(this.measurementHandler(this.surfaceWidth, this.fontScale));
     }.width(this.surfaceWidth).clip(false)
@@ -90,6 +90,18 @@ export struct ReaderBottomTabBar {
     if (!this.mounted || !this.inputEnabled || !this.items.some((item: ReaderBottomTabItem): boolean => item.key === key)) return;
     if (key === this.current) this.onCurrentTap(key);
     else this.onSelect(key);
+  }
+
+  private requiresChildClip(): boolean {
+    const count = this.items.length;
+    const itemHeight = readerMainTabItemHeight(this.fontScale, false);
+    const minimumWidth = count * Math.max(44, itemHeight) + Math.max(0, count - 1) * TOK_SPACE_XS +
+      2 * (TOK_SPACE_XS + TOK_BORDER_W);
+    const maximumRadius = Math.min(this.surfaceWidth, readerFloatingTabBarHeight(this.fontScale)) / 2;
+    // Within this paid box the child capsule caps share the parent's centers.
+    // Keep clipping until both the live width and adopted radius fit that box.
+    return count === 0 || !Number.isFinite(this.surfaceWidth) || this.surfaceWidth < minimumWidth ||
+      this.materialRadius() > maximumRadius;
   }
 
   private measurementHandler(width: number, fontScale: number): (_old: Area, area: Area) => void {

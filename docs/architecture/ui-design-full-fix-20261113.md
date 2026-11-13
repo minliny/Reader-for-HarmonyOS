@@ -112,3 +112,11 @@ manifest位于 `.reader-artifacts/hap/20261113T125933Z-ed8d6937-54bfeed6/manifes
 包含动态分支的native raised共6个装配站点。PhoneTab的日夜材质均为FF不透明色，其余dock和veil存在半透明主题分支。当前单变量假设仅使PhoneTab显式选择opaqueMaterial，raised helper默认false。上游fill=false分支增加DIFFERENCE剪裁，true分支跳过该内部剪裁，上游同时有自动恢复。当前实验不认定VM泄漏或版本已匹配。抗锯齿边界及实际故障因果继续由新帧回答。[RenderService实现](https://raw.githubusercontent.com/openharmony/graphic_graphic_2d/master/rosen/modules/render_service_base/src/property/rs_properties_painter.cpp)
 
 准确 `opaque-tab-shadow` 叶及独立审修通过。该实验只有PhoneTab的shadow.fill从false到true，其他材质参数、border、clip、几何和业务调用保持原值。证据为 `native/opaque-tab-shadow-sdk.json` 和 `native/reading-raised-path-review.json`，原生假设状态为OPEN。全部代码和独立审修冻结后再构建候选。本轮另一次构建尝试在编译前被沙盒进程优先级权限拒绝，相同冻结输入在允许执行资源保护操作的上下文中完成编译，记录保留。
+
+## 父级剪裁的后继定位
+
+opaque候选 `20261113T135236Z-eaf26f92-b1a9f492`，App `0.2.0.DEV.23a27c337416` 已保数据安装、启动和采样。其选中按钮52150像素及四个白楔区域与前一候选完全相同。外部阴影也没有范围性变化，少量材料边缘像素变化。该假设记为NATIVE_FAIL_HYPOTHESIS_REJECTED，SDK参数PASS保留其原含义。当前存储WAL确已改变，复用入口正确返回NOT_REUSABLE，当前副本FFI新执行一次、两项同源合成用例复用。
+
+当前后继撤回opaqueMaterial选项及其临时接线，shadow helper恢复91218050同字节。只在PhoneTab已支付的包含域关闭冗余父clip。域下界按原item高度、44目标、8间距、8padding和1border推导，两项1到2倍字号需要126到162vp，当前196vp满足。0宽、窄宽、无项、非法宽和尚未满足当前预算的已采用半径保持原剪裁。源字体与实际标签墨迹另行核对，child Capsule和Glyph都包含于当前父材料。
+
+准确 `phone-child-containment` 第06记录通过，36个实际SDK组合、10560个数学边界点、四个负控拒绝。真实同Row的Prop与State回放覆盖2到1倍输入过渡，旧Area拒绝，当前68vp回执采用r34后取消clip。独立审修接受该代码边界。历史opaque代码、参数结果、签名包及失败帧继续保留，当前测试由后继包含条件回归承接。新候选仍须回答实际白楔是否消失，包含计算不作为原生PASS。
