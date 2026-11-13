@@ -2491,3 +2491,6 @@ Current-session original system font has been restored: actual Settings sliders2
 
 
 2026-11-14 当前formal共壳组合补充。既有module-shell-sdk已接当前真实producer和Host提交链，第05次180提交/540轨迹/51自然高度/20metadata/20环境/20实际Back通过并获独审。生产只补LocalReadingExperience失活intent清理与Back消费语义，inactive-back-cleanup03含真实hide/open后的首次Back终点。Auto未挂载QuickBack误判、临时源与新增仅dead测试已撤回并保历史，真实build可达性继续逐项核对。支持范围正式3f5c4b9b/control21，13own递增、283unique/2470pins，refs02PASS0/register原39对象保持。App16f为本次取消补修前的已安装候选。准确边界及历史Tab图像拟合见[体系修复记录](../architecture/ui-design-full-fix-20261113.md)。
+
+
+2026-11-14 支持范围候选45f30d32已实际编译、指定签名、原远程VM保数据更新和启动，当前App23dcb7399460，HAPbbdd8706。普通Back与Home/Directory往返五帧、初始ready Tab/RS获ae4749b6离线独审，四可见帧共同外壳边界一致。pending hide/open仍归SDK03，所有动作连续视觉与历史Tab因果继续OPEN。当前交付清单及撤回的dead Builder、正文预览初判见[体系修复记录](../architecture/ui-design-full-fix-20261113.md)。所有设备会话已释放，后继仅提交文档，不重编同字节App。

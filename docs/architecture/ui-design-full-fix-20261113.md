@@ -423,7 +423,7 @@ AutoPage Quick图出现两条近重合轮廓。真实历史1234772ae在2026-09-1
 
 2026-11-14，完成审计确认旧module-shell-sdk仍走直接session赋值及legacy minimum delegate，新生命周期十一叶使用有限190高度，真实七模块producer则由另一个准确叶覆盖。三者各自的历史结果保留，旧证明组合宣称撤回。当前同一module-shell-sdk叶已串起真实Panel.publishMinimumMeasurer、Home与七个纯模块测量、Host.setControlPage/request/bind/frame/admit、正式profileReader/facts及完整receipt。
 
-第05次准确运行通过180次主序列提交、540个共壳和亮度轨迹样本、51种真实自然高度、20次同几何metadata零重测、20次真实环境重排与20次requestExit取消。五个窗口组合含当前365.714×809.143vp、density3.5，四字号为1/1.3/1.6/2。旧active-module chooser和semantic-first导航负例均被拒，失效provider、非法shared basis与真实内容不适配保持准确处置。readonly业务事实、文字metrics和frame队列为显式有限端口，原生字形及连续帧另有自己的证据。Primary db14fcbc独审接受。本轮01的session引用相同过约束已纠正为语义副本，首次失败原记录保留。
+第05次准确运行通过180次主序列提交、540个共壳和亮度轨迹样本、51种真实自然高度、20次同几何metadata零重测、20次环境输入变化重排与20次requestExit取消。五个窗口组合含当前365.714×809.143vp、density3.5，四字号为1/1.3/1.6/2。旧active-module chooser和semantic-first导航负例均被拒，失效provider、非法shared basis与真实内容不适配保持准确处置。readonly业务事实、文字metrics和frame队列为显式有限端口，原生字形及连续帧另有自己的证据。Primary db14fcbc独审接受。本轮01的session引用相同过约束已纠正为语义副本，首次失败原记录保留。
 
 实际共享调用链另发现失活intent仍因对象存在而消费Back。pending经外侧或程序关闭后，旧对象可在新opening失活，requestExit清理时原先提前返回。当前cancelControlNavigationIntent仍退休旧generation，仅在activeControlNavigationIntent有效时返回已消费。准确inactive-back-cleanup03走真实hide、advance、open、requestExit，首Back目标为hidden且exitCalls为0，涵盖七类owner失配、九个旧frame、无对象及旧无条件true负例。该生产差异仅LocalReadingExperience取消语义三行。
 
@@ -435,3 +435,18 @@ Tab历史材料离线审计已检查四证据根1083份文本记录的十个旧P
 
 
 真实build可达性审计已封存并停止写入。所选10组件144个Builder中，142个有build静态装配链，一个为BuilderParam默认，Auto.quickBack为唯一无生产引用方法。另核四个实际宿主、四个Directory Surface构造点、两个TTS配置构造点及必要插槽桥，12组当前回归逐项映射，没有发现第二个同类live入口误判。SourceOnly只读分支、ForEach条件、popup/content-cover、虚拟无障碍函数值和BuilderParam动态限制分别保存，静态装配链不等同于当前每一条件分支实际显示。结果9196a839见builder-reachability-audit-20261114/results.json。支持范围formal02终核9f78a7cd已接受3f5c4b9b及当前三输入，所有开发、正式绑定及独立审修现已冻结。
+
+
+## App23dc 的交付和当前最小返回后证
+
+所有源代码、正式绑定和独立审修冻结后，提交45f30d32完成一次必要的实际ArkTS编译和指定证书签名。run为20261113T220718Z-45f30d32-33d2232f，App为0.2.0.DEV.23dcb7399460，signed HAP为bbdd870611df0b1debf9a2a4f5e3543cb7632eafb4b5f51ccb0308cf7a11e136，manifest为a0f2ba2ee89d4589fe7a3e30bb7957709de5bc50e8d4d20a63f71718d4ebe964。iteration、contracts none、acceptanceEligible false按原类别保留，Core和x86_64 Native沿c078既有缓存复用。
+
+现有远程VM保数据更新和启动通过，部署回执为该run的deploy-vm-6460677a198b-20261113T220828Z.json。当前停态原库/WAL与旧proof不同，先保留原字节备份，当前一次性副本formal FFI新执行一次，两项同源合成结果复用。原未决书签核对和继续本批均为0。实际HDC客户端socket为192.168.1.29:52220→192.168.1.10:8710，进程29566，路由en0，八个proxy变量清除并设置NO_PROXY/no_proxy星号。相同server及准确target沿canonical租约，所有会话已释放。
+
+初始PNG属于启动动画。同组tree后的PNG已显示ready书架，Root和独审ae4749b6均实际核图。64837个既有quiet点全为正常底色，异常精确描边色0。当前同组postRS材料为686×238px、radius119、border3、clipBounds/clipFrame false、shadowY42/sigma57.1/fillfalse。3.258秒顺序采样保留非同步边界，历史523因果继续OPEN。
+
+当前五帧覆盖Home→普通硬件Back隐藏→重新打开Home→目录→Back回Home。四个可见Home/Directory的shell/content/grabber/brightness盒均相同，三个Home Scroll均为false。Root已逐张或精确单张ROI核原PNG，独审ae4749b6接受。pending hide/open竞态继续只归准确SDK03，本次普通Back保留自己的实际分支。
+
+一次批量预览造成隐藏帧正文空白的初判。原始RGBA/RGB像素、文本树和精确单张ROI核对后，该初判撤回。五帧正文区域[78,522,1200,1439]原始RGB字节SHA全为24758aed9b3d07f2c406883b869350186cbb983f82650c3d8f246fb36e6bddb1，文字实际存在，未据该印象修改源码或再派设备动作。记录位于goal-completion-audit/body-preview-correction.json。
+
+当前交付与独审清单为goal-completion-audit/current-delivery-23dc.json。正式3f5c4b9b/control21、原39诊断和21visual结果保留准确范围。控制栏所有动作的连续绘制与历史Tab物理原因仍未证。所查官方系统录屏入口标注模拟器不支持，本轮未调用该入口，也未更换宿主。相关代码、最小回归和当前候选已交付，连续视觉证据与坏态同期数据仍列开放。[官方录屏说明](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ide-screen-recording/)
