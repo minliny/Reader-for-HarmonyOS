@@ -2531,7 +2531,7 @@
         }
       },
       "exceptions": [],
-      "revision": 22,
+      "revision": 23,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -3031,7 +3031,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-          "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+          "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumReceipt.ts",
@@ -3067,7 +3067,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+          "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
         },
         {
           "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -5457,7 +5457,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5921,7 +5921,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -5929,7 +5929,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -5945,7 +5945,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -5953,15 +5953,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -5989,15 +5989,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -6069,7 +6069,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -6078,6 +6078,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }
@@ -6941,7 +6953,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7397,7 +7409,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -7405,7 +7417,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -7421,7 +7433,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -7429,15 +7441,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -7465,15 +7477,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -7517,7 +7529,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -7526,6 +7538,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }
@@ -8452,7 +8476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -8896,7 +8920,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -8904,7 +8928,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -8920,7 +8944,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -8928,15 +8952,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -8964,15 +8988,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -9036,7 +9060,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -9045,6 +9069,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }
@@ -11105,7 +11141,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -11561,7 +11597,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -11569,7 +11605,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -11585,7 +11621,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -11593,15 +11629,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -11629,15 +11665,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -11681,7 +11717,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -11690,6 +11726,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }
@@ -13889,7 +13937,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -14345,7 +14393,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -14353,7 +14401,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -14369,7 +14417,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -14377,15 +14425,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -14413,15 +14461,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -14465,7 +14513,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -14474,6 +14522,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }
@@ -16534,7 +16594,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16990,7 +17050,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -16998,7 +17058,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -17014,7 +17074,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -17022,15 +17082,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -17058,15 +17118,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -17110,7 +17170,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -17119,6 +17179,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }
@@ -18069,7 +18141,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18513,7 +18585,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -18521,7 +18593,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -18537,7 +18609,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -18545,15 +18617,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -18581,15 +18653,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -18653,7 +18725,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -18662,6 +18734,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }
@@ -19607,7 +19691,7 @@
               }
             },
             "exceptions": [],
-            "revision": 22,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -20051,7 +20135,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
-                "sha256": "9dd9095a45562322ea4cc2e43a9a63f5e94843f8c615286d1e78862a977d4797"
+                "sha256": "7a78da5d2c10e2c7892849ab476931058e9c1581bc678673cfe16833f7fabf1c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts",
@@ -20059,7 +20143,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceMinimum.ets",
-                "sha256": "1f624d77f3b9e2d7604f9e5c9282d8559478990aa23fa3f961a350248fe5288a"
+                "sha256": "4a2fcc435a70bc42f04ef14278abe1316d4cbc185a18db023db6019c3f89bd08"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
@@ -20075,7 +20159,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlMinimumMeasurement.ets",
-                "sha256": "81eabd14fe2ba99f71829e7463a24759379a54139069e0b1881bebf6fe844c84"
+                "sha256": "f3bcf10ee1aa71a4e8032e286b08e8d2c374a2a3f40289e8aa7e36674ecf8639"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlQuickBack.ets",
@@ -20083,15 +20167,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
-                "sha256": "8d0b263da7ee60650bc5f4e5540d8fd1de5fb4a726ac0ca8796acf557b288684"
+                "sha256": "4d757c89f0a907faef4d5f070107de11ff2e9df2c1fdd6abee7e82a9ff17d0e4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts",
-                "sha256": "057c78bf8c02bd72fd9caf4d7cb4693b0bf840a7eb15169632009252c9644741"
+                "sha256": "c12d7631fbfc618c74bbff872d553e65e1dfde4ba4bf9aa61ed6eab826cede09"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
+                "sha256": "693124b5223994260b111099269715a5df2998015784cc704ac4915810e73146"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -20119,15 +20203,15 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "6b449b3dec5cac264b4c491dca15f7a33062be3c904a061dc3010865f031ff1a"
+                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
+                "sha256": "c90ac55667599a25c8d014a6bfd91f8528f5b798943a293846fc287b4bd8c0e5"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "20aafa69c2ff382876dc982fdc16295444295bc74fff9553b5f9fc3a023cae5a"
+                "sha256": "5e895f450f189b0bf9fdefd84f90ec80ab76f592941cc3e31efc8da268701201"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -20191,7 +20275,7 @@
               },
               {
                 "path": "tools/test-reader-control-layout-budget.mjs",
-                "sha256": "6bd4d20a976a3edeaef76b7f641eb075fa3d9c54728e5607348e91ba569ab2ae"
+                "sha256": "52aceb027fbbe61f6ad1439ee2a2e0c734a3692af1938e744e8d8eb8b6ffcc0e"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -20200,6 +20284,18 @@
               {
                 "path": "tools/test-reader-control-quick-overflow.mjs",
                 "sha256": "9559030416749b1ac2fce21c5656d70cdd42cf2bf86942d839cacbe1d064ae53"
+              },
+              {
+                "path": "tools/test-reader-control-outline-content-box.mjs",
+                "sha256": "8c651adc59679717ddacb6eeed4c094b2ba6164fdaec3e21265828ea92cef86c"
+              },
+              {
+                "path": "tools/test-reader-tts-manage-content-budget.mjs",
+                "sha256": "0494f062efa3a43a06b246370def48f3e550d5f7a655c666bc494bee7f50c05a"
+              },
+              {
+                "path": "tools/test-reader-control-replace-row-box.mjs",
+                "sha256": "7799eaf2cb26cc781a209531cdc1e4eb4064805133f28af17a520e08e3ca325d"
               }
             ]
           }

@@ -1684,7 +1684,7 @@ async function run(id) {
         scale = 2;
         const ttsNarrow = tt.measureReaderTtsMinimum(context, widths(272), { ...ttsFacts, online: true });
         assert.ok(ttsNarrow.fullText.configRow > 52 && ttsNarrow.fullText.serviceTabTitle > 34, 'actual residual CJK column widths grow row/card and tab title');
-        const config = native('ReaderControlTtsContent.ets', ['onlineServiceInfoRow', 'ttsClosedConfigRow', 'voiceSelectorRow', 'ttsSelectValueField', 'fieldWidth', 'fieldHeight', 'ttsServiceTypeTabs', 'ttsServiceTypeTab']);
+        const config = native('ReaderControlTtsContent.ets', ['onlineServiceInfoRow', 'manageConfigured', 'ttsClosedConfigRow', 'voiceSelectorRow', 'ttsSelectValueField', 'fieldWidth', 'fieldHeight', 'ttsServiceTypeTabs', 'ttsServiceTypeTab']);
         Object.assign(config, { appScheme: 'day', httpEngines: [{}], textMinimum: () => ttsNarrow.fullText, fullInput: () => true, serviceBusy: false, configFocusId: 'current',
             fieldLabel: () => '不可用处理', fieldValue: () => '停止并提示', currentVoiceLabel: () => '中文女声', isTtsServiceTabSelected: () => true, onlineServiceDescription: () => '设备内置语音', onlineTtsAccessibilityText: () => '在线TTS', openConfiguration: () => {}, selectTtsServiceType: () => {} });
         config.onlineServiceInfoRow(); config.ttsClosedConfigRow('failure'); config.voiceSelectorRow(); config.ttsServiceTypeTabs();

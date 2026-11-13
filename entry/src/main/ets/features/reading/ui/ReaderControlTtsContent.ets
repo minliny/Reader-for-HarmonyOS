@@ -1708,6 +1708,11 @@ export struct ReaderControlTtsContent {
     });
   }
 
+  private manageConfigured(): boolean {
+    const border = this.displayedFacts()?.manageBorderWidth;
+    return border === undefined ? this.httpEngines.length > 0 : border > 0;
+  }
+
   @Builder
   private onlineServiceInfoRow() {
     Row({ space: 8 }) {
@@ -1715,20 +1720,20 @@ export struct ReaderControlTtsContent {
         .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
       Button({ type: ButtonType.Capsule, stateEffect: false }) {
         Row({ space: 6 }) {
-        Text(this.displayedFacts()?.manageLabel ?? (this.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置')).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
+        Text(this.displayedFacts()?.manageLabel ?? (this.manageConfigured() ? '已配置 · 编辑' : '立即配置')).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontSizeFp)
-          .fontColor(this.httpEngines.length > 0 ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.FFFAF4', this.appScheme));
-        Image(this.httpEngines.length === 0 ?
+          .fontColor(this.manageConfigured() ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.FFFAF4', this.appScheme));
+        Image(!this.manageConfigured() ?
           (this.appScheme === 'night' ? $r('app.media.reader_tts_configure_chevron_theme_night') : $r('app.media.reader_tts_configure_chevron')) :
           (this.appScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12);
         }.width('100%').alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }.width(this.textMinimum()?.manageButtonWidth ?? 130).height(this.textMinimum()?.manageButton ?? 44).flexShrink(0).padding({ left: 11, right: 9, top: 0, bottom: 0 }).opacity(1)
-        .backgroundColor(this.httpEngines.length > 0 ? readerAppColor('app.control.paint.1A2F6373', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
-        .border({ width: this.httpEngines.length > 0 ? .5 : 0, color: readerAppColor('app.control.paint.4D2F6373', this.appScheme) })
-        .shadow({ radius: 7, color: this.httpEngines.length > 0 ? Color.Transparent : readerAppColor('app.control.paint.472F6373', this.appScheme), offsetY: 2 })
+        .backgroundColor(this.manageConfigured() ? readerAppColor('app.control.paint.1A2F6373', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
+        .border({ width: this.displayedFacts()?.manageBorderWidth ?? (this.manageConfigured() ? .5 : 0), color: readerAppColor('app.control.paint.4D2F6373', this.appScheme) })
+        .shadow({ radius: 7, color: this.manageConfigured() ? Color.Transparent : readerAppColor('app.control.paint.472F6373', this.appScheme), offsetY: 2 })
         .enabled(this.fullInput() && !this.serviceBusy)
         .id(`${this.configFocusId}:manage`)
-        .accessibilityText(this.httpEngines.length > 0 ? '已配置在线 TTS，编辑服务信息' : '立即配置在线 TTS')
+        .accessibilityText(this.manageConfigured() ? '已配置在线 TTS，编辑服务信息' : '立即配置在线 TTS')
         .onClick((): void => this.openConfiguration('manage'));
     }.width('100%').height(this.textMinimum()?.configRow ?? 48).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
       .border({ width: { top: 1 }, color: readerAppColor('app.control.paint.299B8466', this.appScheme) });

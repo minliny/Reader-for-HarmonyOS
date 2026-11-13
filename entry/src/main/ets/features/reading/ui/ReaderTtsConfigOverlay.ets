@@ -159,7 +159,7 @@ export struct ReaderTtsConfigOverlay {
   private formatActionHeight(): number {
     this.metricsRevision;
     const measured = measureReaderControlText(this.getUIContext(), 'MP3', TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL,
-      Math.max(1, (this.panelWidth() - 52) / 3));
+      Math.max(1, (this.panelWidth() - 52) / 3 - 1));
     return Math.max(44, (measured?.heightVp ?? 18) + 16);
   }
   private previewActionWidth(choiceId?: string): number {
@@ -299,7 +299,7 @@ export struct ReaderTtsConfigOverlay {
               }, (choice: ReaderTtsConfigChoice): string => choice.id);
               if (this.showManage) {
                 Button({ type: ButtonType.Normal, stateEffect: false }) {
-                  Text('管理在线 TTS').width('100%').height(44).textAlign(TextAlign.Center)
+                  Text('管理在线 TTS').width('100%').height(43.5).textAlign(TextAlign.Center)
                     .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)
                     .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))
                     .accessibilityLevel('no');
@@ -610,7 +610,7 @@ export struct ReaderTtsConfigOverlay {
   @Builder
   private formatChoice(label: string, format: ReaderTtsAudioFormat) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(label).width('100%').height(this.formatActionHeight()).textAlign(TextAlign.Center)
+      Text(label).width('100%').height(Math.max(0, this.formatActionHeight() - 1)).textAlign(TextAlign.Center)
         .fontFamily(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontSizeFp)
         .fontColor(this.draftFormat === format ? readerAppColor('app.control.onPrimary', this.appThemeScheme) : readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .accessibilityLevel('no');

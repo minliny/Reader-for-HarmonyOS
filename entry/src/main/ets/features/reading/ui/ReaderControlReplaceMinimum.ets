@@ -48,7 +48,7 @@ export function measureReaderControlReplaceMinimum(context: UIContext, widths: R
   const quick = measureEndpoint(context, widths.quickContentWidthVp, false, statusText, recoveryLabel, nameText, patternText, metaText, headerTitle, editorOpen);
   const full = measureEndpoint(context, widths.fullContentWidthVp, true, statusText, recoveryLabel, nameText, patternText, metaText, headerTitle, editorOpen);
   if (quick === undefined || full === undefined) return undefined;
-  return { quick, full };
+  return { quick, full, rowBorderWidth: TOK_BORDER_W };
 }
 function measureEndpoint(context: UIContext, width: number, full: boolean,
   statusText: string, recoveryLabel: string, nameText: string, patternText: string, metaText: string, headerTitle: string, editorOpen: boolean): ReaderControlReplaceEndpointMinimum | undefined {
@@ -116,7 +116,8 @@ function measureEndpoint(context: UIContext, width: number, full: boolean,
   return { width, nameHeight, metaHeight, actionHeight,
     editorFlagHeight: Math.max(44, editorFlag.heightVp + 12), editorHeaderHeight,
     editorBackHeight, editorBackWidth,
-    rowHeight: full ? Math.max(77, 11 + nameHeight + 4 + metaHeight) : Math.max(28, nameHeight),
+    rowHeight: full ? Math.max(77, 11 + nameHeight + 4 + metaHeight + TOK_BORDER_W * 2) :
+      Math.max(28, nameHeight + TOK_BORDER_W * 2),
     backHeight: Math.max(24, back.heightVp + 8), backWidth: Math.max(51, 11 + 5 + back.singleLineWidthVp + 8),
     toolbarColumns: columns, toolbarCellHeight: toolbarHeight,
     statusHeight: Math.max(76, status.heightVp + actionHeight + 4), fits: (full ? toolbarFits : true) && back.fitsWidth };

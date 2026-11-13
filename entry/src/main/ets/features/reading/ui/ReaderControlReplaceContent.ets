@@ -640,8 +640,8 @@ export struct ReaderControlReplaceContent {
         ReaderControlSwitchTrack({ value: rule().isEnabled, trackWidth: this.frame().toggleWidth,
           trackHeight: this.frame().toggleHeight, thumbSize: this.frame().thumbSize,
           thumbColor: readerAppColor('app.text.onAccent', this.appThemeScheme), inactiveColor: readerAppColor('app.replace.inactiveRule', this.appThemeScheme) });
-      }.width(this.frame().toggleWidth).height(this.frame().rowHeight).alignItems(VerticalAlign.Center);
-      }.width(this.frame().toggleWidth).height(this.frame().rowHeight).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+      }.width(this.frame().toggleWidth).height(this.frame().rowInnerHeight).alignItems(VerticalAlign.Center);
+      }.width(this.frame().toggleWidth).height(this.frame().rowInnerHeight).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
         .position({ x: this.frame().rowPadding, y: 0 })
         .enabled(this.layer === '' && this.readyInput() && index() >= 0 && (this.fullInput() || index() < 3))
         .accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)
@@ -672,10 +672,10 @@ export struct ReaderControlReplaceContent {
           (): void => this.openEditor(this.currentRule(rule())), (): boolean => index() >= 0, (): string => `edit:${rule().id}`);
         this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_delete_theme_night') : $r('app.media.reader_control_replace_delete')), (): string => `删除${rule().name}`,
           (): void => this.askDelete(this.currentRule(rule())), (): boolean => index() >= 0, (): string => `delete:${rule().id}`);
-      }.width(93).height(44).position({ x: Math.max(0, this.frame().list.width - 106), y: (this.frame().rowHeight - 44) / 2 })
+      }.width(93).height(44).position({ x: Math.max(0, this.frame().list.width - 106), y: (this.frame().rowInnerHeight - 44) / 2 })
         .opacity(this.frame().progress).hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)
         .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
-      }.width(this.frame().list.width).height(this.frame().rowHeight)
+      }.width(Math.max(0, this.frame().list.width - TOK_BORDER_W * 2)).height(this.frame().rowInnerHeight)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
     }.width(this.frame().list.width).height(this.frame().rowHeight).clip(false)
       .clipShape(this.rowClip(index()))

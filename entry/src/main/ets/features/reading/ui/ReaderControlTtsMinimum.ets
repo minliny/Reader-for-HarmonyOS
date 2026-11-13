@@ -97,6 +97,7 @@ export function readerControlTtsMinimumFacts(input: ReaderTtsMinimumFactsInput):
     rate: (input.ratePreview >= READER_TTS_RATE_MIN ? input.ratePreview : input.state.rate).toFixed(2) + 'x',
     error: input.state.errorMessage ?? '', seek: input.state.totalSlices > 1, online: online,
     serviceDescription: service?.name ?? '第三方语音服务', manageLabel: input.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置',
+    manageBorderWidth: input.httpEngines.length > 0 ? 0.5 : 0,
     engineValue: http ? readerControlTtsEngineLabel(input.engine, input.httpEngines) : '系统默认', languageValue: http ? '由在线服务提供' : readerTtsLanguageLabel(input.language),
     failureValue: input.failurePolicy === 'skip' ? '跳过不可用内容' : '停止并提示' };
 }
@@ -120,6 +121,7 @@ export interface ReaderTtsMinimumFacts {
   online: boolean;
   serviceDescription: string;
   manageLabel: string;
+  manageBorderWidth?: number;
   engineValue: string;
   languageValue: string;
   failureValue: string;
@@ -289,6 +291,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     actual(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE), Math.max(1, inner - 78), true);
   const toggleLine = largest(context, ['高'], actual(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE), inner);
   const manage = largest(context, [facts.manageLabel], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE), inner);
+  const manageHorizontalReserve = 38 + (facts.manageBorderWidth ?? 0.5) * 2;
   const manageTitle = largest(context, ['服务信息'], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL), inner);
   const error = measureReaderControlText(context, facts.error, MESSAGE_BODY, inner - 32, 'wrap');
   const values: (ReaderControlTextExtent | undefined)[] = [qPlayback, qStatus, qSetting, header, playbackMeta, timerMeta,
@@ -343,7 +346,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     engineFieldWidth: Math.max(44, Math.min(cap, Math.ceil(engineValue.singleLineWidthVp) + 18)),
     languageFieldWidth: Math.max(44, Math.min(cap, Math.ceil(languageValue.singleLineWidthVp) + 18)),
     failureFieldWidth: Math.max(44, Math.min(cap, Math.ceil(failureValue.singleLineWidthVp) + 18)),
-    manageButton: Math.max(44, manage.heightVp + 8), manageButtonWidth: Math.max(44, Math.min(cap, manage.singleLineWidthVp + 38)), seekY: 198, errorY: facts.seek ? 230 : 198,
+    manageButton: Math.max(44, manage.heightVp + 8), manageButtonWidth: Math.max(44, Math.min(cap, manage.singleLineWidthVp + manageHorizontalReserve)), seekY: 198, errorY: facts.seek ? 230 : 198,
   };
   const closedLabel = largest(context, ['语音引擎', '朗读语言', '不可用处理'],
     actual(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE),
@@ -353,7 +356,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const serviceLabel = largest(context, ['服务信息'], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL),
     Math.max(1, inner - 28 - 8 - text.manageButtonWidth), true);
   const serviceAction = largest(context, [facts.manageLabel], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE),
-    Math.max(1, text.manageButtonWidth - 38), true);
+    Math.max(1, text.manageButtonWidth - manageHorizontalReserve), true);
   if (closedLabel === undefined || voiceLabel === undefined || serviceLabel === undefined || serviceAction === undefined) return undefined;
   text.manageButton = Math.max(44, serviceAction.heightVp + 8);
   text.configRow = Math.max(text.configRow, closedLabel.heightVp + 12, serviceLabel.heightVp + 12, text.manageButton + 12);

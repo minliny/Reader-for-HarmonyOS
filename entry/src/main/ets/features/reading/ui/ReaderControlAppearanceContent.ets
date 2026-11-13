@@ -771,7 +771,8 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private themeAction(day: boolean) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-    Text(this.defaultThemeActionLabel(day)).width(74).height(this.minimumProfile()?.themeActionHeight ?? 28)
+    Text(this.defaultThemeActionLabel(day)).width(Math.max(0, 74 - TOK_BORDER_W * 2))
+      .height(Math.max(0, (this.minimumProfile()?.themeActionHeight ?? 28) - TOK_BORDER_W * 2))
       .fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.lineHeightFp as number).fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontWeight)
       .wordBreak(WordBreak.BREAK_WORD).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.width(74).height(this.minimumProfile()?.themeActionHeight ?? 28).padding(0).backgroundColor(Color.Transparent).borderRadius(6)

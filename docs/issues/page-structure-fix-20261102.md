@@ -2476,3 +2476,8 @@ Current-session original system font has been restored: actual Settings sliders2
 正式控制登记已从19更新到20，四族21项source/sourceInputs绑定266个唯一当前文件，各项revision本批递增一次。最终refs03通过，register03保留39项既有开放诊断。紧凑目录部分响应小于44，E2继续FAIL，旧44绘制证据保留历史判定并退出当前证明。全页visual、Source E2/E3及原生大字号等范围各守原判定。当前仅书架Tab首测量0宽原生材料缺陷在代码侧闭合，523首帧扇形原因继续OPEN。下次必要候选复用实际安装机会取得首次书架同期帧与RS，所有agent开发和独审完成后才进入该阶段。
 
 后继实际编译类型缺口已补齐，34ea候选完成指定证书签名和远程VM保数据安装。其ready Tab当前正常，历史扇形归因继续OPEN。已采Home/Directory/TTS Quick具有相同外壳与内容边界。新增原生中间帧同时定位嵌套目录加载行使旧章节位移88px，以及Full TTS秒数加号仅2px可见。暂停后续Native后，已从共享Surface私有状态和真实子组合预算修复两条链，并补Search/Replace/AutoPage三处真实扣款。准确回归、独审、控制登记21及21页面当前绑定均已完成，269唯一源/2311pin，refsPASS/register39开放结果保持。当前安装34ea为本补修之前的候选，后继交付及原生端点另记。[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)
+## 控制栏体系重审的边框组合后继收口
+
+2026-11-14。全量重审已进一步定位d8ad88ef原生包装的父边框与子Text外盒重复、31536cfb有限宽度扣款缺边框，以及Replace旧行外壳和自然增长预算的复合欠付。八个模块及三个嵌套宿主的46个border站点、共享57文件与34个原生Button构造、AutoPage/Replace全部38个Builder链已完成源侧逐项审读。五类私有模板缺口分别修复，默认原稿角色保持，真实文字增长沿实际内容盒计算。逐项历史、准确回归和独立审修见[控制栏体系修复记录](../architecture/ui-design-full-fix-20261113.md)。
+
+本批正式register为9c96a9e0，九登记各revision22→23，274唯一输入、2356处pin，control21保持。refs单次PASS0，register单次保留原39项完整诊断，Primary独审23881e00接受。此前App081已在现有远程VM保数据更新，Home真实657px内容和视口相等且Scroll为false，首次ready Tab正常。该包Appearance两枚主题动作Text越界继续保留FAIL，后继已修源码须由新准确候选另行记录。全部生产与独立审修冻结后才继续安装或设备步骤，历史Tab扇形因果、全页visual和Source E2/E3仍按原开放判定。

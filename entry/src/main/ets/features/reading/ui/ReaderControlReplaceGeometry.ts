@@ -23,6 +23,7 @@ export interface ReaderControlReplaceEndpointMinimum {
 export interface ReaderControlReplaceMinimumProfile {
   quick: ReaderControlReplaceEndpointMinimum;
   full: ReaderControlReplaceEndpointMinimum;
+  rowBorderWidth?: number;
 }
 
 export interface ReaderControlReplaceFrame {
@@ -30,6 +31,7 @@ export interface ReaderControlReplaceFrame {
   toolbar: ReaderControlActorFrame;
   list: ReaderControlActorFrame;
   rowHeight: number;
+  rowInnerHeight: number;
   nameHeight: number;
   nameY: number;
   metaHeight: number;
@@ -97,13 +99,16 @@ export function sampleReaderControlReplace(progress: number, availableWidth: num
   const actionHeight = readerControlLerp(qActionHeight, f?.actionHeight ?? 28, p);
   const nameHeight = readerControlLerp(q?.nameHeight ?? 17, f?.nameHeight ?? 17, p);
   const rowHeight = readerControlLerp(q?.rowHeight ?? 28, f?.rowHeight ?? 77, p);
+  const rowBorderWidth = minimum?.rowBorderWidth ?? 1;
+  const rowInnerHeight = Math.max(0, rowHeight - rowBorderWidth * 2);
   return {
     progress: p,
     toolbar: sampleReaderControlActor(readerControlActor(14, 60, width - 28, 40, 0),
       readerControlActor(14, 14, width - 28, fullToolbarHeight), p),
     list: readerControlActor(inset, listY, width - readerControlLerp(36, 28, p),
       Math.max(0, availableHeight - listY - readerControlLerp(qActionHeight + 30.45, 13, p))),
-    rowHeight, nameHeight, nameY: readerControlLerp(((q?.rowHeight ?? 28) - (q?.nameHeight ?? 17)) / 2, 11, p),
+    rowHeight, rowInnerHeight, nameHeight,
+    nameY: readerControlLerp(((q?.rowHeight ?? 28) - rowBorderWidth * 2 - (q?.nameHeight ?? 17)) / 2, 11, p),
     metaHeight: readerControlLerp(q?.metaHeight ?? 34, f?.metaHeight ?? 34, p),
     metaY: 11 + nameHeight + 4, actionHeight,
     editorHeaderHeight: f?.editorHeaderHeight ?? 28, editorFlagHeight: f?.editorFlagHeight ?? 32, editorBackHeight: f?.editorBackHeight ?? 28, editorBackWidth: f?.editorBackWidth ?? 38,

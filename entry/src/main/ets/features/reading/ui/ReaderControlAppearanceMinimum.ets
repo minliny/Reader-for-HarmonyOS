@@ -1,5 +1,6 @@
 import { readerAppearanceFontSlotLabel, readerAppearanceFontSlotFamily } from './ReaderAppearanceRenderStyle';
 import { readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { normalizeReaderAppearanceFontOrder, type ReaderAppearanceFontSlot, type ReaderAppearanceSnapshot } from '../application/ReaderAppearanceState';
 import { READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeLabel } from './ReaderControlAppearanceStyle';
 import type { UIContext } from '@ohos.arkui.UIContext';
@@ -170,7 +171,8 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
   // Start with the original four-column cell and its existing label inset5+5.
   const themeWidth = Math.max(0, (section - 22) / 4);
   const theme = measureThemeLabels(context, input.themes, Math.max(1, themeWidth - 10));
-  const action = measureMany(context, input.themeActions, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, 74, true);
+  const action = measureMany(context, input.themeActions, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE,
+    74 - TOK_BORDER_W * 2, true);
   const layoutHeader = measureMany(context, ['排版库'], TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, (section - 8) / 2, true);
   const layoutMeta = measureMany(context, ['即时应用'], TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, (section - 8) / 2, true);
   const selectLabel = measureMany(context, ['缩进', '简繁'], TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, section - 28);
@@ -228,7 +230,7 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
     quickFontHeaderHeight: Math.max(10, qFontHeader.heightVp),
     fullFontHeaderHeight: Math.max(16, fFontHeader.heightVp, fFontMeta.heightVp),
     themeLabelHeight: Math.max(13, Math.ceil(theme.heightVp)),
-    themeActionHeight: Math.max(28, Math.ceil(action.heightVp)),
+    themeActionHeight: Math.max(28, Math.ceil(action.heightVp) + TOK_BORDER_W * 2),
     quickFontCellHeight: Math.max(27, fontHeight), fullFontCellHeight: Math.max(30, fontHeight),
     layoutHeaderHeight: Math.max(17, layoutHeader.heightVp, layoutMeta.heightVp),
     selectLabelHeight: Math.max(18, Math.ceil(selectLabel.heightVp)), selectTriggerHeight: triggerHeight,
