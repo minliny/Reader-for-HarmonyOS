@@ -1,3 +1,4 @@
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 export const CONTRACT_CASES = {
@@ -5,6 +6,7 @@ export const CONTRACT_CASES = {
     description: 'Actual StandardPage methods and real page geometry reject stale reads/receipts across layout generations and unmount; no native rendering',
     resources: [],
   },
+  'standard-page-same-area': { description: 'Same-box geometry changes retain slot facts; actual native slot hosts re-read new requests without Area and retire old frames.', resources: [] },
   'window-environment': {
     description: 'Actual readonly environment/coordinator binding shares the current snapshot; finite fake platform I/O, no window or device',
     resources: [],
@@ -13,6 +15,7 @@ export const CONTRACT_CASES = {
 
 for (const id of selectContractCases(CONTRACT_CASES)) {
   if (id === 'standard-page-generation') await standardPageGeneration();
+  else if (id === 'standard-page-same-area') await standardPageSameArea();
   else await windowEnvironment();
   recordContractCasePass(id);
 }
@@ -32,10 +35,10 @@ async function standardPageGeneration() {
     '../entry/src/main/ets/ui/layout/ReaderStandardPage.ets', import.meta.url), 'ReaderStandardPage', [
     'aboutToAppear', 'aboutToDisappear', 'onLayoutInputsChanged', 'recordMeasurement',
     'headerHeight', 'footerHeight', 'refreshGeometry',
-  ], { ...layout, APP_HEADER_BAR_HEIGHT, readerWindowMetrics: () => metrics,
+  ], { ...layout, readerInteractiveSafeLeft, readerInteractiveSafeRight, APP_HEADER_BAR_HEIGHT, readerWindowMetrics: () => metrics,
     ReaderWindowCoordinator: { metrics: () => metrics } });
   const owner = Object.assign(new Owner(), {
-    mounted: false, measurementKey: 0, geometryRevision: 0, viewportWidth: 393, viewportHeight: 852,
+    mounted: false, measurementKey: 0, footerMeasurementKey: 0, headerInputs: '', footerInputs: '', geometryRevision: 0, viewportWidth: 393, viewportHeight: 852,
     variant: 'settingsHome', contentLeadingRail: 0, contentEndInset: -1,
     measurements: new layout.ReaderMeasurementStore(), geometry: new layout.ReaderPageGeometry(),
   });
@@ -80,7 +83,7 @@ async function standardPageGeneration() {
   owner.contentEndInset = 24;
   owner.onLayoutInputsChanged();
   const railKey = owner.measurementKey;
-  owner.recordMeasurement('standard:footer', 160, railKey);
+  owner.recordMeasurement('standard:footer', 160, owner.footerMeasurementKey);
   assert.equal(owner.footerHeight(), 0, 'a rail cannot charge a simultaneous bottom navigation height');
   assert.equal(owner.geometry.content.endInset, 24, 'the explicit rail end budget reaches actual geometry');
 
@@ -104,6 +107,131 @@ async function standardPageGeneration() {
   assert.equal(owner.headerHeight(), APP_HEADER_BAR_HEIGHT, 'invalid measurements never enter the current budget');
   owner.recordMeasurement('standard:header', 81, owner.measurementKey);
   assert.equal(owner.headerHeight(), 81, 'a valid current callback still converges');
+}
+
+async function standardPageSameArea() {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+  const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const safe = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+  const rect = await import('../entry/src/main/ets/ui/layout/ReaderSurfaceRect.ts');
+  const { APP_HEADER_BAR_HEIGHT } = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+  const root = new URL('../entry/src/main/ets/', import.meta.url);
+  const read = path => readFileSync(new URL(path, root), 'utf8');
+  const layout = actualReaderPageLayout(), metrics = safe.createDefaultReaderWindowMetrics();
+  metrics.windowRect.width = 393; metrics.windowRect.height = 852; metrics.ready = true;
+  const Owner = selectedProductionMethods(new URL('ui/layout/ReaderStandardPage.ets', root), 'ReaderStandardPage',
+    ['aboutToAppear', 'aboutToDisappear', 'onLayoutInputsChanged', 'recordMeasurement', 'headerHeight', 'footerHeight', 'refreshGeometry'],
+    { ...layout, readerInteractiveSafeLeft, readerInteractiveSafeRight, APP_HEADER_BAR_HEIGHT, readerWindowMetrics: () => metrics });
+  const owner = Object.assign(new Owner(), { mounted: false, measurementKey: 0, footerMeasurementKey: 0,
+    headerInputs: '', footerInputs: '', geometryRevision: 0, viewportWidth: 393, viewportHeight: 852,
+    variant: 'settingsHome', contentLeadingRail: 0, contentEndInset: -1, measurements: new layout.ReaderMeasurementStore() });
+  owner.aboutToAppear();
+  owner.recordMeasurement('standard:header', 93, owner.measurementKey);
+  owner.recordMeasurement('standard:footer', 84, owner.footerMeasurementKey);
+  const headerKey = owner.measurementKey, footerKey = owner.footerMeasurementKey;
+  for (const height of [700, 360, 852]) {
+    owner.viewportHeight = height; metrics.windowRect.height = height;
+    metrics.keyboardInsets.bottom = height === 360 ? 180 : 0; metrics.revision += 1;
+    owner.onLayoutInputsChanged();
+    assert.equal(owner.measurementKey, headerKey, 'height/IME/revision preserve the same native header box');
+    assert.equal(owner.headerHeight(), 93);
+    assert.equal(owner.geometry.content.startInset, 101, 'no Area event is supplied during height-only changes');
+  }
+  owner.contentLeadingRail = 88; owner.onLayoutInputsChanged();
+  assert.equal(owner.measurementKey, headerKey, 'rail transition does not retire the independent header');
+  assert.ok(owner.footerMeasurementKey > footerKey);
+  assert.equal(owner.footerHeight(), 0);
+  owner.contentLeadingRail = 0; owner.onLayoutInputsChanged();
+  owner.recordMeasurement('standard:footer', 500, footerKey);
+  assert.equal(owner.footerHeight(), 0, 'rail return cannot revive an old footer receipt');
+
+  const frames = [], receipts = [];
+  let nativeHeight = 93, available = true;
+  const context = { postFrameCallback: frame => frames.push(frame), px2vp: x => x / 2,
+    getFrameNodeById: () => available ? { getPositionToWindowWithTransform: () => ({ x: 0, y: 0 }) } : null,
+    getComponentUtils: () => ({ getRectangleById: () => ({ scale: { x: 1, y: 1 }, rotate: { angle: 0 }, size: { width: 786, height: nativeHeight * 2 } }) }) };
+  const measurement = pureModuleProbe(read('ui/layout/ReaderSurfaceRectMeasurement.ets'), 'ReaderSurfaceRectMeasurement.ets', rect, ['readerMeasureSurfaceRect']);
+  const slots = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'), 'ReaderNativeSlotMeasurement.ets',
+    { FrameCallback: class {}, ...measurement }, ['ReaderNativeSlotMeasurement']);
+  const properties = createArkUIPropertyRuntimeProbe();
+  const source = read('ui/layout/ReaderFixedHeaderHost.ets');
+  const probe = createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...layout, ...slots,
+    HitTestMode: { Transparent: 'transparent' }, uiContext: context }, properties.hooks);
+  const host = new probe.Component(undefined, { style: { clip: false, backgroundColor: '#fff' }, measurementKey: headerKey,
+    content() {}, onHeightChange: (height, key) => { receipts.push([height, key]); owner.recordMeasurement('standard:header', height, key); } });
+  host.initialRender();
+  const native = [...host.nodes.values()].find(node => node.id === host.nativeMeasurement.id);
+  assert.ok(native, 'normal header build attaches the native measurement identity');
+  native.onAppear(); frames.shift().onIdle(1000000);
+  assert.deepEqual(receipts.at(-1), [93, headerKey]);
+  owner.viewportWidth = 320; owner.onLayoutInputsChanged();
+  host.measurementKey = owner.measurementKey; properties.flush();
+  assert.equal(owner.headerHeight(), APP_HEADER_BAR_HEIGHT);
+  frames.shift().onIdle(1000000);
+  assert.equal(owner.headerHeight(), 93, 'a new request accepts the same native height without any Area event');
+  const staleArea = host.areaChangeHandler(host.measurementKey);
+  host.measurementKey += 1; properties.flush(); const oldFrame = frames.shift();
+  host.measurementKey += 1; properties.flush();
+  const count = receipts.length;
+  oldFrame.onIdle(1000000); staleArea({}, { height: 999 });
+  assert.equal(receipts.length, count, 'retired request frames and Area callbacks cannot publish');
+  frames.shift().onIdle(1000000);
+  nativeHeight = 0; host.measurementKey += 1; properties.flush(); frames.shift().onIdle(1000000);
+  assert.equal(receipts.length, count + 1, 'zero-size query has a finite empty result');
+  available = false; host.measurementKey += 1; properties.flush(); frames.shift().onIdle(1000000);
+  assert.equal(receipts.length, count + 1, 'missing native node has a finite empty result');
+  available = true; nativeHeight = 100; host.measurementKey += 1; properties.flush();
+  native.onDisAppear(); frames.shift().onIdle(1000000);
+  assert.equal(receipts.length, count + 1, 'unmount rejects a deferred native read');
+  native.onAppear(); frames.shift().onIdle(1000000);
+  assert.equal(receipts.at(-1)[0], 100, 'remounted native slot can produce a fresh fact');
+
+  const footerSource = read('ui/layout/ReaderPageScaffold.ets');
+  const enumPort = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
+  const footerProbe = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), {
+    ...properties.sdk, ...layout, ...slots, ReaderFixedHeaderHost: probe.Component, uiContext: context,
+    SafeAreaType: enumPort('SafeAreaType'), SafeAreaEdge: enumPort('SafeAreaEdge'),
+    LayoutSafeAreaType: enumPort('LayoutSafeAreaType'), LayoutSafeAreaEdge: enumPort('LayoutSafeAreaEdge'),
+  }, { ...properties.hooks, childSources: { ReaderFixedHeaderHost: source } });
+  const footerReceipts = [];
+  const scaffold = new footerProbe.Component(undefined, { headerVisible: false, geometry: owner.geometry,
+    frameStyle: layout.readerFrameStyle({ backgroundColor: '#fff' }), footerMeasurementKey: 1,
+    content() {}, footer() {}, overlayContent() {}, onFooterHeightChange: (height, key) => footerReceipts.push([height, key]) });
+  scaffold.initialRender();
+  const footerNode = [...scaffold.nodes.values()].find(node => node.id === scaffold.footerMeasurement.id);
+  assert.ok(footerNode, 'normal Scaffold build attaches the footer measurement producer');
+  footerNode.onAppear(); frames.shift().onIdle(1000000);
+  scaffold.footerMeasurementKey = 2; properties.flush(); frames.shift().onIdle(1000000);
+  assert.deepEqual(footerReceipts, [[100, 1], [100, 2]], 'footer also acknowledges a same-height new request without Area');
+  footerNode.onDisAppear();
+
+  for (const [path, component, prefix] of [
+    ['features/source/ui/SourceManagementPage.ets', 'SourceManagementPage', 'source'],
+    ['features/bookshelf/ui/BookshelfMultiSelectPage.ets', 'BookshelfMultiSelectPage', 'selection'],
+  ]) {
+    const DirectOwner = selectedProductionMethods(new URL(path, root), component, ['onGeometryInputsChanged', 'recordMeasurement'],
+      { ...safe, ReaderWindowCoordinator: { metrics: () => metrics } });
+    const direct = Object.assign(new DirectOwner(), { mounted: true, measurementKey: 0, footerMeasurementKey: 0, headerInputs: '', footerInputs: '',
+      viewportWidth: 320, liveWidth: () => 320, bottomInset: () => 16, footerFallbackHeight: () => 80,
+      refreshGeometry() {}, measurements: new layout.ReaderMeasurementStore() });
+    direct.onGeometryInputsChanged();
+    direct.recordMeasurement(`${prefix}:header`, 93, direct.measurementKey);
+    direct.recordMeasurement(`${prefix}:footer`, 80, direct.footerMeasurementKey);
+    const previousKey = direct.measurementKey;
+    metrics.windowRect.height -= 40; metrics.revision += 1; direct.onGeometryInputsChanged();
+    assert.equal(direct.measurementKey, previousKey, `${component} retains the same header shape across height-only changes`);
+    assert.equal(direct.measurements.readForGeneration(`${prefix}:header`, direct.measurementKey), 93);
+    metrics.systemFontScale += .1; direct.onGeometryInputsChanged();
+    direct.recordMeasurement(`${prefix}:header`, 999, previousKey);
+    assert.equal(direct.measurements.readForGeneration(`${prefix}:header`, direct.measurementKey, 58), 58,
+      `${component} rejects the previous font generation`);
+  }
 }
 
 async function windowEnvironment() {

@@ -48,6 +48,9 @@ export struct BookshelfMultiSelectPage {
   @State private selectedKeys: string[] = [];
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
+  @State private footerMeasurementKey: number = 0;
+  private headerInputs: string = '';
+  private footerInputs: string = '';
   @State private headerFontRevision: number = 0;
   @State private listTextFontRevision: number = 0;
   private readonly listTextBudget: BookshelfListTextBudget = new BookshelfListTextBudget();
@@ -74,6 +77,8 @@ export struct BookshelfMultiSelectPage {
     this.headerFontPreparationGeneration += 1;
     this.listTextFontGeneration += 1;
     this.measurements.clear();
+    this.headerInputs = '';
+    this.footerInputs = '';
   }
 
   private frameStyle(): ReaderFrameStyle {
@@ -87,7 +92,7 @@ export struct BookshelfMultiSelectPage {
       frameStyle: this.frameStyle(),
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
-      footerMeasurementKey: this.measurementKey,
+      footerMeasurementKey: this.footerMeasurementKey,
       content: (): void => { this.selectionList(); },
       header: (): void => { this.selectionTopBar(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
@@ -320,12 +325,24 @@ export struct BookshelfMultiSelectPage {
 
   private onGeometryInputsChanged(): void {
     if (!this.mounted) return;
-    this.measurementKey += 1;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const headerInputs = JSON.stringify([this.liveWidth(), metrics.systemFontScale,
+      metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)]);
+    const footerInputs = JSON.stringify([headerInputs, this.bottomInset()]);
+    if (headerInputs !== this.headerInputs) {
+      this.headerInputs = headerInputs;
+      this.measurementKey += 1;
+    }
+    if (footerInputs !== this.footerInputs) {
+      this.footerInputs = footerInputs;
+      this.footerMeasurementKey += 1;
+    }
     this.refreshGeometry();
   }
 
   private recordMeasurement(slot: string, height: number, presentedKey: number): void {
-    if (!this.mounted || presentedKey !== this.measurementKey || height <= 0) return;
+    const currentKey = slot === 'selection:footer' ? this.footerMeasurementKey : this.measurementKey;
+    if (!this.mounted || presentedKey !== currentKey || height < 0) return;
     if (this.measurements.record(slot, height, presentedKey)) this.refreshGeometry();
   }
 
@@ -352,7 +369,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private removeBarClearance(): number {
-    return this.measurements.readForGeneration('selection:footer', this.measurementKey,
+    return this.measurements.readForGeneration('selection:footer', this.footerMeasurementKey,
       12 + READER_ACTION_MIN_TARGET + this.bottomInset());
   }
 

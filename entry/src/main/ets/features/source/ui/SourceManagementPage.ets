@@ -179,6 +179,9 @@ export struct SourceManagementPage {
   @State private originY: number = 0;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
+  @State private footerMeasurementKey: number = 0;
+  private headerInputs: string = '';
+  private footerInputs: string = '';
   private viewportWidth: number = 0;
   private viewportHeight: number = 0;
   private measurementRevision: number = 0;
@@ -223,6 +226,8 @@ export struct SourceManagementPage {
     this.viewportWidth = 0;
     this.viewportHeight = 0;
     this.measurements.clear();
+    this.headerInputs = '';
+    this.footerInputs = '';
     this.retireGroupSelection();
     this.onTemporaryBackBridge(undefined, identity);
   }
@@ -424,7 +429,7 @@ export struct SourceManagementPage {
       frameStyle: this.frameStyle(),
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
-      footerMeasurementKey: this.measurementKey,
+      footerMeasurementKey: this.footerMeasurementKey,
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },
@@ -1319,12 +1324,24 @@ export struct SourceManagementPage {
 
   private onGeometryInputsChanged(): void {
     if (!this.mounted) return;
-    this.measurementKey += 1;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const headerInputs = JSON.stringify([this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width, metrics.systemFontScale,
+      metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)]);
+    const footerInputs = JSON.stringify([headerInputs, this.footerFallbackHeight()]);
+    if (headerInputs !== this.headerInputs) {
+      this.headerInputs = headerInputs;
+      this.measurementKey += 1;
+    }
+    if (footerInputs !== this.footerInputs) {
+      this.footerInputs = footerInputs;
+      this.footerMeasurementKey += 1;
+    }
     this.refreshGeometry();
   }
 
   private recordMeasurement(slot: string, height: number, presentedKey: number): void {
-    if (!this.mounted || presentedKey !== this.measurementKey || height <= 0) return;
+    const currentKey = slot === 'source:footer' ? this.footerMeasurementKey : this.measurementKey;
+    if (!this.mounted || presentedKey !== currentKey || height < 0) return;
     if (this.measurements.record(slot, height, presentedKey)) this.refreshGeometry();
   }
 
@@ -1393,7 +1410,7 @@ export struct SourceManagementPage {
     input.viewportHeight = this.viewportHeight;
     input.measurementRevision = ++this.measurementRevision;
     input.headerHeight = this.measurements.readForGeneration('source:header', this.measurementKey, readerPageContentStartInset());
-    input.footerHeight = this.measurements.readForGeneration('source:footer', this.measurementKey, this.footerFallbackHeight());
+    input.footerHeight = this.measurements.readForGeneration('source:footer', this.footerMeasurementKey, this.footerFallbackHeight());
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
     input.contentHorizontalPadding = 19;
     input.contentEndInset = input.footerHeight;

@@ -3,6 +3,7 @@ import { ReaderFooterSurface, readerPageAreaLength } from './ReaderPageShell';
 import { ReaderFooterFrameModifier, ReaderPageFrameModifier } from './ReaderPageNativeAttributes';
 import { ReaderPageGeometry } from './ReaderPageGeometry';
 import { ReaderFrameStyle } from './ReaderFrameStyle';
+import { ReaderNativeSlotMeasurement } from './ReaderNativeSlotMeasurement';
 
 /** One native frame for finite categories. Geometry inputs are measured safe,
  * rail or card offsets. Visual surfaces and layers stay at the shared owner. */
@@ -16,7 +17,8 @@ export struct ReaderPageScaffold {
   @Prop transparentContent: boolean = false;
   @Prop frameStyle: ReaderFrameStyle;
   @Prop headerMeasurementKey: number = 0;
-  @Prop footerMeasurementKey: number = 0;
+  @Prop @Watch('requestFooterMeasurement') footerMeasurementKey: number = 0;
+  private readonly footerMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   /** Resolved page contract. The measured header height still arrives below. */
   @Prop geometry: ReaderPageGeometry;
   onHeaderHeightChange: (height: number, presentedKey: number) => void = (_height: number, _presentedKey: number): void => {};
@@ -30,6 +32,7 @@ export struct ReaderPageScaffold {
   private footerSurfaceValue(): ReaderFooterSurface {
     return this.geometry.footer.surface;
   }
+  private requestFooterMeasurement(): void { this.footerMeasurement.request(this.footerMeasurementKey); }
   private footerAreaChangeHandler(presentedKey: number): (_old: Area, next: Area) => void {
     return (_old: Area, next: Area): void => {
       if (presentedKey !== this.footerMeasurementKey) return;
@@ -58,6 +61,10 @@ export struct ReaderPageScaffold {
           Column() { this.footer(); }
             .width('100%').padding({ left: this.geometry.footer.insetLeft, right: this.geometry.footer.insetRight })
             .hitTestBehavior(this.footerSurfaceValue() === 'solid' ? HitTestMode.Default : HitTestMode.Transparent)
+            .id(this.footerMeasurement.id)
+            .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
+              (height: number, key: number): void => this.onFooterHeightChange(height, key)))
+            .onDisAppear((): void => this.footerMeasurement.unmount())
             .onAreaChange(this.footerAreaChangeHandler(this.footerMeasurementKey));
         }.width('100%')
           .hitTestBehavior(this.footerSurfaceValue() === 'solid' ? HitTestMode.Default : HitTestMode.Transparent)
