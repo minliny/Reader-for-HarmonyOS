@@ -22,6 +22,7 @@ if(selected.length){
  const {resolveReaderControlDirectoryGeometry}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts');
  const {sampleReaderControlMotionPresentation}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
  const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
+ const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
  const {readerPageAreaLength}=await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
  const read=n=>readFileSync(new URL('../entry/src/main/ets/features/'+n,import.meta.url),'utf8');
  const content=read('reading/ui/ReaderControlDirectoryContent.ets'),field=read('../ui/controls/ReaderSearchField.ets'),toolbar=read('reading/ui/ReaderDirectoryToolbar.ets');
@@ -41,7 +42,7 @@ if(selected.length){
   class Surface extends Child{constructor(...args){super(...args);this.port=this.params.navigationPortFactory?.();}}
   const childSources={ReaderSearchField:field,ReaderDirectoryToolbar:toolbar,ReaderDirectoryNavigationSurface:read('reading/ui/ReaderDirectoryNavigationSurface.ets'),ReaderDirectoryChapterRow:read('reading/ui/ReaderDirectoryChapterRow.ets'),ReaderBookmarkRow:read('reading/ui/ReaderBookmarkRow.ets'),ReaderBookmarkEmptyState:read('reading/ui/ReaderBookmarkEmptyState.ets'),ReaderBookmarkLoadingState:read('reading/ui/ReaderBookmarkLoadingState.ets'),ReaderBookmarkErrorState:read('reading/ui/ReaderBookmarkErrorState.ets')};
   const scroller={offset:0,index:1,rect:{y:0,height:64},scrollToIndex(...v){scroll.push(['index',...v]);},scrollTo(v){scroll.push(['offset',v]);},scrollEdge(v){scroll.push(['edge',v]);},currentOffset(){return{yOffset:this.offset};},getItemIndex(){return this.index;},getItemRect(){return this.rect;}};
-  const deps={...sdk.deps,...classes,...accessibility,readerControlDirectorySnapshot,ReaderControlDirectoryPosition,resolveReaderControlDirectoryGeometry,readerReadableFontScale,readerScaledControlHeight,readerPageAreaLength,
+  const deps={...sdk.deps,...classes,...accessibility,EMPTY_READING_DIRECTORY_RECOVERY,readerControlDirectorySnapshot,ReaderControlDirectoryPosition,resolveReaderControlDirectoryGeometry,readerReadableFontScale,readerScaledControlHeight,readerPageAreaLength,
    measureReaderDirectoryMinimum:(...args)=>minimumMeasure(...args),sampleReaderControlBookmark,sampleReaderControlMotionPresentation,readerWindowMetrics:()=>metrics,ReaderWindowCoordinator:{metrics:()=>metrics},
    ReaderSearchField:Child,ReaderDirectoryToolbar:Child,ReaderDirectoryNavigationSurface:Surface,ReaderDirectoryChapterRow:Child,ReaderBookmarkRow:Child,
    ReaderBookmarkEmptyState:Child,ReaderBookmarkLoadingState:Child,ReaderBookmarkErrorState:Child,
@@ -116,7 +117,7 @@ if(selected.length){
   const{owner}=compile(()=>createReaderBuilderProbe(source,boundedMembers(source),deps,sdk.hooks));
   Object.assign(owner,{variant,mode:'submit',readerWindowMetricsRevision:1,directoryFocusId:id,directoryFocusAllowed:allowed,directoryFocusRevision:revision,directoryKeyboardOnFocus:keyboard,directoryFocusCurrent:current,onDirectoryFocusChanged:(id,value)=>events.push([id,value]),onDirectoryKeyboardRestoreSettled:(id,value)=>keyboardSettled.push([id,value]),onTextChange(){},onSubmit(){}});owner.aboutToAppear();owner.initialRender();
   const inputEntry=[...owner.nodes.entries()].find(([,n])=>n.type==='TextInput');
-  return{owner,sdk,frames,focus,events,keyboardRequests,keyboardSettled,input:inputEntry?.[1],updateKeyboard(value){owner.directoryKeyboardOnFocus=value;owner.replayOnly([inputEntry[0]]);},flush(){while(frames.length){const f=frames.shift();f.onIdle?.(0);}}};
+  return{owner,sdk,frames,focus,events,keyboardRequests,keyboardSettled,input:inputEntry?.[1],updateKeyboard(value){owner.directoryKeyboardOnFocus=value;owner.replayOnly([inputEntry[0]]);},flush(){while(frames.length){const f=frames.shift();f.onFrame?.(0);f.onIdle?.(0);}}};
  }
 
  function toolbarSdk({id='toolbar:current',current=()=>true}={}){
@@ -227,7 +228,7 @@ if(selected.length){
   f.owner.onDirectoryFocusChanged=(id,value)=>x.owner.onDirectoryFocus(x.presentation,id,value);
   f.owner.onDirectoryKeyboardRestoreSettled=(id,value)=>{f.keyboardSettled.push([id,value]);x.owner.onDirectoryKeyboardRestoreSettled(x.presentation,id,value);};
   f.input.onAreaChange({}, {width:200,height:44});
-  const focusFrame=f.frames.shift();focusFrame.onIdle(0);
+  const focusFrame=f.frames.shift();focusFrame.onFrame(0);
   assert.equal(f.owner.directoryNativeFocused,true,'actual Field receives current Native focus callback before keyboard request');
   assert.equal(f.keyboardRequests.length,0,'native focus is not a keyboard visibility receipt');
   x.owner.syncContentLayout();f.updateKeyboard(x.owner.directoryRestoreKeyboard);assert.equal(f.input.enableKeyboardOnFocus,true);
@@ -251,7 +252,7 @@ if(selected.length){
    z=>{z.owner.directoryFocusId='next';z.owner.onDirectoryFocusRequest();},
    z=>z.input.onBlur(),
   ]){
-   const z=focusField({ackFocus:true});z.input.onAreaChange({}, {width:200,height:44});z.frames.shift().onIdle(0);invalidate(z);z.flush();await new Promise(resolve=>setImmediate(resolve));assert.equal(z.keyboardRequests.length,0,'retired/Back/disabled/blurred input cannot issue queued keyboard request');
+   const z=focusField({ackFocus:true});z.input.onAreaChange({}, {width:200,height:44});z.frames.shift().onFrame(0);invalidate(z);z.flush();await new Promise(resolve=>setImmediate(resolve));assert.equal(z.keyboardRequests.length,0,'retired/Back/disabled/blurred input cannot issue queued keyboard request');
   }
   const failed=focusField({ackFocus:true,show:()=>Promise.reject(Error('detached'))});failed.input.onAreaChange({}, {width:200,height:44});failed.flush();await new Promise(resolve=>setImmediate(resolve));assert.equal(failed.keyboardRequests.length,1);assert.deepEqual(failed.keyboardSettled,[['directory:current',false]]);
   let finish;const stale=focusField({ackFocus:true,show:()=>new Promise(resolve=>{finish=resolve;})});stale.input.onAreaChange({}, {width:200,height:44});stale.flush();stale.owner.aboutToDisappear();finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(stale.keyboardSettled.length,0,'late keyboard Promise does not settle successor');

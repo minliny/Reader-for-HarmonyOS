@@ -197,6 +197,10 @@ export default class EntryAbility extends UIAbility {
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     if (this.coreCopyOnly) return;
     this.frameworkCapture.start(DEBUG, BUILD_MODE_NAME, want.parameters?.readerFrameworkCaptureSeconds, this.context.cacheDir);
+    const focusTrace = want.parameters?.readerToggleFocusTrace;
+    if (DEBUG && BUILD_MODE_NAME === 'debug' && typeof focusTrace === 'boolean') {
+      AppStorage.setOrCreate('readerToggleFocusTrace', focusTrace);
+    }
     // Never reload the window or route directly; Index saves the active
     // reading session before presenting a successfully imported file.
     this.scheduleRebuildableCacheClear?.(want, this.runtimeOwner);

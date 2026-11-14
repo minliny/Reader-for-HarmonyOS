@@ -66,8 +66,8 @@ class LibrarySearchFrame extends FrameCallback {
 class LibrarySearchFocusFrame extends FrameCallback {
   private action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
 }
 
 /** Persistent library bar and its transition. SearchHost remains the owner of search facts. */

@@ -9,8 +9,8 @@ import { DEBUG } from '../../../../../build/default/generated/profile/default/Bu
 class ReaderToggleFocusFrame extends FrameCallback {
   private readonly action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
 }
 
 type ReaderToggleSpecId = 'standard-toggle' | 'bookshelf-update-toggle';
@@ -40,7 +40,7 @@ function resolveReaderToggleSpec(id: ReaderToggleSpecId): ReaderToggleSpec {
 @Component
 export struct ReaderToggle {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private appForeground: boolean = true;
   @Prop specId: ReaderToggleSpecId = 'standard-toggle';
   @Prop value: boolean = false;
   @Prop actionEnabled: boolean = true;
@@ -56,10 +56,14 @@ export struct ReaderToggle {
   private pendingAccessibilityFocusRevision: number = -1;
   private pendingKeyboardAfterAccessibilityRevision: number = -1;
   private diagnosticFocusEvents: number = 0;
+  private restoringRevision: number = -1;
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void {
     this.mounted = false;
     this.clearFocusContinuation();
+  }
+  private onForegroundChanged(): void {
+    if (!this.appForeground) this.clearFocusContinuation();
   }
   private clearFocusContinuation(): void {
     this.focusedRevision = -1;
@@ -67,6 +71,7 @@ export struct ReaderToggle {
     this.accessibilityFocusedRevision = -1;
     this.pendingAccessibilityFocusRevision = -1;
     this.pendingKeyboardAfterAccessibilityRevision = -1;
+    this.restoringRevision = -1;
   }
   build() {
     ForEach([this.inputIdentity], (identity: string): void => {
@@ -81,10 +86,13 @@ export struct ReaderToggle {
             .responseRegion({ x: 0, y: -10, width: 44, height: 44 })
             .enabled(this.canAct(identity)).focusable(this.canAct(identity))
             .accessibilityText(this.accessibilityLabel)
-            .id(this.nativeFocusId(identity))
+            .id(this.nativeFocusId(identity, revision))
             .onFocus((): void => {
               this.diagnosticFocus('keyboard-focus', revision);
-              if (this.mounted && identity === this.inputIdentity && revision === this.nativeRevision) this.focusedRevision = revision;
+              if (this.mounted && identity === this.inputIdentity && revision === this.nativeRevision) {
+                this.focusedRevision = revision;
+                this.restoreAccessibilityFocus(identity, revision);
+              }
             })
             .onBlur((): void => {
               this.diagnosticFocus('keyboard-blur', revision);
@@ -110,35 +118,45 @@ export struct ReaderToggle {
   private canAct(identity: string): boolean {
     return this.mounted && identity.length > 0 && this.actionEnabled && !this.isBusy && identity === this.inputIdentity;
   }
-  private nativeFocusId(identity: string): string { return `reader-toggle:${identity}`; }
+  private nativeFocusId(identity: string, revision: number): string { return `reader-toggle:${identity}:${revision}`; }
 
   private restoreNativeFocus(identity: string, revision: number): void {
     this.diagnosticFocus('appear-restore', revision);
     const keyboardFocused = this.pendingFocusRevision === revision;
     const accessibilityFocused = this.pendingAccessibilityFocusRevision === revision;
-    if (!keyboardFocused && !accessibilityFocused) return;
+    if ((!keyboardFocused && !accessibilityFocused) || this.restoringRevision === revision) return;
+    this.restoringRevision = revision;
     this.pendingKeyboardAfterAccessibilityRevision = keyboardFocused && accessibilityFocused ? revision : -1;
     this.pendingFocusRevision = -1;
-    this.pendingAccessibilityFocusRevision = -1;
     if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
     try {
       this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
         if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
         if (keyboardFocused) this.restoreKeyboardFocus(identity, revision);
-        if (accessibilityFocused && (this.accessibilityFocusedRevision === revision - 1 ||
-          this.accessibilityFocusedRevision === revision)) {
-          try {
-            const bundleName = this.getUIContext().getHostContext()?.applicationInfo.name;
-            if (bundleName !== undefined && bundleName.length > 0) {
-              this.diagnosticFocus('accessibility-request', revision);
-              accessibility.sendAccessibilityEvent({ type: 'requestFocusForAccessibilityNotInterrupt', bundleName,
-                triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity) }).then((): void => {
-                  this.diagnosticFocus('accessibility-accepted', revision);
-                  this.continueKeyboardAfterAccessibility(identity, revision);
-                }).catch((): void => {});
-            }
-          } catch (_unavailable) {}
-        }
+        else this.restoreAccessibilityFocus(identity, revision);
+      }));
+    } catch (_detached) {}
+  }
+
+  private restoreAccessibilityFocus(identity: string, revision: number): void {
+    if (this.pendingAccessibilityFocusRevision !== revision || !this.appForeground || !this.canAct(identity) ||
+      revision !== this.nativeRevision) return;
+    this.pendingAccessibilityFocusRevision = -1;
+    try {
+      this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
+        if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision ||
+          (this.accessibilityFocusedRevision !== revision - 1 && this.accessibilityFocusedRevision !== revision)) return;
+        try {
+          const bundleName = this.getUIContext().getHostContext()?.applicationInfo.name;
+          if (bundleName !== undefined && bundleName.length > 0) {
+            this.diagnosticFocus('accessibility-request', revision);
+            accessibility.sendAccessibilityEvent({ type: 'requestFocusForAccessibilityNotInterrupt', bundleName,
+              triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity, revision) }).then((): void => {
+                this.diagnosticFocus('accessibility-accepted', revision);
+                this.continueKeyboardAfterAccessibility(identity, revision);
+              }).catch((): void => { this.diagnosticFocus('accessibility-rejected', revision); });
+          }
+        } catch (_unavailable) {}
       }));
     } catch (_detached) {}
   }
@@ -155,15 +173,19 @@ export struct ReaderToggle {
     } catch (_detached) {}
   }
 
-  private restoreKeyboardFocus(identity: string, revision: number): void {
+  private restoreKeyboardFocus(identity: string, revision: number, attempt: number = 0): void {
     if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
     this.diagnosticFocus('keyboard-request', revision);
-    try { this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity)); }
-    catch (_unavailable) {}
+    try {
+      const accepted = this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity, revision));
+      if (accepted === false && attempt === 0) {
+        this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => this.restoreKeyboardFocus(identity, revision, 1)));
+      }
+    } catch (_unavailable) {}
   }
 
   private diagnosticFocus(stage: string, revision: number, focused: boolean = false): void {
-    if (!DEBUG || this.diagnosticFocusEvents >= 40) return;
+    if (!DEBUG || AppStorage.get<boolean>('readerToggleFocusTrace') !== true || this.diagnosticFocusEvents >= 40) return;
     this.diagnosticFocusEvents += 1;
     hilog.info(0x5244, 'ReaderToggleFocus', 'READER_TOGGLE_FOCUS %{public}s', JSON.stringify({
       stage, revision, focused, label: this.accessibilityLabel, current: this.nativeRevision, keyboard: this.focusedRevision,

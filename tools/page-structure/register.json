@@ -1076,7 +1076,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
         },
         {
           "path": "AppScope/app.json5",
@@ -1168,7 +1168,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2"
+          "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -1180,7 +1180,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
-          "sha256": "fba698ede24c75d14b600847132cce178a60848ac4d6c09e7f6a3d2bf63235ba"
+          "sha256": "7da01b9aa8057081818073317eb5d178cf25e2c2c3b2b68fd6dea7c58b028b94"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
@@ -1288,7 +1288,7 @@
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "3e461c8b66046168c2c4a654da3d3a3683f3a382f138639bcc1cc688c4959e3a"
+          "sha256": "96e24b27d219aeb3347eeb2160ee85b1cb0e9da73d20ed16290df1b3cfe9e551"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -2587,7 +2587,7 @@
       "sourceInputs": [
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+          "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
           "symbol": "externalDirectory"
         },
         {
@@ -2697,7 +2697,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+          "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
           "symbol": "build"
         },
         {
@@ -2802,7 +2802,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-          "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+          "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
           "symbol": "prepareMangaPreview"
         },
         {
@@ -2811,7 +2811,7 @@
         },
         {
           "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+          "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
         },
         {
           "path": "tools/test-directory-native-row-target.mjs",
@@ -2825,7 +2825,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
         },
         {
           "path": "AppScope/app.json5",
@@ -4025,7 +4025,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -4135,7 +4135,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -4240,7 +4240,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -4249,7 +4249,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -4263,7 +4263,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -5617,7 +5617,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -5727,7 +5727,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -5832,7 +5832,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -5841,7 +5841,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -5855,7 +5855,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -7172,7 +7172,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -7282,7 +7282,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -7387,7 +7387,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -7396,7 +7396,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -7410,7 +7410,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -8754,7 +8754,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -8864,7 +8864,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -8969,7 +8969,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -8978,7 +8978,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -8992,7 +8992,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -10198,7 +10198,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -10308,7 +10308,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -10413,7 +10413,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -10422,7 +10422,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -10436,7 +10436,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -11529,7 +11529,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -11639,7 +11639,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -11744,7 +11744,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -11753,7 +11753,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -11767,7 +11767,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -13036,7 +13036,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -13146,7 +13146,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -13251,7 +13251,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -13260,7 +13260,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -13274,7 +13274,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -14435,7 +14435,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -14545,7 +14545,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -14650,7 +14650,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -14659,7 +14659,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -14673,7 +14673,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -15871,7 +15871,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -15981,7 +15981,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -16086,7 +16086,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -16095,7 +16095,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -16109,7 +16109,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -17202,7 +17202,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -17312,7 +17312,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -17417,7 +17417,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -17426,7 +17426,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -17440,7 +17440,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -18808,7 +18808,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -18918,7 +18918,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -19023,7 +19023,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -19032,7 +19032,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -19046,7 +19046,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -20417,7 +20417,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe",
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3",
                 "symbol": "externalDirectory"
               },
               {
@@ -20527,7 +20527,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2",
+                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
                 "symbol": "build"
               },
               {
@@ -20632,7 +20632,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
-                "sha256": "7e8bdd02103962be0fb2f3a6925d3177ec0cb64a1c24bc562c0a8e82ccdc150f",
+                "sha256": "b34a3c746b87f0a9d2199a8a3985c3bac4d3cee1355a3c4becd37ebb05c64790",
                 "symbol": "prepareMangaPreview"
               },
               {
@@ -20641,7 +20641,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+                "sha256": "074c2488dfd200727e9f99f282caeb62dd3f1506162292910578edabc6a8ffd1"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -20655,7 +20655,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -21151,7 +21151,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe"
+          "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3"
         },
         {
           "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
@@ -21261,7 +21261,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
         },
         {
           "path": "AppScope/app.json5",
@@ -22536,7 +22536,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe"
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
@@ -22646,7 +22646,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -23928,7 +23928,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe"
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
@@ -24038,7 +24038,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -25320,7 +25320,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe"
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
@@ -25430,7 +25430,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -26668,7 +26668,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe"
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
@@ -26778,7 +26778,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -28016,7 +28016,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "26c432a65aa92d3c7733ed8d36d5b63fd482dcfe7abc437eeaee7879b2bfabfe"
+                "sha256": "38fd8e553523d2b515955d94f3c808c52e20ea9a05b2d0177a3ecfe6147c0df3"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
@@ -28126,7 +28126,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
               },
               {
                 "path": "AppScope/app.json5",
@@ -30473,7 +30473,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
+          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
         },
         {
           "path": "AppScope/app.json5",
@@ -30521,7 +30521,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "8f897eaa3c6149247896ebb288011baf04a79bb7941fb53145c1f1066382cfa2"
+          "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",

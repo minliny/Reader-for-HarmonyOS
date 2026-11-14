@@ -127,8 +127,8 @@ class BookshelfMotionFrameCallback extends FrameCallback {
 class BookshelfBookActionFocusFrame extends FrameCallback {
   private readonly callback: () => void;
   constructor(callback: () => void) { super(); this.callback = callback; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.callback(); }
+  onFrame(_time: number): void { this.callback(); }
+  onIdle(_remaining: number): void {}
 }
 
 class BookshelfRowDataSource implements IDataSource {

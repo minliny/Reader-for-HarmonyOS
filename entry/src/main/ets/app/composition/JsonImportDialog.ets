@@ -25,8 +25,8 @@ import type { JsonImportFocusReturn } from './JsonImportPresentation';
 class JsonImportFocusFrame extends FrameCallback {
   private readonly action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
 }
 
 /**

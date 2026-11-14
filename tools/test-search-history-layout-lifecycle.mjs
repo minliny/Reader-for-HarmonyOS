@@ -14,6 +14,14 @@ const { readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar
 
 
 const source=readFileSync(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'utf8');
+let actualSearchFocusFrame;
+if (selectedCase === 'native-focus') {
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const field = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
+  const frame = field.slice(field.indexOf('class ReaderSearchFocusFrame'), field.indexOf('@Component'));
+  actualSearchFocusFrame = pureModuleProbe(frame, 'ReaderSearchFocusFrame.ets',
+    { FrameCallback: class {} }, ['ReaderSearchFocusFrame']).ReaderSearchFocusFrame;
+}
 // StateContent branches reference the page's other real Builders; register
 // their production names with the same SDK registry without executing them.
 const require = createRequire(import.meta.url);
@@ -160,12 +168,12 @@ check('history loading, failure and retry render independently on every entry su
 check('native focus waits for layout and a removed or returning page never steals it',()=>{
   const path=new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets',import.meta.url);
   const frames=[],focus=[];
-  const Field=selectedProductionMethods(path,'ReaderSearchField',['aboutToAppear','aboutToDisappear'],{
-    ReaderSearchFocusFrame:class{constructor(action){this.action=action;}onIdle(){this.action();}}});
-  const owner=Object.assign(new Field(),{mounted:false,focusGeneration:0,variant:'bookPage',mode:'submit',focusOnAppear:true,
+  const Field=selectedProductionMethods(path,'ReaderSearchField',['aboutToAppear','aboutToDisappear','isBookField'],{
+    ReaderSearchFocusFrame:actualSearchFocusFrame});
+  const owner=Object.assign(new Field(),{mounted:false,focusGeneration:0,variant:'bookPanel',mode:'submit',focusOnAppear:true,
     getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({requestFocus:id=>focus.push(id)})})});
-  owner.aboutToAppear();assert.equal(focus.length,0);frames.shift().onIdle();assert.deepEqual(focus,['reader-book-search-input']);
-  owner.aboutToAppear();owner.aboutToDisappear();frames.shift().onIdle();assert.equal(focus.length,1);
+  owner.aboutToAppear();assert.equal(focus.length,0);frames.shift().onFrame();assert.deepEqual(focus,['reader-book-search-input']);
+  owner.aboutToAppear();owner.aboutToDisappear();frames.shift().onFrame();assert.equal(focus.length,1);
   owner.focusOnAppear=false;owner.aboutToAppear();assert.equal(frames.length,0);
 
 });

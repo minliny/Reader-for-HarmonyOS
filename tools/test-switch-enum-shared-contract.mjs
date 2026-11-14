@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
+const definitions={"toggle-native-focus-target": {"description": "Actual native target IDs bind the remount revision, old queued accessibility requests cannot address successors, logging defaults off", "resources": []},"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -55,8 +55,8 @@ if (selectedCase === 'toggle-focus') {
     if (stop === 'request') {
       current.onFocus(); current.onChange(true); p.properties.flush();
     }
-    frames[0].onIdle(1000000);
-    assert.deepEqual(requests, stop === 'none' ? ['reader-toggle:focus-A'] : [], 'only the current eligible native owner can regain focus');
+    frames[0].onFrame(1000000);
+    assert.deepEqual(requests, stop === 'none' ? ['reader-toggle:focus-A:1'] : [], 'only the current eligible native owner can regain focus');
   }
   const p = switchControls(), o = p.mount(p.toggle, { inputIdentity: 'touch', onToggle() {} });
   o.getUIContext = () => { throw Error('unfocused touch must not schedule focus'); };
@@ -86,11 +86,12 @@ if (selectedCase === 'toggle-accessibility-focus') {
     if (stop === 'initial-false') current.onAccessibilityFocus(false);
     if (stop === 'late-event') initial.onAccessibilityFocus(false);
     if (stop === 'new-request') { current.onChange(true); p.properties.flush(); }
-    frames[0]?.onIdle(1000000);
+    frames.shift()?.onFrame(1000000);
+    frames.shift()?.onFrame(1000000);
     assert.deepEqual(keyboard, [], 'accessibility focus alone never requests keyboard focus');
     assert.deepEqual(events, ['none', 'late-event', 'initial-false'].includes(stop) ? [{
       type: 'requestFocusForAccessibilityNotInterrupt', bundleName: 'io.reader.minliny',
-      triggerAction: 'accessibilityFocus', customId: 'reader-toggle:a11y-A',
+      triggerAction: 'accessibilityFocus', customId: 'reader-toggle:a11y-A:1',
     }] : [], 'only current prior screen-reader focus can be continued once');
   }
 }
@@ -105,7 +106,11 @@ if (selectedCase === 'toggle-accessibility-focus') {
     const initial = nativeToggle(p, o);
     initial.onFocus(); initial.onAccessibilityFocus(true); initial.onChange(true); p.properties.flush();
     const current = nativeToggle(p, o); current.onAppear();
-    frames.shift().onIdle(1000000);
+    frames.shift().onFrame(1000000);
+    assert.equal(events.length, 0, 'accessibility request waits for actual replacement keyboard acknowledgement');
+    current.onFocus();
+    assert.equal(frames.length, 1);
+    frames.shift().onFrame(1000000);
     await Promise.resolve(); await Promise.resolve();
     assert.equal(events.length, 1); assert.equal(frames.length, 0, 'platform acceptance alone cannot establish actual accessibility focus');
     current.onAccessibilityFocus(false);
@@ -118,8 +123,8 @@ if (selectedCase === 'toggle-accessibility-focus') {
     if (stop === 'background') o.appForeground = false;
     if (stop === 'retired') o.aboutToDisappear();
     if (stop === 'screen-reader-moved') current.onAccessibilityFocus(false);
-    frames.shift().onIdle(1000000);
-    assert.deepEqual(requests, stop === 'none' ? ['reader-toggle:both-A', 'reader-toggle:both-A'] : ['reader-toggle:both-A']);
+    frames.shift().onFrame(1000000);
+    assert.deepEqual(requests, stop === 'none' ? ['reader-toggle:both-A:1', 'reader-toggle:both-A:1'] : ['reader-toggle:both-A:1']);
   }
 }
 if (selectedCase === 'toggle-focus-identity') {
@@ -137,6 +142,51 @@ if (selectedCase === 'toggle-focus-identity') {
   fresh.onChange(true); p.properties.flush(); nativeToggle(p, o).onAppear();
   assert.equal(frames.length, 0, 'new identity cannot inherit previous native keyboard or screen-reader focus');
   assert.deepEqual(events, []);
+}
+if (selectedCase === 'toggle-native-focus-target') {
+  const frameProbe = switchControls();
+  let executed = 0;
+  const callback = new frameProbe.dependencies.ReaderToggleFocusFrame(() => { executed += 1; });
+  callback.onIdle(1000000);
+  assert.equal(executed, 0, 'critical focus does not depend on an idle budget');
+  callback.onFrame(1000000);
+  assert.equal(executed, 1, 'actual next-frame callback performs critical focus work');
+  const frames = [], events = [];
+  const p = switchControls({ accessibility: { sendAccessibilityEvent: async event => { events.push(event); } } });
+  const o = p.mount(p.toggle, { inputIdentity: 'target-A', value: false, onToggle() {} });
+  o.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+    getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }) });
+  const first = nativeToggle(p, o);
+  assert.equal(first.id, 'reader-toggle:target-A:0');
+  first.onAccessibilityFocus(true); first.onChange(true); p.properties.flush();
+  const second = nativeToggle(p, o); second.onAppear();
+  frames.shift().onFrame(1000000); frames.shift().onFrame(1000000);
+  assert.equal(events[0].customId, second.id);
+  second.onChange(true); p.properties.flush();
+  assert.notEqual(events[0].customId, nativeToggle(p, o).id, 'a queued old request cannot target a successor native instance');
+  for (const stop of ['none', 'identity', 'background', 'retired', 'busy']) {
+    const retryFrames = [], requests = [], probe = switchControls();
+    const owner = probe.mount(probe.toggle, { inputIdentity: 'retry-A', value: false, onToggle() {} });
+    owner.getUIContext = () => ({ postFrameCallback: frame => retryFrames.push(frame),
+      getFocusController: () => ({ requestFocus: id => { requests.push(id); return false; } }) });
+    const native = nativeToggle(probe, owner);
+    native.onFocus(); native.onChange(true); probe.properties.flush(); nativeToggle(probe, owner).onAppear();
+    retryFrames.shift().onFrame(1000000);
+    assert.equal(retryFrames.length, 1, 'a rejected native focus request receives one bounded frame retry');
+    if (stop === 'identity') probe.update(owner, { inputIdentity: 'retry-B' });
+    if (stop === 'background') owner.appForeground = false;
+    if (stop === 'retired') owner.aboutToDisappear();
+    if (stop === 'busy') probe.update(owner, { isBusy: true });
+    retryFrames.shift().onFrame(1000000);
+    assert.equal(requests.length, stop === 'none' ? 2 : 1);
+    assert.equal(retryFrames.length, 0, 'native refusal cannot produce unbounded focus retries');
+  }
+  for (const [debug, focusTrace, expected] of [[false, true, 0], [true, false, 0], [true, true, 40]]) {
+    const diagnostics = [], probe = switchControls({ debug, focusTrace, diagnostics });
+    const owner = probe.mount(probe.toggle, { inputIdentity: 'trace' });
+    for (let index = 0; index < 45; index += 1) owner.diagnosticFocus('finite-probe', 0);
+    assert.equal(diagnostics.length, expected, 'DEBUG diagnostic requires explicit in-memory opt-in and is bounded');
+  }
 }
 if(selectedCase==='segment'){
  const p=switchControls(),calls=[],o=p.mount(p.segment,{inputIdentity:'A',options:['跟随','浅色','深色'],optionIds:['system','day','night'],selectedIndex:0,onSelect:i=>calls.push(i)});

@@ -39,7 +39,7 @@ const definitions = {
   'bookshelf-action-lanes': 'The shelf section pays the full icon hit lane while the group selector preserves compact paint inside a native44vp carrier.',
   'labeled-action-paint': 'Finite labeled actions retain their authored compact paint heights and distinct glyphs with an independent44vp native carrier and natural text growth.',
   'select-watch-parent-delivery': 'A closing/reduce-motion PropWatch fences immediately but delivers the actual select dismiss callback after the parent render and rejects a replaced identity.',
-  'directory-watch-parent-delivery': 'Directory focus revocation fences the native input immediately and delivers the parent callback on idle only while its current identity still owns it.',
+  'directory-watch-parent-delivery': 'Directory focus revocation fences the native input immediately and delivers the parent callback on the next frame only while its current identity still owns it.',
   'dialog-action-budget': 'Real bundled font advances at actual dialog safe widths expose wrapping and natural native action growth beyond the old single-line cap.',
   'menu-divider-current': 'Stable-key menu actors recompute their divider from current action order after an appended action.',
   'main-rail-current': 'Actual stable-key rail actors update selected appearance and current/inactive event routing with the current tab.',
@@ -570,12 +570,12 @@ for (const id of selectContractCases(definitions)) {
     renderingParent = true; deliver({ directoryFocusAllowed: false }); renderingParent = false;
     assert.equal(owner.directoryNativeFocused, false); assert.equal(owner.directoryFocusEnabled('one'), false);
     assert.deepEqual(calls, []);
-    const current = frames.splice(0); current.forEach(frame => frame.onFrame()); assert.deepEqual(calls, []);
-    current.forEach(frame => frame.onIdle()); assert.deepEqual(calls, [['one', false]]);
+    const current = frames.splice(0); current.forEach(frame => frame.onFrame()); assert.deepEqual(calls, [['one', false]]);
+    current.forEach(frame => frame.onIdle()); assert.deepEqual(calls, [['one', false]], 'optional idle delivery adds no duplicate parent callback');
     owner.directoryNativeFocused = true;
     renderingParent = true; deliver({ directoryFocusRevision: 1 }); renderingParent = false;
     deliver({ directoryFocusId: 'two' });
-    frames.splice(0).forEach(frame => frame.onIdle());
+    frames.splice(0).forEach(frame => frame.onFrame());
     assert.deepEqual(calls, [['one', false]], 'an old layout identity cannot notify its successor');
   }
   if (id === 'dialog-action-budget') {

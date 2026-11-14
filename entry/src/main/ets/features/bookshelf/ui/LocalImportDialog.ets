@@ -54,8 +54,8 @@ const LOCAL_IMPORT_FILE_FOCUS_ID = 'reader-local-import-file-selection';
 class LocalImportSelectionFocusFrame extends FrameCallback {
   private readonly action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
 }
 
 /**

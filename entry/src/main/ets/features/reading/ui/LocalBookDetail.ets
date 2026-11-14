@@ -79,8 +79,8 @@ type DetailDirectoryFocusContext = 'detail' | 'directory' | 'inactive';
 class DetailDirectoryFocusFrame extends FrameCallback {
   private readonly action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
 }
 
 /** Shared detail presentation. Core facts decide the type and readable rows. */

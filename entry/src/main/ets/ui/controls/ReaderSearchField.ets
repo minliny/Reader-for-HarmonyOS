@@ -86,8 +86,8 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
 class ReaderSearchFocusFrame extends FrameCallback {
   private action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
-  onFrame(): void {}
-  onIdle(): void { this.action(); }
+  onFrame(): void { this.action(); }
+  onIdle(): void {}
 }
 
 @Component
