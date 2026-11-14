@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
+const definitions={"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -122,6 +122,22 @@ if (selectedCase === 'toggle-accessibility-focus') {
     assert.deepEqual(requests, stop === 'none' ? ['reader-toggle:both-A', 'reader-toggle:both-A'] : ['reader-toggle:both-A']);
   }
 }
+if (selectedCase === 'toggle-focus-identity') {
+  const frames = [], events = [];
+  const p = switchControls({ accessibility: { sendAccessibilityEvent: async event => { events.push(event); } } });
+  const o = p.mount(p.toggle, { inputIdentity: 'identity-A', value: false, onToggle() {} });
+  o.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+    getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
+    getFocusController: () => ({ requestFocus() {} }) });
+  const previous = nativeToggle(p, o);
+  previous.onFocus(); previous.onAccessibilityFocus(true);
+  p.update(o, { inputIdentity: 'identity-B' });
+  previous.onFocus(); previous.onAccessibilityFocus(true);
+  const fresh = nativeToggle(p, o);
+  fresh.onChange(true); p.properties.flush(); nativeToggle(p, o).onAppear();
+  assert.equal(frames.length, 0, 'new identity cannot inherit previous native keyboard or screen-reader focus');
+  assert.deepEqual(events, []);
+}
 if(selectedCase==='segment'){
  const p=switchControls(),calls=[],o=p.mount(p.segment,{inputIdentity:'A',options:['跟随','浅色','深色'],optionIds:['system','day','night'],selectedIndex:0,onSelect:i=>calls.push(i)});
  const night=nativeChoice(p,o).at(-1).onClick;night();assert.deepEqual(calls,[2]);assert.equal(o.selectedIndex,0);
@@ -160,7 +176,26 @@ if(selectedCase==='spec-propagation'){
   'native border receives the capsule radius even when the visual border is disabled');
  assert.throws(()=>switchSpecs().resolveReaderToggleSpec('private99'),/Unknown/);assert.throws(()=>switchSpecs().resolveReaderSegmentSpec('private99'),/Unknown/);
 }
-if(selectedCase==='toggle')for(const guard of ['identity === this.inputIdentity','this.actionEnabled','!this.isBusy','this.mounted']){const source=guard==='this.mounted'?toggleSource.replace('return this.mounted &&','return true &&'):toggleSource.replace(guard,'true');assert.notEqual(source,toggleSource);const p=switchControls({toggleDefinition:source}),calls=[],o=p.mount(p.toggle,{inputIdentity:'old',onToggle:next=>calls.push(next)}),click=nativeToggle(p,o).onChange;if(guard.startsWith('identity'))p.update(o,{inputIdentity:'new'});if(guard==='this.actionEnabled')p.update(o,{actionEnabled:false});if(guard==='!this.isBusy')p.update(o,{isBusy:true});if(guard==='this.mounted')o.aboutToDisappear();click(true);assert.equal(calls.length,1,'removed '+guard+' admits illegal action');}
+if (selectedCase === 'toggle') {
+  const start = toggleSource.indexOf('private canAct(identity: string): boolean {');
+  const end = toggleSource.indexOf('\n  }', start);
+  assert.ok(start >= 0 && end > start);
+  const body = toggleSource.slice(start, end);
+  for (const guard of ['identity === this.inputIdentity', 'this.actionEnabled', '!this.isBusy', 'this.mounted']) {
+    assert.ok(body.includes(guard));
+    const source = toggleSource.slice(0, start) + body.replace(guard, 'true') + toggleSource.slice(end);
+    const p = switchControls({ toggleDefinition: source }), calls = [];
+    const o = p.mount(p.toggle, { inputIdentity: 'old', onToggle: next => calls.push(next) });
+    const click = nativeToggle(p, o).onChange;
+    if (guard.startsWith('identity')) p.update(o, { inputIdentity: 'new' });
+    if (guard === 'this.actionEnabled') p.update(o, { actionEnabled: false });
+    if (guard === '!this.isBusy') p.update(o, { isBusy: true });
+    if (guard === 'this.mounted') o.aboutToDisappear();
+    click(true);
+    assert.equal(calls.length, 1, 'removed canAct guard admits the actual illegal action: ' + guard);
+  }
+}
+
 const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 // Original production consumer methods and native shared controls execute in
 // one installed SDK property runtime. No business owner algorithm is copied.

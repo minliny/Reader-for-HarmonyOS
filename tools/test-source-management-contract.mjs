@@ -104,7 +104,7 @@ if (selected.length) {
     const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
     const switchControls = () => {
       const properties=createArkUIPropertyRuntimeProbe();
-      const dependencies={...properties.sdk,...switchSpecs(),readerAppColor};
+      const dependencies={...properties.sdk,...switchSpecs(),readerAppColor,DEBUG:false,hilog:{info(){}}};
       const hooks={...properties.hooks,childSources:{ReaderToggle:toggleSource},mountChildren:true,lifecycleChildren:true};
       const toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),dependencies,hooks);
       dependencies.ReaderToggle=toggle.Component;

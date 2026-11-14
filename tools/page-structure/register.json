@@ -1180,7 +1180,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
-          "sha256": "2e1184fc2e15d736d09d6e39cd3863a154602ca5025f2b5981dae504e2f3ebda"
+          "sha256": "fba698ede24c75d14b600847132cce178a60848ac4d6c09e7f6a3d2bf63235ba"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
@@ -1256,7 +1256,7 @@
         },
         {
           "path": "tools/test-source-management-contract.mjs",
-          "sha256": "091d2aec8e4c995f21a5c8c9e4b593cf4ba1ed096bae18abffac1491baf62bb2"
+          "sha256": "5088d8f010528e2f424538999337ed4ffcce26182faee3c2c29bdf869139c042"
         },
         {
           "path": "tools/test-source-journey-retention.mjs",
@@ -1288,7 +1288,7 @@
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "2b3687de149bb0c3ba1b47a83942b06410dcd5a80551b5ea73c970cfa785297e"
+          "sha256": "3e461c8b66046168c2c4a654da3d3a3683f3a382f138639bcc1cc688c4959e3a"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -30541,7 +30541,7 @@
         },
         {
           "path": "tools/test-source-management-contract.mjs",
-          "sha256": "091d2aec8e4c995f21a5c8c9e4b593cf4ba1ed096bae18abffac1491baf62bb2"
+          "sha256": "5088d8f010528e2f424538999337ed4ffcce26182faee3c2c29bdf869139c042"
         },
         {
           "path": "tools/test-source-journey-retention.mjs",

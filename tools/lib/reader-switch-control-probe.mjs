@@ -50,7 +50,7 @@ export function switchControls({specs=switchSpecs(),toggleDefinition=toggleSourc
   const toggleFrameText = toggleDefinition.slice(toggleDefinition.indexOf('class ReaderToggleFocusFrame'),
     toggleDefinition.indexOf('type ReaderToggleSpecId'));
   const ToggleFocusFrame = new Function('FrameCallback', stripTypeScriptTypes(toggleFrameText) + ';return ReaderToggleFocusFrame;')(class {});
-  const dependencies = { accessibility, ReaderToggleFocusFrame: ToggleFocusFrame, ...properties.sdk, ...specs, ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor,
+  const dependencies = { DEBUG: false, hilog: { info() {} }, accessibility, ReaderToggleFocusFrame: ToggleFocusFrame, ...properties.sdk, ...specs, ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor,
     ReaderPressFeedback: productionReaderPressFeedback({ ColorMetrics }),
     CapsuleSegmentButtonV2: CapsuleSegmentButtonV2Port, SegmentButtonV2Items: SegmentButtonV2ItemsPort,
     TextModifier: TextModifierPort, ReaderSegmentPolicyFrame: Frame,
