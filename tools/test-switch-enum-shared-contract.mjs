@@ -63,7 +63,7 @@ if (selectedCase === 'toggle-focus') {
   nativeToggle(p, o).onChange(true); p.properties.flush(); nativeToggle(p, o).onAppear();
 }
 if (selectedCase === 'toggle-accessibility-focus') {
-  for (const stop of ['none', 'unfocused', 'identity', 'disabled', 'busy', 'retired', 'background', 'new-focus', 'late-event', 'new-request']) {
+  for (const stop of ['none', 'unfocused', 'identity', 'disabled', 'busy', 'retired', 'background', 'new-focus', 'late-event', 'new-request', 'initial-false']) {
     const frames = [], events = [], keyboard = [];
     const p = switchControls({ accessibility: { sendAccessibilityEvent: async event => { events.push(event); } } });
     const o = p.mount(p.toggle, { inputIdentity: 'a11y-A', value: false, onToggle() {} });
@@ -82,12 +82,13 @@ if (selectedCase === 'toggle-accessibility-focus') {
     if (stop === 'busy') p.update(o, { isBusy: true });
     if (stop === 'retired') o.aboutToDisappear();
     if (stop === 'background') o.appForeground = false;
-    if (stop === 'new-focus') current.onAccessibilityFocus(false);
+    if (stop === 'new-focus') { current.onAccessibilityFocus(true); current.onAccessibilityFocus(false); }
+    if (stop === 'initial-false') current.onAccessibilityFocus(false);
     if (stop === 'late-event') initial.onAccessibilityFocus(false);
     if (stop === 'new-request') { current.onChange(true); p.properties.flush(); }
     frames[0]?.onIdle(1000000);
     assert.deepEqual(keyboard, [], 'accessibility focus alone never requests keyboard focus');
-    assert.deepEqual(events, ['none', 'late-event'].includes(stop) ? [{
+    assert.deepEqual(events, ['none', 'late-event', 'initial-false'].includes(stop) ? [{
       type: 'requestFocusForAccessibilityNotInterrupt', bundleName: 'io.reader.minliny',
       triggerAction: 'accessibilityFocus', customId: 'reader-toggle:a11y-A',
     }] : [], 'only current prior screen-reader focus can be continued once');
@@ -106,8 +107,11 @@ if (selectedCase === 'toggle-accessibility-focus') {
     const current = nativeToggle(p, o); current.onAppear();
     frames.shift().onIdle(1000000);
     await Promise.resolve(); await Promise.resolve();
-    assert.equal(events.length, 1); assert.equal(frames.length, 1, 'one final frame follows actual platform event completion');
+    assert.equal(events.length, 1); assert.equal(frames.length, 0, 'platform acceptance alone cannot establish actual accessibility focus');
+    current.onAccessibilityFocus(false);
     current.onAccessibilityFocus(true);
+    current.onAccessibilityFocus(true);
+    assert.equal(frames.length, 1, 'one final frame follows actual native focus acknowledgement even when it arrives after API completion');
     if (stop === 'identity') p.update(o, { inputIdentity: 'both-B' });
     if (stop === 'disabled') p.update(o, { actionEnabled: false });
     if (stop === 'busy') p.update(o, { isBusy: true });

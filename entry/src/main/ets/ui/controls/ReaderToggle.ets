@@ -52,6 +52,7 @@ export struct ReaderToggle {
   private pendingFocusRevision: number = -1;
   private accessibilityFocusedRevision: number = -1;
   private pendingAccessibilityFocusRevision: number = -1;
+  private pendingKeyboardAfterAccessibilityRevision: number = -1;
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void {
     this.mounted = false;
@@ -59,6 +60,7 @@ export struct ReaderToggle {
     this.pendingFocusRevision = -1;
     this.accessibilityFocusedRevision = -1;
     this.pendingAccessibilityFocusRevision = -1;
+    this.pendingKeyboardAfterAccessibilityRevision = -1;
   }
   build() {
     ForEach([this.inputIdentity], (identity: string): void => {
@@ -77,7 +79,14 @@ export struct ReaderToggle {
             .onFocus((): void => { if (revision === this.nativeRevision) this.focusedRevision = revision; })
             .onBlur((): void => { if (revision === this.nativeRevision) this.focusedRevision = -1; })
             .onAccessibilityFocus((focused: boolean): void => {
-              if (revision === this.nativeRevision) this.accessibilityFocusedRevision = focused ? revision : -1;
+              if (revision !== this.nativeRevision) return;
+              if (focused) {
+                this.accessibilityFocusedRevision = revision;
+                this.continueKeyboardAfterAccessibility(identity, revision);
+              } else if (this.accessibilityFocusedRevision === revision) {
+                this.accessibilityFocusedRevision = -1;
+                this.pendingKeyboardAfterAccessibilityRevision = -1;
+              }
             })
             .onAppear((): void => this.restoreNativeFocus(identity, revision))
             .onChange((next: boolean): void => this.toggle(identity, revision, next));
@@ -94,6 +103,7 @@ export struct ReaderToggle {
     const keyboardFocused = this.pendingFocusRevision === revision;
     const accessibilityFocused = this.pendingAccessibilityFocusRevision === revision;
     if (!keyboardFocused && !accessibilityFocused) return;
+    this.pendingKeyboardAfterAccessibilityRevision = keyboardFocused && accessibilityFocused ? revision : -1;
     this.pendingFocusRevision = -1;
     this.pendingAccessibilityFocusRevision = -1;
     if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
@@ -108,18 +118,22 @@ export struct ReaderToggle {
             if (bundleName !== undefined && bundleName.length > 0) {
               accessibility.sendAccessibilityEvent({ type: 'requestFocusForAccessibilityNotInterrupt', bundleName,
                 triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity) }).then((): void => {
-                  if (!keyboardFocused || !this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
-                  // Accessibility delivery can move native keyboard focus to the next node.
-                  // Restore its original owner after that platform update has reached layout.
-                  try {
-                    this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
-                      if (this.accessibilityFocusedRevision === revision) this.restoreKeyboardFocus(identity, revision);
-                    }));
-                  } catch (_detached) {}
+                  this.continueKeyboardAfterAccessibility(identity, revision);
                 }).catch((): void => {});
             }
           } catch (_unavailable) {}
         }
+      }));
+    } catch (_detached) {}
+  }
+
+  private continueKeyboardAfterAccessibility(identity: string, revision: number): void {
+    if (this.pendingKeyboardAfterAccessibilityRevision !== revision || this.accessibilityFocusedRevision !== revision ||
+      !this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
+    this.pendingKeyboardAfterAccessibilityRevision = -1;
+    try {
+      this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
+        if (this.accessibilityFocusedRevision === revision) this.restoreKeyboardFocus(identity, revision);
       }));
     } catch (_detached) {}
   }
