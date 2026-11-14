@@ -22,10 +22,11 @@ const nativeToggle=(p,o)=>p.nodes(o).findLast(n=>n.type==='Toggle'&&n.onChange);
 const nativeChoice=(p,o)=>p.choices(o);
 let cases=0;
 if(selectedCase==='toggle'){
- const p=switchControls(),calls=[],o=p.mount(p.toggle,{inputIdentity:'A',value:false,onToggle:next=>calls.push(next)}),old=nativeToggle(p,o);
- old.onChange(true);p.properties.flush();assert.deepEqual(calls,[true]);assert.equal(o.value,false,'intent never changes controlled value');
+ const p=switchControls(),calls=[],o=p.mount(p.toggle,{inputIdentity:'A',value:false,onToggle:next=>calls.push(next)}),old=nativeToggle(p,o),oldChange=old.onChange;
+ oldChange(true);p.properties.flush();assert.deepEqual(calls,[true]);assert.equal(o.value,false,'intent never changes controlled value');
  assert.equal(nativeToggle(p,o).create.isOn,false,'native control is refreshed from the owner');
- p.update(o,{value:true});old.onChange(false);assert.deepEqual(calls,[true],'retired native event is rejected');
+ assert.equal(p.nodes(o).filter(node=>node.type==='Toggle').length,1,'controlled refresh retains the same native Toggle');
+ p.update(o,{value:true});oldChange(false);assert.deepEqual(calls,[true],'retired native event is rejected');
  nativeToggle(p,o).onChange(false);assert.deepEqual(calls,[true,false]);
  p.update(o,{value:false});assert.equal(nativeToggle(p,o).create.isOn,false,'checked state follows owner');
  p.update(o,{actionEnabled:false});nativeToggle(p,o).onChange(true);assert.equal(calls.length,2);
@@ -81,16 +82,16 @@ function consumer(file,members,params={},extra={}){
  const o=p.consumer(read('entry/src/main/ets/features/'+file+'.ets'),members,extra,params);return{p,o};
 }
 if(selectedCase==='source'){
- const calls=[],{p,o}=consumer('source/SourceManagementPage',['operation','sourceSwitch','sourceToggleBusy','sourceToggleEnabled'],{operation:{action:'load',sourceId:''}});
- Object.assign(o,{mounted:true,temporaryBackIdentity:'source-visit',onToggleSource:(id,next)=>calls.push([id,next])});o.sourceSwitch(false,next=>o.onToggleSource('source-A',next),'source-A');
+ const calls=[],{p,o}=consumer('source/SourceManagementPage',['operation','sourceSwitch','sourceToggleBusy','sourceActionEnabled','managementBackIsCurrent','feedbackIdentity'],{operation:{action:'load',sourceId:''}});
+ Object.assign(o,{mounted:true,appForeground:true,statusKind:'idle',statusMessage:'',scheduleSourceAnchorRestore(){},managementOpeningIsCurrent:()=>true,temporaryBackIdentity:'source-visit',onToggleSource:(id,next)=>calls.push([id,next])});o.sourceSwitch(false,next=>o.onToggleSource('source-A',next),'source-A');
  const actor=[...o.children.values()][0];nativeToggle(p,actor).onChange(true);assert.deepEqual(calls,[['source-A',true]]);
  p.update(actor,{value:true});nativeToggle(p,actor).onChange(false);assert.deepEqual(calls.at(-1),['source-A',false]);
  o.operation={action:'toggle',sourceId:'source-A',original:{blocked:true,busy:false}};o.replay();p.properties.flush();nativeToggle(p,actor).onChange(false);assert.equal(calls.length,2);cases++;
 }
 if(selectedCase==='settings'){
  const {defaults}=await import('./lib/general-settings-persistence-probe.mjs');
- const calls=[],Runtime={isCurrent:owner=>owner===Runtime},members=['snapshot','operation','appThemeScheme','autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','temporaryBackIdentity','onSnapshotChanged','syncSnapshotValues','switchRow','toggleSetting','settingValue','settingToggleBusy','settingCanToggle'];
- const {p,o}=consumer('settings/SettingsPage',members,{}, {ReaderRuntimeOwner:Runtime,createDefaultSettingsSnapshot:()=>({...defaults})});Object.assign(o,{mounted:true,themeOwner:Runtime,resetInFlight:false,onToggle:(key,next)=>calls.push([key,next])});o.temporaryBackIdentity='visit-A';o.syncSnapshotValues();o.switchRow('减少动态效果',()=>({id:1}),'reduceMotion');
+ const calls=[],Runtime={isCurrent:owner=>owner===Runtime},members=['snapshot','operation','appThemeScheme','autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','temporaryBackIdentity','onSnapshotChanged','syncSnapshotValues','switchRow','toggleSetting','settingValue','settingToggleBusy','settingCanToggle','settingsInputIsCurrent','operationFeedbackIdentity'];
+ const {p,o}=consumer('settings/SettingsPage',members,{}, {ReaderRuntimeOwner:Runtime,createDefaultSettingsSnapshot:()=>({...defaults})});Object.assign(o,{mounted:true,isOpeningCurrent:()=>true,lastOperationFeedback:'0:0',themeOwner:Runtime,resetInFlight:false,onToggle:(key,next)=>calls.push([key,next])});o.temporaryBackIdentity='visit-A';o.syncSnapshotValues();o.switchRow('减少动态效果',()=>({id:1}),'reduceMotion');
  const row=[...o.children.values()].find(c=>c instanceof p.dependencies.ReaderFormRow);
  const actor=[...o.children.values()].find(c=>c instanceof p.dependencies.ReaderToggle);
  assert.ok(row);const label=p.nodes(row).find(n=>n.type==='Button'&&n.onClick);
@@ -108,7 +109,7 @@ if(selectedCase==='rules'){
 }
 
 if(selectedCase==='rss-management'){
- const calls=[],{p,o}=consumer('rss/RssSubscriptionManagementPage',['operation','presentationIdentity','expandedSubscriptionId','isExpanded','subscriptionItem','actionBar','actionTarget'],{operation:undefined,presentationIdentity:'rss-A'});
+ const calls=[],{p,o}=consumer('rss/ui/RssSubscriptionManagementPage',['operation','presentationIdentity','expandedSubscriptionId','isExpanded','subscriptionItem','actionBar','actionTarget'],{operation:undefined,presentationIdentity:'rss-A'});
  Object.assign(o,{onToggle:(id,next)=>calls.push([id,next])});o.subscriptionItem({subscriptionId:'s',title:'订阅',feedUrl:'https://feed.test',enabled:false},0);
  const actor=[...o.children.values()].find(c=>c instanceof p.dependencies.ReaderToggle);
  nativeToggle(p,actor).onChange(true);assert.deepEqual(calls,[['s',true]]);p.update(actor,{value:true});nativeToggle(p,actor).onChange(false);assert.deepEqual(calls.at(-1),['s',false],'actual item callback forwards current next value, not captured item enabled');
@@ -116,7 +117,8 @@ if(selectedCase==='rss-management'){
  p.update(o,{operation:undefined,presentationIdentity:'rss-B'});stale.onChange(false);assert.equal(calls.length,2,'retained native actor old presentation rejected');cases++;
 }
 if(selectedCase==='rss-editor'){
- const p=switchControls();Object.assign(p.dependencies,readerFoundationTokens);
+ const {rssOriginalMatchesScope}=await import('../entry/src/main/ets/features/rss/application/RssMutationRecoveryContract.ts');
+ const p=switchControls();Object.assign(p.dependencies,readerFoundationTokens,{rssOriginalMatchesScope});
  const t=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
  const editor=read('entry/src/main/ets/features/rss/ui/RssSubscriptionEditorPage.ets'),ownerSource=read('entry/src/main/ets/features/rss/application/RssSubscriptionEditorOrchestrator.ets');
  const tree=t.createSourceFile(virtualFilePath('RssEditor.ets'),ownerSource,t.ScriptTarget.Latest,true,t.ScriptKind.ETS,options);

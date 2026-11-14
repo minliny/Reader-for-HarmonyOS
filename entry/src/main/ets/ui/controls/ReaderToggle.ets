@@ -42,28 +42,30 @@ export struct ReaderToggle {
   build() {
     ForEach([this.inputIdentity], (identity: string): void => {
       Stack({ alignContent: Alignment.Center }) {
-        ForEach([this.nativeRevision], (revision: number): void => {
-          Toggle({ type: ToggleType.Switch, isOn: this.value })
-            .width(44).height(24)
-            .selectedColor(readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
-            .switchStyle({ pointRadius: 10, trackBorderRadius: 12,
-              pointColor: readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme),
-              unselectedColor: readerAppColor(resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme) })
-            .responseRegion({ x: 0, y: -10, width: 44, height: 44 })
-            .enabled(this.canAct(identity)).focusable(this.canAct(identity))
-            .accessibilityText(this.accessibilityLabel)
-            .onChange((next: boolean): void => this.toggle(identity, revision, next));
-        }, (revision: number): string => revision.toString());
+        Toggle({ type: ToggleType.Switch, isOn: this.value })
+          .width(44).height(24)
+          .selectedColor(readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
+          .switchStyle({ pointRadius: 10, trackBorderRadius: 12,
+            pointColor: readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme),
+            unselectedColor: readerAppColor(resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme) })
+          .responseRegion({ x: 0, y: -10, width: 44, height: 44 })
+          .enabled(this.canAct(identity)).focusable(this.canAct(identity))
+          .accessibilityText(this.accessibilityLabel)
+          .onChange(this.nativeChangeHandler(identity, this.nativeRevision));
       }.width(44).height(44);
     }, (identity: string): string => identity);
   }
   private canAct(identity: string): boolean {
     return this.mounted && identity.length > 0 && this.actionEnabled && !this.isBusy && identity === this.inputIdentity;
   }
+  private nativeChangeHandler(identity: string, revision: number): (next: boolean) => void {
+    return (next: boolean): void => this.toggle(identity, revision, next);
+  }
   private toggle(identity: string, revision: number, next: boolean): void {
     if (revision !== this.nativeRevision || !this.canAct(identity) || next === this.value) return;
-    // A native switch mutates its own transient value. Recreate that control
-    // from the owner projection even when the intent is rejected without a prop change.
+    // This revision is read by the native observer when binding onChange.
+    // Its update reapplies the controlled isOn value on the same Toggle node,
+    // including rejected intents whose owner value stays unchanged.
     this.nativeRevision += 1;
     this.onToggle(next);
   }
