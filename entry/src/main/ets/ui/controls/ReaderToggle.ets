@@ -177,11 +177,14 @@ export struct ReaderToggle {
     if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
     this.diagnosticFocus('keyboard-request', revision);
     try {
-      const accepted = this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity, revision));
-      if (accepted === false && attempt === 0) {
-        this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => this.restoreKeyboardFocus(identity, revision, 1)));
+      this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity, revision));
+    } catch (_unavailable) {
+      if (attempt === 0) {
+        try {
+          this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => this.restoreKeyboardFocus(identity, revision, 1)));
+        } catch (_detached) {}
       }
-    } catch (_unavailable) {}
+    }
   }
 
   private diagnosticFocus(stage: string, revision: number, focused: boolean = false): void {

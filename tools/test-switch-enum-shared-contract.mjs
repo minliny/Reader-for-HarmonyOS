@@ -168,18 +168,18 @@ if (selectedCase === 'toggle-native-focus-target') {
     const retryFrames = [], requests = [], probe = switchControls();
     const owner = probe.mount(probe.toggle, { inputIdentity: 'retry-A', value: false, onToggle() {} });
     owner.getUIContext = () => ({ postFrameCallback: frame => retryFrames.push(frame),
-      getFocusController: () => ({ requestFocus: id => { requests.push(id); return false; } }) });
+      getFocusController: () => ({ requestFocus: id => { requests.push(id); throw new Error('150003 target not yet on tree'); } }) });
     const native = nativeToggle(probe, owner);
     native.onFocus(); native.onChange(true); probe.properties.flush(); nativeToggle(probe, owner).onAppear();
     retryFrames.shift().onFrame(1000000);
-    assert.equal(retryFrames.length, 1, 'a rejected native focus request receives one bounded frame retry');
+    assert.equal(retryFrames.length, 1, 'a thrown native focus error receives one bounded frame retry');
     if (stop === 'identity') probe.update(owner, { inputIdentity: 'retry-B' });
     if (stop === 'background') owner.appForeground = false;
     if (stop === 'retired') owner.aboutToDisappear();
     if (stop === 'busy') probe.update(owner, { isBusy: true });
     retryFrames.shift().onFrame(1000000);
     assert.equal(requests.length, stop === 'none' ? 2 : 1);
-    assert.equal(retryFrames.length, 0, 'native refusal cannot produce unbounded focus retries');
+    assert.equal(retryFrames.length, 0, 'native errors cannot produce unbounded focus retries');
   }
   for (const [debug, focusTrace, expected] of [[false, true, 0], [true, false, 0], [true, true, 40]]) {
     const diagnostics = [], probe = switchControls({ debug, focusTrace, diagnostics });
