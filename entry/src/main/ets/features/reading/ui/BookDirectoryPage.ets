@@ -34,6 +34,7 @@ import { MangaDirectoryEntryRow } from '../../manga/ui/MangaDirectoryEntryRow';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SERIF_SC_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
+import { ReaderNativeSlotMeasurement } from '../../../ui/layout/ReaderNativeSlotMeasurement';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput,
   resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
@@ -62,8 +63,8 @@ export struct BookDirectoryPage {
   onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
   onContinueOffline: (generation: number, identity: string) => void = (): void => {};
 
-  @Prop bookTitle: string = '';
-  @Prop currentChapterIndex: number = -1;
+  @Prop @Watch('onMangaContentChanged') bookTitle: string = '';
+  @Prop @Watch('onMangaContentChanged') currentChapterIndex: number = -1;
   /** Core manga location page, kept separate from the TOC row ordinal. */
   @Prop @Watch('onMangaPositionChanged') currentPageOrdinal: number = -1;
   @Prop @Watch('onMangaPositionChanged') currentPageTotal: number = -1;
@@ -93,11 +94,18 @@ export struct BookDirectoryPage {
   @State private mangaViewportHeight: number = 0;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
+  @State private mangaMeasurementKey: number = 0;
+  private headerInputs: string = '';
+  private mangaInputs: string = '';
+  private geometryRevision: number = 0;
+  private readonly toolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
+  private readonly footerMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
+  private readonly flowFooterMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private mangaToolsHeight: number = 175;
   @State private mangaFooterMeasured: number = 0;
   @State private mangaScrollOffset: number = 0;
-  @State private mangaFontsReady: boolean = false;
+  @State @Watch('invalidateFrame') private mangaFontsReady: boolean = false;
   @State private mangaFontsFailed: boolean = false;
   private mangaFontGeneration: number = 0;
   @State private navigationInteracted: boolean = false;
@@ -135,6 +143,11 @@ export struct BookDirectoryPage {
     this.retireDownloadMenu();
     this.mangaFontGeneration += 1;
     this.measurements.clear();
+    this.headerInputs = '';
+    this.mangaInputs = '';
+    this.toolsMeasurement.unmount();
+    this.footerMeasurement.unmount();
+    this.flowFooterMeasurement.unmount();
     this.projectionGeneration += 1;
     this.scrollGeneration += 1;
     this.admittedIdentity = '';
@@ -283,32 +296,41 @@ export struct BookDirectoryPage {
         onLocateCurrent: (): void => { if (this.directoryInputIsCurrent(identity)) this.locateCurrent(); },
       });
       if (this.mangaFlowFooter()) {
-        Row() { this.mangaCurrentFooter(); }.width('100%').justifyContent(FlexAlign.Center)
+        Row() { this.mangaCurrentFooter(this.flowFooterMeasurement); }.width('100%').justifyContent(FlexAlign.Center)
           .margin({ top: this.mangaFooterBottomOffset() });
       }
     }.width(this.geometry.content.frame.width).alignItems(HorizontalAlign.Start)
       .position({ x: this.geometry.content.frame.left, y: this.geometry.content.startInset - this.mangaToolsHeight - this.mangaScrollOffset })
-      .onAreaChange(this.mangaHeightHandler('tools', this.measurementKey));
+      .id(this.toolsMeasurement.id)
+      .onAppear((): void => this.toolsMeasurement.mount(this.getUIContext(), this.mangaMeasurementKey,
+        (height: number, key: number): void => this.recordMangaHeight('tools', height, key)))
+      .onDisAppear((): void => this.toolsMeasurement.unmount())
+      .onAreaChange(this.mangaHeightHandler('tools', this.mangaMeasurementKey));
   }
 
   @Builder
-  private mangaCurrentFooter() {
+  private mangaCurrentFooter(measurement: ReaderNativeSlotMeasurement = this.footerMeasurement) {
     MangaDirectoryCurrentFooter({ title: this.mangaCurrentTitle(), pagePosition: this.mangaCurrentPosition(), scheme: this.appThemeScheme,
       availableWidth: this.mangaFooterFrame(this.geometry.content.frame).width,
     }).width(this.mangaFooterFrame(this.geometry.content.frame).width)
-      .onAreaChange(this.mangaHeightHandler('footer', this.measurementKey));
+      .id(measurement.id)
+      .onAppear((): void => measurement.mount(this.getUIContext(), this.mangaMeasurementKey,
+        (height: number, key: number): void => this.recordMangaHeight('footer', height, key)))
+      .onDisAppear((): void => measurement.unmount())
+      .onAreaChange(this.mangaHeightHandler('footer', this.mangaMeasurementKey));
   }
 
   private mangaHeightHandler(slot: 'tools' | 'footer', presentedKey: number): (_old: Area, next: Area) => void {
-    return (_old: Area, next: Area): void => {
-      if (!this.mounted || presentedKey !== this.measurementKey) return;
-      const height = readerPageAreaLength(next.height);
-      const previous = slot === 'tools' ? this.mangaToolsHeight : this.mangaFooterMeasured;
-      if (!Number.isFinite(height) || height <= 0 || Math.abs(height - previous) <= .1) return;
-      if (slot === 'tools') this.mangaToolsHeight = height;
-      else this.mangaFooterMeasured = height;
-      this.refreshGeometry();
-    };
+    return (_old: Area, next: Area): void => this.recordMangaHeight(slot, readerPageAreaLength(next.height), presentedKey);
+  }
+
+  private recordMangaHeight(slot: 'tools' | 'footer', height: number, presentedKey: number): void {
+    if (!this.mounted || presentedKey !== this.mangaMeasurementKey || !Number.isFinite(height) || height <= 0) return;
+    const previous = slot === 'tools' ? this.mangaToolsHeight : this.mangaFooterMeasured;
+    if (Math.abs(height - previous) <= .1) return;
+    if (slot === 'tools') this.mangaToolsHeight = height;
+    else this.mangaFooterMeasured = height;
+    this.refreshGeometry();
   }
 
   private mangaNarrow(): boolean {
@@ -370,14 +392,14 @@ export struct BookDirectoryPage {
   }
 
   private onMangaMetricsChanged(): void {
-    this.mangaFooterMeasured = 0;
     if (!this.mounted) return;
     this.invalidateFrame();
     this.prepareMangaLayout();
   }
 
-  private onMangaPositionChanged(): void {
-    this.mangaFooterMeasured = 0;
+  private onMangaPositionChanged(): void { this.onMangaContentChanged(); }
+
+  private onMangaContentChanged(): void {
     if (this.mounted) this.invalidateFrame();
   }
 
@@ -712,6 +734,7 @@ export struct BookDirectoryPage {
     }) : [];
     this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
       reset ? '' : this.searchQuery, reset ? true : this.ascending, true));
+    this.invalidateFrame();
     if (reset || wasEmpty) {
       this.scheduleTopScroll();
       this.pendingMangaCurrentScroll = this.currentChapterIndex >= 0;
@@ -811,7 +834,6 @@ export struct BookDirectoryPage {
     if (!widthChanged && Math.abs(height - this.mangaViewportHeight) <= .1) return;
     this.viewportWidth = width;
     this.mangaViewportHeight = height;
-    if (widthChanged) this.mangaFooterMeasured = 0;
     this.invalidateFrame();
     if (widthChanged) this.prepareMangaLayout();
   }
@@ -822,7 +844,25 @@ export struct BookDirectoryPage {
   }
 
   private invalidateFrame(): void {
-    this.measurementKey += 1;
+    if (!this.mounted) return;
+    const metrics = readerWindowMetrics();
+    const header = this.headerFrame();
+    const headerInputs = JSON.stringify([this.identity(), this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width,
+      header.left, header.right, metrics.systemFontScale, metrics.densityPixels, metrics.ready, this.mangaFontsReady]);
+    const mangaInputs = JSON.stringify([headerInputs, this.mangaFooterFrame().width, this.bookTitle,
+      this.mangaSummaryLabel(), this.mangaCurrentTitle(), this.mangaCurrentPosition()]);
+    if (headerInputs !== this.headerInputs) {
+      this.headerInputs = headerInputs;
+      this.measurementKey += 1;
+    }
+    if (mangaInputs !== this.mangaInputs) {
+      this.mangaInputs = mangaInputs;
+      this.mangaMeasurementKey += 1;
+      this.mangaFooterMeasured = 0;
+      this.toolsMeasurement.request(this.mangaMeasurementKey);
+      this.footerMeasurement.request(this.mangaMeasurementKey);
+      this.flowFooterMeasurement.request(this.mangaMeasurementKey);
+    }
     this.refreshGeometry();
   }
 
@@ -842,7 +882,7 @@ export struct BookDirectoryPage {
     input.viewportWidth = this.viewportWidth > 0 ? this.viewportWidth :
       (this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width);
     input.viewportHeight = this.mangaViewportHeight;
-    input.measurementRevision = this.measurementKey;
+    input.measurementRevision = ++this.geometryRevision;
     input.contentHorizontalSafeArea = 'interactive';
     const minimumHeaderHeight = mangaDirectoryHeaderHeight(this.mangaFontScale());
     const header = this.headerFrame();

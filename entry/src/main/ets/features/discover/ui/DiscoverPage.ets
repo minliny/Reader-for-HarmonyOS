@@ -59,6 +59,7 @@ export struct DiscoverPage {
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
   @State private measurementRevision: number = 0;
   @State private measurementKey: number = 0;
+  private headerInputs: string = '';
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @Prop @Watch('onPresentationChanged') presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @Prop @Watch('onGeometryInputsChanged') expandedLayout: boolean;
@@ -85,11 +86,18 @@ export struct DiscoverPage {
     this.transientFeedback.reset();
     this.mounted = false;
     this.measurementKey += 1;
+    this.headerInputs = '';
     this.measurements.clear();
   }
 
   private onGeometryInputsChanged(): void {
-    if (this.mounted) this.measurementKey += 1;
+    if (!this.mounted) return;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const inputs = JSON.stringify([metrics.windowRect.width, metrics.systemFontScale,
+      metrics.densityPixels, metrics.ready, this.expandedLayout]);
+    if (inputs === this.headerInputs) return;
+    this.headerInputs = inputs;
+    this.measurementKey += 1;
   }
 
   private recordHeaderHeight(height: number, presentedKey: number): void {

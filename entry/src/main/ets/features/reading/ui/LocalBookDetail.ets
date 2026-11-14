@@ -94,11 +94,11 @@ export struct LocalBookDetail {
   @Prop sourceSwitchEnabled: boolean = false;
   @Prop readingEnabled: boolean = true;
   @Prop readingBlockedReason: string = '';
-  @Prop inBookshelf: boolean = true;
+  @Prop @Watch('invalidateFrame') inBookshelf: boolean = true;
   @Prop removalEnabled: boolean = true;
-  @Prop removing: boolean = false;
-  @Prop adding: boolean = false;
-  @Prop cancellingAdd: boolean = false;
+  @Prop @Watch('invalidateFrame') removing: boolean = false;
+  @Prop @Watch('invalidateFrame') adding: boolean = false;
+  @Prop @Watch('invalidateFrame') cancellingAdd: boolean = false;
   @Prop @Watch('onShelfMessageChanged') shelfMessage: string = '';
   @Prop @Watch('onDirectoryFocusIdentityChanged') admissionIdentity: string = '';
   @Prop @Watch('onDirectoryFocusContextChanged') directoryFocusContext: DetailDirectoryFocusContext = 'detail';
@@ -126,13 +126,17 @@ export struct LocalBookDetail {
   @State private mangaPreviewRows: MangaDirectoryLayoutRow[] = [];
   private collapseIdentity: string = '';
   private collapseEntries: LocalReadingTocEntry[] = [];
-  @State private mangaFontsReady: boolean = false;
+  @State @Watch('invalidateFrame') private mangaFontsReady: boolean = false;
   @State private dockRaisedShape: ReaderRaisedShape | undefined = undefined;
   @State private headerScrolled: boolean = false;
   private readonly detailScroller: Scroller = new Scroller();
   @State private mangaFontsFailed: boolean = false;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
+  @State private footerMeasurementKey: number = 0;
+  private headerInputs: string = '';
+  private footerInputs: string = '';
+  private geometryRevision: number = 0;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   private layoutBookIdentity: string = '';
   private readonly headerSpec: DetailHeaderSpec = detailHeaderSpec();
@@ -158,6 +162,8 @@ export struct LocalBookDetail {
     this.headerScrolled = false;
     this.layoutBookIdentity = '';
     this.measurements.clear();
+    this.headerInputs = '';
+    this.footerInputs = '';
     this.viewportWidth = 0;
     this.viewportHeight = 0;
     this.mangaFontGeneration += 1;
@@ -217,7 +223,7 @@ export struct LocalBookDetail {
       frameStyle: this.frameStyle(),
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
-      footerMeasurementKey: this.measurementKey,
+      footerMeasurementKey: this.footerMeasurementKey,
       content: (): void => { this.detailContent(); },
       header: (): void => { this.detailHeader(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
@@ -734,7 +740,7 @@ export struct LocalBookDetail {
   private dockAreaChangeHandler(presentedKey: number): (_old: Area, next: Area) => void {
     const identity = this.dockShapeIdentity();
     return (_old: Area, next: Area): void => {
-      if (!this.mounted || presentedKey !== this.measurementKey || identity !== this.dockShapeIdentity()) return;
+      if (!this.mounted || presentedKey !== this.footerMeasurementKey || identity !== this.dockShapeIdentity()) return;
       const width = readerPageAreaLength(next.width);
       const height = readerPageAreaLength(next.height);
       const shape = resolveReaderRaisedShape(identity, width, height, this.dockRequestedRadius());
@@ -746,7 +752,7 @@ export struct LocalBookDetail {
   }
 
   private dockShapeIdentity(): string {
-    return JSON.stringify(['detail-dock', this.measurementKey, this.book.sourceId, this.book.bookId, this.book.contentKind]);
+    return JSON.stringify(['detail-dock', this.footerMeasurementKey, this.book.sourceId, this.book.bookId, this.book.contentKind]);
   }
   private dockRequestedRadius(): number { return this.book.contentKind === 'manga' ? visual.detailDockRadius : 24; }
   private currentDockShape(): ReaderRaisedShape | undefined { return this.mounted ? this.dockRaisedShape : undefined; }
@@ -820,7 +826,7 @@ export struct LocalBookDetail {
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT })
       .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
       .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape()))
-      .onAreaChange(this.dockAreaChangeHandler(this.measurementKey));
+      .onAreaChange(this.dockAreaChangeHandler(this.footerMeasurementKey));
   }
   private detailColor(token: ReaderAppColorRole, role: string): string {
     return this.book.contentKind === 'manga' ? mangaDirectoryColor(role, this.appThemeScheme) : readerAppColor(token, this.appThemeScheme);
@@ -865,13 +871,27 @@ export struct LocalBookDetail {
   }
 
   private recordFrameHeight(slot: string, height: number, key: number): void {
-    if (!this.mounted || key !== this.measurementKey || height <= 0) return;
+    const currentKey = slot === 'detail:dock' ? this.footerMeasurementKey : this.measurementKey;
+    if (!this.mounted || key !== currentKey || height < 0) return;
     if (!this.measurements.record(slot, height, key, .1)) return;
     this.refreshGeometry();
   }
 
   private invalidateFrame(): void {
-    this.measurementKey += 1;
+    if (!this.mounted) return;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const headerInputs = JSON.stringify([this.liveWidth(), this.safeLeft(), this.safeRight(),
+      metrics.systemFontScale, metrics.densityPixels, metrics.ready,
+      this.book.sourceId, this.book.bookId, this.book.contentKind, this.book.contentKind === 'manga' && this.mangaFontsReady]);
+    const footerInputs = JSON.stringify([headerInputs, this.detailKindConfirmed(), this.readingActionLabel(), this.shelfActionLabel()]);
+    if (headerInputs !== this.headerInputs) {
+      this.headerInputs = headerInputs;
+      this.measurementKey += 1;
+    }
+    if (footerInputs !== this.footerInputs) {
+      this.footerInputs = footerInputs;
+      this.footerMeasurementKey += 1;
+    }
     this.refreshGeometry();
   }
 
@@ -890,14 +910,14 @@ export struct LocalBookDetail {
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = this.liveWidth();
     input.viewportHeight = this.viewportHeight;
-    input.measurementRevision = this.measurementKey;
+    input.measurementRevision = ++this.geometryRevision;
     input.headerTop = this.headerSpec.headerTop(readerInteractiveSafeTop(metrics));
     const minimumHeaderHeight = manga ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.headerSpec.barHeight;
     input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));
     input.headerInsetLeft = Math.max(8, this.safeLeft());
     input.headerInsetRight = Math.max(8, this.safeRight());
     input.footerBottom = readerInteractiveSafeBottom(metrics) + (manga ? visual.detailDockBottom : DETAIL_DOCK_BOTTOM_GAP);
-    input.footerHeight = Math.max(minimumDockHeight, this.measurements.readForGeneration('detail:dock', this.measurementKey, minimumDockHeight));
+    input.footerHeight = Math.max(minimumDockHeight, this.measurements.readForGeneration('detail:dock', this.footerMeasurementKey, minimumDockHeight));
     input.contentGap = manga ? visual.contentTop - visual.headerHeight - this.headerSpec.topGap : this.headerSpec.contentGap;
     input.contentUnderlap = 0;
     input.contentMaxWidth = manga ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET;
@@ -1025,9 +1045,11 @@ export struct LocalBookDetail {
     if (this.mounted && this.layoutBookIdentity !== layoutIdentity) {
       if (!this.layoutBookIdentity.endsWith(`\u0000${this.book.contentKind}`)) this.measurements.clear();
       this.layoutBookIdentity = layoutIdentity;
-      this.invalidateFrame();
     }
-    if (this.mounted) this.onMangaFontIdentityChanged();
+    if (this.mounted) {
+      this.invalidateFrame();
+      this.onMangaFontIdentityChanged();
+    }
     const identity = `${this.book.sourceId}\u0000${this.book.bookId}`;
     if (identity === this.collapseIdentity) { this.prepareMangaPreview(); this.measureIntro(); return; }
     this.headerScrolled = false;

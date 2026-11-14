@@ -7,6 +7,7 @@ export const CONTRACT_CASES = {
     resources: [],
   },
   'standard-page-same-area': { description: 'Same-box geometry changes retain slot facts; actual native slot hosts re-read new requests without Area and retire old frames.', resources: [] },
+  'direct-page-same-area': { description: 'Actual detail/manga owners retain same-shape header and footer facts, independently renew real dependencies, and use finite current native supplementation.', resources: [] },
   'window-environment': {
     description: 'Actual readonly environment/coordinator binding shares the current snapshot; finite fake platform I/O, no window or device',
     resources: [],
@@ -16,6 +17,7 @@ export const CONTRACT_CASES = {
 for (const id of selectContractCases(CONTRACT_CASES)) {
   if (id === 'standard-page-generation') await standardPageGeneration();
   else if (id === 'standard-page-same-area') await standardPageSameArea();
+  else if (id === 'direct-page-same-area') await directPageSameArea();
   else await windowEnvironment();
   recordContractCasePass(id);
 }
@@ -232,6 +234,179 @@ async function standardPageSameArea() {
     assert.equal(direct.measurements.readForGeneration(`${prefix}:header`, direct.measurementKey, 58), 58,
       `${component} rejects the previous font generation`);
   }
+}
+
+async function directPageSameArea() {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const { selectedProductionMethods, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+  const { actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const safe = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+  const rect = await import('../entry/src/main/ets/ui/layout/ReaderSurfaceRect.ts');
+  const manga = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+  const root = new URL('../entry/src/main/ets/', import.meta.url);
+  const read = path => readFileSync(new URL(path, root), 'utf8');
+  const layout = actualReaderPageLayout(), metrics = safe.createDefaultReaderWindowMetrics();
+  metrics.windowRect.width = 393; metrics.windowRect.height = 852; metrics.ready = true;
+  const detailPath = new URL('features/reading/ui/LocalBookDetail.ets', root);
+  const constants = selectedProductionValues(detailPath,
+    ['DETAIL_DOCK_HEIGHT', 'DETAIL_DOCK_BOTTOM_GAP', 'DETAIL_DOCK_CONTENT_GAP']);
+  const Detail = selectedProductionMethods(detailPath, 'LocalBookDetail',
+    ['invalidateFrame', 'recordFrameHeight', 'refreshGeometry', 'detailKindConfirmed',
+      'readingActionLabel', 'shelfActionLabel', 'detailBookAvailable'],
+    { ...layout, ...safe, ...constants, ...manga, visual: manga.MANGA_DIRECTORY_VISUAL,
+      ReaderWindowCoordinator: { metrics: () => metrics }, TOK_CONTENT_MAX_W_TABLET: 720 });
+  const detail = Object.assign(new Detail(), { mounted: true, book: { sourceId: 'local', bookId: 'a', contentKind: 'text' },
+    mangaFontsReady: false, inBookshelf: true, measurementKey: 0, footerMeasurementKey: 0, geometryRevision: 0,
+    headerInputs: '', footerInputs: '', viewportWidth: 393, viewportHeight: 852,
+    liveWidth() { return this.viewportWidth; }, safeLeft: () => 0, safeRight: () => 0,
+    headerSpec: { headerTop: top => top + 8, barHeight: 58, contentGap: 8 },
+    dockFrame: frame => frame, measurements: new layout.ReaderMeasurementStore() });
+  detail.invalidateFrame();
+  detail.recordFrameHeight('detail:header', 93, detail.measurementKey);
+  detail.recordFrameHeight('detail:dock', 90, detail.footerMeasurementKey);
+  const detailHeaderKey = detail.measurementKey, detailFooterKey = detail.footerMeasurementKey;
+  for (const height of [700, 360, 852]) {
+    detail.viewportHeight = height; metrics.windowRect.height = height;
+    metrics.keyboardInsets.bottom = height === 360 ? 180 : 0; metrics.revision += 1;
+    detail.invalidateFrame();
+    assert.equal(detail.measurementKey, detailHeaderKey);
+    assert.equal(detail.footerMeasurementKey, detailFooterKey);
+    assert.equal(detail.geometry.header.height, 93);
+    assert.equal(detail.geometry.footer.height, 90);
+    assert.equal(detail.geometry.content.startInset, detail.geometry.header.top + 101);
+  }
+  detail.book = { ...detail.book, contentKind: 'manga' };
+  detail.mangaFontScale = () => 1;
+  detail.invalidateFrame();
+  detail.recordFrameHeight('detail:header', 100, detail.measurementKey);
+  const mangaHeaderKey = detail.measurementKey, preparingFooterKey = detail.footerMeasurementKey;
+  detail.mangaFontsReady = true; detail.invalidateFrame();
+  assert.ok(detail.measurementKey > mangaHeaderKey, 'actual font readiness renews the header request');
+  assert.ok(detail.footerMeasurementKey > preparingFooterKey);
+  const readyHeaderKey = detail.measurementKey, readyFooterKey = detail.footerMeasurementKey;
+  detail.inBookshelf = false; detail.invalidateFrame();
+  assert.equal(detail.measurementKey, readyHeaderKey, 'action label changes retire the footer independently');
+  assert.ok(detail.footerMeasurementKey > readyFooterKey);
+  detail.recordFrameHeight('detail:dock', 999, preparingFooterKey);
+  assert.notEqual(detail.geometry.footer.height, 999);
+  detail.viewportWidth = 320; detail.invalidateFrame();
+  detail.recordFrameHeight('detail:header', 999, mangaHeaderKey);
+  assert.notEqual(detail.geometry.header.height, 999, 'old actual width receipts remain rejected');
+  detail.book = { ...detail.book, bookId: 'b' }; detail.invalidateFrame();
+  detail.recordFrameHeight('detail:header', 999, detailHeaderKey);
+  assert.notEqual(detail.geometry.header.height, 999, 'old book callbacks remain rejected');
+  const retiredDetailGeometry = detail.geometry; detail.mounted = false;
+  detail.recordFrameHeight('detail:dock', 999, detail.footerMeasurementKey);
+  detail.invalidateFrame(); assert.equal(detail.geometry, retiredDetailGeometry);
+
+  const Discover = selectedProductionMethods(new URL('features/discover/ui/DiscoverPage.ets', root),
+    'DiscoverPage', ['onGeometryInputsChanged', 'recordHeaderHeight'], { ReaderWindowCoordinator: { metrics: () => metrics } });
+  const discover = Object.assign(new Discover(), { mounted: true, measurementKey: 0, measurementRevision: 0,
+    headerInputs: '', expandedLayout: false, measurements: new layout.ReaderMeasurementStore() });
+  discover.onGeometryInputsChanged(); discover.recordHeaderHeight(93, discover.measurementKey);
+  const discoverKey = discover.measurementKey;
+  metrics.windowRect.height = 360; metrics.revision += 1; discover.onGeometryInputsChanged();
+  assert.equal(discover.measurementKey, discoverKey, 'retained Discover also preserves same-box header facts');
+  metrics.systemFontScale += .1; discover.onGeometryInputsChanged(); discover.recordHeaderHeight(999, discoverKey);
+  assert.equal(discover.measurements.readForGeneration('discover:header', discover.measurementKey, 58), 58);
+
+  const frames = [];
+  let nativeHeight = 88;
+  const context = { postFrameCallback: frame => frames.push(frame), px2vp: value => value / 2,
+    getFrameNodeById: () => ({ getPositionToWindowWithTransform: () => ({ x: 0, y: 0 }) }),
+    getComponentUtils: () => ({ getRectangleById: () => ({ scale: { x: 1, y: 1 }, rotate: { angle: 0 },
+      size: { width: 640, height: nativeHeight * 2 } }) }) };
+  const measurement = pureModuleProbe(read('ui/layout/ReaderSurfaceRectMeasurement.ets'), 'ReaderSurfaceRectMeasurement.ets',
+    rect, ['readerMeasureSurfaceRect']);
+  const { ReaderNativeSlotMeasurement } = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
+    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, ...measurement }, ['ReaderNativeSlotMeasurement']);
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+  const properties = createArkUIPropertyRuntimeProbe();
+  const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+  const directorySource = read('features/reading/ui/BookDirectoryPage.ets');
+  class ChildPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+  const nativeOwner = createReaderBuilderProbe(directorySource, ['mangaToolbar', 'mangaCurrentFooter',
+    'mangaHeightHandler', 'recordMangaHeight', 'toolsMeasurement', 'footerMeasurement', 'flowFooterMeasurement', 'mangaMeasurementKey'],
+    { ...properties.sdk, ...fonts, ReaderNativeSlotMeasurement, ReaderDirectoryToolbar: ChildPort, MangaDirectoryCurrentFooter: ChildPort,
+      uiContext: context, readerPageAreaLength: layout.readerPageAreaLength },
+    { ...properties.hooks, childSources: {
+      ReaderDirectoryToolbar: read('features/reading/ui/ReaderDirectoryToolbar.ets'),
+      MangaDirectoryCurrentFooter: read('features/manga/ui/MangaDirectoryCurrentFooter.ets') } }).owner;
+  Object.assign(nativeOwner, { mounted: true, mangaMeasurementKey: 1, mangaToolsHeight: 175, mangaFooterMeasured: 0,
+    geometry: { content: { frame: { width: 284, left: 18 }, startInset: 240 } },
+    appThemeScheme: 'day', bookTitle: '漫画', admittedIdentity: 'current', searchDraft: '', ascending: true, mangaScrollOffset: 0,
+    mangaFontScale: () => 1, mangaSummaryLabel: () => '2 个可读条目', mangaFlowFooter: () => false,
+    mangaCurrentTitle: () => '第一章', mangaCurrentPosition: () => '1 / 10 页', mangaFooterFrame: () => ({ width: 284 }),
+    refreshGeometry() {} });
+  nativeOwner.mangaToolbar('current'); nativeOwner.mangaCurrentFooter();
+  for (const [measurementOwner, slot] of [[nativeOwner.toolsMeasurement, 'tools'], [nativeOwner.footerMeasurement, 'footer']]) {
+    const native = [...nativeOwner.nodes.values()].find(node => node.id === measurementOwner.id);
+    assert.ok(native?.onAppear && native?.onDisAppear, 'normal manga SDK builder attaches the current native ' + slot + ' producer');
+    native.onAppear(); frames.shift().onIdle(1000000);
+    assert.equal(slot === 'tools' ? nativeOwner.mangaToolsHeight : nativeOwner.mangaFooterMeasured, 88);
+    measurementOwner.request(1); native.onDisAppear();
+    const pending = frames.shift(); nativeHeight = 999; pending.onIdle(1000000);
+    assert.equal(slot === 'tools' ? nativeOwner.mangaToolsHeight : nativeOwner.mangaFooterMeasured, 88);
+    nativeHeight = 88;
+  }
+  nativeOwner.mangaCurrentFooter(nativeOwner.flowFooterMeasurement);
+  const flowFooter = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.flowFooterMeasurement.id);
+  assert.ok(flowFooter?.onAppear && flowFooter?.onDisAppear);
+  const fixedFooter = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.footerMeasurement.id);
+  fixedFooter.onAppear(); const retiredFixedFrame = frames.shift();
+  flowFooter.onAppear(); const currentFlowFrame = frames.shift();
+  fixedFooter.onDisAppear(); nativeHeight = 105;
+  retiredFixedFrame.onIdle(1000000); assert.equal(nativeOwner.mangaFooterMeasured, 88);
+  currentFlowFrame.onIdle(1000000); assert.equal(nativeOwner.mangaFooterMeasured, 105,
+    'old fixed-footer disappearance cannot retire the distinct current in-flow native producer');
+  flowFooter.onDisAppear(); nativeHeight = 88;
+  const Directory = selectedProductionMethods(new URL('features/reading/ui/BookDirectoryPage.ets', root), 'BookDirectoryPage',
+    ['invalidateFrame', 'recordHeaderHeight', 'recordMangaHeight', 'mangaHeightHandler', 'onMangaMetricsChanged',
+      'onMangaPositionChanged', 'onMangaContentChanged', 'identity'], { readerWindowMetrics: () => metrics, readerPageAreaLength: layout.readerPageAreaLength });
+  const directory = Object.assign(new Directory(), { mounted: true, sourceId: 'local', bookId: 'manga-a', bookTitle: 'A',
+    viewportWidth: 320, mangaFontsReady: true, measurementKey: 0, mangaMeasurementKey: 0,
+    headerInputs: '', mangaInputs: '', mangaFooterMeasured: 0, mangaToolsHeight: 175,
+    toolsMeasurement: new ReaderNativeSlotMeasurement(), footerMeasurement: new ReaderNativeSlotMeasurement(),
+    flowFooterMeasurement: new ReaderNativeSlotMeasurement(),
+    measurements: new layout.ReaderMeasurementStore(), headerFrame: () => ({ left: 8, right: 8 }),
+    mangaFooterFrame: () => ({ width: 284 }), mangaSummaryLabel: () => '2 个可读条目',
+    mangaCurrentTitle: () => '第一章', mangaCurrentPosition() { return this.position ?? '1 / 10 页'; },
+    refreshGeometry() {}, prepareMangaLayout() {} });
+  directory.invalidateFrame();
+  directory.recordHeaderHeight('bookDirectory:mangaHeader', 93, directory.measurementKey);
+  directory.recordMangaHeight('footer', 88, directory.mangaMeasurementKey);
+  const directoryKey = directory.measurementKey, contentKey = directory.mangaMeasurementKey;
+  for (const height of [360, 700, 852]) {
+    metrics.windowRect.height = height; metrics.revision += 1;
+    metrics.keyboardInsets.bottom = height === 360 ? 180 : 0;
+    directory.onMangaMetricsChanged();
+    assert.equal(directory.measurementKey, directoryKey);
+    assert.equal(directory.mangaMeasurementKey, contentKey);
+    assert.equal(directory.mangaFooterMeasured, 88, 'unrelated window revision keeps the current footer fact');
+    assert.equal(directory.measurements.readForGeneration('bookDirectory:mangaHeader', directoryKey), 93);
+  }
+  directory.footerMeasurement.mount(context, contentKey,
+    (height, key) => directory.recordMangaHeight('footer', height, key));
+  frames.shift().onIdle(1000000);
+  const oldFooterArea = directory.mangaHeightHandler('footer', contentKey);
+  directory.position = '2 / 10 页'; directory.onMangaPositionChanged();
+  assert.equal(directory.measurementKey, directoryKey, 'footer position leaves the independent header intact');
+  assert.equal(directory.mangaFooterMeasured, 0);
+  oldFooterArea({}, { height: 999 }); assert.equal(directory.mangaFooterMeasured, 0);
+  frames.shift().onIdle(1000000);
+  assert.equal(directory.mangaFooterMeasured, 88, 'same native footer height is renewed without an Area event');
+  metrics.systemFontScale = 2; directory.onMangaMetricsChanged();
+  directory.recordHeaderHeight('bookDirectory:mangaHeader', 999, directoryKey);
+  assert.equal(directory.measurements.readForGeneration('bookDirectory:mangaHeader', directory.measurementKey, 58), 58);
+  const deferred = frames.shift(); directory.bookId = 'manga-b'; directory.invalidateFrame();
+  deferred.onIdle(1000000); assert.equal(directory.mangaFooterMeasured, 0);
+  nativeHeight = 100; frames.shift().onIdle(1000000); assert.equal(directory.mangaFooterMeasured, 100);
+  directory.position = '3 / 10 页'; directory.onMangaPositionChanged();
+  directory.mounted = false; directory.footerMeasurement.unmount();
+  frames.shift().onIdle(1000000); assert.equal(directory.mangaFooterMeasured, 0, 'retired native footer cannot publish');
 }
 
 async function windowEnvironment() {
