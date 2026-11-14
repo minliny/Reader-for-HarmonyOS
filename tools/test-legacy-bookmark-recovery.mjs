@@ -11,6 +11,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 const { EMPTY_READING_DIRECTORY_RECOVERY } = await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
 
 const definitions = {
+  'native-fixture': { description: 'Independent production original-record owner with finite memory gateway and actual SDK fixture/surface admission, single-flight, unavailable/confirmed and retired callbacks', resources: [] },
   metadata: { description: 'V1 missing metadata remains legal, provided malformed values fail closed, raw context guard stays exact', resources: [] },
   create: { description: 'Legacy create uses only immutable original DTO metadata, exact entity scope and original context/query', resources: [] },
   delete: { description: 'Legacy delete uses independent exact original operation owner, no continuation/current-book result, stale/busy/runtime guards', resources: [] },
@@ -261,9 +262,79 @@ async function runUi() {
   probe.bookmarkRecovery = { ...recovery, originalBookmarks: { ...original, identity: 'successor', generation: 8 } };
   probe.reconcileBookmarkRecovery(identity, false); assert.equal(calls.length, 2);
 }
+async function runNativeFixture() {
+  const { ReaderLegacyBookmarkFixtureOwner } = await import('../entry/src/main/ets/pages/ReaderLegacyBookmarkFixtureOwner.ts');
+  let current = true, changes = 0;
+  const owner = new ReaderLegacyBookmarkFixtureOwner('native:1', () => current, () => { changes += 1; });
+  await owner.load();
+  const raw = owner.gateway.rawOriginal();
+  const original = owner.recovery().originalBookmarks;
+  assert.ok(original.message.includes('缺少书名或作者'));
+  assert.deepEqual(JSON.parse(raw).context, { sourceId: 'legacy-memory', bookId: 'legacy-original' });
+  assert.equal(owner.recovery().bookmarkWriteEnabled, false);
+  const first = owner.reconcile(original.generation, 'native:1');
+  await owner.reconcile(original.generation, 'native:1');
+  assert.equal(owner.gateway.reconcileCount, 1);
+  assert.equal(owner.recovery().originalBookmarks.busy, true);
+  owner.complete(false); await first;
+  assert.equal(owner.gateway.rawOriginal(), raw);
+  assert.equal(owner.recovery().originalBookmarks.busy, false);
+  await owner.reconcile(original.generation, 'obsolete');
+  assert.equal(owner.gateway.reconcileCount, 1);
+  const confirmed = owner.reconcile(original.generation, 'native:1');
+  owner.complete(true); await confirmed;
+  assert.equal(owner.gateway.rawOriginal(), '');
+  assert.equal(owner.recovery().originalBookmarks, undefined);
+  assert.equal(owner.runtime.unexpectedRequests, 0);
+  assert.ok(changes > 0);
+  owner.close(); current = false;
+  await owner.reconcile(original.generation, 'native:1');
+  assert.equal(owner.gateway.reconcileCount, 2);
+  const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+  const fixtureSource = readFileSync(new URL('../entry/src/main/ets/pages/ReaderLegacyBookmarkRecoveryStructureFixture.ets', import.meta.url), 'utf8');
+  const recoverySource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets', import.meta.url), 'utf8');
+  sdk.deps.EMPTY_READING_DIRECTORY_RECOVERY = EMPTY_READING_DIRECTORY_RECOVERY;
+  sdk.childSources.ReaderDirectoryRecoverySurface = recoverySource;
+  sdk.deps.ReaderDirectoryRecoverySurface = createReaderBuilderProbe(recoverySource, boundedMembers(recoverySource), sdk.deps, sdk.hooks).Component;
+  for (const [debug, mode, fontsReady, allowed] of [[true, 'debug', true, true], [false, 'debug', true, false],
+    [true, 'release', true, false], [true, 'debug', false, false]]) {
+    const events = [], bridges = [];
+    const page = sdk.consumer(fixtureSource, boundedMembers(fixtureSource), {
+      DEBUG: debug, BUILD_MODE_NAME: mode, ReaderLegacyBookmarkFixtureOwner, EMPTY_READING_DIRECTORY_RECOVERY,
+      hilog: { info(_domain, _tag, _format, raw) { events.push(JSON.parse(raw)); } },
+      LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, FlexWrap: { Wrap: 'wrap' },
+    }, { fontsReady, onTemporaryBackBridge: handler => bridges.push(handler) });
+    page.aboutToAppear(); page.initialRender();
+    assert.equal(sdk.nodes(page).some(node => node.id === 'reader-legacy-open'), allowed);
+    if (allowed) {
+      sdk.nodes(page).find(node => node.id === 'reader-legacy-open').onClick();
+      await until(() => page.owner?.recovery().originalBookmarks !== undefined);
+      sdk.properties.flush();
+      const action = sdk.nodes(page).find(node => node.type === 'Button' && node.accessibilityText === '核对原记录');
+      assert.ok(action);
+      action.onClick(); action.onClick(); sdk.properties.flush();
+      assert.equal(page.owner.gateway.reconcileCount, 1);
+      const complete = sdk.nodes(page).find(node => node.id === 'reader-legacy-unavailable');
+      assert.equal(complete.enabled, true, 'actual owner revision updates the finite receipt controls');
+      complete.onClick(); await until(() => page.owner.recovery().originalBookmarks?.busy === false);
+      // The finite probe does not model removal of the native busy branch.
+      // Check parent control updates here; actual child removal is native evidence.
+      sdk.properties.flush(actor => actor === page);
+      assert.equal(sdk.nodes(page).find(node => node.id === 'reader-legacy-unavailable').enabled, false);
+      const stale = action.onClick;
+      sdk.nodes(page).find(node => node.id === 'reader-legacy-open').onClick();
+      await until(() => page.owner.recovery().originalBookmarks !== undefined); sdk.properties.flush(actor => actor === page);
+      stale(); assert.equal(page.owner.gateway.reconcileCount, 0);
+      assert.equal(bridges[0](), true);
+      assert.equal(page.opened, false);
+      assert.ok(events.every(event => event.unexpectedRequests === 0));
+    }
+    page.aboutToDisappear();
+  }
+}
 try {
   for (const id of selectContractCases(definitions)) {
-    await ({ metadata: runMetadata, create: runCreate, delete: runDelete, classification: runClassification, ui: runUi })[id]();
+    await ({ metadata: runMetadata, create: runCreate, delete: runDelete, classification: runClassification, ui: runUi, 'native-fixture': runNativeFixture })[id]();
     recordContractCasePass(id);
   }
 } finally { await cleanupDurableFixtures(); }

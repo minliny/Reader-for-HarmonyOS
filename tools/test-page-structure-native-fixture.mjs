@@ -16,6 +16,7 @@ const selected = selectContractCases({
   'downloads-short': 'New typed DEBUG 168vp Download wrapper through actual SDK initializer/safe top and real child/actor Area callbacks; full Download initializer and canonical recovery remain unchanged. Native geometry/inflow not asserted.',
   'group-recovery': 'Actual SDK DEBUG group fixture initializer, checked fonts, current-scene temporary Back and retired bridge rejection.',
   'framework-geometry': 'Actual SDK DEBUG geometry/removal fixture initializer, checked fonts and current-scene temporary Back ownership.',
+  'legacy-recovery': 'Actual SDK DEBUG legacy-original fixture initializer, checked admission, current-scene Back and retired bridge rejection.',
 });
 if (selected.length) {
   registerHooks({ resolve(specifier, context, next) {
@@ -46,6 +47,7 @@ if (selected.length) {
   const toolsFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets',import.meta.url),'utf8');
   const groupFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets',import.meta.url),'utf8');
   const geometryFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets',import.meta.url),'utf8');
+  const legacyFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderLegacyBookmarkRecoveryStructureFixture.ets',import.meta.url),'utf8');
   const {createDefaultReaderWindowMetrics,readerContentSafeTop,readerInteractiveSafeBottom}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
   const tick=()=>new Promise(resolve=>setImmediate(resolve));
   const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
@@ -62,17 +64,17 @@ if (selected.length) {
     const sdk=boundedSurfaceSdk(),children=[],states=[],routes=[],events=[];let fontCalls=0;
     const liveMetrics=metrics??createDefaultReaderWindowMetrics();if(metrics===undefined)liveMetrics.systemFontScale=1.6;
     const child = kind => class {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;this.kind=kind;this.hostAtCreation={...[...owner.nodes.values()].filter(n=>n.type==='Stack').at(-1)};children.push(this);}updateStateVars(params){Object.assign(this.params,params);}};
-    const SourceChild=child('source'), DirectoryChild=child('directory'), DownloadChild=child('downloads'), ToolsChild=child('tools'), GroupChild=child('group'), GeometryChild=child('geometry');
+    const SourceChild=child('source'), DirectoryChild=child('directory'), DownloadChild=child('downloads'), ToolsChild=child('tools'), GroupChild=child('group'), GeometryChild=child('geometry'), LegacyChild=child('legacy');
     class StateChild {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;states.push(this);}updateStateVars(params){Object.assign(this.params,params);}}
     const {owner:page}=compile(()=>createReaderBuilderProbe(sourceText,boundedMembers(sourceText),{
       ...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:mode,SourceManagementPage:SourceChild,ReaderPageState:StateChild,
-      ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,ReaderGroupRecoveryStructureFixture:GroupChild,ReaderFrameworkGeometryStructureFixture:GeometryChild,
+      ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,ReaderGroupRecoveryStructureFixture:GroupChild,ReaderFrameworkGeometryStructureFixture:GeometryChild,ReaderLegacyBookmarkRecoveryStructureFixture:LegacyChild,
       defaultSourceManagementFilters,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
       readerContentSafeTop,readerInteractiveSafeBottom,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
       prepareReaderFonts:()=>{fontCalls++;return fonts();},
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));},error(){}},
     },{...sdk.hooks,childSources:{...sdk.childSources,SourceManagementPage:sourceActor,ReaderPageState:stateActor,
-      ReaderDirectoryStructureFixture:directoryFixture,ReaderDownloadStructureFixture:downloadFixture,ReaderSourceToolsStructureFixture:toolsFixture,ReaderGroupRecoveryStructureFixture:groupFixture,ReaderFrameworkGeometryStructureFixture:geometryFixture}}));
+      ReaderDirectoryStructureFixture:directoryFixture,ReaderDownloadStructureFixture:downloadFixture,ReaderSourceToolsStructureFixture:toolsFixture,ReaderGroupRecoveryStructureFixture:groupFixture,ReaderFrameworkGeometryStructureFixture:geometryFixture,ReaderLegacyBookmarkRecoveryStructureFixture:legacyFixture}}));
     page.getUIContext=()=>({...nativeContext?.(),getRouter:()=>({replaceUrl:route=>routes.push({kind:'replace',...route}),back:()=>routes.push({kind:'back'})})});
     return{page,children,states,routes,events,sdk,fontCalls:()=>fontCalls,props:()=>children.at(-1)?.params};
   }
@@ -410,6 +412,7 @@ if (selected.length) {
   }
   const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,
     'group-recovery': () => componentFixtureBack('group-recovery', 'group', 'reader-page-structure-group-recovery'),
-    'framework-geometry': () => componentFixtureBack('framework-geometry', 'geometry', 'reader-page-structure-framework-geometry')};
+    'framework-geometry': () => componentFixtureBack('framework-geometry', 'geometry', 'reader-page-structure-framework-geometry'),
+    'legacy-recovery': () => componentFixtureBack('legacy-recovery', 'legacy', 'reader-page-structure-legacy-recovery')};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }
