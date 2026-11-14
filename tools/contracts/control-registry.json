@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 24,
+  "revision": 25,
   "controls": [
     {
       "controlId": "page-back",
@@ -177,7 +177,7 @@
       },
       "accessibleNameSource": "ReaderSelect current value",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
+      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
     },
     {
       "controlId": "source-row",
@@ -447,7 +447,7 @@
       },
       "accessibleNameSource": "ReaderChoiceRow option value",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
+      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
     },
     {
       "controlId": "source-group-dismiss",
@@ -900,7 +900,7 @@
       },
       "accessibleNameSource": "ReaderSearchField.accessibilityLabel(searchPlaceholder)",
       "status": "partial",
-      "knownGap": "Actual directory query keeps32vp paint and its caller-specific32vp native typography recipe inside a transparent minimum44vp carrier. The native TextInput response is centered and at least44vp high. Existing50vp toolbar pays44vp plus3vp top/bottom padding. Control short ScrollAway prefix pays the same carrier. directory-query-targets and editable-budget/sdk-actions PASS. Actual pointer routing, IME, clipping, glyphs and focus remain OPEN."
+      "knownGap": "Actual directory query keeps32vp paint and its caller-specific32vp native typography recipe inside a transparent minimum44vp carrier. The native TextInput response is centered and at least44vp high. Existing50vp toolbar pays44vp plus3vp top/bottom padding. Control short ScrollAway prefix pays the same carrier. directory-query-targets and editable-budget/sdk-actions PASS. Actual pointer routing, IME, clipping, glyphs and focus remain OPEN. Candidate60649f803468 standalone memory-fixture native observation at system font1 measured44vp carrier with32vp input. Upper/lower taps outside painted input acquired native input focus. Back restored the visible list boundary and retained header geometry. Other contexts and complete E2 remain OPEN."
     },
     {
       "controlId": "directory-tools-full",
@@ -1784,7 +1784,7 @@
       },
       "accessibleNameSource": "ReaderInlineSelect quick/current/forward/all",
       "status": "partial",
-      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
     },
     {
       "controlId": "download-chapter-title-open",
@@ -2076,7 +2076,7 @@
       },
       "accessibleNameSource": "Visible row label and value for filter/storage/range book",
       "status": "partial",
-      "knownGap": "Both storage selectors now dispatch existing configureStorage intent. Current sheet/presentation and label/index guard; shared option target behavior/native dispatch remain upstream boundaries."
+      "knownGap": "Both storage selectors now dispatch existing configureStorage intent. Current sheet/presentation and label/index guard; shared option target behavior/native dispatch remain upstream boundaries. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
     },
     {
       "controlId": "download-choice-option",
@@ -2688,7 +2688,7 @@
       },
       "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
       "status": "partial",
-      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
     },
     {
       "controlId": "source-tools-original-reconcile",
@@ -2942,7 +2942,7 @@
       },
       "accessibleNameSource": "current boundary value and four option labels",
       "status": "partial",
-      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
     },
     {
       "controlId": "directory-rules-delete",

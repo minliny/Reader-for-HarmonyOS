@@ -2,7 +2,9 @@
 
 本报告的审计结论绑定下述原始输入。2026 年 11 月 14 日用户授权后，已在原隔离检出全量实施。五项问题已有生产修改及准确局部回归，Toggle 键盘焦点风险已经定位并在后继候选 af920500e5af 上完成准确现有 VM 场景。用户随后要求先完成代码范围，再进入 VM 验证。当前代码续查已补详情、漫画目录、保留 Discover 的测量依赖，并在既有工具栏容量内为目录查询分配 44vp 响应。后继源码待完整工程编译及候选验证。
 
-当前新增代码侧库存为 635 个生产文件，14 个 StandardPage 和 11 个 Scaffold 构造点的框架消费处置已对账。原始 633 项库存及审计结果保留历史身份。Source 重复动作的生产 owner 和上下文优先级已按原入口完成登记，正式检查现保留 37 项诊断。紧凑目录及 TTS 的其余 44vp 槽位冲突已有数值预算，涉及的布局选择已提交用户确认。实际执行状态见实施方案“当前执行进度”和原账本 implementation 字段。[当前代码复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-first-review.json)
+当前新增代码侧库存为 635 个生产文件，14 个 StandardPage 和 11 个 Scaffold 构造点的框架消费处置已对账。原始 633 项库存及审计结果保留历史身份。Source 重复动作的生产 owner 和上下文优先级已按原入口完成登记，正式检查现保留 37 项诊断。紧凑目录及 TTS 的其余 44vp 槽位冲突已有数值预算，用户已明确沿批准原稿保留这些紧凑布局及容量冲突。实际执行状态见实施方案“当前执行进度”和原账本 implementation 字段。[当前代码复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-first-review.json)
+
+VM 补充发现 UIF-06。书源工具下拉靠近窗口底部时，末项被裁切，内部 Scroll 没有可滚动范围。原生 popup 包裹盒为零尺寸，ReaderSelectPanel 的绝对定位内容未参与平台避让。当前代码将 popup 内容改为自然流并支付当前窗口、安全区和 IME 高度预算，原有页面覆盖层继续使用定位宿主。新增 inline-popup-layout、原 overlay/motion 及边框父链回归通过，后继完整编译和原生底部避让复验正在推进。失败原始 UI 树与截图已保留在原账本。
 
 日期为 2026 年 11 月 14 日。
 

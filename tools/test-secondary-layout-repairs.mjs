@@ -111,7 +111,7 @@ function selectHost() {
       x: 180, y: 250, hostTopVp: 0, hostBottomVp: height, reduceMotion: true, selectionId: `host:${height}` });
     panel.aboutToAppear(); panel.initialRender();
     const frame = inline.nodes(panel).find(n => n.type === 'Column' && n.position !== undefined);
-    frame.onAppear(); inline.properties.flush();
+    inline.nodes(panel).find(node => node.type === 'Column' && node.onAppear).onAppear(); inline.properties.flush();
     const scroll = inline.nodes(panel).find(n => n.type === 'Scroll');
     assert.ok(scroll, 'actual options have one Scroll');
     assert.ok(frame.position.y >= 0 && frame.position.y + frame.height <= height, 'panel y and viewport share the same actual host budget');
@@ -160,7 +160,7 @@ function selectHost() {
   const UnsafePanel = createReaderBuilderProbe(unguardedHeights, boundedMembers(unguardedHeights), { ...inline.dependencies, ...values }, inline.hooks).Component;
   assert.throws(() => heightReceipts(UnsafePanel), /old font and width native receipts/, 'old generation-only height callback corrupts the current option cache');
   const old = source.replace('this.panelY()', 'this.y');
-  const c = context(value), owner = c.actor(rel, ['build', 'panelX', 'resolvedWidth', 'panelBackgroundColor', 'panelBorderColor'], {
+  const c = context(value), owner = c.actor(rel, ['build', 'panelBody', 'panelHeight', 'panelX', 'resolvedWidth', 'panelBackgroundColor', 'panelBorderColor'], {
     variant: 'sourceGroup', x: 20, y: 250, expandedHeight: 180, appThemeScheme: 'day', optionContent() {}, wrapsOptions: () => false,
     resolvedWidth: () => 180, panelX: () => 20, panelBackgroundColor: () => '', panelBorderColor: () => '' }, old);
   owner.initialRender();
@@ -632,7 +632,7 @@ function supplementalSelectTargets() {
     parent.groupOverlay();
     const panel = inline.walk(parent).find(actor => actor instanceof inline.dependencies.ReaderSelectPanel);
     const frame = inline.nodes(panel).find(node => node.type === 'Column' && node.position !== undefined);
-    frame.onAppear(); inline.properties.flush();
+    inline.nodes(panel).find(node => node.type === 'Column' && node.onAppear).onAppear(); inline.properties.flush();
     assert.equal(panel.x, 100, 'normal Source caller converts the global anchor once');
     return { panel, frame };
   }

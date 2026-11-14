@@ -7,6 +7,7 @@ import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/found
 const definitions = {
   'source-native-targets': { description: 'Current SDK-emitted native Buttons reserve the scaled source/tool targets and publish opt-in choice semantics.', resources: [] },
   'directory-query-targets': { description: 'Actual shared directory query retains compact paint/input recipes inside a paid44vp wrapper and centered response through normal Toolbar assembly and short prefix allocation.', resources: [] },
+  'inline-popup-layout': { description: 'Normal InlineSelect popup mounts a naturally sized shared panel inside current window capacity, preserving positioned overlay hosting and current motion/identity guards.', resources: [] },
   'source-group-budget': { description: 'Actual select panel and choice row pay border-box width and 44vp native row minimum while default variants keep their own geometry.', resources: [] },
 };
 
@@ -73,6 +74,7 @@ function assertNativeStates() {
 
 for (const id of selectContractCases(definitions)) {
   if (id === 'directory-query-targets') await directoryQueryTargets();
+  if (id === 'inline-popup-layout') await inlinePopupLayout();
   if (id === 'source-native-targets') {
     assertNativeStates();
     for (const scale of [1, 1.3, 1.6, 2]) {
@@ -215,4 +217,53 @@ async function directoryQueryTargets() {
   new Broken('readerDirectory', 30).applyNormalAttribute({ responseRegion(value) { response = value; return this; },
     minFontScale() { return this; }, maxFontScale() { return this; } });
   assert.throws(() => assert.ok(response.height >= 44), /AssertionError/, 'the old response fails the actual target requirement');
+}
+
+async function inlinePopupLayout() {
+  for (const height of [852, 180, 0]) for (const scale of [1, 2]) for (const reduced of [false, true]) {
+    const metrics = createDefaultReaderWindowMetrics();
+    metrics.ready = true; metrics.windowRect.width = 366; metrics.windowRect.height = height;
+    metrics.systemFontScale = scale; metrics.systemInsets.top = 24; metrics.systemInsets.bottom = 16;
+    const animations = [];
+    const uiContext = { px2vp: value => value, getFont: () => ({}), getMeasureUtils: () => ({ measureText: () => 26 * scale, measureTextSize: () => ({ width: 26 * scale, height: 24 * scale }) }),
+      animateTo(params, action) { animations.push(params); action(); }, postFrameCallback() {} };
+    const sdk = inlineSelectSdk({ uiContext, dependencies: { readerWindowMetrics: () => metrics } });
+    const actor = new sdk.dependencies.ReaderInlineSelect(undefined,
+      { value: '搜索', options: ['搜索', '发现'], reduceMotion: reduced });
+    actor.aboutToAppear(); actor.initialRender(); actor.toggle(); sdk.properties.flush();
+    actor.popupOptions(actor.selectionId).builder(); sdk.properties.flush();
+    const panel = sdk.walk(actor).find(child => child instanceof sdk.dependencies.ReaderSelectPanel);
+    assert.ok(panel);
+    assert.equal(panel.hosting, 'popup', 'normal popup builder declares natural native hosting');
+    assert.equal(panel.hostBottomVp, Math.max(0, height - 24 - 16 - 32));
+    const body = [...panel.nodes.values()].find(node => node.onAppear);
+    assert.ok(body); body.onAppear(); sdk.properties.flush();
+    assert.ok([...panel.nodes.values()].every(node => node.position === undefined),
+      'the native popup receives actual flow size instead of an absolute child inside zero-size wrappers');
+    assert.equal(body.height, Math.min(panel.expandedHeight, panel.hostBottomVp));
+    assert.ok(body.width > 0);
+    if (height === 0) assert.equal(body.height, 0, 'zero window capacity preserves a zero menu viewport');
+    else assert.ok(body.height >= 44 + 2, 'current popup pays a bordered choice row');
+    if (reduced) assert.equal(animations.length, 0, 'reduced-motion panel uses its immediate branch');
+    else assert.equal(animations.at(-1).duration, 160);
+    const retainedIdentity = actor.selectionId;
+    actor.toggle(); actor.dismiss(retainedIdentity); sdk.properties.flush();
+    actor.aboutToDisappear();
+    const oldIntent = actor.open; actor.commit('发现', retainedIdentity);
+    assert.equal(actor.open, oldIntent, 'retired popup callback cannot revive the owner');
+  }
+  const metrics = createDefaultReaderWindowMetrics(); metrics.windowRect.width = 320; metrics.windowRect.height = 180;
+  const sdk = inlineSelectSdk({ uiContext: { getFont: () => ({}), px2vp: value => value,
+    getMeasureUtils: () => ({ measureText: () => 70 }), animateTo(_params, action) { action(); } },
+    dependencies: { readerWindowMetrics: () => metrics } });
+  const overlay = new sdk.dependencies.ReaderSelectPanel(undefined, { variant: 'sourceGroup',
+    value: '全部分组', options: ['全部分组', '长分组'], x: 180, y: 250,
+    hostTopVp: 0, hostBottomVp: 180, reduceMotion: true });
+  overlay.aboutToAppear(); overlay.initialRender();
+  [...overlay.nodes.values()].find(node => node.onAppear).onAppear(); sdk.properties.flush();
+  const positioned = [...overlay.nodes.values()].find(node => node.position);
+  assert.ok(positioned, 'existing full-height overlays keep their explicit positional owner');
+  assert.ok(positioned.position.y >= 0 && positioned.position.y + positioned.height <= 180);
+  assert.throws(() => assert.ok([...overlay.nodes.values()].every(node => node.position === undefined)),
+    /AssertionError/, 'the previous overlay assembly is an invalid native popup flow root');
 }

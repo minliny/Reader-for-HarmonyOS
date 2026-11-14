@@ -11,7 +11,7 @@ import {pureModuleProbe} from './ets-pure-module-probe.mjs';
 import {readerAppColor} from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import * as appearance from '../../entry/src/main/ets/ui/controls/ReaderSelectAppearanceStyle.ts';
 import * as geometry from '../../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import * as timing from '../../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
 import { readerMotionValueDurationMs as collapseMotionDurationMs } from '../../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts';
 import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
@@ -27,7 +27,7 @@ export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),ui
  const policy=pureModuleProbe(read('ReaderMotionPolicy','foundation'),'ReaderMotionPolicy.ets',{...motion,collapseMotionDurationMs},['readerMotionAnimateParam']);
  const choice=choiceRowProbe(resolveReaderChoiceSpec,choiceSource,properties,dependencies.readerWindowMetrics);
  const hooks={...properties.hooks,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:true,childSources:{...choice.hooks.childSources}};
- const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,...motion,...policy,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
+ const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeTop,readerInteractiveSafeBottom,...motion,...policy,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
  for(const name of ['ReaderSelect','ReaderSelectPanel','ReaderInlineSelect']){
   const source=read(name);hooks.childSources[name]=source;
   const moduleNames=name==='ReaderSelect'?['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:name==='ReaderSelectPanel'?['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:[];

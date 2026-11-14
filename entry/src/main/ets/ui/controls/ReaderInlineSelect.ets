@@ -1,3 +1,5 @@
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../foundation/ReaderWindowMetrics';
 import { ReaderSelect, type ReaderSelectVariant } from './ReaderSelect';
 import { ReaderSelectPanel } from './ReaderSelectPanel';
 import type { ReaderSelectMenuKind } from '../foundation/ReaderSelectGeometry';
@@ -13,6 +15,7 @@ import type { ReaderSelectMenuKind } from '../foundation/ReaderSelectGeometry';
  */
 @Component
 export struct ReaderInlineSelect {
+  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop value: string = '';
   @Prop options: string[] = [];
   @Prop selectedIndex: number = 0;
@@ -74,9 +77,17 @@ export struct ReaderInlineSelect {
     }
   }
 
+  private popupViewportHeight(): number {
+    const metrics = readerWindowMetrics();
+    const height = this.metricsRevision < 0 ? 0 : metrics.windowRect.height;
+    return Number.isFinite(height) ? Math.max(0, height - readerInteractiveSafeTop(metrics) -
+      readerInteractiveSafeBottom(metrics, true) - 32) : 0;
+  }
+
   @Builder
   private selectPanel(identity: string) {
-      ReaderSelectPanel({ value: this.value, options: this.options,
+      ReaderSelectPanel({ hosting: 'popup', hostBottomVp: this.popupViewportHeight(),
+        value: this.value, options: this.options,
         variant: this.variant, controlWidth: this.controlWidth, reduceMotion: this.reduceMotion,
         menuKind: this.menuKind,
         selectionId: identity, x: 0, y: 0,

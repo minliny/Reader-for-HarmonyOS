@@ -14,11 +14,13 @@ Toggle 的原生条件风险已经定位和修复。首个候选 26e7cc19b7ba �
 
 当前代码侧库存为 635 个生产 ETS/TS 文件，解析诊断为零，14 个 StandardPage 和 11 个 Scaffold 构造点均已逐项登记框架消费处置。20 个路由值及 4 个 manifest 根沿原准入条件保留。正式 control 登记更新到 revision 24，21 项页面登记的输入与引用已同步。Source 的两个重复动作上下文按现有生产入口和配方完成对账。引用检查通过，页面检查保留 37 项诊断，其中 E2 21 项 FAIL、E3 5 项 FAIL、G-03 8 项 NOT_RUN、SCOPE 3 项 NOT_RUN。[代码复核与数值预算](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-first-review.json)
 
-目录 32vp 工具横向达到四个独立 44vp 响应时需要额外 48vp 空间，31/36vp tab 和 32/40vp 章节行也有实际槽位不足。TTS Quick 的当前四个独立响应宽度为 39、36、32.5、37.5vp。相关数值已记录到原账本。方案第 5 批规定布局调整须经确认，当前已提交具体布局选择供用户确认。
+目录 32vp 工具横向达到四个独立 44vp 响应时需要额外 48vp 空间，31/36vp tab 和 32/40vp 章节行也有实际槽位不足。TTS Quick 的当前四个独立响应宽度为 39、36、32.5、37.5vp。相关数值已记录到原账本。方案第 5 批规定布局调整须经确认，用户已明确选择沿批准原稿保留这些紧凑布局，记录容量冲突并继续其余代码和 VM 验证。
 
 上述后续代码修复尚待完整工程编译及后继候选验证。现有已安装候选 af920500e5af 继续保留其原范围证据。完整读屏可听、长分组恢复的原生动作可达、全部页面 E2/E3、21 项整页视觉及 G05/G10 按原关闭条件保留。用户已明确沿现有资料推进，新增视觉原稿和历史坏态同期输入的缺口沿原条件保存。
 
 每次失败、夹具修正、准确测试结果、签装 manifest、保数据证明及原生取证均追加到原问题账本 implementation 字段。当前全量目标继续执行。后文各批次保留授权前方案，实际进度以该字段及本节为准。
+
+VM 补充发现 UIF-06。书源工具下拉靠近窗口底部时，末项被裁切，内部 Scroll 没有可滚动范围。原生 popup 包裹盒为零尺寸，ReaderSelectPanel 的绝对定位内容未参与平台避让。当前代码将 popup 内容改为自然流并支付当前窗口、安全区和 IME 高度预算，原有页面覆盖层继续使用定位宿主。新增 inline-popup-layout、原 overlay/motion 及边框父链回归通过，后继完整编译和原生底部避让复验正在推进。失败原始 UI 树与截图已保留在原账本。
 
 日期为 2026 年 11 月 14 日。实施输入为 HarmonyOS `10a5d58d0231f48a4c4fceff22c733b3b3cb1fe2`、Core `c078126376294faa3a611690fbe48e79f0f86cc4` 和 Reader-UI `f206f0db011ae82c5a6e4059769fa3688b9cfcd5`。
 

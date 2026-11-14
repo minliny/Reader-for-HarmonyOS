@@ -54,6 +54,7 @@ export struct ReaderSelectPanel {
 
   @Prop @Watch('onGeometryChanged') value: string = '';
   @Prop @Watch('onGeometryChanged') options: string[] = [];
+  @Prop hosting: 'overlay' | 'popup' = 'overlay';
   @Prop x: number = 0;
   @Prop y: number = 0;
   @Prop @Watch('onGeometryChanged') variant: ReaderSelectVariant = 'default';
@@ -64,7 +65,7 @@ export struct ReaderSelectPanel {
   @Prop @Watch('onGeometryChanged') controlWidth: number = 0;
   /** Optional current appearance host budget. Zero keeps the original menu contract. */
   @Prop @Watch('onGeometryChanged') maxPanelHeight: number = 0;
-  /** Bounds in the overlay host's coordinate space. Platform popups leave these unset. */
+  /** Overlay coordinates, or a popup's local height budget from its window owner. */
   @Prop @Watch('onGeometryChanged') hostTopVp: number = 0;
   @Prop @Watch('onGeometryChanged') hostLeftVp: number = 0;
   @Prop @Watch('onGeometryChanged') hostRightVp: number = -1;
@@ -187,7 +188,22 @@ export struct ReaderSelectPanel {
       this.optionHeights.get(key) ?? fallback : fallback;
   }
 
+  private panelHeight(): number {
+    return this.hostBottomVp >= 0 ? Math.min(this.expandedHeight, Math.max(0, this.hostBottomVp - this.hostTopVp)) : this.expandedHeight;
+  }
+
   build() {
+    if (this.hosting === 'popup') {
+      this.panelBody();
+    } else {
+      Column() { this.panelBody(); }
+        .width(this.resolvedWidth()).height(this.panelHeight())
+        .position({ x: this.panelX(), y: this.panelY() });
+    }
+  }
+
+  @Builder
+  private panelBody() {
     Column({ space: 0 }) {
       if (this.wrapsOptions()) {
         Scroll() {
@@ -195,9 +211,8 @@ export struct ReaderSelectPanel {
         }.width('100%').layoutWeight(1).scrollBar(BarState.Auto);
       } else { this.optionContent(); }
     }
-    .position({ x: this.panelX(), y: this.panelY() })
     .width(this.resolvedWidth())
-    .height(this.hostBottomVp >= 0 ? Math.min(this.expandedHeight, Math.max(0, this.hostBottomVp - this.hostTopVp)) : this.expandedHeight)
+    .height(this.panelHeight())
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
     .zIndex(10)
     .backgroundColor(this.panelBackgroundColor())

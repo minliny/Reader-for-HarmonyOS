@@ -1030,11 +1030,11 @@
         }
       },
       "exceptions": [],
-      "revision": 27,
+      "revision": 28,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 24,
+        "control": 25,
         "platform": 3
       },
       "sourceInputs": [
@@ -1176,7 +1176,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
-          "sha256": "c5bc94c44fb4a658e32718f9961943bcf9cce18667939f6ff711b83b18681ee5"
+          "sha256": "8cc1fbaf36eb965d5be6b738076c346975bd819a3835e101e7b3d5cadd824f5a"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
@@ -1284,7 +1284,7 @@
         },
         {
           "path": "tools/test-source-group-border-budget.mjs",
-          "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
+          "sha256": "05eafac7b6d6d0b2132a2f47d6a4f8889f73df84430733b18c52d0710a37f1a6"
         },
         {
           "path": "tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets",
@@ -1991,6 +1991,18 @@
               "path": "tools/test-framework-confluence-controls.mjs",
               "symbol": "directory-query-targets",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-60649-scoped.json",
+              "result": "PASS",
+              "symbol": "directoryQuery"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-framework-confluence-controls.mjs",
+              "result": "PASS",
+              "symbol": "inline-popup-layout"
             }
           ],
           "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints."
@@ -2553,11 +2565,11 @@
         }
       },
       "exceptions": [],
-      "revision": 28,
+      "revision": 29,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 24,
+        "control": 25,
         "platform": 3
       },
       "sourceInputs": [
@@ -3017,7 +3029,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-          "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+          "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
@@ -3986,11 +3998,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -5028,6 +5040,12 @@
                     "path": "tools/test-framework-confluence-controls.mjs",
                     "symbol": "directory-query-targets",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-framework-confluence-controls.mjs",
+                    "result": "PASS",
+                    "symbol": "inline-popup-layout"
                   }
                 ],
                 "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints."
@@ -5567,11 +5585,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -6019,7 +6037,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-                "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+                "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
@@ -7117,11 +7135,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -8694,11 +8712,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -10133,11 +10151,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -11459,11 +11477,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -12961,11 +12979,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -14355,11 +14373,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -15786,11 +15804,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -17112,11 +17130,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -18713,11 +18731,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -20317,11 +20335,11 @@
               }
             },
             "exceptions": [],
-            "revision": 29,
+            "revision": 30,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             },
             "sourceInputs": [
@@ -21096,7 +21114,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-          "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+          "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
         },
         {
           "path": "entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets",
@@ -21314,7 +21332,7 @@
         },
         {
           "path": "tools/lib/reader-inline-select-sdk-probe.mjs",
-          "sha256": "978e527037d820390b1436b76a60f79fb1ed571da9c9a0288e06a88a59b534e5"
+          "sha256": "382775be63fdeaf82d6542bd2a9423e3c7d5e4c17f57bd2e13bbace304fb8f48"
         },
         {
           "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -21817,6 +21835,12 @@
               "path": "tools/test-shared-download-visual-contract.mjs",
               "result": "PASS",
               "symbol": "touch-targets"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-framework-confluence-controls.mjs",
+              "result": "PASS",
+              "symbol": "inline-popup-layout"
             }
           ],
           "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
@@ -22331,11 +22355,11 @@
         }
       },
       "exceptions": [],
-      "revision": 18,
+      "revision": 19,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 24,
+        "control": 25,
         "platform": 3
       },
       "variants": [
@@ -22475,7 +22499,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-                "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+                "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets",
@@ -22693,7 +22717,7 @@
               },
               {
                 "path": "tools/lib/reader-inline-select-sdk-probe.mjs",
-                "sha256": "978e527037d820390b1436b76a60f79fb1ed571da9c9a0288e06a88a59b534e5"
+                "sha256": "382775be63fdeaf82d6542bd2a9423e3c7d5e4c17f57bd2e13bbace304fb8f48"
               },
               {
                 "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -23202,6 +23226,12 @@
                     "path": "tools/test-shared-download-visual-contract.mjs",
                     "result": "PASS",
                     "symbol": "touch-targets"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-framework-confluence-controls.mjs",
+                    "result": "PASS",
+                    "symbol": "inline-popup-layout"
                   }
                 ],
                 "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
@@ -23716,11 +23746,11 @@
               }
             },
             "exceptions": [],
-            "revision": 18,
+            "revision": 19,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             }
           }
@@ -23861,7 +23891,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-                "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+                "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets",
@@ -24079,7 +24109,7 @@
               },
               {
                 "path": "tools/lib/reader-inline-select-sdk-probe.mjs",
-                "sha256": "978e527037d820390b1436b76a60f79fb1ed571da9c9a0288e06a88a59b534e5"
+                "sha256": "382775be63fdeaf82d6542bd2a9423e3c7d5e4c17f57bd2e13bbace304fb8f48"
               },
               {
                 "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -24588,6 +24618,12 @@
                     "path": "tools/test-shared-download-visual-contract.mjs",
                     "result": "PASS",
                     "symbol": "touch-targets"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-framework-confluence-controls.mjs",
+                    "result": "PASS",
+                    "symbol": "inline-popup-layout"
                   }
                 ],
                 "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
@@ -25102,11 +25138,11 @@
               }
             },
             "exceptions": [],
-            "revision": 18,
+            "revision": 19,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             }
           }
@@ -25247,7 +25283,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-                "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+                "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets",
@@ -25465,7 +25501,7 @@
               },
               {
                 "path": "tools/lib/reader-inline-select-sdk-probe.mjs",
-                "sha256": "978e527037d820390b1436b76a60f79fb1ed571da9c9a0288e06a88a59b534e5"
+                "sha256": "382775be63fdeaf82d6542bd2a9423e3c7d5e4c17f57bd2e13bbace304fb8f48"
               },
               {
                 "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -25938,6 +25974,12 @@
                     "path": "tools/test-shared-download-visual-contract.mjs",
                     "result": "PASS",
                     "symbol": "touch-targets"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-framework-confluence-controls.mjs",
+                    "result": "PASS",
+                    "symbol": "inline-popup-layout"
                   }
                 ],
                 "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
@@ -26444,11 +26486,11 @@
               }
             },
             "exceptions": [],
-            "revision": 18,
+            "revision": 19,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             }
           }
@@ -26589,7 +26631,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-                "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+                "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets",
@@ -26807,7 +26849,7 @@
               },
               {
                 "path": "tools/lib/reader-inline-select-sdk-probe.mjs",
-                "sha256": "978e527037d820390b1436b76a60f79fb1ed571da9c9a0288e06a88a59b534e5"
+                "sha256": "382775be63fdeaf82d6542bd2a9423e3c7d5e4c17f57bd2e13bbace304fb8f48"
               },
               {
                 "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -27280,6 +27322,12 @@
                     "path": "tools/test-shared-download-visual-contract.mjs",
                     "result": "PASS",
                     "symbol": "touch-targets"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-framework-confluence-controls.mjs",
+                    "result": "PASS",
+                    "symbol": "inline-popup-layout"
                   }
                 ],
                 "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
@@ -27786,11 +27834,11 @@
               }
             },
             "exceptions": [],
-            "revision": 18,
+            "revision": 19,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             }
           }
@@ -27931,7 +27979,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
-                "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+                "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets",
@@ -28149,7 +28197,7 @@
               },
               {
                 "path": "tools/lib/reader-inline-select-sdk-probe.mjs",
-                "sha256": "978e527037d820390b1436b76a60f79fb1ed571da9c9a0288e06a88a59b534e5"
+                "sha256": "382775be63fdeaf82d6542bd2a9423e3c7d5e4c17f57bd2e13bbace304fb8f48"
               },
               {
                 "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -28622,6 +28670,12 @@
                     "path": "tools/test-shared-download-visual-contract.mjs",
                     "result": "PASS",
                     "symbol": "touch-targets"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-framework-confluence-controls.mjs",
+                    "result": "PASS",
+                    "symbol": "inline-popup-layout"
                   }
                 ],
                 "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
@@ -29128,11 +29182,11 @@
               }
             },
             "exceptions": [],
-            "revision": 18,
+            "revision": 19,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 24,
+              "control": 25,
               "platform": 3
             }
           }
@@ -29603,6 +29657,12 @@
               "path": "tools/test-source-tools-layout.mjs",
               "symbol": "parent-budget",
               "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-framework-confluence-controls.mjs",
+              "result": "PASS",
+              "symbol": "inline-popup-layout"
             }
           ],
           "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations."
@@ -30185,11 +30245,11 @@
         }
       },
       "exceptions": [],
-      "revision": 14,
+      "revision": 15,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 24,
+        "control": 25,
         "platform": 3
       },
       "sourceInputs": [
@@ -30266,7 +30326,7 @@
         {
           "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
           "symbol": "build",
-          "sha256": "f867a2c64492d306c3df6a34878135fde8b5f42b3eb42ad6870d81e09dd5f588"
+          "sha256": "62724bd3284c28289a00534ff94abf1f9d2999a7edecfa99ec3a38c428b7fcb3"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -30370,7 +30430,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
-          "sha256": "c5bc94c44fb4a658e32718f9961943bcf9cce18667939f6ff711b83b18681ee5"
+          "sha256": "8cc1fbaf36eb965d5be6b738076c346975bd819a3835e101e7b3d5cadd824f5a"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
@@ -30406,7 +30466,7 @@
         },
         {
           "path": "tools/test-source-group-border-budget.mjs",
-          "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
+          "sha256": "05eafac7b6d6d0b2132a2f47d6a4f8889f73df84430733b18c52d0710a37f1a6"
         },
         {
           "path": "tools/test-source-management-typography.mjs",
