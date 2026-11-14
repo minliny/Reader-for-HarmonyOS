@@ -1042,7 +1042,7 @@
         }
       },
       "exceptions": [],
-      "revision": 29,
+      "revision": 30,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1188,7 +1188,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
-          "sha256": "8cc1fbaf36eb965d5be6b738076c346975bd819a3835e101e7b3d5cadd824f5a"
+          "sha256": "68a722e1a66cb3fd9ee023a732b822a4b86409315c544ed10dfa30559a4a9ae6"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
@@ -30275,7 +30275,7 @@
         }
       },
       "exceptions": [],
-      "revision": 16,
+      "revision": 17,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -30460,7 +30460,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
-          "sha256": "8cc1fbaf36eb965d5be6b738076c346975bd819a3835e101e7b3d5cadd824f5a"
+          "sha256": "68a722e1a66cb3fd9ee023a732b822a4b86409315c544ed10dfa30559a4a9ae6"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",

@@ -198,7 +198,7 @@ export struct ReaderSelectPanel {
     } else {
       Column() { this.panelBody(); }
         .width(this.resolvedWidth()).height(this.panelHeight())
-        .position({ x: this.panelX(), y: this.panelY() });
+        .position({ x: this.panelX(), y: this.panelY() }).zIndex(10);
     }
   }
 

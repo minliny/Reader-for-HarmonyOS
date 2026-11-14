@@ -266,4 +266,27 @@ async function inlinePopupLayout() {
   assert.ok(positioned.position.y >= 0 && positioned.position.y + positioned.height <= 180);
   assert.throws(() => assert.ok([...overlay.nodes.values()].every(node => node.position === undefined)),
     /AssertionError/, 'the previous overlay assembly is an invalid native popup flow root');
+
+  const { readFileSync } = await import('node:fs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const appearanceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
+  const appearance = createReaderBuilderProbe(appearanceSource, ['selectOverlay'], sdk.dependencies, sdk.hooks).owner;
+  Object.assign(appearance, {
+    openSelect: 'language', selectAnchorX: 12, selectAnchorY: 24, reduceMotion: true, selectClosing: false,
+    selectionActorIdentity: () => 'appearance-layout-current',
+    selectionCloseAction: () => () => {},
+    selectValue: () => '中文', selectOptions: () => ['中文', 'English'],
+    selectMenuViewportHeight: () => 160,
+    selectPanelFocusPrefix: identity => identity,
+    conversionSelectionCommit: () => () => {},
+    dismissTemporaryLayer: () => {},
+  });
+  appearance.selectOverlay();
+  const backdrop = [...appearance.nodes.values()].find(node => node.type === 'Row' && node.onClick);
+  const appearancePanel = sdk.walk(appearance).find(child => child instanceof sdk.dependencies.ReaderSelectPanel);
+  assert.ok(backdrop && appearancePanel, 'actual Appearance overlay mounts its dismiss surface and shared panel');
+  const panelRoot = [...appearancePanel.nodes.values()].find(node => node.position);
+  assert.ok(panelRoot, 'the shared overlay positions its native root in the Appearance Stack');
+  assert.ok((panelRoot.zIndex ?? 0) > backdrop.zIndex,
+    'the positioned menu root must sort above its actual sibling dismiss surface');
 }
