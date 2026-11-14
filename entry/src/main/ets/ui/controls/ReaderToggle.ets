@@ -55,6 +55,7 @@ export struct ReaderToggle {
   private accessibilityFocusedRevision: number = -1;
   private pendingAccessibilityFocusRevision: number = -1;
   private pendingKeyboardAfterAccessibilityRevision: number = -1;
+  private accessibilityFocusRetryTimer: number = -1;
   private diagnosticFocusEvents: number = 0;
   private restoringRevision: number = -1;
   aboutToAppear(): void { this.mounted = true; }
@@ -66,6 +67,7 @@ export struct ReaderToggle {
     if (!this.appForeground) this.clearFocusContinuation();
   }
   private clearFocusContinuation(): void {
+    this.clearAccessibilityFocusRetry();
     this.focusedRevision = -1;
     this.pendingFocusRevision = -1;
     this.accessibilityFocusedRevision = -1;
@@ -102,6 +104,7 @@ export struct ReaderToggle {
               this.diagnosticFocus('accessibility-focus', revision, focused);
               if (!this.mounted || identity !== this.inputIdentity || revision !== this.nativeRevision) return;
               if (focused) {
+                this.clearAccessibilityFocusRetry();
                 this.accessibilityFocusedRevision = revision;
                 this.continueKeyboardAfterAccessibility(identity, revision);
               } else if (this.accessibilityFocusedRevision === revision) {
@@ -146,19 +149,39 @@ export struct ReaderToggle {
       this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
         if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision ||
           (this.accessibilityFocusedRevision !== revision - 1 && this.accessibilityFocusedRevision !== revision)) return;
-        try {
-          const bundleName = this.getUIContext().getHostContext()?.applicationInfo.name;
-          if (bundleName !== undefined && bundleName.length > 0) {
-            this.diagnosticFocus('accessibility-request', revision);
-            accessibility.sendAccessibilityEvent({ type: 'requestFocusForAccessibilityNotInterrupt', bundleName,
-              triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity, revision) }).then((): void => {
-                this.diagnosticFocus('accessibility-accepted', revision);
-                this.continueKeyboardAfterAccessibility(identity, revision);
-              }).catch((): void => { this.diagnosticFocus('accessibility-rejected', revision); });
-          }
-        } catch (_unavailable) {}
+        this.sendAccessibilityFocus(identity, revision);
       }));
     } catch (_detached) {}
+  }
+
+  private clearAccessibilityFocusRetry(): void {
+    if (this.accessibilityFocusRetryTimer >= 0) clearTimeout(this.accessibilityFocusRetryTimer);
+    this.accessibilityFocusRetryTimer = -1;
+  }
+
+  private sendAccessibilityFocus(identity: string, revision: number, allowRetry: boolean = true): void {
+    if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision ||
+      (this.accessibilityFocusedRevision !== revision - 1 && this.accessibilityFocusedRevision !== revision)) return;
+    try {
+      const bundleName = this.getUIContext().getHostContext()?.applicationInfo.name;
+      if (bundleName === undefined || bundleName.length === 0) return;
+      this.diagnosticFocus('accessibility-request', revision);
+      accessibility.sendAccessibilityEvent({ type: 'requestFocusForAccessibilityNotInterrupt', bundleName,
+        triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity, revision) }).then((): void => {
+          this.diagnosticFocus('accessibility-accepted', revision);
+          this.continueKeyboardAfterAccessibility(identity, revision);
+        }).catch((): void => { this.diagnosticFocus('accessibility-rejected', revision); }).finally((): void => {
+          // Acceptance can precede the replacement's accessibility-tree update.
+          // Keep one bounded retry until the actual native focus acknowledgement.
+          if (!allowRetry || !this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision ||
+            this.accessibilityFocusedRevision !== revision - 1) return;
+          this.clearAccessibilityFocusRetry();
+          this.accessibilityFocusRetryTimer = setTimeout((): void => {
+            this.accessibilityFocusRetryTimer = -1;
+            if (this.accessibilityFocusedRevision === revision - 1) this.sendAccessibilityFocus(identity, revision, false);
+          }, 100);
+        });
+    } catch (_unavailable) {}
   }
 
   private continueKeyboardAfterAccessibility(identity: string, revision: number): void {
@@ -200,6 +223,7 @@ export struct ReaderToggle {
 
   private toggle(identity: string, revision: number, next: boolean): void {
     if (revision !== this.nativeRevision || !this.canAct(identity) || next === this.value) return;
+    this.clearAccessibilityFocusRetry();
     // A native switch mutates its own transient value. Recreate that control
     // from the owner projection even when the intent is rejected without a prop change.
     this.diagnosticFocus('change', revision);
