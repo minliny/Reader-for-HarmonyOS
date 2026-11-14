@@ -12,7 +12,7 @@ const selected = selectContractCases({
   'font-gate': 'Actual fixture lifecycle and SDK Source initializer: pending/failed/retired font preparation cannot mount; only current checked completion permits Source.',
   'source-callbacks': 'Actual Source initializer callbacks: memory-only intents, scene generations, temporary Back before menu and real-area vs requested width. No native rendering or business receipt evidence.',
   'source-states': 'Actual memory-only Source read/original/unknown recovery initializers, full long-message path through real projections, accurate generations and retired callbacks; no Host/RPC, native clipping or hit claim.',
-  'fixture-scenes': 'Seven actual Directory/Download/Tools child initializers, checked admission, outer width vs actual Area, current-scene intent/Back and same-identity old bridge cleanup retirement. No native child subtree execution.',
+  'fixture-scenes': 'Actual Directory/Download/Tools child initializers, checked admission, outer width vs actual Area, current-scene intent/Back and same-identity old bridge cleanup retirement. No native child subtree execution.',
   'downloads-short': 'New typed DEBUG 168vp Download wrapper through actual SDK initializer/safe top and real child/actor Area callbacks; full Download initializer and canonical recovery remain unchanged. Native geometry/inflow not asserted.',
   'group-recovery': 'Actual SDK DEBUG group fixture initializer, checked fonts, current-scene temporary Back and retired bridge rejection.',
   'framework-geometry': 'Actual SDK DEBUG geometry/removal fixture initializer, checked fonts and current-scene temporary Back ownership.',
@@ -234,15 +234,17 @@ if (selected.length) {
       ['directory-manga','directory','manga','detail',undefined],
       ['directory-control-expanded','directory','control','reader',true],
       ['directory-control-compact','directory','control','reader',false],
+      ['directory-control-flat-expanded','directory','control','reader',true,undefined,true],
+      ['directory-control-flat-compact','directory','control','reader',false,undefined,true],
       ['directory-control-short-122','directory','control','reader',true,122],
       ['directory-control-short-168','directory','control','reader',true,168],
       ['directory-control-short-190','directory','control','reader',true,190],
       ['downloads','downloads'],['source-tools','tools'],
     ];
-    for(const width of [320,366])for(const [scene,kind,mode,context,expanded,height]of scenes){
+    for(const width of [320,366])for(const [scene,kind,mode,context,expanded,height,flat]of scenes){
       const f=fixture();f.page.aboutToAppear();await tick();f.page.selectWidth(width, f.page.presentation);f.page.launchFixture(scene, f.page.presentation);f.page.initialRender();
       assert.equal(f.children.length,1);assert.equal(f.children[0].kind,kind);const p=f.props();assert.equal(p.fontsReady,true);
-      if(kind==='directory'){assert.equal(p.mode,mode);assert.equal(p.catalogContext,context);if(expanded!==undefined)assert.equal(p.controlExpanded,expanded);if(height!==undefined)assert.equal(p.controlViewportHeight,height);assert(!Object.hasOwn(p,'onTemporaryBackBridge'));}
+      if(kind==='directory'){assert.equal(p.mode,mode);assert.equal(p.catalogContext,context);if(expanded!==undefined)assert.equal(p.controlExpanded,expanded);if(height!==undefined)assert.equal(p.controlViewportHeight,height);if(mode==='control')assert.equal(p.flatCatalog,flat===true);assert(!Object.hasOwn(p,'onTemporaryBackBridge'));}
       else assert.equal(typeof p.onTemporaryBackBridge,'function');
       const nodes=f.sdk.nodes(f.page),host=nodes.find(node=>node.type==='Stack'&&node.id==='reader-page-structure-fixture-stage');
       assert(host);assert.equal(host.width,width);assert.equal(host.constraintSize.maxWidth,'100%');
@@ -280,7 +282,7 @@ if (selected.length) {
   async function safeArea(){
     const sourceScenes=['default','empty','recovery','busy','read-error','read-empty-error','original-unknown','original-cleanup'];
     const appScenes=['menu',...sourceScenes,'directory-detail','downloads','downloads-short','source-tools'];
-    const ownedScenes=['directory-reader','directory-manga','directory-control-expanded','directory-control-compact','directory-control-short-122','directory-control-short-168','directory-control-short-190'];
+    const ownedScenes=['directory-reader','directory-manga','directory-control-expanded','directory-control-compact','directory-control-flat-expanded','directory-control-flat-compact','directory-control-short-122','directory-control-short-168','directory-control-short-190'];
     for(const width of[320,366])for(const scene of[...appScenes,...ownedScenes]){
       const metrics=createDefaultReaderWindowMetrics();metrics.systemInsets.top=39;metrics.cutoutInsets.top=43;metrics.systemFontScale=1;
       const f=fixture({metrics});f.page.aboutToAppear();await tick();f.page.selectWidth(width,f.page.presentation);

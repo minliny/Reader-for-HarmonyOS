@@ -37,11 +37,12 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
   private readonly entries: () => LocalReadingTocEntry[];
   private readonly active: () => boolean;
   private readonly observe: (kind: string, chapterIndex: number) => void;
+  private readonly flatCatalog: boolean;
 
   constructor(sourceId: string, bookId: string, viewId: string, entries: () => LocalReadingTocEntry[],
-    active: () => boolean, observe: (kind: string, chapterIndex: number) => void) {
+    active: () => boolean, observe: (kind: string, chapterIndex: number) => void, flatCatalog: boolean = false) {
     this.sourceId = sourceId; this.bookId = bookId; this.viewId = viewId;
-    this.entries = entries; this.active = active; this.observe = observe;
+    this.entries = entries; this.active = active; this.observe = observe; this.flatCatalog = flatCatalog;
   }
 
   private admit(bookId: string, isCurrent?: () => boolean): void {
@@ -71,6 +72,7 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
   async open(query: ReaderDirectoryNavigationQuery, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationOpen> {
     this.admit(query.bookId, isCurrent);
     if (query.sourceId !== this.sourceId) throw new Error('directory fixture source changed');
+    if (this.flatCatalog) return { status: 'unavailable', reason: 'NoStructure' };
     this.observe('tree-open-static-snapshot', query.chapterIndex ?? -1);
     const nodes = this.nodes();
     const current = nodes.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === query.chapterIndex);
@@ -83,7 +85,7 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
 
   async page(bookId: string, viewId: string, offset: number, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationPage> {
     this.admit(bookId, isCurrent);
-    if (viewId !== this.viewId || offset !== 0) throw new Error('static directory fixture has one bounded page');
+    if (this.flatCatalog || viewId !== this.viewId || offset !== 0) throw new Error('static directory fixture has one bounded page');
     const nodes = this.nodes();
     return { viewId: this.viewId, visibleTotal: nodes.length, nodes: nodes };
   }
@@ -92,7 +94,7 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
     isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationTarget> {
     this.admit(bookId, isCurrent);
     const node = this.nodes().find((candidate: ReaderDirectoryNavigationNode): boolean => candidate.nodeId === nodeId);
-    if (viewId !== this.viewId || node?.kind !== 'target' || node.chapterIndex === undefined)
+    if (this.flatCatalog || viewId !== this.viewId || node?.kind !== 'target' || node.chapterIndex === undefined)
       throw new Error('static directory fixture target changed');
     this.observe('tree-target-intent', node.chapterIndex);
     return { kind: 'chapterStart', chapterIndex: node.chapterIndex, chapterOffsetScalar: 0 };

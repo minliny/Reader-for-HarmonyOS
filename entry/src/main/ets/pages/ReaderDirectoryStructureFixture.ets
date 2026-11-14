@@ -25,6 +25,7 @@ export type ReaderDirectoryFixtureMode = 'text' | 'manga' | 'control';
 interface ReaderDirectoryFixtureObservation {
   kind: string;
   mode: string;
+  flatCatalog: boolean;
   fixtureInstanceId: number;
   presentation: number;
   bookId: string;
@@ -45,6 +46,7 @@ export struct ReaderDirectoryStructureFixture {
   @StorageLink('readerWindowMetricsRevision') @Watch('onMetricsChanged') private windowMetricsRevision: number = 0;
   @Prop @Watch('resetFixture') mode: ReaderDirectoryFixtureMode = 'text';
   @Prop @Watch('resetFixture') fontsReady: boolean = false;
+  @Prop @Watch('resetFixture') flatCatalog: boolean = false;
   @Prop catalogContext: 'detail' | 'reader' = 'detail';
   @Prop controlExpanded: boolean = true;
   @Prop controlViewportHeight: number = 0;
@@ -91,7 +93,7 @@ export struct ReaderDirectoryStructureFixture {
       const port = new ReaderDirectoryFixturePort(identity.sourceId, identity.bookId,
         `${this.openingIdentity()}:${this.mode}`, (): LocalReadingTocEntry[] => this.entries,
         (): boolean => this.current(presentation),
-        (kind: string, index: number): void => { if (this.current(presentation)) this.record(kind, index); });
+        (kind: string, index: number): void => { if (this.current(presentation)) this.record(kind, index); }, this.flatCatalog);
       this.navigationFactory = (): ReaderDirectoryFixturePort => {
         if (!this.current(presentation)) throw new Error('directory fixture factory has retired');
         return port;
@@ -120,7 +122,7 @@ export struct ReaderDirectoryStructureFixture {
   private current(presentation: number): boolean { return this.admitted() && presentation === this.presentation; }
 
   private record(kind: string, chapterIndex: number = -1): void {
-    const observation: ReaderDirectoryFixtureObservation = { kind: kind, mode: this.mode,
+    const observation: ReaderDirectoryFixtureObservation = { kind: kind, mode: this.mode, flatCatalog: this.flatCatalog,
       fixtureInstanceId: this.fixtureInstanceId, bookId: this.identity().bookId,
       viewId: `${this.openingIdentity()}:${this.mode}`,
       presentation: this.presentation, actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
@@ -351,7 +353,7 @@ export struct ReaderDirectoryStructureFixture {
         this.admitControlMinimum(presentation, identity, measurer),
       entries: this.entries, currentChapterIndex: this.currentChapterIndex,
       bookmarkIdentity: this.identity(), navigationPortFactory: this.navigationFactory,
-      directoryRecovery: this.memoryRecovery(),
+      bookmarkRecovery: this.memoryRecovery(),
       catalogComplete: true, catalogChapterCount: this.entries.length,
       catalogReadableChapterCount: this.entries.length, catalogReadablePosition: this.currentChapterIndex,
       progress: this.controlExpanded ? 1 : 0, interactionEnabled: true,

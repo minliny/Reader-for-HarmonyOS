@@ -33,7 +33,7 @@ function defaultSourceManagementFilters(): SourceManagementFilterState {
 
 type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'busy' |
   'read-error' | 'read-empty-error' | 'original-unknown' | 'original-cleanup' |
-  'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-control-expanded' | 'directory-control-compact' |
+  'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
   'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
   'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery' | 'framework-geometry';
 interface PageStructureFixtureObservation {
@@ -203,6 +203,7 @@ struct ReaderPageStructureVerification {
       menuPresentation !== this.presentation ||
       (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' &&
         scene !== 'directory-control-expanded' && scene !== 'directory-control-compact' &&
+        scene !== 'directory-control-flat-expanded' && scene !== 'directory-control-flat-compact' &&
         scene !== 'directory-control-short-122' && scene !== 'directory-control-short-168' && scene !== 'directory-control-short-190' &&
         scene !== 'downloads' && scene !== 'downloads-short' && scene !== 'source-tools' && scene !== 'group-recovery' && scene !== 'framework-geometry')) return;
     this.presentation += 1;
@@ -309,6 +310,7 @@ struct ReaderPageStructureVerification {
   private readerOwnsWindowEdges(): boolean {
     return this.scene === 'directory-reader' || this.scene === 'directory-manga' ||
       this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
+      this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' ||
       this.scene === 'directory-control-short-122' || this.scene === 'directory-control-short-168' ||
       this.scene === 'directory-control-short-190';
   }
@@ -408,6 +410,10 @@ struct ReaderPageStructureVerification {
         .onClick((): void => this.launchFixture('directory-control-expanded', menuPresentation));
       Button('目录 · 控制内容收拢').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-compact')
         .onClick((): void => this.launchFixture('directory-control-compact', menuPresentation));
+      Button('目录 · 平面内容展开').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-flat-expanded')
+        .onClick((): void => this.launchFixture('directory-control-flat-expanded', menuPresentation));
+      Button('目录 · 平面内容收拢').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-flat-compact')
+        .onClick((): void => this.launchFixture('directory-control-flat-compact', menuPresentation));
       Button('目录 · 短视口 122').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-short-122')
         .onClick((): void => this.launchFixture('directory-control-short-122', menuPresentation));
       Button('目录 · 短视口 168').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-short-168')
@@ -481,9 +487,11 @@ struct ReaderPageStructureVerification {
           ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', catalogContext: 'detail',
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
-        } else if (this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' || this.shortControlHeight() > 0) {
+        } else if (this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
+          this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' || this.shortControlHeight() > 0) {
           ReaderDirectoryStructureFixture({ mode: 'control', fontsReady: this.fontState === 'ready', catalogContext: 'reader',
-            controlExpanded: this.scene !== 'directory-control-compact', controlViewportHeight: this.shortControlHeight(),
+            controlExpanded: this.scene !== 'directory-control-compact' && this.scene !== 'directory-control-flat-compact',
+            flatCatalog: this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact', controlViewportHeight: this.shortControlHeight(),
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
         } else if (this.scene === 'downloads') {

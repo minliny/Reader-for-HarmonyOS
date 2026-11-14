@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases,recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected=selectContractCases({
+  'flat-fallback-port':'Actual current fixture NoStructure response enters the production Surface flat fallback without Runtime and retires old ports across openings.',
   'bookmark-memory-owner':'Actual DEBUG fixture uses production recovery projection for its current in-memory bookmark owner; normal production read-only default and retired callbacks remain bounded.',
   'initializer-safety':'Actual SDK fixture admission/production initializers and exact control parent geometry; no native child rendering.',
   'default-vs-fixture':'Actual default Gateway creation remains and injected factories preserve their captured typed port.',
@@ -46,7 +47,7 @@ if(selected.length){
     ['ReaderControlDirectoryContent','reading/ui/ReaderControlDirectoryContent'],
   ].map(([name,path])=>[name,readFileSync(new URL('../entry/src/main/ets/features/'+path+'.ets',import.meta.url),'utf8')]));
   const require=createRequire(import.meta.url),componentMap=require(resolveEtsLoaderRoot()+'/lib/component_map.js');
-  function fixture({debug=true,build='debug',ready=true,mode='text',expanded=true,scale=1.6,controlHeight=0,fixtureSource=source}={}){
+  function fixture({debug=true,build='debug',ready=true,mode='text',expanded=true,scale=1.6,controlHeight=0,flatCatalog=false,fixtureSource=source}={}){
     const sdk=boundedSurfaceSdk(),children=[],events=[],actions=[],back=[];
     const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=366;metrics.windowRect.height=844;metrics.systemFontScale=scale;
     const deps={...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:build,readerDirectoryFixtureEntries,ReaderDirectoryFixturePort,readerDirectoryFixtureCopyEntry,nextReaderDirectoryFixtureInstanceId,
@@ -57,15 +58,16 @@ if(selected.length){
     const saved=new Map(componentMap.ID_ATTRS);componentMap.ID_ATTRS.clear();let page;
     try{({owner:page}=createReaderBuilderProbe(fixtureSource,boundedMembers(fixtureSource),deps,{...sdk.hooks,childSources}));}
     finally{componentMap.ID_ATTRS.clear();for(const [k,v]of saved)componentMap.ID_ATTRS.set(k,v);}
-    Object.assign(page,{fontsReady:ready,mode,controlExpanded:expanded,controlViewportHeight:controlHeight,onAction:(kind,index)=>actions.push([kind,index]),onBack:()=>back.push(true)});
+    Object.assign(page,{fontsReady:ready,mode,flatCatalog,controlExpanded:expanded,controlViewportHeight:controlHeight,onAction:(kind,index)=>actions.push([kind,index]),onBack:()=>back.push(true)});
     page.aboutToAppear();return{page,sdk,children,events,actions,back,metrics};
   }
   async function bookmarkMemoryOwner() {
     function assertWritable(fixture) {
       const child = fixture.children.at(-1);
-      assert.equal(child.params.directoryRecovery?.bookmarkWriteEnabled, true,
+      const key = fixture.page.mode === 'control' ? 'bookmarkRecovery' : 'directoryRecovery';
+      assert.equal(child.params[key]?.bookmarkWriteEnabled, true,
         'the current in-memory bookmark owner explicitly supplies its production recovery projection');
-      assert.equal(child.params.directoryRecovery.presentationId, fixture.page.openingIdentity());
+      assert.equal(child.params[key].presentationId, fixture.page.openingIdentity());
     }
     for (const mode of ['text', 'control']) {
       const current = fixture({ mode, scale: 1 });
@@ -86,10 +88,41 @@ if(selected.length){
       current.page.aboutToDisappear();
       assert.equal(current.page.memoryRecovery().bookmarkWriteEnabled, false);
     }
-    const missing = fixture({ mode: 'control', fixtureSource: source.replaceAll('directoryRecovery: this.memoryRecovery(),', '') });
+    const missing = fixture({ mode: 'control', fixtureSource: source.replaceAll('directoryRecovery: this.memoryRecovery(),', '').replaceAll('bookmarkRecovery: this.memoryRecovery(),', '') });
     missing.page.measure({ width: '366vp', height: '809vp' });
     missing.page.initialRender();
     assert.throws(() => assertWritable(missing), /in-memory bookmark owner/);
+    const wrongKey = fixture({ mode: 'control', fixtureSource: source.replace('bookmarkRecovery: this.memoryRecovery(),', 'directoryRecovery: this.memoryRecovery(),') });
+    wrongKey.page.measure({ width: '366vp', height: '809vp' });
+    wrongKey.page.initialRender();
+    assert.throws(() => assertWritable(wrongKey), /in-memory bookmark owner/);
+  }
+  async function flatFallbackPort() {
+    const current = fixture({ mode: 'control', scale: 1, flatCatalog: true });
+    current.page.measure({ width: '366vp', height: '809vp' });
+    current.page.initialRender();
+    const port = current.page.navigationFactory();
+    const identity = current.page.identity();
+    const unavailable = await port.open({ sourceId: identity.sourceId, bookId: identity.bookId });
+    assert.deepEqual(unavailable, { status: 'unavailable', reason: 'NoStructure' });
+    const actualSurface = surface({ factory: () => port });
+    Object.assign(actualSurface.owner, { sourceId: identity.sourceId, bookId: identity.bookId,
+      chapterEntries: current.page.entries });
+    actualSurface.owner.aboutToAppear();
+    await tick();
+    assert.equal(actualSurface.owner.view, undefined);
+    assert.equal(actualSurface.owner.settledFlat, true, 'actual NoStructure branch admits the existing flat catalog');
+    assert.equal(actualSurface.owner.loadPending, false);
+    assert.equal(actualSurface.runtimeCalls(), 0);
+    actualSurface.owner.aboutToDisappear();
+    const staleFactory = current.page.navigationFactory;
+    current.page.flatCatalog = false;
+    current.page.resetFixture();
+    assert.throws(() => staleFactory(), /retired/);
+    await assert.rejects(() => port.open({ sourceId: identity.sourceId, bookId: identity.bookId }), /retired/);
+    const next = current.page.identity();
+    const tree = await current.page.navigationFactory().open({ sourceId: next.sourceId, bookId: next.bookId });
+    assert.equal(tree.status, 'ready');
   }
   async function initializerSafety(){
     for(const debug of [true,false])for(const build of ['debug','release'])for(const ready of [true,false]){
@@ -286,7 +319,7 @@ if(selected.length){
     let runtimeCalls=0,gatewayCalls=0;
     const runtime={supportsCoreCapability(){return false;}};
     const Surface=selectedProductionMethods(surfaceFile,'ReaderDirectoryNavigationSurface',
-      ['aboutToAppear','aboutToDisappear','openTree','prepareVisiblePages','cancelQueryTimer'],{
+      ['aboutToAppear','aboutToDisappear','openTree','prepareVisiblePages','cancelQueryTimer','currentInputOwnerKey','currentReadInputKey'],{
         ...navigation,...navigationSession,ReaderDirectoryTrace,
         ReaderRuntimeOwner:{current(){runtimeCalls++;assert(runtimeAllowed,'fixture cannot obtain RuntimeOwner');return runtime;}},
         ReaderDirectoryNavigationGateway:class{constructor(owner){assert.equal(owner,runtime);gatewayCalls++;}},
@@ -347,6 +380,6 @@ if(selected.length){
     list.selectTarget({kind:'target',nodeId:'n1',chapterIndex:1});assert.equal(guard(),true);
     list.mounted=false;list.generation+=1;assert.equal(guard(),false);resolveTarget({chapterIndex:1,chapterOffsetScalar:0});await tick();assert.deepEqual(selections,[]);
   }
-  const cases={'bookmark-memory-owner':bookmarkMemoryOwner,'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
+  const cases={'flat-fallback-port':flatFallbackPort,'bookmark-memory-owner':bookmarkMemoryOwner,'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }
