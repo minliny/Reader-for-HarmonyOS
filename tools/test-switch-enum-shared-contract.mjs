@@ -93,6 +93,80 @@ if (selectedCase === 'toggle-focus-availability') {
   newMixed.onAccessibilityFocus(true); mixedFrames.shift().onFrame(1000000);
   assert.equal(mixedKeyboard.length, 2, 'the original mixed-input intent survives an accessibility-only resumed phase');
   mixedOwner.aboutToDisappear();
+  const lateMixed = (phase, stop = 'ready', definition = toggleSource) => {
+    const frames = [], events = [], keyboard = [];
+    const p = switchControls({ toggleDefinition: definition,
+      accessibility: { sendAccessibilityEvent: async event => events.push(event) } });
+    const owner = p.mount(p.toggle, { inputIdentity: 'late-mixed-A', value: false, onToggle() {} });
+    owner.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+      getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
+      getFocusController: () => ({ requestFocus: id => keyboard.push(id) }) });
+    try {
+      const previous = nativeToggle(p, owner);
+      previous.onFocus(); previous.onAccessibilityFocus(true); previous.onChange(true);
+      p.properties.flush();
+      const current = nativeToggle(p, owner);
+      current.onAppear(); frames.shift().onFrame(1000000);
+      current.onFocus(); frames.shift().onFrame(1000000);
+      if (phase === 'keyboard-frame') current.onAccessibilityFocus(true);
+      owner.isBusy = true; p.properties.flush();
+      current.onBlur();
+      if (phase === 'keyboard-frame') frames.shift().onFrame(1000000);
+      else current.onAccessibilityFocus(true);
+      assert.equal(keyboard.length, 1, 'blocked final mixed phase cannot request keyboard focus');
+      if (stop === 'identity') p.update(owner, { inputIdentity: 'late-mixed-B' });
+      if (stop === 'background') { owner.appForeground = false; owner.onForegroundChanged(); }
+      if (stop === 'retired') owner.aboutToDisappear();
+      if (stop !== 'disabled') { owner.isBusy = false; p.properties.flush(); }
+      for (let step = 0; step < 3 && frames.length; step += 1) frames.shift().onFrame(1000000);
+      assert.equal(frames.length, 0, 'late mixed resumption is bounded');
+      assert.equal(keyboard.length, stop === 'ready' ? 2 : 1,
+        'current mixed keyboard intent survives busy after actual accessibility ACK');
+      assert.equal(events.length, 1, 'already acknowledged accessibility focus is not replayed');
+    } finally { owner.aboutToDisappear(); }
+  };
+  for (const phase of ['keyboard-frame', 'accessibility-ack']) {
+    for (const stop of ['ready', 'identity', 'background', 'retired', 'disabled']) lateMixed(phase, stop);
+  }
+  const lostLateKeyboard = toggleSource.replace('      this.pendingFocusRevision = revision;\n      this.restoringRevision = -1;',
+    '      return;');
+  assert.notEqual(lostLateKeyboard, toggleSource);
+  assert.throws(() => lateMixed('keyboard-frame', 'ready', lostLateKeyboard), /current mixed keyboard intent survives/);
+  const lostLateAck = toggleSource.replace('    this.continueKeyboardAfterAccessibility(this.inputIdentity, this.nativeRevision);', '');
+  assert.notEqual(lostLateAck, toggleSource);
+  assert.throws(() => lateMixed('accessibility-ack', 'ready', lostLateAck), /current mixed keyboard intent survives/);
+  for (const stop of ['ready', 'identity', 'background', 'retired', 'disabled']) {
+    const frames = [], events = [], keyboard = [];
+    let accept;
+    const accepted = new Promise(resolve => { accept = resolve; });
+    const p = switchControls({ accessibility: { sendAccessibilityEvent: event => {
+      events.push(event); return events.length === 1 ? accepted : Promise.resolve();
+    } } });
+    const owner = p.mount(p.toggle, { inputIdentity: 'settling-reader-A', value: false, onToggle() {} });
+    owner.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+      getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
+      getFocusController: () => ({ requestFocus: id => keyboard.push(id) }) });
+    try {
+      nativeToggle(p, owner).onAccessibilityFocus(true);
+      nativeToggle(p, owner).onChange(true); p.properties.flush();
+      const current = nativeToggle(p, owner);
+      current.onAppear(); frames.shift().onFrame(1000000); frames.shift().onFrame(1000000);
+      owner.isBusy = true; p.properties.flush();
+      accept();
+      for (let step = 0; step < 6; step += 1) await Promise.resolve();
+      assert.equal(owner.pendingAccessibilityFocusRevision, 1,
+        'unacknowledged current request settling while busy retains its reader intent');
+      if (stop === 'identity') p.update(owner, { inputIdentity: 'settling-reader-B' });
+      if (stop === 'background') { owner.appForeground = false; owner.onForegroundChanged(); }
+      if (stop === 'retired') owner.aboutToDisappear();
+      if (stop !== 'disabled') { owner.isBusy = false; p.properties.flush(); }
+      for (let step = 0; step < 3 && frames.length; step += 1) frames.shift().onFrame(1000000);
+      assert.equal(frames.length, 0);
+      assert.equal(events.length, stop === 'ready' ? 2 : 1, 'only current available reader intent resumes');
+      assert.deepEqual(keyboard, [], 'pure reader resumption does not acquire keyboard focus');
+      if (stop === 'ready') nativeToggle(p, owner).onAccessibilityFocus(true);
+    } finally { owner.aboutToDisappear(); }
+  }
   const lostAvailability = toggleSource.replace('this.restoreNativeFocus(this.inputIdentity, this.nativeRevision);',
     'return;');
   assert.notEqual(lostAvailability, toggleSource);
@@ -187,6 +261,15 @@ if (selectedCase === 'toggle-accessibility-ack') {
       mock.timers.tick(1000);
       await settle();
       assert.equal(events.length, shouldRetry ? 2 : 1, 'one retry is the complete bound');
+      if (stop === 'busy' || stop === 'disabled') {
+        p.update(owner, { actionEnabled: true, isBusy: false });
+        for (let step = 0; step < 3 && frames.length; step += 1) frames.shift().onFrame(1000000);
+        await settle();
+        assert.equal(events.length, 2, 'a retry blocked by temporary ' + stop + ' retains its current reader intent ' + JSON.stringify({ pending: owner.pendingAccessibilityFocusRevision, restoring: owner.restoringRevision, reader: owner.accessibilityFocusedRevision, busy: owner.isBusy, enabled: owner.actionEnabled }));
+        nativeToggle(p, owner).onAccessibilityFocus(true);
+        mock.timers.tick(1000); await settle();
+        assert.equal(events.length, 2, 'actual reader acknowledgement ends the resumed retry');
+      }
       assert.deepEqual(keyboard, [], 'reader-only continuation retains keyboard-unfocused state');
     } finally {
       owner?.aboutToDisappear();
@@ -196,7 +279,7 @@ if (selectedCase === 'toggle-accessibility-ack') {
   for (const stop of ['none', 'rejected', 'ack', 'moved', 'identity', 'disabled', 'busy', 'retired', 'background', 'new-revision']) {
     await exercise(stop);
   }
-  const oneShot = toggleSource.replace('if (!allowRetry ||', 'if (true || !allowRetry ||');
+  const oneShot = toggleSource.replace('if (!allowRetry) return;', 'return;');
   assert.notEqual(oneShot, toggleSource);
   await assert.rejects(exercise('none', oneShot), /only the unacknowledged current replacement retries/);
 }

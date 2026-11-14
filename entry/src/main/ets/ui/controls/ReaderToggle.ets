@@ -74,6 +74,7 @@ export struct ReaderToggle {
       }
       return;
     }
+    this.continueKeyboardAfterAccessibility(this.inputIdentity, this.nativeRevision);
     this.restoreNativeFocus(this.inputIdentity, this.nativeRevision);
   }
   private clearFocusContinuation(): void {
@@ -181,8 +182,13 @@ export struct ReaderToggle {
   }
 
   private sendAccessibilityFocus(identity: string, revision: number, allowRetry: boolean = true): void {
-    if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision ||
+    if (!this.appForeground || !this.mounted || identity !== this.inputIdentity || revision !== this.nativeRevision ||
       (this.accessibilityFocusedRevision !== revision - 1 && this.accessibilityFocusedRevision !== revision)) return;
+    if (!this.canAct(identity)) {
+      this.pendingAccessibilityFocusRevision = revision;
+      this.restoringRevision = -1;
+      return;
+    }
     try {
       const bundleName = this.getUIContext().getHostContext()?.applicationInfo.name;
       if (bundleName === undefined || bundleName.length === 0) return;
@@ -194,8 +200,14 @@ export struct ReaderToggle {
         }).catch((): void => { this.diagnosticFocus('accessibility-rejected', revision); }).finally((): void => {
           // Acceptance can precede the replacement's accessibility-tree update.
           // Keep one bounded retry until the actual native focus acknowledgement.
-          if (!allowRetry || !this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision ||
+          if (!this.appForeground || !this.mounted || identity !== this.inputIdentity || revision !== this.nativeRevision ||
             this.accessibilityFocusedRevision !== revision - 1) return;
+          if (!this.canAct(identity)) {
+            this.pendingAccessibilityFocusRevision = revision;
+            this.restoringRevision = -1;
+            return;
+          }
+          if (!allowRetry) return;
           this.clearAccessibilityFocusRetry();
           this.accessibilityFocusRetryTimer = setTimeout((): void => {
             this.accessibilityFocusRetryTimer = -1;
@@ -218,7 +230,12 @@ export struct ReaderToggle {
   }
 
   private restoreKeyboardFocus(identity: string, revision: number, attempt: number = 0): void {
-    if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
+    if (!this.appForeground || !this.mounted || identity !== this.inputIdentity || revision !== this.nativeRevision) return;
+    if (!this.canAct(identity)) {
+      this.pendingFocusRevision = revision;
+      this.restoringRevision = -1;
+      return;
+    }
     this.diagnosticFocus('keyboard-request', revision);
     try {
       this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity, revision));

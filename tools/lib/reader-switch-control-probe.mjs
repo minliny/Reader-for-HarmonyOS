@@ -86,7 +86,16 @@ export function switchControls({specs=switchSpecs(),toggleDefinition=toggleSourc
  const nodes=owner=>[...owner.nodes.values(),...[...owner.children.values()].flatMap(child=>child.nodes?nodes(child):[])];
  return {toggle,segment,row,dependencies,hooks,properties,nodes,choices,capsules,
   consumer(source,members,extra={},params={}){return createReaderBuilderProbe(source,members,{...dependencies,...extra},{...hooks,initialParams:params}).owner;},
-  mount(probe,params){Object.assign(probe.owner,params);probe.owner.aboutToAppear();probe.owner.initialRender();return probe.owner;},
+  mount(probe, params) {
+    const owner = probe.owner;
+    Object.assign(owner, params);
+    const initialProps = Object.fromEntries(Object.keys(owner).filter(key => key.startsWith('__'))
+      .map(key => [key.slice(2), owner[key.slice(2)]]));
+    owner.updateStateVars(initialProps);
+    owner.aboutToAppear();
+    owner.initialRender();
+    return owner;
+  },
   update(owner,params){const current=Object.fromEntries(Object.keys(owner).filter(k=>k.startsWith('__')).map(k=>[k.slice(2),owner[k.slice(2)]]));owner.updateStateVars({...current,...params});properties.flush();},
  };
 }
