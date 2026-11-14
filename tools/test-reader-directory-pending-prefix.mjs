@@ -6,12 +6,14 @@ import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-pro
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
+import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (error.code === 'ERR_MODULE_NOT_FOUND' && specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) return next(specifier + '.ts', context);
   throw error;
 } } });
 const selected = selectContractCases({
   'pending-prefix': { description: 'Actual SDK directory first-row and readonly actors without embedded pending recovery, global write admission and state-driven floating recovery yield', resources: [] },
+  'flat-row-updates': { description: 'Actual flat-list SDK key generator changes for bookmark/download values while unrelated rows retain keys; real chapter actor dispatch follows current row values. Native engine remains separately verified.', resources: [] },
 });
 const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
 const ui = name => read('features/reading/ui/' + name + '.ets');
@@ -50,7 +52,7 @@ function listFixture(source = contentSource, short = false, tab = 'directory', p
     }
   }; } });
   const owner = sdk.consumer(source, ['flatList', 'headerCount', 'prefixHeight', 'onPrefixArea', 'currentContent',
-    'currentInputEnabled', 'bookmarkWriteEnabled', 'queuePosition'], {
+    'currentInputEnabled', 'bookmarkWriteEnabled', 'queuePosition', 'displaySnapshot', 'displayedFacts'], {
     ...classes, readerPageAreaLength: Number, LazyForEach, ListItem, ReaderBookmarkRow: sdk.deps.ReaderBookmarkRow, ScrollAlign: { CENTER: 'center' },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
   });
@@ -186,8 +188,9 @@ function floatingFixture(source) {
   sdk.deps.ReaderDirectoryRecoverySurface = createReaderBuilderProbe(recoverySource, boundedMembers(recoverySource),
     { ...sdk.deps, EMPTY_READING_DIRECTORY_RECOVERY }, sdk.hooks).Component;
   const owner = sdk.consumer(source, ['controlSession', 'latestControlVisualSession', 'onControlSessionChanged',
-    'controlVisible', 'controlMotionSession', 'controlMotionVisible', 'controlPage', 'readerRecoveryInputCurrent',
-    'readerRecoveryContent', 'hasReaderRecoveryContent', 'bookmarkRecoveryIdentity', 'reconcileBookmarkRecovery'],
+    'controlVisible', 'controlMotionSession', 'controlMotionVisible', 'controlPage', 'readerRecoveryInputCurrent', 'readerRecoveryRequestCurrent',
+    'readerRecoveryContent', 'readerRecoveryItems', 'readerBookmarkRecoveryContent', 'readerBookmarkPending', 'hasReaderPendingGroup',
+    'hasReaderRecoveryContent', 'bookmarkRecoveryIdentity', 'reconcileBookmarkRecovery'],
     { ...state, ...host, EMPTY_READING_DIRECTORY_RECOVERY });
   const empty = { visible: false, canRetry: false, generation: 0, message: '' };
   Object.assign(owner, { mounted: true, exitRequested: false, lifecycleToken: 1, sourceId: 'local', bookId: 'book-a',
@@ -195,6 +198,7 @@ function floatingFixture(source) {
     ttsConfigurationRecovery: empty, replaceRecovery: empty, bookmarkRecovery: recovery,
     viewportWidth: 366, readerWindowMetricsRevision: 0, controlLayout: () => ({ topBarWidth: 334 }),
     readerRecoveryViewportHeight: () => 180, readerRecoveryTop: () => 100, readerRecoveryOverlayId: () => 'recovery-test',
+    readerRecoveryRequested: true, readerRecoveryRequestIdentity: 'recovery-test',
     isSessionActive: () => true, isControlInputEnabled: () => true,
     admitSessionControlClosing() {}, applyWindowPolicyForChromeOwner() {}, suspendAdjacentMeasurement() {},
     prepareControlPage() {}, controlModuleVisitRevision: 0, onReconcileBookmarks: (generation, presentation) => calls.push([generation, presentation]),
@@ -240,7 +244,80 @@ function assertGestureAdmission() {
   assert.equal(owner.canStartReaderBookmarkGesture(), false); owner.toggleCurrentPageBookmark();
   assert.deepEqual(calls, ['unavailable']); assert.equal(owner.bookmarkMutationGeneration, 7); assert.equal(owner.bookmarkPendingTarget, '');
 }
+function assertFlatRowUpdates(source) {
+  const sdk = boundedSurfaceSdk();
+  sdk.hooks.childSources.ReaderBookmarkRow = ui('ReaderBookmarkRow');
+  sdk.deps.ReaderBookmarkRow = ChildPort;
+  const classes = pureModuleProbe(source.slice(source.indexOf('class ControlDirectoryDataSource'), source.indexOf('/** Control-only')),
+    'DirectoryListPrelude.ets', { FrameCallback: class {} }, ['ControlDirectoryDataSource', 'ControlDirectoryFrame']);
+  const data = new classes.ControlDirectoryDataSource();
+  let nativePort;
+  const LazyForEach = { create(_id, _owner, currentData, generate, key) {
+    nativePort = { data: currentData, generate, key };
+  }, pop() {} };
+  let materializing = false;
+  let itemId = 100000;
+  const ListItem = new Proxy({}, { get(_target, member) { return (...args) => {
+    if (member !== 'create' || typeof args[0] !== 'function' || materializing) return;
+    materializing = true;
+    try { args[0](itemId++, true); } finally { materializing = false; }
+  }; } });
+  const owner = sdk.consumer(source, ['flatList'], { ...classes, LazyForEach, ListItem, ReaderBookmarkRow: ChildPort,
+    ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} } });
+  const Chapter = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets', import.meta.url),
+    'ReaderDirectoryChapterRow', ['marker', 'bookmarkActionEnabled', 'downloadActionEnabled'], marker);
+  let currentActor;
+  const actions = [];
+  Object.assign(owner, { dataSource: data, scroller: {}, shortContent: false, availableWidth: 286,
+    headerCount: () => 0, rowHeight: () => 40, rowPadding: () => 10, currentInputEnabled: () => true,
+    chapterRow(entry) {
+      currentActor = Object.assign(new Chapter(), { entry, bookmarkActionsEnabled: true,
+        chapterStartBookmarkCreationEnabled: true, chapterDownloadEnabled: true,
+        onDeleteBookmarks: times => actions.push(['delete', times]),
+        onCreateChapterStartBookmark: request => actions.push(['create', request.chapterIndex]) });
+    } });
+  let entries = [chapter([mark]), { ...chapter([]), index: 1, title: 'Chapter 1' }];
+  const rows = () => model.readerControlDirectorySnapshot(entries, 'directory', '', true, 0).rows;
+  data.replace(rows());
+  owner.flatList();
+  assert.equal(nativePort.data, data, 'SDK LazyForEach receives the actual current data source');
+  const firstKey = nativePort.key(data.getData(0));
+  const otherKey = nativePort.key(data.getData(1));
+  nativePort.generate(data.getData(0), 0);
+  currentActor.marker();
+  assert.deepEqual(actions, [['delete', [7]]]);
+  const changes = [];
+  data.registerDataChangeListener({ onDataReloaded() { assert.fail('value-only update cannot reload the entire list'); },
+    onDataChange(index) { changes.push(index); } });
+  entries = [{ ...entries[0], bookmarks: [] }, entries[1]];
+  data.replace(rows());
+  assert.deepEqual(changes, [0]);
+  const emptyKey = nativePort.key(data.getData(0));
+  assert.notEqual(emptyKey, firstKey, 'actual SDK key must replace the deleted bookmark row');
+  assert.equal(nativePort.key(data.getData(1)), otherKey, 'unaffected row retains its native key');
+  nativePort.generate(data.getData(0), 0);
+  currentActor.marker();
+  assert.deepEqual(actions, [['delete', [7]], ['create', 0]], 'real actor reads the replacement entry');
+  entries = [{ ...entries[0], downloadState: 'queued' }, entries[1]];
+  data.replace(rows());
+  assert.notEqual(nativePort.key(data.getData(0)), emptyKey, 'download status also invalidates its native row');
+  nativePort.generate(data.getData(0), 0);
+  assert.equal(currentActor.downloadActionEnabled(), false, 'queued download loses its current action admission');
+  const unchanged = changes.length;
+  data.replace(rows());
+  assert.equal(changes.length, unchanged, 'equal value projection sends no native update');
+}
+
 for (const id of selected) {
+  if (id === 'flat-row-updates') {
+    assertFlatRowUpdates(contentSource);
+    const stale = contentSource.replace('`${row.key}:${JSON.stringify(row)}`', 'row.key');
+    assert.notEqual(stale, contentSource);
+    assert.throws(() => assertFlatRowUpdates(stale), /actual SDK key must replace/);
+    console.log('PASS flat-row-updates: actual SDK keys, real delete/create actors, download admission and unchanged-row retention; no native execution');
+    recordContractCasePass(id);
+    continue;
+  }
   assertNoPendingObstruction(contentSource);
   assertRowActors(); await assertTreeActors(); assertParentLivePorts(); assertAllCallerBindings();
   assertReactiveYield(ui('LocalReadingExperience')); assertGestureAdmission();

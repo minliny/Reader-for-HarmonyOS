@@ -841,7 +841,10 @@ export struct ReaderControlDirectoryContent {
               } });
           }
         }.width('100%').height(this.rowHeight());
-      }, (row: ReaderControlDirectoryRow): string => row.key);
+      // LazyForEach keeps an existing plain-object child when its key is
+      // unchanged, including after onDataChange. Include the admitted value so
+      // bookmark and download updates replace only their affected row.
+      }, (row: ReaderControlDirectoryRow): string => `${row.key}:${JSON.stringify(row)}`);
       }
     }.width('100%').height('100%').padding({ left: this.rowPadding(), right: this.rowPadding() })
       .scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring).cachedCount(4)

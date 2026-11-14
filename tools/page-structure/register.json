@@ -2622,7 +2622,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+          "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
           "symbol": "build"
         },
         {
@@ -4060,7 +4060,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -5652,7 +5652,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -7207,7 +7207,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -7871,7 +7871,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b"
+              "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747"
             },
             "layers": {
               "route": {
@@ -8795,7 +8795,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -10239,7 +10239,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -11570,7 +11570,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -13077,7 +13077,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -14476,7 +14476,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -15912,7 +15912,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -17243,7 +17243,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -17914,7 +17914,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b"
+              "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747"
             },
             "layers": {
               "route": {
@@ -18849,7 +18849,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
@@ -19528,7 +19528,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b"
+              "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747"
             },
             "layers": {
               "route": {
@@ -20458,7 +20458,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b07e73071de5584c804d9468157b383c5c988cdcbd972ff8165fe05f41a24a0b",
+                "sha256": "a831040e564b85ee8430e58b347738a59ae818773243766d5bee8abb7eb7e747",
                 "symbol": "build"
               },
               {
