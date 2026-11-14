@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"toggle-focus-buffer": {"description": "Explicit DEBUG buffered focus diagnostics perform no callback-time logging, bound the buffer and flush only through the actual warm-Want entry", "resources": []},"toggle-accessibility-ack": {"description": "Actual SDK Toggle retries an unacknowledged accessibility replacement once and retires the retry on focus, identity, foreground and operation changes", "resources": []},"toggle-native-focus-target": {"description": "Actual native target IDs bind the remount revision, old queued accessibility requests cannot address successors, logging defaults off", "resources": []},"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
+const definitions={"toggle-focus-availability": {"description": "Actual SDK availability watchers resume current pending keyboard and reader focus after a busy mount or blocked frame and reject retired owners", "resources": []},"toggle-focus-buffer": {"description": "Explicit DEBUG buffered focus diagnostics perform no callback-time logging, bound the buffer and flush only through the actual warm-Want entry", "resources": []},"toggle-accessibility-ack": {"description": "Actual SDK Toggle retries an unacknowledged accessibility replacement once and retires the retry on focus, identity, foreground and operation changes", "resources": []},"toggle-native-focus-target": {"description": "Actual native target IDs bind the remount revision, old queued accessibility requests cannot address successors, logging defaults off", "resources": []},"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -21,6 +21,61 @@ const read=p=>readFileSync(new URL('../'+(liveSourcePaths.get(p)??p),import.meta
 const nativeToggle=(p,o)=>p.nodes(o).findLast(n=>n.type==='Toggle'&&n.onChange);
 const nativeChoice=(p,o)=>p.choices(o);
 let cases=0;
+if (selectedCase === 'toggle-focus-availability') {
+  const exercise = (phase, input, stop = 'ready', definition = toggleSource) => {
+    const frames = [], events = [], keyboard = [];
+    const p = switchControls({ toggleDefinition: definition,
+      accessibility: { sendAccessibilityEvent: async event => events.push(event) } });
+    const owner = p.mount(p.toggle, { inputIdentity: 'available-A', value: false, onToggle() {} });
+    owner.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+      getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
+      getFocusController: () => ({ requestFocus: id => keyboard.push(id) }) });
+    try {
+      const previous = nativeToggle(p, owner);
+      if (input === 'keyboard') previous.onFocus();
+      else previous.onAccessibilityFocus(true);
+      previous.onChange(true);
+      p.properties.flush();
+      const current = nativeToggle(p, owner);
+      if (phase !== 'mount') current.onAppear();
+      if (phase === 'accessibility-frame') frames.shift().onFrame(1000000);
+      owner.actionEnabled = false;
+      owner.isBusy = true;
+      p.properties.flush();
+      if (phase === 'mount') current.onAppear();
+      else frames.shift().onFrame(1000000);
+      assert.equal(frames.length, 0);
+      assert.deepEqual(events, []);
+      assert.deepEqual(keyboard, []);
+      if (stop === 'identity') p.update(owner, { inputIdentity: 'available-B' });
+      if (stop === 'background') { owner.appForeground = false; owner.onForegroundChanged(); }
+      if (stop === 'retired') owner.aboutToDisappear();
+      if (stop !== 'disabled') {
+        owner.actionEnabled = true;
+        owner.isBusy = false;
+        p.properties.flush();
+      }
+      for (let step = 0; step < 3 && frames.length > 0; step += 1) {
+        frames.shift().onFrame(1000000);
+        if (keyboard.length) nativeToggle(p, owner).onFocus();
+        if (events.length) nativeToggle(p, owner).onAccessibilityFocus(true);
+      }
+      assert.equal(frames.length, 0, 'resumption is bounded');
+      assert.equal(keyboard.length, stop === 'ready' && input === 'keyboard' ? 1 : 0);
+      assert.equal(events.length, stop === 'ready' && input === 'reader' ? 1 : 0, 'current reader focus resumes when availability returns');
+    } finally { owner.aboutToDisappear(); }
+  };
+  for (const input of ['keyboard', 'reader']) {
+    for (const phase of input === 'reader' ? ['mount', 'first-frame', 'accessibility-frame'] : ['mount', 'first-frame']) {
+      exercise(phase, input);
+    }
+  }
+  for (const stop of ['identity', 'background', 'retired', 'disabled']) exercise('mount', 'reader', stop);
+  const lostAvailability = toggleSource.replace('if (this.appForeground && this.canAct(this.inputIdentity)) this.restoreNativeFocus',
+    'if (false && this.appForeground && this.canAct(this.inputIdentity)) this.restoreNativeFocus');
+  assert.notEqual(lostAvailability, toggleSource);
+  assert.throws(() => exercise('mount', 'reader', 'ready', lostAvailability), /current reader focus resumes when availability returns/);
+}
 if (selectedCase === 'toggle-focus-buffer') {
   const buffer = [], diagnostics = [];
   for (const identity of ['buffer-A', 'buffer-B']) {

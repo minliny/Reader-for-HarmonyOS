@@ -43,8 +43,8 @@ export struct ReaderToggle {
   @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private appForeground: boolean = true;
   @Prop specId: ReaderToggleSpecId = 'standard-toggle';
   @Prop value: boolean = false;
-  @Prop actionEnabled: boolean = true;
-  @Prop isBusy: boolean = false;
+  @Prop @Watch('onAvailabilityChanged') actionEnabled: boolean = true;
+  @Prop @Watch('onAvailabilityChanged') isBusy: boolean = false;
   @Prop @Watch('clearFocusContinuation') inputIdentity: string = '';
   @Prop accessibilityLabel: string = '';
   @State private nativeRevision: number = 0;
@@ -65,6 +65,9 @@ export struct ReaderToggle {
   }
   private onForegroundChanged(): void {
     if (!this.appForeground) this.clearFocusContinuation();
+  }
+  private onAvailabilityChanged(): void {
+    if (this.appForeground && this.canAct(this.inputIdentity)) this.restoreNativeFocus(this.inputIdentity, this.nativeRevision);
   }
   private clearFocusContinuation(): void {
     this.clearAccessibilityFocusRetry();
@@ -128,13 +131,18 @@ export struct ReaderToggle {
     const keyboardFocused = this.pendingFocusRevision === revision;
     const accessibilityFocused = this.pendingAccessibilityFocusRevision === revision;
     if ((!keyboardFocused && !accessibilityFocused) || this.restoringRevision === revision) return;
+    if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
     this.restoringRevision = revision;
     this.pendingKeyboardAfterAccessibilityRevision = keyboardFocused && accessibilityFocused ? revision : -1;
     this.pendingFocusRevision = -1;
-    if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
     try {
       this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
-        if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
+        if (!this.appForeground || !this.mounted || identity !== this.inputIdentity || revision !== this.nativeRevision) return;
+        if (!this.canAct(identity)) {
+          this.pendingFocusRevision = keyboardFocused ? revision : -1;
+          this.restoringRevision = -1;
+          return;
+        }
         if (keyboardFocused) this.restoreKeyboardFocus(identity, revision);
         else this.restoreAccessibilityFocus(identity, revision);
       }));
@@ -147,8 +155,13 @@ export struct ReaderToggle {
     this.pendingAccessibilityFocusRevision = -1;
     try {
       this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
-        if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision ||
-          (this.accessibilityFocusedRevision !== revision - 1 && this.accessibilityFocusedRevision !== revision)) return;
+        if (!this.appForeground || !this.mounted || identity !== this.inputIdentity || revision !== this.nativeRevision) return;
+        if (!this.canAct(identity)) {
+          this.pendingAccessibilityFocusRevision = revision;
+          this.restoringRevision = -1;
+          return;
+        }
+        if (this.accessibilityFocusedRevision !== revision - 1 && this.accessibilityFocusedRevision !== revision) return;
         this.sendAccessibilityFocus(identity, revision);
       }));
     } catch (_detached) {}

@@ -1186,7 +1186,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
-          "sha256": "d3fea3d940783dfadd0e3f5508966cd118879899bf2910c1402fd1a33e1e3727"
+          "sha256": "182274edd9a3ce0301a337e3f79622f4c166d2c61ccfcd3806812a2ea8f4070a"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
