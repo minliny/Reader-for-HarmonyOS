@@ -1082,7 +1082,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
         },
         {
           "path": "AppScope/app.json5",
@@ -1186,7 +1186,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
-          "sha256": "3bd4b21feffa646572a7d315129af3a6dd872ea8ae1e9fb835bffc5eb2506020"
+          "sha256": "d3fea3d940783dfadd0e3f5508966cd118879899bf2910c1402fd1a33e1e3727"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
@@ -2831,7 +2831,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
         },
         {
           "path": "AppScope/app.json5",
@@ -4281,7 +4281,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -5879,7 +5879,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -7458,7 +7458,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -9058,7 +9058,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -10502,7 +10502,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -11833,7 +11833,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -13340,7 +13340,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -14739,7 +14739,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -16175,7 +16175,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -17506,7 +17506,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -19112,7 +19112,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -20721,7 +20721,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -21327,7 +21327,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
         },
         {
           "path": "AppScope/app.json5",
@@ -22718,7 +22718,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -24110,7 +24110,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -25502,7 +25502,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -26850,7 +26850,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -28198,7 +28198,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
               },
               {
                 "path": "AppScope/app.json5",
@@ -30551,7 +30551,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "58d411d96b52677d0523dbbc831a478c37f146b8b670297254c3442bb81e87dd"
+          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
         },
         {
           "path": "AppScope/app.json5",

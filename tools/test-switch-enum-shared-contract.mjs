@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"toggle-accessibility-ack": {"description": "Actual SDK Toggle retries an unacknowledged accessibility replacement once and retires the retry on focus, identity, foreground and operation changes", "resources": []},"toggle-native-focus-target": {"description": "Actual native target IDs bind the remount revision, old queued accessibility requests cannot address successors, logging defaults off", "resources": []},"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
+const definitions={"toggle-focus-buffer": {"description": "Explicit DEBUG buffered focus diagnostics perform no callback-time logging, bound the buffer and flush only through the actual warm-Want entry", "resources": []},"toggle-accessibility-ack": {"description": "Actual SDK Toggle retries an unacknowledged accessibility replacement once and retires the retry on focus, identity, foreground and operation changes", "resources": []},"toggle-native-focus-target": {"description": "Actual native target IDs bind the remount revision, old queued accessibility requests cannot address successors, logging defaults off", "resources": []},"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -21,6 +21,48 @@ const read=p=>readFileSync(new URL('../'+(liveSourcePaths.get(p)??p),import.meta
 const nativeToggle=(p,o)=>p.nodes(o).findLast(n=>n.type==='Toggle'&&n.onChange);
 const nativeChoice=(p,o)=>p.choices(o);
 let cases=0;
+if (selectedCase === 'toggle-focus-buffer') {
+  const buffer = [], diagnostics = [];
+  for (const identity of ['buffer-A', 'buffer-B']) {
+    const p = switchControls({ debug: true, focusTrace: 'buffered', focusBuffer: buffer, diagnostics });
+    const owner = p.mount(p.toggle, { inputIdentity: identity, accessibilityLabel: identity });
+    for (let index = 0; index < 45; index += 1) owner.diagnosticFocus('buffer-' + index, 0);
+    assert.equal(owner.diagnosticFocusEvents, 40);
+    owner.aboutToDisappear();
+  }
+  assert.equal(buffer.length, 64);
+  assert.deepEqual(diagnostics, [], 'buffered callbacks perform no hilog IO');
+  assert.equal(JSON.parse(buffer.at(-1)).stage, 'buffer-39', 'each owner has the original forty-event bound');
+  const entry = readFileSync(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
+  const { ts, options } = (await import('./lib/ets-compiler-runtime.mjs')).installedEtsCompiler();
+  const tree = ts.createSourceFile('EntryAbility.ets', entry, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const declaration = tree.statements.find(node => node.name?.getText(tree) === 'EntryAbility');
+  const method = declaration.members.find(node => node.name?.getText(tree) === 'onNewWant').getText(tree);
+  const { stripTypeScriptTypes } = await import('node:module');
+  for (const [debug, mode] of [[false, 'debug'], [true, 'release'], [true, 'debug']]) {
+    const storage = new Map([['readerToggleFocusBuffer', [...buffer]]]), logs = [], received = [];
+    const Owner = new Function('DEBUG', 'BUILD_MODE_NAME', 'AppStorage', 'hilog', 'DOMAIN', 'ReaderSystemFileOpenHost',
+      stripTypeScriptTypes('class Owner {' + method + '}') + ';return Owner;')(
+      debug, mode, { get: key => storage.get(key), setOrCreate: (key, value) => storage.set(key, value) },
+      { info: (...args) => logs.push(args) }, 0x5244, { receive: want => received.push(want) });
+    const owner = new Owner();
+    owner.frameworkCapture = { start() {} };
+    owner.context = { cacheDir: '/finite-cache' };
+    const want = { parameters: { readerToggleFocusTrace: 'flush' } };
+    owner.onNewWant(want, {});
+    assert.deepEqual(received, [want], 'normal warm-Want reception remains active');
+    assert.equal(logs.length, debug && mode === 'debug' ? 64 : 0);
+    if (debug && mode === 'debug') {
+      assert.equal(storage.get('readerToggleFocusTrace'), false);
+      assert.deepEqual(storage.get('readerToggleFocusBuffer'), []);
+      owner.onNewWant({ parameters: { readerToggleFocusTrace: 'buffered' } }, {});
+      assert.equal(storage.get('readerToggleFocusTrace'), 'buffered');
+      assert.deepEqual(storage.get('readerToggleFocusBuffer'), []);
+      owner.onNewWant({ parameters: { readerToggleFocusTrace: false } }, {});
+      assert.equal(storage.get('readerToggleFocusTrace'), false);
+    }
+  }
+}
 if (selectedCase === 'toggle-accessibility-ack') {
   const { mock } = await import('node:test');
   const settle = async () => {

@@ -198,8 +198,19 @@ export default class EntryAbility extends UIAbility {
     if (this.coreCopyOnly) return;
     this.frameworkCapture.start(DEBUG, BUILD_MODE_NAME, want.parameters?.readerFrameworkCaptureSeconds, this.context.cacheDir);
     const focusTrace = want.parameters?.readerToggleFocusTrace;
-    if (DEBUG && BUILD_MODE_NAME === 'debug' && typeof focusTrace === 'boolean') {
-      AppStorage.setOrCreate('readerToggleFocusTrace', focusTrace);
+    if (DEBUG && BUILD_MODE_NAME === 'debug') {
+      if (typeof focusTrace === 'boolean') AppStorage.setOrCreate('readerToggleFocusTrace', focusTrace);
+      else if (focusTrace === 'buffered') {
+        AppStorage.setOrCreate<string[]>('readerToggleFocusBuffer', []);
+        AppStorage.setOrCreate('readerToggleFocusTrace', 'buffered');
+      } else if (focusTrace === 'flush') {
+        AppStorage.setOrCreate('readerToggleFocusTrace', false);
+        const events = AppStorage.get<string[]>('readerToggleFocusBuffer') ?? [];
+        AppStorage.setOrCreate<string[]>('readerToggleFocusBuffer', []);
+        events.forEach((event: string): void => {
+          hilog.info(DOMAIN, 'ReaderToggleFocus', 'READER_TOGGLE_FOCUS %{public}s', event);
+        });
+      }
     }
     // Never reload the window or route directly; Index saves the active
     // reading session before presenting a successfully imported file.

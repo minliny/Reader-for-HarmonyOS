@@ -211,14 +211,21 @@ export struct ReaderToggle {
   }
 
   private diagnosticFocus(stage: string, revision: number, focused: boolean = false): void {
-    if (!DEBUG || AppStorage.get<boolean>('readerToggleFocusTrace') !== true || this.diagnosticFocusEvents >= 40) return;
+    const mode = DEBUG ? AppStorage.get<boolean | string>('readerToggleFocusTrace') : false;
+    if ((mode !== true && mode !== 'buffered') || this.diagnosticFocusEvents >= 40) return;
     this.diagnosticFocusEvents += 1;
-    hilog.info(0x5244, 'ReaderToggleFocus', 'READER_TOGGLE_FOCUS %{public}s', JSON.stringify({
-      stage, revision, focused, label: this.accessibilityLabel, current: this.nativeRevision, keyboard: this.focusedRevision,
+    const event = JSON.stringify({
+      atMs: Date.now(), stage, revision, focused, label: this.accessibilityLabel, current: this.nativeRevision, keyboard: this.focusedRevision,
       accessibility: this.accessibilityFocusedRevision, pendingKeyboard: this.pendingFocusRevision,
       pendingAccessibility: this.pendingAccessibilityFocusRevision,
       pendingAfterAccessibility: this.pendingKeyboardAfterAccessibilityRevision, foreground: this.appForeground,
-    }));
+      enabled: this.actionEnabled, busy: this.isBusy,
+    });
+    if (mode === 'buffered') {
+      const events = AppStorage.get<string[]>('readerToggleFocusBuffer') ?? [];
+      events.push(event);
+      AppStorage.setOrCreate('readerToggleFocusBuffer', events.slice(-64));
+    } else hilog.info(0x5244, 'ReaderToggleFocus', 'READER_TOGGLE_FOCUS %{public}s', event);
   }
 
   private toggle(identity: string, revision: number, next: boolean): void {
