@@ -1,0 +1,226 @@
+# Reader HarmonyOS UI 框架实施方案
+
+## 当前执行进度
+
+2026 年 11 月 14 日，用户已授权按本方案全量实施，目标已建立，当前状态为 IMPLEMENTATION_IN_PROGRESS。实施位于原隔离检出，初始 HEAD 为 10a5d58d。用户随后明确要求先完成代码侧可执行范围，再进行 VM 验证。当前 HDC 会话已释放，后继工作按这一顺序推进。
+
+UIF-01 至 UIF-05 的生产修改和准确局部回归已完成。StandardPage、SourceManagement 和 BookshelfMultiSelect 分开判断头尾测量依赖，当前原生宿主具有有限补采入口。九处 InlineSelect 以及详情、阅读内目录两条来源已传递减少动态效果偏好。分组恢复覆盖槽支付当前可用高度，短反馈沿原前景宿主及 generation 发出不打断宣告。控件回归采用最终属性、状态更新、真实动作及对应负例。移除确认已补窗口 revision 依赖，实际 SDK 更新路径可重算纯高度变化后的 Scroll 容量。
+
+代码侧续查补齐了详情、漫画目录和保留 Discover 的同型测量问题。详情按当前实体、宽度、字体就绪和动作文字分别续接头尾事实。漫画目录保留纯高度及 IME 变化下的有效页头和页脚，为工具和页脚绑定当前原生盒的有限补采入口。旧宽度、字体、实体及卸载后的回执继续受拒旧条件约束。新增 direct-page-same-area 回归包含真实详情几何、正常 SDK 漫画 producer 和有限矩形读取。
+
+目录查询框已有 50vp 工具栏，扣除上下各 3vp 后可以支付 44vp 响应。当前源码保留 32vp 外框和 Control 30vp、Standalone 32vp 的输入配方，增加透明 44vp 承载槽及居中的 TextInput 响应。漫画原有 44vp 输入沿当前配方。短窗口 List 前缀显式支付相同高度。directory-query-targets 覆盖 48 个正常装配上下文，目录预算与动作回归完成 42 个样本，Source 共享输入的 200 个 SDK 样本通过。
+
+Toggle 的原生条件风险已经定位和修复。首个候选 26e7cc19b7ba 复现了键盘焦点外移。同节点后继 cf117fd3f679 的准确键盘采样没有得到值更新，该处理方向已撤回。当前受控重挂和一次有界帧后焦点恢复已在候选 af920500e5af 上完成现有 VM 的两次 Enter 激活。每次后继原生 Toggle 均保持焦点，值依次 false、true、false，原偏好已恢复。实际读屏焦点及其余调用方沿各自证据范围开放。[准确键盘记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/toggle-focus-native-af920.json)
+
+当前代码侧库存为 635 个生产 ETS/TS 文件，解析诊断为零，14 个 StandardPage 和 11 个 Scaffold 构造点均已逐项登记框架消费处置。20 个路由值及 4 个 manifest 根沿原准入条件保留。正式 control 登记更新到 revision 24，21 项页面登记的输入与引用已同步。Source 的两个重复动作上下文按现有生产入口和配方完成对账。引用检查通过，页面检查保留 37 项诊断，其中 E2 21 项 FAIL、E3 5 项 FAIL、G-03 8 项 NOT_RUN、SCOPE 3 项 NOT_RUN。[代码复核与数值预算](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-first-review.json)
+
+目录 32vp 工具横向达到四个独立 44vp 响应时需要额外 48vp 空间，31/36vp tab 和 32/40vp 章节行也有实际槽位不足。TTS Quick 的当前四个独立响应宽度为 39、36、32.5、37.5vp。相关数值已记录到原账本。方案第 5 批规定布局调整须经确认，当前已提交具体布局选择供用户确认。
+
+上述后续代码修复尚待完整工程编译及后继候选验证。现有已安装候选 af920500e5af 继续保留其原范围证据。完整读屏可听、长分组恢复的原生动作可达、全部页面 E2/E3、21 项整页视觉及 G05/G10 按原关闭条件保留。用户已明确沿现有资料推进，新增视觉原稿和历史坏态同期输入的缺口沿原条件保存。
+
+每次失败、夹具修正、准确测试结果、签装 manifest、保数据证明及原生取证均追加到原问题账本 implementation 字段。当前全量目标继续执行。后文各批次保留授权前方案，实际进度以该字段及本节为准。
+
+日期为 2026 年 11 月 14 日。实施输入为 HarmonyOS `10a5d58d0231f48a4c4fceff22c733b3b3cb1fe2`、Core `c078126376294faa3a611690fbe48e79f0f86cc4` 和 Reader-UI `f206f0db011ae82c5a6e4059769fa3688b9cfcd5`。
+
+本方案承接[全应用审计报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/docs/architecture/ui-framework-audit-20261114.md)及[五项问题账本](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ledger.json)。当前状态为 PLAN_ONLY。各批次列出的源码修改、回归增补、构建和原生验证均为后续实施工作。
+
+## 实施目标与交付边界
+
+第一组交付关闭 UIF-01 至 UIF-05 的应用侧原因，并提交对应真实方法或正常 SDK 装配回归。第二组交付回答 Toggle 焦点与移除确认容量的两个条件风险。第三组交付逐页补齐 E2、E3、视觉来源和原生生命周期证据。历史 Tab 坏态归因沿 G10 单独保留同期取证要求。
+
+每个问题在原账本中追加生产修改、输入指纹、准确测试项、结果、剩余问题和原生证据。源码修复、方法回归、编译签名、安装、原生交互、视觉批准分别记录。实施后报告应能直接回答哪些问题已经在代码侧关闭，哪些证据已复用，哪些原生结论仍开放。
+
+## 批次与依赖
+
+| 批次 | 主要工作 | 依赖与产出 | 完成条件 |
+| --- | --- | --- | --- |
+| 0 | 核对当前 checkout、问题与旧证据 | 输入指纹、受影响调用点、逐项验证选择 | 相关差异有归属，复用与待跑范围已写入原账本 |
+| 1 | UIF-01 测量续接和页头避让 | 共享页、原生测量宿主及同型直接 owner | 同盒换代可收敛，真实失配旧回调继续无效 |
+| 2 | UIF-04 判据修正及 UIF-02 偏好接线 | 原生属性回归、九处下拉及两条目录来源 | 正常入口继承偏好，行为断言和负例具有对应结果 |
+| 3 | UIF-05 分组恢复容量及 UIF-03 短反馈宣告 | 分组覆盖层和共享反馈的薄平台适配 | 长内容与动作可达，当前前景反馈按代次宣告 |
+| 4 | 两个条件风险与跨宿主组合复核 | 代码定位、必要时的准确原生问题 | 各风险得到已排除或可复现归因及相应处置 |
+| 5 | 受影响原生行为和全应用剩余项关闭 | 固定候选、最小交付、逐页证据 | 本次五项逐层记账，E2/E3、视觉、G05/G10 各自更新 |
+
+批次 2 和 3 的问题在技术上可以独立实施。一次共享修改影响多个问题时合并采样并保存各自断言。UIF-04 的测试调整随所覆盖控件提交，避免无行为依据的计数规则继续充当生产结论。各批次按问题提交，便于审查和局部回退。
+
+## 批次 0　固定输入与复用依据
+
+1. 在当前隔离检出核对 HEAD、未提交差异和实际正在工作的 owner。以本报告指纹作比较起点，保留并行 WIP。
+2. 对五项问题重新核对相关输入有无漂移。仅在相关生产方法或依赖改变时更新该项来源，历史见证保留原结果与原指纹。
+3. 复用最近交付中已经覆盖且本次未影响的普通 Back、目录往返、表面边框、短内容滚动原点等准确场景。后续修改改变其生产依赖时，再选择对应的局部回归。
+4. 在原账本为每个拟运行项补充唯一问题、旧证据不足之处、实际入口、隐式调用、输入、时间上限及停止条件。缺少目标场景的旧 PASS 只能沿其已证明范围使用。
+5. 记录本次实施耗时的代码、方法、构建、签装、设备查询和等待部分。后续候选具备复用条件时沿用已有产物与缓存。
+
+本批次使用现有[源码清单](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-inventory.json)、[覆盖快照](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/full-report-scope.json)和[最近交付记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/control-module-height-20261113/goal-completion-audit/current-delivery-23dc.json)。
+
+## 批次 1　修复测量换代后的续接
+
+### 修改范围
+
+| 文件或 owner | 修改内容 |
+| --- | --- |
+| ReaderStandardPage | 区分页面几何变化与实际头尾测量依赖变化，明确同盒事实的续接资格 |
+| ReaderFixedHeaderHost | 对确需新代测量的情况提供当前挂载盒的有限补采入口，并保留原生 Area 后续更新 |
+| ReaderPageScaffold | 必要时传递测量请求与当前挂载身份，统一 header/footer 回执 |
+| ReaderMeasurements | 沿用有限高度、单调代次及拒旧语义，只有共享 owner 确实需要时才扩充最小接口 |
+| SourceManagementPage | 核对并修正其独立的 generation、fallback 和 Area-only 续接链 |
+| 其余直接 Scaffold owner | 逐个检查失效条件、测量产生入口和 fallback，按实际同型证据纳入修复 |
+
+源码入口见[StandardPage](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/layout/ReaderStandardPage.ets:55)、[FixedHeaderHost](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/layout/ReaderFixedHeaderHost.ets:15)、[Scaffold](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/layout/ReaderPageScaffold.ets)、[测量存储](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/layout/ReaderMeasurements.ts)和[书源独立 owner](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/source/ui/SourceManagementPage.ets:1320)。14 个 StandardPage 构造点和 11 个 Scaffold 构造点已保存在 AST 清单。
+
+### 采用的处理方向
+
+页面 geometry revision 与头尾 slot 的测量资格分别判断。仅窗口高度、键盘或无关环境字段变化，且页头的宽度、字体、内容配方和挂载身份继续有效时，保留已知页头高度并据此重算正文。真正改变测量依赖时生成新请求，并由当前原生宿主补采当前事实。
+
+补采使用现有 SDK 节点或矩形读取能力及有限 post-frame 调度。实现时先核对项目已有 SurfaceRectMeasurement 适配是否能直接复用。相同高度也能按当前有效请求交回，避免把数值 epsilon 去重当成代次续接。每次读取捕获宿主、请求和挂载身份，采纳前再次核验。原生查询失败、零尺寸或节点退休均有明确退出结果，后续真实 Area 仍可更新。
+
+Header 和 footer 分别判断测量依赖。rail 与底栏互换、footer 条件消失、真正宽度改变、字体就绪以及实体重挂均需要独立覆盖。对 header 合法保留事实时，不能连带复活已退休 footer。直接 owner 的修复沿用其自身配方和滚动职责。
+
+### 最小回归与负例
+
+在现有 `test-ui-window-layout-closure.mjs` 中增加同盒续接场景。建议 case 名为 `standard-page-same-area`，该名称当前尚未注册。
+
+- 用真实 StandardPage 方法和完整几何输入建立 93vp 页头。保持页头原生盒和宽度，改变 viewport 高度、IME 及环境 revision，验证 startInset 持续按有效 93vp 分配或由有限补采恢复。
+- 通过正常 build 装配回调，验证新请求即使得到相同高度也可以采纳。测试显式不给 Area 事件，不能由夹具补发一个生产端没有义务产生的事件。
+- 改变宽度、字号、字体就绪、配方或挂载身份，注入上一请求的迟到回执，验证其无法修改当前几何。
+- 覆盖 footer 消失、rail 往返和卸载重挂，验证 inset 只由当前存在的 owner 支付。
+- 对 SourceManagement 的独立生命周期复用其实际方法和当前 producer，验证同型原因已经消除。
+
+已有 `standard-page-generation` 的拒旧和手动新回执收敛断言继续保留。实现后按实际依赖调整其期待值。方法级证据充分后，剩余原生问题为窗口纯高度或 IME 变化时是否会出现中间避让错误。最小原生场景选一个实际可进入且页头实测高于 58vp 的页面，记录变更前后页头与正文原点，保留同窗同帧身份。
+
+## 批次 2　修正控件判据并补齐动态效果偏好
+
+### UIF-04 的测试修改
+
+`assertSingleNativeModifier` 的计数结果只能解释局部装配约定。现有 Button 的合并 modifier 实现可以继续使用。回归断言直接检查最终 native carrier、语义、样式和业务动作，状态更新后再次执行正常 SDK 更新路径。[现有测试](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-framework-confluence-controls.mjs:25)
+
+具体断言覆盖实际宽高或 minimum、选择角色与选中值、enabled、按压和禁用外观、真实 onClick，以及 disabled/retired 后回调拒绝。负例移除一个必要属性、破坏某个状态更新或动作资格，使相应行为断言失败。两个合法 modifier 顺序组合应按平台规则得到合并及后写覆盖结果，测试记录该边界。
+
+现有 `source-native-targets` 和 `source-group-budget` 为点名入口。需要补充的状态断言并入该文件，必要的新 case 先注册准确含义。华为对多个 modifier 的顺序应用已有平台约定。[官方文档](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/arkts-user-defined-extension-attributemodifier/)
+
+### UIF-02 的实际接线
+
+优先沿现有 Prop 传递单一全局偏好，实际修改位置如下。
+
+| 来源 | 完整 UI 装配链 | 修改 |
+| --- | --- | --- |
+| 下载 | Index → SharedDownloadPage → 六个 ReaderInlineSelect | 消费页面已有 reduceMotion Prop |
+| 书源工具 | Index → SourceJourneySurface.toolsPage → SourceToolsPage.debugCard → 两个 ReaderInlineSelect | toolsPage 传递，Tools Page 接收并向两处传递 |
+| 阅读内目录 | 已有 reduceMotion 的 ReaderShell → ReaderDirectoryDestination → ReaderFullDirectory → ReaderDirectoryRules → ReaderInlineSelect | 补齐四层真实 UI 绑定 |
+| 详情目录 | Index.externalDirectory → DetailDirectoryScene → ReaderDirectoryDestination → 后续相同链 | 根使用 settings snapshot，Scene 与 Destination 接收并传递 |
+
+链路见[下载](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets:784)、[书源装配](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/source/ui/SourceJourneySurface.ets:105)、[Tools](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/source/ui/SourceToolsPage.ets:792)、[阅读根](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderShell.ets:335)、[详情入口](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1093)、[详情 Scene](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/DetailDirectoryScene.ets:24)、[Destination](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderDirectoryDestination.ets:139)、[FullDirectory](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets:390)和[规则选择器](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets:293)。
+
+ReaderSourceJourney 等业务导航类继续只处理原导航职责。偏好的持有者沿用 SettingsPresentation。菜单生命周期中途改为减少动态效果时，核对 SelectPanel 当前 Watch 和动画完成逻辑，按现有 motion policy 完成当前状态及回调退休。
+
+### 回归与关闭
+
+修正 `inlineSelectSdk.choose` 的无条件 `inline.reduceMotion=true`。由调用方显式选择偏好，测试分别检查 true/false。需要即时完成的有限方法场景可以显式提供对应输入，并另设正常调用方传播场景。[SDK helper](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/lib/reader-inline-select-sdk-probe.mjs:41)
+
+在现有 secondary layout 的 `select-host`、`actions-tools-rules` 和 `download-controls` 场景中复用真实装配，按实际依赖补充正常入口。建议增加 `select-reduce-motion` case，该名称当前尚未注册。覆盖九个构造点，目录包含阅读和详情两来源，检查当前 panel 的 reduceMotion 和实际动画参数。true 时遵守现有零时长或无动画分支，false 时沿当前配方。菜单打开后切换偏好、关闭时切页、旧 selectionId 与卸载时，已退休回调不得继续操作新 owner。
+
+原生剩余问题为 popup 实际打开与关闭的动效、焦点和外点行为。选下载、书源工具和目录三个宿主各一个实际入口，已覆盖相同宿主语义的旧证据可复用。若只修改测试判据且生产输入相同，沿用原生产包。
+
+## 批次 3　恢复提示容量与短反馈宣告
+
+### UIF-05 的容量分配
+
+在 BookshelfGroupDialog 的恢复覆盖槽中计算当前可用高度。输入来自实际宿主 viewport、safe-area、现有 recoveryTop 与上下留白。沿用 ReaderRecoveryNotice 的 `maxHeightVp` 有界滚动能力，或由该槽提供一个有界 Scroll，选择单一实际滚动 owner。[分组覆盖槽](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/ui/BookshelfGroupDialog.ets:39) [共享容量入口](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets:25)
+
+宿主显式订阅会改变该预算的窗口事实。高度为零或负值时夹取到零，原操作事实与恢复入口仍由原 presentation 持有。空间恢复后重新分配容量。展开长文案时，动作和全文在当前边界内可以滚动到达。原分组事务的 identity/generation、双动作 busy、外点、Back、焦点域与焦点返回按当前规则执行。
+
+在 `test-secondary-layout-repairs.mjs` 的 recovery overlay 场景或现有分组装配测试中增加准确分组子项。建议 case 名为 `bookshelf-group-recovery-capacity`，当前尚未注册。通过正常 build、surface、recovery 链进入共享 Notice，输入短文案、长 blocked message、展开、双动作、busy、zero-height 和 resize，检查预算确实落到原生 Scroll，并点击真实动作验证原代次资格。
+
+最小原生剩余问题为短窗口和大字号下最后一个动作是否可达，以及滚动和关闭后焦点是否回到当前触发入口。已有原操作自然完成或前提失配时结束该场景并记录结果。
+
+### UIF-03 的显式宣告
+
+由 ReaderTransientToast 的有效前景宿主发起一次平台宣告，复用 ReaderTransientFeedback 已有 generation 和 active-host 归属。平台接口使用 SDK 提供的 `sendAccessibilityEvent`，按当前 API 能力选择不打断宣告。API18 起的事件类型已经存在于本机 SDK，当前实际构建目标及运行环境仍在该动作处核对。[宿主生命周期](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/feedback/ReaderTransientToast.ets:110) [SDK 接口](/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.accessibility.d.ts:376)
+
+宣告适配保持在现有消息或平台边界，包含下列行为。
+
+- 在当前 host、foreground、visible、非空消息及有效 generation 均成立时发出。前景宿主竞争沿用现有优先级。
+- 同一业务 generation 的宣告资格由现有共享反馈归属协调，处理同一反馈的宿主交接，避免只靠单组件本地计数造成重复。
+- 从反馈当前 title/message 生成可理解的文字，重复发布、空内容、替代和隐藏的规则与现有可见状态一致。
+- 使用平台宣告事件保留当前输入焦点。可见 UI 和原业务操作继续由已有 owner 持有。
+- 在实际发出前再核验身份。异步 API 返回只记录该次调用结果，失败按当前消息日志边界记账，随后到达的旧完成不改写新反馈。
+
+在共享反馈现有测试目录中增加准确宣告场景。建议 case 名为 `transient-announcement`，当前尚未注册。运行真实 host 的 syncToast、挂载、前景变更及卸载方法，对平台接口设置有限 spy。覆盖活动/非活动 host、竞争、同代重复、不同代替代、同代宿主交接、后台、退休和平台拒绝，检查发送次数与文字，检查无请求焦点调用。
+
+方法测试关闭应用发事件的接线问题。原生读屏场景回答宣告是否实际可听、是否打断当前内容、焦点是否稳定。平台 API 成功回执和实际听到分别记录。已由代码定位的缺口修复及局部回归完成后，再安排该准确问题。
+
+## 批次 4　两个条件风险的定位
+
+| 风险 | 先做的源码工作 | 原生未决问题与最小场景 | 实施条件 |
+| --- | --- | --- | --- |
+| Toggle 焦点 | 追踪八个构造点、nativeRevision 替换、受控值回写及已有 focus 处理 | 对当前可达设置开关做一次键盘或读屏激活，观察焦点能否继续同一操作 | 若确实丢焦点，优先使用原生受控更新或当前 focus owner 的有限恢复，并复验拒绝状态的投影 |
+| BookRemoval 高度 | 追踪 Index 装配、父约束、文字 Area、窗口 revision 与 messageMaxHeight 更新 | 打开真实移除确认后只改变高度，观察正文与动作边界 | 若新预算没有传到当前宿主，补充实际 owner 的窗口依赖或有效测量更新 |
+
+风险源码见[Toggle](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/controls/ReaderToggle.ets:43)和[移除确认](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/ui/BookRemovalDialog.ets:68)。源码或旧证据已经回答的问题直接记录结论。原生行为足以排除风险时保留排除证据。确认缺陷后登记准确触发、因果链和最小回归，再实施对应修改。
+
+## 共享框架组合回归的选择
+
+下表列出实施时可用的现有入口以及保护边界。执行前核对该项定义与隐式调用仍符合本次范围。新增 case 以注册后的实际名称为准。
+
+| 入口与准确 case | 嵌套或范围 | 本次必要依据 | 停止与复用 |
+| --- | --- | --- | --- |
+| test-ui-window-layout-closure，standard-page-generation | 选定生产方法、完整纯几何/store、有限输入 | UIF-01 修改会影响代次及拒旧 | 该项失败先审方法与输入，其他无关窗口 case 保留原结果 |
+| 同文件，window-environment | 真实 environment/coordinator 绑定、有限平台端口 | 仅实际改到环境发布或订阅时选择 | 只改 slot 策略时核对旧结果能否复用 |
+| test-framework-confluence-controls，source-native-targets | 当前 SDK Button、相关 spec、所选状态 | UIF-04 修改其行为判据 | 计数断言退回局部含义，失败归于对应属性或回调 |
+| 同文件，source-group-budget | 当前 SelectPanel/ChoiceRow border-box | 只有控件预算或 modifier 实际受影响时选择 | 单纯补 Prop 时复用未变配方结果 |
+| test-secondary-layout-repairs，select-host/actions-tools-rules/download-controls | 当前相关控件和具体页面装配，有限量字/动画端口 | UIF-02 的正常接线与六处下载下拉 | 仅点名受影响 case，平台 popup 仍另记 |
+| 同文件，recovery-overlays 及拟增分组 case | 当前恢复层与实际 Notice | UIF-05 需要验证原生容量属性确实被装配 | 外围 overlay 旧断言继续沿原来源使用 |
+| 共享反馈拟增 transient-announcement | 实际消息 host 与有限平台事件 spy | UIF-03 缺少自动宣告通道 | 只证明平台调用与身份，实际读屏单列 |
+| overlay assembly 检查的准确宿主 | 现有已登记槽和真实 build 追踪 | 仅新增或改变装配合同、登记时选择 | 已知槽检查覆盖边界继续记录 |
+| 读者控制栏历史准确 case | 按本次实际依赖选择 lifecycle、budget、surface 或 navigation 子项 | 修改进入这些生产依赖时才执行 | 共享 UI 名称相似本身不触发全组 |
+
+测试入口见[窗口](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-ui-window-layout-closure.mjs)、[控件](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-framework-confluence-controls.mjs)、[二级装配](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-secondary-layout-repairs.mjs)、[覆盖层检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/check-overlay-assembly.mjs)和[门禁选择规则](/Users/minliny/Documents/Reader/GATE_INDEX.md)。当前方案中的表格是执行选择依据，实际运行结果在原问题中追加。
+
+## 批次 5　原生行为与全应用剩余项
+
+### 固定候选和实际交付
+
+当实施进入 HAP 或设备动作时，使用项目 reader-harmonyos-hap-pipeline 流程，核对候选源码、Core pin、工具链、输入、不可变产物和签名。沿用用户指定 `minliny_HarmonyOS` 证书、`io.reader.minliny` 包名和匹配 Profile。版本按现行治理处理。每个签装动作单独核验身份及保数据条件。
+
+先查相同生产输入的已有产物与场景证据。确需新构建时只构建该候选一次，记录产物 SHA 与 manifest。仅测试变更且生产包输入相同的情形，复用已签名生产 App。HDC 经 reader-hdc-lease 入口，按实际 server、精确 target 和占用执行，完整调用链直连，设置本次问题所需的有界期限。
+
+代码侧已回答的原因先完成修复与局部回归。设备场景逐项写明剩余问题、旧证据为何不足、动作、观测值和停止条件。平台工具或必要运行条件缺失时记录具体缺口，已完成的代码与方法结果继续有效。
+
+### 正式登记的后续工作
+
+当前四个页面族含变体共 21 项。保存结果为 visual 21 项 NOT_RUN、interaction 21 项 FAIL、adaptation 5 项 FAIL 与 16 项 NOT_RUN。实施后更新实际受到影响的登记和证据，保留各项输入及原结果。登记中的 FAIL 包含完整原生命中、焦点或读屏证据缺席。Source 的 content FAIL 还保留整页原生字形与裁切验收缺口，具体原因沿原条目处理。[正式 register](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/page-structure/register.json)
+
+| 工作面 | 实施内容 | 关闭依据 |
+| --- | --- | --- |
+| Source/Tools | 测量续接、下拉偏好、真实 native target 及选择语义 | 正常入口，实际父级预算、触摸、焦点、读屏及大字号 |
+| Directory 及 12 变体 | 详情/阅读来源、text/manga、规则/书签/正文及各临时层 | 按变体的真实装配、响应可行性和返回身份 |
+| Downloads 及 5 变体 | 普通/管理/章节/弹层的偏好、内容和原操作 | 各实际状态的命中、焦点、容量与大字号 |
+| 书架/搜索/详情/设置及诊断根 | 报告中的路由与根责任逐项对照，复用已有有限来源 | 对实际可达状态的独立依据和对应运行证据 |
+| L0 保留模块 | 复核共享框架消费和关闭条件，保留 S-06 来源 | 未来实际开放范围明确后按其真实入口完成对应验证 |
+
+当前目录及 TTS 部分紧凑横向响应与 44vp 下限存在已知冲突。每处先列 paint、native carrier、父槽、边框、gap 和可用宽高，再选择可容纳的响应分配或经确认的页面布局调整。使用真实目标和相邻命中验证，默认密度与小窗口分别给出依据。
+
+### 视觉依据、连续绘制与历史坏态
+
+1. 对完整书架、搜索、详情及部分二级和漫画状态补齐独立批准来源，核对后续批准是否覆盖当前组合。源码衍生画板继续标注来源。存在明确设计差异时沿原配方实施，涉及布局变更时给出具体可审阅方案。
+2. 阅读恢复引导的 GAP-04 沿已有 `CODE_VERIFIED_NATIVE_OPEN` 记录补实际原生入口与遮挡证据。
+3. G05 先检查现成视频、trace 或可用连续取帧能力。在固定候选的一段正常操作中记录目标、profile 提交、Area、输入资格与像素时序。只改变某一链路时选择对应动作，保留真实窗口和帧身份。
+4. G10 需要历史 Tab 扇形坏态同期的 App、PID、window、frame、Area、半径、path 与绘制命令。缺少同期输入时继续开放归因。后继正常场景的像素与 RS 证据沿其采样时刻保存。
+
+来源与现有开放状态见[原设计审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/docs/architecture/ui-design-comparison-audit-20261113.md:131)和[整改总账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/docs/architecture/ui-design-full-fix-20261113.md)。
+
+## 验收、失败处理和回退
+
+| 问题 | 应用侧关闭 | 方法或装配关闭 | 原生剩余关闭 |
+| --- | --- | --- | --- |
+| UIF-01 | 测量事实续接与拒旧均成立 | 无 Area 同盒场景、真正依赖变化、卸载与迟到回执 | 当前窗口/IME 变化的正文避让与中间绘制 |
+| UIF-02 | 九处接线和目录两来源完整 | true/false、过程中变更、旧 identity 及卸载 | popup 动效、外点、Back 与焦点 |
+| UIF-05 | 分组恢复槽支付当前高度 | 长文展开、双动作、零空间、resize 与原操作资格 | 全文和动作可达、关闭及焦点返回 |
+| UIF-03 | 有效 host 按反馈 generation 宣告 | 竞争、交接、重复、替代、后台、失败与退休 | 实际可听、不打断策略及焦点连续 |
+| UIF-04 | 每个负例能对应一个真实失败 | 属性、更新、交互和合法组合均按平台语义检查 | 所涉及原生行为随相应生产项复验 |
+
+每次局部失败先保留输出、输入指纹及本次已完成结果，再审生产路径与夹具。夹具缺端口记夹具失败，生产动作失效记对应问题，缺少所选证据保持未完成。形成新的可检验原因后再安排一次有界运行。
+
+按问题保存小型提交及其对应回归。回退时核对当前差异和后续依赖，只恢复本问题实际修改。安装候选及用户数据按既有保数据流程处理，源码回退与设备结果分别记录。
+
+最后交付包括实际源码差异、准确测试结果、更新后的原问题账本及页面登记、发生过的构建签装 manifest、原生证据和仍开放的视觉或历史归因项。当前这两份文档及覆盖快照构成实施输入。

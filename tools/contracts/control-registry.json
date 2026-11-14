@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 23,
+  "revision": 24,
   "controls": [
     {
       "controlId": "page-back",
@@ -324,7 +324,7 @@
       },
       "accessibleNameSource": "ReaderToggle.accessibilityLabel('启用书源')",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. Controlled native remount is retained. A previously keyboard-focused native owner schedules one post-layout focus request with current identity, foreground, enabled, busy, mount and revision guards. Scoped SDK projection/focus tests pass. Successor native focus/value revalidation remains open."
+      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. Controlled native remount is retained. A previously keyboard-focused native owner schedules one post-layout focus request with current identity, foreground, enabled, busy, mount and revision guards. Scoped SDK projection/focus tests pass. The af920500 VM candidate passed two Enter activations with focus retained on each successor native Toggle in General Settings and restored the original preference. Source-specific native target routing, screen-reader focus and remaining caller families retain their exact open scope."
     },
     {
       "controlId": "footer-batch",
@@ -882,6 +882,10 @@
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
           "symbol": "queryField"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "symbol": "ReaderSearchInputTarget"
         }
       ],
       "states": [
@@ -890,13 +894,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": 32,
+        "height": 44,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "ReaderSearchField.accessibilityLabel(searchPlaceholder)",
       "status": "partial",
-      "knownGap": "Standalone FullDirectory passes field32vp and no separate naturalInputHeight. With the zero-border readerDirectory field the actual TextInput is32vp high. Reference field168vp leaves129vp native input after39vp icon/gap/padding. Actor width selects stacked tools. Current authored-allocation-sdk checks this caller distinction. Native hit, IME, glyphs and focus remain OPEN."
+      "knownGap": "Actual directory query keeps32vp paint and its caller-specific32vp native typography recipe inside a transparent minimum44vp carrier. The native TextInput response is centered and at least44vp high. Existing50vp toolbar pays44vp plus3vp top/bottom padding. Control short ScrollAway prefix pays the same carrier. directory-query-targets and editable-budget/sdk-actions PASS. Actual pointer routing, IME, clipping, glyphs and focus remain OPEN."
     },
     {
       "controlId": "directory-tools-full",
@@ -973,6 +977,10 @@
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
           "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "symbol": "ReaderSearchInputTarget"
         }
       ],
       "states": [
@@ -983,13 +991,13 @@
       ],
       "hitTarget": {
         "width": null,
-        "height": 30,
+        "height": 44,
         "unit": "vp",
         "status": "spec"
       },
       "accessibleNameSource": "ReaderSearchField.accessibilityLabel(搜索章节名称/搜索书签内容)",
       "status": "partial",
-      "knownGap": "Formal Control Directory passes field32vp and separate native TextInput30vp from the same admitted module profile. Reference field168vp leaves129vp input width after39vp icon/gap/padding. It differs from the standalone32vp input and Manga44vp input. Short-window prefix retains the same caller. Current authored-allocation-sdk covers actual shared input consumption. Native hit, glyphs, IME and focus remain OPEN."
+      "knownGap": "Actual directory query keeps32vp paint and its caller-specific30vp native typography recipe inside a transparent minimum44vp carrier. The native TextInput response is centered and at least44vp high. Existing50vp toolbar pays44vp plus3vp top/bottom padding. Control short ScrollAway prefix pays the same carrier. directory-query-targets and editable-budget/sdk-actions PASS. Actual pointer routing, IME, clipping, glyphs and focus remain OPEN."
     },
     {
       "controlId": "directory-tools-control",
