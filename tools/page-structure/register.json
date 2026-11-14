@@ -522,9 +522,15 @@
               "path": "tools/test-source-group-border-budget.mjs",
               "symbol": "trigger-parent",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json",
+              "symbol": "sourceMax",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage."
+          "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -555,9 +561,15 @@
               "path": "tools/test-reader-window-font-configuration.mjs",
               "symbol": "configuration,entry-consumer,native-context",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json",
+              "symbol": "sourceMax",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Current configuration and SDK budgets are bound separately. Native1/1.45 and same-actor Source reflow were observed, followed by restored system2/1/1 and native1. Exact1.3/1.6/2 native cells and complete page adaptation remain open."
+          "knownGap": "Current configuration and SDK budgets are bound separately. Native1/1.45 and same-actor Source reflow were observed, followed by restored system2/1/1 and native1. Exact1.3/1.6/2 native cells and complete page adaptation remain open. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
         },
         "accessibility": {
           "applicability": "applicable",
@@ -1030,7 +1042,7 @@
         }
       },
       "exceptions": [],
-      "revision": 28,
+      "revision": 29,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -29663,9 +29675,21 @@
               "path": "tools/test-framework-confluence-controls.mjs",
               "result": "PASS",
               "symbol": "inline-popup-layout"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json",
+              "symbol": "popupMax",
+              "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-popup-40bc.json",
+              "symbol": "after",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations."
+          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -29703,9 +29727,15 @@
               "path": "tools/test-source-tools-layout.mjs",
               "symbol": "parent-budget",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json",
+              "symbol": "popupMax",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Current320/366 ×1/1.3/1.6/2 SDK parent-budget covers16rows: real list padding/border costs, minHeight growth, explicit text line boxes and button wrap. The finite SDK/native-property port does not establish actual system glyph, clipping or focus acceptance."
+          "knownGap": "Current320/366 ×1/1.3/1.6/2 SDK parent-budget covers16rows: real list padding/border costs, minHeight growth, explicit text line boxes and button wrap. The finite SDK/native-property port does not establish actual system glyph, clipping or focus acceptance. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
         },
         "accessibility": {
           "applicability": "applicable",
@@ -30245,7 +30275,7 @@
         }
       },
       "exceptions": [],
-      "revision": 15,
+      "revision": 16,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,

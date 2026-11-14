@@ -1,10 +1,22 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
-本报告的审计结论绑定下述原始输入。2026 年 11 月 14 日用户授权后，已在原隔离检出全量实施。五项问题已有生产修改及准确局部回归，Toggle 键盘焦点风险已经定位并在后继候选 af920500e5af 上完成准确现有 VM 场景。用户随后要求先完成代码范围，再进入 VM 验证。当前代码续查已补详情、漫画目录、保留 Discover 的测量依赖，并在既有工具栏容量内为目录查询分配 44vp 响应。后继源码待完整工程编译及候选验证。
+## 当前实施回填
 
-当前新增代码侧库存为 635 个生产文件，14 个 StandardPage 和 11 个 Scaffold 构造点的框架消费处置已对账。原始 633 项库存及审计结果保留历史身份。Source 重复动作的生产 owner 和上下文优先级已按原入口完成登记，正式检查现保留 37 项诊断。紧凑目录及 TTS 的其余 44vp 槽位冲突已有数值预算，用户已明确沿批准原稿保留这些紧凑布局及容量冲突。实际执行状态见实施方案“当前执行进度”和原账本 implementation 字段。[当前代码复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-first-review.json)
+2026 年 11 月 14 日，已沿原隔离检出完成本轮代码可执行范围、准确局部回归、完整工程编译、指定证书签名和现有 VM 保数据交付。当前生产候选为 `0.2.0.DEV.40bc7b38fab6`，绑定 HarmonyOS `facf700e27d9246a234f0203d44d2114d7bc0297`。当前状态为 CODE_AND_SCOPED_VM_DELIVERED，整体验收沿原条件开放。
 
-VM 补充发现 UIF-06。书源工具下拉靠近窗口底部时，末项被裁切，内部 Scroll 没有可滚动范围。原生 popup 包裹盒为零尺寸，ReaderSelectPanel 的绝对定位内容未参与平台避让。当前代码将 popup 内容改为自然流并支付当前窗口、安全区和 IME 高度预算，原有页面覆盖层继续使用定位宿主。新增 inline-popup-layout、原 overlay/motion 及边框父链回归通过，后继完整编译和原生底部避让复验正在推进。失败原始 UI 树与截图已保留在原账本。
+UIF-01 至 UIF-05 的应用侧原因已有对应生产修改及方法或正常 SDK 回归。续查同时补齐详情、漫画目录和保留 Discover 的测量依赖，为目录查询支付透明44vp响应槽，保留已批准的紧凑外框。Toggle 键盘焦点风险经历原生复现、失败方向撤回和后继候选两次 Enter 值与焦点复验，当前受控重挂与有界焦点恢复生效。移除确认已接入窗口 revision 并完成准确 SDK 容量更新回归。[实施方案当前结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/docs/architecture/ui-framework-implementation-plan-20261114.md)
+
+VM 新增 UIF-06。旧候选底部下拉因绝对定位内容没有贡献原生 popup 自然尺寸，末项被裁切。修复将 popup 自然流和页面 overlay 定位分别接入现有宿主，并支付当前窗口、安全区与IME预算。后继40bc候选完整编译和指定签名通过。默认字体下，底部下拉被平台完整安置到触发器上方，末项实际选择更新owner并关闭。1.45倍系统字体下，末项完整可见及实际回调也通过。原失败和修复后证据保留。[原生下拉记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-popup-40bc.json)
+
+当前库存为635个生产ETS/TS文件，14个StandardPage和11个Scaffold构造点的框架消费处置已对账，完整ArkTS工程编译通过。635项生产输入与当前候选快照一致。20个路由和4个manifest根沿原准入条件保留。原633项审计清单保存原始身份。Source重复动作按现有业务owner及生产上下文完成登记，control登记为revision25。[代码复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-first-review.json) · [候选字节绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/current-code-byte-comparison-40bc.json)
+
+本轮原生证据覆盖目录查询44vp边缘命中及IME/Back、漫画页头与工具原点、Toggle键盘值与焦点、共享下拉末项与Back，以及1.45倍书源输入和下拉场景。系统最大字体档实际映射1.45倍，结束后已恢复原标准档及Reader实测1倍。最终现场为当前候选正常书架。[字体与现场记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json)
+
+用户已明确选择沿批准原稿保留目录与TTS紧凑布局，并接受按原条件保留证据缺口。其余44vp容量冲突有准确数值记录。正式页面检查保留37项诊断，其中E2为21项FAIL、E3为5项FAIL、G-03为8项NOT_RUN、SCOPE为3项NOT_RUN，visual为21项NOT_RUN。可听宣告、实际读屏焦点、真实长分组恢复、完整页面E2/E3、独立整页批准、GAP-04、G05与历史G10继续沿原条件开放。[完整问题账本](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ledger.json)
+
+下文保存原始审计输入、结论和历史证据。原审计问题的源码状态以本节和账本implementation字段中的交付结果为准。
+
+## 原始审计记录
 
 日期为 2026 年 11 月 14 日。
 
