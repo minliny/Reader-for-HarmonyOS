@@ -36,6 +36,7 @@ export interface ReaderDirectoryRulesRecoveryProjection {
  * the editor never changes TXT splitting or derives a tree in Host. */
 @Component
 export struct ReaderDirectoryRules {
+  @Prop reduceMotion: boolean = false;
   @Prop @Watch('loadRules') bookId: string = '';
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop focusTargetId: string = '';
@@ -290,7 +291,7 @@ export struct ReaderDirectoryRules {
               fieldAccessibilityLabel: `规则${rule.id}层级`,
               isEditable: this.canEdit(),
               onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'level', value); } });
-            ReaderInlineSelect({
+            ReaderInlineSelect({ reduceMotion: this.reduceMotion,
               value: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'][Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(rule.boundary))],
               options: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'],
               selectedIndex: Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(rule.boundary)),

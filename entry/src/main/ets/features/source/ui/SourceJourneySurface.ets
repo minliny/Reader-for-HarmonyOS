@@ -104,7 +104,7 @@ export struct SourceJourneySurface {
 
   @Builder
   private toolsPage() {
-    SourceToolsPage({
+    SourceToolsPage({ reduceMotion: this.reduceMotion,
       snapshot: this.view.tools,
       isOpeningCurrent: (): boolean => this.presentation.tools(this.identity) !== undefined,
       isInputAllowed: (): boolean => this.toolsInputIsCurrent(),

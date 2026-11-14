@@ -1090,7 +1090,7 @@ struct Index {
   @Builder
   private externalDirectory() {
     if (this.readingEntry.book !== undefined) {
-      DetailDirectoryScene({
+      DetailDirectoryScene({ reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
         reading: this.readingEntry,
         operations: this.directoryJourney.operations,
         navigation: this.directoryNavigationPorts(),

@@ -781,7 +781,7 @@ export struct SharedDownloadPage {
         .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('muted', this.appThemeScheme)).layoutWeight(1);
       if (this.managing) {
-        ReaderInlineSelect({
+        ReaderInlineSelect({ reduceMotion: this.reduceMotion,
           value: '快速选择',
           options: ['快速选择', '当前章节', '从当前往后', '全部章节'],
           controlWidth: this.selectClosedWidth('快速选择', ['快速选择', '当前章节', '从当前往后', '全部章节'],
@@ -1305,7 +1305,7 @@ export struct SharedDownloadPage {
       Text('下载状态').fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      ReaderInlineSelect({
+      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
         value: this.stateChoices().find((choice: DownloadChoice): boolean => choice.id === this.stateFilter)?.label ?? '全部状态',
         options: this.stateChoices().map((choice: DownloadChoice): string => choice.label),
         selectedIndex: Math.max(0, this.stateChoices().findIndex((choice: DownloadChoice): boolean => choice.id === this.stateFilter)),
@@ -1323,7 +1323,7 @@ export struct SharedDownloadPage {
       Text('书源').fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      ReaderInlineSelect({
+      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
         value: this.sourceFilterLabel(),
         menuKind: 'source',
         options: this.filterSourceOptions.map((choice: DownloadChoice): string => choice.label),
@@ -1419,7 +1419,7 @@ export struct SharedDownloadPage {
       Text('空间上限').layoutWeight(1).fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-      ReaderInlineSelect({
+      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
         value: this.limitLabels()[this.limitIndex()] ?? '暂不可用',
         options: this.limitLabels(),
         selectedIndex: this.limitIndex(),
@@ -1433,7 +1433,7 @@ export struct SharedDownloadPage {
       Text('多久未阅读后清理').layoutWeight(1).fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-      ReaderInlineSelect({
+      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
         value: this.dayLabels()[this.daysIndex()] ?? '暂不可用',
         options: this.dayLabels(),
         selectedIndex: this.daysIndex(),
@@ -1530,7 +1530,7 @@ export struct SharedDownloadPage {
   @Builder
   private rangeSheet(opening: number = this.sheetOpeningGeneration) {
     if (this.actionBookKeys.length > 1) {
-      ReaderInlineSelect({
+      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
         value: this.availableRangeBooks().find((choice: DownloadChoice): boolean => choice.id === this.rangeBookKey)?.label ?? '',
         options: this.availableRangeBooks().map((choice: DownloadChoice): string => choice.label),
         selectedIndex: Math.max(0, this.availableRangeBooks().findIndex((choice: DownloadChoice): boolean => choice.id === this.rangeBookKey)),

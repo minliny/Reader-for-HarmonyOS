@@ -37,6 +37,8 @@ const selected = selectContractCases({
   'download-chapter-width': 'Actual Download chapter List row title/tag/trail budget at320/366 safe0/40each scale1/2/3 with current scope and old23vp failure.',
   'retained-and-settings': 'Actual retained Discover/RSS/Sync consumers and bounded Settings phone/tablet menus. Product gate frozen.',
   'title-scale': 'Actual standard and action-sheet titles at2.5 with platformmax3 and current linebox parent.',
+  'select-reduce-motion': 'Nine real InlineSelect callers and both directory/source-tool propagation chains preserve true/false preferences and popup lifecycle.',
+  'bookshelf-group-recovery-capacity': 'Actual group build/surface/recovery pays current safe host capacity, including expanded long text, zero, busy and retired actions.',
 });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const read = rel => readFileSync(new URL(rel, root), 'utf8');
@@ -279,7 +281,7 @@ function recoveryOverlays() {
   Object.assign(notice, { appThemeScheme: 'day', maxHeightVp: 200, layoutWidthVp: 344, view: { visible: true, message: '原操作仍待核对。'.repeat(1000), canRetry: true, generation: 7 },
     actionLabel: '核对', secondaryActionLabel: '继续', busy: false, secondaryBusy: false, tag: '待处理', expanded: true, clipped: true,
     actionsWidth: 280, actionsHeight: 44, titleLineHeight: 44, reservedSpace: '', onReconcile() {}, onSecondaryAction() {} });
-  notice.aboutToAppear(); notice.initialRender();
+  notice.aboutToAppear(); notice.expanded = true; notice.initialRender();
   const nodes = sdk.nodes(notice), scroll = nodes.find(n => n.type === 'Scroll');
   assert.ok(scroll); assert.equal(scroll.constraintSize.maxHeight, 200);
   assert.ok(nodes.some(n => n.type === 'Text' && n.maxLines === 10000), 'full message remains inside the Scroll');
@@ -311,7 +313,7 @@ function recoveryOverlays() {
   Object.assign(unsafe, { appThemeScheme: 'day', maxHeightVp: 200, layoutWidthVp: 344, view: { visible: true, message: '原操作', canRetry: true, generation: 7 },
     actionLabel: '核对', secondaryActionLabel: '继续', busy: false, secondaryBusy: false, tag: '待处理', expanded: true, clipped: true,
     actionsWidth: 280, actionsHeight: 44, titleLineHeight: 44, reservedSpace: '' });
-  unsafe.aboutToAppear(); unsafe.initialRender();
+  unsafe.aboutToAppear(); unsafe.expanded = true; unsafe.initialRender();
   const unsafeText = sdk.nodes(unsafe).find(n => n.type === 'Text' && n.maxLines === 10000).onAreaChange;
   const unsafeActions = sdk.nodes(unsafe).find(n => n.type === 'Flex' && typeof n.onAreaChange === 'function').onAreaChange;
   unsafe.view = { ...unsafe.view, generation: 8 }; unsafe.measuredWidth = 180; unsafe.actionsHeight = 88;
@@ -321,7 +323,7 @@ function recoveryOverlays() {
 
   function coldMeasurements(definition, order) {
     const cold = sdk.consumer(definition, boundedMembers(definition), { ...nativeEnums, uiContext: uiContext() });
-    Object.assign(cold, { appThemeScheme: 'day', maxHeightVp: 200, layoutWidthVp: 344, readerWindowMetricsRevision: 1,
+    Object.assign(cold, { appThemeScheme: 'day', maxHeightVp: 200, layoutWidthVp: -1, readerWindowMetricsRevision: 1,
       view: { visible: true, message: '待核对'.repeat(100), canRetry: true, generation: 9 }, actionLabel: '核对原操作', secondaryActionLabel: '继续原操作',
       busy: false, secondaryBusy: false, tag: '待处理', expanded: false, clipped: false, actionsWidth: 0, actionsHeight: 44, titleLineHeight: 22, reservedSpace: '' });
     cold.aboutToAppear(); cold.initialRender();
@@ -659,7 +661,7 @@ function supplementalSelectTargets() {
       const action = inline.nodes(owner).find(node => typeof node.onClick === 'function');
       assert.ok(action.height >= 44, `${variant} actual action pays44 at${scale}`);
     }
-    const host = new inline.dependencies.ReaderInlineSelect(undefined, { value: '开', options: ['开', '关'], onSelect() {} });
+    const host = new inline.dependencies.ReaderInlineSelect(undefined, { value: '开', options: ['开', '关'], reduceMotion: true, onSelect() {} });
     host.aboutToAppear(); host.initialRender();
     const frame = [...host.nodes.values()].find(node => node.type === 'Stack');
     assert.equal(frame.height, undefined, 'InlineSelect natural carrier follows its current Select height');
@@ -736,7 +738,7 @@ function supplementalPreviewDocument() {
   const notice = [...owner.children.values()].find(child => child instanceof c.deps.ReaderRecoveryNotice);
   assert.ok(notice); assert.equal(notice.maxHeightVp, -1, 'one StandardPage document owns Scroll around Notice and end action');
   assert.equal(notice.layoutWidthVp, -1, 'business content leaves width allocation to its live bounded host');
-  notice.expanded = true; notice.clipped = true; notice.replay(); c.foundation.properties.flush();
+  notice.measuredGeneration = 7; notice.expanded = true; notice.clipped = true; notice.replay(); c.foundation.properties.flush();
   const nodes = [...c.nodes(standard), ...c.nodes(owner)];
   assert.equal(nodes.filter(node => node.type === 'Scroll').length, 1, 'expanded Preview notice does not create nested Scroll');
   assert.ok(nodes.some(node => node.type === 'Text' && node.maxLines === 10000));
@@ -847,6 +849,121 @@ function supplementalDownloadControls() {
   assert.throws(() => assert.ok(c.nodes(prior).find(node => node.type === 'Button').constraintSize.minHeight >= 44), /AssertionError/, 'old retry34 rejected');
   results.push({ case: 'download-controls', supplemental: 'query/retry44, original scope, all six actual Inline sites' });
 }
+function selectReduceMotion() {
+  for (const reduceMotion of [false, true]) {
+    const value = metrics(320, 360, 1), c = context(value), animations = [], frames = [];
+    const native = { ...uiContext(), animateTo(params, action) { animations.push(params); action(); }, postFrameCallback: frame => frames.push(frame) };
+    const inline = inlineSelectSdk({ properties: c.foundation.properties, uiContext: native, dependencies: { readerWindowMetrics: () => value } });
+    const hooks = { ...c.hooks, childSources: { ...c.hooks.childSources, ...inline.hooks.childSources } };
+    const recovery = pureModuleProbe(read('features/reading/presentation/ReadingDirectoryRecovery.ts'), 'ReadingDirectoryRecovery.ts', {}, ['EMPTY_READING_DIRECTORY_RECOVERY']);
+    const dependencies = { ...c.deps, ...inline.dependencies, ...recovery, uiContext: native, DOWNLOAD_VISUAL, downloadVisualColor };
+    const mount = (rel, members, fields) => {
+      const actor = createReaderBuilderProbe(read(rel), members, dependencies, hooks).owner;
+      Object.assign(actor, { appThemeScheme: 'day', reduceMotion, ...fields }); return actor;
+    };
+    const download = mount('features/downloads/ui/SharedDownloadPage.ets', ['chapterToolbar', 'filterSheet', 'settingsSheet', 'rangeSheet', 'selectClosedWidth', 'storageSelectWidth', 'currentMetrics', 'fontScale'], {
+      visualIcon: () => ({}), managing: true, stateFilter: 'all', stateChoices: () => [{ id: 'all', label: '全部状态' }], sourceFilter: 'all',
+      sourceFilterLabel: () => '全部书源', filterSourceOptions: [{ id: 'all', label: '全部书源' }],
+      storageSummaryContent() {}, storagePolicy: {}, storagePolicyBusy: false, limitLabels: () => ['1 GB'], limitIndex: () => 0,
+      dayLabels: () => ['30 天'], daysIndex: () => 0, contentLeftInset: () => 19, contentRightInset: () => 19,
+      actionBookKeys: ['a', 'b'], rangeBookKey: 'a', rangeChoice: 'all', availableRangeBooks: () => [{ id: 'a', label: '样本书' }, { id: 'b', label: '另一书' }], choiceRow() {} });
+    download.chapterToolbar(() => ({ key: 'a' }), 1); download.filterSheet(1); download.settingsSheet(1); download.rangeSheet(1);
+    const tools = mount('features/source/ui/SourceToolsPage.ets', ['debugCard'], { snapshot: { busy: false, checkMode: 'search', checkDepth: 2,
+      debugSourceId: '', debugKey: '', debugLogs: [] }, debugInputRevision: 0, debugKeyChange: () => () => {}, debugOptionsCurrent: () => true });
+    tools.debugCard();
+    const rules = mount('features/reading/ui/ReaderDirectoryRules.ets', ['build'], { scheme: 'day', focusTargetId: '', interactionEnabled: true,
+      actorIdentity: () => 'rules:1', rules: [{ id: 1, pattern: '.*', level: '0', boundary: 'title' }], availableWidthVp: 280, availableHeightVp: 180,
+      canEdit: () => true, previewReady: false, recoveryView: () => ({ visible: false }), loaded: true, busy: false,
+      recoveryIdentity: () => 'rules:1', preview: [], message: '', operation: { generation: 1 } });
+    rules.initialRender();
+    const selects = [download, tools, rules].flatMap(owner => inline.walk(owner).filter(child => child instanceof inline.dependencies.ReaderInlineSelect));
+    assert.equal(selects.length, 9, 'normal download/tools/rules builders mount all nine constructor sites');
+    for (const select of selects) {
+      assert.equal(select.reduceMotion, reduceMotion);
+      // Replace the business sink after asserting the actual caller's binding.
+      const commits = []; select.onSelect = (...args) => commits.push(args);
+      const trigger = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelect);
+      inline.nodes(trigger).find(node => typeof node.onClick === 'function').onClick();
+      c.foundation.properties.flush(); select.menu(select.selectionId); c.foundation.properties.flush();
+      const panel = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelectPanel && child.selectionId === select.selectionId);
+      assert.equal(panel.reduceMotion, reduceMotion);
+      const before = animations.length; panel.expandPanel();
+      if (reduceMotion) assert.equal(animations.length, before, 'reduced-motion popup opens immediately');
+      else assert.ok(animations.at(-1).duration > 0, 'ordinary preference retains the current animation recipe');
+      select.reduceMotion = true; c.foundation.properties.flush();
+      assert.equal(panel.reduceMotion, true, 'open popup receives a live preference update');
+      const oldIdentity = panel.selectionId;
+      panel.onCommit(panel.options[0], oldIdentity); assert.equal(commits.length, 1);
+      select.toggle(); panel.onCommit(panel.options[0], oldIdentity);
+      assert.equal(commits.length, 1, 'an old popup cannot commit into the new opening');
+      select.aboutToDisappear(); select.commit(panel.options[0], select.selectionId);
+      assert.equal(commits.length, 1, 'unmounted select cannot commit');
+    }
+    // Each intermediate constructor is executed by the normal SDK Builder.
+    class ChildPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } updateStateVars(params) { Object.assign(this.params, params); } }
+    function propagated(rel, member, child, fields, args = []) {
+      const childRel = child === 'SourceToolsPage' ? 'features/source/ui/SourceToolsPage.ets' : `features/reading/ui/${child}.ets`;
+      const owner = createReaderBuilderProbe(read(rel), [member], { ...dependencies, [child]: ChildPort },
+        { ...hooks, childSources: { ...hooks.childSources, [child]: read(childRel) } }).owner;
+      Object.assign(owner, { reduceMotion, ...fields });
+      if (member === 'build') owner.initialRender(); else owner[member](...args);
+      const params = [...owner.children.values()].find(actor => actor instanceof ChildPort)?.params;
+      assert.ok(params, `${rel} normally assembles ${child}`);
+      assert.equal(params.reduceMotion, reduceMotion, `${rel} forwards the global preference`);
+      return params;
+    }
+    propagated('features/source/ui/SourceJourneySurface.ets', 'toolsPage', 'SourceToolsPage', { view: { tools: {} } });
+    propagated('pages/Index.ets', 'externalDirectory', 'DetailDirectoryScene', {
+      readingEntry: { book: { contentKind: 'text' } }, directoryJourney: { operations: {} }, directoryNavigationPorts: () => ({}),
+      settingsPresentation: { snapshot: { reduceMotion } }, isDirectoryOpeningCurrent: () => true });
+    propagated('features/reading/ui/DetailDirectoryScene.ets', 'build', 'ReaderDirectoryDestination', { reading: { book: { contentKind: 'text' }, toc: [], bookmarkIdentity: () => '' }, directoryActions: {}, navigation: {} });
+    propagated('features/reading/ui/ReaderShell.ets', 'readingOverlay', 'ReaderDirectoryDestination', { route: 'directory', contentKind: 'text', overlayStatusBarUnderlay() {} });
+    propagated('features/reading/ui/ReaderDirectoryDestination.ets', 'catalog', 'ReaderFullDirectory', { contentKind: 'text', bookmarkSelection: () => () => {} }, [1]);
+    propagated('features/reading/ui/ReaderFullDirectory.ets', 'directoryRulesForm', 'ReaderDirectoryRules', { panelWidth: () => 280, panelViewportHeight: () => 180, directoryRulesFocusId: () => 'rules-focus' }, ['rules:1', 'book']);
+    results.push({ case: 'select-reduce-motion', reduceMotion, constructors: selects.length, propagationLinks: 6 });
+  }
+}
+
+function bookshelfGroupRecoveryCapacity() {
+  for (const scale of [1, 1.3, 1.6, 2]) for (const height of [360, 180, 0]) {
+    const value = metrics(320, height, scale), c = context(value), calls = [];
+    const rel = 'features/bookshelf/ui/BookshelfGroupDialog.ets';
+    const dialogSource = read('ui/surfaces/ReaderDialogSurface.ets');
+    const horizontal = pureModuleProbe(read('ui/layout/SurfaceHorizontalGeometry.ts'), 'SurfaceHorizontalGeometry.ts', {},
+      ['SurfaceHorizontalFrame', 'SurfaceWidthSpec', 'resolveHorizontalFrame']);
+    Object.assign(c.deps, horizontal, readerSurfaceSpecsForProbe(value));
+    c.hooks.childSources.ReaderDialogSurface = dialogSource;
+    c.deps.ReaderDialogSurface = createReaderBuilderProbe(dialogSource, boundedMembers(dialogSource), c.deps, c.hooks).Component;
+    const owner = c.actor(rel, ['build', 'surface', 'recovery', 'recoveryInsetTop', 'recoveryAvailableHeight', 'groupInputIsCurrent',
+      'focusScopeKey', 'selectorFocusKey', 'viewportHeight', 'originY', 'metricsRevision'], { foreground: true, metricsRevision: 1, viewportHeight: height, originY: 0, recoveryTop: 70,
+      selector() {}, restoreFocusAction: () => () => {}, requestFocusAfterFrame() {},
+      presentation: { book: {}, identity: 'group:1', snapshot: { busy: false, receipt: { facts: { generation: 7 } } },
+        recovery: generation => ({ visible: true, message: '分组操作仍待核对。'.repeat(1000), generation, canRetry: true }), canContinue: () => true,
+        reconcile: (...args) => calls.push(args) } });
+    owner.initialRender(); c.foundation.properties.flush();
+    const notice = [...owner.children.values()].find(child => child instanceof c.deps.ReaderRecoveryNotice);
+    assert.ok(notice, 'normal group build/surface/recovery mounts the shared Notice');
+    const expected = Math.max(0, height - 16 - 82 - 12);
+    assert.equal(notice.maxHeightVp, expected);
+    notice.measuredGeneration = 7; notice.expanded = true; notice.clipped = true; notice.replay(); c.foundation.properties.flush();
+    const nodes = c.nodes(notice), scroll = nodes.find(node => node.type === 'Scroll');
+    assert.equal(scroll.constraintSize.maxHeight, expected);
+    assert.equal(nodes.filter(node => node.type === 'Scroll').length, 1, 'the shared Notice owns the single scrollable document');
+    assert.ok(nodes.some(node => node.type === 'Text' && node.maxLines === 10000));
+    const primary = nodes.find(node => node.type === 'Button' && node.accessibilityText === '核对分组');
+    const secondary = nodes.find(node => node.type === 'Button' && node.accessibilityText === '继续原分组操作');
+    assert.ok(primary && secondary); primary.onClick(); secondary.onClick();
+    assert.deepEqual(calls, [['group:1', 7], ['group:1', 7, true]]);
+    notice.busy = true; c.foundation.properties.flush(); primary.onClick(); secondary.onClick();
+    assert.equal(calls.length, 2, 'busy blocks both original-operation actions');
+    owner.presentation.identity = 'group:2'; notice.onReconcile(7); notice.onSecondaryAction(7);
+    assert.equal(calls.length, 2, 'old identity cannot dispatch against a reopened group');
+    value.windowRect.height = 500; owner.viewportHeight = 500; owner.metricsRevision += 1; c.foundation.properties.flush();
+    assert.equal(owner.recoveryAvailableHeight(), 390, 'height-only resize recomputes the current safe remainder');
+    results.push({ case: 'bookshelf-group-recovery-capacity', height, scale, maxHeight: expected });
+  }
+}
+
 function supplementalRendererPilot() {
   const value = metrics(320, 180, 2), c = context(value), rel = 'pages/ReaderRendererPilot.ets', source = read(rel);
   // Inactive specialized descendants need their actual ETS schemas for SDK lowering.
@@ -939,6 +1056,7 @@ function supplementalChapterWidths() {
   }
 }
 const runners = { 'select-host': selectHost, 'actions-tools-rules': actionsToolsRules, 'recovery-overlays': recoveryOverlays,
+  'select-reduce-motion': selectReduceMotion, 'bookshelf-group-recovery-capacity': bookshelfGroupRecoveryCapacity,
   'arkweb-host': arkwebHost, 'retained-and-settings': retainedAndSettings, 'title-scale': titleScale,
   'download-controls': supplementalDownloadControls, 'renderer-pilot': supplementalRendererPilot, 'download-chapter-width': supplementalChapterWidths };
 const supplemental = { 'select-host': supplementalSelectTargets, 'actions-tools-rules': supplementalInputTargets,

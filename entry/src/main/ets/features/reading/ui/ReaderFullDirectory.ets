@@ -80,6 +80,7 @@ let fullDirectoryBackGeneration = 0;
  */
 @Component
 export struct ReaderFullDirectory {
+  @Prop reduceMotion: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
     readerAppColor('app.window.background', 'day');
@@ -387,7 +388,7 @@ export struct ReaderFullDirectory {
   @Builder
   private directoryRulesForm(identity: string, bookId: string) {
     Column() {
-      ReaderDirectoryRules({ bookId,
+      ReaderDirectoryRules({ reduceMotion: this.reduceMotion, bookId,
         availableWidthVp: this.panelWidth(), availableHeightVp: this.panelViewportHeight(),
         interactionEnabled: this.directoryRulesVisible && this.interactive,
         focusTargetId: this.directoryRulesFocusId(identity, true),

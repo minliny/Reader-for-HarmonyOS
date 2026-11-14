@@ -184,6 +184,7 @@ class SourceDebugLogDataSource implements IDataSource {
 
 @Component
 export struct SourceToolsPage {
+  @Prop reduceMotion: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -789,7 +790,7 @@ export struct SourceToolsPage {
       // takes ownership. Keep the log actors and the accepted text intact.
       ForEach([this.snapshot.busy], (busy: boolean): void => {
         Row({ space: TOK_SPACE_SM }) {
-          ReaderInlineSelect({
+          ReaderInlineSelect({ reduceMotion: this.reduceMotion,
             value: this.snapshot.checkMode === 'explore' ? '发现' : '搜索',
             options: ['搜索', '发现'],
             selectedIndex: this.snapshot.checkMode === 'explore' ? 1 : 0,
@@ -799,7 +800,7 @@ export struct SourceToolsPage {
                 this.onCheckSelectionChanged(index === 1 ? 'explore' : 'search', this.snapshot.checkDepth);
             },
           });
-          ReaderInlineSelect({
+          ReaderInlineSelect({ reduceMotion: this.reduceMotion,
             value: ['列表', '详情', '目录', '正文'][this.snapshot.checkDepth - 2] ?? '列表',
             options: ['列表', '详情', '目录', '正文'],
             selectedIndex: Math.max(0, this.snapshot.checkDepth - 2),

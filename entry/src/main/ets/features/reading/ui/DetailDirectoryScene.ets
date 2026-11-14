@@ -6,6 +6,7 @@ import { ReaderDirectoryDestination } from './ReaderDirectoryDestination';
 
 @Component
 export struct DetailDirectoryScene {
+  @Prop reduceMotion: boolean = false;
   @ObjectLink reading: ReadingEntryPresentation;
   @Prop interactive: boolean = true;
   @Prop mangaDownloadEnabled: boolean = false;
@@ -21,7 +22,7 @@ export struct DetailDirectoryScene {
 
   build() {
     if (this.reading.book !== undefined) {
-      ReaderDirectoryDestination({
+      ReaderDirectoryDestination({ reduceMotion: this.reduceMotion,
         opening: this.reading.directoryPresentationGeneration,
         isOpeningCurrent: (opening: number): boolean => this.isOpeningCurrent(opening),
         catalogContext: 'detail', contentKind: this.reading.book.contentKind === 'manga' ? 'manga' : 'text',

@@ -11,6 +11,7 @@ import type { RemoteReadingPositionScope } from '../application/RemoteReadingPos
 /** Directory reached from book detail or an already mounted reader. */
 @Component
 export struct ReaderDirectoryDestination {
+  @Prop reduceMotion: boolean = false;
   @Prop opening: number = 0;
   @Prop catalogContext: 'detail' | 'reader' = 'reader';
   @Prop contentKind: 'text' | 'manga' = 'text';
@@ -136,7 +137,7 @@ export struct ReaderDirectoryDestination {
         .accessibilityLevel(this.interactive ? 'auto' : 'no-hide-descendants')
         .hitTestBehavior(this.interactive ? HitTestMode.Default : HitTestMode.None);
     } else {
-      ReaderFullDirectory({
+      ReaderFullDirectory({ reduceMotion: this.reduceMotion,
         sourceId: this.sourceId, bookId: this.bookId, bookTitle: this.bookTitle, bookKind: this.bookKind,
         interactive: this.interactive, isOpeningCurrent: (): boolean => this.canHandle(opening),
         chapterTitle: this.chapterTitle, catalogContext: this.catalogContext,

@@ -332,7 +332,7 @@ export struct ReaderShell {
   @Builder
   private readingOverlay() {
       if (this.route === 'directory') {
-        ReaderDirectoryDestination({
+        ReaderDirectoryDestination({ reduceMotion: this.reduceMotion,
           opening: this.directoryOpening, isOpeningCurrent: this.isDirectoryOpeningCurrent,
           catalogContext: 'reader', contentKind: this.contentKind,
           sourceId: this.sourceId, bookId: this.bookId, bookKind: this.bookKind ?? '', bookTitle: this.bookTitle,
