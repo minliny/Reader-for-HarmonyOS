@@ -173,7 +173,7 @@ if (selected.includes('sdk-targets')) {
       const actor = new controls.button.Component(undefined, { specId, label, layout, availableWidth: width - 38,
         scheme: 'day', actionEnabled: enabled, onAction: () => actions++ });
       actor.aboutToAppear(); actor.initialRender(); const frame = hit(controls.nodes(actor), group);
-      assert.ok(frame.height >= 44); frame.onClick(); assert.equal(actions, enabled ? 1 : 0);
+      assert.ok(Math.max(frame.height ?? 0, frame.constraintSize?.minHeight ?? 0) >= 44); frame.onClick(); assert.equal(actions, enabled ? 1 : 0);
       actor.actionEnabled = false; frame.onClick(); assert.equal(actions, enabled ? 1 : 0, 'existing callback obeys disabled state');
       record(group, width, scale, frame, { ...(targetId ? { targetId } : {}), label });
     }
@@ -234,9 +234,9 @@ if (selected.includes('sdk-targets')) {
     record('query-input', width, scale, input, { boundary: 'growing field pays both border edges; actual input response reserves at least44; native parent clipping/focus not proved' });
     search.variant = 'readerDirectory'; search.autoLineHeightField();
     const otherInput = [...search.nodes.values()].filter(n => n.type === 'TextInput').at(-1);
-    const directoryHeight=sizing.readerScaledControlHeight(44,24,scale);
-    assert.equal(otherInput.height,directoryHeight,'current directory branch owns a real growing target');
-    assert.deepEqual(otherInput.responseRegion,{x:0,y:0,width:'100%',height:directoryHeight},'directory no longer inherits Source negative-y expansion');
+    const directoryHeight=sizing.readerScaledControlHeight(32,24,scale);
+    assert.equal(otherInput.height,directoryHeight,'directory input retains the actual compact typography recipe');
+    assert.deepEqual(otherInput.responseRegion,{x:0,y:(directoryHeight-Math.max(44,directoryHeight))/2,width:'100%',height:Math.max(44,directoryHeight)},'directory owns a centered response inside its paid carrier');
     assert.equal(otherInput.maxFontScale,scale);
     const outsideCalls=[];
     new searchInputTarget.ReaderSearchInputTarget('rssPassive',44).applyNormalAttribute(new Proxy({},{get:(_target,key)=>(...args)=>outsideCalls.push([key,...args])}));

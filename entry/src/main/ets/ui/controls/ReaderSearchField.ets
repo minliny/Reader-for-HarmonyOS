@@ -63,7 +63,10 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
   }
   applyNormalAttribute(instance: TextInputAttribute): void {
     if (this.variant === 'sourceManagement') instance.responseRegion(readerActionTouchRegion('100%', this.height));
-    if (this.variant === 'readerDirectory') instance.responseRegion({ x: 0, y: 0, width: '100%', height: this.height });
+    if (this.variant === 'readerDirectory') {
+      const targetHeight = Math.max(44, this.height);
+      instance.responseRegion({ x: 0, y: (this.height - targetHeight) / 2, width: '100%', height: targetHeight });
+    }
     if (this.variant === 'sourceManagement' || this.variant === 'readerDirectory') {
       instance.minFontScale(1);
       instance.maxFontScale(this.fontScale);
@@ -411,44 +414,53 @@ export struct ReaderSearchField {
 
   @Builder
   private autoLineHeightField(inputFocusId: string = this.directoryFocusId ?? '') {
-    Row({ space: this.iconGap() }) {
-      Image(this.searchIcon())
-        .width(this.iconSize())
-        .height(this.iconSize());
-      TextInput({ placeholder: this.placeholder, text: this.text })
-        .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
-        .layoutWeight(1)
-        .height(this.inputHeight())
-        .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.variant === 'readerDirectory' || this.variant === 'sourceManagement' ? this.directoryFontScale() : 1,
-          this.directoryFocusAllowed ? inputFocusId : '',
-          (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
-          (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus))
-        .padding(0)
-        .borderRadius(0)
-        .fontFamily(this.textStyle().fontFamily)
-        .fontWeight(this.textStyle().fontWeight)
-        .fontSize(this.textStyle().fontSizeFp)
-        .maxLines(1)
-        .fontColor(this.inputColor())
-        .nativeInputBackground()
-        .caretColor(this.caretColor())
-        .placeholderColor(this.placeholderColor())
-        .placeholderFont({
-          size: this.textStyle().fontSizeFp,
-          family: this.textStyle().fontFamily,
-        })
-        .accessibilityText(this.resolvedAccessibilityLabel())
-        .onChange((value: string): void => this.changeText(value))
-        .enterKeyType(EnterKeyType.Search)
-        .onSubmit((_enterKey: EnterKeyType): void => this.submit());
-    }
-    .width('100%')
-    .height(this.fieldHeight())
-    .padding({ left: this.horizontalPadding(), right: this.horizontalPadding() })
-    .nativeFieldBackground()
-    .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
-    .borderRadius(this.cornerRadius())
-    .alignItems(VerticalAlign.Center);
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.variant === 'readerDirectory') {
+        Row().width('100%').height(this.fieldHeight())
+          .nativeFieldBackground()
+          .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
+          .borderRadius(this.cornerRadius())
+          .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+      }
+      Row({ space: this.iconGap() }) {
+        Image(this.searchIcon())
+          .width(this.iconSize())
+          .height(this.iconSize());
+        TextInput({ placeholder: this.placeholder, text: this.text })
+          .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
+          .layoutWeight(1)
+          .height(this.inputHeight())
+          .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.variant === 'readerDirectory' || this.variant === 'sourceManagement' ? this.directoryFontScale() : 1,
+            this.directoryFocusAllowed ? inputFocusId : '',
+            (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
+            (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus))
+          .padding(0)
+          .borderRadius(0)
+          .fontFamily(this.textStyle().fontFamily)
+          .fontWeight(this.textStyle().fontWeight)
+          .fontSize(this.textStyle().fontSizeFp)
+          .maxLines(1)
+          .fontColor(this.inputColor())
+          .nativeInputBackground()
+          .caretColor(this.caretColor())
+          .placeholderColor(this.placeholderColor())
+          .placeholderFont({
+            size: this.textStyle().fontSizeFp,
+            family: this.textStyle().fontFamily,
+          })
+          .accessibilityText(this.resolvedAccessibilityLabel())
+          .onChange((value: string): void => this.changeText(value))
+          .enterKeyType(EnterKeyType.Search)
+          .onSubmit((_enterKey: EnterKeyType): void => this.submit());
+      }
+      .width('100%')
+      .height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight())
+      .padding({ left: this.horizontalPadding(), right: this.horizontalPadding() })
+      .backgroundColor(this.variant === 'readerDirectory' ? Color.Transparent : this.fieldBackgroundColor())
+      .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
+      .borderRadius(this.cornerRadius())
+      .alignItems(VerticalAlign.Center);
+    }.width('100%').height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight());
   }
 
   @Builder

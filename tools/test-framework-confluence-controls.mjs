@@ -6,6 +6,7 @@ import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/found
 
 const definitions = {
   'source-native-targets': { description: 'Current SDK-emitted native Buttons reserve the scaled source/tool targets and publish opt-in choice semantics.', resources: [] },
+  'directory-query-targets': { description: 'Actual shared directory query retains compact paint/input recipes inside a paid44vp wrapper and centered response through normal Toolbar assembly and short prefix allocation.', resources: [] },
   'source-group-budget': { description: 'Actual select panel and choice row pay border-box width and 44vp native row minimum while default variants keep their own geometry.', resources: [] },
 };
 
@@ -71,6 +72,7 @@ function assertNativeStates() {
 }
 
 for (const id of selectContractCases(definitions)) {
+  if (id === 'directory-query-targets') await directoryQueryTargets();
   if (id === 'source-native-targets') {
     assertNativeStates();
     for (const scale of [1, 1.3, 1.6, 2]) {
@@ -145,4 +147,72 @@ for (const id of selectContractCases(definitions)) {
     }
   }
   recordContractCasePass(id);
+}
+
+async function directoryQueryTargets() {
+  const { readFileSync } = await import('node:fs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+  const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { readerFoundationTokens, surfaceFontResolvers } = await import('./lib/reader-foundation-control-probe.mjs');
+  const searchGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
+  const budget = await import('../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts');
+  const root = new URL('../entry/src/main/ets/', import.meta.url);
+  const read = path => readFileSync(new URL(path, root), 'utf8');
+  const source = read('ui/controls/ReaderSearchField.ets');
+  const target = pureModuleProbe(source.slice(0, source.indexOf('@Component')), 'ReaderSearchInputTarget.ets',
+    { FrameCallback: class {} }, ['ReaderSearchInputTarget', 'ReaderSearchFocusFrame']);
+  for (const width of [320, 366]) for (const scale of [1, 1.3, 1.6, 2]) {
+    const metrics = createDefaultReaderWindowMetrics(); metrics.windowRect.width = width; metrics.systemFontScale = scale;
+    for (const caller of [{ variant: 'full-directory', field: 32, input: 30 },
+      { variant: 'full-directory', field: 32, input: 32 }, { variant: 'manga-catalog', field: 44, input: 44 }]) {
+      const properties = createArkUIPropertyRuntimeProbe();
+      const dependencies = { ...properties.sdk, ...target, ...readerFoundationTokens, ...surfaceFontResolvers(), ...searchGeometry,
+        readerWindowMetrics: () => metrics, TextInputController: class {} };
+      const Field = createReaderBuilderProbe(source, boundedMembers(source), dependencies, properties.hooks).Component;
+      const toolbar = createReaderBuilderProbe(read('features/reading/ui/ReaderDirectoryToolbar.ets'),
+        ['queryField', 'controlFieldHeight', 'currentDirectoryInput'], { ...dependencies, ReaderSearchField: Field },
+        { ...properties.hooks, childSources: { ReaderSearchField: source }, mountChildren: true, lifecycleChildren: true }).owner;
+      let edits = 0;
+      Object.assign(toolbar, { variant: caller.variant, readerWindowMetricsRevision: 1, directoryMounted: true,
+        naturalFieldHeightVp: caller.field, naturalInputHeightVp: caller.input,
+        placeholder: '搜索章节', text: '', directoryFocusId: '', directoryFocusAllowed: false,
+        onTextChange() { edits += 1; }, onSearch() {} });
+      toolbar.queryField('');
+      const field = [...toolbar.children.values()][0];
+      const nodes = [...field.nodes.values()];
+      const input = nodes.find(node => node.type === 'TextInput');
+      const paint = nodes.find(node => node.type === 'Row' && node.backgroundColor !== undefined && node.height === field.fieldHeight());
+      const parent = [...toolbar.nodes.values()].find(node => node.type === 'Row');
+      assert.ok(paint && input);
+      assert.equal(paint.height, field.fieldHeight(), 'paint still follows the original field recipe');
+      const expectedInput = caller.variant === 'manga-catalog' ? toolbar.controlFieldHeight() : caller.input;
+      assert.equal(input.height, expectedInput, 'caller-specific native typography height stays explicit');
+      assert.equal(input.responseRegion.height, Math.max(44, expectedInput));
+      assert.equal(input.responseRegion.y, (expectedInput - Math.max(44, expectedInput)) / 2);
+      const carrier = nodes.find(node => node.type === 'Stack' && node.height === Math.max(44, field.fieldHeight()));
+      assert.ok(carrier, 'the normal shared build pays the complete native response');
+      assert.ok(parent.height >= carrier.height, 'the immediate query parent pays the shared carrier');
+      const toolbarBudget = budget.readerDirectoryToolbarBudget(width, true, toolbar.controlFieldHeight(), 60 * scale);
+      assert.ok(toolbarBudget.height >= parent.height + 6, 'actual toolbar budget pays padding outside the response');
+      input.onChange('章节'); assert.equal(edits, 1);
+      toolbar.directoryMounted = false; input.onChange('旧章节'); assert.equal(edits, 1, 'retired actual caller refuses input');
+      field.text = '后继'; properties.flush();
+      assert.equal([...field.nodes.values()].find(node => node.type === 'TextInput').create.text, '后继');
+    }
+  }
+  const Prefix = selectedProductionMethods(new URL('features/reading/ui/ReaderControlDirectoryContent.ets', root),
+    'ReaderControlDirectoryContent', ['shortHeaderHeight'], { readerScaledControlHeight: surfaceFontResolvers().readerScaledControlHeight });
+  const prefix = Object.assign(new Prefix(), { tab: 'bookmarks', directoryQueryHeight: () => 32,
+    tabHeight: () => 36, shortToolsHeight: () => 44 });
+  assert.equal(prefix.shortHeaderHeight(), 24 + 36 + 44 + 44, 'short List prefix pays the same actual query carrier');
+  const brokenTarget = source.replace('const targetHeight = Math.max(44, this.height);', 'const targetHeight = this.height;');
+  const Broken = pureModuleProbe(brokenTarget.slice(0, brokenTarget.indexOf('@Component')), 'BrokenSearchTarget.ets',
+    { FrameCallback: class {} }, ['ReaderSearchInputTarget']).ReaderSearchInputTarget;
+  let response;
+  new Broken('readerDirectory', 30).applyNormalAttribute({ responseRegion(value) { response = value; return this; },
+    minFontScale() { return this; }, maxFontScale() { return this; } });
+  assert.throws(() => assert.ok(response.height >= 44), /AssertionError/, 'the old response fails the actual target requirement');
 }

@@ -163,7 +163,7 @@ export struct ReaderDirectoryToolbar {
           },
           onTextChange: (value: string): void => { if (this.currentDirectoryInput(inputFocusId)) this.onTextChange(value); },
           onSubmit: (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onSearch(); } });
-      }.layoutWeight(1).height(this.controlFieldHeight()).alignItems(VerticalAlign.Center);
+      }.layoutWeight(1).height(Math.max(44, this.controlFieldHeight())).alignItems(VerticalAlign.Center);
   }
 
   @Builder

@@ -571,7 +571,7 @@ export struct ReaderControlDirectoryContent {
     return Math.max(readerScaledControlHeight(32, 24, this.fontScale()), this.selectedMinimum()?.full.fieldHeightVp ?? 0);
   }
   private shortHeaderHeight(): number {
-    const input = this.directoryQueryHeight();
+    const input = Math.max(44, this.directoryQueryHeight());
     // Four action rows/lanes plus the informational summary. Native Area may
     // grow this positive first-frame allocation, never hide the clear control.
     return 24 + this.tabHeight() + input + this.shortToolsHeight() +
