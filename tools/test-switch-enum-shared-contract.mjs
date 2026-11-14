@@ -93,6 +93,31 @@ if (selectedCase === 'toggle-accessibility-focus') {
     }] : [], 'only current prior screen-reader focus can be continued once');
   }
 }
+if (selectedCase === 'toggle-accessibility-focus') {
+  for (const stop of ['none', 'identity', 'disabled', 'busy', 'background', 'retired', 'screen-reader-moved']) {
+    const frames = [], requests = [], events = [];
+    const p = switchControls({ accessibility: { sendAccessibilityEvent: async event => { events.push(event); } } });
+    const o = p.mount(p.toggle, { inputIdentity: 'both-A', value: false, onToggle() {} });
+    o.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+      getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
+      getFocusController: () => ({ requestFocus: id => requests.push(id) }) });
+    const initial = nativeToggle(p, o);
+    initial.onFocus(); initial.onAccessibilityFocus(true); initial.onChange(true); p.properties.flush();
+    const current = nativeToggle(p, o); current.onAppear();
+    frames.shift().onIdle(1000000);
+    await Promise.resolve(); await Promise.resolve();
+    assert.equal(events.length, 1); assert.equal(frames.length, 1, 'one final frame follows actual platform event completion');
+    current.onAccessibilityFocus(true);
+    if (stop === 'identity') p.update(o, { inputIdentity: 'both-B' });
+    if (stop === 'disabled') p.update(o, { actionEnabled: false });
+    if (stop === 'busy') p.update(o, { isBusy: true });
+    if (stop === 'background') o.appForeground = false;
+    if (stop === 'retired') o.aboutToDisappear();
+    if (stop === 'screen-reader-moved') current.onAccessibilityFocus(false);
+    frames.shift().onIdle(1000000);
+    assert.deepEqual(requests, stop === 'none' ? ['reader-toggle:both-A', 'reader-toggle:both-A'] : ['reader-toggle:both-A']);
+  }
+}
 if(selectedCase==='segment'){
  const p=switchControls(),calls=[],o=p.mount(p.segment,{inputIdentity:'A',options:['跟随','浅色','深色'],optionIds:['system','day','night'],selectedIndex:0,onSelect:i=>calls.push(i)});
  const night=nativeChoice(p,o).at(-1).onClick;night();assert.deepEqual(calls,[2]);assert.equal(o.selectedIndex,0);

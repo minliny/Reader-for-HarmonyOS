@@ -100,22 +100,34 @@ export struct ReaderToggle {
     try {
       this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
         if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
-        if (keyboardFocused) {
-          try { this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity)); }
-          catch (_unavailable) {}
-        }
+        if (keyboardFocused) this.restoreKeyboardFocus(identity, revision);
         if (accessibilityFocused && (this.accessibilityFocusedRevision === revision - 1 ||
           this.accessibilityFocusedRevision === revision)) {
           try {
             const bundleName = this.getUIContext().getHostContext()?.applicationInfo.name;
             if (bundleName !== undefined && bundleName.length > 0) {
               accessibility.sendAccessibilityEvent({ type: 'requestFocusForAccessibilityNotInterrupt', bundleName,
-                triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity) }).catch((): void => {});
+                triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity) }).then((): void => {
+                  if (!keyboardFocused || !this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
+                  // Accessibility delivery can move native keyboard focus to the next node.
+                  // Restore its original owner after that platform update has reached layout.
+                  try {
+                    this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
+                      if (this.accessibilityFocusedRevision === revision) this.restoreKeyboardFocus(identity, revision);
+                    }));
+                  } catch (_detached) {}
+                }).catch((): void => {});
             }
           } catch (_unavailable) {}
         }
       }));
     } catch (_detached) {}
+  }
+
+  private restoreKeyboardFocus(identity: string, revision: number): void {
+    if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
+    try { this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity)); }
+    catch (_unavailable) {}
   }
 
   private toggle(identity: string, revision: number, next: boolean): void {
