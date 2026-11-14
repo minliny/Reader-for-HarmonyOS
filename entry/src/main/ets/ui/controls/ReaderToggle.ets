@@ -67,7 +67,14 @@ export struct ReaderToggle {
     if (!this.appForeground) this.clearFocusContinuation();
   }
   private onAvailabilityChanged(): void {
-    if (this.appForeground && this.canAct(this.inputIdentity)) this.restoreNativeFocus(this.inputIdentity, this.nativeRevision);
+    if (!this.appForeground) return;
+    if (!this.canAct(this.inputIdentity)) {
+      if (this.pendingFocusRevision === this.nativeRevision || this.pendingAccessibilityFocusRevision === this.nativeRevision) {
+        this.restoringRevision = -1;
+      }
+      return;
+    }
+    this.restoreNativeFocus(this.inputIdentity, this.nativeRevision);
   }
   private clearFocusContinuation(): void {
     this.clearAccessibilityFocusRetry();
@@ -133,7 +140,8 @@ export struct ReaderToggle {
     if ((!keyboardFocused && !accessibilityFocused) || this.restoringRevision === revision) return;
     if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
     this.restoringRevision = revision;
-    this.pendingKeyboardAfterAccessibilityRevision = keyboardFocused && accessibilityFocused ? revision : -1;
+    this.pendingKeyboardAfterAccessibilityRevision = (keyboardFocused && accessibilityFocused) ||
+      this.pendingKeyboardAfterAccessibilityRevision === revision ? revision : -1;
     this.pendingFocusRevision = -1;
     try {
       this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
@@ -225,7 +233,7 @@ export struct ReaderToggle {
 
   private diagnosticFocus(stage: string, revision: number, focused: boolean = false): void {
     const mode = DEBUG ? AppStorage.get<boolean | string>('readerToggleFocusTrace') : false;
-    if ((mode !== true && mode !== 'buffered') || this.diagnosticFocusEvents >= 40) return;
+    if ((mode !== true && mode !== 'buffered') || this.diagnosticFocusEvents >= (mode === 'buffered' ? 64 : 40)) return;
     this.diagnosticFocusEvents += 1;
     const event = JSON.stringify({
       atMs: Date.now(), stage, revision, focused, label: this.accessibilityLabel, current: this.nativeRevision, keyboard: this.focusedRevision,

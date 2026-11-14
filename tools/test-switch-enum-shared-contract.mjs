@@ -71,8 +71,30 @@ if (selectedCase === 'toggle-focus-availability') {
     }
   }
   for (const stop of ['identity', 'background', 'retired', 'disabled']) exercise('mount', 'reader', stop);
-  const lostAvailability = toggleSource.replace('if (this.appForeground && this.canAct(this.inputIdentity)) this.restoreNativeFocus',
-    'if (false && this.appForeground && this.canAct(this.inputIdentity)) this.restoreNativeFocus');
+  const mixedFrames = [], mixedEvents = [], mixedKeyboard = [];
+  const mixed = switchControls({ accessibility: { sendAccessibilityEvent: async event => mixedEvents.push(event) } });
+  const mixedOwner = mixed.mount(mixed.toggle, { inputIdentity: 'mixed-busy-A', value: false, onToggle() {} });
+  mixedOwner.getUIContext = () => ({ postFrameCallback: frame => mixedFrames.push(frame),
+    getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
+    getFocusController: () => ({ requestFocus: id => mixedKeyboard.push(id) }) });
+  const oldMixed = nativeToggle(mixed, mixedOwner);
+  oldMixed.onFocus(); oldMixed.onAccessibilityFocus(true); oldMixed.onChange(true);
+  mixed.properties.flush();
+  const newMixed = nativeToggle(mixed, mixedOwner);
+  newMixed.onAppear(); mixedFrames.shift().onFrame(1000000);
+  assert.equal(mixedKeyboard.length, 1);
+  mixedOwner.actionEnabled = false; mixedOwner.isBusy = true; mixed.properties.flush();
+  newMixed.onFocus(); newMixed.onBlur();
+  assert.equal(mixedFrames.length, 0, 'keyboard acknowledgement while busy cannot request accessibility focus');
+  assert.equal(mixedOwner.pendingAccessibilityFocusRevision, 1);
+  mixedOwner.actionEnabled = true; mixedOwner.isBusy = false; mixed.properties.flush();
+  mixedFrames.shift().onFrame(1000000); mixedFrames.shift().onFrame(1000000);
+  assert.equal(mixedEvents.length, 1, 'pending reader continuation resumes after the busy keyboard acknowledgement');
+  newMixed.onAccessibilityFocus(true); mixedFrames.shift().onFrame(1000000);
+  assert.equal(mixedKeyboard.length, 2, 'the original mixed-input intent survives an accessibility-only resumed phase');
+  mixedOwner.aboutToDisappear();
+  const lostAvailability = toggleSource.replace('this.restoreNativeFocus(this.inputIdentity, this.nativeRevision);',
+    'return;');
   assert.notEqual(lostAvailability, toggleSource);
   assert.throws(() => exercise('mount', 'reader', 'ready', lostAvailability), /current reader focus resumes when availability returns/);
 }
@@ -81,13 +103,13 @@ if (selectedCase === 'toggle-focus-buffer') {
   for (const identity of ['buffer-A', 'buffer-B']) {
     const p = switchControls({ debug: true, focusTrace: 'buffered', focusBuffer: buffer, diagnostics });
     const owner = p.mount(p.toggle, { inputIdentity: identity, accessibilityLabel: identity });
-    for (let index = 0; index < 45; index += 1) owner.diagnosticFocus('buffer-' + index, 0);
-    assert.equal(owner.diagnosticFocusEvents, 40);
+    for (let index = 0; index < 70; index += 1) owner.diagnosticFocus('buffer-' + index, 0);
+    assert.equal(owner.diagnosticFocusEvents, 64);
     owner.aboutToDisappear();
   }
   assert.equal(buffer.length, 64);
   assert.deepEqual(diagnostics, [], 'buffered callbacks perform no hilog IO');
-  assert.equal(JSON.parse(buffer.at(-1)).stage, 'buffer-39', 'each owner has the original forty-event bound');
+  assert.equal(JSON.parse(buffer.at(-1)).stage, 'buffer-63', 'buffered owner and global bounds hold');
   const entry = readFileSync(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
   const { ts, options } = (await import('./lib/ets-compiler-runtime.mjs')).installedEtsCompiler();
   const tree = ts.createSourceFile('EntryAbility.ets', entry, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
