@@ -66,6 +66,8 @@ API 23 可通过 `UIContext.getPromptAction()` 显示系统 Toast。`openToast` 
 
 ## 登记与保留边界
 
+普通短反馈由当前有效前景 ReaderTransientToast 调用 ReaderTransientAnnouncement 平台适配。共享注册表核对活动宿主、前景、可见非空消息及当前 generation，同代跨宿主只取得一次宣告资格。事件采用 API18 起的 announceForAccessibilityNotInterrupt，文字沿当前标题和正文生成。平台异步回执只记日志，输入焦点继续由原宿主持有。准确方法回归为 tools/test-ui-framework-feedback.mjs 的 transient-announcement，实际可听、读屏队列和焦点连续性继续沿原生证据关闭。入口已登记于 tools/message-entrypoints.json。
+
 受控清单为 `tools/message-entrypoints.json`：按文件、宿主、成员和类别登记，不以行号或历史总数锁死。新增或修改入口必须更新分类、准入、清理或明确例外。来源中已有公共组件不等于已完成视觉、交互或用户验收。
 
 RSS、同步、发现、未开放设置及不可达旧模块保持关闭。它们的 Toast 同样经公共适配；未完成的历史 UI 分流必须列为 `retained-before-open`，开放前完成对应分类迁移，不能计入当前已整合覆盖率。正常任务内容、资源占位、阅读手势和 OS 媒体通道属于已登记专用类别，不是任意页面绕过公共消息框架的授权。

@@ -3,6 +3,7 @@ import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteracti
 import { MESSAGE_BODY, MESSAGE_TITLE } from '../foundation/ReaderMessageStyle';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam, readerReduceMotionFromStorage } from '../foundation/ReaderMotionPolicy';
+import { announceReaderTransientToast } from './ReaderTransientAnnouncement';
 import {
   READER_TRANSIENT_TOAST_STORAGE_KEY,
   READER_TRANSIENT_HOST_STORAGE_KEY,
@@ -157,6 +158,7 @@ export struct ReaderTransientToast {
       this.toastOffsetY = 0;
     }
     const generation = this.toast.generation;
+    announceReaderTransientToast(() => this.getUIContext(), this.hostId, generation);
     const duration = Math.max(1, Number.isFinite(this.toast.duration) ? this.toast.duration : 2000);
     this.dismissTimer = setTimeout((): void => this.dismiss(generation), duration);
   }

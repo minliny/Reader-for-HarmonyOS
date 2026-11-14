@@ -12,6 +12,7 @@ import { ReaderDialogSurface, DialogActionView } from '../../../ui/surfaces/Read
 export struct BookRemovalDialog {
   controller: CustomDialogController;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop message: string = '';
   @State private measuredMessageHeight: number = 50;
   onCancel: () => void = (): void => {};
@@ -66,6 +67,7 @@ export struct BookRemovalDialog {
   }
 
   private messageMaxHeight(): number {
+    this.metricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     // Reserve title, actions, spacing and window insets. Long names and the
     // truthful local-book purge notice scroll instead of being ellipsized.

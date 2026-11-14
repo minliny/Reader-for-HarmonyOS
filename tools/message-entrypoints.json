@@ -132,7 +132,7 @@
       "family": "shared.recovery-notice",
       "category": "原操作未决、读回失败或清理待完成",
       "effectiveHost": "BookshelfGroupPresentation当前identity及snapshot.receipt generation；groupInputIsCurrent验证foreground和输入准入。",
-      "retireRule": "关闭只dismiss当前展示identity；原分组操作继续归presentation，恢复动作捕获identity/expected；退场焦点恢复使用captureFocusReturn当前资格。",
+      "retireRule": "关闭只dismiss当前展示identity；原分组操作继续归presentation，恢复动作捕获identity/expected；退场焦点恢复使用captureFocusReturn当前资格。 Overlay capacity uses actual host height/origin, safe edges and recoveryTop. Notice owns the single bounded Scroll, with zero clamped to zero.",
       "status": "registered-source-entry"
     },
     {
@@ -1966,6 +1966,17 @@
       "retireRule": "close 标记 retired 并解除事件/释放原 AVSession；失败仍按原 optional 系统能力处理。",
       "reason": "平台媒体会话是系统适配，独立于应用内 Toast、确认框和常驻待处理通知。",
       "status": "dedicated-existing-surface"
+    }
+  ],
+  "platformAdapters": [
+    {
+      "file": "entry/src/main/ets/ui/feedback/ReaderTransientAnnouncement.ets",
+      "member": "announceReaderTransientToast",
+      "category": "ordinary short-feedback accessibility announcement",
+      "effectiveHost": "Active registered foreground ReaderTransientToast host, visible nonempty current generation. claimReaderTransientAnnouncement coordinates one attempt per generation across hosts.",
+      "retireRule": "Background, hidden, replaced or retired generations cannot claim. Async platform completion only logs its outcome and cannot modify the next feedback or input focus.",
+      "platformAPI": "accessibility.sendAccessibilityEvent / announceForAccessibilityNotInterrupt (API18+)",
+      "evidence": "tools/test-ui-framework-feedback.mjs#transient-announcement. Native audible/focus evidence OPEN."
     }
   ]
 }

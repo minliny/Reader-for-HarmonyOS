@@ -13,6 +13,20 @@ export const READER_FEEDBACK_DEDUPE_MS: 2000 = 2000;
 interface ReaderTransientHostRegistration { id: number; priority: number; }
 let nextHostId: number = 0;
 const transientHosts: ReaderTransientHostRegistration[] = [];
+let announcedGeneration: number = -1;
+
+/** Claims one announcement attempt across every foreground presentation host. */
+export function claimReaderTransientAnnouncement(hostId: number, generation: number): string | undefined {
+  const current = AppStorage.get<ReaderTransientToastState>(READER_TRANSIENT_TOAST_STORAGE_KEY);
+  if (hostId <= 0 || !transientHosts.some((host: ReaderTransientHostRegistration): boolean => host.id === hostId) ||
+    AppStorage.get<number>(READER_TRANSIENT_HOST_STORAGE_KEY) !== hostId ||
+    AppStorage.get<boolean>('readerAppForeground') === false || current?.visible !== true ||
+    !Number.isSafeInteger(generation) || generation <= announcedGeneration || current.generation !== generation ||
+    current.message.trim().length === 0) return undefined;
+  announcedGeneration = generation;
+  const title = current.title.trim();
+  return title.length > 0 ? `${title}。${current.message.trim()}` : current.message.trim();
+}
 
 /** Native covers/sheets have their own compositor layer. Exactly one shared
  * host presents a fact; changing layers retires the prior presentation. */
