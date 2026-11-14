@@ -1294,7 +1294,7 @@
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "96e24b27d219aeb3347eeb2160ee85b1cb0e9da73d20ed16290df1b3cfe9e551"
+          "sha256": "c4bfdca34e90d242d1fdd68c68853443ddf247809926a1984c7b4ae4ccf6d546"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
