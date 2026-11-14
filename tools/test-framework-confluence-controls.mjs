@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import { buttonSource, foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
+import { buttonSource, foundationControls, foundationSpecs, foundationModifiers } from './lib/reader-foundation-control-probe.mjs';
 import { inlineSelectSdk } from './lib/reader-inline-select-sdk-probe.mjs';
 import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 
@@ -22,10 +22,26 @@ function button(specId, fontScale, extra = {}, specs = foundationSpecs(), defini
   return { actor, controls, target, intents };
 }
 
-function assertSingleNativeModifier(view) {
-  const nodeKey = [...view.actor.nodes].find(([, node]) => node === view.target)?.[0];
-  const calls = view.actor.attributeCalls.filter(call => call.id === nodeKey && call.property === 'attributeModifier');
-  assert.equal(calls.length, 1, 'one native Button owns one combined attribute modifier');
+function assertChoice(target, selected) {
+  assert.equal(target.accessibilityRole, 'AccessibilityRoleType.RADIO', 'choice role reaches the native carrier');
+  assert.equal(target.accessibilitySelected, selected, 'current selection reaches the native carrier');
+}
+
+function assertUpdatedButton(view) {
+  view.actor.primary = false;
+  view.actor.actionEnabled = false;
+  view.controls.properties.flush();
+  const target = view.controls.nodes(view.actor).find(node => node.type === 'Button');
+  assertTarget(target);
+  assert.equal(target.enabled, false, 'normal SDK update disables the carrier');
+  if (view.actor.selectionSemantic) assertChoice(target, false);
+  target.onClick();
+  assert.equal(view.intents.length, 1, 'disabled update rejects the real callback');
+  view.actor.actionEnabled = true;
+  view.controls.properties.flush();
+  view.actor.aboutToDisappear();
+  target.onClick();
+  assert.equal(view.intents.length, 1, 'retired actor rejects its retained callback');
 }
 
 function assertTarget(target) {
@@ -33,40 +49,74 @@ function assertTarget(target) {
   assert.ok((target.height ?? target.constraintSize?.minHeight) >= 44, 'native carrier pays minimum height');
 }
 
+function assertNativeStates() {
+  const ColorMetrics = { resourceColor: color => ({ red: 1, green: 2, blue: 3,
+    blendColor: () => ({ color: `pressed:${color}` }) }), rgba: () => ({}) };
+  const { ReaderButtonFrameModifier } = foundationModifiers(foundationSpecs(), ColorMetrics);
+  function applied(modifier, method) {
+    const attributes = {};
+    const native = new Proxy({}, { get: (_target, property) => (...args) => {
+      attributes[property] = args.length === 1 ? args[0] : args; return native;
+    } });
+    modifier[method](native); return attributes;
+  }
+  const enabled = new ReaderButtonFrameModifier('source-tools-compact', false, true, 'intrinsic', 'day');
+  const normal = applied(enabled, 'applyNormalAttribute'), pressed = applied(enabled, 'applyPressedAttribute');
+  assert.notEqual(pressed.backgroundColor, normal.backgroundColor, 'pressed native state consumes the platform blend result');
+  assert.equal(pressed.height, normal.height); assert.equal(pressed.borderRadius, normal.borderRadius);
+  const disabled = new ReaderButtonFrameModifier('source-tools-compact', false, false, 'intrinsic', 'day');
+  const disabledNormal = applied(disabled, 'applyNormalAttribute'), disabledPress = applied(disabled, 'applyPressedAttribute');
+  assert.equal(disabledPress.backgroundColor, disabledNormal.backgroundColor, 'disabled press preserves its normal surface');
+  assert.deepEqual(applied(disabled, 'applyDisabledAttribute'), disabledNormal);
+}
+
 for (const id of selectContractCases(definitions)) {
   if (id === 'source-native-targets') {
+    assertNativeStates();
     for (const scale of [1, 1.3, 1.6, 2]) {
       for (const specId of ['source-management-category', 'source-management-status-compact',
         'source-management-status-wide', 'source-management-login', 'source-management-detect',
         'source-tools-action', 'source-tools-compact']) {
         const view = button(specId, scale, { selectionSemantic: specId.includes('category'), primary: true });
         assertTarget(view.target);
-        assertSingleNativeModifier(view);
         if (view.actor.selectionSemantic) {
-          assert.equal(view.target.accessibilityRole, 'AccessibilityRoleType.RADIO');
-          assert.equal(view.target.accessibilitySelected, true);
+          assertChoice(view.target, true);
         }
         view.target.onClick();
         assert.equal(view.intents.length, 1);
-        view.actor.actionEnabled = false;
-        view.target.onClick();
-        view.actor.actionEnabled = true;
-        view.actor.aboutToDisappear();
-        view.target.onClick();
-        assert.equal(view.intents.length, 1, 'disabled and retired callbacks are rejected by the actual actor');
+        assertUpdatedButton(view);
       }
     }
     const ordinary = button('source-action', 1);
-    assert.equal(ordinary.target.height, 42, 'retained source-action keeps its authored target');
+    assert.equal(ordinary.target.height, 44, 'source-action keeps its current authored target');
     assert.equal(ordinary.target.accessibilitySelected, undefined, 'default Button receives no new choice state');
-    for (const variant of ['search-field-wide', 'search-filter-option']) assertSingleNativeModifier(button(variant, 1));
     const duplicateModifier = buttonSource.replaceAll('.attributeModifier(new ReaderButtonFrameModifier(',
       '.attributeModifier(new ReaderButtonSelectionModifier(this.selectionSemantic, this.primary))\n        .attributeModifier(new ReaderButtonFrameModifier(');
-    assert.throws(() => assertSingleNativeModifier(button('source-management-category', 1, {}, foundationSpecs(), duplicateModifier)),
-      /one native Button/, 'the former double-modifier assembly is rejected even when the probe can accumulate both');
+    const composed = button('source-management-status-wide', 1, { selectionSemantic: true, primary: true }, foundationSpecs(), duplicateModifier);
+    assertTarget(composed.target);
+    assertChoice(composed.target, true);
+    composed.target.onClick();
+    assertUpdatedButton(composed);
+    const override = duplicateModifier.replaceAll('.attributeModifier(new ReaderButtonFrameModifier(',
+      '.attributeModifier(new ReaderButtonSelectionModifier(true, false))\n        .attributeModifier(new ReaderButtonFrameModifier(');
+    const overridden = button('source-management-status-wide', 1, { selectionSemantic: false, primary: true }, foundationSpecs(), override);
+    assertChoice(overridden.target, false);
+    const missingChoice = buttonSource.replace('instance.accessibilityRole(AccessibilityRoleType.RADIO).accessibilitySelected(this.primary)',
+      'instance.accessibilityRole(AccessibilityRoleType.BUTTON)');
+    assert.notEqual(missingChoice, buttonSource);
+    assert.throws(() => assertChoice(button('source-management-status-wide', 1,
+      { selectionSemantic: true, primary: true }, foundationSpecs(), missingChoice).target, true), /choice role/);
+    const staleSelection = buttonSource.replace('accessibilitySelected(this.primary)', 'accessibilitySelected(true)');
+    const stale = button('source-management-status-wide', 1, { selectionSemantic: true, primary: true }, foundationSpecs(), staleSelection);
+    stale.target.onClick();
+    assert.throws(() => assertUpdatedButton(stale), /current selection/, 'a broken state update fails the actual updated property');
+    const unguarded = buttonSource.replace('if (this.mounted && this.actionEnabled) this.onAction()', 'this.onAction()');
+    const unsafe = button('source-tools-action', 1, {}, foundationSpecs(), unguarded);
+    unsafe.target.onClick();
+    assert.throws(() => assertUpdatedButton(unsafe), /disabled update/, 'a broken action guard fails the real disabled callback');
     const specs = foundationSpecs();
-    const oldHeight = { ...specs, resolveReaderButtonSpec: key => ({ ...specs.resolveReaderButtonSpec(key), height: 28 }) };
-    assert.throws(() => assertTarget(button('source-management-login', 1, {}, oldHeight).target),
+    const oldHeight = { ...specs, resolveReaderButtonSpec: key => ({ ...specs.resolveReaderButtonSpec(key), height: 28, minHeight: undefined }) };
+    assert.throws(() => assertTarget(button('source-management-status-wide', 1, {}, oldHeight).target),
       /minimum height/, 'old 28vp actual native carrier fails the current requirement');
   }
   if (id === 'source-group-budget') {
