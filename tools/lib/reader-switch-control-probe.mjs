@@ -15,7 +15,7 @@ const controlRecipe=source=>source.slice(source.indexOf('type Reader'),source.in
 export const switchSpecSource=controlRecipe(toggleSource)+controlRecipe(segmentSource);
 const formRowSource=read('ReaderFormRow');
 export function switchSpecs(source=switchSpecSource){return new Function(stripTypeScriptTypes(source).replace(/^export /gm,'')+';return{resolveReaderToggleSpec,resolveReaderSegmentSpec,READER_APP_THEME_SEGMENT_WIDTH};')();}
-export function switchControls({specs=switchSpecs(),toggleDefinition=toggleSource,segmentDefinition=segmentSource,properties=createArkUIPropertyRuntimeProbe(),ColorMetrics}={}){
+export function switchControls({specs=switchSpecs(),toggleDefinition=toggleSource,segmentDefinition=segmentSource,properties=createArkUIPropertyRuntimeProbe(),ColorMetrics,accessibility={sendAccessibilityEvent:async()=>{}}}={}){
  const {root,require}=installedEtsCompiler();
  require(root+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderFormRow',new Set(['content']));
   // The official advanced V2 component crosses a finite constructor/event
@@ -50,7 +50,7 @@ export function switchControls({specs=switchSpecs(),toggleDefinition=toggleSourc
   const toggleFrameText = toggleDefinition.slice(toggleDefinition.indexOf('class ReaderToggleFocusFrame'),
     toggleDefinition.indexOf('type ReaderToggleSpecId'));
   const ToggleFocusFrame = new Function('FrameCallback', stripTypeScriptTypes(toggleFrameText) + ';return ReaderToggleFocusFrame;')(class {});
-  const dependencies = { ReaderToggleFocusFrame: ToggleFocusFrame, ...properties.sdk, ...specs, ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor,
+  const dependencies = { accessibility, ReaderToggleFocusFrame: ToggleFocusFrame, ...properties.sdk, ...specs, ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor,
     ReaderPressFeedback: productionReaderPressFeedback({ ColorMetrics }),
     CapsuleSegmentButtonV2: CapsuleSegmentButtonV2Port, SegmentButtonV2Items: SegmentButtonV2ItemsPort,
     TextModifier: TextModifierPort, ReaderSegmentPolicyFrame: Frame,

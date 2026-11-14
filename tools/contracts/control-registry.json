@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 26,
+  "revision": 27,
   "controls": [
     {
       "controlId": "page-back",
@@ -324,7 +324,7 @@
       },
       "accessibleNameSource": "ReaderToggle.accessibilityLabel('启用书源')",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. Controlled native remount is retained. A previously keyboard-focused native owner schedules one post-layout focus request with current identity, foreground, enabled, busy, mount and revision guards. Scoped SDK projection/focus tests pass. The af920500 VM candidate passed two Enter activations with focus retained on each successor native Toggle in General Settings and restored the original preference. Source-specific native target routing, screen-reader focus and remaining caller families retain their exact open scope."
+      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. Controlled native remount is retained. A previously keyboard-focused native owner schedules one post-layout focus request with current identity, foreground, enabled, busy, mount and revision guards. Scoped SDK projection/focus tests pass. The af920500 VM candidate passed two Enter activations with focus retained on each successor native Toggle in General Settings and restored the original preference. Source-specific native target routing, screen-reader focus and remaining caller families retain their exact open scope. UIF-09 is now native-confirmed on73bc. The actual green screen-reader cursor moves to the following storage heading when the native instance is replaced, although keyboard focus stays. Current source also snapshots onAccessibilityFocus and requests current customId focus once with the platform not-interrupt event. Exact callback/revision/foreground negatives pass. Successor native recheck remains pending."
     },
     {
       "controlId": "footer-batch",

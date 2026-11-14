@@ -28,10 +28,12 @@ import type { JsonObject } from '@reader/core-harmony';
 import { readerMotionNowMs } from '../ui/foundation/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { WebDavCredentialStore } from '../features/sync/application/WebDavCredentialStore';
+import { ReaderFrameworkCapture } from '../app/diagnostics/ReaderFrameworkCapture';
 const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   private windowStageGeneration: number = 0;
+  private readonly frameworkCapture: ReaderFrameworkCapture = new ReaderFrameworkCapture();
   private activeWindowStage: window.WindowStage | undefined = undefined;
   private coreCopyProbeGeneration: number = 0;
   private coreCopyOnly: boolean = false;
@@ -194,6 +196,7 @@ export default class EntryAbility extends UIAbility {
 
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     if (this.coreCopyOnly) return;
+    this.frameworkCapture.start(DEBUG, BUILD_MODE_NAME, want.parameters?.readerFrameworkCaptureSeconds, this.context.cacheDir);
     // Never reload the window or route directly; Index saves the active
     // reading session before presenting a successfully imported file.
     this.scheduleRebuildableCacheClear?.(want, this.runtimeOwner);
@@ -359,6 +362,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    this.frameworkCapture.close();
     this.coreCopyProbeGeneration += 1;
     if (this.coreCopyOnly) { this.coreCopyOnly = false; return; }
     this.mangaPlatformDiagnostic?.stop(); this.mangaPlatformDiagnostic = undefined;

@@ -2,6 +2,7 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 
 import { FrameCallback } from '@kit.ArkUI';
+import { accessibility } from '@kit.AccessibilityKit';
 
 class ReaderToggleFocusFrame extends FrameCallback {
   private readonly action: () => void;
@@ -49,8 +50,16 @@ export struct ReaderToggle {
   private mounted: boolean = false;
   private focusedRevision: number = -1;
   private pendingFocusRevision: number = -1;
+  private accessibilityFocusedRevision: number = -1;
+  private pendingAccessibilityFocusRevision: number = -1;
   aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; this.focusedRevision = -1; this.pendingFocusRevision = -1; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.focusedRevision = -1;
+    this.pendingFocusRevision = -1;
+    this.accessibilityFocusedRevision = -1;
+    this.pendingAccessibilityFocusRevision = -1;
+  }
   build() {
     ForEach([this.inputIdentity], (identity: string): void => {
       Stack({ alignContent: Alignment.Center }) {
@@ -67,6 +76,9 @@ export struct ReaderToggle {
             .id(this.nativeFocusId(identity))
             .onFocus((): void => { if (revision === this.nativeRevision) this.focusedRevision = revision; })
             .onBlur((): void => { if (revision === this.nativeRevision) this.focusedRevision = -1; })
+            .onAccessibilityFocus((focused: boolean): void => {
+              if (revision === this.nativeRevision) this.accessibilityFocusedRevision = focused ? revision : -1;
+            })
             .onAppear((): void => this.restoreNativeFocus(identity, revision))
             .onChange((next: boolean): void => this.toggle(identity, revision, next));
         }, (revision: number): string => revision.toString());
@@ -79,14 +91,29 @@ export struct ReaderToggle {
   private nativeFocusId(identity: string): string { return `reader-toggle:${identity}`; }
 
   private restoreNativeFocus(identity: string, revision: number): void {
-    if (this.pendingFocusRevision !== revision) return;
+    const keyboardFocused = this.pendingFocusRevision === revision;
+    const accessibilityFocused = this.pendingAccessibilityFocusRevision === revision;
+    if (!keyboardFocused && !accessibilityFocused) return;
     this.pendingFocusRevision = -1;
+    this.pendingAccessibilityFocusRevision = -1;
     if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
     try {
       this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
         if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
-        try { this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity)); }
-        catch (_unavailable) {}
+        if (keyboardFocused) {
+          try { this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity)); }
+          catch (_unavailable) {}
+        }
+        if (accessibilityFocused && (this.accessibilityFocusedRevision === revision - 1 ||
+          this.accessibilityFocusedRevision === revision)) {
+          try {
+            const bundleName = this.getUIContext().getHostContext()?.applicationInfo.name;
+            if (bundleName !== undefined && bundleName.length > 0) {
+              accessibility.sendAccessibilityEvent({ type: 'requestFocusForAccessibilityNotInterrupt', bundleName,
+                triggerAction: 'accessibilityFocus', customId: this.nativeFocusId(identity) }).catch((): void => {});
+            }
+          } catch (_unavailable) {}
+        }
       }));
     } catch (_detached) {}
   }
@@ -96,6 +123,7 @@ export struct ReaderToggle {
     // A native switch mutates its own transient value. Recreate that control
     // from the owner projection even when the intent is rejected without a prop change.
     this.pendingFocusRevision = this.focusedRevision === revision ? revision + 1 : -1;
+    this.pendingAccessibilityFocusRevision = this.accessibilityFocusedRevision === revision ? revision + 1 : -1;
     this.nativeRevision += 1;
     this.onToggle(next);
   }

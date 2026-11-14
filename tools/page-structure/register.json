@@ -1046,7 +1046,7 @@
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 26,
+        "control": 27,
         "platform": 3
       },
       "sourceInputs": [
@@ -1076,7 +1076,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
         },
         {
           "path": "AppScope/app.json5",
@@ -1180,7 +1180,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
-          "sha256": "3ff31aebeadbfd50ea160e578def788a805330604f00e08bdf575cdce51b27c0"
+          "sha256": "bdd7854bcbf145b8e09ab560e32e8eb929d611f0f3e2df096aa834c22a747e11"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
@@ -1288,7 +1288,7 @@
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "265029c4ccc1e13b85e5b4c95fa58b956930f4423b6c9db04df90e1a942f17bb"
+          "sha256": "2b3687de149bb0c3ba1b47a83942b06410dcd5a80551b5ea73c970cfa785297e"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -2581,7 +2581,7 @@
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 26,
+        "control": 27,
         "platform": 3
       },
       "sourceInputs": [
@@ -2825,7 +2825,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
         },
         {
           "path": "AppScope/app.json5",
@@ -4019,7 +4019,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -4263,7 +4263,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -5611,7 +5611,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -5855,7 +5855,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -7166,7 +7166,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -7410,7 +7410,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -8748,7 +8748,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -8992,7 +8992,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -10192,7 +10192,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -10436,7 +10436,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -11523,7 +11523,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -11767,7 +11767,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -13030,7 +13030,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -13274,7 +13274,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -14429,7 +14429,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -14673,7 +14673,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -15865,7 +15865,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -16109,7 +16109,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -17196,7 +17196,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -17440,7 +17440,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -18802,7 +18802,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -19046,7 +19046,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -20411,7 +20411,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             },
             "sourceInputs": [
@@ -20655,7 +20655,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -21261,7 +21261,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
         },
         {
           "path": "AppScope/app.json5",
@@ -22436,7 +22436,7 @@
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 26,
+        "control": 27,
         "platform": 3
       },
       "variants": [
@@ -22646,7 +22646,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -23827,7 +23827,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             }
           }
@@ -24038,7 +24038,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -25219,7 +25219,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             }
           }
@@ -25430,7 +25430,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -26567,7 +26567,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             }
           }
@@ -26778,7 +26778,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -27915,7 +27915,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             }
           }
@@ -28126,7 +28126,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+                "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
               },
               {
                 "path": "AppScope/app.json5",
@@ -29263,7 +29263,7 @@
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 26,
+              "control": 27,
               "platform": 3
             }
           }
@@ -30344,7 +30344,7 @@
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 26,
+        "control": 27,
         "platform": 3
       },
       "sourceInputs": [
@@ -30473,7 +30473,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "69f15b0af03504fc0791d8430d16ed1e95eff64a27a6191e153526c847683994"
+          "sha256": "cb3803f1422500e34f62fb2aec738664afabf22905e6c86c71e820212790f3de"
         },
         {
           "path": "AppScope/app.json5",

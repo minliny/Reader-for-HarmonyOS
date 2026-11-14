@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
+const definitions={"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -61,6 +61,37 @@ if (selectedCase === 'toggle-focus') {
   const p = switchControls(), o = p.mount(p.toggle, { inputIdentity: 'touch', onToggle() {} });
   o.getUIContext = () => { throw Error('unfocused touch must not schedule focus'); };
   nativeToggle(p, o).onChange(true); p.properties.flush(); nativeToggle(p, o).onAppear();
+}
+if (selectedCase === 'toggle-accessibility-focus') {
+  for (const stop of ['none', 'unfocused', 'identity', 'disabled', 'busy', 'retired', 'background', 'new-focus', 'late-event', 'new-request']) {
+    const frames = [], events = [], keyboard = [];
+    const p = switchControls({ accessibility: { sendAccessibilityEvent: async event => { events.push(event); } } });
+    const o = p.mount(p.toggle, { inputIdentity: 'a11y-A', value: false, onToggle() {} });
+    o.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+      getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
+      getFocusController: () => ({ requestFocus: id => keyboard.push(id) }) });
+    const initial = nativeToggle(p, o);
+    assert.equal(typeof initial.onAccessibilityFocus, 'function', 'actual SDK native callback');
+    if (stop !== 'unfocused') initial.onAccessibilityFocus(true);
+    initial.onChange(true); p.properties.flush();
+    const current = nativeToggle(p, o);
+    current.onAppear(); current.onAppear();
+    assert.equal(frames.length, stop === 'unfocused' ? 0 : 1);
+    if (stop === 'identity') p.update(o, { inputIdentity: 'a11y-B' });
+    if (stop === 'disabled') p.update(o, { actionEnabled: false });
+    if (stop === 'busy') p.update(o, { isBusy: true });
+    if (stop === 'retired') o.aboutToDisappear();
+    if (stop === 'background') o.appForeground = false;
+    if (stop === 'new-focus') current.onAccessibilityFocus(false);
+    if (stop === 'late-event') initial.onAccessibilityFocus(false);
+    if (stop === 'new-request') { current.onChange(true); p.properties.flush(); }
+    frames[0]?.onIdle(1000000);
+    assert.deepEqual(keyboard, [], 'accessibility focus alone never requests keyboard focus');
+    assert.deepEqual(events, ['none', 'late-event'].includes(stop) ? [{
+      type: 'requestFocusForAccessibilityNotInterrupt', bundleName: 'io.reader.minliny',
+      triggerAction: 'accessibilityFocus', customId: 'reader-toggle:a11y-A',
+    }] : [], 'only current prior screen-reader focus can be continued once');
+  }
 }
 if(selectedCase==='segment'){
  const p=switchControls(),calls=[],o=p.mount(p.segment,{inputIdentity:'A',options:['跟随','浅色','深色'],optionIds:['system','day','night'],selectedIndex:0,onSelect:i=>calls.push(i)});
