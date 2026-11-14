@@ -41,7 +41,8 @@ export struct ReaderMangaDownloadPopup {
   @Builder
   private popupContent(generation: number) {
     Scroll() {
-      MangaDownloadOperationsPanel({ actions: this.actions, loading: this.loading, failureMessage: this.failureMessage,
+      MangaDownloadOperationsPanel({ reduceMotion: this.reduceMotion,
+        actions: this.actions, loading: this.loading, failureMessage: this.failureMessage,
         onAction: (action: MangaDownloadActionId): void => this.onAction(action, generation),
         onRetry: (): void => this.onRetry(generation) });
     }.width(Math.min(this.spec().maxWidth, this.availableWidth))

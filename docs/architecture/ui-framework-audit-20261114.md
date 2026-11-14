@@ -1,5 +1,48 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026年11月15日后继修复与未决内容
+
+全量目标继续执行。当前没有等待用户决定的实施选项。原稿查找、分支核对、回归修正、可进入的VM场景和登记对账均由agent继续完成。已确认的紧凑布局决定继续适用。下面的状态更新到生产修复提交`8036ac9f`。
+
+### 新确认的遗漏及修复
+
+目录平面回退存在UIF-13。基线`10a5d58d`已经使用稳定的`row.key`，数据源对书签与下载值变化调用`onDataChange`。行内使用普通对象，原生`LazyForEach`因此保留旧Builder。实际392f候选中，两次点击同一书签都派发删除，原生行ID和树指纹保持原样。此次属于先前审计遗漏的已有问题。
+
+当前键值加入已接纳行数据。选章、定位和滚动锚点继续使用业务行键。准确SDK回归检查实际键生成器、未变化行的稳定键、删除后的添加动作、下载排队后的禁用，并拒绝旧键值负例。原生Full与Quick都实际派发删除、添加、下载三次回调，计数分别为1、2、3，随后下载按钮禁用。首个会话在后续Quick入口未滚到可视区时停止，已通过的Full断言保留。第二个会话只补Quick。获准的32/40vp行高和26vp平面附属宽度继续保留。[准确SDK结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-flat-update-02.log) [原生状态更新结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-flat-update-12cd.json)
+
+书签验证夹具原来省略了当前内存owner的恢复投影，导致合法的默认只读状态遮住可写场景。现已补齐Full的`directoryRecovery`及Control的`bookmarkRecovery`，并通过公共目录port的`NoStructure`进入真实平面回退。新增入口限定在既有DEBUG验证菜单。首次编译发现Control属性名用错，失败候选未安装。回归现已断言两个消费者各自的真实属性名并拒绝错接。正常生产写入准入沿原业务owner执行。[最终夹具准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-directory-memory-05.log) [语义目录Full与Quick结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-semantic-writable-392f.json)
+
+TTS此前仅凭“准备中”和冻结的发起面板文本，无法判断当前引擎是否启动。现使用应用已有的`readerTtsTrace=true`入口，实际正常Sample EPUB收到五次当前会话`tts.platform-start`。第一次距播放意图1128ms、距dispatch769ms。Back后记录到host-stop、stop-ack、audio-release、listener-release及owner-release。此场景已回答当前平台启动与退出问题。原进度通过正常Slider恢复为0，语速1.00x、25分钟定时和原系统音色保留，最后冷启动恢复无追踪的正常书架。实际可听语音及其他播放状态仍分别验收。[平台回调与恢复记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-tts-platform-trace-12cd.json)
+
+### 本节后续补证及UIF-14
+
+减少动态效果开启后，正常下载筛选下拉、书源工具模式下拉及阅读顶部More三个宿主均完成原生打开和关闭。下载筛选实际从4/4变为1/4并恢复4/4，书源工具模式实际搜索→发现→搜索，深度“列表”和关键词“我的”保留。三处各取得8秒有界trace，当前采样的自定义动画计数均为0。该计数只描述采样，完整像素动效继续保留开放条件。书源工具返回后，`source-back:2:tools:header`实际focused为true。[下载宿主](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-download-popup-12cd.json) [工具宿主及返回焦点](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-tools-popup-12cd.json) [阅读顶部More](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-reader-more-12cd.json)
+
+正常漫画入口本次出现“章节加载失败”，保留原现象并保持重试和换源入口。源码确认目录准入独立于正文opened状态，随后沿正常目录→完整目录进入当前两章目录，实际下载popup可打开并由Back逐层返回。未执行任何下载或清理动作，漫画原100%、第2页和Sample EPUB原0%及继续阅读项均保持。此场景同时发现UIF-14。popup外层零时长transition已接通，内部`MangaDownloadOperationsPanel`仍缺少减少动态效果及前景约束。当前trace中的LoadingProgress813存在期间出现四个自定义动画，精确归属还需修复后的同场景对照。[当前漫画宿主与原始trace](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-manga-popup-12cd.json)
+
+UIF-14的三个生产输入现已补齐既有偏好传递、`foreground && !reduceMotion`加载约束和共享动作面的偏好。准确SDK回归覆盖两个正常父入口、当前LoadingProgress最终属性、实时偏好与前景变化、真实动作渲染器，以及三个漏接负例。旧popup回归同时修正了过期的Row/原生Button查找、实际最小高度承载和当前目录准入辅助，原失败日志保留。当前已安装候选仍为12cd，后继完整编译、签名及同场景VM对照待执行。[加载约束回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-manga-loading-03.log) [原popup生命周期回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-manga-popup-lifecycle-04.log)
+
+### 当前交付身份
+
+- 已安装`0.2.0.DEV.12cd63ffb89c`，运行清单`20261114T191217Z-8036ac9f-a152a7da`，保数据安装及启动通过。签名为既定`minliny_HarmonyOS`证书。signed HAP SHA-256为`2c65487628d65bb38f653c32de8f8c2584708f1a647b8612ab89b7fed3a69df3`。[不可变清单](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261114T191217Z-8036ac9f-a152a7da/manifest.json)
+- 12cd安装后，638个生产ETS/TS输入已与该候选逐一对账。相对392f，该候选唯一生产变化是Control平面列表的键值，其他637项相同。随后UIF-14修改三个漫画加载相关输入，当前需后继候选绑定。Toggle、分组、页头及TTS继续沿各自未受影响范围复用证据。[输入比对](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/current-code-byte-comparison-12cd.json) [实际变化范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/candidate-source-delta-392f-12cd.json)
+- 原生会话最后恢复正常书架、Sample EPUB进度0、减少动态效果false和系统读屏OFF。字体原档2、粗细1、界面缩放1继续保留。本批租约均释放。编译日志仍含既有ArkTS警告，完整编译与签名结果为PASS。全量业务套件保持NOT_RUN。
+
+### 未决内容及后续承担
+
+| 内容 | 当前已经回答 | 仍需完成及原因 |
+| --- | --- | --- |
+| 原稿及紧凑目标 | 已找到TTS Make V17完整TSX。目录原始40高裁切行将44高响应投影到40，相邻目标重叠14。正常语义附属宽44、平面附属宽26分别核对 | 已获准保留的目录四工具32宽、Quick32/Full40行高及TTS Quick四个不足44的独立宽度继续登记容量冲突。现有布局决定已足够执行 |
+| Toggle焦点 | 共享修复的默认无日志键盘加读屏连续两次换实例已通过。纯读屏场景实际绿色焦点落在Toggle，键盘focused为false | 一次VM双击注入返回成功，但checked、原生ID及前后树和屏幕指纹均相同，尚未触发onChange。需找到能实际派发原生无障碍激活的入口后验证换代。保留为未进入场景。[记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-toggle-pure-reader-12cd.json) |
+| 减少动态效果 | 九处接线、目录两条来源链及四个原生popup构造点已修复，准确SDK参数与拒旧通过。SourceTools登记中的旧“无偏好输入”描述已更正 | 不同原生popup宿主、偏好中途变化、动画收束和焦点仍由agent按准确场景补齐 |
+| 移除确认纯高度变化 | 长文案、滚动到底和内存确认动作已有真实宿主结果，当前高度更新代码与拒旧回归已核对 | 仍需实际窗口仅改变高度的原生入口。现有WindowManagerService帮助只给dump，已试Multitask未建立有效调整路线。此条件继续追踪 |
+| G05连续绘制 | 已取得有界ArkUI与RS trace。首次页头正文66→110跨两个UIvsync，命令提交相差6.791ms | trace不能回答实际显示像素是否闪动。应用录制已到隐私授权请求，未收到STARTED，现有独立C API创建亦失败。可用连续像素采集能力继续调查 |
+| 读屏短反馈与TTS声音 | 短反馈显式宣告、当前owner及generation归属已接通。TTS实际onStart与停止释放已补齐 | 实际自动宣告听感、TTS可听输出及未覆盖播放状态仍需对应音频或原生回执 |
+| 全应用剩余登记 | 正式21项仍按各层保存原判定，输入漂移为0。局部新通过结果逐项补入 | 整页字形、裁切、材质、主题、方向、目标命中和状态覆盖仍由agent继续核对。完整独立视觉依据与原生矩阵尚未齐全，visual21项NOT_RUN及其余原FAIL保持原含义 |
+| G10历史Tab归因 | 已核当前代码与现有历史材料 | 异常同期原始录像、trace或绘制数据仍缺。用户已决定沿现有资料推进，按原条件保留该缺口 |
+
+后续各节保留c96f及更早候选的局部历史证据。当前候选、修复与未决状态以本节及完整账本`implementation.completionCorrection20261115`为准。
+
 ## 2026年11月15日继续实施状态
 
 全量实施目标保持执行中。现有授权和紧凑布局保留决定足以继续工作。原稿核对、源码复核、准确回归和VM场景继续由agent完成，当前没有等待用户作出的实施决断。此前完成表述只覆盖对应候选的局部交付，整体验收沿逐项证据推进。

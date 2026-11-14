@@ -528,6 +528,12 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json",
               "symbol": "sourceMax",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-tools-popup-12cd.json",
+              "symbol": "actual normal SourceTools header return focus",
+              "result": "PASS"
             }
           ],
           "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
@@ -3157,7 +3163,7 @@
         },
         {
           "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-          "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+          "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
           "symbol": "popupOptions"
         }
       ],
@@ -3631,6 +3637,12 @@
                     "kind": "test",
                     "path": "tools/test-reader-window-font-configuration.mjs",
                     "symbol": "configuration,entry-consumer,native-context",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-download-popup-sdk.mjs",
+                    "symbol": "loading-motion",
                     "result": "PASS"
                   }
                 ],
@@ -4543,7 +4555,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -4877,6 +4889,12 @@
                     "kind": "test",
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-reader-more-12cd.json",
+                    "symbol": "normal topbar More popup open and Back close",
                     "result": "PASS"
                   }
                 ],
@@ -6067,7 +6085,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -6291,7 +6309,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -6766,6 +6784,12 @@
                     "kind": "test",
                     "path": "tools/test-reader-window-font-configuration.mjs",
                     "symbol": "configuration,entry-consumer,native-context",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-download-popup-sdk.mjs",
+                    "symbol": "loading-motion",
                     "result": "PASS"
                   }
                 ],
@@ -7614,7 +7638,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -7810,7 +7834,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -8026,9 +8050,21 @@
                     "path": "tools/test-directory-native-row-target.mjs",
                     "symbol": "text-row-target",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-pending-prefix.mjs",
+                    "symbol": "flat-row-updates",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-directory-flat-update-12cd.json",
+                    "symbol": "Full,Quick current bookmark/delete/create/download and queued disable",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current authored-allocation-sdk binds frozen source macros and actual producer/consumer parameters. Revised text-row-target covers the full-parent row response. Native content/glyph/clipping and all list/business journeys remain NOT_RUN. Historical uniform44 row/marker assertions are superseded by the current constrained payment recipe; they are not current Native evidence."
+                "knownGap": "Current authored-allocation-sdk binds frozen source macros and actual producer/consumer parameters. Revised text-row-target covers the full-parent row response. Native content/glyph/clipping and all list/business journeys remain NOT_RUN. Historical uniform44 row/marker assertions are superseded by the current constrained payment recipe; they are not current Native evidence. UIF13 actual plain-object flat row values now participate in LazyForEach keys. Scoped SDK and native Full/Quick delete→create→download updates pass on12cd. Native glyph/full-page and other journeys remain open."
               },
               "query": {
                 "applicability": "applicable",
@@ -9190,7 +9226,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -9406,7 +9442,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -10722,7 +10758,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -11977,7 +12013,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -12173,7 +12209,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -13560,7 +13596,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -14883,7 +14919,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -15079,7 +15115,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -16395,7 +16431,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -17650,7 +17686,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -17846,7 +17882,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -19244,7 +19280,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -19460,7 +19496,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -20853,7 +20889,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "7078bd55839b81a448ff57ba32c028ef87f2b2d2c6ed989be750809500afec63"
+                "sha256": "9e2d726642847881acf242e938952c7d5ce25be3f6f7663a8aed8b146f34fada"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -21069,7 +21105,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
-                "sha256": "ca917dd0cd77a9368ec2aff7142b34f68e2d6e86f0b42901dcc4429b1a76a7b3",
+                "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
               }
             ]
@@ -21963,6 +21999,12 @@
               "kind": "test",
               "path": "tools/test-shared-download-visual-contract.mjs",
               "symbol": "list-layout,private-tool-budget",
+              "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-download-popup-12cd.json",
+              "symbol": "normal state popup true preference; selection and exact restore",
               "result": "PASS"
             }
           ],
@@ -29782,7 +29824,7 @@
               "day",
               "night"
             ],
-            "reduceMotion": "No page reduceMotion input; shared/platform defaults not audited",
+            "reduceMotion": "SourceJourneySurface forwards current settings.reduceMotion to SourceToolsPage and both ReaderInlineSelect consumers. UIF08 shared native popup transition uses explicit zero duration when enabled. Exact SDK source/parameter evidence passes; complete native motion/focus remains open.",
             "budgetStatus": "declared"
           },
           "result": "FAIL",
@@ -29803,6 +29845,12 @@
               "kind": "device",
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json",
               "symbol": "popupMax",
+              "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-tools-popup-12cd.json",
+              "symbol": "normal mode popup under true preference; exact bounded trace and restoration",
               "result": "PASS"
             }
           ],

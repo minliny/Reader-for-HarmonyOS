@@ -2685,7 +2685,8 @@ export struct MangaReadingSurface {
       Column() {
         if (this.panel === 'downloads') {
           ForEach([this.downloadActionsGeneration], (generation: number): void => {
-            MangaDownloadOperationsPanel({ actions: this.downloadActions, loading: this.downloadActionsLoading,
+            MangaDownloadOperationsPanel({ reduceMotion: this.reduceMotion,
+              actions: this.downloadActions, loading: this.downloadActionsLoading,
               failureMessage: this.downloadActionsFailure, panelScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
               onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action, generation),
               onRetry: (): void => {

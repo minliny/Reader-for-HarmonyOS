@@ -8,6 +8,8 @@ import type { MangaDownloadAction, MangaDownloadActionId } from '../application/
 @Component
 export struct MangaDownloadOperationsPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private foreground: boolean = true;
+  @Prop reduceMotion: boolean = false;
   @Prop actions: MangaDownloadAction[] = [];
   @Prop loading: boolean = false;
   @Prop failureMessage: string = '';
@@ -20,7 +22,8 @@ export struct MangaDownloadOperationsPanel {
       if (this.loading) {
         Row({ space: 10 }) {
           LoadingProgress().width(32).height(32)
-            .color(readerAppColor('TOK_GREEN', this.effectiveScheme()));
+            .color(readerAppColor('TOK_GREEN', this.effectiveScheme()))
+            .enableLoading(this.foreground && !this.reduceMotion);
           Text('正在读取下载状态…').fontSize(13).lineHeight(20).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
             .fontColor(this.ink());
         }.width('100%').constraintSize({ minHeight: 44 }).justifyContent(FlexAlign.Center);
@@ -34,6 +37,7 @@ export struct MangaDownloadOperationsPanel {
         }.width('100%').justifyContent(FlexAlign.End);
       } else {
         ReaderActionMenuSurface({ variant: 'grouped', actions: this.sheetActions(), scheme: this.panelScheme,
+          reduceMotion: this.reduceMotion,
           onAction: (id: string): void => this.performAction(id) });
       }
     }.width('100%');
