@@ -536,7 +536,7 @@
               "result": "PASS"
             }
           ],
-          "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
+          "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has scoped actual Source query/IME/header and1.45 font observations, plus exact current lower-bound SDK samples. General Settings Toggle focus observations bind their own normal host. Complete Source native target routing, all states, glyph/clipping and screen-reader semantics remain open."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -975,7 +975,7 @@
         },
         "E2": {
           "result": "FAIL",
-          "reason": "Current complete SDK lower-bound/response/parent report PASS covers176 targets across22 interactive refs and24 budgets. Native hit routing, touch and clipping have not been executed for this confluence candidate, so E2 remains FAIL.",
+          "reason": "Current continuation has scoped actual Source query/IME/header and1.45 font observations, plus exact current lower-bound SDK samples. General Settings Toggle focus observations bind their own normal host. Complete Source native target routing, all states, glyph/clipping and screen-reader semantics remain open. E2 remains FAIL under its existing full native acceptance criteria.",
           "evidence": [
             {
               "kind": "test",
@@ -1048,11 +1048,11 @@
         }
       },
       "exceptions": [],
-      "revision": 32,
+      "revision": 34,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 28,
+        "control": 29,
         "platform": 3
       },
       "sourceInputs": [
@@ -2023,7 +2023,7 @@
               "symbol": "inline-popup-layout"
             }
           ],
-          "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints."
+          "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -2521,7 +2521,7 @@
         },
         "E2": {
           "result": "FAIL",
-          "reason": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN.",
+          "reason": "Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch. E2 remains FAIL under its existing full native acceptance criteria.",
           "evidence": [
             {
               "kind": "test",
@@ -2583,11 +2583,11 @@
         }
       },
       "exceptions": [],
-      "revision": 31,
+      "revision": 33,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 28,
+        "control": 29,
         "platform": 3
       },
       "sourceInputs": [
@@ -3612,7 +3612,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -3977,7 +3977,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -4033,11 +4033,11 @@
               }
             },
             "exceptions": [],
-            "revision": 30,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -5094,7 +5094,7 @@
                     "symbol": "inline-popup-layout"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -5569,7 +5569,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -5631,11 +5631,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -6771,7 +6771,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has normal manga→Quick directory→full catalog→download popup with actual loading node and0 custom-animation samples under reduceMotiontrue. Existing historical manga manifests are evicted and provide no current offline-readable head. Healthy body and complete native target/state/reader coverage remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -7154,7 +7154,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation has normal manga→Quick directory→full catalog→download popup with actual loading node and0 custom-animation samples under reduceMotiontrue. Existing historical manga manifests are evicted and provide no current offline-readable head. Healthy body and complete native target/state/reader coverage remain open. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -7210,11 +7210,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -8345,7 +8345,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes, flat26xrow marker responses and semantic44xrow accessory lanes. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Currentc96f scoped actual semantic-directory download boundaries pay44vp horizontal carriers and deliver only chapter16/18 intent once per left/right band tap. Disabled adjacentbookmark rejects. The compact32/40vp vertical capacity, enabledbookmark, Quick and remaining native obligations retain their scope."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes, flat26xrow marker responses and semantic44xrow accessory lanes. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Currentc96f scoped actual semantic-directory download boundaries pay44vp horizontal carriers and deliver only chapter16/18 intent once per left/right band tap. Disabled adjacentbookmark rejects. The compact32/40vp vertical capacity, enabledbookmark, Quick and remaining native obligations retain their scope. Current continuation reconciliation20261115. Current continuation has actual semantic44vp horizontal accessory edge delivery and memory callback once per target, plus Control Full/Quick flat bookmark delete→create and queued-download disable on new native rows. Compact Quick32/Full40 heights and flat26vp width follow the approved retained-layout decision. Complete remaining target/reader/state coverage remains open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -8743,7 +8743,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN.",
+                "reason": "Current continuation has actual semantic44vp horizontal accessory edge delivery and memory callback once per target, plus Control Full/Quick flat bookmark delete→create and queued-download disable on new native rows. Compact Quick32/Full40 heights and flat26vp width follow the approved retained-layout decision. Complete remaining target/reader/state coverage remains open. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -8810,11 +8810,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -9889,7 +9889,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -10198,7 +10198,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -10254,11 +10254,11 @@
               }
             },
             "exceptions": [],
-            "revision": 30,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -11208,7 +11208,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -11529,7 +11529,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -11585,11 +11585,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -12677,7 +12677,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -13036,7 +13036,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -13092,11 +13092,11 @@
               }
             },
             "exceptions": [],
-            "revision": 30,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -14064,7 +14064,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -14435,7 +14435,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -14491,11 +14491,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -15562,7 +15562,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -15871,7 +15871,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -15927,11 +15927,11 @@
               }
             },
             "exceptions": [],
-            "revision": 30,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -16881,7 +16881,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -17202,7 +17202,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current declared targets/parent budgets repaired and selected SDK native-property consumers pass; complete native hit/interception/clipping/focus evidence remains OPEN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -17258,11 +17258,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -18388,7 +18388,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -18797,7 +18797,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -18864,11 +18864,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -20002,7 +20002,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -20406,7 +20406,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN.",
+                "reason": "Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -20473,11 +20473,11 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 34,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             },
             "sourceInputs": [
@@ -21986,7 +21986,7 @@
               "symbol": "inline-popup-layout"
             }
           ],
-          "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
+          "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN. Current continuation reconciliation20261115. Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -22460,7 +22460,7 @@
         },
         "E2": {
           "result": "FAIL",
-          "reason": "Current selected SDK assembly proves the named private carriers and budget contexts. Complete page pointer hit/focus/screen-reader acceptance is not available, so E2 remains FAIL.",
+          "reason": "Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage. E2 remains FAIL under its existing full native acceptance criteria.",
           "evidence": [
             {
               "kind": "test",
@@ -22504,11 +22504,11 @@
         }
       },
       "exceptions": [],
-      "revision": 21,
+      "revision": 23,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 28,
+        "control": 29,
         "platform": 3
       },
       "variants": [
@@ -23383,7 +23383,7 @@
                     "symbol": "inline-popup-layout"
                   }
                 ],
-                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
+                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN. Current continuation reconciliation20261115. Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -23851,7 +23851,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current selected SDK assembly proves the named private carriers and budget contexts. Complete page pointer hit/focus/screen-reader acceptance is not available, so E2 remains FAIL.",
+                "reason": "Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -23895,11 +23895,11 @@
               }
             },
             "exceptions": [],
-            "revision": 21,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             }
           }
@@ -24775,7 +24775,7 @@
                     "symbol": "inline-popup-layout"
                   }
                 ],
-                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
+                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN. Current continuation reconciliation20261115. Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -25243,7 +25243,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current selected SDK assembly proves the named private carriers and budget contexts. Complete page pointer hit/focus/screen-reader acceptance is not available, so E2 remains FAIL.",
+                "reason": "Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -25287,11 +25287,11 @@
               }
             },
             "exceptions": [],
-            "revision": 21,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             }
           }
@@ -26131,7 +26131,7 @@
                     "symbol": "inline-popup-layout"
                   }
                 ],
-                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
+                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN. Current continuation reconciliation20261115. Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -26591,7 +26591,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current selected SDK assembly proves the named private carriers and budget contexts. Complete page pointer hit/focus/screen-reader acceptance is not available, so E2 remains FAIL.",
+                "reason": "Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -26635,11 +26635,11 @@
               }
             },
             "exceptions": [],
-            "revision": 21,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             }
           }
@@ -27479,7 +27479,7 @@
                     "symbol": "inline-popup-layout"
                   }
                 ],
-                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
+                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN. Current continuation reconciliation20261115. Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -27939,7 +27939,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current selected SDK assembly proves the named private carriers and budget contexts. Complete page pointer hit/focus/screen-reader acceptance is not available, so E2 remains FAIL.",
+                "reason": "Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -27983,11 +27983,11 @@
               }
             },
             "exceptions": [],
-            "revision": 21,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             }
           }
@@ -28827,7 +28827,7 @@
                     "symbol": "inline-popup-layout"
                   }
                 ],
-                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN."
+                "knownGap": "Actual direction carrier44 contains original24 paint, with independent44+3+sort-field parent allocation. Filter/sort/count parent widths/heights are computed at actual page width/font scale, using inline or wrapped layout. SDK15 combinations and old-overlap negative pass; native pointer/clipping/focus and business receipt coverage remain OPEN. Current continuation reconciliation20261115. Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -29287,7 +29287,7 @@
               },
               "E2": {
                 "result": "FAIL",
-                "reason": "Current selected SDK assembly proves the named private carriers and budget contexts. Complete page pointer hit/focus/screen-reader acceptance is not available, so E2 remains FAIL.",
+                "reason": "Current continuation has normal download filter all4/4→undownloaded1/4→all4/4, actual popup delivery/close/Back and8s reduced-motion trace. The scoped filter evidence covers that actual host and state. This specific registered variant still requires its complete native target/focus/state coverage. E2 remains FAIL under its existing full native acceptance criteria.",
                 "evidence": [
                   {
                     "kind": "test",
@@ -29331,11 +29331,11 @@
               }
             },
             "exceptions": [],
-            "revision": 21,
+            "revision": 23,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 28,
+              "control": 29,
               "platform": 3
             }
           }
@@ -29826,7 +29826,7 @@
               "result": "PASS"
             }
           ],
-          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
+          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -30363,7 +30363,7 @@
         },
         "E2": {
           "result": "FAIL",
-          "reason": "Current Tools-only minimum44/natural row and parent font growth repair is SDK tested; native all-target/system font/glyph/clipping/focus acceptance remains OPEN.",
+          "reason": "Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. E2 remains FAIL under its existing full native acceptance criteria.",
           "evidence": [
             {
               "kind": "test",
@@ -30418,11 +30418,11 @@
         }
       },
       "exceptions": [],
-      "revision": 19,
+      "revision": 21,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 28,
+        "control": 29,
         "platform": 3
       },
       "sourceInputs": [
