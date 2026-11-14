@@ -22,6 +22,9 @@ TTS此前仅凭“准备中”和冻结的发起面板文本，无法判断当�
 
 UIF-14的三个生产输入现已补齐既有偏好传递、`foreground && !reduceMotion`加载约束和共享动作面的偏好。准确SDK回归覆盖两个正常父入口、当前LoadingProgress最终属性、实时偏好与前景变化、真实动作渲染器，以及三个漏接负例。旧popup回归同时修正了过期的Row/原生Button查找、实际最小高度承载和当前目录准入辅助，原失败日志保留。当前已安装候选仍为12cd，后继完整编译、签名及同场景VM对照待执行。[加载约束回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-manga-loading-03.log) [原popup生命周期回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-manga-popup-lifecycle-04.log)
 
+
+消息类别复核同时确认，下载操作列表的首次读取和没有可用内容的失败应使用公共`ReaderPageState`。当前已移除原自绘加载与失败分支，并把现有文案、原owner重试及前景/动效约束接入该组件，入口登记到`tools/message-entrypoints.json`。ready操作列表沿既有公共动作面呈现。eda814e7中间候选在此补正前已编译签装，尚未执行受影响原生复验，后继候选将统一包含此补正。[最终加载约束回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-manga-loading-04.log) [最终popup生命周期回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/implementation-continuation-manga-popup-lifecycle-05.log)
+
 ### 当前交付身份
 
 - 已安装`0.2.0.DEV.12cd63ffb89c`，运行清单`20261114T191217Z-8036ac9f-a152a7da`，保数据安装及启动通过。签名为既定`minliny_HarmonyOS`证书。signed HAP SHA-256为`2c65487628d65bb38f653c32de8f8c2584708f1a647b8612ab89b7fed3a69df3`。[不可变清单](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261114T191217Z-8036ac9f-a152a7da/manifest.json)

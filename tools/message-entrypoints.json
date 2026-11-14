@@ -1854,6 +1854,17 @@
       "effectiveHost": "当前已登记RecoveryNotice的view.generation、view.canRetry/busy/secondaryBusy；原operation事实仍归调用者。第三个Action仅切expanded，不执行原操作。 Both busy roles retain the primary actor and its width reservation while group admission blocks duplicates. Only the owner-selected action shows busy. Other registered callers retain the existing secondaryBusy=false behavior.",
       "retireRule": "主次动作按view.generation转交原onReconcile/onSecondaryAction；新generation重置展开测量，关闭/折叠不确认或取消业务。是否仍为当前原operation最终由调用者复核。",
       "status": "registered-adapter-boundary"
+    },
+    {
+      "id": "entry/src/main/ets/features/manga/ui/MangaDownloadOperationsPanel.ets#MangaDownloadOperationsPanel.build::shared.page-state",
+      "file": "entry/src/main/ets/features/manga/ui/MangaDownloadOperationsPanel.ets",
+      "owner": "MangaDownloadOperationsPanel",
+      "member": "build",
+      "family": "shared.page-state",
+      "category": "当前下载操作列表的局部加载或无可用内容失败",
+      "effectiveHost": "BookDirectoryPage当前目录身份及downloadMenuGeneration，或MangaReadingSurface当前downloads面板与downloadActionsGeneration。正文加载状态独立，菜单只读取原owner提供的操作。",
+      "retireRule": "loading/failure/actions随原owner发布。ReaderPageState只呈现局部状态。loadingActive由当前readerAppForeground及reduceMotion约束，重试继续经过原popup/sheet的当前身份、代次、前景与失败守卫。",
+      "status": "registered-source-entry"
     }
   ],
   "dedicatedExceptions": [

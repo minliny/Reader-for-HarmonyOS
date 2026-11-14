@@ -1,5 +1,5 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../application/MangaDownloadActionsGateway';
@@ -19,22 +19,15 @@ export struct MangaDownloadOperationsPanel {
 
   build() {
     Column({ space: 8 }) {
-      if (this.loading) {
-        Row({ space: 10 }) {
-          LoadingProgress().width(32).height(32)
-            .color(readerAppColor('TOK_GREEN', this.effectiveScheme()))
-            .enableLoading(this.foreground && !this.reduceMotion);
-          Text('正在读取下载状态…').fontSize(13).lineHeight(20).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-            .fontColor(this.ink());
-        }.width('100%').constraintSize({ minHeight: 44 }).justifyContent(FlexAlign.Center);
-      } else if (this.failureMessage.length > 0) {
-        Text(this.failureMessage).fontSize(13).lineHeight(20).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-          .fontColor(this.ink()).width('100%');
-        Row() {
-          Button('重试').constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 12, right: 12 }).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-            .fontColor(readerAppColor('TOK_GREEN', this.effectiveScheme())).backgroundColor(Color.Transparent).borderRadius(8)
-            .onClick((): void => { if (!this.loading && this.failureMessage.length > 0) this.onRetry(); });
-        }.width('100%').justifyContent(FlexAlign.End);
+      if (this.loading || this.failureMessage.length > 0) {
+        ReaderPageState({ padded: false, loading: this.loading,
+          loadingActive: this.foreground && !this.reduceMotion,
+          message: this.loading ? '正在读取下载状态…' : this.failureMessage,
+          actionLabel: this.loading ? '' : '重试',
+          actionEnabled: !this.loading && this.failureMessage.length > 0,
+          inkColor: readerAppColor('TOK_MESSAGE_INK', this.effectiveScheme()),
+          mutedColor: readerAppColor('TOK_MESSAGE_MUTED', this.effectiveScheme()),
+          onAction: (): void => { if (!this.loading && this.failureMessage.length > 0) this.onRetry(); } });
       } else {
         ReaderActionMenuSurface({ variant: 'grouped', actions: this.sheetActions(), scheme: this.panelScheme,
           reduceMotion: this.reduceMotion,
@@ -66,5 +59,4 @@ export struct MangaDownloadOperationsPanel {
     if (current !== undefined) this.onAction(current.id);
   }
   private effectiveScheme(): string { return this.panelScheme === 'auto' ? this.appThemeScheme : this.panelScheme; }
-  private ink(): string { return readerAppColor('TOK_INK', this.effectiveScheme()); }
 }

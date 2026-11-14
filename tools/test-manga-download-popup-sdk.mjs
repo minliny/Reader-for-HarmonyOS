@@ -160,6 +160,8 @@ if(selected.includes('loading-motion')){
       anchor.bindPopup[1].builder();
       const inner=current.walk(popupChild).find(child=>child instanceof currentDeps.MangaDownloadOperationsPanel);
       assert.equal(inner.reduceMotion,reduceMotion,'actual catalog and popup forward the current preference');
+      assert.ok(current.walk(inner).some(child=>child instanceof current.deps.ReaderPageState),
+        'initial action loading uses the registered common local content state');
       assert.equal(indicator(inner).enableLoading,!reduceMotion,'current loading indicator respects motion policy');
       inner.foreground=false;current.properties.flush();
       assert.equal(indicator(inner).enableLoading,false,'background retires native loading animation');
@@ -187,7 +189,7 @@ if(selected.includes('loading-motion')){
     }
   }
   checkMotion();
-  const unguarded=panelSource.replace('.enableLoading(this.foreground && !this.reduceMotion)','.enableLoading(true)');
+  const unguarded=panelSource.replace('loadingActive: this.foreground && !this.reduceMotion','loadingActive: true');
   assert.notEqual(unguarded,panelSource);
   assert.throws(()=>checkMotion(unguarded),/background retires|loading indicator respects/);
   const disconnected=popupSource.replace('MangaDownloadOperationsPanel({ reduceMotion: this.reduceMotion,','MangaDownloadOperationsPanel({');

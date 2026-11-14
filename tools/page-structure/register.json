@@ -21281,7 +21281,7 @@
         },
         {
           "path": "tools/message-entrypoints.json",
-          "sha256": "0f6ffed1f4351db484a8d8f9aa06d7a3b7941c3685cb0d0588e3610a8149e745"
+          "sha256": "db50e00255c38c5a794616613625fadd2c001b98fdf21fcbdedcf2408d4509a9"
         },
         {
           "path": "tools/test-shared-download-visual-contract.mjs",
@@ -22672,7 +22672,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "0f6ffed1f4351db484a8d8f9aa06d7a3b7941c3685cb0d0588e3610a8149e745"
+                "sha256": "db50e00255c38c5a794616613625fadd2c001b98fdf21fcbdedcf2408d4509a9"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -24064,7 +24064,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "0f6ffed1f4351db484a8d8f9aa06d7a3b7941c3685cb0d0588e3610a8149e745"
+                "sha256": "db50e00255c38c5a794616613625fadd2c001b98fdf21fcbdedcf2408d4509a9"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -25456,7 +25456,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "0f6ffed1f4351db484a8d8f9aa06d7a3b7941c3685cb0d0588e3610a8149e745"
+                "sha256": "db50e00255c38c5a794616613625fadd2c001b98fdf21fcbdedcf2408d4509a9"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -26804,7 +26804,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "0f6ffed1f4351db484a8d8f9aa06d7a3b7941c3685cb0d0588e3610a8149e745"
+                "sha256": "db50e00255c38c5a794616613625fadd2c001b98fdf21fcbdedcf2408d4509a9"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -28152,7 +28152,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "0f6ffed1f4351db484a8d8f9aa06d7a3b7941c3685cb0d0588e3610a8149e745"
+                "sha256": "db50e00255c38c5a794616613625fadd2c001b98fdf21fcbdedcf2408d4509a9"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
