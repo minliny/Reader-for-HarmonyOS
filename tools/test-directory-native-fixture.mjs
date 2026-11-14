@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases,recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected=selectContractCases({
+  'bookmark-memory-owner':'Actual DEBUG fixture uses production recovery projection for its current in-memory bookmark owner; normal production read-only default and retired callbacks remain bounded.',
   'initializer-safety':'Actual SDK fixture admission/production initializers and exact control parent geometry; no native child rendering.',
   'default-vs-fixture':'Actual default Gateway creation remains and injected factories preserve their captured typed port.',
   'no-runtime':'Actual Surface opening and List initializer use injected public API without obtaining Runtime/Core; same renderer route.',
@@ -34,6 +35,7 @@ if(selected.length){
   const {resolveReaderControlLayout}=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
   const {ReaderControlGeometry}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
   const {readerControlMotionBounds,sampleReaderControlMotionComposition}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+  const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
   const {readerPageAreaLength}=await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
   const file=new URL('../entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets',import.meta.url),source=readFileSync(file,'utf8');
   const dataFile=new URL('../entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts',import.meta.url),dataSource=readFileSync(dataFile,'utf8');
@@ -48,7 +50,7 @@ if(selected.length){
     const sdk=boundedSurfaceSdk(),children=[],events=[],actions=[],back=[];
     const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=366;metrics.windowRect.height=844;metrics.systemFontScale=scale;
     const deps={...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:build,readerDirectoryFixtureEntries,ReaderDirectoryFixturePort,readerDirectoryFixtureCopyEntry,nextReaderDirectoryFixtureInstanceId,
-      resolveReaderControlLayout,ReaderControlGeometry,readerControlMotionBounds,sampleReaderControlMotionComposition,
+      readingDirectoryRecovery,resolveReaderControlLayout,ReaderControlGeometry,readerControlMotionBounds,sampleReaderControlMotionComposition,
       readerReadableFontScale,readerPageAreaLength,readerWindowMetrics:()=>metrics,
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));}}};
     for(const name of Object.keys(childSources))deps[name]=class{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id,name});children.push(this);}updateStateVars(params){Object.assign(this.params,params);}};
@@ -57,6 +59,37 @@ if(selected.length){
     finally{componentMap.ID_ATTRS.clear();for(const [k,v]of saved)componentMap.ID_ATTRS.set(k,v);}
     Object.assign(page,{fontsReady:ready,mode,controlExpanded:expanded,controlViewportHeight:controlHeight,onAction:(kind,index)=>actions.push([kind,index]),onBack:()=>back.push(true)});
     page.aboutToAppear();return{page,sdk,children,events,actions,back,metrics};
+  }
+  async function bookmarkMemoryOwner() {
+    function assertWritable(fixture) {
+      const child = fixture.children.at(-1);
+      assert.equal(child.params.directoryRecovery?.bookmarkWriteEnabled, true,
+        'the current in-memory bookmark owner explicitly supplies its production recovery projection');
+      assert.equal(child.params.directoryRecovery.presentationId, fixture.page.openingIdentity());
+    }
+    for (const mode of ['text', 'control']) {
+      const current = fixture({ mode, scale: 1 });
+      current.page.measure({ width: '366vp', height: '809vp' });
+      current.page.initialRender();
+      assertWritable(current);
+      const callbacks = current.children.at(-1).params;
+      const chapter = current.page.entries[1];
+      callbacks.onCreateChapterStartBookmark({ chapterIndex: chapter.index, chapterTitle: chapter.title });
+      assert.equal(current.page.entries[1].bookmarks.length, 1);
+      const bookmark = current.page.entries[1].bookmarks[0];
+      callbacks.onDeleteBookmarks([bookmark.time]);
+      assert.equal(current.page.entries[1].bookmarks.length, 0);
+      current.page.resetFixture();
+      const count = current.page.intentCount;
+      callbacks.onCreateChapterStartBookmark({ chapterIndex: chapter.index, chapterTitle: chapter.title });
+      assert.equal(current.page.intentCount, count, 'retired opening cannot publish a memory mutation');
+      current.page.aboutToDisappear();
+      assert.equal(current.page.memoryRecovery().bookmarkWriteEnabled, false);
+    }
+    const missing = fixture({ mode: 'control', fixtureSource: source.replaceAll('directoryRecovery: this.memoryRecovery(),', '') });
+    missing.page.measure({ width: '366vp', height: '809vp' });
+    missing.page.initialRender();
+    assert.throws(() => assertWritable(missing), /in-memory bookmark owner/);
   }
   async function initializerSafety(){
     for(const debug of [true,false])for(const build of ['debug','release'])for(const ready of [true,false]){
@@ -314,6 +347,6 @@ if(selected.length){
     list.selectTarget({kind:'target',nodeId:'n1',chapterIndex:1});assert.equal(guard(),true);
     list.mounted=false;list.generation+=1;assert.equal(guard(),false);resolveTarget({chapterIndex:1,chapterOffsetScalar:0});await tick();assert.deepEqual(selections,[]);
   }
-  const cases={'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
+  const cases={'bookmark-memory-owner':bookmarkMemoryOwner,'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

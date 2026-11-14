@@ -16,6 +16,7 @@ import type { LocalReadingTocEntry } from '../features/reading/application/Local
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../features/reading/presentation/ReaderDirectoryMarkerState';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../features/manga/application/MangaDownloadActionsGateway';
 import type { ReaderBookIdentity } from '../features/reading/presentation/ReaderBookmarkProjection';
+import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../features/reading/presentation/ReadingDirectoryRecovery';
 import type { ReaderDirectoryNavigationPortFactory } from '../features/reading/application/ReaderDirectoryNavigation';
 import { readerDirectoryFixtureEntries, ReaderDirectoryFixturePort, readerDirectoryFixtureCopyEntry,
   nextReaderDirectoryFixtureInstanceId } from './ReaderDirectoryStructureFixtureData';
@@ -106,6 +107,14 @@ export struct ReaderDirectoryStructureFixture {
     return { sourceId: 'directory-native-fixture', bookId: bookId,
       libraryBookId: `directory-native-fixture:${bookId}`,
       bookName: '目录原生夹具 · 山海行记', bookAuthor: '内存样本' };
+  }
+
+  private memoryRecovery(): ReadingDirectoryRecovery {
+    const identity = this.identity();
+    return readingDirectoryRecovery(this.openingIdentity(), {
+      sourceId: identity.sourceId, sourceName: '内存目录样本', bookId: identity.bookId,
+      title: identity.bookName, author: identity.bookAuthor,
+    }, undefined, undefined, this.admitted());
   }
 
   private current(presentation: number): boolean { return this.admitted() && presentation === this.presentation; }
@@ -295,6 +304,7 @@ export struct ReaderDirectoryStructureFixture {
       catalogContext: this.catalogContext, sourceId: this.identity().sourceId, bookId: this.identity().bookId,
       isOpeningCurrent: (): boolean => this.current(presentation),
       bookmarkIdentity: this.identity(), navigationPortFactory: this.navigationFactory,
+      directoryRecovery: this.memoryRecovery(),
       entries: this.entries, currentChapterIndex: this.currentChapterIndex,
       chapterStartBookmarkCreationEnabled: true,
       onSelectChapter: (index: number): void => this.intent(presentation, 'select-chapter', index),
@@ -341,6 +351,7 @@ export struct ReaderDirectoryStructureFixture {
         this.admitControlMinimum(presentation, identity, measurer),
       entries: this.entries, currentChapterIndex: this.currentChapterIndex,
       bookmarkIdentity: this.identity(), navigationPortFactory: this.navigationFactory,
+      directoryRecovery: this.memoryRecovery(),
       catalogComplete: true, catalogChapterCount: this.entries.length,
       catalogReadableChapterCount: this.entries.length, catalogReadablePosition: this.currentChapterIndex,
       progress: this.controlExpanded ? 1 : 0, interactionEnabled: true,
