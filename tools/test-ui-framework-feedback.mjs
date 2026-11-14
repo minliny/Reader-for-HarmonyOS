@@ -3,12 +3,70 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 const cases = {
   'transient-announcement': { description: 'Actual feedback registry, Toast lifecycle and platform adapter announce once for the active foreground generation and preserve state after platform rejection.', resources: [] },
   'removal-resize': { description: 'Actual removal-message SDK observer recomputes Scroll capacity after a height-only metrics publication without a Text Area event.', resources: [] },
+  'group-native-fixture': { description: 'Actual DEBUG group fixture methods use memory-only receipts and guarded actions, retaining generation and retired-host fences.', resources: [] },
 };
 
 for (const id of selectContractCases(cases)) {
   if (id === 'transient-announcement') await transientAnnouncement();
-  else await removalResize();
+  else if (id === 'removal-resize') await removalResize();
+  else await groupNativeFixture();
   recordContractCasePass(id);
+}
+
+async function groupNativeFixture() {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { selectedProductionClasses, selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const app = new URL('../entry/src/main/ets/app/', import.meta.url);
+  const facts = pureModuleProbe(readFileSync(new URL('ReaderOperationFacts.ts', app), 'utf8'), 'ReaderOperationFacts.ts', {},
+    ['projectOperationFacts', 'projectCommitReadback']);
+  const receipts = pureModuleProbe(readFileSync(new URL('ReaderPersistedReceiptProjection.ts', app), 'utf8'),
+    'ReaderPersistedReceiptProjection.ts', facts, ['projectPersistedReceipt']);
+  const recovery = pureModuleProbe(readFileSync(new URL('ReaderRecoveryProjection.ts', app), 'utf8'),
+    'ReaderRecoveryProjection.ts', {}, ['readerRecoveryView']);
+  const empty = { data: { groups: [], books: [], records: [], totalReadTime: 0, latestReadAt: 0 }, busy: false };
+  const base = selectedProductionClasses(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfGroupPresentation.ets', import.meta.url),
+    ['BookshelfGroupPresentation'], { ...recovery, EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT: empty,
+      BookshelfHost: class { constructor() { throw Error('fixture cannot attach business Host'); } } });
+  const file = new URL('../entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets', import.meta.url);
+  const source = readFileSync(file, 'utf8');
+  const { ReaderGroupFixturePresentation: Presentation } = pureModuleProbe(source.slice(0, source.indexOf('@Component')),
+    'ReaderGroupFixturePresentation.ets', { ...facts, ...receipts, ...base, Observed: value => value }, ['ReaderGroupFixturePresentation']);
+  const actions = [], presentation = new Presentation();
+  let current = true;
+  presentation.fixtureCurrent = () => current;
+  presentation.onFixtureAction = kind => actions.push(kind);
+  presentation.prepare('first', 1);
+  assert.equal(presentation.book.sourceId, 'fixture-group.example.invalid');
+  assert.equal(presentation.recovery(1).visible, true);
+  assert(presentation.recovery(1).message.endsWith('分组长文案末尾。'));
+  assert.equal(presentation.recovery(0).visible, false);
+  assert.equal(presentation.canContinue(1), true);
+  presentation.reconcile('stale', 1); presentation.reconcile('first', 0);
+  presentation.snapshot.busy = true; presentation.reconcile('first', 1); presentation.dismiss('first');
+  assert.deepEqual(actions, []);
+  presentation.snapshot.busy = false;
+  presentation.reconcile('first', 1); presentation.reconcile('first', 1, true);
+  assert.deepEqual(actions, ['reconcile', 'continue']);
+  const focus = presentation.captureFocusReturn('first');
+  presentation.dismiss('first'); assert.equal(focus.isCurrent(), true);
+  presentation.prepare('second', 2); presentation.dismiss('second'); assert.equal(focus.isCurrent(), false);
+  current = false; presentation.prepare('retired', 3); presentation.reconcile('second', 2);
+  assert.equal(presentation.identity, ''); assert.equal(focus.isCurrent(), false);
+  for (const [debug, mode, fontsReady, allowed] of [[true, 'debug', true, true], [false, 'debug', true, false],
+    [true, 'release', true, false], [true, 'debug', false, false]]) {
+    const Fixture = selectedProductionMethods(file, 'ReaderGroupRecoveryStructureFixture',
+      ['aboutToAppear', 'aboutToDisappear', 'current', 'openSample', 'back', 'record'], {
+        DEBUG: debug, BUILD_MODE_NAME: mode, hilog: { info() {} },
+      });
+    const bridges = [], page = Object.assign(new Fixture(), { fontsReady, presentation: new Presentation(), opening: 0,
+      actionCount: 0, hostHeight: 180, actualHeight: 180, actualWidth: 320, bridgeIdentity: 'group-recovery-fixture',
+      onTemporaryBackBridge: handler => bridges.push(handler) });
+    page.aboutToAppear(); page.openSample(); assert.equal(page.presentation.book !== undefined, allowed);
+    assert.equal(typeof bridges[0] === 'function', allowed);
+    page.aboutToDisappear(); page.openSample(); assert.equal(page.presentation.book, undefined);
+  }
 }
 
 async function transientAnnouncement() {

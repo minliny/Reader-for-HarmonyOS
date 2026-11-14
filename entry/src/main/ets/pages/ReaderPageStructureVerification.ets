@@ -17,6 +17,7 @@ import { projectCommitReadback, projectOperationFacts } from '../app/ReaderOpera
 import { ReaderDirectoryStructureFixture } from './ReaderDirectoryStructureFixture';
 import { ReaderDownloadStructureFixture } from './ReaderDownloadStructureFixture';
 import { ReaderSourceToolsStructureFixture } from './ReaderSourceToolsStructureFixture';
+import { ReaderGroupRecoveryStructureFixture } from './ReaderGroupRecoveryStructureFixture';
 
 interface SourceManagementFilterState {
   searchQuery: string;
@@ -33,7 +34,7 @@ type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'bu
   'read-error' | 'read-empty-error' | 'original-unknown' | 'original-cleanup' |
   'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-control-expanded' | 'directory-control-compact' |
   'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
-  'downloads' | 'downloads-short' | 'source-tools';
+  'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery';
 interface PageStructureFixtureObservation {
   kind: string;
   scene: string;
@@ -202,7 +203,7 @@ struct ReaderPageStructureVerification {
       (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' &&
         scene !== 'directory-control-expanded' && scene !== 'directory-control-compact' &&
         scene !== 'directory-control-short-122' && scene !== 'directory-control-short-168' && scene !== 'directory-control-short-190' &&
-        scene !== 'downloads' && scene !== 'downloads-short' && scene !== 'source-tools')) return;
+        scene !== 'downloads' && scene !== 'downloads-short' && scene !== 'source-tools' && scene !== 'group-recovery')) return;
     this.presentation += 1;
     this.temporaryBack = undefined;
     this.temporaryBackIdentity = '';
@@ -418,6 +419,8 @@ struct ReaderPageStructureVerification {
         .onClick((): void => this.launchFixture('downloads-short', menuPresentation));
       Button('书源 · 批量管理与工具').enabled(this.fontState === 'ready').id('reader-page-structure-source-tools')
         .onClick((): void => this.launchFixture('source-tools', menuPresentation));
+      Button('分组 · 长恢复提示').enabled(this.fontState === 'ready').id('reader-page-structure-group-recovery')
+        .onClick((): void => this.launchFixture('group-recovery', menuPresentation));
       Text(`夹具意图 ${this.intentCount} · ${this.lastIntent}`).fontSize(12);
       Button('返回诊断菜单').id('reader-page-structure-back-pilot').onClick((): void => this.returnToPilot(menuPresentation));
     }.width('100%').padding(20);
@@ -493,6 +496,9 @@ struct ReaderPageStructureVerification {
               onAction: (kind: string): void => this.fixtureAction(presentation, kind),
               onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
           }.width('100%').height(168).align(Alignment.Top).clip(true).id('reader-download-short-viewport');
+        } else if (this.scene === 'group-recovery') {
+          ReaderGroupRecoveryStructureFixture({ fontsReady: this.fontState === 'ready',
+            onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
         } else if (this.scene === 'source-tools') {
           ReaderSourceToolsStructureFixture({ fontsReady: this.fontState === 'ready',
             onBack: (): void => this.leaveScene(presentation),
