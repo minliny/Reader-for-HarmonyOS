@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
+const definitions={"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -25,7 +25,6 @@ if(selectedCase==='toggle'){
  const p=switchControls(),calls=[],o=p.mount(p.toggle,{inputIdentity:'A',value:false,onToggle:next=>calls.push(next)}),old=nativeToggle(p,o),oldChange=old.onChange;
  oldChange(true);p.properties.flush();assert.deepEqual(calls,[true]);assert.equal(o.value,false,'intent never changes controlled value');
  assert.equal(nativeToggle(p,o).create.isOn,false,'native control is refreshed from the owner');
- assert.equal(p.nodes(o).filter(node=>node.type==='Toggle').length,1,'controlled refresh retains the same native Toggle');
  p.update(o,{value:true});oldChange(false);assert.deepEqual(calls,[true],'retired native event is rejected');
  nativeToggle(p,o).onChange(false);assert.deepEqual(calls,[true,false]);
  p.update(o,{value:false});assert.equal(nativeToggle(p,o).create.isOn,false,'checked state follows owner');
@@ -34,6 +33,34 @@ if(selectedCase==='toggle'){
  p.update(o,{isBusy:false,inputIdentity:'B'});busy.onChange(true);assert.equal(calls.length,2,'old physical identity rejected');
  const fresh=nativeToggle(p,o);fresh.onChange(true);assert.equal(calls.length,3);
  o.aboutToDisappear();fresh.onChange(true);assert.equal(calls.length,3);cases++;
+}
+if (selectedCase === 'toggle-focus') {
+  for (const stop of ['none', 'identity', 'disabled', 'busy', 'retired', 'request', 'background']) {
+    const p = switchControls(), frames = [], requests = [], intents = [];
+    const o = p.mount(p.toggle, { inputIdentity: 'focus-A', value: false, onToggle: value => intents.push(value) });
+    o.getUIContext = () => ({ postFrameCallback: frame => frames.push(frame),
+      getFocusController: () => ({ requestFocus: id => requests.push(id) }) });
+    const initial = nativeToggle(p, o);
+    initial.onFocus(); initial.onChange(true); p.properties.flush();
+    assert.deepEqual(intents, [true]);
+    assert.equal(nativeToggle(p, o).create.isOn, false, 'rejected intent keeps accepted owner projection');
+    const current = nativeToggle(p, o);
+    current.onAppear(); current.onAppear();
+    assert.equal(frames.length, 1, 'only one bounded restoration is scheduled for the replacement');
+    if (stop === 'identity') p.update(o, { inputIdentity: 'focus-B' });
+    if (stop === 'disabled') p.update(o, { actionEnabled: false });
+    if (stop === 'busy') p.update(o, { isBusy: true });
+    if (stop === 'retired') o.aboutToDisappear();
+    if (stop === 'background') o.appForeground = false;
+    if (stop === 'request') {
+      current.onFocus(); current.onChange(true); p.properties.flush();
+    }
+    frames[0].onIdle(1000000);
+    assert.deepEqual(requests, stop === 'none' ? ['reader-toggle:focus-A'] : [], 'only the current eligible native owner can regain focus');
+  }
+  const p = switchControls(), o = p.mount(p.toggle, { inputIdentity: 'touch', onToggle() {} });
+  o.getUIContext = () => { throw Error('unfocused touch must not schedule focus'); };
+  nativeToggle(p, o).onChange(true); p.properties.flush(); nativeToggle(p, o).onAppear();
 }
 if(selectedCase==='segment'){
  const p=switchControls(),calls=[],o=p.mount(p.segment,{inputIdentity:'A',options:['跟随','浅色','深色'],optionIds:['system','day','night'],selectedIndex:0,onSelect:i=>calls.push(i)});

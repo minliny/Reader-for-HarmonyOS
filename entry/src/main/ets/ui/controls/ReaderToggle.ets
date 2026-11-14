@@ -1,6 +1,15 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 
+import { FrameCallback } from '@kit.ArkUI';
+
+class ReaderToggleFocusFrame extends FrameCallback {
+  private readonly action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void {}
+  onIdle(_remaining: number): void { this.action(); }
+}
+
 type ReaderToggleSpecId = 'standard-toggle' | 'bookshelf-update-toggle';
 interface ReaderToggleSpec {
   thumbColor: ReaderAppColorRole;
@@ -28,6 +37,7 @@ function resolveReaderToggleSpec(id: ReaderToggleSpecId): ReaderToggleSpec {
 @Component
 export struct ReaderToggle {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @Prop specId: ReaderToggleSpecId = 'standard-toggle';
   @Prop value: boolean = false;
   @Prop actionEnabled: boolean = true;
@@ -37,35 +47,55 @@ export struct ReaderToggle {
   @State private nativeRevision: number = 0;
   onToggle: (next: boolean) => void = (_next: boolean): void => {};
   private mounted: boolean = false;
+  private focusedRevision: number = -1;
+  private pendingFocusRevision: number = -1;
   aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void { this.mounted = false; this.focusedRevision = -1; this.pendingFocusRevision = -1; }
   build() {
     ForEach([this.inputIdentity], (identity: string): void => {
       Stack({ alignContent: Alignment.Center }) {
-        Toggle({ type: ToggleType.Switch, isOn: this.value })
-          .width(44).height(24)
-          .selectedColor(readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
-          .switchStyle({ pointRadius: 10, trackBorderRadius: 12,
-            pointColor: readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme),
-            unselectedColor: readerAppColor(resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme) })
-          .responseRegion({ x: 0, y: -10, width: 44, height: 44 })
-          .enabled(this.canAct(identity)).focusable(this.canAct(identity))
-          .accessibilityText(this.accessibilityLabel)
-          .onChange(this.nativeChangeHandler(identity, this.nativeRevision));
+        ForEach([this.nativeRevision], (revision: number): void => {
+          Toggle({ type: ToggleType.Switch, isOn: this.value })
+            .width(44).height(24)
+            .selectedColor(readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
+            .switchStyle({ pointRadius: 10, trackBorderRadius: 12,
+              pointColor: readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme),
+              unselectedColor: readerAppColor(resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme) })
+            .responseRegion({ x: 0, y: -10, width: 44, height: 44 })
+            .enabled(this.canAct(identity)).focusable(this.canAct(identity))
+            .accessibilityText(this.accessibilityLabel)
+            .id(this.nativeFocusId(identity))
+            .onFocus((): void => { if (revision === this.nativeRevision) this.focusedRevision = revision; })
+            .onBlur((): void => { if (revision === this.nativeRevision) this.focusedRevision = -1; })
+            .onAppear((): void => this.restoreNativeFocus(identity, revision))
+            .onChange((next: boolean): void => this.toggle(identity, revision, next));
+        }, (revision: number): string => revision.toString());
       }.width(44).height(44);
     }, (identity: string): string => identity);
   }
   private canAct(identity: string): boolean {
     return this.mounted && identity.length > 0 && this.actionEnabled && !this.isBusy && identity === this.inputIdentity;
   }
-  private nativeChangeHandler(identity: string, revision: number): (next: boolean) => void {
-    return (next: boolean): void => this.toggle(identity, revision, next);
+  private nativeFocusId(identity: string): string { return `reader-toggle:${identity}`; }
+
+  private restoreNativeFocus(identity: string, revision: number): void {
+    if (this.pendingFocusRevision !== revision) return;
+    this.pendingFocusRevision = -1;
+    if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
+    try {
+      this.getUIContext().postFrameCallback(new ReaderToggleFocusFrame((): void => {
+        if (!this.appForeground || !this.canAct(identity) || revision !== this.nativeRevision) return;
+        try { this.getUIContext().getFocusController().requestFocus(this.nativeFocusId(identity)); }
+        catch (_unavailable) {}
+      }));
+    } catch (_detached) {}
   }
+
   private toggle(identity: string, revision: number, next: boolean): void {
     if (revision !== this.nativeRevision || !this.canAct(identity) || next === this.value) return;
-    // This revision is read by the native observer when binding onChange.
-    // Its update reapplies the controlled isOn value on the same Toggle node,
-    // including rejected intents whose owner value stays unchanged.
+    // A native switch mutates its own transient value. Recreate that control
+    // from the owner projection even when the intent is rejected without a prop change.
+    this.pendingFocusRevision = this.focusedRevision === revision ? revision + 1 : -1;
     this.nativeRevision += 1;
     this.onToggle(next);
   }

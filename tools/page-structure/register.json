@@ -1030,11 +1030,11 @@
         }
       },
       "exceptions": [],
-      "revision": 25,
+      "revision": 26,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 22,
+        "control": 23,
         "platform": 3
       },
       "sourceInputs": [
@@ -1168,7 +1168,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
-          "sha256": "a975612b6f7cf582cb22aab5f60fe6d6d2163694c6df3c394b2783a8dc28138e"
+          "sha256": "3ff31aebeadbfd50ea160e578def788a805330604f00e08bdf575cdce51b27c0"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
@@ -1276,7 +1276,7 @@
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "ed9286eb8fb7a5131fe0379ba6e84ffdbc7f9d7ce96f4ebe85c6b920eff0918f"
+          "sha256": "265029c4ccc1e13b85e5b4c95fa58b956930f4423b6c9db04df90e1a942f17bb"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -2547,11 +2547,11 @@
         }
       },
       "exceptions": [],
-      "revision": 26,
+      "revision": 27,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 22,
+        "control": 23,
         "platform": 3
       },
       "sourceInputs": [
@@ -3974,11 +3974,11 @@
               }
             },
             "exceptions": [],
-            "revision": 25,
+            "revision": 26,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -5549,11 +5549,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -7093,11 +7093,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -8664,11 +8664,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -10097,11 +10097,11 @@
               }
             },
             "exceptions": [],
-            "revision": 25,
+            "revision": 26,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -11417,11 +11417,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -12913,11 +12913,11 @@
               }
             },
             "exceptions": [],
-            "revision": 25,
+            "revision": 26,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -14301,11 +14301,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -15726,11 +15726,11 @@
               }
             },
             "exceptions": [],
-            "revision": 25,
+            "revision": 26,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -17046,11 +17046,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -18641,11 +18641,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -20239,11 +20239,11 @@
               }
             },
             "exceptions": [],
-            "revision": 27,
+            "revision": 28,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             },
             "sourceInputs": [
@@ -22253,11 +22253,11 @@
         }
       },
       "exceptions": [],
-      "revision": 16,
+      "revision": 17,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 22,
+        "control": 23,
         "platform": 3
       },
       "variants": [
@@ -23638,11 +23638,11 @@
               }
             },
             "exceptions": [],
-            "revision": 16,
+            "revision": 17,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             }
           }
@@ -25024,11 +25024,11 @@
               }
             },
             "exceptions": [],
-            "revision": 16,
+            "revision": 17,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             }
           }
@@ -26366,11 +26366,11 @@
               }
             },
             "exceptions": [],
-            "revision": 16,
+            "revision": 17,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             }
           }
@@ -27708,11 +27708,11 @@
               }
             },
             "exceptions": [],
-            "revision": 16,
+            "revision": 17,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             }
           }
@@ -29050,11 +29050,11 @@
               }
             },
             "exceptions": [],
-            "revision": 16,
+            "revision": 17,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 22,
+              "control": 23,
               "platform": 3
             }
           }
@@ -30107,11 +30107,11 @@
         }
       },
       "exceptions": [],
-      "revision": 12,
+      "revision": 13,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 22,
+        "control": 23,
         "platform": 3
       },
       "sourceInputs": [

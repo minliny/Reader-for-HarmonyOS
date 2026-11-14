@@ -47,7 +47,10 @@ export function switchControls({specs=switchSpecs(),toggleDefinition=toggleSourc
   const frameText = segmentDefinition.slice(segmentDefinition.indexOf('class ReaderSegmentPolicyFrame'),
     segmentDefinition.indexOf('type ReaderSegmentSpecId'));
   const Frame = new Function('FrameCallback', stripTypeScriptTypes(frameText) + ';return ReaderSegmentPolicyFrame;')(class {});
-  const dependencies = { ...properties.sdk, ...specs, ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor,
+  const toggleFrameText = toggleDefinition.slice(toggleDefinition.indexOf('class ReaderToggleFocusFrame'),
+    toggleDefinition.indexOf('type ReaderToggleSpecId'));
+  const ToggleFocusFrame = new Function('FrameCallback', stripTypeScriptTypes(toggleFrameText) + ';return ReaderToggleFocusFrame;')(class {});
+  const dependencies = { ReaderToggleFocusFrame: ToggleFocusFrame, ...properties.sdk, ...specs, ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor,
     ReaderPressFeedback: productionReaderPressFeedback({ ColorMetrics }),
     CapsuleSegmentButtonV2: CapsuleSegmentButtonV2Port, SegmentButtonV2Items: SegmentButtonV2ItemsPort,
     TextModifier: TextModifierPort, ReaderSegmentPolicyFrame: Frame,

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 22,
+  "revision": 23,
   "controls": [
     {
       "controlId": "page-back",
@@ -324,7 +324,7 @@
       },
       "accessibleNameSource": "ReaderToggle.accessibilityLabel('启用书源')",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. Controlled native changes now update the same Toggle node. Accepted/rejected projection and stale-event guards have scoped SDK evidence. Successor native keyboard focus revalidation remains open."
+      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL. Controlled native remount is retained. A previously keyboard-focused native owner schedules one post-layout focus request with current identity, foreground, enabled, busy, mount and revision guards. Scoped SDK projection/focus tests pass. Successor native focus/value revalidation remains open."
     },
     {
       "controlId": "footer-batch",
