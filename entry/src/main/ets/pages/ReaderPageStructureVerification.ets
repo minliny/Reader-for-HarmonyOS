@@ -51,6 +51,7 @@ interface PageStructureFixtureObservation {
   nativeFontMaxScale?: number;
   nativeFontScaleVp?: number;
   sourceId: string;
+  sourceVersion?: string;
   intentCount: number;
   filterObservation: string;
   queryLength: number;
@@ -147,6 +148,8 @@ struct ReaderPageStructureVerification {
       const id = `https://fixture-${index + 1}.example.invalid`;
       const source: BookSource = { sourceId: id, name: `夹具书源${index + 1} · 中文 English`,
         baseUrl: id, enabled: index % 3 !== 1, enabledExplore: false,
+        // Opaque memory versions exercise accepted-value changes independently of Core I/O.
+        sourceVersion: `memory-source-${index + 1}-revision-0`,
         category: index % 3 === 0 ? 'novel' : index % 3 === 1 ? 'comic' : 'music',
         group: index % 2 === 0 ? '科幻样本' : '纪实样本',
         loginUrl: index % 2 === 0 ? `${id}/fixture-login` : undefined,
@@ -258,6 +261,7 @@ struct ReaderPageStructureVerification {
         if (source.sourceId !== sourceId) return source;
         const next: BookSource = { sourceId: source.sourceId, name: source.name, baseUrl: source.baseUrl,
           enabled: kind === 'toggle' ? enabled : source.enabled, enabledExplore: source.enabledExplore,
+          sourceVersion: kind === 'toggle' ? `memory-source-revision-${this.intentCount}` : source.sourceVersion,
           category: source.category, group: source.group, loginUrl: source.loginUrl,
           checkState: kind === 'toggle' ? source.checkState : 'checking',
           checkMessage: kind === 'toggle' ? source.checkMessage : kind === 'login' ?
@@ -341,7 +345,8 @@ struct ReaderPageStructureVerification {
     const observation: PageStructureFixtureObservation = { kind, scene: this.scene, presentation: this.presentation,
       requestedWidthVp: this.requestedWidth, actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
       systemFontScale: readerWindowMetrics().systemFontScale, contentTopInsetVp: this.appContentTopInset(),
-      sourceId, intentCount: this.intentCount, nativeFontObservationStatus: 'unavailable',
+      sourceId, sourceVersion: this.sources.find((source: BookSource): boolean => source.sourceId === sourceId)?.sourceVersion,
+      intentCount: this.intentCount, nativeFontObservationStatus: 'unavailable',
       filterObservation: 'initial-or-tools-capture', queryLength: this.filters.searchQuery.length, statusFilter: this.filters.statusValue,
       categoryFilter: this.filters.categoryValue, groupFilter: this.filters.groupValue };
     try {

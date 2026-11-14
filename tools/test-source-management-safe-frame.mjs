@@ -83,7 +83,7 @@ function controls(metrics, fieldSource = searchSource) {
     consumer(source, names) { return createReaderBuilderProbe(source, names, dependencies, hooks).owner; } };
 }
 
-const rowMembers = ['sourceRow', 'sourceLeading', 'sourceInfo', 'sourceActions', 'detectButton', 'loginButton', 'statusBadge', 'sourceSwitch'];
+const rowMembers = ['sourceRow', 'sourceLeading', 'sourceInfo', 'sourceActions', 'detectButton', 'loginButton', 'statusBadge', 'sourceSwitch', 'sourceSwitchValue', 'sourceSwitchName', 'currentSourceRow', 'currentSourceInfo', 'sourceRenderKey', 'projectedSources'];
 function mountRow(c, page, book, source = pageSource) {
   const owner = c.consumer(source, rowMembers);
   Object.assign(owner, { appThemeScheme: 'day', contentFrame: page.contentFrame.bind(page), fontScale: page.fontScale.bind(page),
@@ -113,15 +113,23 @@ function assertRow(c, owner, page, book) {
   const actualText = nodes.filter(node => node.type === 'Text').map(node => node.create);
   assert.equal(actualText.includes('登录'), !!book.loginUrl, 'busy login keeps its real two-glyph label');
   assert.ok(actualText.includes(book.checkState === 'checking' ? '检测中' : '检测'));
-  for (const button of buttons) {
-    assert.ok(button.width >= 44 && button.width <= actions.width && button.height >= 44, 'actual NativeButton target survives wrapping');
+  const buttonFrames = buttons.map(button => {
+    const label = button.accessibilityText === '检测' && book.checkState === 'checking' ? '检测中' : button.accessibilityText;
+    const paint = nodes.find(node => node.type === 'Text' && node.create === label);
+    assert.ok(paint && Number.isFinite(paint.width) && Number.isFinite(paint.height), 'actual capsule pays a finite child frame');
+    assert.equal(button.padding, 0);
+    assert.equal(paint.hitTestBehavior, 'HitTestMode.None');
+    const width = Math.max(button.width ?? 0, button.constraintSize?.minWidth ?? 0, paint.width);
+    const height = Math.max(button.height ?? 0, button.constraintSize?.minHeight ?? 0, paint.height);
+    assert.ok(width >= 44 && width <= actions.width && height >= 44, 'native minimum contains the separate painted capsule within the parent budget');
     assert.equal(button.enabled, book.checkState !== 'checking');
-  }
+    return { width, height };
+  });
   const toggle = nodes.find(node => node.type === 'Toggle');
   const badge = nodes.find(node => node.type === 'Stack' && node.accessibilityText === '检测通过');
   assert.ok(toggle && badge);
-  const actualWidths = [...buttons.map(button => button.width), badge.width, toggle.width];
-  const actualHeights = [...buttons.map(button => button.height), badge.height, toggle.responseRegion.height];
+  const actualWidths = [...buttonFrames.map(button => button.width), badge.width, toggle.width];
+  const actualHeights = [...buttonFrames.map(button => button.height), badge.height, toggle.responseRegion.height];
   let lineWidth = 0, lineHeight = 0, rows = 1, height = 0;
   for (let index = 0; index < actualWidths.length; index += 1) {
     const gap = lineWidth > 0 ? actions.create.space.main.value : 0;
@@ -226,6 +234,23 @@ function assertFooter(c, page) {
   assert.equal(page.footerFallbackHeight(), expectedFooterHeight + readerFoundationTokens.TOK_SPACE_SM + 16);
   page.contentFrame = contentFrame;
   return { stacked, paidWidth, requirements, requiredHeight, footerHeight: footer.constraintSize.minHeight };
+}
+
+{
+  const metrics = createDefaultReaderWindowMetrics();
+  metrics.windowRect = new ReaderRectVp(0, 0, 366, 844);
+  const page = geometryOwner(metrics), c = controls(metrics);
+  const source = { sourceId: 'retained-source', sourceVersion: 'version-A', name: 'Original source',
+    category: 'novel', baseUrl: 'https://retained-source.test', enabled: true, checkState: 'passed' };
+  const owner = mountRow(c, page, source);
+  const toggles = () => [...owner.children.values()].filter(child => child.inputIdentity === 'source-opening:retained-source');
+  assert.equal(toggles().length, 1);
+  const toggle = toggles()[0];
+  owner.projectedSources = [{ ...source, sourceVersion: 'version-B', name: 'Updated source', enabled: false }];
+  c.foundation.properties.flush();
+  assert.deepEqual(toggles(), [toggle], 'full source row slots retain the actual ReaderToggle child through a version update');
+  assert.equal(toggle.value, false);
+  assert.ok(c.nodes(owner).some(node => node.type === 'Text' && node.create === 'Updated source'), 'current information slot uses the accepted DTO');
 }
 
 for (const width of widths) for (const safe of safeEdges) for (const scale of fontScales) {

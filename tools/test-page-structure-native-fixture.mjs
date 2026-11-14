@@ -119,7 +119,10 @@ if (selected.length) {
   async function sourceCallbacks() {
     const f=fixture();f.page.aboutToAppear();await tick();f.page.selectWidth(320, f.page.presentation);f.page.launchSource('default', f.page.presentation);f.page.sourceStage();
     const old=f.props(),id=old.sources[0].sourceId;assert(id.endsWith('.example.invalid'));
-    const before=f.page.intentCount;old.onToggleSource(id,false);assert.equal(f.page.sources[0].enabled,false);
+    const before=f.page.intentCount, originalVersion=f.page.sources[0].sourceVersion;
+    old.onToggleSource(id,false);assert.equal(f.page.sources[0].enabled,false);
+    assert.notEqual(f.page.sources[0].sourceVersion,originalVersion,'memory accepted toggle also changes the opaque source version');
+    assert.equal(f.events.at(-1).sourceVersion,f.page.sources[0].sourceVersion,'native diagnostic records the actual accepted memory version');
     old.onDetectSource(id);assert.equal(f.page.sources[0].checkState,'checking');
     old.onLoginSource(id);assert.match(f.page.sources[0].checkMessage,/无平台登录/);old.onAddSource();old.onOpenTools(old.initialViewState);
     f.page.returnToPilot(f.page.presentation);

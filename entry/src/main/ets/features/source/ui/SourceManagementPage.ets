@@ -849,7 +849,7 @@ export struct SourceManagementPage {
         ListItem() {
           this.sourceRow(source);
         }
-      }, (source: BookSource): string => this.sourceRenderKey(source));
+      }, (source: BookSource): string => this.sourceRowKey(source));
     }
     .width('100%')
     .height('100%')
@@ -980,28 +980,39 @@ export struct SourceManagementPage {
   @Builder
   private sourceRow(source: BookSource) {
     Column({ space: TOK_SPACE_XS }) {
-      if (this.layoutBudget(source).rowForm === 'stacked-leading') {
+      if (this.layoutBudget(this.currentSourceRow(source)).rowForm === 'stacked-leading') {
         this.sourceLeading();
-        this.sourceInfo(source);
+        this.currentSourceInfo(source);
         this.sourceActions(source);
       } else {
         Row({ space: TOK_SPACE_XS }) {
           this.sourceLeading();
-          this.sourceInfo(source);
-          if (this.layoutBudget(source).rowForm === 'inline') {
+          this.currentSourceInfo(source);
+          if (this.layoutBudget(this.currentSourceRow(source)).rowForm === 'inline') {
             this.sourceActions(source);
           }
         }.width('100%').alignItems(VerticalAlign.Center);
-        if (this.layoutBudget(source).rowForm === 'stacked-actions') {
+        if (this.layoutBudget(this.currentSourceRow(source)).rowForm === 'stacked-actions') {
           this.sourceActions(source);
         }
       }
     }
     .width(this.contentFrame().width)
-    .constraintSize({ minHeight: this.layoutBudget(source).rowMinHeight })
+    .constraintSize({ minHeight: this.layoutBudget(this.currentSourceRow(source)).rowMinHeight })
     .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_XS, right: TOK_SPACE_XS })
     .alignItems(HorizontalAlign.Start)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
+  }
+
+  private currentSourceRow(source: BookSource): BookSource {
+    return this.projectedSources.find((current: BookSource): boolean => current.sourceId === source.sourceId) ?? source;
+  }
+
+  @Builder
+  private currentSourceInfo(source: BookSource) {
+    ForEach([this.currentSourceRow(source)], (current: BookSource): void => {
+      this.sourceInfo(current);
+    }, (current: BookSource): string => this.sourceRenderKey(current));
   }
 
   @Builder
@@ -1081,19 +1092,18 @@ export struct SourceManagementPage {
   private sourceActions(source: BookSource) {
     Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
       space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
-      if (source.loginUrl !== undefined && source.loginUrl.trim().length > 0) {
-        this.loginButton(source);
-      }
-
-      this.detectButton(source);
-
-      this.statusBadge(source);
-
-      this.sourceSwitch(source.enabled, this.sourceRowToggle(source), source.sourceId, source.name);
+      ForEach([this.currentSourceRow(source)], (current: BookSource): void => {
+        if (current.loginUrl !== undefined && current.loginUrl.trim().length > 0) {
+          this.loginButton(current);
+        }
+        this.detectButton(current);
+        this.statusBadge(current);
+      }, (current: BookSource): string => this.sourceRenderKey(current));
+      this.sourceSwitch(source.enabled, (next: boolean): void => this.sourceRowToggle(this.currentSourceRow(source))(next), source.sourceId, source.name);
 
     }
-    .width(this.layoutBudget(source).trailingWidth)
-    .constraintSize({ minHeight: this.layoutBudget(source).actionsHeight });
+    .width(this.layoutBudget(this.currentSourceRow(source)).trailingWidth)
+    .constraintSize({ minHeight: this.layoutBudget(this.currentSourceRow(source)).actionsHeight });
   }
 
   @Builder
@@ -1146,11 +1156,19 @@ export struct SourceManagementPage {
     StatusBadge({ status: this.sourceBadgeStatus(source), label: this.sourceBadgeLabel(source) }).flexShrink(0);
   }
 
+  private sourceSwitchValue(sourceId: string, fallback: boolean): boolean {
+    return this.projectedSources.find((source: BookSource): boolean => source.sourceId === sourceId)?.enabled ?? fallback;
+  }
+
+  private sourceSwitchName(sourceId: string, fallback: string): string {
+    return this.projectedSources.find((source: BookSource): boolean => source.sourceId === sourceId)?.name ?? fallback;
+  }
+
   @Builder
   private sourceSwitch(value: boolean, onTap: (next: boolean) => void, sourceId: string, sourceName: string = '') {
     ForEach([`${this.temporaryBackIdentity}:${sourceId}`], (identity: string): void => {
-      ReaderToggle({ value, specId: 'standard-toggle', inputIdentity: identity,
-        accessibilityLabel: `${sourceName.trim().length > 0 ? sourceName : sourceId}，启用书源${this.sourceToggleBusy() ? '，忙碌' : this.sourceActionEnabled() ? '' : '，暂不可用'}`, actionEnabled: this.sourceActionEnabled(), isBusy: this.sourceToggleBusy(),
+      ReaderToggle({ value: this.sourceSwitchValue(sourceId, value), specId: 'standard-toggle', inputIdentity: identity,
+        accessibilityLabel: `${this.sourceSwitchName(sourceId, sourceName).trim() || sourceId}，启用书源${this.sourceToggleBusy() ? '，忙碌' : this.sourceActionEnabled() ? '' : '，暂不可用'}`, actionEnabled: this.sourceActionEnabled(), isBusy: this.sourceToggleBusy(),
         onToggle: (next: boolean): void => {
           if (identity === `${this.temporaryBackIdentity}:${sourceId}` && this.sourceActionEnabled() && !this.sourceToggleBusy()) onTap(next);
         } }).flexShrink(0);
@@ -1207,6 +1225,9 @@ export struct SourceManagementPage {
     if (this.readerWindowMetricsRevision < 0) { return TOK_SPACE_MD; }
     return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
   }
+
+  // Keep the toggle owner while the complete source digest and content slots update.
+  private sourceRowKey(source: BookSource): string { return source.sourceId; }
 
   private sourceRenderKey(source: BookSource): string {
     return `source-${source.sourceId}-${source.name}-${source.baseUrl}-${source.group ?? ''}-${source.category}-` +

@@ -44,7 +44,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "sha256": "4a1911cba52645255a56deb62ad4057ba4ab149819699c50edbb6f02e33c0bba"
+        "sha256": "7fc548b7de848862286852e3fd68dc944f17ab5d64435b0ad38d2531a6a5b217"
       },
       "layers": {
         "route": {
@@ -1048,7 +1048,7 @@
         }
       },
       "exceptions": [],
-      "revision": 34,
+      "revision": 35,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1098,7 +1098,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4a1911cba52645255a56deb62ad4057ba4ab149819699c50edbb6f02e33c0bba"
+          "sha256": "7fc548b7de848862286852e3fd68dc944f17ab5d64435b0ad38d2531a6a5b217"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
@@ -1126,7 +1126,7 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "8435534006dc8b418694eaecd2aa1ce1f780beabadecf5cf830a72bdec7a2503"
+          "sha256": "bf801fa8f6a3c8919c65178bca58d3246b9b35d618814f185a25102685115ece"
         },
         {
           "path": "tools/lib/source-layout-control-probe.mjs",
@@ -1262,7 +1262,7 @@
         },
         {
           "path": "tools/test-source-management-contract.mjs",
-          "sha256": "5088d8f010528e2f424538999337ed4ffcce26182faee3c2c29bdf869139c042"
+          "sha256": "3343fc1f694c67121bd81e9170b66240c5af23b5128484d82bffd5f2272fc7fb"
         },
         {
           "path": "tools/test-source-journey-retention.mjs",
@@ -30418,7 +30418,7 @@
         }
       },
       "exceptions": [],
-      "revision": 21,
+      "revision": 22,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -30591,7 +30591,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4a1911cba52645255a56deb62ad4057ba4ab149819699c50edbb6f02e33c0bba"
+          "sha256": "7fc548b7de848862286852e3fd68dc944f17ab5d64435b0ad38d2531a6a5b217"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -30619,7 +30619,7 @@
         },
         {
           "path": "tools/test-source-management-contract.mjs",
-          "sha256": "5088d8f010528e2f424538999337ed4ffcce26182faee3c2c29bdf869139c042"
+          "sha256": "3343fc1f694c67121bd81e9170b66240c5af23b5128484d82bffd5f2272fc7fb"
         },
         {
           "path": "tools/test-source-journey-retention.mjs",
@@ -30647,7 +30647,7 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "8435534006dc8b418694eaecd2aa1ce1f780beabadecf5cf830a72bdec7a2503"
+          "sha256": "bf801fa8f6a3c8919c65178bca58d3246b9b35d618814f185a25102685115ece"
         },
         {
           "path": "tools/page-structure/test-source-interaction-inventory.mjs",

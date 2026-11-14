@@ -121,7 +121,7 @@ if (selected.length) {
       [{ action: 'toggle', sourceId: 'a', receipt: { receipt: { confirmation: 'confirmed' }, facts: { fact: 'refreshing' } } }, 0],
     ]) {
       const controls = switchControls(), calls = [];
-      const page = controls.consumer(text, ['operation', 'sourceSwitch', 'sourceToggleBusy', 'sourceActionEnabled','managementBackIsCurrent','managementOpeningIsCurrent'], {}, { operation });
+      const page = controls.consumer(text, ['operation', 'projectedSources', 'sourceSwitch', 'sourceSwitchValue', 'sourceSwitchName', 'sourceToggleBusy', 'sourceActionEnabled','managementBackIsCurrent','managementOpeningIsCurrent'], {}, { operation });
       Object.assign(page, { mounted: true, appForeground:true, temporaryBackIdentity: 'action-admission', onToggleSource: (_id, next) => calls.push(next) });
       page.sourceSwitch(false, next => page.onToggleSource('a', next), 'a');
       const actor = [...page.children.values()].find(c => c instanceof controls.toggle.Component);

@@ -1,5 +1,6 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"toggle-focus-availability": {"description": "Actual SDK availability watchers resume current pending keyboard and reader focus after a busy mount or blocked frame and reject retired owners", "resources": []},"toggle-focus-buffer": {"description": "Explicit DEBUG buffered focus diagnostics perform no callback-time logging, bound the buffer and flush only through the actual warm-Want entry", "resources": []},"toggle-accessibility-ack": {"description": "Actual SDK Toggle retries an unacknowledged accessibility replacement once and retires the retry on focus, identity, foreground and operation changes", "resources": []},"toggle-native-focus-target": {"description": "Actual native target IDs bind the remount revision, old queued accessibility requests cannot address successors, logging defaults off", "resources": []},"toggle-focus-identity": {"description": "Focus ownership and pending continuations retire with input identity, including late callbacks at the same native revision", "resources": []},"toggle-accessibility-focus": {"description": "Actual native accessibility focus callback and current-revision not-interrupt restoration with retirement and foreground negatives", "resources": []},"toggle-focus": {"description": "Actual keyed Toggle restores only its prior keyboard focus once after remount and rejects stale or disabled deferred requests", "resources": []},"toggle": {"description": "实际受控Toggle接纳、identity/disabled/busy/retired与四guard负例", "resources": []}, "segment": {"description": "实际enum稳定optionID重排/删除/重复及受控选择", "resources": []}, "press": {"description": "当前共享按压/取消恢复与禁用不请求pressed fill", "resources": []}, "spec-propagation": {"description": "当前有限spec宽度+3传播与另一族隔离/private拒绝", "resources": []}, "source": {"description": "SourceManagement当前Toggle控制与blocked原操作", "resources": []}, "settings": {"description": "Settings受控回执/unknown/pending/旧页面拒绝", "resources": []}, "rules": {"description": "Rules本地boolean草稿在未决保存期间可编辑", "resources": []}, "rss-management": {"description": "RSS当前立即写回执与旧presentation拒绝", "resources": []}, "rss-editor": {"description": "RSS实际build两个本地草稿Toggle与旧editor拒绝", "resources": []}, "theme": {"description": "Settings实际ThemeHost接受后shared enum更新", "resources": []}, "lazy-theme": {"description": "Root按需真实shared enum解析与保留child更新", "resources": []}};
+definitions['source-row-value'] = { description: 'Actual Source row identity retains accepted value/version updates and SDK child consumes current projection while old snapshot and removed source callbacks retire', resources: [] };
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -517,8 +518,60 @@ function consumer(file,members,params={},extra={}){
  const p=switchControls();Object.assign(p.dependencies,readerFoundationTokens);
  const o=p.consumer(read('entry/src/main/ets/features/'+file+'.ets'),members,extra,params);return{p,o};
 }
+if (selectedCase === 'source-row-value') {
+ const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+ const file = new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url);
+ const Keys = selectedProductionMethods(file, 'SourceManagementPage', ['sourceRenderKey', 'sourceRowKey']);
+ const keys = new Keys();
+ const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+ const { ts, options } = installedEtsCompiler();
+ const tree = ts.createSourceFile('SourceManagementPage.ets', readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+ const component = tree.statements.find(node => node.name?.text === 'SourceManagementPage');
+ const list = component.members.find(node => node.name?.getText(tree) === 'sourceList');
+ assert.match(list.getText(tree), /\(source: BookSource\): string => this\.sourceRowKey\(source\)/, 'normal LazyForEach binds the value-independent row key');
+ const source = { sourceId: 'source-A', name: 'Current source', baseUrl: 'https://source.test',
+   sourceVersion: 'version-A', category: 'novel', enabled: true, checkState: 'unchecked' };
+ assert.equal(keys.sourceRowKey(source), keys.sourceRowKey({ ...source, enabled: false, sourceVersion: 'version-B' }),
+   'accepted enabled-only value retains the LazyForEach row and ReaderToggle owner');
+ for (const change of [{ sourceVersion: 'version-B' }, { checkState: 'checking' }, { name: 'Changed source' }]) {
+   assert.notEqual(keys.sourceRenderKey(source), keys.sourceRenderKey({ ...source, ...change }),
+     'definition and row content changes keep their existing retirement boundary');
+ }
+ const calls = [];
+ const { p, o } = consumer('source/SourceManagementPage', ['operation', 'projectedSources', 'sourceSwitch',
+   'sourceSwitchValue', 'sourceSwitchName', 'currentSourceRow', 'sourceRowToggle', 'sourceRowIsCurrent', 'sourceRenderKey',
+   'sourceToggleBusy', 'sourceActionEnabled', 'managementBackIsCurrent', 'managementOpeningIsCurrent'],
+   { operation: { action: 'load', sourceId: '' } });
+ Object.assign(o, { mounted: true, appForeground: true, temporaryBackIdentity: 'source-row-visit',
+   managementOpeningIsCurrent: () => true, projectedSources: [source],
+   onToggleSource(id, next) {
+     calls.push([id, next]);
+     o.projectedSources = [{ ...source, enabled: next, sourceVersion: next ? 'version-C' : 'version-B' }];
+   } });
+ const staleRowAction = o.sourceRowToggle(source);
+ const rowAction = next => o.sourceRowToggle(o.currentSourceRow(source))(next);
+ o.sourceSwitch(source.enabled, rowAction, source.sourceId, source.name);
+ const actor = [...o.children.values()][0];
+ const original = nativeToggle(p, actor);
+ assert.equal(actor.value, true);
+ original.onFocus(); original.onChange(false); p.properties.flush();
+ assert.equal([...o.children.values()][0], actor, 'same real SDK ReaderToggle component');
+ assert.equal(actor.value, false, 'current projected value reaches retained child through SDK dependency update');
+ assert.equal(nativeToggle(p, actor).create.isOn, false);
+ assert.equal(actor.nativeRevision, 1, 'only the existing native child replacement advances');
+ original.onChange(true);
+ assert.deepEqual(calls, [['source-A', false]], 'retired native revision cannot act');
+ const current = nativeToggle(p, actor); current.onFocus(); current.onChange(true); p.properties.flush();
+ assert.equal(actor.value, true); assert.equal(actor.nativeRevision, 2);
+ assert.deepEqual(calls, [['source-A', false], ['source-A', true]], 'original current-row callback survives accepted value updates');
+ o.projectedSources = [{ ...source, sourceVersion: 'version-D' }]; staleRowAction(false);
+ assert.equal(calls.length, 2, 'old source definition callback remains invalid');
+ o.projectedSources = []; rowAction(false);
+ assert.equal(calls.length, 2, 'removed source callback remains invalid');
+ cases++;
+}
 if(selectedCase==='source'){
- const calls=[],{p,o}=consumer('source/SourceManagementPage',['operation','sourceSwitch','sourceToggleBusy','sourceActionEnabled','managementBackIsCurrent','feedbackIdentity'],{operation:{action:'load',sourceId:''}});
+ const calls=[],{p,o}=consumer('source/SourceManagementPage',['operation','projectedSources','sourceSwitch','sourceSwitchValue','sourceSwitchName','sourceToggleBusy','sourceActionEnabled','managementBackIsCurrent','feedbackIdentity'],{operation:{action:'load',sourceId:''}});
  Object.assign(o,{mounted:true,appForeground:true,statusKind:'idle',statusMessage:'',scheduleSourceAnchorRestore(){},managementOpeningIsCurrent:()=>true,temporaryBackIdentity:'source-visit',onToggleSource:(id,next)=>calls.push([id,next])});o.sourceSwitch(false,next=>o.onToggleSource('source-A',next),'source-A');
  const actor=[...o.children.values()][0];nativeToggle(p,actor).onChange(true);assert.deepEqual(calls,[['source-A',true]]);
  p.update(actor,{value:true});nativeToggle(p,actor).onChange(false);assert.deepEqual(calls.at(-1),['source-A',false]);

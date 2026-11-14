@@ -3,11 +3,21 @@ import { stripTypeScriptTypes } from 'node:module';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
 import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import { actualSourceManagementGeometry } from './source-management-owner-probe.mjs';
+import { createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import * as windowFacts from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import * as sourceScroll from '../../entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts';
+import * as surfaceResolvers from '../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts';
+import { resolveSourceManagementLayout } from '../../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts';
+import { readerSourceCategoryLabel } from '../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
+import { foundationSpecs } from './reader-foundation-control-probe.mjs';
+import { labeledIconSpecs } from './reader-labeled-icon-action-probe.mjs';
 
 // Only unrelated material/scroll rendering is outside this action proof.
 // No Watch callback or member reachable from one may cross this seam.
 const renderSeams = ['searchField', 'statsRow', 'filterArea', 'categoryFilter',
-  'sourceRow', 'scrollLayout', 'contentFrame'];
+  'sourceRow'];
 const roots = ['appThemeScheme', 'sources', 'operation', 'statusKind', 'statusMessage',
   'statusActionLabel', 'statusActionGeneration', 'mounted', 'appForeground',
   'temporaryBackIdentity', 'sourceList', 'pendingOverlay', 'statusAction'];
@@ -79,14 +89,18 @@ export function sourceManagementRecoveryClosure(source, parameterNames = [], add
 export function sourceManagementRecoveryProbe(source, params = {}, options = {}) {
   const sdk = options.sdk ?? boundedSurfaceSdk();
   const closure = sourceManagementRecoveryClosure(source, Object.keys(params));
+  const metrics = createDefaultReaderWindowMetrics();
+  metrics.windowRect.width = 366;
+  metrics.windowRect.height = 844;
   const FramePort = class {};
   const support = new Function('FrameCallback',
     stripTypeScriptTypes(closure.support) + ';return {SourceListDataSource,SourceListLayoutFrame};')(FramePort);
   const owner = sdk.consumer(source, closure.members, {
-    readerRecoveryView, ...support,
+    ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers,
+    ...foundationSpecs(), ...labeledIconSpecs(),
+    resolveSourceManagementLayout, readerSourceCategoryLabel, readerRecoveryView, ...support,
     hilog: { info() {}, warn() {}, error() {} },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
-    readerScrollStartOffset: () => 0, readerScrollEndOffset: () => 0,
     BarState: { Off: 'BarState.Off' },
     // DataSource.replace and Source filtering remain production methods.
     // Native row materialization itself is not part of a recovery-action proof.
@@ -102,12 +116,13 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
     onReconcile: missing('onReconcile'), onRetryLoad: missing('onRetryLoad'),
     onStatusAction: missing('onStatusAction'), onContinueOriginal: missing('onContinueOriginal'),
     searchField() {}, statsRow() {}, filterArea() {}, categoryFilter() {}, sourceRow() {},
-    scrollLayout: () => ({}), contentFrame: () => ({ left: 0, right: 0, width: 350 }),
+    viewportWidth: 366, viewportHeight: 844,
     ...params,
   });
   owner.sources = params.sources ?? [];
   owner.operation = params.operation ?? { action: 'load', sourceId: '' };
   owner.mounted = true;
+  owner.refreshGeometry();
   owner.sourceList();
   // ArkUI emits native ListItem bodies as lazy deep-render callbacks. The
   // recorder stores them; execute those exact callbacks for the visible

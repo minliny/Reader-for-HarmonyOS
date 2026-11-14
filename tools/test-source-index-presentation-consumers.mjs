@@ -6,12 +6,23 @@ const {switchSpecs} = await import('./lib/reader-switch-control-probe.mjs');
 const {iconButtonControls} = await import('./lib/reader-icon-button-probe.mjs');
 const {default:assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
-const {stripTypeScriptTypes} = await import('node:module');
+const {stripTypeScriptTypes, registerHooks} = await import('node:module');
+registerHooks({ resolve(specifier, context, next) {
+ try { return next(specifier, context); }
+ catch (error) {
+  if (error.code === 'ERR_MODULE_NOT_FOUND' && specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) return next(specifier + '.ts', context);
+  throw error;
+ }
+} });
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const {actualSourceManagementGeometry} = await import('./lib/source-management-owner-probe.mjs');
+const { resolveSourceManagementLayout } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
+const { readerReadableFontScale, readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
 const {sourceManagementRecoveryProbe,sourceRecoveryNativeAction}=await import('./lib/source-management-recovery-probe.mjs');
 const {ReaderNavigation} = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
 const {JsonImportPresentation} = await import('./lib/json-import-presentation-probe.mjs');
@@ -19,6 +30,18 @@ const {createDefaultReaderWindowMetrics} = await import('../entry/src/main/ets/u
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const indexSource=source('pages/Index.ets'),pageSource=source('features/source/ui/SourceManagementPage.ets'),jsonSource=source('app/composition/JsonImportDialog.ets');
 const toolsSource=source('features/source/ui/SourceToolsPage.ets');
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { ts: sourceTs, options: sourceOptions } = installedEtsCompiler();
+function ordinarySourceMethods(text, name) {
+ const tree = sourceTs.createSourceFile(name + '.ets', text, sourceTs.ScriptTarget.Latest, true, sourceTs.ScriptKind.ETS, sourceOptions);
+ assert.deepEqual(tree.parseDiagnostics, []);
+ const component = tree.statements.find(node => node.name?.text === name);
+ assert.ok(component);
+ return component.members.filter(node => sourceTs.isMethodDeclaration(node) && node.name.getText(tree) !== 'build' &&
+  !sourceTs.getAllDecorators(node).some(decorator => decorator.expression.getText(tree) === 'Builder')).map(node => node.name.getText(tree));
+}
+const sourcePageMethods = ordinarySourceMethods(pageSource, 'SourceManagementPage');
+const jsonMethods = ordinarySourceMethods(jsonSource, 'JsonImportDialog');
 const journeySource=source('features/source/ui/SourceJourneySurface.ets'),journeyModel='features/source/presentation/SourceJourneyPresentation.ets';
 const ordinary=s=>stripTypeScriptTypes(s.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(p,n,d={})=>new Function(...Object.keys(d),ordinary(source(p))+`;return ${n};`)(...Object.values(d));
@@ -35,7 +58,7 @@ const {SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY}=load(journeyModel,'{Sourc
 const sdk=boundedSurfaceSdk();sdk.hooks.lifecycleChildren=true;
 const toggleSource=source('ui/controls/ReaderToggle.ets');
 sdk.hooks.childSources.ReaderToggle=toggleSource;
-const Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),{...sdk.deps,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},sdk.hooks).Component;
+const Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),{...sdk.deps,...switchSpecs(),DEBUG:false,AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},sdk.hooks).Component;
 const badgeSource=source('ui/controls/StatusBadge.ets');sdk.hooks.childSources.StatusBadge=badgeSource;
 const Badge=createReaderBuilderProbe(badgeSource,boundedMembers(badgeSource),{...sdk.deps,
  LineJoinStyle:{Round:'LineJoinStyle.Round'},uiContext:{vp2px:value=>value}},sdk.hooks).Component;
@@ -103,9 +126,9 @@ function index(r,Presentation=SourceJourneyPresentation){
   return [...surface.children.values()].findLast(c=>c.params.sources)?.params;
  };
  const page=()=>{
-  const params=props(),p=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onOpenTools','onRetryLoad',
-   'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','sourceRow','sourceBadgeStatus','sourceBadgeLabel','statusBadge','detectButton','loginButton','sourceSwitch','sourceToggleBusy','sourceToggleEnabled','bottomActionBar',
-   'sourceRowIsCurrent','sourceRowCommand','sourceRowToggle','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'],{readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
+  const params=props(),p=sdk.consumer(pageSource,[...new Set(['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onOpenTools','onRetryLoad',
+   'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','sourceRow','sourceLeading','sourceInfo','currentSourceInfo','currentSourceRow','sourceActions','fontScale','layoutBudget','footerActionHeight','footerControlHeight','footerContentWidth','footerStacked','sourceBadgeStatus','sourceBadgeLabel','statusBadge','detectButton','loginButton','sourceSwitch','sourceSwitchValue','sourceSwitchName','sourceToggleBusy','sourceActionEnabled','sourceDetectEnabled','sourceActionLabel','bottomActionBar',
+   'sourceRowIsCurrent','sourceRowCommand','sourceRowToggle','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent',...sourcePageMethods])],{...actualSourceManagementGeometry(),...foundationSpecs(),resolveSourceManagementLayout,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
   p.sources=params.sources;p.mounted=true;p.appForeground=true;p.groupOpen=false;p.temporaryBackIdentity='source-sdk-visit';p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
   const currentSource=()=>{p.projectedSources=read().sources;return p.projectedSources[0];};
   const switchAction=()=>{p.sourceRow(currentSource());const c=[...p.children.values()].findLast(c=>c instanceof Toggle);c.initialRender();const onChange=sdk.nodes(c).find(n=>n.type==='Toggle'&&n.onChange).onChange,next=!c.value;return ()=>onChange(next);};
@@ -118,7 +141,7 @@ function index(r,Presentation=SourceJourneyPresentation){
   return{p,params,switchAction,login,detect,add,recovery};
  };
  const json=()=>{i.jsonImportContent();const params=[...i.children.values()].findLast(c=>c.params.onSelectLocal)?.params;
-  const p=sdk.consumer(jsonSource,['onSelectLocal','onImportOnline','onDismiss','urlDraft','validationMessage','localButton','submitOnlineImport'],{},params);p.localButton();
+  const p=sdk.consumer(jsonSource,[...new Set(['onSelectLocal','onImportOnline','onDismiss','urlDraft','validationMessage','localButton','submitOnlineImport','mounted','focusRevision','openingId','isInputAllowed','urlInputRevision',...jsonMethods])],{registerReaderFonts() {}},params);p.aboutToAppear();p.localButton();
   return{p,local:sdk.nodes(p).find(n=>n.onClick).onClick,params};};
  const settle=async()=>{await tick();await i.sourceJourney.registry.orchestrator.operationChain;await tick();};
  return{i,r,props,page,json,read,routes,settle,open:async()=>{i.sourceNavigation.openPresentation('source');await settle();}};
@@ -212,7 +235,7 @@ if(selectedCase==='inline-import-return'){
  };
  const inlineAction=()=>{
   const page=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','statusActionLabel','statusActionGeneration','onStatusAction','onMessageChanged','feedbackIdentity','lastFeedbackIdentity','lastToastMessage','mounted','recovery','statusAction'],
-   {readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView')},
+   {...actualSourceManagementGeometry(),...foundationSpecs(),resolveSourceManagementLayout,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView')},
    a.props());
   page.statusAction();
   const button=sdk.walk(page).findLast(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label==='重新搜索');

@@ -86,7 +86,7 @@ if (selected.length) {
       assert.ok(budget.footerHeight >= controls.targets.manage.height && budget.footerHeight >= controls.targets.add.height);
       assert.ok(budget.filterHeight >= controls.targets.statusWide.height && budget.filterHeight >= controls.targets.category.height);
       const sdk = boundedSurfaceSdk();
-      const actor = sdk.consumer(source, ['sourceRow', 'sourceLeading', 'sourceInfo', 'sourceActions', 'statusFilter', 'categoryFilter', 'bottomActionBar'], {
+      const actor = sdk.consumer(source, ['sourceRow', 'currentSourceRow', 'currentSourceInfo', 'sourceRenderKey', 'projectedSources', 'sourceLeading', 'sourceInfo', 'sourceActions', 'statusFilter', 'categoryFilter', 'bottomActionBar'], {
         ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor, readerSourceCategoryLabel,
         Alignment: { Center: 'center' }, VerticalAlign: { Center: 'center' }, HorizontalAlign: { Start: 'start' },
         TextOverflow: { Ellipsis: 'ellipsis' }, ScrollDirection: { Horizontal: 'horizontal' }, HitTestMode: { Transparent: 'transparent' },
