@@ -63,6 +63,7 @@ export struct ReaderInlineSelect {
   private popupOptions(identity: string): CustomPopupOptions {
     return { builder: (): void => this.menu(identity), placement: Placement.Bottom,
       enableArrow: false, popupColor: Color.Transparent, autoCancel: true, focusable: true,
+      transition: this.reduceMotion ? TransitionEffect.IDENTITY.animation({ duration: 0 }) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.dismiss(identity); } };
   }
 

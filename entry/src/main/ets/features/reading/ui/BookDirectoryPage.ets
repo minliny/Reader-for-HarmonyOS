@@ -54,6 +54,7 @@ export struct BookDirectoryPage {
   @Prop catalogMessage: string = '';
   @Prop catalogBusy: boolean = false;
   @Prop interactive: boolean = true;
+  @Prop reduceMotion: boolean = false;
   isOpeningCurrent: () => boolean = (): boolean => true;
   // Keep the parent's original operation contract while the catalog owns
   // the foreground. Recovery presentation resumes at its reading host.
@@ -584,6 +585,7 @@ export struct BookDirectoryPage {
     if (this.mangaDownloadEnabled) {
       ForEach([this.identity()], (identity: string): void => {
         ReaderMangaDownloadPopup({ specId: 'manga-download', visible: this.downloadMenuVisible, generation: this.downloadMenuGeneration,
+          reduceMotion: this.reduceMotion,
           focusId: 'reader-manga-download:' + JSON.stringify([identity, this.temporaryBackIdentity]),
           availableWidth: this.contentFrame().width, actions: this.downloadActions, loading: this.downloadActionsLoading,
           failureMessage: this.downloadActionsFailure,

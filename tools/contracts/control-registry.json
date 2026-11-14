@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 25,
+  "revision": 26,
   "controls": [
     {
       "controlId": "page-back",
@@ -1365,6 +1365,14 @@
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
           "symbol": "mangaDownloadMenuButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/ui/MangaDownloadOperationsPanel.ets",
+          "symbol": "build"
         }
       ],
       "states": [
@@ -1375,14 +1383,14 @@
         "disabled"
       ],
       "hitTarget": {
-        "width": null,
-        "height": null,
+        "width": 44,
+        "height": 44,
         "unit": "vp",
-        "status": "unverified"
+        "status": "spec"
       },
-      "accessibleNameSource": "ReaderMangaDownloadPopup action.label；由宿主透传",
+      "accessibleNameSource": "锚点为ReaderMangaDownloadPopup的漫画下载管理，菜单项采用MangaDownloadOperationsPanel的action.label，失败入口为重试",
       "status": "partial",
-      "knownGap": "菜单读取generation/identity与onClosed核对已绑定源码；业务动作忙态、全部分支/焦点未执行。"
+      "knownGap": "Actual shared popup recipe pays44vp anchor. Loading and retry use44vp minima, ready actions use the grouped shared action rows. UIF-08 native transition and normal parent preference propagation have exact SDK coverage. Full native pointer, screen-reader, focus and business-action matrix remain open."
     },
     {
       "controlId": "directory-recovery-actions",
@@ -1784,7 +1792,7 @@
       },
       "accessibleNameSource": "ReaderInlineSelect quick/current/forward/all",
       "status": "partial",
-      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending. UIF-08 native popup transition consumes current reduce-motion preference with an explicit zero-duration identity effect, checked through actual SDK bindPopup options, live updates and old dismissal retirement."
     },
     {
       "controlId": "download-chapter-title-open",
@@ -2076,7 +2084,7 @@
       },
       "accessibleNameSource": "Visible row label and value for filter/storage/range book",
       "status": "partial",
-      "knownGap": "Both storage selectors now dispatch existing configureStorage intent. Current sheet/presentation and label/index guard; shared option target behavior/native dispatch remain upstream boundaries. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
+      "knownGap": "Both storage selectors now dispatch existing configureStorage intent. Current sheet/presentation and label/index guard; shared option target behavior/native dispatch remain upstream boundaries. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending. UIF-08 native popup transition consumes current reduce-motion preference with an explicit zero-duration identity effect, checked through actual SDK bindPopup options, live updates and old dismissal retirement."
     },
     {
       "controlId": "download-choice-option",
@@ -2688,7 +2696,7 @@
       },
       "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
       "status": "partial",
-      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending. UIF-08 native popup transition consumes current reduce-motion preference with an explicit zero-duration identity effect, checked through actual SDK bindPopup options, live updates and old dismissal retirement."
     },
     {
       "controlId": "source-tools-original-reconcile",
@@ -2942,7 +2950,7 @@
       },
       "accessibleNameSource": "current boundary value and four option labels",
       "status": "partial",
-      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending."
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN. VM-SEL-CLIP-01 established zero-size platform popup wrappers with a clipped final option. Current code gives popup panels natural flow and current window/safe/IME capacity while retaining positioned overlay hosting. Exact popup/overlay/motion/border SDK regressions PASS. Successor native bottom-edge fitting remains pending. UIF-08 native popup transition consumes current reduce-motion preference with an explicit zero-duration identity effect, checked through actual SDK bindPopup options, live updates and old dismissal retirement."
     },
     {
       "controlId": "directory-rules-delete",

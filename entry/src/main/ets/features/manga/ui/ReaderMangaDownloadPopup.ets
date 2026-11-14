@@ -10,6 +10,7 @@ export struct ReaderMangaDownloadPopup {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop specId: 'manga-download' = 'manga-download';
   @Prop visible: boolean = false;
+  @Prop reduceMotion: boolean = false;
   @Prop generation: number = 0;
   @Prop focusId: string = '';
   @Prop availableWidth: number = 240;
@@ -34,6 +35,7 @@ export struct ReaderMangaDownloadPopup {
     return { builder: (): void => { this.popupContent(generation); },
       placement: Placement.BottomLeft, enableArrow: false,
       popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme),
+      transition: this.reduceMotion ? TransitionEffect.IDENTITY.animation({ duration: 0 }) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.onClosed(generation); } };
   }
   @Builder

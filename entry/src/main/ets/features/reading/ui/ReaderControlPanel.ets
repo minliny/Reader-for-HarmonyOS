@@ -1755,6 +1755,7 @@ export struct ReaderControlPanel {
       shadow: { radius: surface.shadowRadius, color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
         offsetY: surface.shadowOffsetY },
       autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
+      transition: this.reduceMotion ? TransitionEffect.IDENTITY.animation({ duration: 0 }) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => {
         if (!event.isVisible) this.dismissMoreMenu(generation);
       },

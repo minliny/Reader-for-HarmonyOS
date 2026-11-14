@@ -98,6 +98,7 @@ export struct ReaderDirectoryDestination {
   private catalog(opening: number) {
     if (this.contentKind === 'manga') {
       BookDirectoryPage({
+        reduceMotion: this.reduceMotion,
         sourceId: this.sourceId, bookId: this.bookId,
         interactive: this.interactive, isOpeningCurrent: (): boolean => this.canHandle(opening),
         bookTitle: this.bookTitle, entries: this.entries, catalogMessage: this.catalogMessage, catalogBusy: this.catalogBusy,

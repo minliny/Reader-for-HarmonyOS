@@ -849,7 +849,8 @@ function supplementalDownloadControls() {
   assert.throws(() => assert.ok(c.nodes(prior).find(node => node.type === 'Button').constraintSize.minHeight >= 44), /AssertionError/, 'old retry34 rejected');
   results.push({ case: 'download-controls', supplemental: 'query/retry44, original scope, all six actual Inline sites' });
 }
-function selectReduceMotion() {
+async function selectReduceMotion() {
+  const { READER_MANGA_DOWNLOAD_POPUP } = await import('../entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopupSpec.ts');
   for (const reduceMotion of [false, true]) {
     const value = metrics(320, 360, 1), c = context(value), animations = [], frames = [];
     const native = { ...uiContext(), animateTo(params, action) { animations.push(params); action(); }, postFrameCallback: frame => frames.push(frame) };
@@ -885,6 +886,10 @@ function selectReduceMotion() {
       const trigger = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelect);
       inline.nodes(trigger).find(node => typeof node.onClick === 'function').onClick();
       c.foundation.properties.flush(); select.menu(select.selectionId); c.foundation.properties.flush();
+      const nativePopup = () => [...select.nodes.values()].find(node => node.bindPopup !== undefined).bindPopup[1];
+      const originalPopupOptions = nativePopup();
+      assert.deepEqual(originalPopupOptions.transition, reduceMotion ? { kind: 'identity', animation: { duration: 0 } } : undefined,
+        'actual native popup consumes the current reduce-motion preference');
       const panel = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelectPanel && child.selectionId === select.selectionId);
       assert.equal(panel.reduceMotion, reduceMotion);
       const before = animations.length; panel.expandPanel();
@@ -892,9 +897,13 @@ function selectReduceMotion() {
       else assert.ok(animations.at(-1).duration > 0, 'ordinary preference retains the current animation recipe');
       select.reduceMotion = true; c.foundation.properties.flush();
       assert.equal(panel.reduceMotion, true, 'open popup receives a live preference update');
+      assert.deepEqual(nativePopup().transition, { kind: 'identity', animation: { duration: 0 } },
+        'live preference also updates the native popup options');
       const oldIdentity = panel.selectionId;
       panel.onCommit(panel.options[0], oldIdentity); assert.equal(commits.length, 1);
       select.toggle(); panel.onCommit(panel.options[0], oldIdentity);
+      originalPopupOptions.onStateChange({ isVisible: false });
+      assert.equal(select.open, true, 'late native dismissal cannot close the successor popup');
       assert.equal(commits.length, 1, 'an old popup cannot commit into the new opening');
       select.aboutToDisappear(); select.commit(panel.options[0], select.selectionId);
       assert.equal(commits.length, 1, 'unmounted select cannot commit');
@@ -902,9 +911,15 @@ function selectReduceMotion() {
     // Each intermediate constructor is executed by the normal SDK Builder.
     class ChildPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } updateStateVars(params) { Object.assign(this.params, params); } }
     function propagated(rel, member, child, fields, args = []) {
-      const childRel = child === 'SourceToolsPage' ? 'features/source/ui/SourceToolsPage.ets' : `features/reading/ui/${child}.ets`;
-      const owner = createReaderBuilderProbe(read(rel), [member], { ...dependencies, [child]: ChildPort },
-        { ...hooks, childSources: { ...hooks.childSources, [child]: read(childRel) } }).owner;
+      const childRel = child === 'SourceToolsPage' ? 'features/source/ui/SourceToolsPage.ets' :
+        child === 'ReaderMangaDownloadPopup' ? 'features/manga/ui/ReaderMangaDownloadPopup.ets' : `features/reading/ui/${child}.ets`;
+      const ports = { ...dependencies, [child]: ChildPort };
+      const childSources = { ...hooks.childSources, [child]: read(childRel) };
+      if (rel === 'app/composition/ReaderSourceSwitchSurfaces.ets') {
+        ports.SourceSwitchPanel = ChildPort;
+        childSources.SourceSwitchPanel = read('features/source/ui/SourceSwitchPanel.ets');
+      }
+      const owner = createReaderBuilderProbe(read(rel), [member], ports, { ...hooks, childSources }).owner;
       Object.assign(owner, { reduceMotion, ...fields });
       if (member === 'build') owner.initialRender(); else owner[member](...args);
       const params = [...owner.children.values()].find(actor => actor instanceof ChildPort)?.params;
@@ -920,7 +935,28 @@ function selectReduceMotion() {
     propagated('features/reading/ui/ReaderShell.ets', 'readingOverlay', 'ReaderDirectoryDestination', { route: 'directory', contentKind: 'text', overlayStatusBarUnderlay() {} });
     propagated('features/reading/ui/ReaderDirectoryDestination.ets', 'catalog', 'ReaderFullDirectory', { contentKind: 'text', bookmarkSelection: () => () => {} }, [1]);
     propagated('features/reading/ui/ReaderFullDirectory.ets', 'directoryRulesForm', 'ReaderDirectoryRules', { panelWidth: () => 280, panelViewportHeight: () => 180, directoryRulesFocusId: () => 'rules-focus' }, ['rules:1', 'book']);
-    results.push({ case: 'select-reduce-motion', reduceMotion, constructors: selects.length, propagationLinks: 6 });
+    propagated('features/reading/ui/ReaderDirectoryDestination.ets', 'catalog', 'BookDirectoryPage', { contentKind: 'manga' }, [1]);
+    propagated('features/reading/ui/BookDirectoryPage.ets', 'mangaDownloadMenuButton', 'ReaderMangaDownloadPopup', {
+      mangaDownloadEnabled: true, identity: () => 'manga:1', contentFrame: () => ({ width: 280 }) });
+    propagated('app/composition/ReaderSourceSwitchSurfaces.ets', 'build', 'BookDirectoryPage', {
+      manga: { selectionVisible: true, selection: { target: { identity: { sourceId: 'source', bookId: 'book' }, book: { title: '目标漫画' } }, entries: [] },
+        directoryOpening: () => () => true, directorySelection: () => () => {},
+        directoryTemporaryBack: () => () => {}, directoryBack: () => () => {} } });
+    Object.assign(c.deps, { READER_MANGA_DOWNLOAD_POPUP,
+      Placement: { BottomLeft: 'Placement.BottomLeft' },
+      TransitionEffect: { IDENTITY: { animation: params => ({ kind: 'identity', animation: params }) } } });
+    const closed = [];
+    const manga = c.actor('features/manga/ui/ReaderMangaDownloadPopup.ets', ['build', 'popupOptions', 'spec'], {
+      specId: 'manga-download', visible: true, generation: 7, focusId: 'manga-popup', reduceMotion,
+      onOpen() {}, onClosed: generation => closed.push(generation) });
+    manga.initialRender();
+    const mangaOptions = () => [...manga.nodes.values()].find(node => node.bindPopup !== undefined).bindPopup[1];
+    assert.deepEqual(mangaOptions().transition, reduceMotion ? { kind: 'identity', animation: { duration: 0 } } : undefined);
+    manga.reduceMotion = true; manga.replay();
+    assert.deepEqual(mangaOptions().transition, { kind: 'identity', animation: { duration: 0 } });
+    mangaOptions().onStateChange({ isVisible: false }); assert.deepEqual(closed, [7]);
+    results.push({ case: 'select-reduce-motion', reduceMotion, constructors: selects.length, propagationLinks: 9,
+      nativePopupOwners: ['inline-select', 'manga-download'] });
   }
 }
 
@@ -1061,7 +1097,7 @@ const runners = { 'select-host': selectHost, 'actions-tools-rules': actionsTools
   'download-controls': supplementalDownloadControls, 'renderer-pilot': supplementalRendererPilot, 'download-chapter-width': supplementalChapterWidths };
 const supplemental = { 'select-host': supplementalSelectTargets, 'actions-tools-rules': supplementalInputTargets,
   'recovery-overlays': supplementalPreviewDocument, 'retained-and-settings': supplementalRetainedTargets };
-for (const id of selected) { runners[id](); supplemental[id]?.(); recordContractCasePass(id); }
+for (const id of selected) { await runners[id](); await supplemental[id]?.(); recordContractCasePass(id); }
 const inputs = [...new Set(['ui/controls/ReaderButton.ets', 'ui/controls/ReaderControlSpecs.ets', 'ui/controls/ReaderSelectPanel.ets',
   'ui/feedback/ReaderRecoveryNotice.ets', 'ui/platform/ArkWebExecutionHost.ets', 'ui/chrome/PageBackBar.ets', 'ui/surfaces/ReaderBoundedSurfaceHeader.ets',
   'features/source/ui/SourceToolsPage.ets', 'features/settings/ui/RulesManagementPage.ets', 'features/settings/ui/SettingsSelectOverlay.ets'])]

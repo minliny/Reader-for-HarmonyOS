@@ -1,5 +1,5 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-const selected = selectContractCases({ 'spec-endpoints': {description:'Actual production popup finite endpoints',resources:[]}, 'panel-actions':{description:'Actual SDK native popup action admission, callbacks and width cache',resources:[]}, 'adaptive-lifecycle':{description:'Actual popup width/window adaptation and input lifecycle',resources:[]} });
+const selected = selectContractCases({ 'spec-endpoints': {description:'Actual production popup finite endpoints',resources:[]}, 'panel-actions':{description:'Actual SDK native popup action admission, callbacks and width cache',resources:[]}, 'adaptive-lifecycle':{description:'Actual popup width/window adaptation and input lifecycle',resources:[]}, 'native-reduce-motion':{description:'Actual More anchor native popup transition consumes current and changed reduce-motion preference',resources:[]} });
 async function run(id) {
 const { actionMenuProbe, resolvePopupSpec } = await import('./lib/reader-action-menu-probe.mjs');
 const { default: assert } = await import('node:assert/strict');
@@ -17,9 +17,10 @@ const readerMoreSurface = resolvePopupSpec('reader-more-menu');
 const { sourceSwitchTriggerFocusId } = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
 const dependencies = {
   Placement: enums('Placement'), ArrowPointPosition: enums('ArrowPointPosition'), BlurStyle: enums('BlurStyle'),
+  TransitionEffect: { IDENTITY: { animation: params => ({ kind: 'identity', animation: params }) } },
   resolvePopupSpec, readerReadableFontScale, sourceSwitchTriggerFocusId,
 };
-const methods = ['topBar', 'topBarBack', 'topBarActions', 'topBarInputEnabled', 'sourceActionHeight', 'readerMorePopupOptions', 'moreMenuGeneration', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
+const methods = ['topBar', 'topBarBack', 'topBarActions', 'topBarInputEnabled', 'sourceActionHeight', 'currentLayout', 'currentMinimumIdentity', 'controlCallbackGuard', 'controlActionHandler', 'readerMorePopupOptions', 'moreMenuGeneration', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
   'currentMoreMenuOwnerScope', 'readerMoreSurfaceSpec', 'readerMoreActionEnabled', 'moreMenuWidthKey', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
 function fixture(scheme = 'day') {
   const shared = actionMenuProbe(dependencies.resolvePopupSpec);
@@ -55,6 +56,14 @@ function fixture(scheme = 'day') {
     failMeasurement: value => { measurementFailure = value; }, invalidMeasurement: value => { measurementInvalid = value; } };
 }
 
+if (id === 'native-reduce-motion') {
+  const f = fixture();
+  for (const reduceMotion of [false, true, false]) {
+    f.owner.reduceMotion = reduceMotion; f.owner.replay();
+    const anchor = f.nodes().find(node => node.accessibilityText === '更多');
+    assert.deepEqual(anchor.bindPopup[1].transition, reduceMotion ? { kind: 'identity', animation: { duration: 0 } } : undefined);
+  }
+}
 if (id === 'spec-endpoints') {
  assert.deepEqual([readerMoreSurface.width,readerMoreSurface.pointerWidth,readerMoreSurface.pointerHeight,readerMoreSurface.borderRadius],[176,24,12,16]);
  assert.deepEqual([readerMoreSurface.actionHeight,readerMoreSurface.actionsHeight,readerMoreSurface.actionFontSize,readerMoreSurface.actionLineHeight],[50,150,15,22]);

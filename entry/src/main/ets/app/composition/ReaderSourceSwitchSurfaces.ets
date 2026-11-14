@@ -22,6 +22,7 @@ export struct ReaderSourceSwitchSurfaces {
       // Keep the original entry and its reading session until the exact
       // candidate chapter has been admitted by MangaSourceSwitchPresentation.
       BookDirectoryPage({
+        reduceMotion: this.reduceMotion,
         sourceId: this.manga.selection.target.identity.sourceId,
         bookId: this.manga.selection.target.identity.bookId,
         interactive: this.interactive,
