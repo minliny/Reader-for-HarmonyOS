@@ -3604,6 +3604,12 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-global-host-contracts.mjs",
+                    "symbol": "manga-retry",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
@@ -6620,6 +6626,12 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-manga-loading-fixed-5aad.json",
+                    "symbol": "normal cached two-chapter full catalog popup loading policy/open/Back at scale1; body entry failed separately",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
@@ -6751,6 +6763,12 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-global-host-contracts.mjs",
+                    "symbol": "manga-retry",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
@@ -6791,9 +6809,15 @@
                     "path": "tools/test-manga-download-popup-sdk.mjs",
                     "symbol": "loading-motion",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-manga-loading-fixed-5aad.json",
+                    "symbol": "normal cached two-chapter full catalog popup loading policy/open/Back at scale1; body entry failed separately",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Real system font scale feeds existing query/header/menu/chapter/bookmark budgets. Private full toolbar chooses stacked query from actual actor width; Control tab and reveal/list/footer share one real geometry budget. SDK320/366 x1/1.3/1.6/2 is local evidence; native system-scale/glyph acceptance remains OPEN."
+                "knownGap": "Real system font scale feeds existing query/header/menu/chapter/bookmark budgets. Private full toolbar chooses stacked query from actual actor width; Control tab and reveal/list/footer share one real geometry budget. SDK320/366 x1/1.3/1.6/2 is local evidence; native system-scale/glyph acceptance remains OPEN. UIF14 scoped5aad normal full-catalog popup actually mounts LoadingProgress with0customanimation across8samples underreduceMotiontrue. Body-entryhealthycell and full glyph/theme/orientation matrix remain open."
               },
               "accessibility": {
                 "applicability": "applicable",

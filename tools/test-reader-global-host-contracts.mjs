@@ -4,6 +4,7 @@ import { registerHooks } from 'node:module';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
@@ -196,14 +197,17 @@ for (const id of selected) {
     await Promise.resolve();
   }
   if (id === 'manga-retry') {
-    const model = owner(read('features/manga/ui/MangaDownloadOperationsPanel.ets'), ['build', 'effectiveScheme', 'ink'],
-      { ReaderActionMenuSurface: class {} }, { childSources: { ReaderActionMenuSurface: read('ui/surfaces/ReaderActionMenuSurface.ets') } });
+    const sdk = boundedSurfaceSdk();
+    const model = sdk.consumer(read('features/manga/ui/MangaDownloadOperationsPanel.ets'), ['build', 'effectiveScheme']);
     let retries = 0;
     Object.assign(model, { appThemeScheme: 'day', panelScheme: 'auto', loading: false, failureMessage: '读取失败', onRetry: () => retries++ });
     model.initialRender();
-    const retry = [...model.nodes.values()].find(node => node.type === 'Button' && typeof node.onClick === 'function');
-    assert.ok(retry, 'failure branch emits its native retry button');
-    assert.deepEqual(retry.constraintSize, { minWidth: 44, minHeight: 44 });
+    assert.ok(sdk.walk(model).some(child => child instanceof sdk.deps.ReaderPageState),
+      'local failure uses the actual common content-state component');
+    const retry = sdk.nodes(model).find(node => node.type === 'Button' && typeof node.onClick === 'function');
+    assert.ok(retry, 'actual common state emits its native retry button');
+    assert.equal(retry.constraintSize.minWidth, 44);
+    assert.equal(retry.constraintSize.minHeight, 44);
     assert.equal(retry.height, undefined, 'native label may grow vertically');
     retry.onClick(); assert.equal(retries, 1);
     model.failureMessage = ''; retry.onClick(); assert.equal(retries, 1);
