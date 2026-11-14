@@ -4,13 +4,51 @@ const cases = {
   'transient-announcement': { description: 'Actual feedback registry, Toast lifecycle and platform adapter announce once for the active foreground generation and preserve state after platform rejection.', resources: [] },
   'removal-resize': { description: 'Actual removal-message SDK observer recomputes Scroll capacity after a height-only metrics publication without a Text Area event.', resources: [] },
   'group-native-fixture': { description: 'Actual DEBUG group fixture methods use memory-only receipts and guarded actions, retaining generation and retired-host fences.', resources: [] },
+  'geometry-native-fixture': { description: 'Actual DEBUG geometry fixture keeps confirmation in the existing presentation lane, memory-only actions, checked admission and retired cleanup.', resources: [] },
 };
 
 for (const id of selectContractCases(cases)) {
   if (id === 'transient-announcement') await transientAnnouncement();
   else if (id === 'removal-resize') await removalResize();
-  else await groupNativeFixture();
+  else if (id === 'group-native-fixture') await groupNativeFixture();
+  else await geometryNativeFixture();
   recordContractCasePass(id);
+}
+
+async function geometryNativeFixture() {
+  const { default: assert } = await import('node:assert/strict');
+  const { BookRemovalDialogPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const file = new URL('../entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets', import.meta.url);
+  for (const [debug, mode, fontsReady, allowed] of [[true, 'debug', true, true], [false, 'debug', true, false],
+    [true, 'release', true, false], [true, 'debug', false, false]]) {
+    const metrics = { windowRect: { width: 366, height: 800 }, keyboardInsets: { bottom: 0 }, systemFontScale: 1 };
+    const bridges = [], messages = [], events = [];
+    let hides = 0;
+    const Fixture = selectedProductionMethods(file, 'ReaderFrameworkGeometryStructureFixture',
+      ['aboutToAppear', 'aboutToDisappear', 'current', 'back', 'metricsChanged', 'record', 'openRemoval'], {
+        DEBUG: debug, BUILD_MODE_NAME: mode, readerWindowMetrics: () => metrics,
+        inputMethod: { getController: () => ({ hideTextInput: () => { hides++; return Promise.resolve(); } }) },
+        hilog: { info(_domain, _tag, _format, payload) { events.push(JSON.parse(payload)); } },
+      });
+    const removal = new BookRemovalDialogPresentation();
+    removal.attach(message => { messages.push(message); return { open() {}, close: () => true }; });
+    const page = Object.assign(new Fixture(), { fontsReady, removal, confirmations: 0,
+      onTemporaryBackBridge: handler => bridges.push(handler) });
+    page.aboutToAppear(); page.openRemoval();
+    assert.equal(removal.isOpen(), allowed); assert.equal(messages.length, allowed ? 1 : 0);
+    assert.equal(typeof bridges[0] === 'function', allowed);
+    if (allowed) {
+      assert(messages[0].endsWith('移除说明末尾。'));
+      removal.confirm(); assert.equal(page.confirmations, 1); assert.equal(events.at(-1).kind, 'memory-confirm');
+      page.openRemoval(); assert.equal(page.back(), true); assert.equal(removal.isOpen(), false);
+      metrics.keyboardInsets.bottom = 200; assert.equal(page.back(), true); assert.equal(hides, 1);
+      metrics.keyboardInsets.bottom = 0; assert.equal(page.back(), false);
+      page.openRemoval();
+    }
+    page.aboutToDisappear(); removal.confirm(); page.openRemoval();
+    assert.equal(removal.isOpen(), false); assert.equal(page.confirmations, allowed ? 1 : 0);
+  }
 }
 
 async function groupNativeFixture() {
@@ -67,6 +105,43 @@ async function groupNativeFixture() {
     assert.equal(typeof bridges[0] === 'function', allowed);
     page.aboutToDisappear(); page.openSample(); assert.equal(page.presentation.book, undefined);
   }
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+  const compiler = installedEtsCompiler();
+  const ids = compiler.require(compiler.root + '/lib/component_map.js').ID_ATTRS;
+  const sdk = boundedSurfaceSdk();
+  const componentSource = source.slice(source.indexOf('@Component'));
+  const dialogSource = readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfGroupDialog.ets', import.meta.url), 'utf8');
+  class DialogChild {
+    constructor(owner, params, _storage, id) { this.owner = owner; this.params = params; this.id = id; }
+    updateStateVars(params) { Object.assign(this.params, params); }
+  }
+  const controlLayout = sourceText => {
+    const saved = new Map(ids); ids.clear();
+    try {
+      const { owner } = createReaderBuilderProbe(sourceText, boundedMembers(sourceText), {
+        ...sdk.deps, DEBUG: true, BUILD_MODE_NAME: 'debug', ReaderGroupFixturePresentation: Presentation,
+        BookshelfGroupDialog: DialogChild, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, FlexAlign: { Center: 'FlexAlign.Center' },
+        LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, hilog: { info() {} },
+      }, { ...sdk.hooks, childSources: { ...sdk.childSources, BookshelfGroupDialog: dialogSource } });
+      owner.fontsReady = true; owner.aboutToAppear(); owner.initialRender();
+      return [...owner.nodes.values()];
+    } finally {
+      ids.clear(); for (const [key, value] of saved) ids.set(key, value);
+    }
+  };
+  const assertWrapping = sourceText => {
+    const lane = controlLayout(sourceText).find(node => node.type === 'Flex');
+    assert.ok(lane, 'diagnostic controls retain a wrapping native layout');
+    assert.equal(lane.create.wrap, 'FlexWrap.Wrap'); assert.equal(lane.width, '100%');
+    assert.equal(lane.height, undefined, 'font growth can add a control line before the measured group host');
+  };
+  assertWrapping(componentSource);
+  const priorRow = componentSource.replace(/Flex\(\{ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center,\s*space: \{ main: LengthMetrics.vp\(8\), cross: LengthMetrics.vp\(8\) \} \}\)/,
+    'Row({ space: 8 })');
+  assert.notEqual(priorRow, componentSource);
+  assert.throws(() => assertWrapping(priorRow), /wrapping native layout/);
 }
 
 async function transientAnnouncement() {

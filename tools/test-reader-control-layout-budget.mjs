@@ -1,5 +1,6 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 const definitions = {
+    'tts-original-targets': { description: 'Hash-bound Make V17 Quick native HTML button targets compared with the current paid response allocation, containment and peer separation', resources: [] },
     'authored-allocation-sdk': { description: 'Original default macros, same-pass typed module profiles, paid touch regions and actual SDK paint remain separate at real narrow/font growth inputs', resources: [] },
     'timer-custom-allocation-sdk': { description: 'Actual TTS timer child combination pays all four thirty-painted minute/second actions inside current and narrow enlarged-text viewports without horizontal hiding', resources: [] },
     'tts-paint-target-sdk': { description: 'Approved Make paint stays separate from actual paid response regions, including constrained44 goals, centered Full stop, glyph recipes and native choice ownership', resources: [] },
@@ -13,8 +14,66 @@ const definitions = {
     'rounded-parent-sdk': { description: 'Measured brightness child containment keeps unpaid crops and removes only a redundant outer mask; empty font paint keeps its separate motion mask.', resources: [] },
 };
 for (const id of selectContractCases(definitions)) {
-    await run(id);
+    if (id === 'tts-original-targets') await ttsOriginalTargets();
+    else await run(id);
     recordContractCasePass(id);
+}
+
+async function ttsOriginalTargets() {
+    const { default: assert } = await import('node:assert/strict');
+    const { readFileSync } = await import('node:fs');
+    const { createHash } = await import('node:crypto');
+    const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+    const { readerControlActor, readerControlPaidResponses } =
+        await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+    const source = readFileSync(new URL('./fixtures/tts-reference/PhoneScreen.tsx', import.meta.url), 'utf8');
+    assert.equal(createHash('sha256').update(source).digest('hex'),
+        '731582c1ac493d48f1ebdaae1e5527de5dfe3f391d37d8c85a51643ce72b4a3c');
+    const { ts } = installedEtsCompiler();
+    const tree = ts.createSourceFile('PhoneScreen.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    assert.deepEqual(tree.parseDiagnostics, []);
+    const quick = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'ReadControlCardRestyled');
+    assert.ok(quick);
+    const original = [];
+    function visit(node) {
+        if (ts.isJsxElement(node) && node.openingElement.tagName.getText(tree) === 'button') {
+            const properties = node.openingElement.attributes.properties;
+            const label = properties.find(value => value.name?.getText(tree) === 'aria-label')?.initializer;
+            const classes = properties.find(value => value.name?.getText(tree) === 'className')?.initializer;
+            const size = classes && ts.isStringLiteral(classes) ? /\bsize-\[(\d+)px\]/.exec(classes.text) : undefined;
+            if (label && size) original.push({ label: ts.isStringLiteral(label) ? label.text : label.expression.getText(tree),
+                width: Number(size[1]), height: Number(size[1]) });
+        }
+        ts.forEachChild(node, visit);
+    }
+    visit(quick);
+    assert.deepEqual(original.map(value => value.label), ['上一句', 'playing ? "暂停" : "播放"', '停止', '下一句']);
+    assert.deepEqual(original.map(value => [value.width, value.height]), [[28, 28], [36, 36], [28, 28], [28, 28]]);
+    const oracle = JSON.parse(readFileSync(new URL('./fixtures/reader-control-tts-make-20260911.json', import.meta.url), 'utf8'));
+    const [, , width, height] = oracle.shared.playback[0];
+    const kinds = ['previous', 'toggle', 'stop', 'next'];
+    const paints = kinds.map(kind => {
+        const [x, y, w, h] = oracle.shared[kind][0];
+        assert.equal(y + h / 2, height / 2, 'original transport boxes use the playback-card coordinate space');
+        return readerControlActor(x, y, w, h);
+    });
+    const allocation = readerControlPaidResponses(paints, readerControlActor(0, 0, width, height));
+    assert.deepEqual(allocation.map(value => value.response.width), [39, 36, 32.5, 37.5]);
+    assert.deepEqual(allocation.map(value => value.response.height), [44, 44, 44, 44]);
+    for (const [index, value] of allocation.entries()) {
+        const response = value.response, paint = paints[index];
+        assert.ok(response.x <= paint.x && response.y <= paint.y);
+        assert.ok(response.x + response.width >= paint.x + original[index].width);
+        assert.ok(response.y + response.height >= paint.y + original[index].height);
+        assert.ok(response.x >= 0 && response.y >= 0 && response.x + response.width <= width && response.y + response.height <= height);
+        if (index > 0) {
+            const previous = allocation[index - 1].response;
+            assert.ok(previous.x + previous.width <= response.x, 'adjacent paid targets remain disjoint');
+        }
+    }
+    console.log(JSON.stringify({ kind: 'make-v17-quick-button-target-comparison', original,
+        current: allocation.map(value => ({ width: value.response.width, height: value.response.height, conflict: value.conflict })),
+        boundary: 'Frozen original HTML button dimensions and current pure allocation. Native event dispatch keeps its own evidence.' }));
 }
 async function run(id) {
     const { default: assert } = await import('node:assert/strict');

@@ -15,6 +15,7 @@ const selected = selectContractCases({
   'fixture-scenes': 'Seven actual Directory/Download/Tools child initializers, checked admission, outer width vs actual Area, current-scene intent/Back and same-identity old bridge cleanup retirement. No native child subtree execution.',
   'downloads-short': 'New typed DEBUG 168vp Download wrapper through actual SDK initializer/safe top and real child/actor Area callbacks; full Download initializer and canonical recovery remain unchanged. Native geometry/inflow not asserted.',
   'group-recovery': 'Actual SDK DEBUG group fixture initializer, checked fonts, current-scene temporary Back and retired bridge rejection.',
+  'framework-geometry': 'Actual SDK DEBUG geometry/removal fixture initializer, checked fonts and current-scene temporary Back ownership.',
 });
 if (selected.length) {
   registerHooks({ resolve(specifier, context, next) {
@@ -44,6 +45,7 @@ if (selected.length) {
   const downloadFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets',import.meta.url),'utf8');
   const toolsFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets',import.meta.url),'utf8');
   const groupFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets',import.meta.url),'utf8');
+  const geometryFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets',import.meta.url),'utf8');
   const {createDefaultReaderWindowMetrics,readerContentSafeTop,readerInteractiveSafeBottom}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
   const tick=()=>new Promise(resolve=>setImmediate(resolve));
   const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
@@ -60,17 +62,17 @@ if (selected.length) {
     const sdk=boundedSurfaceSdk(),children=[],states=[],routes=[],events=[];let fontCalls=0;
     const liveMetrics=metrics??createDefaultReaderWindowMetrics();if(metrics===undefined)liveMetrics.systemFontScale=1.6;
     const child = kind => class {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;this.kind=kind;this.hostAtCreation={...[...owner.nodes.values()].filter(n=>n.type==='Stack').at(-1)};children.push(this);}updateStateVars(params){Object.assign(this.params,params);}};
-    const SourceChild=child('source'), DirectoryChild=child('directory'), DownloadChild=child('downloads'), ToolsChild=child('tools'), GroupChild=child('group');
+    const SourceChild=child('source'), DirectoryChild=child('directory'), DownloadChild=child('downloads'), ToolsChild=child('tools'), GroupChild=child('group'), GeometryChild=child('geometry');
     class StateChild {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;states.push(this);}updateStateVars(params){Object.assign(this.params,params);}}
     const {owner:page}=compile(()=>createReaderBuilderProbe(sourceText,boundedMembers(sourceText),{
       ...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:mode,SourceManagementPage:SourceChild,ReaderPageState:StateChild,
-      ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,ReaderGroupRecoveryStructureFixture:GroupChild,
+      ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,ReaderGroupRecoveryStructureFixture:GroupChild,ReaderFrameworkGeometryStructureFixture:GeometryChild,
       defaultSourceManagementFilters,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
       readerContentSafeTop,readerInteractiveSafeBottom,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
       prepareReaderFonts:()=>{fontCalls++;return fonts();},
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));},error(){}},
     },{...sdk.hooks,childSources:{...sdk.childSources,SourceManagementPage:sourceActor,ReaderPageState:stateActor,
-      ReaderDirectoryStructureFixture:directoryFixture,ReaderDownloadStructureFixture:downloadFixture,ReaderSourceToolsStructureFixture:toolsFixture,ReaderGroupRecoveryStructureFixture:groupFixture}}));
+      ReaderDirectoryStructureFixture:directoryFixture,ReaderDownloadStructureFixture:downloadFixture,ReaderSourceToolsStructureFixture:toolsFixture,ReaderGroupRecoveryStructureFixture:groupFixture,ReaderFrameworkGeometryStructureFixture:geometryFixture}}));
     page.getUIContext=()=>({...nativeContext?.(),getRouter:()=>({replaceUrl:route=>routes.push({kind:'replace',...route}),back:()=>routes.push({kind:'back'})})});
     return{page,children,states,routes,events,sdk,fontCalls:()=>fontCalls,props:()=>children.at(-1)?.params};
   }
@@ -389,21 +391,23 @@ if (selected.length) {
       widths:[320,366],scales:[1,1.45,2],liveBottomInsets:[40,52],sameScrollDependencyUpdate:true,
       actorStagesRetained:true,boundary:'Actual SDK viewport/clip declarations and real inset helper. Native gesture routing/hit testing remains Root target verification.'}));
   }
-  async function groupRecovery() {
+  async function componentFixtureBack(scene, kind, entryId) {
     const pending = deferred(), page = fixture({ fonts: () => pending.promise });
-    page.page.aboutToAppear(); page.page.launchFixture('group-recovery', page.page.presentation);
+    page.page.aboutToAppear(); page.page.launchFixture(scene, page.page.presentation);
     assert.equal(page.page.scene, 'menu');
     pending.resolve(); await tick(); page.page.menu();
-    const launch = page.sdk.nodes(page.page).find(node => node.id === 'reader-page-structure-group-recovery').onClick;
-    launch(); page.page.initialRender(); assert.equal(page.children.at(-1).kind, 'group');
+    const launch = page.sdk.nodes(page.page).find(node => node.id === entryId).onClick;
+    launch(); page.page.initialRender(); assert.equal(page.children.at(-1).kind, kind);
     const old = page.props(); assert.equal(old.fontsReady, true);
     let backs = 0;
     old.onTemporaryBackBridge(() => { backs++; return true; }, 'group-fixture');
-    page.page.onBackPress(); assert.equal(backs, 1); assert.equal(page.page.scene, 'group-recovery');
+    page.page.onBackPress(); assert.equal(backs, 1); assert.equal(page.page.scene, scene);
     old.onTemporaryBackBridge(undefined, 'group-fixture');
     page.page.onBackPress(); assert.equal(page.page.scene, 'menu');
     old.onTemporaryBackBridge(() => true, 'retired'); assert.equal(page.page.temporaryBackIdentity, '');
   }
-  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'group-recovery':groupRecovery};
+  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,
+    'group-recovery': () => componentFixtureBack('group-recovery', 'group', 'reader-page-structure-group-recovery'),
+    'framework-geometry': () => componentFixtureBack('framework-geometry', 'geometry', 'reader-page-structure-framework-geometry')};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

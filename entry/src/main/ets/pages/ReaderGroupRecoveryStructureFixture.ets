@@ -1,6 +1,7 @@
 // DEBUG component fixture. The presentation has no Runtime or Host attachment.
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { LengthMetrics } from '@kit.ArkUI';
 import { BookshelfGroupPresentation, type BookshelfGroupFocusReturn } from '../features/bookshelf/presentation/BookshelfGroupPresentation';
 import { BookshelfGroupDialog } from '../features/bookshelf/ui/BookshelfGroupDialog';
 import type { BookshelfManagementData } from '../features/bookshelf/application/BookshelfManagementGateway';
@@ -116,11 +117,12 @@ export struct ReaderGroupRecoveryStructureFixture {
       Column({ space: 8 }) {
         Text('分组恢复 · 原生组件样本').fontSize(18);
         Text('内存回执与动作意图').fontSize(14);
-        Row({ space: 8 }) {
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center,
+          space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
           Button('打开分组样本').id('reader-group-fixture-open').onClick((): void => this.openSample());
           Button('180vp').id('reader-group-fixture-height-180').onClick((): void => { this.hostHeight = 180; });
           Button('320vp').id('reader-group-fixture-height-320').onClick((): void => { this.hostHeight = 320; });
-        }
+        }.width('100%');
         Text(`动作 ${this.actionCount} · ${this.lastAction}`).fontSize(14).id('reader-group-fixture-actions');
         Stack() {
           BookshelfGroupDialog({ presentation: this.presentation, recoveryTop: 0,

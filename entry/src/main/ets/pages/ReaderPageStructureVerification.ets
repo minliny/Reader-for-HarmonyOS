@@ -18,6 +18,7 @@ import { ReaderDirectoryStructureFixture } from './ReaderDirectoryStructureFixtu
 import { ReaderDownloadStructureFixture } from './ReaderDownloadStructureFixture';
 import { ReaderSourceToolsStructureFixture } from './ReaderSourceToolsStructureFixture';
 import { ReaderGroupRecoveryStructureFixture } from './ReaderGroupRecoveryStructureFixture';
+import { ReaderFrameworkGeometryStructureFixture } from './ReaderFrameworkGeometryStructureFixture';
 
 interface SourceManagementFilterState {
   searchQuery: string;
@@ -34,7 +35,7 @@ type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'bu
   'read-error' | 'read-empty-error' | 'original-unknown' | 'original-cleanup' |
   'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-control-expanded' | 'directory-control-compact' |
   'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
-  'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery';
+  'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery' | 'framework-geometry';
 interface PageStructureFixtureObservation {
   kind: string;
   scene: string;
@@ -203,7 +204,7 @@ struct ReaderPageStructureVerification {
       (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' &&
         scene !== 'directory-control-expanded' && scene !== 'directory-control-compact' &&
         scene !== 'directory-control-short-122' && scene !== 'directory-control-short-168' && scene !== 'directory-control-short-190' &&
-        scene !== 'downloads' && scene !== 'downloads-short' && scene !== 'source-tools' && scene !== 'group-recovery')) return;
+        scene !== 'downloads' && scene !== 'downloads-short' && scene !== 'source-tools' && scene !== 'group-recovery' && scene !== 'framework-geometry')) return;
     this.presentation += 1;
     this.temporaryBack = undefined;
     this.temporaryBackIdentity = '';
@@ -421,6 +422,8 @@ struct ReaderPageStructureVerification {
         .onClick((): void => this.launchFixture('source-tools', menuPresentation));
       Button('分组 · 长恢复提示').enabled(this.fontState === 'ready').id('reader-page-structure-group-recovery')
         .onClick((): void => this.launchFixture('group-recovery', menuPresentation));
+      Button('框架 · 页头与移除确认').enabled(this.fontState === 'ready').id('reader-page-structure-framework-geometry')
+        .onClick((): void => this.launchFixture('framework-geometry', menuPresentation));
       Text(`夹具意图 ${this.intentCount} · ${this.lastIntent}`).fontSize(12);
       Button('返回诊断菜单').id('reader-page-structure-back-pilot').onClick((): void => this.returnToPilot(menuPresentation));
     }.width('100%').padding(20);
@@ -496,6 +499,9 @@ struct ReaderPageStructureVerification {
               onAction: (kind: string): void => this.fixtureAction(presentation, kind),
               onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
           }.width('100%').height(168).align(Alignment.Top).clip(true).id('reader-download-short-viewport');
+        } else if (this.scene === 'framework-geometry') {
+          ReaderFrameworkGeometryStructureFixture({ fontsReady: this.fontState === 'ready',
+            onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
         } else if (this.scene === 'group-recovery') {
           ReaderGroupRecoveryStructureFixture({ fontsReady: this.fontState === 'ready',
             onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
