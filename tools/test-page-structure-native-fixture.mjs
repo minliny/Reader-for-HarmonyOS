@@ -187,6 +187,11 @@ if (selected.length) {
       const count=f.page.intentCount;f.page.leaveScene(f.page.presentation);props.onStatusAction(0);props.onContinueOriginal(original?.generation??0);props.onReconcile(original?.generation??0);launch();
       assert.equal(f.page.intentCount,count);assert.equal(f.page.scene,'menu','retired source menu launch cannot replace successor menu');
     }
+    f.page.launchSource('busy',f.page.presentation);f.page.sourceStage();
+    assert.equal(f.props().statusKind,'loading','retained busy fixture reaches the real loading producer');
+    assert.equal(f.props().operation.receipt.receipt.readback,'reading');
+    assert.equal(f.props().sources.length,24);
+    f.page.leaveScene(f.page.presentation);
     f.page.launchSource('default',f.page.presentation);f.page.sourceStage();f.props().onOpenTools({searchQuery:'fixture',status:'启用',category:'novel',group:'科幻样本',anchorSourceId:''});
     assert.deepEqual(Object.fromEntries(['queryLength','statusFilter','categoryFilter','groupFilter'].map(k=>[k,f.events.at(-1)[k]])),{queryLength:7,statusFilter:'启用',categoryFilter:'novel',groupFilter:'科幻样本'});
     assert.equal(f.events.at(-1).kind,'intent-tools');

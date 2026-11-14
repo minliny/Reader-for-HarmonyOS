@@ -1,6 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const cases = {
+  'loading-motion': { description: 'Actual shared loading/busy SDK nodes follow accepted app motion/foreground facts and keep their current content/action state.', resources: [] },
   'transient-announcement': { description: 'Actual feedback registry, Toast lifecycle and platform adapter announce once for the active foreground generation and preserve state after platform rejection.', resources: [] },
   'removal-resize': { description: 'Actual removal-message SDK observer recomputes Scroll capacity after a height-only metrics publication without a Text Area event.', resources: [] },
   'group-native-fixture': { description: 'Actual DEBUG group fixture methods use memory-only receipts and guarded actions, retaining generation and retired-host fences.', resources: [] },
@@ -8,11 +9,139 @@ const cases = {
 };
 
 for (const id of selectContractCases(cases)) {
-  if (id === 'transient-announcement') await transientAnnouncement();
+  if (id === 'loading-motion') await loadingMotion();
+  else if (id === 'transient-announcement') await transientAnnouncement();
   else if (id === 'removal-resize') await removalResize();
   else if (id === 'group-native-fixture') await groupNativeFixture();
   else await geometryNativeFixture();
   recordContractCasePass(id);
+}
+
+async function loadingMotion() {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+  const compiler = installedEtsCompiler();
+  const { ts } = compiler;
+  const root = new URL('../entry/src/main/ets/', import.meta.url);
+  const inventory = [];
+  for (const relative of readdirSync(root, { recursive: true }).filter(name => name.endsWith('.ets'))) {
+    const source = readFileSync(new URL(relative, root), 'utf8');
+    if (!source.includes('LoadingProgress(')) continue;
+    const tree = ts.createSourceFile(relative, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, compiler.options);
+    assert.deepEqual(tree.parseDiagnostics, []);
+    const visit = node => {
+      if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) &&
+        ts.isIdentifier(node.expression) && node.expression.text === 'LoadingProgress') {
+        let chain = node;
+        const modifiers = [];
+        while (ts.isPropertyAccessExpression(chain.parent) && chain.parent.expression === chain &&
+          ts.isCallExpression(chain.parent.parent) && chain.parent.parent.expression === chain.parent) {
+          chain = chain.parent.parent;
+          modifiers.push(chain);
+        }
+        const active = modifiers.find(call => call.expression.name.text === 'enableLoading');
+        assert.ok(active && active.arguments.length === 1, `${relative} declares native loading activity`);
+        const expression = active.arguments[0].getText(tree);
+        assert.match(expression, /reduceMotion|appReduceMotion|shouldAnimate/);
+        assert.match(expression, /foreground|Foreground|active|readerPanelForeground|shouldAnimate/);
+        inventory.push({ file: relative, line: tree.getLineAndCharacterOfPosition(node.getStart()).line + 1, expression });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(tree);
+  }
+  assert.ok(inventory.length > 0);
+  for (const variant of ['default', 'readingBookmark', 'inline']) {
+    const sdk = boundedSurfaceSdk();
+    const owner = new sdk.deps.ReaderPageState(undefined, {
+      variant, loading: true, loadingActive: true, message: '正在读取书源', padded: false,
+    });
+    owner.initialRender();
+    const spinner = () => sdk.nodes(owner).filter(node => node.type === 'LoadingProgress');
+    assert.equal(spinner().length, 1);
+    assert.equal(spinner()[0].enableLoading, true);
+    const nativeId = spinner()[0].id;
+    owner.appReduceMotion = true;
+    sdk.properties.flush();
+    assert.equal(spinner()[0].enableLoading, false, `${variant} follows accepted reduceMotion`);
+    owner.appReduceMotion = false;
+    owner.appForeground = false;
+    sdk.properties.flush();
+    assert.equal(spinner()[0].enableLoading, false, `${variant} stops in background`);
+    owner.appForeground = true;
+    sdk.properties.flush();
+    assert.equal(spinner()[0].enableLoading, true);
+    assert.equal(spinner()[0].id, nativeId, 'fact updates retain the current native spinner');
+    assert.ok(sdk.nodes(owner).some(node => node.type === 'Text' && node.create === '正在读取书源'));
+    owner.loadingActive = false;
+    sdk.properties.flush();
+    assert.equal(spinner()[0].enableLoading, false, 'the caller keeps its own activity fence');
+  }
+  const sdk = boundedSurfaceSdk();
+  let retried = 0;
+  const failed = new sdk.deps.ReaderPageState(undefined, {
+    variant: 'inline', loading: false, message: '读取失败', actionLabel: '重试',
+    actionGeneration: 4, onAction: generation => { assert.equal(generation, 4); retried++; },
+  });
+  failed.initialRender();
+  const retry = sdk.walk(failed).find(child => child instanceof sdk.deps.ReaderRecoveryAction);
+  assert.ok(retry, 'a non-loading inline request retains the ordinary shared action surface');
+  sdk.nodes(retry).find(node => node.type === 'Button').onClick();
+  assert.equal(retried, 1);
+  let actions = 0;
+  const action = new sdk.deps.ReaderRecoveryAction(undefined, {
+    label: '核对', generation: 7, isBusy: true, onReconcile: () => actions++,
+  });
+  action.initialRender();
+  const busySpinner = () => sdk.nodes(action).find(node => node.type === 'LoadingProgress');
+  const busyLabel = () => sdk.nodes(action).find(node => node.type === 'Text' && node.create === '核对');
+  assert.equal(busySpinner().enableLoading, true);
+  assert.equal(busyLabel().opacity, 0);
+  action.appReduceMotion = true;
+  sdk.properties.flush();
+  assert.equal(busySpinner().enableLoading, false);
+  assert.equal(busyLabel().opacity, 1, 'a hidden native animation retains the disabled action label');
+  action.appReduceMotion = false;
+  action.appForeground = false;
+  sdk.properties.flush();
+  assert.equal(busySpinner().enableLoading, false);
+  assert.equal(busyLabel().opacity, 1);
+  const button = sdk.nodes(action).find(node => node.type === 'Button');
+  assert.equal(button.enabled, false);
+  button.onClick();
+  assert.equal(actions, 0, 'stopping animation preserves busy action admission');
+
+  const source = readFileSync(new URL('features/source/ui/SourceToolsPage.ets', root), 'utf8');
+  for (const retained of [false, true]) {
+    const runtime = boundedSurfaceSdk();
+    const snapshot = { sources: retained ? [{ sourceId: 'memory-source' }] : [], busy: true,
+      statusMessage: '正在读取书源', batchCheck: { phase: 'idle' } };
+    const owner = runtime.consumer(source, ['appThemeScheme', 'reduceMotion', 'snapshot', 'statusCard'],
+      { EMPTY_SOURCE_TOOLS_SNAPSHOT: snapshot }, { snapshot, reduceMotion: false });
+    owner.statusCard();
+    const state = runtime.walk(owner).find(child => child instanceof runtime.deps.ReaderPageState);
+    assert.ok(state, 'the actual tools producer uses the shared page state');
+    assert.equal(state.variant, retained ? 'inline' : 'default');
+    assert.equal(state.loading, true);
+    const spinner = () => runtime.nodes(state).find(node => node.type === 'LoadingProgress');
+    assert.equal(spinner().enableLoading, true);
+    owner.reduceMotion = true;
+    runtime.properties.flush();
+    assert.equal(spinner().enableLoading, false, 'current parent preference updates the retained actual child');
+    if (retained) {
+      const row = runtime.nodes(state).find(node => node.type === 'Row');
+      assert.deepEqual(row.create, { space: 10 });
+      assert.equal(spinner().width, 32);
+      assert.equal(spinner().height, 32);
+      const text = runtime.nodes(state).find(node => node.type === 'Text');
+      assert.equal(text.layoutWeight, 1);
+      assert.equal(text.create, snapshot.statusMessage);
+    }
+  }
+  console.log(JSON.stringify({ nativeLoadingInventory: inventory,
+    scope: 'All native constructor gates inspected through actual ETS AST. Shared native properties and current SourceTools producer updates executed with installed SDK. Native timing, pixels and other full page assembly are separate.' }));
 }
 
 async function geometryNativeFixture() {

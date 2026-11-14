@@ -456,7 +456,7 @@ struct ReaderPageStructureVerification {
     ForEach([this.presentation], (presentation: number): void => {
       Stack() {
         SourceManagementPage({ sources: this.sources, expandedLayout: false, initialViewState: this.initialSourceView(),
-          operation: this.operation, statusKind: 'idle',
+          operation: this.operation, statusKind: this.scene === 'busy' ? 'loading' : 'idle',
           statusActionLabel: this.scene === 'read-error' ? '夹具状态动作' : '',
           statusActionGeneration: this.operation.readFacts?.generation ?? 0,
           onStatusAction: (revision: number): void => this.statusFixture(presentation, revision),

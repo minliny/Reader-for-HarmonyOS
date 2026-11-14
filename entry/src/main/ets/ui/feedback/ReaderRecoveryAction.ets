@@ -5,6 +5,8 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 @Component
 export struct ReaderRecoveryAction {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
   @Prop variant: 'compact' | 'rssManagement' | 'notice' | 'text' | 'readingState' = 'compact';
   @Prop label: string = '刷新列表';
   @Prop generation: number = 0;
@@ -23,10 +25,11 @@ export struct ReaderRecoveryAction {
         .fontColor(readerAppColor(this.variant === 'notice' ? 'TOK_MESSAGE_NOTICE_INK' : 'TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .decoration({ type: this.variant === 'notice' && !this.isBusy ? TextDecorationType.Underline : TextDecorationType.None })
-        .opacity(this.isBusy ? 0 : 1);
+        .opacity(this.isBusy && this.appForeground && !this.appReduceMotion ? 0 : 1);
       if (this.isBusy) {
         LoadingProgress().width(18).height(18)
-          .color(readerAppColor(this.variant === 'notice' ? 'TOK_MESSAGE_NOTICE_INK' : 'TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
+          .color(readerAppColor(this.variant === 'notice' ? 'TOK_MESSAGE_NOTICE_INK' : 'TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
+          .enableLoading(this.appForeground && !this.appReduceMotion);
       }
     }.accessibilityLevel('no-hide-descendants');
     }

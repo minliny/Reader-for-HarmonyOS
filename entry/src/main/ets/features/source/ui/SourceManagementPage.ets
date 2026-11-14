@@ -22,7 +22,6 @@ import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_TITLE, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
@@ -808,12 +807,9 @@ export struct SourceManagementPage {
             ReaderRecoveryAction({ label: '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
           }
           if (this.statusKind === 'loading' && this.sources.length > 0 && this.operation.original?.blocked !== true) {
-            Row({ space: 10 }) {
-              LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
-              Text(this.statusMessage || '正在读取书源').layoutWeight(1)
-                .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
-                .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-            }.width('100%').padding({ top: 12, bottom: 12 });
+            ReaderPageState({ variant: 'inline', padded: false, loading: true,
+              loadingActive: !this.reduceMotion, message: this.statusMessage || '正在读取书源' })
+              .padding({ top: 12, bottom: 12 });
           }
           this.filterArea();
           this.categoryFilter();
@@ -826,6 +822,7 @@ export struct SourceManagementPage {
             message: this.statusKind === 'loading' ? '请稍候' : this.operation.readFacts?.fact === 'failed' ?
               '请稍后重试。' : '点击下方「＋ 新增书源」导入 Legado 书源 JSON',
             loading: this.statusKind === 'loading',
+            loadingActive: !this.reduceMotion,
             actionLabel: this.operation.readFacts?.fact === 'failed' ? '重试' : '',
             onAction: (): void => {
               if (this.recovery().canRetry) this.onReconcile(this.recovery().generation);

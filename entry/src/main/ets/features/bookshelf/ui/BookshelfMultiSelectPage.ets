@@ -30,6 +30,8 @@ const GRID_ROW_GAP = 12;
 @Component
 export struct BookshelfMultiSelectPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
@@ -294,7 +296,8 @@ export struct BookshelfMultiSelectPage {
             Image(this.appThemeScheme === 'night' ? $r('app.media.reader_danger_trash_theme_night') : $r('app.media.reader_danger_trash'))
               .width(22).height(22).opacity(!this.ready || this.busy ? 0 : 1);
             if (!this.ready || this.busy) {
-              LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+              LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+                .enableLoading(this.appForeground && !this.appReduceMotion);
             }
           }.width(22).height(22);
           Text('移除书架')

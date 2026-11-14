@@ -332,7 +332,8 @@ export struct LocalImportDialog {
       Column() {
         this.importHeader('正在导入');
         Column({ space: 16 }) {
-          LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+            .enableLoading(this.foreground && !this.reduceMotion);
           Text('请稍候，完成后将显示导入结果。')
             .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
             .lineHeight(MESSAGE_BODY.lineHeightFp as number)

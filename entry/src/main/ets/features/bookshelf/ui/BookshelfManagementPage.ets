@@ -49,6 +49,8 @@ export struct BookshelfManagementPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
 
   @Prop @Watch('onSnapshotChanged') snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
@@ -149,7 +151,8 @@ export struct BookshelfManagementPage {
   private statusCard() {
     if (this.snapshot.busy) {
       Row({ space: 10 }) {
-        LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+        LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+          .enableLoading(this.appForeground && !this.appReduceMotion);
         Text(this.snapshot.statusMessage).layoutWeight(1).fontFamily(MESSAGE_BODY.fontFamily)
           .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));

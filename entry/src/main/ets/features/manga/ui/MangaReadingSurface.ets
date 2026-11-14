@@ -2303,7 +2303,8 @@ export struct MangaReadingSurface {
               this.tileImage(row, this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri ?? '', this.rowRenderKey(row), this.controller, this.controller?.chapter?.manifest);
             } else {
               Column() {
-                LoadingProgress().width(32).height(32).color(this.mutedColor());
+                LoadingProgress().width(32).height(32).color(this.mutedColor())
+                  .enableLoading(this.readerPanelForeground() && !this.reduceMotion);
               }.width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).justifyContent(FlexAlign.Center);
             }
           }.width('100%').height(this.rowDisplayHeight(row)).align(Alignment.Center)

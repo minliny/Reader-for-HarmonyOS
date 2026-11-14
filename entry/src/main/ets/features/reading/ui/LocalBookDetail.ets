@@ -88,6 +88,8 @@ class DetailDirectoryFocusFrame extends FrameCallback {
 export struct LocalBookDetail {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') @Watch('onMangaGeometryChanged') readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBookChanged') book: ReadingBookDetail;
   @Prop @Watch('onTocChanged') toc: LocalReadingTocEntry[] = [];
@@ -815,7 +817,8 @@ export struct LocalBookDetail {
             }
           });
           if (this.removing || this.cancellingAdd) {
-            LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+            LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+              .enableLoading(this.appForeground && !this.appReduceMotion);
           }
         }
         }, (identity: string): string => identity);

@@ -8,7 +8,9 @@ import { ReaderRecoveryAction } from './ReaderRecoveryAction';
 @Component
 export struct ReaderPageState {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @Prop variant: 'default' | 'readingBookmark' = 'default';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @Prop variant: 'default' | 'readingBookmark' | 'inline' = 'default';
   @Prop title: string = '';
   @Prop message: string = '';
   @Prop loading: boolean = false;
@@ -32,45 +34,59 @@ export struct ReaderPageState {
   private emptySlot() {}
 
   build() {
-    Column({ space: this.variant === 'readingBookmark' ? 0 : 12 }) {
-      this.leading();
-      if (this.loading) {
+    if (this.variant === 'inline' && this.loading) {
+      Row({ space: 10 }) {
         LoadingProgress().width(32).height(32)
           .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
-          .enableLoading(this.loadingActive)
+          .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
           .accessibilityText('载入中');
-      }
-      if (this.title.length > 0) {
-        Text(this.title).width('100%').textAlign(TextAlign.Center)
-          .fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
-          .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
-          .fontColor(this.inkColor ?? readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
-      }
-      if (this.message.length > 0) {
-        Text(this.message).width('100%').textAlign(TextAlign.Center)
+        Text(this.message.length > 0 ? this.message : this.title).layoutWeight(1)
           .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
           .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
-          .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
-          .margin({ top: this.variant === 'readingBookmark' && this.title.length > 0 ? 9 : 0 });
-      }
-      if (!this.loading && this.customActions) {
-        this.actionContent();
-      } else if (!this.loading && (this.actionLabel.length > 0 || this.secondaryActionLabel.length > 0)) {
-        Flex({ justifyContent: FlexAlign.Center, wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(10), cross: LengthMetrics.vp(10) } }) {
-          if (this.actionLabel.length > 0) {
-            ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.actionLabel, actionEnabled: this.actionEnabled, focusId: this.actionFocusId,
-              generation: this.actionGeneration,
-              onReconcile: (expected: number): void => this.onAction(expected) });
-          }
-          if (this.secondaryActionLabel.length > 0) {
-            ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.secondaryActionLabel, actionEnabled: this.secondaryActionEnabled,
-              generation: this.actionGeneration,
-              onReconcile: (expected: number): void => this.onSecondaryAction(expected) });
-          }
-        }.width('100%').margin({ top: this.variant === 'readingBookmark' ? 23 : 0 });
-      }
-    }.width('100%').padding({ left: this.padded ? 20 : 0, right: this.padded ? 20 : 0,
-      top: this.padded ? (this.variant === 'readingBookmark' ? 30 : 24) : 0,
-      bottom: this.padded ? (this.variant === 'readingBookmark' ? 30 : 24) : 0 });
+          .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      }.width('100%').padding({ left: this.padded ? 20 : 0, right: this.padded ? 20 : 0,
+        top: this.padded ? 24 : 0, bottom: this.padded ? 24 : 0 });
+    } else {
+      Column({ space: this.variant === 'readingBookmark' ? 0 : 12 }) {
+        this.leading();
+        if (this.loading) {
+          LoadingProgress().width(32).height(32)
+            .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
+            .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
+            .accessibilityText('载入中');
+        }
+        if (this.title.length > 0) {
+          Text(this.title).width('100%').textAlign(TextAlign.Center)
+            .fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
+            .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+            .fontColor(this.inkColor ?? readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
+        }
+        if (this.message.length > 0) {
+          Text(this.message).width('100%').textAlign(TextAlign.Center)
+            .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+            .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+            .margin({ top: this.variant === 'readingBookmark' && this.title.length > 0 ? 9 : 0 });
+        }
+        if (!this.loading && this.customActions) {
+          this.actionContent();
+        } else if (!this.loading && (this.actionLabel.length > 0 || this.secondaryActionLabel.length > 0)) {
+          Flex({ justifyContent: FlexAlign.Center, wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(10), cross: LengthMetrics.vp(10) } }) {
+            if (this.actionLabel.length > 0) {
+              ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.actionLabel, actionEnabled: this.actionEnabled, focusId: this.actionFocusId,
+                generation: this.actionGeneration,
+                onReconcile: (expected: number): void => this.onAction(expected) });
+            }
+            if (this.secondaryActionLabel.length > 0) {
+              ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.secondaryActionLabel, actionEnabled: this.secondaryActionEnabled,
+                generation: this.actionGeneration,
+                onReconcile: (expected: number): void => this.onSecondaryAction(expected) });
+            }
+          }.width('100%').margin({ top: this.variant === 'readingBookmark' ? 23 : 0 });
+        }
+      }.width('100%').padding({ left: this.padded ? 20 : 0, right: this.padded ? 20 : 0,
+        top: this.padded ? (this.variant === 'readingBookmark' ? 30 : 24) : 0,
+        bottom: this.padded ? (this.variant === 'readingBookmark' ? 30 : 24) : 0 });
+    }
   }
 }

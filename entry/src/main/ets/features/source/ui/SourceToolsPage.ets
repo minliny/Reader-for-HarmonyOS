@@ -579,15 +579,12 @@ export struct SourceToolsPage {
         message: this.snapshot.readFacts?.fact === 'failed' ? '请稍后重试。' :
           (this.snapshot.busy ? '请稍候' : '返回书源管理后，可导入书源 JSON。'),
         loading: this.snapshot.busy,
+        loadingActive: !this.reduceMotion,
         actionLabel: this.snapshot.readFacts?.canRetry ? '重试' : '',
         onAction: (): void => this.onReconcile(this.snapshot.readFacts?.generation ?? 0) });
     } else if (this.snapshot.busy && this.snapshot.batchCheck.phase !== 'running' && this.snapshot.batchCheck.phase !== 'stopping' && this.snapshot.original?.blocked !== true) {
-      Row({ space: 10 }) {
-        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
-        Text(this.snapshot.statusMessage).layoutWeight(1)
-          .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
-          .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-      }.width('100%').padding(17);
+      ReaderPageState({ variant: 'inline', padded: false, loading: true,
+        loadingActive: !this.reduceMotion, message: this.snapshot.statusMessage }).padding(17);
     }
   }
 

@@ -62,6 +62,8 @@ let settingsSelectionGeneration: number = 0;
 export struct SettingsPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
 
   @Prop @Watch('onActiveSectionChanged') activeSection: 'home' | 'general' = 'home';
   @Prop navigationGeneration: number = 0;
@@ -476,7 +478,8 @@ export struct SettingsPage {
   private operationFeedback() {
     if (this.resetInFlight || this.cacheCleanup?.busy === true) {
       Row({ space: 10 }) {
-        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
+        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
+          .enableLoading(this.appForeground && !this.appReduceMotion);
         Text(this.resetInFlight ? '正在恢复界面与阅读设置' : this.cacheCleanup?.operation.message ?? '正在清理文字缓存')
           .layoutWeight(1).fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
           .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));

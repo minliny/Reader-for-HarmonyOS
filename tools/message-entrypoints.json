@@ -1497,8 +1497,8 @@
       "member": "sourceList",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前已挂载书源页，原 operation/original/receipt 身份与 loading/blocked 状态控制消息；statusBanner 保留但无当前消费入口。",
-      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "当前已挂载书源页，原 operation/original/receipt 身份与 loading/blocked 状态控制消息；statusBanner 保留但无当前消费入口。 有旧内容的读取中状态复用ReaderPageState inline局部变体，保留原32vp指示、10vp横距及原调用方内距。",
+      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。 原生加载动效同时消费已有readerAppForeground、readerReduceMotion及当前调用方loadingActive，原状态文案保留加载/忙碌事实，隐藏动画不改变原操作准入。",
       "status": "registered-source-entry"
     },
     {
@@ -1630,8 +1630,8 @@
       "member": "statusCard",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。",
-      "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。 有旧内容的读取中状态复用ReaderPageState inline局部变体，保留原32vp指示、10vp横距及原调用方内距。",
+      "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。 原生加载动效同时消费已有readerAppForeground、readerReduceMotion及当前调用方loadingActive，原状态文案保留加载/忙碌事实，隐藏动画不改变原操作准入。",
       "status": "registered-source-entry"
     },
     {
