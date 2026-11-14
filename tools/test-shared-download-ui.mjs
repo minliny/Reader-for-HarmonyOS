@@ -279,6 +279,7 @@ if(selectedCase==='storage-actions'){
 // Exercise the production cleanup button and confirmation callbacks. There
 // is deliberately no RPC/filesystem port or invented successful publication.
 const storageMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { ReaderMeasurementStore } = await import('../entry/src/main/ets/ui/layout/ReaderMeasurements.ts');
 const surfaceGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const storageProperties = createArkUIPropertyRuntimeProbe();
@@ -288,7 +289,8 @@ class DialogFrame {
 const cleanupProbe = createReaderBuilderProbe(source, [...new Set([
   'clearStorageButton', 'confirmationOverlay', 'confirmationSurfaceBody', 'confirmationContent', 'confirmationBody',
   'confirmationButton', 'confirmation', 'confirmationGeneration', 'previousConfirmation', 'storageCleanupBusy',
-  'transientFeedback', ...helpers])], {
+  'transientFeedback', 'measurements', ...helpers])], {
+  ReaderMeasurementStore,
   ...storageProperties.sdk, ...projection, ...visual, ...storageMetrics, ...surfaceGeometry,
   ButtonType: { Normal: 'normal' }, ReaderDialogSurface: DialogFrame,
   ReaderWindowCoordinator: { metrics: () => ({ ...storageMetrics.createDefaultReaderWindowMetrics(),

@@ -21184,12 +21184,12 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-        "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+        "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
       },
       "sourceInputs": [
         {
           "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-          "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+          "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -21309,7 +21309,7 @@
         },
         {
           "path": "tools/test-shared-download-visual-contract.mjs",
-          "sha256": "52dfbb9ad2864735550a2868fbba877780965ed2dbf9b4f0d66c7de9948462f7"
+          "sha256": "c0457d479903159353069fbb8ebc8b26f7caab86e469f59b44173d7d24609a6e"
         },
         {
           "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -22504,7 +22504,7 @@
         }
       },
       "exceptions": [],
-      "revision": 23,
+      "revision": 24,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -22575,12 +22575,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+              "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+                "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -22700,7 +22700,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "52dfbb9ad2864735550a2868fbba877780965ed2dbf9b4f0d66c7de9948462f7"
+                "sha256": "c0457d479903159353069fbb8ebc8b26f7caab86e469f59b44173d7d24609a6e"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -23967,12 +23967,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+              "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+                "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -24092,7 +24092,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "52dfbb9ad2864735550a2868fbba877780965ed2dbf9b4f0d66c7de9948462f7"
+                "sha256": "c0457d479903159353069fbb8ebc8b26f7caab86e469f59b44173d7d24609a6e"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -25359,12 +25359,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+              "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+                "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -25484,7 +25484,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "52dfbb9ad2864735550a2868fbba877780965ed2dbf9b4f0d66c7de9948462f7"
+                "sha256": "c0457d479903159353069fbb8ebc8b26f7caab86e469f59b44173d7d24609a6e"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -26707,12 +26707,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+              "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+                "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -26832,7 +26832,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "52dfbb9ad2864735550a2868fbba877780965ed2dbf9b4f0d66c7de9948462f7"
+                "sha256": "c0457d479903159353069fbb8ebc8b26f7caab86e469f59b44173d7d24609a6e"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -28055,12 +28055,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+              "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "900bd65650d436fe00a4078befb522e3a976a42fe7ac14374387cea0e7f3d5d9"
+                "sha256": "9a4a4f0b92cfd9c5adba8cbf8113dac4cc7d82123b49fbc2d884d9c8489f7c79"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -28180,7 +28180,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "52dfbb9ad2864735550a2868fbba877780965ed2dbf9b4f0d66c7de9948462f7"
+                "sha256": "c0457d479903159353069fbb8ebc8b26f7caab86e469f59b44173d7d24609a6e"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",

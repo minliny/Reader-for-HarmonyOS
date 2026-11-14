@@ -1033,10 +1033,10 @@ export struct SharedDownloadPage {
           }, (bookKey: string): string => bookKey);
           this.actionButton((): string => '定位当前', false, (): boolean => this.currentChapter() !== undefined, (): void => this.locateCurrent());
         } else if (this.detail() !== undefined) {
-          this.actionButton((): string => '下载所选', true, (): boolean => this.selectedChapters.size > 0, (): void => {
+          this.actionButton((): string => '下载所选', true, (): boolean => this.selectedChapterActionAvailable('download'), (): void => {
             if (this.captureSelection(true)) this.sendAction('download');
           });
-          this.actionButton((): string => '暂停所选', false, (): boolean => this.selectedChapters.size > 0, (): void => {
+          this.actionButton((): string => '暂停所选', false, (): boolean => this.selectedChapterActionAvailable('pause'), (): void => {
             if (this.captureSelection(true)) this.sendAction('pause');
           });
           this.actionButton((): string => '更多', false, (): boolean => this.selectedChapters.size > 0, (): void => {
@@ -2304,33 +2304,42 @@ export struct SharedDownloadPage {
     if (chapters ? book === undefined || this.selectedChapters.size === 0 :
       this.detailKey.length > 0 || this.selectedBookKeys.length === 0) return false;
     this.actionBookKeys = book === undefined ? this.selectedBookKeys.slice() : [book.key];
+    this.actionChapters = chapters ? this.selectedChapterProofs() : [];
+    return true;
+  }
+  private selectedChapterProofs(): SharedDownloadExpectedChapter[] {
     const proofs: SharedDownloadExpectedChapter[] = [];
-    if (chapters) this.selectedChapters.forEach((chapterId: string, chapterIndex: number): void => {
+    this.selectedChapters.forEach((chapterId: string, chapterIndex: number): void => {
       proofs.push({ chapterIndex, chapterId });
     });
-    this.actionChapters = proofs;
-    return true;
+    return proofs;
+  }
+  private selectedChapterActionAvailable(action: SharedDownloadUiAction): boolean {
+    const book = this.detail();
+    return book !== undefined && this.selectedChapters.size > 0 &&
+      this.actionAvailable(action, [book], this.selectedChapterProofs());
   }
   private chapterProof(chapter: DownloadChapterView): SharedDownloadExpectedChapter {
     return { chapterIndex: chapter.index, chapterId: chapter.chapterId };
   }
-  private actionChapterRows(book: DownloadBookView): DownloadChapterView[] {
+  private actionChapterRows(book: DownloadBookView, proofs: SharedDownloadExpectedChapter[] = this.actionChapters): DownloadChapterView[] {
     const expected = new Map<number, string>();
-    this.actionChapters.forEach((chapter: SharedDownloadExpectedChapter): void => {
+    proofs.forEach((chapter: SharedDownloadExpectedChapter): void => {
       if (chapter.chapterId.length > 0) expected.set(chapter.chapterIndex, chapter.chapterId);
     });
     return book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable &&
-      (this.actionChapters.length === 0 || expected.get(chapter.index) === chapter.chapterId));
+      (proofs.length === 0 || expected.get(chapter.index) === chapter.chapterId));
   }
   private selectedIsRunning(): boolean {
     return this.actionBooks().some((book: DownloadBookView): boolean =>
       this.actionChapterRows(book).some((chapter: DownloadChapterView): boolean => this.chapterIsRunning(chapter)));
   }
-  private actionAvailable(action: SharedDownloadUiAction): boolean {
-    return this.actionBooks().some((book: DownloadBookView): boolean => {
+  private actionAvailable(action: SharedDownloadUiAction, books: DownloadBookView[] = this.actionBooks(),
+    proofs: SharedDownloadExpectedChapter[] = this.actionChapters): boolean {
+    return books.some((book: DownloadBookView): boolean => {
       if (book.projectionStatus !== 'ready') return false;
-      const chapters = this.actionChapterRows(book);
-      if (this.actionChapters.length > 0 && chapters.length !== this.actionChapters.length) return false;
+      const chapters = this.actionChapterRows(book, proofs);
+      if (proofs.length > 0 && chapters.length !== proofs.length) return false;
       if (action === 'download') return chapters.some((chapter: DownloadChapterView): boolean => !chapter.localComplete && chapter.queueState !== 'unknown');
       if (action === 'pause') return chapters.some((chapter: DownloadChapterView): boolean => this.chapterIsRunning(chapter));
       if (action === 'cancel') return chapters.some((chapter: DownloadChapterView): boolean => this.chapterIsRunning(chapter) || chapter.queueState === 'paused' || chapter.queueState === 'failed');

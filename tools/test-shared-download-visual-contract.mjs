@@ -9,6 +9,7 @@ Object.assign(definitions, {
   'private-tool-budget': { description: '实际筛选/排序native carrier及父预算320/366/720 x1/1.3/1.6/2/3.2；24vp旧排序carrier负例', resources: [] },
   'touch-targets': { description: '实际tabs/search-clear/management完成44vp原生carrier及陈旧管理epoch拒绝', resources: [] },
   'filter-reset': { description: '实际筛选空PageState清条件/保排序，current opening准入与retired callback拒绝', resources: [] },
+  'chapter-selection-actions': { description: '实际章节管理按钮最终enabled随当前选择及队列更新，复用动作准入和精确章节身份，实际点击与拒旧回调', resources: [] },
 });
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
@@ -78,9 +79,9 @@ methods.push('measurements', 'measurementRevision', 'reduceMotion', 'sheetWasVis
 // state as the methods it executes. Follow actual this.member references and
 // their real Watch callbacks instead of patching undefined fields with fixture
 // defaults. Other selected leaves keep their separately reviewed extraction.
-if (selectedCase === 'native-bindings') {
+if (['native-bindings', 'chapter-selection-actions'].includes(selectedCase)) {
   const declared = new Map(page.members.filter(node=>node.name).map(node=>[node.name.getText(tree),node]));
-  const pending = ['topBar','contentTop','searchField','storageDock','selectionDock','sheetOverlay','bookRow','statusButton',
+  const pending = selectedCase === 'chapter-selection-actions' ? ['selectionDock', 'books', 'aboutToDisappear'] : ['topBar','contentTop','searchField','storageDock','selectionDock','sheetOverlay','bookRow','statusButton',
     'currentRaisedDockShape','onSheetActorAppeared','onSheetActorTransitionFinished','onSheetExitFinished',
     'sheetActorAttachment','sheetActorOwner','sheetActors','sheetExitPending','sheetOpeningGeneration','presentationGeneration'];
   const selectedMembers = new Set();
@@ -111,7 +112,7 @@ if (selectedCase === 'native-bindings') {
   }
   methods.splice(0,methods.length,...page.members.filter(node=>node.name&&selectedMembers.has(node.name.getText(tree)))
     .map(node=>node.name.getText(tree)));
-  assert.ok(methods.includes('filterSourceOptions') && methods.includes('sheetActors'),
+  if (selectedCase === 'native-bindings') assert.ok(methods.includes('filterSourceOptions') && methods.includes('sheetActors'),
     'the real filter and Native sheet actor initializers are in the current dependency closure');
 }
 if (confluenceCases.has(selectedCase) || ['area-receipts','management-scroll'].includes(selectedCase)) {
@@ -328,6 +329,102 @@ const colorIs = (result, property, role) => find(result, node => typeof node[pro
   argb(node[property]) === palette[result.appThemeScheme][role], `production ${property} consumes demo ${role}`);
 
 const microtasks=async()=>{for(let i=0;i<4;i++)await Promise.resolve();};const originalWindowMetrics=windowMetrics;
+if (selectedCase === 'chapter-selection-actions') {
+    const chapter = (index, queueState, localComplete = false) => ({
+        key: `chapter-${index}`, sourceId: book.sourceId, bookId: book.bookId, index,
+        chapterId: `exact-chapter-${index}`, title: `Chapter ${index}`, navigable: true,
+        queueState, localComplete, stateLabel: queueState,
+    });
+    const completed = chapter(0, 'completed', true);
+    const running = chapter(1, 'inProgress');
+    const queued = chapter(2, 'queued');
+    const paused = chapter(3, 'paused');
+    const failed = chapter(4, 'failed');
+    const missing = chapter(5, 'missing');
+    const unknown = chapter(6, 'unknown');
+    const inputs = [completed, running, queued, paused, failed, missing, unknown];
+    let samples = 0;
+    for (const [chapters, expected] of [
+        [[], [false, false, false]],
+        [[completed], [false, false, true]],
+        [[running], [true, true, true]],
+        [[queued], [true, true, true]],
+        [[paused], [true, false, true]],
+        [[failed], [true, false, true]],
+        [[missing], [true, false, true]],
+        [[unknown], [false, false, true]],
+        [inputs, [true, true, true]],
+    ]) {
+        const intents = [];
+        const current = { ...book, chapters: inputs };
+        const f = owner('day', { books: [current], detailKey: book.key, managing: true,
+            fontsReady: true, onIntent: intent => intents.push(intent) });
+        f.selectChapters(chapters);
+        f.selectionDock();
+        const buttons = records(f).filter(node => node.type === 'Button').slice(-3);
+        assert.deepEqual(records(f).filter(node => node.type === 'Text').slice(-3).map(label),
+            ['下载所选', '暂停所选', '更多']);
+        assert.deepEqual(buttons.map(node => node.enabled), expected, 'final SDK enabled attributes follow actual action admission');
+        for (let index = 0; index < 2; index++) {
+            intents.length = 0;
+            buttons[index].onClick();
+            assert.equal(intents.length, expected[index] ? 1 : 0, 'actual click agrees with final enabled value');
+            if (expected[index]) {
+                assert.equal(intents[0].action, index === 0 ? 'download' : 'pause');
+                assert.equal(intents[0].scope, 'chapters');
+                assert.deepEqual(Array.from(intents[0].books[0].expectedChapters, value => ({ ...value })),
+                    chapters.map(value => ({ chapterIndex: value.index, chapterId: value.chapterId })));
+            }
+        }
+        assert.equal(f.sheet, '', 'direct action does not open another menu');
+        f.aboutToDisappear();
+        samples++;
+    }
+    const intents = [];
+    const f = owner('day', { books: [{ ...book, chapters: [running] }], detailKey: book.key,
+        managing: true, fontsReady: true, onIntent: intent => intents.push(intent) });
+    f.selectionDock();
+    const buttons = records(f).filter(node => node.type === 'Button').slice(-3);
+    const entries = buttons.map(node => [...f.nodes.entries()].find(([, value]) => value === node));
+    f.selectChapters([running]);
+    propertyRuntime.flush();
+    assert.deepEqual(buttons.map(node => node.enabled), [true, true, true], 'selection updates retained SDK buttons');
+    for (const [id, node] of entries) assert.equal(f.nodes.get(id), node, 'same SDK Button record retained');
+    f.books = [{ ...book, chapters: [{ ...running, localComplete: true, queueState: 'completed' }] }];
+    propertyRuntime.flush();
+    assert.deepEqual(buttons.map(node => node.enabled), [false, false, true], 'same identity queue update disables both direct actions');
+    buttons[1].onClick();
+    assert.equal(intents.length, 0);
+    f.books = [{ ...book, projectionStatus: 'unavailable', chapters: [running] }];
+    propertyRuntime.flush();
+    assert.deepEqual(buttons.map(node => node.enabled), [false, false, true], 'unavailable projection cannot dispatch');
+    f.books = [{ ...book, chapters: [running] }];
+    f.selectedChapters = new Map([[running.index, 'stale-chapter-at-same-index']]);
+    propertyRuntime.flush();
+    assert.deepEqual(buttons.map(node => node.enabled), [false, false, true], 'stale chapter proof cannot enable another chapter');
+    buttons[0].onClick(); buttons[1].onClick();
+    assert.equal(intents.length, 0);
+    f.selectChapters([running]);
+    propertyRuntime.flush();
+    assert.deepEqual(buttons.map(node => node.enabled), [true, true, true]);
+    buttons[1].onClick();
+    assert.equal(intents.length, 1);
+    for (const invalidate of [
+        page => { page.covered = true; },
+        page => { page.appForeground = false; },
+        page => { page.presentationGeneration++; },
+        page => { page.mounted = false; },
+    ]) {
+        const blocked = owner('day', { books: [{ ...book, chapters: [running] }], detailKey: book.key,
+            managing: true, fontsReady: true, onIntent: intent => intents.push(intent) });
+        blocked.selectChapters([running]); blocked.selectionDock();
+        const click = records(blocked).filter(node => node.type === 'Button').at(-2).onClick;
+        invalidate(blocked); click();
+        assert.equal(intents.length, 1, 'existing input owner guards reject retired direct click');
+    }
+    f.aboutToDisappear();
+    console.log(JSON.stringify({ kind: 'download-chapter-selection-actions', samples }));
+}
 const completeChapter = { key: JSON.stringify([book.sourceId, book.bookId, 0]), sourceId: book.sourceId, bookId: book.bookId, index: 0,
   title: '第一章', chapterId: 'chapter:0', navigable: true, localComplete: true,
   stateLabel: '已下载', queueState: 'cached', cachedBytes: 100 };
