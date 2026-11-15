@@ -17,6 +17,8 @@ export struct LibrarySearchResults {
   onResult: (book: SearchBook, variants: SearchBook[], cover?: string, focusKey?: string) => void =
     (_book: SearchBook, _variants: SearchBook[], _cover?: string): void => {};
 
+  private inputCurrent(): boolean { return this.isCurrent() && this.isVisible(); }
+
   build() {
     SearchPage({
       externalHeaderHeight: this.presentation.headerBottom,
@@ -28,30 +30,30 @@ export struct LibrarySearchResults {
       publicationRevision: this.presentation.publicationRevision,
       reduceMotion: this.reduceMotion,
       expandedLayout: this.expandedLayout,
-      onBack: (): void => { if (this.isCurrent()) this.onBack(); },
+      onBack: (): void => { if (this.inputCurrent()) this.onBack(); },
       onSearch: (keyword: string, scopeSourceIds?: string[]): void => {
-        if (this.isCurrent()) this.onQuery(keyword, scopeSourceIds);
+        if (this.inputCurrent()) this.onQuery(keyword, scopeSourceIds);
       },
       onStop: (): void => {
-        if (!this.isCurrent()) return;
+        if (!this.inputCurrent()) return;
         this.presentation.host.stop();
         this.coordinator?.endSearch();
       },
-      onClearHistory: (): void => { if (this.isCurrent()) this.presentation.host.clearHistory(); },
-      onRetryHistory: (): void => { if (this.isCurrent()) this.presentation.host.retryHistory(); },
+      onClearHistory: (): void => { if (this.inputCurrent()) this.presentation.host.clearHistory(); },
+      onRetryHistory: (): void => { if (this.inputCurrent()) this.presentation.host.retryHistory(); },
       onSelectResult: (book: SearchBook, variants: SearchBook[], cover?: string, focusKey?: string): void => {
-        if (this.isCurrent()) this.onResult(book, variants, cover, focusKey);
+        if (this.inputCurrent()) this.onResult(book, variants, cover, focusKey);
       },
       onVisibleGroups: (groups: SearchBook[][]): void => {
         if (this.isCurrent() && this.coordinator !== undefined)
           this.presentation.prepareGroups(this.coordinator, groups, this.isVisible());
       },
       onRetry: (): void => {
-        if (!this.isCurrent()) return;
+        if (!this.inputCurrent()) return;
         this.coordinator?.beginSearch();
         this.presentation.host.retry();
       },
-      onManageSources: (): void => { if (this.isCurrent()) this.onManageSources(); },
+      onManageSources: (): void => { if (this.inputCurrent()) this.onManageSources(); },
     });
   }
 }

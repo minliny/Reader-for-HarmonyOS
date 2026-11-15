@@ -127,6 +127,7 @@ export struct MangaReadingSurface {
   @Prop @Watch('onReaderWindowOwnershipChanged') windowChromeOverlayActive: boolean = false;
   @Prop @Watch('onReaderInteractionBlockedChanged') interactionBlocked: boolean = false;
   isReaderIdentityCurrent: () => boolean = (): boolean => true;
+  inputCurrent: (() => boolean) | undefined = undefined;
   retainPreparationOnDisappear: () => boolean = (): boolean => false;
   private windowChromeOwned: boolean = false;
   onDetail: () => void = (): void => {};
@@ -196,6 +197,8 @@ export struct MangaReadingSurface {
   private viewportGeneration: number = 0;
   private presentationGeneration: number = 0;
   private pageTurnInputRevision: number = 0;
+  private viewportInputRevision: number = -1;
+  private boundaryInputRevision: number = -1;
   private visibleAnchor: MangaViewportAnchor | undefined;
   private confirmedPosition: MangaConfirmedPosition | undefined;
   private appliedLayoutGeneration: number = -1;
@@ -698,8 +701,10 @@ export struct MangaReadingSurface {
     this.viewportObservationGeneration++; this.viewportObservationPending = false;
     this.onViewportScroll();
   }
-  private onViewportTouch(): void {
+  private onViewportTouch(event?: TouchEvent): void {
+    if (event !== undefined && event.type !== TouchType.Down) return;
     if (!this.phonePanelBackgroundEnabled()) return;
+    this.viewportInputRevision = this.pageTurnInputRevision;
     this.seekingPage = undefined;
     this.pendingRestoreAnchor = undefined;
     this.presentationGeneration++;
@@ -1401,15 +1406,18 @@ export struct MangaReadingSurface {
   private boundaryEnabled(): boolean {
     return this.mounted && this.opened && !this.horizontal && this.zoom === 1 && !this.recovering && !this.exiting &&
       this.panel.length === 0 && this.panelPhase === 'closed' && !this.chapterEnd && this.windowChromeActive &&
-      !this.windowChromeOverlayActive && !this.interactionBlocked && !this.restoringAnchor && !this.loginRequiredForControls &&
+      this.readerPanelForeground() && !this.restoringAnchor && !this.loginRequiredForControls &&
       this.error.length === 0 && !this.boundaryBusy && !this.rollbackPainting && this.pendingChapterTransition === undefined && this.rollbackChapterController === undefined;
   }
   private phonePanelBackgroundEnabled(): boolean {
-    return !this.interactionBlocked && (this.widePanel() || (!this.windowChromeOverlayActive && !this.chapterEnd &&
+    return this.readerPanelForeground() && (this.widePanel() || (!this.windowChromeOverlayActive && !this.chapterEnd &&
       this.panel.length === 0 && this.panelPhase === 'closed'));
   }
+  private viewportGestureCurrent(): boolean {
+    return this.viewportInputRevision === this.pageTurnInputRevision && this.phonePanelBackgroundEnabled();
+  }
   private onBoundaryPull(direction: PullDirection, distance: number, armed: boolean): void {
-    if (this.interactionBlocked) return;
+    if (!this.readerPanelForeground() || this.boundaryInputRevision !== this.pageTurnInputRevision) return;
     if (armed && !this.boundaryHapticSent && !this.reduceMotion) {
       this.boundaryHapticSent = true;
       try { void vibrator.startVibration({ type: 'time', duration: 10 }, { usage: 'touch' }).catch((): void => {}); }
@@ -1418,8 +1426,9 @@ export struct MangaReadingSurface {
     this.boundaryDirection = direction; this.boundaryDistance = distance; this.boundaryArmed = armed;
   }
   private onBoundaryActivity(active: boolean): void {
-    if (active && this.interactionBlocked) return;
+    if (active && !this.readerPanelForeground()) return;
     if (active && !this.boundaryDragging) {
+      this.boundaryInputRevision = this.pageTurnInputRevision;
       this.boundaryHapticSent = false;
       this.flushViewportObservation();
       this.boundaryOrigin = this.confirmedPosition;
@@ -1451,7 +1460,8 @@ export struct MangaReadingSurface {
     return pixels;
   }
   private async turnBoundaryChapter(direction: number): Promise<string> {
-    if (this.interactionBlocked || this.boundaryBusy || this.rollbackChapterController !== undefined ||
+    if (!this.readerPanelForeground() || (this.boundaryDragging && this.boundaryInputRevision !== this.pageTurnInputRevision) ||
+      this.boundaryBusy || this.rollbackChapterController !== undefined ||
       this.runtime === undefined || this.chapterTransitions?.pending === true) return '';
     const target = this.adjacentChapter(direction), origin = this.controller;
     if (target === undefined || origin?.chapter === undefined || !this.mounted || this.exiting) return '';
@@ -1750,6 +1760,7 @@ export struct MangaReadingSurface {
     if (!this.mounted || this.readerPanelForeground()) return;
     this.panelFocusGeneration += 1;
     this.pageTurnInputRevision += 1;
+    this.pinchAnchor = undefined;
     if (this.panelPhase === 'dragging') {
       this.panelOffset = 0;
       this.panelPhase = 'open';
@@ -2013,7 +2024,7 @@ export struct MangaReadingSurface {
   private readerPanelForeground(): boolean {
     return this.mounted && !this.exiting && this.appForeground && this.windowChromeActive && !this.windowChromeOverlayActive &&
       !this.interactionBlocked &&
-      this.isReaderIdentityCurrent();
+      this.isReaderIdentityCurrent() && (this.inputCurrent?.() ?? true);
   }
 
   private panelTriggerFocusId(panel: string): string {
@@ -2324,7 +2335,7 @@ export struct MangaReadingSurface {
           this.viewportRangeObserved = true;
           this.layoutGeneration++; this.updateViewport();
         })
-        .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.onViewportTouch(); })
+        .onTouch((event: TouchEvent): void => this.onViewportTouch(event))
         .onScrollStop((): void => { this.flushViewportObservation(); this.saveVisible(); })
     }.height('100%').width('100%').scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
       .enableScrollInteraction(this.phonePanelBackgroundEnabled() && !this.boundaryBusy && !this.rollbackPainting)
@@ -2333,25 +2344,25 @@ export struct MangaReadingSurface {
       .onScrollStop((): void => { this.flushViewportObservation(); this.saveVisible(); })
       .parallelGesture(GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })
         .onActionStart((): void => {
-          if (!this.phonePanelBackgroundEnabled()) return;
+          if (!this.viewportGestureCurrent()) return;
           this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom;
         })
         .onActionUpdate((event: GestureEvent): void => {
-          if (this.phonePanelBackgroundEnabled()) this.changeZoom(this.pinchStartScale * event.scale);
+          if (this.viewportGestureCurrent()) this.changeZoom(this.pinchStartScale * event.scale);
         })
         .onActionEnd((): void => {
           this.pinchAnchor = undefined;
-          if (this.phonePanelBackgroundEnabled()) this.saveVisible();
+          if (this.viewportGestureCurrent()) this.saveVisible();
         })
         .onActionCancel((): void => { this.pinchAnchor = undefined; }),
         SwipeGesture({ direction: SwipeDirection.Horizontal }).onAction((event: GestureEvent): void => {
-          if (this.phonePanelBackgroundEnabled() && this.horizontal && this.zoom === 1) {
+          if (this.viewportGestureCurrent() && this.horizontal && this.zoom === 1) {
             if (this.horizontalPage + 1 === this.horizontalPageCount && Math.abs(event.angle) > 90) void this.openChapterEnd();
             else this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);
           }
         }),
         TapGesture({ count: 1, distanceThreshold: 6 }).onAction((): void => {
-          if (this.phonePanelBackgroundEnabled() && !this.boundaryDragging) this.toggleControls();
+          if (this.viewportGestureCurrent() && !this.boundaryDragging) this.toggleControls();
         })));
   }
   @Builder

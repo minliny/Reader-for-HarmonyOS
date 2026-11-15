@@ -128,6 +128,9 @@ export struct ReaderContinuousReadingStage {
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
+  @Prop @Watch('onInputRevisionChanged') inputRevision: number = 0;
+  inputCurrent: ((revision: number) => boolean) | undefined = undefined;
+  onInputLost: (revision: number) => void = (_revision: number): void => {};
 
   onVisibleRangeChanged: (startFragment: number, endFragment: number, startProgress: number) => void =
     (_startFragment: number, _endFragment: number, _startProgress: number): void => {};
@@ -351,6 +354,7 @@ export struct ReaderContinuousReadingStage {
   }
 
   private handleTouch(event: TouchEvent): void {
+    if (!this.acceptCurrentInput()) return;
     if (!this.interactionEnabled) {
       this.resetTouch();
       return;
@@ -430,7 +434,7 @@ export struct ReaderContinuousReadingStage {
   }
 
   private handleStationaryTap(event: GestureEvent): void {
-    if (!this.interactionEnabled || !this.completedStationaryTouch || event.fingerList.length === 0) {
+    if (!this.acceptCurrentInput() || !this.interactionEnabled || !this.completedStationaryTouch || event.fingerList.length === 0) {
       return;
     }
     this.completedStationaryTouch = false;
@@ -453,9 +457,26 @@ export struct ReaderContinuousReadingStage {
   }
 
   private onInteractionEnabledChanged(): void {
+    if (!this.acceptCurrentInput()) return;
     if (this.interactionEnabled) return;
     this.completedStationaryTouch = false;
     this.resetTouch();
+  }
+
+  private acceptCurrentInput(): boolean {
+    if (this.inputCurrent?.(this.inputRevision) !== false) return true;
+    this.onInputLost(this.inputRevision);
+    this.onInputRevisionChanged();
+    return false;
+  }
+
+  private onInputRevisionChanged(): void {
+    this.completedStationaryTouch = false;
+    // The parent has already retired the old pointer. A delayed child receipt
+    // must not release a newer pointer with the same native id.
+    this.touchActive = false;
+    this.touchPointerId = -1;
+    this.touchMoved = false;
   }
 
   private resetTouch(): void {

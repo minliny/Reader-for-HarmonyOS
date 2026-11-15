@@ -32,6 +32,8 @@ class ReaderDirectoryTraceFrame extends FrameCallback {
  * is not ready, the supplied chapter list stays visible for this opening. */
 @Component
 export struct ReaderDirectoryNavigationSurface {
+  inputCurrent: (() => boolean) | undefined = undefined;
+  chapterInputCurrent: ((chapter: LocalReadingTocEntry) => boolean) | undefined = undefined;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
   @Prop @Watch('onIdentityChanged') sourceId: string = 'local';
@@ -641,6 +643,9 @@ export struct ReaderDirectoryNavigationSurface {
         } else {
           Stack({ alignContent: this.mangaDisplay ? Alignment.TopStart : Alignment.Center }) {
             ReaderDirectoryNavigationList({
+              inputCurrent: (): boolean => this.mounted && this.interactionEnabled &&
+                !this.awaitingRulesRefresh && (this.inputCurrent?.() ?? true),
+              chapterInputCurrent: this.chapterInputCurrent,
               navigationPortFactory: this.navigationPortFactory,
               view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
               mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,

@@ -164,7 +164,7 @@ for (const [state, label, enabled] of [
 // Execute the actual control wrappers. Motion wrappers and the native List stay owned by the control.
 {
   const calls = [];
-  const owner = createReaderBuilderProbe(controlSource, ['directoryToolbar', 'chapterRow', 'flatChapterIsCurrent', 'currentContent', 'currentInputEnabled', 'bookmarkWriteEnabled'],
+  const owner = createReaderBuilderProbe(controlSource, ['directoryToolbar', 'chapterRow', 'flatChapterIsCurrent', 'chapterIsCurrent', 'directoryInputCurrent', 'currentContent', 'currentInputEnabled', 'bookmarkWriteEnabled'],
     { sameReaderDirectoryData, ReaderDirectoryToolbar: Child, ReaderDirectoryChapterRow: Child, Edge: { Top: 'top', Bottom: 'bottom' } }).owner;
   Object.assign(owner, { mounted: true, layoutPresentation: 1, interactionEnabled: true, preparedMinimumRequired: false,
     navigationActive: false, entries: [entry], bookmarkRecovery: { bookmarkWriteEnabled: true }, appThemeScheme: 'day', draft: '已有搜索', ascending: true, tab: 'directory', availableWidth: 338,

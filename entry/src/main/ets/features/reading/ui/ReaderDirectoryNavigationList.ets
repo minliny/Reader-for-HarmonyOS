@@ -268,6 +268,8 @@ export struct ReaderDirectoryNavigationList {
   @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
+  inputCurrent: (() => boolean) | undefined = undefined;
+  chapterInputCurrent: ((chapter: LocalReadingTocEntry) => boolean) | undefined = undefined;
   @Prop @Watch('onChapterEntriesChanged') chapterEntries: LocalReadingTocEntry[] = [];
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterDownloadActionsEnabled: boolean = false;
@@ -601,7 +603,8 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private bookmarkActionEnabled(chapter: LocalReadingTocEntry | undefined): boolean {
-    return this.interactionEnabled && this.bookmarkActionsEnabled && chapter !== undefined &&
+    return this.directoryInputCurrent() && this.bookmarkActionsEnabled && chapter !== undefined &&
+      (this.chapterInputCurrent?.(chapter) ?? true) &&
       chapter.navigable !== false && chapter.bookmarks !== undefined &&
       (chapter.bookmarks.length > 0 || this.chapterStartBookmarkCreationEnabled);
   }
@@ -614,14 +617,18 @@ export struct ReaderDirectoryNavigationList {
       this.onCreateChapterStartBookmark(state.createRequest);
   }
 
+  private directoryInputCurrent(): boolean {
+    return this.mounted && this.interactionEnabled && (this.inputCurrent?.() ?? true);
+  }
+
   private toggleNode(node: ReaderDirectoryNavigationNode): void {
-    if (this.interactionEnabled === false) return;
+    if (!this.directoryInputCurrent()) return;
     this.captureViewportAnchor();
     this.onToggleNode(node);
   }
 
   private canDownloadTarget(node: ReaderDirectoryNavigationNode): boolean {
-    if (!this.interactionEnabled || !this.chapterDownloadEnabled || node.kind !== 'target' || node.chapterIndex === undefined) return false;
+    if (!this.directoryInputCurrent() || !this.chapterDownloadEnabled || node.kind !== 'target' || node.chapterIndex === undefined) return false;
     if (this.mangaDisplay) {
       const revision = this.rowPresentationRevision;
       const current = this.dataSource.loadedItemById(node.nodeId)?.node;
@@ -633,7 +640,7 @@ export struct ReaderDirectoryNavigationList {
       if (index === undefined || this.dataSource.displayIndex(index) === undefined) return false;
     }
     const chapter = this.chapterByIndex.get(node.chapterIndex);
-    return chapter !== undefined && chapter.navigable !== false &&
+    return chapter !== undefined && (this.chapterInputCurrent?.(chapter) ?? true) && chapter.navigable !== false &&
       (this.chapterDownloadActionsEnabled && chapter.downloadState !== 'unknown' ||
         chapter.downloadState === 'missing' || chapter.downloadState === 'cached' ||
         chapter.downloadState === 'failed' || chapter.downloadState === 'cancelled');
@@ -683,7 +690,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private selectTarget(node: ReaderDirectoryNavigationNode): void {
-    if (this.interactionEnabled === false || node.kind !== 'target' || node.chapterIndex === undefined || this.gateway === undefined) {
+    if (!this.directoryInputCurrent() || node.kind !== 'target' || node.chapterIndex === undefined || this.gateway === undefined) {
       return;
     }
     const generation = this.generation;
@@ -691,11 +698,11 @@ export struct ReaderDirectoryNavigationList {
     const viewId = this.view.viewId, bookId = this.bookId;
     void this.gateway.resolveTarget(bookId, viewId, node.nodeId,
       (): boolean => this.mounted && generation === this.generation && selection === this.selectionGeneration &&
-        this.interactionEnabled !== false && viewId === this.view.viewId && bookId === this.bookId &&
+        this.directoryInputCurrent() && viewId === this.view.viewId && bookId === this.bookId &&
         !(this.mangaQuickDisplay && !this.mangaSearchActive &&
           this.dataSource.displayIndex(this.dataSource.loadedItemById(node.nodeId)?.index ?? -1) === undefined))
       .then((target): void => {
-        if (!this.mounted || this.interactionEnabled === false || generation !== this.generation || selection !== this.selectionGeneration ||
+        if (!this.directoryInputCurrent() || generation !== this.generation || selection !== this.selectionGeneration ||
           viewId !== this.view.viewId || bookId !== this.bookId) {
           return;
         }
@@ -705,7 +712,7 @@ export struct ReaderDirectoryNavigationList {
         }
         this.onSelectTarget(target.chapterIndex, target.chapterOffsetScalar, target.positionScope, target.directoryTargetProof);
       }).catch((_error: Error): void => {
-        if (this.mounted && this.interactionEnabled !== false && generation === this.generation &&
+        if (this.directoryInputCurrent() && generation === this.generation &&
           selection === this.selectionGeneration && viewId === this.view.viewId && bookId === this.bookId)
           this.onInvalidated();
       });

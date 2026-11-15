@@ -1820,6 +1820,11 @@ export struct ReadingExperience {
       // The normal paper and controls own loading and recoverable errors too.
       if (readerRenderStageKind(this.readerSettingsSnapshot.navigationMode, this.hasContinuousRenderContent()) === 'continuous') {
         ReaderContinuousReadingStage({
+          inputRevision: this.pageTurnInputRevision,
+          inputCurrent: (revision: number): boolean => revision === this.pageTurnInputRevision && this.isReaderPageInteractionEnabled(),
+          onInputLost: (revision: number): void => {
+            if (revision === this.pageTurnInputRevision) this.retirePagePointer();
+          },
           chapterIdentity: this.continuousRenderChapterIdentity,
           chapterTitle: this.continuousRenderChapterTitle,
           geometryKey: this.continuousRenderGeometryKey,

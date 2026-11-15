@@ -50,7 +50,7 @@ const { ReaderLibrarySearchModel } = selectedProductionClasses(modelFile, ['Read
 const { READER_LIBRARY_SEARCH_BACK_FOCUS_ID } = selectedProductionValues(modelFile, ['READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
 let restoredAppChrome = 0;
 const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'SearchPage',
-  ['aboutToAppear', 'aboutToDisappear', 'acceptPublication', 'bindSurface', 'publishSurface', 'ownsSurface', 'hasSearchSession', 'canSubmit',
+  ['aboutToAppear', 'aboutToDisappear', 'acceptPublication', 'bindSurface', 'publishSurface', 'ownsSurface', 'surfaceInputCurrent', 'pageInputCurrent', 'hasSearchSession', 'canSubmit',
     'ownsPageQuery', 'ownsList', 'searchFontScale', 'submitSearch', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'finishScrollRestore', 'restoreMeasuredAnchor', 'resultNativeIndex', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex',
     'retirePanelScope', 'publishSurfacePanelInput', 'cancelSearchFocusRestore', 'pendingResultFocus', 'resetFilteredResults', 'releaseNativePanelChrome',
     'filterPresentationIdentity', 'taskStatusIdentity', 'acceptsFilter', 'acceptsTaskStatus', 'dismissSearchFilters', 'dismissTaskStatus', 'searchPanelOwnsInput',
@@ -63,6 +63,7 @@ const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/sea
     SEARCH_LOCAL_SCOPE: '本地', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
     SearchLayoutFrame: actualReaderPostLayoutFrame(),
     ScrollAlign: { START: 0 }, Edge: { Top: 'top' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' }, registerReaderFonts() {} });
+Page.prototype.isPresentationVisible = () => true;
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
 const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });

@@ -125,7 +125,7 @@ function assertRowActors() {
 }
 async function assertTreeActors() {
   const sdk = boundedSurfaceSdk();
-  const owner = sdk.consumer(ui('ReaderDirectoryNavigationList'), ['row', 'bookmarkActionEnabled', 'marker', 'selectTarget'], { ...marker });
+  const owner = sdk.consumer(ui('ReaderDirectoryNavigationList'), ['row', 'bookmarkActionEnabled', 'marker', 'selectTarget', 'directoryInputCurrent'], { ...marker });
   const calls = [], entry = chapter([mark]);
   Object.assign(owner, { appThemeScheme: 'day', rowHeight: 44, interactionEnabled: true, bookmarkActionsEnabled: false,
     chapterStartBookmarkCreationEnabled: true, chapterDownloadEnabled: false, mangaDisplay: false, mangaQuickDisplay: false,
@@ -145,7 +145,7 @@ async function assertTreeActors() {
 function assertParentLivePorts() {
   const source = contentSource, sdk = boundedSurfaceSdk();
   sdk.hooks.childSources.ReaderDirectoryChapterRow = ui('ReaderDirectoryChapterRow');
-  const owner = sdk.consumer(source, ['chapterRow', 'bookmarkWriteEnabled', 'flatChapterIsCurrent', 'currentContent', 'currentInputEnabled'], { ReaderDirectoryChapterRow: ChildPort, sameReaderDirectoryData });
+  const owner = sdk.consumer(source, ['chapterRow', 'bookmarkWriteEnabled', 'flatChapterIsCurrent', 'chapterIsCurrent', 'directoryInputCurrent', 'currentContent', 'currentInputEnabled'], { ReaderDirectoryChapterRow: ChildPort, sameReaderDirectoryData });
   const calls = [];
   Object.assign(owner, { mounted: true, layoutPresentation: 1, interactionEnabled: true, preparedMinimumRequired: false,
     tab: 'directory', navigationActive: false, entries: [chapter([mark])], bookmarkRecovery: { ...recovery, bookmarkWriteEnabled: true }, chapterStartBookmarkCreationEnabled: true,

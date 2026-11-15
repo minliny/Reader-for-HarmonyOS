@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
+import { selectedProductionMethods, selectedProductionValues, selectedProductionClasses } from './lib/selected-production-methods.mjs';
 import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
@@ -31,6 +31,10 @@ const cases = selectContractCases({
   'mode-async-admission': 'Both actual mode consumers recheck admission after prepare/load and retain dispatched ACKs.',
   'theme-async-admission': 'Actual Settings theme callback rechecks its captured input after barrier/load and preserves an accepted save.',
   'reader-live-input': 'Actual Root/Scene/Shell/reader/Panel and raw callbacks consume live input before delayed Props.',
+  'manga-live-input': 'Actual Root/Shell/Manga settings Button and gesture/boundary first admission.',
+  'continuous-live-input': 'Actual continuous Stage retires old parent revisions before native scrollPage.',
+  'semantic-directory-input': 'Actual semantic marker checks original Content/Surface/List input and canonical chapter.',
+  'search-live-input': 'Actual search history native Button and Host queue consume current visibility before first write.',
   'directory-flat-input': 'Actual flat chapter and bookmark callbacks reject retired input, content and canonical row data.',
 });
 function deferred() {
@@ -228,7 +232,7 @@ function readerRootInput(owner) {
   const scene = { ports: host.retainedReaderPorts() };
   const inputCurrent = componentCallback('app/composition/RetainedReaderScene.ets', 'ReaderShell', 'inputCurrent', scene, {});
   const Shell = selectedProductionMethods(new URL('features/reading/ui/ReaderShell.ets', root), 'ReaderShell',
-    ['readingContentIsForeground', 'readingIdentityKey']);
+    ['readingContentIsForeground', 'readingIdentityKey', 'mangaIdentityKey', 'isMangaSurfaceCurrent', 'acceptsMangaInput']);
   const shell = Object.assign(new Shell(), { sourceId: 'source', bookId: 'book', readingReadyGeneration: 7,
     inputAllowed: true, visible: true, route: 'reading', sourceSwitchPresented: false, sourceSwitchCovered: false, inputCurrent });
   const identity = reading.readerPresentationIdentity();
@@ -390,7 +394,7 @@ async function readerLiveInput() {
 function directoryFlatInput() {
   const ui = name => read(`features/reading/ui/${name}.ets`);
   class Child { constructor(owner, params) { Object.assign(this, { owner, params }); } }
-  const methods = ['chapterRow', 'flatChapterIsCurrent', 'flatBookmarkIsCurrent', 'bookmarkWriteEnabled',
+  const methods = ['chapterRow', 'flatChapterIsCurrent', 'chapterIsCurrent', 'directoryInputCurrent', 'flatBookmarkIsCurrent', 'bookmarkWriteEnabled',
     'currentContent', 'currentInputEnabled', 'flatList'];
   let chapterScenarios = 0;
   for (const bookmarked of [true, false]) {
@@ -457,9 +461,227 @@ function directoryFlatInput() {
   return { chapterRetirementScenarios: chapterScenarios, bookmarkRetirementScenarios: 3 };
 }
 
+async function mangaLiveInput() {
+  const path = 'features/manga/ui/MangaReadingSurface.ets';
+  const source = read(path);
+  const writes = [], brightness = [], pendingSave = deferred();
+  const sdk = boundedSurfaceSdk();
+  const methods = ['settingsPanel', 'sheetChoice', 'sectionTitle', 'preferencePanelInputCurrent', 'panelInputCurrent',
+    'readerPanelForeground', 'setBackground', 'setPageNumbers', 'setBrightness', 'displayedBrightnessPercent',
+    'phonePanelBackgroundEnabled', 'viewportGestureCurrent', 'onViewportTouch', 'onPanelForegroundChanged',
+    'boundaryEnabled', 'onBoundaryPull', 'onBoundaryActivity', 'turnBoundaryChapter'];
+  const owner = sdk.consumer(source, methods, { readerBrightnessWindowValue: value => value / 100,
+    ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }), brightness: () => ({ request: async (_owner, value) => brightness.push(value) }) } });
+  Object.assign(owner, { mounted: true, exiting: false, appForeground: true, windowChromeActive: true,
+    windowChromeOverlayActive: false, interactionBlocked: false, isReaderIdentityCurrent: () => true,
+    actionPanelPresentationGeneration: 1, panel: 'settings', panelPhase: 'open', panelFocusGeneration: 0,
+    pageTurnInputRevision: 0, viewportInputRevision: -1, boundaryInputRevision: -1, panelGeneration: 1,
+    brightnessOwner: 1, brightnessGeneration: 0, brightnessPercent: 78, backgroundPreference: 'paper', showPageNumbers: true,
+    choiceIcon: kind => kind, isSheetChoiceSelected: () => false, mutedColor: () => '#333333',
+    inkColor: () => '#111111', accentColor: () => '#008800', greenColor: () => '#008800', softSurfaceColor: () => '#ffffff', lineColor: () => '#cccccc',
+    settingsGateway: { updateMangaPreferences: value => { writes.push(value); return pendingSave.promise; } },
+    cancelPanelOpening() {}, widePanel: () => true, opened: true, horizontal: false, zoom: 1,
+    recovering: false, chapterEnd: false, restoringAnchor: false, loginRequiredForControls: false,
+    error: '', boundaryBusy: false, rollbackPainting: false, presentationGeneration: 0, layoutGeneration: 0,
+    flushViewportObservation() {}, confirmedPosition: { anchor: {} }, reduceMotion: true });
+  const { host, reading, shell } = readerRootInput(owner);
+  shell.contentKind = 'manga'; shell.mangaChapterRequestGeneration = 11;
+  owner.inputCurrent = componentCallback('features/reading/ui/ReaderShell.ets', 'MangaReadingSurface', 'inputCurrent', shell,
+    { _identity: shell.mangaIdentityKey() });
+  owner.settingsPanel(1);
+  const nodes = sdk.nodes(owner);
+  const ink = nodes.find(node => node.type === 'Button' && node.accessibilityText.startsWith('深墨'));
+  const numbers = nodes.find(node => node.type === 'Button' && node.accessibilityText.startsWith('常驻页码'));
+  const slider = nodes.find(node => node.type === 'Slider');
+  ink.onClick(); assert.deepEqual(writes, [{ mangaBackground: 'ink' }]);
+  for (const boundary of ['foreground', 'arkweb', 'source', 'manga', 'identity', 'runtime', 'retired', 'manga-opening']) {
+    host.searchAppForeground = true; host.arkWebCapturesInput = false; host.switchPresented = false;
+    host.mangaSourceSwitch.selectionVisible = false; host.shelfReceiptRetired = false;
+    const runtime = host.mountedRuntimeOwner; reading.readyGeneration = 7; shell.mangaChapterRequestGeneration = 11;
+    if (boundary === 'foreground') host.searchAppForeground = false;
+    if (boundary === 'arkweb') host.arkWebCapturesInput = true;
+    if (boundary === 'source') host.switchPresented = true;
+    if (boundary === 'manga') host.mangaSourceSwitch.selectionVisible = true;
+    if (boundary === 'identity') reading.readyGeneration = 8;
+    if (boundary === 'runtime') host.mountedRuntimeOwner = {};
+    if (boundary === 'retired') host.shelfReceiptRetired = true;
+    if (boundary === 'manga-opening') shell.mangaChapterRequestGeneration = 12;
+    ink.onClick(); numbers.onClick(); slider.onChange(90);
+    assert.equal(writes.length, 1, `${boundary} first preference admission`);
+    assert.equal(brightness.length, 0, `${boundary} first brightness admission`);
+    owner.panel = ''; owner.panelPhase = 'closed';
+    assert.equal(owner.boundaryEnabled(), false);
+    assert.equal(await owner.turnBoundaryChapter(1), '');
+    owner.panel = 'settings'; owner.panelPhase = 'open';
+    host.mountedRuntimeOwner = runtime;
+  }
+  host.shelfReceiptRetired = false; shell.mangaChapterRequestGeneration = 11; reading.readyGeneration = 7;
+  owner.onViewportTouch(); assert.equal(owner.viewportGestureCurrent(), true);
+  owner.appForeground = false; owner.onPanelForegroundChanged(); owner.appForeground = true;
+  assert.equal(owner.viewportGestureCurrent(), false, 'old gesture stays retired after foreground return');
+  owner.onViewportTouch(); assert.equal(owner.viewportGestureCurrent(), true);
+  owner.panel = ''; owner.panelPhase = 'closed'; owner.boundaryDragging = false;
+  owner.onBoundaryActivity(true); assert.equal(owner.boundaryInputRevision, owner.pageTurnInputRevision);
+  owner.appForeground = false; owner.onPanelForegroundChanged(); owner.appForeground = true;
+  assert.equal(await owner.turnBoundaryChapter(1), '', 'old boundary pull cannot first enter a chapter transfer');
+  pendingSave.resolve(); await Promise.resolve();
+  assert.equal(writes.length, 1, 'accepted save keeps its original gateway receipt');
+  return { liveBoundaries: 8, retiredGestureRejected: true, acceptedSaveRetained: true };
+}
+
+function continuousLiveInput() {
+  const path = 'features/reading/ui/LocalReadingExperience.ets';
+  const Owner = selectedProductionMethods(new URL(path, root), 'ReadingExperience',
+    ['readerInputIsCurrent', 'isReaderPageInteractionEnabled', 'requestPageTurn', 'drainRapidPageTurn',
+      'performPageTurn', 'performContinuousPageTurn', 'acquirePagePointer', 'releasePagePointer', 'retirePagePointer', 'pageTurnInputPhase'],
+    { ...rapid, readerControlHostInputEnabled, readerPageTransitionUsesPreparedPages, setTimeout: () => 1 });
+  const TouchType = { Down: 0, Up: 1, Move: 2, Cancel: 3 };
+  let clock = 1000;
+  const Stage = selectedProductionMethods(new URL('features/reading/ui/ReaderContinuousReadingStage.ets', root), 'ReaderContinuousReadingStage',
+    ['handleTouch', 'handleStationaryTap', 'resetTouch', 'acceptCurrentInput', 'onInputRevisionChanged', 'onInteractionEnabledChanged', 'reportManualInteraction'],
+    { TouchType, ReaderPageInputClock, readerMotionNowMs: () => clock, CONTINUOUS_TAP_SLOP: 12, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
+  for (const boundary of ['current', 'foreground', 'foreground-return', 'root-cover']) {
+    const scrolls = [];
+    const owner = Object.assign(new Owner(), { mounted: true, exitRequested: false, appForeground: true,
+      windowChromeActive: true, interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
+      controlVisible: () => false, pageTurnInputRevision: 0, activePagePointerId: -1, pagePointerEpoch: 0, lifecycleToken: 1,
+      pendingPointerSegmentReserved: false, pageTurnPreparationQueue: [], pageTurnGestureState: { phase: 'idle' }, pageTurnTransactionSerial: 0,
+      pageTurnSettlementActive: false, commitInFlight: false, phase: 'ready', chapter: { chapterIndex: 0 },
+      readerSettingsSnapshot: { navigationMode: 'continuous' }, rapidPageTurnState: rapid.createReaderRapidPageTurnState(),
+      progressProducers: { continuousInFlight: false }, continuousFragments: [{}], canTurnPage: () => true,
+      isContinuousScrollerAtStart: () => false, isContinuousScrollerAtEnd: () => false,
+      continuousScroller: { scrollPage: params => scrolls.push(params) }, continuousProgrammaticScrollIntent() {} });
+    const { host } = readerRootInput(owner);
+    const stage = Object.assign(new Stage(), { interactionEnabled: true, inputRevision: 0, touchActive: false,
+      touchPointerId: -1, completedStationaryTouch: false, layout: { viewportWidth: 390 },
+      inputCurrent: componentCallback(path, 'ReaderContinuousReadingStage', 'inputCurrent', owner, {}),
+      onInputLost: componentCallback(path, 'ReaderContinuousReadingStage', 'onInputLost', owner, {}),
+      onPointerStart: id => owner.acquirePagePointer(id), onPointerEnd: id => owner.releasePagePointer(id),
+      onTurn: direction => owner.requestPageTurn(direction), onOpenControl() {}, onManualInteraction() {}, cancelInitialScrollForInput() {},
+      onBoundaryDrag: () => assert.fail('stationary tap has no boundary drag'), isScrollerAtEnd: () => false, isScrollerAtStart: () => false });
+    const touch = type => ({ type, timestamp: (clock += 20) * 1e6,
+      changedTouches: [{ id: 7, x: 300, y: 200 }], touches: [{ id: 7, x: 300, y: 200 }] });
+    stage.handleTouch(touch(TouchType.Down));
+    if (boundary.startsWith('foreground')) {
+      owner.appForeground = false; host.searchAppForeground = false; owner.retirePagePointer();
+      assert.equal(owner.pageTurnInputRevision, 1);
+      if (boundary === 'foreground-return') { owner.appForeground = true; host.searchAppForeground = true; }
+    }
+    if (boundary === 'root-cover') host.arkWebCapturesInput = true;
+    stage.handleTouch(touch(TouchType.Up));
+    stage.handleStationaryTap({ fingerList: [{ localX: 300 }] });
+    assert.equal(scrolls.length, boundary === 'current' ? 1 : 0, boundary);
+    if (boundary === 'foreground-return') {
+      stage.inputRevision = owner.pageTurnInputRevision; stage.onInputRevisionChanged();
+      stage.handleTouch(touch(TouchType.Down)); stage.handleTouch(touch(TouchType.Up));
+      stage.handleStationaryTap({ fingerList: [{ localX: 300 }] });
+      assert.equal(scrolls.length, 1, 'fresh current revision permits a fresh pointer');
+      owner.activePagePointerId = 7; stage.touchPointerId = 7;
+      stage.onInputRevisionChanged(); assert.equal(owner.activePagePointerId, 7, 'old child cannot release a newer same-id parent pointer');
+    }
+  }
+  return { boundaries: 4, currentNativeScroll: 1, oldPointerNativeScroll: 0, freshPointerNativeScroll: 1 };
+}
+
+function semanticDirectoryInput() {
+  const contentPath = 'features/reading/ui/ReaderControlDirectoryContent.ets';
+  const Content = selectedProductionMethods(new URL(contentPath, root), 'ReaderControlDirectoryContent',
+    ['currentContent', 'currentInputEnabled', 'directoryInputCurrent', 'chapterIsCurrent', 'bookmarkWriteEnabled'], { sameReaderDirectoryData });
+  const chapter = { index: 7, title: '第八章', navigable: true, downloadState: 'missing',
+    bookmarks: [{ time: 123, chapterIndex: 7, chapterOffset: 0, chapterTitle: '第八章', content: '当前摘录' }] };
+  const calls = [];
+  const content = Object.assign(new Content(), { mounted: true, layoutPresentation: 1, interactionEnabled: true,
+    preparedMinimumRequired: false, inputCurrent: () => true, tab: 'directory', entries: [chapter], bookmarkRecovery: { bookmarkWriteEnabled: true },
+    onDeleteBookmarks: times => calls.push(times) });
+  const inputCurrent = componentCallback(contentPath, 'ReaderDirectoryNavigationSurface', 'inputCurrent', content, { presentation: 1 });
+  const chapterInputCurrent = componentCallback(contentPath, 'ReaderDirectoryNavigationSurface', 'chapterInputCurrent', content, { presentation: 1 });
+  const onDeleteBookmarks = componentCallback(contentPath, 'ReaderDirectoryNavigationSurface', 'onDeleteBookmarks', content, { presentation: 1 });
+  const surface = { mounted: true, interactionEnabled: true, awaitingRulesRefresh: false, bookmarkActionsEnabled: true, inputCurrent, chapterInputCurrent, onDeleteBookmarks };
+  const listInput = componentCallback('features/reading/ui/ReaderDirectoryNavigationSurface.ets', 'ReaderDirectoryNavigationList', 'inputCurrent', surface, {});
+  const listDelete = componentCallback('features/reading/ui/ReaderDirectoryNavigationSurface.ets', 'ReaderDirectoryNavigationList', 'onDeleteBookmarks', surface, {});
+  const controls = foundationControls();
+  const row = createReaderBuilderProbe(read('features/reading/ui/ReaderDirectoryNavigationList.ets'),
+    ['row', 'currentPaintNode', 'displayLevel', 'textRowAccessibility', 'marker', 'bookmarkActionEnabled', 'directoryInputCurrent'],
+    { ...controls.dependencies, readerDirectoryBookmarkMarkerState }, controls.hooks).owner;
+  const node = { nodeId: 'chapter:7', chapterIndex: 7, title: chapter.title, kind: 'target', depth: 0, hasChildren: false };
+  Object.assign(row, { mounted: true, interactionEnabled: true, inputCurrent: listInput, chapterInputCurrent,
+    bookmarkActionsEnabled: true, chapterStartBookmarkCreationEnabled: true, chapterDownloadEnabled: false,
+    onDeleteBookmarks: listDelete, rowHeight: 44, rowPresentationRevision: 0, appThemeScheme: 'day', view: { viewId: 'view' },
+    dataSource: { currentView: () => row.view, loadedItemById: () => ({ node, index: 7 }) },
+    chapterByIndex: new Map([[7, chapter]]), isCurrentNode: () => false });
+  row.row({ node, index: 7 });
+  const marker = controls.nodes(row).find(item => item.type === 'Button' && item.accessibilityText === '删除本章已有书签');
+  marker.onClick(); assert.deepEqual(calls, [[123]]);
+  for (const boundary of ['input', 'presentation', 'content-mount', 'surface-mount', 'list-mount', 'canonical']) {
+    Object.assign(content, { interactionEnabled: true, layoutPresentation: 1, mounted: true, entries: [chapter] });
+    surface.mounted = true; row.mounted = true;
+    if (boundary === 'input') content.interactionEnabled = false;
+    if (boundary === 'presentation') content.layoutPresentation = 2;
+    if (boundary === 'content-mount') content.mounted = false;
+    if (boundary === 'surface-mount') surface.mounted = false;
+    if (boundary === 'list-mount') row.mounted = false;
+    if (boundary === 'canonical') content.entries = [{ ...chapter, bookmarks: [] }];
+    marker.onClick(); assert.equal(calls.length, 1, boundary);
+  }
+  return { actualNativeMarkerWrites: 1, retiredAndCanonicalBoundaries: 6 };
+}
+
+async function searchLiveInput() {
+  const { ReaderLibrarySearchModel } = selectedProductionClasses(new URL('features/search/presentation/ReaderLibrarySearchModel.ets', root), ['ReaderLibrarySearchModel']);
+  const Page = selectedProductionMethods(new URL('features/search/ui/SearchPage.ets', root), 'SearchPage',
+    ['bindSurface', 'ownsSurface', 'surfaceInputCurrent', 'ownsPageQuery', 'pageInputCurrent', 'acceptsFilter', 'acceptsTaskStatus'], { nextSearchSurfaceOwner: 0 });
+  const Surface = selectedProductionMethods(new URL('features/search/ui/ReaderLibrarySearchSurface.ets', root), 'ReaderLibrarySearchSurface',
+    ['clearHistoryAction', 'historyInteractive', 'inputInteractive']);
+  const Results = selectedProductionMethods(new URL('features/search/ui/LibrarySearchResults.ets', root), 'LibrarySearchResults', ['inputCurrent']);
+  const Host = selectedProductionMethods(new URL('features/search/application/SearchHost.ets', root), 'SearchHost', ['clearHistory']);
+  const Orchestrator = selectedProductionMethods(new URL('features/search/application/SearchOrchestrator.ets', root), 'SearchOrchestrator',
+    ['clearHistory', 'loadEntryHistory', 'enqueueHistoryWrite', 'isCurrentSession'], { hilog: { error() {} }, DOMAIN: 0 });
+  const result = [];
+  for (const boundary of ['current', 'foreground', 'arkweb', 'retired', 'accepted']) {
+    const state = { visible: true, current: true, writes: 0 };
+    const save = deferred();
+    const orchestrator = Object.assign(new Orchestrator(), { sessionOpen: true, session: 1, historyRevision: 0,
+      historyClearing: false, historyStatus: 'ready', entryHistory: ['query'], presentEntryHistory() {},
+      gateway: { clearHistory: async () => { state.writes++; await save.promise; }, loadHistory: async () => ({ keywords: [] }) } });
+    const host = Object.assign(new Host(), { getOrchestrator: () => orchestrator });
+    const results = Object.assign(new Results(), { isCurrent: () => state.current, isVisible: () => state.visible, presentation: { host } });
+    const model = new ReaderLibrarySearchModel();
+    const page = Object.assign(new Page(), { pageMounted: true, pageEpoch: 1, queryAtMount: 1,
+      viewState: { pageRevision: 1, revision: 1 }, isPresentationCurrent: results.isCurrent,
+      isPresentationVisible: results.isVisible, surfaceModel: model, publishSurface() {}, filtersExpanded: true, taskStatusExpanded: true,
+      filterPresentationIdentity: () => 'filter', taskStatusIdentity: () => 'task',
+      onClearHistory: componentCallback('features/search/ui/LibrarySearchResults.ets', 'SearchPage', 'onClearHistory', results, {}) });
+    page.bindSurface();
+    const surface = Object.assign(new Surface(), { mounted: true, mode: 'input', model,
+      surfaceProgress: () => 1, historyProgress: () => 1, resultsProgress: () => 1 });
+    const controls = foundationControls();
+    const panel = createReaderBuilderProbe(read('features/search/ui/ReaderSearchHistoryPanel.ets'), ['build', 'actionsEnabled'],
+      controls.dependencies, controls.hooks).owner;
+    Object.assign(panel, { appThemeScheme: 'day', status: 'ready', history: ['query'], geometry: { headingVisible: true, headingHeight: 44 },
+      projectedRows: () => [], onClear: surface.clearHistoryAction(model.currentOwner()) });
+    panel.initialRender();
+    const clear = controls.nodes(panel).find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
+    if (boundary === 'foreground' || boundary === 'arkweb') state.visible = false;
+    if (boundary === 'retired') state.current = false;
+    clear.onClick();
+    for (let tick = 0; tick < 4; tick++) await Promise.resolve();
+    assert.equal(state.writes, ['current', 'accepted'].includes(boundary) ? 1 : 0, boundary);
+    if (boundary === 'accepted') { state.visible = false; state.current = false; }
+    if (!state.visible || !state.current) {
+      assert.equal(page.acceptsFilter('filter'), false); assert.equal(page.acceptsTaskStatus('task'), false);
+    }
+    save.resolve();
+    for (let tick = 0; tick < 12; tick++) await Promise.resolve();
+    assert.equal(orchestrator.historyClearing, false, 'accepted history queue reaches its original terminal receipt');
+    result.push({ boundary, writes: state.writes });
+  }
+  return { samples: result, acceptedHistoryReceiptRetained: true };
+}
+
 for (const id of cases) {
   const result = await ({ 'shelf-filter-admission': shelfFilters, 'mode-async-admission': modeAdmission,
-    'theme-async-admission': themeAdmission, 'reader-live-input': readerLiveInput, 'directory-flat-input': directoryFlatInput }[id])();
+    'theme-async-admission': themeAdmission, 'reader-live-input': readerLiveInput, 'directory-flat-input': directoryFlatInput, 'manga-live-input': mangaLiveInput,
+    'continuous-live-input': continuousLiveInput, 'semantic-directory-input': semanticDirectoryInput, 'search-live-input': searchLiveInput }[id])();
   console.log(JSON.stringify({ case: id, result,
     scope: 'Actual production callback/method/Host/Store contracts with explicit finite persistence and native SDK ports. No device action.' }));
   recordContractCasePass(id);

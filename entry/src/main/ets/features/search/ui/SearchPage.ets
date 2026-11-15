@@ -479,13 +479,21 @@ export struct SearchPage {
       this.surfaceModel?.interactive === true;
   }
 
+  private pageInputCurrent(): boolean {
+    return this.ownsPageQuery() && this.isPresentationVisible();
+  }
+
+  private surfaceInputCurrent(): boolean {
+    return this.ownsSurface() && this.isPresentationVisible();
+  }
+
   private bindSurface(): void {
     const model = this.surfaceModel;
     if (model === undefined) return;
     this.surfaceOwner = ++nextSearchSurfaceOwner;
     model.claim(this.surfaceOwner);
     model.onTemporaryBack = (): boolean => {
-      if (!this.ownsSurface()) return false;
+      if (!this.surfaceInputCurrent()) return false;
       if (this.taskStatusExpanded) {
         this.dismissTaskStatus(this.taskStatusIdentity());
         return true;
@@ -498,23 +506,23 @@ export struct SearchPage {
       // becomes false. Only its disappearance releases the next Back.
       return this.nativePanel !== undefined;
     };
-    model.onFieldFocused = (): void => { if (this.ownsSurface()) this.cancelSearchFocusRestore(); };
+    model.onFieldFocused = (): void => { if (this.surfaceInputCurrent()) this.cancelSearchFocusRestore(); };
     model.onText = (value: string): void => {
-      if (!this.ownsSurface()) return;
+      if (!this.surfaceInputCurrent()) return;
       this.keyword = value; this.viewState.keywordDraft = value; this.publishSurface();
     };
     model.onSubmit = (): void => {
-      if (!this.ownsSurface() || this.searchPanelOwnsInput()) return;
+      if (!this.surfaceInputCurrent() || this.searchPanelOwnsInput()) return;
       if (this.isSweeping()) this.onStop(); else this.submitSearch();
     };
     model.onAction = (): void => {
-      if (!this.ownsSurface() || this.searchPanelOwnsInput()) return;
+      if (!this.surfaceInputCurrent() || this.searchPanelOwnsInput()) return;
       if (this.isSweeping()) this.onStop(); else this.submitSearch();
     };
-    model.onClearHistory = (): void => { if (this.ownsSurface()) this.onClearHistory(); };
-    model.onRetryHistory = (): void => { if (this.ownsSurface()) this.onRetryHistory(); };
+    model.onClearHistory = (): void => { if (this.surfaceInputCurrent()) this.onClearHistory(); };
+    model.onRetryHistory = (): void => { if (this.surfaceInputCurrent()) this.onRetryHistory(); };
     model.onHistory = (keyword: string): void => {
-      if (this.ownsSurface()) this.submitSearch(keyword);
+      if (this.surfaceInputCurrent()) this.submitSearch(keyword);
     };
     model.activate(this.surfaceOwner);
     this.publishSurface();
@@ -583,7 +591,7 @@ export struct SearchPage {
   }
 
   private acceptsFilter(identity: string): boolean {
-    return this.ownsPageQuery() && this.filtersExpanded && identity === this.filterPresentationIdentity();
+    return this.pageInputCurrent() && this.filtersExpanded && identity === this.filterPresentationIdentity();
   }
 
   private dismissSearchFilters(identity: string): void {
@@ -593,7 +601,7 @@ export struct SearchPage {
   }
 
   private toggleSearchFilters(identity: string, wasExpanded: boolean): void {
-    if (!this.ownsList() || this.retainedViewportPending || identity !== this.filterPresentationIdentity() ||
+    if (!this.pageInputCurrent() || !this.ownsList() || this.retainedViewportPending || identity !== this.filterPresentationIdentity() ||
       wasExpanded !== this.filtersExpanded) return;
     if (wasExpanded) {
       this.dismissSearchFilters(identity);
@@ -619,7 +627,7 @@ export struct SearchPage {
     return `${this.pageEpoch}:${this.viewState.revision}:${this.taskStatusGeneration}`;
   }
   private acceptsTaskStatus(identity: string): boolean {
-    return this.ownsPageQuery() && this.taskStatusExpanded && identity === this.taskStatusIdentity();
+    return this.pageInputCurrent() && this.taskStatusExpanded && identity === this.taskStatusIdentity();
   }
   private dismissTaskStatus(identity: string): void {
     if (!this.acceptsTaskStatus(identity)) return;
@@ -627,7 +635,7 @@ export struct SearchPage {
     this.publishSurfacePanelInput();
   }
   private toggleTaskStatus(identity: string, wasExpanded: boolean): void {
-    if (!this.ownsList() || this.retainedViewportPending || identity !== this.taskStatusIdentity() ||
+    if (!this.pageInputCurrent() || !this.ownsList() || this.retainedViewportPending || identity !== this.taskStatusIdentity() ||
       wasExpanded !== this.taskStatusExpanded) return;
     if (wasExpanded) {
       this.dismissTaskStatus(identity);
@@ -826,6 +834,7 @@ export struct SearchPage {
   }
 
   private retryOperation(): void {
+    if (!this.pageInputCurrent()) return;
     const operation = this.operation();
     if (operation !== undefined && !operation.canRetry) return;
     this.onRetry();
@@ -852,14 +861,14 @@ export struct SearchPage {
   }
 
   private submitSearch(value: string = this.keyword): void {
-    if (!this.ownsPageQuery() || this.presentation.kind === 'loading') return;
+    if (!this.pageInputCurrent() || this.presentation.kind === 'loading') return;
     const keyword = value.trim();
     // A result filter is local to its query. The admitted Host resets it.
     if (keyword.length > 0) this.onSearch(keyword);
   }
 
   private selectGroup(name: string): void {
-    if (!this.ownsPageQuery() || this.selectedGroupName === name) return;
+    if (!this.pageInputCurrent() || this.selectedGroupName === name) return;
     this.selectedGroupName = name;
     this.viewState.category = name;
     this.resetFilteredResults();
@@ -888,7 +897,7 @@ export struct SearchPage {
   }
 
   private selectContentType(contentType: SearchContentType): void {
-    if (!this.ownsPageQuery() || this.selectedContentType === contentType) return;
+    if (!this.pageInputCurrent() || this.selectedContentType === contentType) return;
     this.selectedContentType = contentType;
     this.viewState.contentType = contentType;
     // Reuse scope navigation/anchor handling without changing the query run.
@@ -1016,7 +1025,7 @@ export struct SearchPage {
   }
 
   private onListTouch(type: TouchType): void {
-    if (!this.ownsList()) return;
+    if (!this.pageInputCurrent() || !this.ownsList()) return;
     if (type === TouchType.Down) {
       this.cancelSearchFocusRestore();
       this.userInteracting = true;
@@ -1041,7 +1050,7 @@ export struct SearchPage {
   }
 
   private onListWillScroll(offset: number, source: ScrollSource): void {
-    if (!this.ownsList()) return;
+    if (!this.pageInputCurrent() || !this.ownsList()) return;
     const userInput = source === ScrollSource.DRAG || source === ScrollSource.FLING ||
       source === ScrollSource.OTHER_USER_INPUT || source === ScrollSource.SCROLL_BAR ||
       source === ScrollSource.SCROLL_BAR_FLING;
@@ -1358,7 +1367,7 @@ export struct SearchPage {
   }
 
   private acceptsResultSelection(book: SearchBook): boolean {
-    if (!this.ownsList() || this.retainedViewportPending || this.searchPanelOwnsInput()) return false;
+    if (!this.pageInputCurrent() || !this.ownsList() || this.retainedViewportPending || this.searchPanelOwnsInput()) return false;
     const key = this.viewState.resolveKey(this.resultGroupKey(book));
     return this.visibleGroups.some((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === key);
   }
@@ -1697,7 +1706,7 @@ export struct SearchPage {
         leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
         actionContent: (): void => {
           this.sourceRecoveryActions(reason === 'noSources' ? '添加书源' : '管理书源', (): void => {
-            if (this.ownsPageQuery() && this.presentation.kind === 'sourceRequired' &&
+            if (this.pageInputCurrent() && this.presentation.kind === 'sourceRequired' &&
               this.presentation.reason === reason) this.onManageSources();
           });
         } });
@@ -1710,7 +1719,7 @@ export struct SearchPage {
       padded: false, leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
       actionContent: (): void => {
         this.sourceRecoveryActions('重试加载', (): void => {
-          if (this.ownsPageQuery() && this.presentation.kind === 'sourceLoadError') this.retryOperation();
+          if (this.pageInputCurrent() && this.presentation.kind === 'sourceLoadError') this.retryOperation();
         });
       } });
   }
@@ -1720,7 +1729,7 @@ export struct SearchPage {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       this.primaryPill(primaryLabel, onPrimary);
       this.secondaryPill('返回书架', (): void => {
-        if (this.ownsPageQuery() && this.sourceRecoveryVisible()) this.onBack();
+        if (this.pageInputCurrent() && this.sourceRecoveryVisible()) this.onBack();
       });
     }.margin({ top: 8 }).alignSelf(ItemAlign.Center);
   }

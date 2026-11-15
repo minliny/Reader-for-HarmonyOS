@@ -15,7 +15,7 @@ class Clock extends InputClock { constructor() { super(); Object.assign(this, { 
 let receivedMs = 1000;
 const TouchType = { Down: 0, Move: 1, Up: 2, Cancel: 3 };
 const Stage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
-  selectedCase==='image-anchor'?['reportVisibleRange']:['handleTouch', 'resetTouch', 'reportManualInteraction', 'reportVisibleRange', 'reportCurrentVisibleRange', 'handleStationaryTap', 'cancelInitialScrollForInput'],
+  selectedCase==='image-anchor'?['reportVisibleRange']:['acceptCurrentInput', 'onInputRevisionChanged', 'handleTouch', 'resetTouch', 'reportManualInteraction', 'reportVisibleRange', 'reportCurrentVisibleRange', 'handleStationaryTap', 'cancelInitialScrollForInput'],
   { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
 const touch=(type,id,x,y)=>({type,changedTouches:[{id,x,y}],touches:[{id,x,y}]});
 if(selectedCase==='input-progress'){
@@ -82,7 +82,7 @@ const LeaseOwner = productionMotionMethods(new URL('LocalReadingExperience.ets',
   ['acquirePagePointer', 'releasePagePointer', 'drainRapidPageTurn', 'performPageTurn'],
   { setTimeout: action => deferred.push(action) });
 const LeaseStage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
-  ['handleTouch', 'resetTouch', 'onInteractionEnabledChanged', 'reportManualInteraction', 'cancelInitialScrollForInput'],
+  ['acceptCurrentInput', 'onInputRevisionChanged', 'handleTouch', 'resetTouch', 'onInteractionEnabledChanged', 'reportManualInteraction', 'cancelInitialScrollForInput'],
   { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
 let deferred = [];
 for (const ending of ['up', 'cancel', 'disabled', 'unmount']) {

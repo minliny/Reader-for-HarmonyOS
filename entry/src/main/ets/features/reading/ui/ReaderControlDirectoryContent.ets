@@ -794,8 +794,15 @@ export struct ReaderControlDirectoryContent {
   }
 
   private flatChapterIsCurrent(entry: LocalReadingTocEntry, presentation: number): boolean {
-    if (!this.currentContent(presentation) || !this.currentInputEnabled() || this.tab !== 'directory' ||
-      this.navigationActive || entry.navigable === false) return false;
+    return !this.navigationActive && this.chapterIsCurrent(entry, presentation);
+  }
+
+  private directoryInputCurrent(presentation: number): boolean {
+    return this.currentContent(presentation) && this.currentInputEnabled() && this.tab === 'directory';
+  }
+
+  private chapterIsCurrent(entry: LocalReadingTocEntry, presentation: number): boolean {
+    if (!this.directoryInputCurrent(presentation) || entry.navigable === false) return false;
     const current = this.entries.find((chapter: LocalReadingTocEntry): boolean => chapter.index === entry.index);
     return current !== undefined && sameReaderDirectoryData([entry], [current]);
   }
@@ -996,6 +1003,8 @@ export struct ReaderControlDirectoryContent {
     } else {
       if (this.tab === 'directory' && this.bookmarkIdentity !== undefined) {
         ReaderDirectoryNavigationSurface({
+          inputCurrent: (): boolean => this.directoryInputCurrent(presentation),
+          chapterInputCurrent: (chapter: LocalReadingTocEntry): boolean => this.chapterIsCurrent(chapter, presentation),
             navigationPortFactory: this.navigationPortFactory,
           headerCount: this.headerCount(), prefixHeight: this.prefixHeight(), prefixIdentity: `${this.sessionKey}:${this.tab}:control-directory-prefix`,
           prefixRevealRevision: this.prefixRevealRevision, prefixBuilder: (): void => { this.shortHeader(); },
@@ -1011,20 +1020,25 @@ export struct ReaderControlDirectoryContent {
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled && this.bookmarkWriteEnabled(),
           scroller: this.scroller, fallbackBuilder: (): void => { this.flatCatalog(true, presentation); },
           onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void => {
-            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
+            if (this.directoryInputCurrent(presentation))
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
           },
-          onUserScrollIntent: (): void => this.userScroll(),
-          onFirstLayout: (): void => { if (this.mounted) this.onListLayout(); },
-          onClearSearch: (): void => this.clearSearch(this.layoutPresentation),
+          onUserScrollIntent: (): void => { if (this.directoryInputCurrent(presentation)) this.userScroll(); },
+          onFirstLayout: (): void => { if (this.currentContent(presentation)) this.onListLayout(); },
+          onClearSearch: (): void => { if (this.directoryInputCurrent(presentation)) this.clearSearch(presentation); },
           onTreeStateChange: (active: boolean): void => {
-            if (!this.mounted) return;
+            if (!this.currentContent(presentation)) return;
             this.navigationActive = active;
             this.leadingRow = undefined; this.leadingKey = undefined; this.leadingPrefixOffset = undefined;
           },
-          onDeleteBookmarks: (times: number[]): void => { if (this.bookmarkWriteEnabled()) this.onDeleteBookmarks(times); },
-          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+          onDeleteBookmarks: (times: number[]): void => {
+            if (this.directoryInputCurrent(presentation) && this.bookmarkWriteEnabled()) this.onDeleteBookmarks(times);
+          },
+          onDownloadChapter: (chapterIndex: number): void => {
+            if (this.directoryInputCurrent(presentation)) this.onDownloadChapter(chapterIndex);
+          },
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-            { if (this.bookmarkWriteEnabled()) this.onCreateChapterStartBookmark(request); },
+            { if (this.directoryInputCurrent(presentation) && this.bookmarkWriteEnabled()) this.onCreateChapterStartBookmark(request); },
         });
       } else {
         this.flatCatalog(allowPrefix, presentation);

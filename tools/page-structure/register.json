@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 52,
+      "revision": 53,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2697,7 +2697,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-          "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+          "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
           "symbol": "readingOverlay"
         },
         {
@@ -2717,7 +2717,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+          "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
           "symbol": "requestCatalogForTurn"
         },
         {
@@ -2727,7 +2727,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+          "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
           "symbol": "build"
         },
         {
@@ -2742,12 +2742,12 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-          "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+          "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
           "symbol": "openTree"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-          "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+          "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
           "symbol": "selectTarget"
         },
         {
@@ -2920,7 +2920,7 @@
         },
         {
           "path": "tools/test-directory-native-row-target.mjs",
-          "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+          "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
         },
         {
           "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4215,7 +4215,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -4235,7 +4235,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -4245,7 +4245,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -4260,12 +4260,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -4438,7 +4438,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5850,7 +5850,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -5870,7 +5870,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -5880,7 +5880,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -5895,12 +5895,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -6073,7 +6073,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -6295,7 +6295,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7491,7 +7491,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -7511,7 +7511,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -7521,7 +7521,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -7536,12 +7536,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -7714,7 +7714,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -7928,7 +7928,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -8197,7 +8197,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15"
+              "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea"
             },
             "layers": {
               "route": {
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9147,7 +9147,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -9167,7 +9167,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -9177,7 +9177,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -9192,12 +9192,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -9370,7 +9370,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -9572,7 +9572,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 50,
+            "revision": 51,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10672,7 +10672,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -10692,7 +10692,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -10702,7 +10702,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -10717,12 +10717,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -10895,7 +10895,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 52,
+            "revision": 53,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12088,7 +12088,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -12108,7 +12108,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12118,7 +12118,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -12133,12 +12133,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -12311,7 +12311,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -12525,7 +12525,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13661,7 +13661,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -13681,7 +13681,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -13691,7 +13691,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -13706,12 +13706,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -13884,7 +13884,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15122,7 +15122,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -15142,7 +15142,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15152,7 +15152,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -15167,12 +15167,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -15345,7 +15345,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -15559,7 +15559,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 50,
+            "revision": 51,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16639,7 +16639,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -16659,7 +16659,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -16669,7 +16669,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -16684,12 +16684,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -16862,7 +16862,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 52,
+            "revision": 53,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18055,7 +18055,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -18075,7 +18075,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18085,7 +18085,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -18100,12 +18100,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -18278,7 +18278,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -18492,7 +18492,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -18772,7 +18772,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15"
+              "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea"
             },
             "layers": {
               "route": {
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19702,7 +19702,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -19722,7 +19722,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -19732,7 +19732,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -19747,12 +19747,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -19925,7 +19925,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -20127,7 +20127,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -20423,7 +20423,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15"
+              "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea"
             },
             "layers": {
               "route": {
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21348,7 +21348,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "1e48138df6a72bc2db8b2aefbde2e20b949dc8cfa6ebcc741a6b7dcc61f03dd6",
+                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
                 "symbol": "readingOverlay"
               },
               {
@@ -21368,7 +21368,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "77aa3efa558a409f2085d36e08d2061a7716ddcf88312975444c57bd5a7cbc65",
+                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -21378,7 +21378,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "fd534ccfe035574608561c5a33b1fa262ad28d594fdd86cd356d43fc6fc81b15",
+                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
                 "symbol": "build"
               },
               {
@@ -21393,12 +21393,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
+                "sha256": "f2fa9b3ba8c61337aee00bc82da887fc94f635409cf2f1061e22b76d192165c6",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
+                "sha256": "395fa6e22c6b559e251dd07e37936e8e95904d5924ae7cbbf8075cf3bbbe37f8",
                 "symbol": "selectTarget"
               },
               {
@@ -21571,7 +21571,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
+                "sha256": "d93c194fb9b23cb06c6519cc137714c9a2f62def984bd4596d09e15cf0c42f6a"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -21773,7 +21773,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ee65b3b3bb3f5fbcc09297aef796c02830675cec7f09dbb1c2b22d3dcf1ab43c"
+                "sha256": "33c40c4349f125bdf647991b0294f83ffb789a6a5ab9257cca0f13134345f969"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",

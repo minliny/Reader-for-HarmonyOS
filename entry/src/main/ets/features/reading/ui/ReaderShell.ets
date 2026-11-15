@@ -390,6 +390,7 @@ export struct ReaderShell {
   private mangaSurface() {
     ForEach([this.mangaIdentityKey()], (_identity: string) => {
       MangaReadingSurface({
+        inputCurrent: (): boolean => this.acceptsMangaInput(_identity),
         windowChromeActive: this.visible,
         windowChromeOverlayActive: this.visible && (this.route === 'directory' || this.sourceSwitchPresented || this.sourceSwitchCovered),
         interactionBlocked: !this.readingContentIsForeground(),

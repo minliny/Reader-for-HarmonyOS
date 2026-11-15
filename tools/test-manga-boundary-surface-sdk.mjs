@@ -33,7 +33,7 @@ const frameClass = name => new Function('FrameCallback',
 const MangaLayoutFrame = frameClass('MangaLayoutFrame');
 const MangaSheetFrame = frameClass('MangaSheetFrame');
 let activePorts;
-const methods = ['boundaryEnabled','onBoundaryActivity','onBoundaryPull','captureChapterPixels','turnBoundaryChapter',
+const methods = ['readerPanelForeground','boundaryEnabled','onBoundaryActivity','onBoundaryPull','captureChapterPixels','turnBoundaryChapter',
   'onChapterImageComplete','onChapterImageError','confirmBoundaryFrame','clearBoundaryFrameWait','cancelBoundaryChapter',
   'publish','rememberVisible','flushViewportObservation','onViewportScroll','queueViewportObservation','restore','finishLayout',
   'measureVisibleWindow','positionIdentity','saveVisible','effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop',

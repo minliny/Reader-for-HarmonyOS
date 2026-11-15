@@ -747,7 +747,7 @@ case "page-retry-admission": {
     assert.equal(skipped.operation.fact, 'empty');
     assert.equal(skipped.operation.canRetry, true);
     let invocations = 0;
-    const page = { operation: () => last(presentations).operation,
+    const page = { pageInputCurrent: () => true, operation: () => last(presentations).operation,
       onRetry: () => { invocations += 1; search.retry(); } };
     retryPage.call(page);
     assert.equal(invocations, 1, 'the mounted page must reach explicit retry');
