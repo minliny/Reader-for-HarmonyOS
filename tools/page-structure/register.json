@@ -1204,7 +1204,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
-          "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+          "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
@@ -21293,7 +21293,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
-          "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+          "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
@@ -22684,7 +22684,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
-                "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+                "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
@@ -24076,7 +24076,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
-                "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+                "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
@@ -25468,7 +25468,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
-                "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+                "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
@@ -26816,7 +26816,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
-                "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+                "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
@@ -28164,7 +28164,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
-                "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+                "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
               },
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
@@ -30604,7 +30604,7 @@
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
           "symbol": "build",
-          "sha256": "0e6b7baade08e8b99210cbd5286ca9fc6d652c0d1b02ce0a22009ecb156bcd4d"
+          "sha256": "c2929ce58882e1dd15e79611b4ac125c5c60ebb554083131c9f981c9ae3edd3e"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",

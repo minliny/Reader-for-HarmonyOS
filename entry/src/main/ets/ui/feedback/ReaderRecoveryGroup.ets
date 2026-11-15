@@ -14,6 +14,6 @@ export struct ReaderRecoveryGroup {
       .width('100%').padding({ left: 12, right: 12, top: 10, bottom: 10 })
       .borderRadius(14).backgroundColor(readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))
       .shadow({ radius: 16, offsetY: 4, color: '#18000000' })
-      .hitTestBehavior(HitTestMode.Transparent);
+      .hitTestBehavior(HitTestMode.Default);
   }
 }

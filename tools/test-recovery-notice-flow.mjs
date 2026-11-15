@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'hit-boundary': {
+    description: 'Actual SDK painted notice/group block sibling hit collection while retaining bounded Scroll and enabled or busy action declarations. Native hit dispatch remains a separate check.', resources: [],
+  },
   'approved-composition': {
     description: 'Approved coarse-pointer action gaps and title-only folding, one-surface groups, wrapped-action blocks and retained busy geometry through actual SDK declarations.', resources: [],
   },
@@ -14,6 +17,11 @@ const selected = selectContractCases({
 });
 
 for (const id of selected) {
+  if (id === 'hit-boundary') {
+    await hitBoundary();
+    recordContractCasePass(id);
+    continue;
+  }
   if (id === 'approved-composition') {
     await approvedComposition();
     recordContractCasePass(id);
@@ -154,6 +162,56 @@ print(json.dumps({'provider': library, 'samples': result}))
   console.log(JSON.stringify({ kind: 'recovery-notice-reservation-boundary', samples, boundaries, externalBlankRemovals,
     boundary: 'Actual SDK declarations/measurement strings/actions plus macOS ICU legal line opportunities. Finite measure heights and one Blank replacement are supplied. HarmonyOS pixel wrapping, Native busy timing and all natural orphan lines are outside this proof.' }));
   recordContractCasePass(id);
+}
+
+async function hitBoundary() {
+  const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const noticeSource = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets', import.meta.url), 'utf8');
+  const groupSource = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryGroup.ets', import.meta.url), 'utf8');
+  function noticeFixture(source, busy) {
+    const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true, ReaderRecoveryNotice: source });
+    const notice = sdk.consumer(source);
+    const calls = [];
+    Object.assign(notice, {
+      view: { visible: true, message: '原操作结果尚未确认', canRetry: true, generation: 7 },
+      actionLabel: '刷新列表', busy, maxHeightVp: 62, layoutWidthVp: 350,
+      onReconcile: generation => calls.push(generation),
+      getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({
+        measureText: options => options.textContent.length * 13,
+        measureTextSize: () => ({ width: 326, height: 22 }),
+      }) }),
+    });
+    notice.aboutToAppear(); notice.initialRender(); sdk.properties.flush();
+    const painted = [...notice.nodes.values()].find(node => node.type === 'Stack' && node.backgroundColor);
+    assert.equal(painted?.hitTestBehavior, 'HitTestMode.Default', 'painted notice blocks sibling hit collection');
+    const scroll = [...notice.nodes.values()].find(node => node.type === 'Scroll');
+    assert.deepEqual(scroll?.constraintSize, { maxHeight: 62 });
+    assert.equal(scroll.clip, true);
+    const action = sdk.walk(notice).find(child => child instanceof sdk.deps.ReaderRecoveryAction);
+    const button = [...action.nodes.values()].find(node => node.type === 'Button' && node.onClick);
+    assert.equal(button.enabled, !busy);
+    button.onClick();
+    assert.deepEqual(calls, busy ? [] : [7]);
+    assert.equal(sdk.nodes(notice).some(node => node.type === 'LoadingProgress'), busy);
+  }
+  function groupFixture(source) {
+    const sdk = boundedSurfaceSdk();
+    const group = sdk.consumer(source);
+    group.initialRender();
+    const painted = sdk.nodes(group).find(node => node.type === 'Column' && node.backgroundColor);
+    assert.equal(painted?.hitTestBehavior, 'HitTestMode.Default', 'painted group blocks sibling hit collection');
+  }
+  noticeFixture(noticeSource, false);
+  noticeFixture(noticeSource, true);
+  groupFixture(groupSource);
+  const transparentNotice = noticeSource.replace('hitTestBehavior(HitTestMode.Default)', 'hitTestBehavior(HitTestMode.Transparent)');
+  const transparentGroup = groupSource.replace('hitTestBehavior(HitTestMode.Default)', 'hitTestBehavior(HitTestMode.Transparent)');
+  assert.notEqual(transparentNotice, noticeSource);
+  assert.notEqual(transparentGroup, groupSource);
+  assert.throws(() => noticeFixture(transparentNotice, true), /painted notice blocks sibling hit collection/);
+  assert.throws(() => groupFixture(transparentGroup), /painted group blocks sibling hit collection/);
+  console.log(JSON.stringify({ kind: 'recovery-hit-boundary', notices: 2, groups: 1, transparentNegatives: 2,
+    boundary: 'Actual SDK surface modes, bounded Scroll and current enabled/busy callbacks. Native sibling dispatch, focus and scrolling require the exact VM scene.' }));
 }
 
 async function approvedComposition() {

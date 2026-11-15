@@ -119,7 +119,7 @@ export struct ReaderRecoveryNotice {
       .borderRadius(this.grouped ? 0 : 14)
       .backgroundColor(this.grouped ? Color.Transparent : readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))
       .shadow({ radius: this.grouped ? 0 : 16, offsetY: this.grouped ? 0 : 4, color: '#18000000' })
-      .hitTestBehavior(HitTestMode.Transparent);
+      .hitTestBehavior(HitTestMode.Default);
   }
 
   private hasNoticeActions(): boolean {
