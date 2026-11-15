@@ -290,7 +290,8 @@ export struct BookshelfShell {
         canCheckUpdates: this.canCheckUpdates,
         updateRunning: this.updateRunning,
         backgroundUpdateRunning: this.backgroundUpdateRunning,
-        isCurrent: (candidate: string): boolean => this.isCurrentMoreSheet(candidate),
+        isCurrent: (candidate: string): boolean => this.isCurrentMoreSheet(candidate) &&
+          this.isCurrentShelfInput?.(this.moreSheetNavigation) !== false,
         onCheckUpdates: this.moreIntentAction(presentationId, (generation: number): void => {
           this.requestCheckUpdates(generation);
           this.dismissMoreMenu();

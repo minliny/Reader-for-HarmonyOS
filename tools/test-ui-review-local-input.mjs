@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { selectedProductionMethods, selectedProductionComponentCallback } from './lib/selected-production-methods.mjs';
+import { selectedProductionMethods, selectedProductionComponentCallback, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
@@ -10,6 +11,8 @@ import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'sheet-token-recovery': 'Actual book/More leaf rejects live-retired token before one-shot state and accepts a fresh same-opening token after input returns.',
+  'source-choice-recovery': 'Actual Source option does not first collapse while live-retired and the same panel can accept after input returns.',
   'shelf-local-admission': 'Actual More icon, book tokens, More tokens and first-read local state consume original live input.',
   'source-filter-admission': 'Actual category/status/group inputs and clear consume the existing live management owner.',
   'directory-consumer-admission': 'All semantic/flat directory consumers forward original live input to first local fold/retry/clear and tools.',
@@ -301,8 +304,181 @@ live = false; fallback.toggleBranch(group, fallback.admittedIdentity); assert.de
 return { samples, fullOriginalOpeningForwarded: true, bookOriginalOpeningForwarded: true, flatBranchRetirement: true };
 }
 
+function sheetTokenRecovery() {
+const base = new URL('../entry/src/main/ets/', import.meta.url);
+const source = path => new URL(path, base);
+const pageFile = source('features/bookshelf/ui/BookshelfPage.ets');
+const wrapperFile = source('features/bookshelf/ui/BookshelfBookActionSheet.ets');
+const leafFile = source('features/bookshelf/ui/ReaderSheetActionList.ets');
+const shellFile = source('features/bookshelf/ui/BookshelfShell.ets');
+const moreFile = source('features/bookshelf/ui/BookshelfMoreActionSheet.ets');
+const Page = selectedProductionMethods(pageFile, 'BookshelfPage', ['isCurrentBookActionSheet', 'performBookAction']);
+const Leaf = selectedProductionMethods(leafFile, 'ReaderSheetActionList', ['dispatch', 'dispatchToken', 'actionId', 'presentationFromToken']);
+const Shell = selectedProductionMethods(shellFile, 'BookshelfShell', ['isCurrentMoreSheet', 'moreIntentAction']);
+const More = selectedProductionMethods(moreFile, 'BookshelfMoreActionSheet', ['dispatchToken']);
+function bookSample(lostBeforeFirstToken) {
+  let live = true;
+  const book = { sourceId: 'local', bookId: 'retained-book' }, id = 'book-opening';
+  const page = Object.assign(new Page(), { mounted: true, navigationGeneration: 9, actionSheetNavigation: 9,
+    actionSheetId: id, actionBook: book, bookActionSheetVisible: true, books: [book],
+    isCurrentShelfInput: () => live, onBookMultiSelectRequested() {} });
+  const pageIsCurrent = selectedProductionComponentCallback(pageFile, 'BookshelfBookActionSheet', 'isCurrent', page,
+    { presentationId: id, book });
+  const pageAction = selectedProductionComponentCallback(pageFile, 'BookshelfBookActionSheet', 'onMultiSelect', page,
+    { presentationId: id, book });
+  const wrapper = { isCurrent: pageIsCurrent };
+  const leafIsCurrent = selectedProductionComponentCallback(wrapperFile, 'ReaderSheetActionList', 'isCurrent', wrapper);
+  const leaf = Object.assign(new Leaf(), { mounted: true, presentationId: id, dispatchedId: '',
+    isCurrent: leafIsCurrent, onMultiSelect: pageAction });
+  const nativeIntent = selectedProductionComponentCallback(leafFile, 'ReaderActionMenuSurface', 'onAction', leaf);
+  live = !lostBeforeFirstToken;
+  const before = { live, openingCurrent: pageIsCurrent(id), leafDispatchedId: leaf.dispatchedId };
+  nativeIntent(id + '::multi-select');
+  const afterFirst = { live, leafDispatchedId: leaf.dispatchedId, parentPending: typeof page.pendingBookAction,
+    sheetVisible: page.bookActionSheetVisible, openingCurrent: pageIsCurrent(id) };
+  live = true;
+  nativeIntent(id + '::multi-select');
+  const afterResume = { live, leafDispatchedId: leaf.dispatchedId, parentPending: typeof page.pendingBookAction,
+    sheetVisible: page.bookActionSheetVisible, openingCurrent: pageIsCurrent(id) };
+  if (lostBeforeFirstToken) {
+    assert.equal(afterFirst.parentPending, 'undefined');
+    assert.equal(afterFirst.sheetVisible, true);
+    assert.equal(afterFirst.leafDispatchedId, '');
+    assert.equal(afterResume.parentPending, 'function');
+    assert.equal(afterResume.leafDispatchedId, id);
+    assert.equal(afterResume.sheetVisible, false);
+  } else {
+    assert.equal(afterFirst.parentPending, 'function');
+    assert.equal(afterFirst.sheetVisible, false);
+  }
+  return { lostBeforeFirstToken, before, afterFirst, afterResume };
+}
+function moreSample(lostBeforeFirstToken) {
+  let live = true;
+  const id = 'more-opening';
+  const shell = Object.assign(new Shell(), { mounted: true, navigationGeneration: 9, moreSheetNavigation: 9,
+    moreSheetCurrentId: id, moreSelectionId: id, moreMenuVisible: true, moreImportSheetId: '',
+    isCurrentShelfInput: () => live, dismissMoreMenu() { this.moreMenuVisible = false; } });
+  const moreIsCurrent = selectedProductionComponentCallback(shellFile, 'BookshelfMoreActionSheet', 'isCurrent', shell);
+  const moreAction = selectedProductionComponentCallback(shellFile, 'BookshelfMoreActionSheet', 'onLocalImport', shell,
+    { presentationId: id });
+  const leaf = Object.assign(new More(), { mounted: true, presentationId: id, dispatchedId: '',
+    isCurrent: moreIsCurrent, onLocalImport: moreAction });
+  const nativeIntent = selectedProductionComponentCallback(moreFile, 'ReaderActionMenuSurface', 'onAction', leaf);
+  live = !lostBeforeFirstToken;
+  const before = { live, openingCurrent: moreIsCurrent(id), leafDispatchedId: leaf.dispatchedId };
+  nativeIntent(id + '::import');
+  const afterFirst = { live, leafDispatchedId: leaf.dispatchedId, moreImportSheetId: shell.moreImportSheetId,
+    sheetVisible: shell.moreMenuVisible, openingCurrent: moreIsCurrent(id) };
+  live = true;
+  nativeIntent(id + '::import');
+  const afterResume = { live, leafDispatchedId: leaf.dispatchedId, moreImportSheetId: shell.moreImportSheetId,
+    sheetVisible: shell.moreMenuVisible, openingCurrent: moreIsCurrent(id) };
+  if (lostBeforeFirstToken) {
+    assert.equal(afterFirst.moreImportSheetId, '');
+    assert.equal(afterFirst.sheetVisible, true);
+    assert.equal(afterFirst.leafDispatchedId, '');
+    assert.equal(afterResume.moreImportSheetId, id);
+    assert.equal(afterResume.leafDispatchedId, id);
+    assert.equal(afterResume.sheetVisible, false);
+  } else {
+    assert.equal(afterFirst.moreImportSheetId, id);
+    assert.equal(afterFirst.sheetVisible, false);
+  }
+  return { lostBeforeFirstToken, before, afterFirst, afterResume };
+}
+return { book: [bookSample(false), bookSample(true)], more: [moreSample(false), moreSample(true)] };
+}
+
+function sourceChoiceRecovery() {
+const base = new URL('../entry/src/main/ets/', import.meta.url);
+const source = path => new URL(path, base);
+const panelFile = source('ui/controls/ReaderSelectPanel.ets');
+const pageFile = source('features/source/ui/SourceManagementPage.ets');
+const surfaceFile = source('features/source/ui/SourceJourneySurface.ets');
+function exactOptionCallback(owner) {
+  const { ts, options } = installedEtsCompiler();
+  const text = readFileSync(panelFile, 'utf8');
+  const tree = ts.createSourceFile(String(panelFile), text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.deepEqual(tree.parseDiagnostics, []);
+  const structure = tree.statements.find(node => node.name?.text === 'ReaderSelectPanel');
+  const method = structure.members.find(node => node.name?.getText(tree) === 'optionRow');
+  const expressions = [];
+  const visit = node => {
+    if (ts.isCallExpression(node) && node.expression.getText(tree) === 'ReaderChoiceRow') {
+      const property = node.arguments[0].properties.find(value => value.name?.getText(tree) === 'onChoose');
+      expressions.push(property.initializer.getText(tree));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(method);
+  assert.equal(expressions.length, 1);
+  const emitted = ts.transpileModule('const callback = ' + expressions[0] + ';', {
+    compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS }, reportDiagnostics: true,
+  });
+  assert.deepEqual(emitted.diagnostics, []);
+  return new Function(emitted.outputText + '\nreturn callback;').call(owner);
+}
+const Surface = selectedProductionMethods(surfaceFile, 'SourceJourneySurface', ['managementInputIsCurrent']);
+const Page = selectedProductionMethods(pageFile, 'SourceManagementPage', [
+  'managementOpeningIsCurrent', 'managementInputIsCurrent', 'ownsGroupSelection', 'commitGroupSelection',
+  'dismissGroupSelection', 'retireGroupSelection',
+]);
+const Panel = selectedProductionMethods(panelFile, 'ReaderSelectPanel', [
+  'selectAndCollapse', 'collapsePanel', 'finishCollapse',
+], { ...selectedProductionValues(panelFile, ['OPTION_H']), motionAnimateParam: (_id, onFinish) => ({ onFinish }) });
+function sample(lostBeforeChoice) {
+  let live = true, projectionCount = 0, nativeFinish;
+  const id = 'original-group-opening';
+  const surface = Object.assign(new Surface(), { mounted: true, identity: 'management-opening',
+    isInputAllowed: () => live, presentation: { isManagementCurrent: value => value === 'management-opening' } });
+  const page = Object.assign(new Page(), { mounted: true, appForeground: true,
+    isOpeningCurrent: () => surface.presentation.isManagementCurrent(surface.identity),
+    isInputAllowed: () => surface.managementInputIsCurrent(), groupOpen: true, groupClosing: false,
+    groupSelectionId: id, groupValue: '全部分组', groupOptions: () => ['全部分组', '当前分组'],
+    cancelGroupFocus() {}, rebuildSourceProjection() { projectionCount += 1; },
+    toolsFocusId: () => 'tools', groupTriggerFocusId: () => 'group', scheduleGroupFocus() {},
+  });
+  const panel = Object.assign(new Panel(), { mounted: true, closeInFlight: false, selectionId: id,
+    inputCurrent: selectedProductionComponentCallback(pageFile, 'ReaderSelectPanel', 'inputCurrent', page),
+    generation: 1, value: page.groupValue, options: page.groupOptions(), reduceMotion: false,
+    onCommit: selectedProductionComponentCallback(pageFile, 'ReaderSelectPanel', 'onCommit', page),
+    onDismiss: selectedProductionComponentCallback(pageFile, 'ReaderSelectPanel', 'onDismiss', page),
+    getUIContext: () => ({ animateTo(options, change) { change(); nativeFinish = options.onFinish; } }),
+  });
+  const actualOption = exactOptionCallback(panel);
+  if (lostBeforeChoice) { live = false; page.appForeground = false; }
+  const before = { liveInput: page.managementInputIsCurrent(), openingCurrent: page.ownsGroupSelection(id),
+    groupOpen: page.groupOpen, groupValue: page.groupValue, closeInFlight: panel.closeInFlight };
+  actualOption('当前分组');
+  const afterChoice = { groupOpen: page.groupOpen, groupValue: page.groupValue,
+    closeInFlight: panel.closeInFlight, projectionCount, nativeFinishAvailable: typeof nativeFinish === 'function' };
+  if (lostBeforeChoice) {
+    assert.equal(afterChoice.closeInFlight, false);
+    assert.equal(afterChoice.nativeFinishAvailable, false);
+    assert.equal(afterChoice.groupOpen, true);
+    assert.equal(afterChoice.projectionCount, 0);
+    live = true; page.appForeground = true;
+    actualOption('当前分组');
+    assert.equal(panel.closeInFlight, true);
+    assert.equal(page.groupValue, '当前分组');
+  }
+  live = false; page.appForeground = false;
+  assert.equal(typeof nativeFinish, 'function'); nativeFinish();
+  const afterCollapseWhileUnavailable = { groupOpen: page.groupOpen, groupValue: page.groupValue, projectionCount };
+  live = true; page.appForeground = true;
+  const afterResume = { groupOpen: page.groupOpen, groupValue: page.groupValue, projectionCount };
+  assert.equal(projectionCount, 1);
+  assert.equal(afterResume.groupOpen, false);
+  assert.equal(afterResume.groupValue, '当前分组');
+  return { lostBeforeChoice, before, afterChoice, afterCollapseWhileUnavailable, afterResume };
+}
+return [sample(false), sample(true)];
+}
+
 for (const id of selected) {
-  const result = await ({ 'shelf-local-admission': shelfLocalAdmission,
+  const result = await ({ 'sheet-token-recovery': sheetTokenRecovery, 'source-choice-recovery': sourceChoiceRecovery,
+    'shelf-local-admission': shelfLocalAdmission,
     'source-filter-admission': sourceFilterAdmission, 'directory-consumer-admission': directoryConsumerAdmission }[id])();
   console.log(JSON.stringify({ case: id, result, boundary: 'Current production methods and SDK callbacks with finite owner/native/Core ports. No device action.' }));
   recordContractCasePass(id);

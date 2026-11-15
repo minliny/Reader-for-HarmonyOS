@@ -77,6 +77,7 @@ export struct ReaderSelectPanel {
   @Prop focusIdPrefix: string = '';
   // Production callers commit the immutable choice now; finish only unmounts.
   onCommit: ((option: string, identity: string) => void) | undefined = undefined;
+  inputCurrent: (() => boolean) | undefined = undefined;
   onDismiss: (identity: string) => void = (_identity: string): void => {};
   @State private expandedHeight: number = OPTION_H;
   @State private chevronAngle: number = 0;
@@ -393,7 +394,7 @@ export struct ReaderSelectPanel {
   }
 
   private selectAndCollapse(option: string): void {
-    if (!this.mounted || this.closeInFlight) return;
+    if (!this.mounted || this.closeInFlight || this.inputCurrent?.() === false) return;
     const identity = this.selectionId;
     const commit = this.onCommit;
     if (commit === undefined) return;

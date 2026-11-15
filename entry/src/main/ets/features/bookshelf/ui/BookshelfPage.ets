@@ -545,7 +545,8 @@ export struct BookshelfPage {
   private bookActionSheetPresentation(presentationId: string, book: ShelfBook | undefined) {
     BookshelfBookActionSheet({
       presentationId,
-      isCurrent: (candidate: string): boolean => candidate === presentationId && this.isCurrentBookActionSheet(presentationId, book),
+      isCurrent: (candidate: string): boolean => candidate === presentationId && this.isCurrentBookActionSheet(presentationId, book) &&
+        this.isCurrentShelfInput(this.actionSheetNavigation),
       onMultiSelect: (): void => this.performBookAction(presentationId, book, this.onBookMultiSelectRequested),
       onBookInfo: (): void => this.performBookAction(presentationId, book,
         (selected: ShelfBook, navigation?: number, target?: string): void => {

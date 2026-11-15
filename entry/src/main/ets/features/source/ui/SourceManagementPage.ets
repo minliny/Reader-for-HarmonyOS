@@ -477,6 +477,7 @@ export struct SourceManagementPage {
         .hitTestBehavior(HitTestMode.Default).accessibilityLevel('no')
         .onClick(this.groupCloseAction(this.groupSelectionId));
       ReaderSelectPanel({
+        inputCurrent: (): boolean => this.managementInputIsCurrent(),
         value: this.groupValue,
         options: this.groupOptions(),
         variant: 'sourceGroup',

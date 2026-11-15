@@ -44,7 +44,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "sha256": "dbf21cc0c8288c40a33d8de38726966e5ede9930368ca6ddb4b964d53aa69633"
+        "sha256": "2155ad97cf112432b25b2e04c6971ee274b6f177c4a1538508cc4f0a3765c49a"
       },
       "layers": {
         "route": {
@@ -1096,7 +1096,7 @@
         }
       },
       "exceptions": [],
-      "revision": 54,
+      "revision": 55,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1146,7 +1146,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "dbf21cc0c8288c40a33d8de38726966e5ede9930368ca6ddb4b964d53aa69633"
+          "sha256": "2155ad97cf112432b25b2e04c6971ee274b6f177c4a1538508cc4f0a3765c49a"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
@@ -1242,7 +1242,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
-          "sha256": "68a722e1a66cb3fd9ee023a732b822a4b86409315c544ed10dfa30559a4a9ae6"
+          "sha256": "0b00dbc1c47a0e43c2faa6bb8d54c4af35bf6f6287d4bbc694b3e912a3321c05"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
@@ -31597,7 +31597,7 @@
         }
       },
       "exceptions": [],
-      "revision": 44,
+      "revision": 45,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -31770,7 +31770,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "dbf21cc0c8288c40a33d8de38726966e5ede9930368ca6ddb4b964d53aa69633"
+          "sha256": "2155ad97cf112432b25b2e04c6971ee274b6f177c4a1538508cc4f0a3765c49a"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -31782,7 +31782,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
-          "sha256": "68a722e1a66cb3fd9ee023a732b822a4b86409315c544ed10dfa30559a4a9ae6"
+          "sha256": "0b00dbc1c47a0e43c2faa6bb8d54c4af35bf6f6287d4bbc694b3e912a3321c05"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
