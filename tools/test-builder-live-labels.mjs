@@ -146,7 +146,8 @@ if (selected.length) {
         controls.dependencies, controls.hooks).owner;
       Object.assign(owner, { onSourceSettings() {}, onRefresh() {}, onEditSource() {}, onViewArticles() {},
         onDelete() {}, canRefresh: () => true });
-      owner[method]('subscription-current');
+      if (name === 'RssSubscriptionManagementPage') owner[method](() => 'subscription-current');
+      else owner[method]('subscription-current');
       const images = controls.nodes(owner).filter(node => node.type === 'Image');
       assert.equal(images.length, count);
       owner.appThemeScheme = 'night'; controls.properties.flush();

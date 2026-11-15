@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
 import { createHash } from 'node:crypto';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
@@ -11,12 +12,19 @@ const selected = selectContractCases({
   'search-empty': 'Actual retained Search empty state consumes current keyword and searched count.',
   'import-formats': 'Actual retained local import badges consume current app theme colors.',
   'appearance-geometry': 'Actual retained appearance layout controls consume current calculated row and button positions.',
+  'shelf-row-index': 'Actual retained shelf projection uses the current row position in its shared motion cadence.',
+  'rss-source-rows': 'Actual RSS source-feed Repeat rows consume current same-key item and position.',
+  'rss-management-actions': 'Actual retained management row actions consume the current recycled entity.',
+  'rss-management-rows': 'Actual RSS management Repeat rows consume current source facts, Toggle value and position.',
   'rss-repeat-rows': 'Actual RSS subscription and unread Repeat closures retain current DTO/index and actions.',
   'rss-feed-arrays': 'Actual retained RSS feed and empty-unread lists consume current projected arrays.',
   'source-overlay': 'Actual retained source recovery overlay consumes current header inset and available height.',
 }, { argv: args.filter(arg => !arg.startsWith('--evidence-path=')) });
 
 if (selected.length) {
+  const { selectedProductionClasses, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+  const { motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
+  const coverVisual = await import('../entry/src/main/ets/features/bookshelf/ui/BookshelfCoverVisual.ts');
   const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
@@ -32,6 +40,9 @@ if (selected.length) {
   const searchPath = 'entry/src/main/ets/features/search/ui/SearchPage.ets';
   const importPath = 'entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets';
   const appearancePath = 'entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets';
+  const shelfPath = 'entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets';
+  const feedPath = 'entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets';
+  const managementPath = 'entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets';
   const sourcePath = 'entry/src/main/ets/features/source/ui/SourceManagementPage.ets';
   const results = {};
 
@@ -150,6 +161,166 @@ if (selected.length) {
     assert.deepEqual([...owner.nodes.keys()], ids, 'current DTO/index uses retained SDK native actors');
     return { rows: 4, currentDto: true, currentIndex: true, acceptedCurrentActions: 2,
       boundary: 'Finite RepeatItem reference/index update port, native recycling and layout remain target evidence' };
+  }
+
+  function additionalRssRows(management) {
+    const controls = foundationControls();
+    const ports = new Map();
+    function Repeat(items) {
+      let each, key;
+      return { each(callback) { each = callback; return this; }, key(callback) { key = callback; return this; },
+        virtualScroll() { return this; }, render(initial) {
+          items.forEach((item, index) => {
+            const id = key(item);
+            if (initial && !ports.has(id)) { const port = { item, index }; ports.set(id, port); each(port); }
+            else if (ports.has(id)) Object.assign(ports.get(id), { item, index });
+          });
+        } };
+    }
+    class TogglePort {
+      constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+      updateStateVars(params) { Object.assign(this.params, params); }
+    }
+    const path = management ? managementPath : feedPath;
+    const methods = management ? ['items', 'subscriptionList', 'subscriptionItem'] : ['items', 'entryList', 'entryRow', 'itemMeta'];
+    const owner = createReaderBuilderProbe(read(path), methods,
+      { ...controls.dependencies, Repeat, ReaderToggle: TogglePort,
+        ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} } },
+      { ...controls.hooks, childSources: { ...controls.hooks.childSources, ReaderToggle: read('entry/src/main/ets/ui/controls/ReaderToggle.ets') } }).owner;
+    const calls = [], focused = [];
+    const initial = { subscriptionId: 'current', guid: 'article', title: '旧标题', description: '旧摘要',
+      pubDate: '昨天', read: false, enabled: true, meta: '旧来源信息' };
+    const other = { ...initial, subscriptionId: 'other' };
+    Object.assign(owner, { pageContent() {}, readFacts: { fact: 'current' }, subscription: { title: '当前订阅' },
+      isExpanded: () => false, presentationIdentity: 'opening-current', operation: undefined,
+      onSelectItem: item => calls.push(item), onToggle: (id, value) => calls.push([id, value]),
+      focusSubscriptionIfNeeded: (item, index) => focused.push([item.title, index]), toggleDisclosure() {} });
+    owner.items = [other, initial]; owner[management ? 'subscriptionList' : 'entryList']();
+    for (const node of [...owner.nodes.values()]) {
+      if (node.type === 'ListItem' && Array.isArray(node.create) && typeof node.create[0] === 'function')
+        node.create[0](node.id, true);
+    }
+    const title = controls.nodes(owner).findLast(node => node.type === 'Text' && node.create === '旧标题');
+    assert.ok(title); const ids = [...owner.nodes.keys()];
+    const current = { ...initial, title: '当前标题', description: '当前摘要', pubDate: '今天', read: true,
+      enabled: false, meta: '当前来源信息' };
+    owner.updateStateVars({ items: [current, other] }); controls.properties.flush();
+    owner.replay(); controls.properties.flush();
+    assert.equal(title.create, '当前标题', `retained RSS ${management ? 'management' : 'source'} row consumes current DTO`);
+    const row = controls.nodes(owner).filter(node => node.type === 'Row' && node.border?.width?.top !== undefined).at(-1);
+    assert.ok(row); assert.equal(row.border.width.top, 0, 'retained additional RSS row consumes current index');
+    if (management) {
+      assert.ok(controls.nodes(owner).some(node => node.type === 'Text' && node.create === '当前来源信息'));
+      const toggle = [...owner.children.values()].filter(child => child.params?.inputIdentity === 'opening-current:current').at(-1);
+      assert.ok(toggle); assert.equal(toggle.params.value, false, 'current management DTO reaches actual Toggle value input');
+      toggle.params.onToggle(true); assert.deepEqual(calls, [['current', true]]);
+      const appeared = controls.nodes(owner).filter(node => node.type === 'Column' && node.onAppear).at(-1);
+      assert.ok(appeared); appeared.onAppear(); assert.deepEqual(focused, [['当前标题', 0]]);
+    } else {
+      assert.ok(controls.nodes(owner).some(node => node.type === 'Text' && node.create === '当前订阅 · 今天'));
+      assert.ok(controls.nodes(owner).some(node => node.type === 'Text' && node.create === '当前摘要'));
+      row.onClick(); assert.equal(calls.length, 1); assert.equal(calls[0].title, '当前标题'); assert.equal(calls[0].read, true);
+    }
+    assert.deepEqual([...owner.nodes.keys()], ids, 'same-key RSS updates preserve recorded native row actors');
+    return { currentDto: true, currentIndex: true, currentAction: true,
+      boundary: 'Finite RepeatItem and Toggle input ports. Actual native recycling, Toggle focus and pixel layout remain target evidence' };
+  }
+
+  function rssManagementActions() {
+    const controls = foundationControls();
+    class ActionPort {
+      constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+      updateStateVars(params) { Object.assign(this.params, params); }
+    }
+    const sources = { ...controls.hooks.childSources,
+      ReaderToggle: read('entry/src/main/ets/ui/controls/ReaderToggle.ets'),
+      ReaderLabeledIconAction: read('entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets') };
+    const owner = createReaderBuilderProbe(read(managementPath), ['subscriptionItem', 'actionBar', 'actionTarget'],
+      { ...controls.dependencies, ReaderToggle: ActionPort, ReaderLabeledIconAction: ActionPort },
+      { ...controls.hooks, childSources: sources, allowEmptyBranchAdmission: true }).owner;
+    let item = { subscriptionId: 'initial', title: '初始源', meta: '初始来源', enabled: true };
+    const calls = [];
+    Object.assign(owner, { presentationIdentity: 'opening-current', operation: undefined, isExpanded: () => true,
+      onToggle: id => calls.push(['toggle', id]), onViewArticles: id => calls.push(['view', id]), onEditSource: id => calls.push(['edit', id]),
+      onRefresh: id => calls.push(['refresh', id]), onDelete: id => calls.push(['delete', id]),
+      focusSubscriptionIfNeeded() {} });
+    owner.subscriptionItem(() => item, () => 0);
+    const oldToggle = [...owner.children.values()].find(child => child.params?.inputIdentity === 'opening-current:initial');
+    assert.ok(oldToggle);
+    const actions = [...owner.children.values()].filter(child => child.params?.label);
+    assert.equal(actions.length, 4);
+    item = { ...item, subscriptionId: 'current', title: '当前源' }; owner.replay(); controls.properties.flush();
+    oldToggle.params.onToggle(false); assert.deepEqual(calls, [], 'old Toggle entity callback is retired before current actions');
+    for (const action of actions) action.params.onAction();
+    assert.deepEqual(calls, [['view', 'current'], ['edit', 'current'], ['refresh', 'current'], ['delete', 'current']],
+      'retained RSS management actions consume current recycled entity');
+    return { currentActions: 4, boundary: 'Finite row-item replacement and shared action constructor callback ports. Native recycling and focus remain target evidence' };
+  }
+
+  function shelfRowIndex() {
+    const controls = foundationControls();
+    const motionPath = 'entry/src/main/ets/ui/foundation/MotionSpec.ets';
+    const linearCurve = { interpolate: value => value };
+    const { BOOKSHELF_VIEW_MOTION } = selectedProductionValues(new URL(motionPath, root), ['BOOKSHELF_VIEW_MOTION'],
+      { curves: { cubicBezierCurve: () => linearCurve }, Curve: { Linear: 'linear', EaseOut: 'ease-out' } });
+    const motionSource = read(motionPath);
+    const tree = ts.createSourceFile('MotionSpec.ets', motionSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    const delay = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'bookshelfViewCoverDelayMs');
+    assert.ok(delay);
+    const bookshelfViewCoverDelayMs = new Function('BOOKSHELF_VIEW_MOTION',
+      stripTypeScriptTypes(delay.getText(tree)).replace(/^export /, '') + ';return bookshelfViewCoverDelayMs;')(BOOKSHELF_VIEW_MOTION);
+    const { BookshelfRowDataSource } = selectedProductionClasses(new URL(shelfPath, root), ['BookshelfRowDataSource'],
+      { DataOperationType: { ADD: 'ADD', DELETE: 'DELETE' } });
+    const methods = ['bookshelfList', 'projectionRow', 'projectionBookCard', 'projectionBookCover', 'projectionBookCoverLayer',
+      'projectionListProgress', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
+      'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
+      'projectionCoverCompensationX', 'projectionCoverCompensationY', 'bookRowRenderKey'];
+    class CoverPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+    const source = read(shelfPath);
+    const nativeGesture = new Proxy({}, { get: () => () => {} });
+    const owner = createReaderBuilderProbe(source, methods, { ...controls.dependencies, ...coverVisual,
+      motionSegment, bookshelfViewCoverDelayMs, BookshelfSectionHeader: CoverPort, ImageFit: { Cover: 'cover' }, NoCoverCover: CoverPort,
+      globalThis: { Gesture: nativeGesture }, LongPressGesture: nativeGesture, GesturePriority: { Low: 'low' } },
+      { ...controls.hooks, childSources: { ...controls.hooks.childSources, NoCoverCover: read('entry/src/main/ets/ui/patterns/NoCoverCover.ets'), BookshelfSectionHeader: read('entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets') } }).owner;
+    Object.assign(owner, { viewMotion: BOOKSHELF_VIEW_MOTION, viewSwitchRunning: true, reduceMotion: false,
+      viewMode: 'cover', viewSwitchDestinationMode: 'list', viewSwitchTimeMs: BOOKSHELF_VIEW_MOTION.layoutCommitMs + 20,
+      shelfBookCardWidth: () => 100, shelfContentWidth: () => 300, gridBookCardHeight: () => 140,
+      listRowHeight: () => 160, listCoverWidth: () => 60, listCoverHeight: () => 80, bookCardHeight: () => 140,
+      bookRowSpace: () => 10, projectionGridDetails() {}, projectionListDetails() {}, hasCover: () => true,
+      bookActionFocusKey: book => `book:${book.bookId}`, bookCoverMotionId: book => `cover:${book.bookId}`,
+      gridProgressLabel: () => '', bookSelectionHandler: () => () => {}, bookActionPresentationHandler: () => () => {},
+      projectionCoverLayerOpacity: () => 1, viewSwitchGridContentOpacity: 1 });
+    const row = [{ sourceId: 'local', bookId: 'current', title: '当前书', author: '作者', coverUrl: 'test://cover' }];
+    const other = [{ ...row[0], bookId: 'other' }];
+    const data = new BookshelfRowDataSource(value => owner.bookRowRenderKey(value, 0));
+    data.replace([row, other]);
+    const initialKey = owner.bookRowRenderKey(row, 0);
+    const currentPosition = typeof data.positionForKey === 'function' ? data.positionForKey(initialKey, 0) : undefined;
+    assert.ok(source.includes('this.rowDataSource.positionForKey(this.bookRowRenderKey(row, rowIndex), rowIndex)'), 'normal bookshelfList entry binds the position getter to its actual row key');
+    const rowMethod = source.match(/private projectionRow\([^\n]+/)[0];
+    owner.projectionRow(row, false, rowMethod.includes('rowIndex: () => number') ? currentPosition : 0);
+    const card = controls.nodes(owner).find(node => node.id === 'book:current');
+    const cover = controls.nodes(owner).find(node => node.id === 'cover:current');
+    assert.ok(card && cover); const before = card.width, ids = [...owner.nodes.keys()];
+    let notifiedPosition;
+    data.registerDataChangeListener({ onDataReloaded() { notifiedPosition = currentPosition?.(); } });
+    data.replace([other, row]); owner.replay(); controls.properties.flush();
+    assert.equal(owner.bookRowRenderKey(row, 1), initialKey, 'current row key intentionally excludes its moved position');
+    const expected = owner.projectionBookWidth(false, 3);
+    assert.notEqual(expected, before, 'first-row and later-row motion cadence differ at this actual sample');
+    assert.equal(card.width, expected, 'retained shelf card consumes current row motion band');
+    assert.equal(cover.borderRadius, owner.projectionCoverRadius(false, 3), 'retained shelf cover consumes current row motion band');
+    const image = controls.nodes(owner).find(node => node.type === 'Image' && node.create === 'test://cover');
+    assert.equal(image.borderRadius, owner.projectionCoverRadius(false, 3), 'retained shelf cover layer consumes current row motion band');
+    const nativeRow = controls.nodes(owner).find(node => node.type === 'Stack' && node.width === 300);
+    assert.equal(nativeRow.height, owner.projectionRowHeight(row, false, 3));
+    assert.deepEqual([...owner.nodes.keys()], ids, 'row position updates preserve existing card and cover actors');
+    assert.equal(currentPosition(), 1);
+    assert.equal(notifiedPosition, 1, 'current position map is committed before synchronous native reload listeners');
+    data.replace([row, other]); owner.replay(); assert.equal(card.width, before, 'returning to first row restores current cadence');
+    data.replace([other]); assert.equal(currentPosition(), 0, 'removed row keeps its captured fallback for its final paint');
+    return { rowPositions: [0, 1, 0], currentCadence: true, actorIdentityRetained: true,
+      boundary: 'Actual motion timings and methods with finite linear native curve, native LazyForEach moves/compositor remain target evidence' };
   }
 
   function searchEmpty() {
@@ -276,6 +447,8 @@ if (selected.length) {
         if (ts.isArrowFunction(argument)) {
           assert.ok(!ts.isBlock(argument.body));
           edits.push({ start: argument.getStart(tree), end: argument.end, text: argument.body.getText(tree) });
+        } else if (ts.isCallExpression(argument) && ts.isPropertyAccessExpression(argument.expression) && argument.expression.name.text === 'positionForKey') {
+          edits.push({ start: argument.getStart(tree), end: argument.end, text: `${argument.getText(tree)}()` });
         } else {
           assert.ok(ts.isIdentifier(argument), 'only actual forwarded getter parameters are restored');
           let parent = node.parent;
@@ -295,6 +468,21 @@ if (selected.length) {
 
   const restoreParameters = (source, methods, parameter) => methods.reduce((current, method) => captureParameter(current, method, parameter), source);
   const negativeCases = {
+    'rss-management-actions': [[managementPath, source => captureParameter(source, 'actionBar', 'subscriptionId'), /management actions consume current recycled entity/]],
+    'shelf-row-index': [
+      [shelfPath, source => captureParameter(source, 'projectionRow', 'rowIndex'), /retained shelf card consumes current row motion band/],
+      [shelfPath, source => restoreParameters(source, ['projectionBookCard', 'projectionBookCover', 'projectionBookCoverLayer'], 'index'), /retained shelf card consumes current row motion band/],
+      [shelfPath, source => restoreParameters(source, ['projectionBookCover', 'projectionBookCoverLayer'], 'index'), /retained shelf cover consumes current row motion band/],
+      [shelfPath, source => captureParameter(source, 'projectionBookCoverLayer', 'index'), /retained shelf cover layer consumes current row motion band/],
+    ],
+    'rss-source-rows': [
+      [feedPath, source => captureParameter(source, 'entryRow', 'item'), /source row consumes current DTO/],
+      [feedPath, source => captureParameter(source, 'entryRow', 'index'), /additional RSS row consumes current index/],
+    ],
+    'rss-management-rows': [
+      [managementPath, source => captureParameter(source, 'subscriptionItem', 'item'), /management row consumes current DTO/],
+      [managementPath, source => captureParameter(source, 'subscriptionItem', 'index'), /additional RSS row consumes current index/],
+    ],
     'rss-error': [
       [rssPath, source => captureParameter(source, 'stateCard', 'body'), /retained RSS error count/],
       [rssPath, source => captureParameter(source, 'stateCard', 'failedSources'), /distinct same-name RSS errors/],
@@ -329,7 +517,7 @@ if (selected.length) {
     }, /retained source overlay padding/]],
   };
 
-  const scenarios = { 'rss-error': rssError, 'search-empty': searchEmpty, 'import-formats': importFormats,
+  const scenarios = { 'rss-management-actions': rssManagementActions, 'shelf-row-index': shelfRowIndex, 'rss-source-rows': () => additionalRssRows(false), 'rss-management-rows': () => additionalRssRows(true), 'rss-error': rssError, 'search-empty': searchEmpty, 'import-formats': importFormats,
     'appearance-geometry': appearanceGeometry, 'source-overlay': sourceOverlay, 'rss-feed-arrays': rssFeedArrays, 'rss-repeat-rows': rssRepeatRows };
   for (const id of selected) {
     results[id] = scenarios[id]();
@@ -342,7 +530,7 @@ if (selected.length) {
     results[id].negativeControlsRejected = negativeCases[id].length;
     recordContractCasePass(id);
   }
-  const inputs = [rssPath, searchPath, importPath, appearancePath, sourcePath, 'tools/test-builder-live-data.mjs']
+  const inputs = [shelfPath, rssPath, feedPath, managementPath, searchPath, importPath, appearancePath, sourcePath, 'tools/test-builder-live-data.mjs']
     .map(path => ({ path, sha256: createHash('sha256').update(read(path)).digest('hex') }));
   if (output) writeFileSync(new URL(output, root), JSON.stringify({ status: 'PASS', cases: selected, results, inputs }, null, 2) + '\n');
 }

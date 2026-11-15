@@ -135,11 +135,15 @@ class BookshelfRowDataSource implements IDataSource {
   private items: ShelfBook[][] = [];
   private listeners: DataChangeListener[] = [];
   private keys: string[] = [];
+  private readonly positions: Map<string, number> = new Map();
   private readonly renderKey: (row: ShelfBook[]) => string;
   constructor(renderKey: (row: ShelfBook[]) => string) { this.renderKey = renderKey; }
 
   totalCount(): number { return this.items.length; }
   getData(index: number): ShelfBook[] { return this.items[index]; }
+  positionForKey(key: string, fallback: number): () => number {
+    return (): number => this.positions.get(key) ?? fallback;
+  }
   registerDataChangeListener(listener: DataChangeListener): void {
     if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
   }
@@ -154,6 +158,8 @@ class BookshelfRowDataSource implements IDataSource {
     const samePrefix = previous.slice(0, shared).every((key: string, index: number): boolean => key === keys[index]);
     this.items = items;
     this.keys = keys;
+    this.positions.clear();
+    keys.forEach((key: string, index: number): void => { this.positions.set(key, index); });
     if (samePrefix && previous.length === keys.length) return;
     // Paging appends/removes whole rows. Tell ArkUI the exact operation so
     // existing covers/text retain their mounted state. Arbitrary regrouping
@@ -719,7 +725,8 @@ export struct BookshelfPage {
       // Figma shared-cover motion had no persistent actor to interpolate.
       LazyForEach(this.rowDataSource, (row: ShelfBook[], rowIndex: number) => {
         ListItem() {
-          this.projectionRow(row, expandedLayout, rowIndex);
+          this.projectionRow(row, expandedLayout,
+            this.rowDataSource.positionForKey(this.bookRowRenderKey(row, rowIndex), rowIndex));
         }
       }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
     }
@@ -1009,14 +1016,14 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private projectionRow(row: ShelfBook[], expandedLayout: boolean, rowIndex: number) {
+  private projectionRow(row: ShelfBook[], expandedLayout: boolean, rowIndex: () => number) {
     Stack({ alignContent: Alignment.TopStart }) {
       ForEach(row, (book: ShelfBook, columnIndex: number) => {
-        this.projectionBookCard(book, expandedLayout, (rowIndex * 3) + columnIndex, columnIndex);
+        this.projectionBookCard(book, expandedLayout, (): number => (rowIndex() * 3) + columnIndex, columnIndex);
       }, (book: ShelfBook): string => `${book.sourceId}:${book.bookId}`);
     }
     .width(this.shelfContentWidth(expandedLayout))
-    .height(this.projectionRowHeight(row, expandedLayout, rowIndex * 3));
+    .height(this.projectionRowHeight(row, expandedLayout, rowIndex() * 3));
   }
 
   /**
@@ -1029,7 +1036,7 @@ export struct BookshelfPage {
   private projectionBookCard(
     book: ShelfBook,
     expandedLayout: boolean,
-    index: number,
+    index: () => number,
     columnIndex: number,
   ) {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -1037,11 +1044,11 @@ export struct BookshelfPage {
       this.projectionGridDetails(book, expandedLayout);
       this.projectionListDetails(book, expandedLayout);
     }
-    .width(this.projectionBookWidth(expandedLayout, index))
-    .height(this.projectionBookHeight(book, expandedLayout, index))
+    .width(this.projectionBookWidth(expandedLayout, index()))
+    .height(this.projectionBookHeight(book, expandedLayout, index()))
     .translate({
-      x: this.projectionBookTranslateX(columnIndex, expandedLayout, index),
-      y: this.projectionBookTranslateY(columnIndex, expandedLayout, index),
+      x: this.projectionBookTranslateX(columnIndex, expandedLayout, index()),
+      y: this.projectionBookTranslateY(columnIndex, expandedLayout, index()),
     })
     .id(this.bookActionFocusKey(book, false))
     .attributeModifier(new ReaderActionAccessibility(`${book.title}，${book.author}，${this.gridProgressLabel(book)}` +
@@ -1054,7 +1061,7 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private projectionBookCover(book: ShelfBook, expandedLayout: boolean, index: number) {
+  private projectionBookCover(book: ShelfBook, expandedLayout: boolean, index: () => number) {
     Stack({ alignContent: Alignment.TopStart }) {
       this.projectionBookCoverLayer(book, expandedLayout, false, index);
       this.projectionBookCoverLayer(book, expandedLayout, true, index);
@@ -1062,17 +1069,17 @@ export struct BookshelfPage {
     .width(this.shelfBookCardWidth(expandedLayout))
     .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
     .id(this.bookCoverMotionId(book, false))
-    .borderRadius(this.projectionCoverRadius(expandedLayout, index))
+    .borderRadius(this.projectionCoverRadius(expandedLayout, index()))
     .clip(true)
     .scale({
-      x: this.projectionCoverScale(expandedLayout, index),
-      y: this.projectionCoverScale(expandedLayout, index),
+      x: this.projectionCoverScale(expandedLayout, index()),
+      y: this.projectionCoverScale(expandedLayout, index()),
       centerX: '50%',
       centerY: '50%',
     })
     .translate({
-      x: this.projectionCoverCompensationX(expandedLayout, index),
-      y: this.projectionCoverCompensationY(expandedLayout, index),
+      x: this.projectionCoverCompensationX(expandedLayout, index()),
+      y: this.projectionCoverCompensationY(expandedLayout, index()),
     })
     .zIndex(4)
     // Both cover layers are visual actors. The enclosing card alone owns
@@ -1087,14 +1094,14 @@ export struct BookshelfPage {
    * incoming text would expose the shelf when the upper actor hands off.
    */
   @Builder
-  private projectionBookCoverLayer(book: ShelfBook, expandedLayout: boolean, morphLayer: boolean, index: number) {
+  private projectionBookCoverLayer(book: ShelfBook, expandedLayout: boolean, morphLayer: boolean, index: () => number) {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.hasCover(book)) {
         Image(book.coverUrl as string)
           .width(this.shelfBookCardWidth(expandedLayout))
           .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
           .objectFit(ImageFit.Cover)
-          .borderRadius(this.projectionCoverRadius(expandedLayout, index))
+          .borderRadius(this.projectionCoverRadius(expandedLayout, index()))
           .shadow({ radius: BOOKSHELF_COVER_SHADOW_RADIUS, color: readerAppColor('app.shadow.cover', this.appThemeScheme),
             offsetX: 0, offsetY: BOOKSHELF_COVER_SHADOW_OFFSET_Y });
       } else {
@@ -1131,7 +1138,7 @@ export struct BookshelfPage {
       angle: 141.7,
       colors: [[readerAppColor('TOK_PRIMARY_GRADIENT_START', this.appThemeScheme), 0.077], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0.923]],
     })
-    .borderRadius(this.projectionCoverRadius(expandedLayout, index))
+    .borderRadius(this.projectionCoverRadius(expandedLayout, index()))
     .clip(true)
     // Alpha belongs to the complete cover, including the fallback's paper,
     // rules and text. Otherwise the fading paper can cover the lower text

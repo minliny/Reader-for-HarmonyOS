@@ -43,7 +43,7 @@ function runBadgeBudget() {
         continueCardFontScale: () => fontScale,
       });
       const book = { sourceId: 'test', bookId: 'same', title: '书名', author: '作者', coverUrl: 'file://cover', unreadCount: count };
-      owner.projectionBookCoverLayer(book, wide, morph, 0);
+      owner.projectionBookCoverLayer(book, wide, morph, () => 0);
       const nodes = [...owner.nodes.values()];
       const text = nodes.find(node => node.type === 'Text' && node.create === `更新 ${count} 章`);
       const badge = nodes.find(node => node.type === 'Row' && node.constraintSize?.maxWidth !== undefined && node.padding?.top === 3);
@@ -69,7 +69,7 @@ function runBadgeBudget() {
         bookActionFocusKey: () => 'book', bookSelectionHandler: () => () => {},
         bookActionPresentationHandler: () => () => {},
       });
-      owner.projectionBookCard(book, wide, 0, 0);
+      owner.projectionBookCard(book, wide, () => 0, 0);
       assert.ok([...owner.nodes.values()].some(node => node.accessibilityText?.includes(`更新 ${count} 章`)),
         'book card preserves the exact count when the visual badge ellipsizes');
       assert.equal(book.unreadCount, count);

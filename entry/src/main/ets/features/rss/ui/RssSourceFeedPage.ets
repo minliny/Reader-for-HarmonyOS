@@ -222,7 +222,7 @@ export struct RssSourceFeedPage {
     Repeat(this.items)
       .each((repeatItem: RepeatItem<RssItem>) => {
       ListItem() {
-        this.entryRow(repeatItem.item, repeatItem.index);
+        this.entryRow((): RssItem => repeatItem.item, (): number => repeatItem.index);
       }.backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
         .border({ width: { left: TOK_BORDER_W, right: TOK_BORDER_W, top: repeatItem.index === 0 ? TOK_BORDER_W : 0,
           bottom: repeatItem.index === this.items.length - 1 ? TOK_BORDER_W : 0 }, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
@@ -235,17 +235,17 @@ export struct RssSourceFeedPage {
   }
 
   @Builder
-  private entryRow(item: RssItem, index: number) {
+  private entryRow(item: () => RssItem, index: () => number) {
     Row({ space: TOK_SPACE_XS }) {
       Text('')
         .width(7)
         .height(7)
-        .backgroundColor(item.read ? readerAppColor('app.feed.unreadDot', this.appThemeScheme) : readerAppColor('app.action.fill', this.appThemeScheme))
+        .backgroundColor(item().read ? readerAppColor('app.feed.unreadDot', this.appThemeScheme) : readerAppColor('app.action.fill', this.appThemeScheme))
         .borderRadius(3.5)
         .margin({ top: 25 });
 
       Column({ space: 3 }) {
-        Text(item.title)
+        Text(item().title)
           .width('100%')
           .fontFamily(TYPE_RSS_ENTRY_TITLE.fontFamily)
           .fontWeight(TYPE_RSS_ENTRY_TITLE.fontWeight)
@@ -254,7 +254,7 @@ export struct RssSourceFeedPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(this.itemMeta(item))
+        Text(this.itemMeta(item()))
           .width('100%')
           .fontFamily(TYPE_RSS_META.fontFamily)
           .fontWeight(TYPE_RSS_META.fontWeight)
@@ -262,8 +262,8 @@ export struct RssSourceFeedPage {
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        if (item.description !== undefined && item.description.trim().length > 0) {
-          Text(item.description)
+        if ((item().description ?? '').trim().length > 0) {
+          Text(item().description ?? '')
             .width('100%')
             .fontFamily(TYPE_RSS_ENTRY_DESCRIPTION.fontFamily)
             .fontWeight(TYPE_RSS_ENTRY_DESCRIPTION.fontWeight)
@@ -280,8 +280,8 @@ export struct RssSourceFeedPage {
     .width('100%')
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .onClick((): void => this.onSelectItem(item));
+    .border({ width: { top: index() > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
+    .onClick((): void => this.onSelectItem(item()));
   }
 
   private sourceSubtitle(): string {

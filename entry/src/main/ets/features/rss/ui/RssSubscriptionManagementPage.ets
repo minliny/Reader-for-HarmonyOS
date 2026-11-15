@@ -272,7 +272,7 @@ export struct RssSubscriptionManagementPage {
     Repeat(this.items)
       .each((repeatItem: RepeatItem<RssSubscriptionManagementItem>) => {
       ListItem() {
-        this.subscriptionItem(repeatItem.item, repeatItem.index);
+        this.subscriptionItem((): RssSubscriptionManagementItem => repeatItem.item, (): number => repeatItem.index);
       }.backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
         .border({ width: { left: TOK_BORDER_W, right: TOK_BORDER_W, top: repeatItem.index === 0 ? TOK_BORDER_W : 0,
           bottom: repeatItem.index === this.items.length - 1 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
@@ -284,7 +284,7 @@ export struct RssSubscriptionManagementPage {
   }
 
   @Builder
-  private subscriptionItem(item: RssSubscriptionManagementItem, index: number) {
+  private subscriptionItem(item: () => RssSubscriptionManagementItem, index: () => number) {
     Column() {
       Row() {
         Stack({ alignContent: Alignment.Center }) {
@@ -297,10 +297,10 @@ export struct RssSubscriptionManagementPage {
         .margin({ left: TOK_SPACE_CONTROL_INLINE })
         .backgroundColor(readerAppColor('TOK_PRIMARY_BG', this.appThemeScheme))
         .borderRadius(16)
-        .opacity(item.enabled ? 1 : 0.58);
+        .opacity(item().enabled ? 1 : 0.58);
 
         Column({ space: 3 }) {
-          Text(item.title)
+          Text(item().title)
             .width('100%')
             .fontFamily(TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily)
             .fontWeight(TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight)
@@ -309,7 +309,7 @@ export struct RssSubscriptionManagementPage {
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-          Text(item.meta)
+          Text(item().meta)
             .width('100%')
             .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
             .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
@@ -322,19 +322,19 @@ export struct RssSubscriptionManagementPage {
         .layoutWeight(1)
         .margin({ left: TOK_SPACE_CONTROL_INLINE })
         .alignItems(HorizontalAlign.Start)
-        .opacity(item.enabled ? 1 : 0.62);
+        .opacity(item().enabled ? 1 : 0.62);
 
         Stack({ alignContent: Alignment.Center }) {
-          ForEach([`${this.presentationIdentity}:${item.subscriptionId}`], (identity: string): void => {
+          ForEach([`${this.presentationIdentity}:${item().subscriptionId}`], (identity: string): void => {
           ReaderToggle({
-            value: item.enabled, specId: 'standard-toggle', accessibilityLabel: '启用订阅',
+            value: item().enabled, specId: 'standard-toggle', accessibilityLabel: '启用订阅',
             inputIdentity: identity,
             actionEnabled: this.operation?.original?.blocked !== true && this.operation?.projection.receipt.confirmation !== 'unknown',
             isBusy: this.operation?.original?.busy === true || this.operation?.projection.facts.fact === 'refreshing',
             onToggle: (next: boolean): void => {
-              if (identity === `${this.presentationIdentity}:${item.subscriptionId}` && this.operation?.original?.blocked !== true &&
+              if (identity === `${this.presentationIdentity}:${item().subscriptionId}` && this.operation?.original?.blocked !== true &&
                 this.operation?.projection.receipt.confirmation !== 'unknown' && this.operation?.original?.busy !== true &&
-                this.operation?.projection.facts.fact !== 'refreshing') this.onToggle(item.subscriptionId, next);
+                this.operation?.projection.facts.fact !== 'refreshing') this.onToggle(item().subscriptionId, next);
             },
           });
           }, (identity: string): string => identity);
@@ -346,36 +346,36 @@ export struct RssSubscriptionManagementPage {
           Image((this.appThemeScheme === 'night' ? $r('app.media.rss_filter_chevron_theme_night') : $r('app.media.rss_filter_chevron')))
             .width(20)
             .height(20)
-            .rotate({ angle: this.isExpanded(item.subscriptionId) ? 180 : 0 });
+            .rotate({ angle: this.isExpanded(item().subscriptionId) ? 180 : 0 });
         }
         .width(44)
         .constraintSize({ minHeight: 44 })
-        .onClick((): void => this.toggleDisclosure(item.subscriptionId));
+        .onClick((): void => this.toggleDisclosure(item().subscriptionId));
       }
       .width('100%')
       .constraintSize({ minHeight: 56 })
       .alignItems(VerticalAlign.Center)
-      .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
+      .border({ width: { top: index() > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
 
-      if (this.isExpanded(item.subscriptionId)) {
-        this.actionBar(item.subscriptionId);
+      if (this.isExpanded(item().subscriptionId)) {
+        this.actionBar((): string => item().subscriptionId);
       }
     }
     .width('100%')
-    .onAppear((): void => this.focusSubscriptionIfNeeded(item, index));
+    .onAppear((): void => this.focusSubscriptionIfNeeded(item(), index()));
   }
 
   @Builder
-  private actionBar(subscriptionId: string) {
+  private actionBar(subscriptionId: () => string) {
     Column() {
       this.actionTarget('查看文章', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_view_all_theme_night') : $r('app.media.rss_manage_view_all')), false, false,
-        (): void => this.onViewArticles(subscriptionId));
+        (): void => this.onViewArticles(subscriptionId()));
       this.actionTarget('编辑来源', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_edit_theme_night') : $r('app.media.rss_manage_edit')), false, true,
-        (): void => this.onEditSource(subscriptionId));
+        (): void => this.onEditSource(subscriptionId()));
       this.actionTarget('立即刷新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')), false, true,
-        (): void => this.onRefresh(subscriptionId));
+        (): void => this.onRefresh(subscriptionId()));
       this.actionTarget('删除', (): Resource => $r('app.media.rss_manage_delete'), true, true,
-        (): void => this.onDelete(subscriptionId));
+        (): void => this.onDelete(subscriptionId()));
     }
     .width('100%')
     .constraintSize({ minHeight: 44 })

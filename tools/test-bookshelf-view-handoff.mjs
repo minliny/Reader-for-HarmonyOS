@@ -181,7 +181,7 @@ for (const hasImage of [false, true]) {
     const updateBranch = owner.ifElseBranchUpdateFunction.bind(owner);
     owner.ifElseBranchUpdateFunction = (branch, builder) => { branches.push(branch); updateBranch(branch, builder); };
     sample(owner, from, to, 0);
-    owner.projectionBookCover(rowBook, false, 5);
+    owner.projectionBookCover(rowBook, false, () => 5);
     owner.projectionGridDetails(rowBook, false);
     owner.projectionListDetails(rowBook, false);
     verifyGroupedCoverActors(owner);
@@ -271,7 +271,7 @@ for (const hasImage of [false, true]) {
   const ungrouped = fixture(ungroupedSource);
   const rowBook = { ...book, ...(hasImage ? { coverUrl: 'https://example.test/handoff.jpg' } : {}) };
   sample(ungrouped, 'cover', 'list', 710);
-  ungrouped.projectionBookCover(rowBook, false, 5);
+  ungrouped.projectionBookCover(rowBook, false, () => 5);
   assert.equal(coverOpacity(ungrouped), 1, 'the counterexample deliberately still passes layer-alpha composition');
   assert.throws(() => verifyGroupedCoverActors(ungrouped), /each cover must composite/,
     'the default and image cover both require complete-layer grouping');
