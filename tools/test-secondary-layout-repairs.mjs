@@ -225,12 +225,12 @@ function actionsToolsRules() {
       debugInputRevision: 0, debugOptionsCurrent: () => true, debugKeyChange: () => () => {} });
     debug.debugCard();
     assert.ok(c.nodes(debug).some(n => n.type === 'TextInput' && n.height >= 44), 'actual debugCard native input owns44vp in its natural Card');
-    const rules = c.actor('features/settings/ui/RulesManagementPage.ets', ['actionButton', 'booleanField', 'entityRow', 'subscriptionRow', 'smallButton'], {
+    const rules = c.actor('features/settings/ui/RulesManagementPage.ets', ['actionButton', 'actionAllowed', 'booleanField', 'entityRow', 'subscriptionRow', 'smallButton'], {
       snapshot: { busy: false }, replaceId: -1, txtId: -1, dictName: '', subId: -1,
-      editSubscription() {}, subscriptionTypeLabel: () => '书源' });
+      editSubscription() {}, subscriptionTypeLabel: () => '书源', draftIsCurrent: () => true, currentSubscription: () => undefined });
     rules.actionButton('替换规则', true, () => {}, false, true);
-    rules.booleanField('自动更新标记', true, () => {});
-    rules.entityRow('很长的规则名称用于窄屏与大字体', 'https://example.org/very-long-subscription/url', () => {}, () => {});
+    rules.booleanField('自动更新标记', () => true, () => {}, 'geometry-draft');
+    rules.entityRow(() => '很长的规则名称用于窄屏与大字体', () => 'https://example.org/very-long-subscription/url', () => {}, () => {});
     rules.subscriptionRow({ name: '很长的规则订阅名称', type: 0, url: 'https://example.org/rules/all', id: 1 });
     const ruleNodes = c.nodes(rules);
     for (const target of ruleNodes.filter(n => n.type === 'Button' && typeof n.onClick === 'function')) assertNaturalButton(target);
@@ -262,8 +262,8 @@ function actionsToolsRules() {
   assert.throws(() => assert.ok(oldRulesControls.nodes(oldRulesButton).find(n => n.type === 'Button').height >= 44), /AssertionError/, 'old30vp native Rules target rejected');
   const rulesSource = read('features/settings/ui/RulesManagementPage.ets');
   const fixedRules = rulesSource.replace('.constraintSize({ minHeight: 56 })', '.height(56)');
-  const fixedRow = c.actor('features/settings/ui/RulesManagementPage.ets', ['entityRow', 'smallButton'], { snapshot: { busy: false } }, fixedRules);
-  fixedRow.entityRow('长规则标题', 'https://example.test/long', () => {}, () => {});
+  const fixedRow = c.actor('features/settings/ui/RulesManagementPage.ets', ['entityRow', 'smallButton', 'actionAllowed'], { snapshot: { busy: false } }, fixedRules);
+  fixedRow.entityRow(() => '长规则标题', () => 'https://example.test/long', () => {}, () => {});
   assert.throws(() => assert.ok(c.nodes(fixedRow).some(n => n.type === 'Column' && n.constraintSize?.minHeight === 56 && n.height === undefined)), /AssertionError/, 'oldfixed56 row rejected');
   // Direct equal callers exercise the same two actual carriers in retained pages.
   for (const [rel, method, args, fields, labels] of [
@@ -694,9 +694,9 @@ function supplementalInputTargets() {
     const defaultButton = new c.deps.ReaderButton(undefined, { label: '好' }); defaultButton.initialRender();
     const button = c.nodes(defaultButton).find(node => node.type === 'Button');
     assert.ok(button.height >= 44 && button.constraintSize.minWidth >= 44, 'public default Native Button owns44x44 minimum');
-    const rules = c.actor('features/settings/ui/RulesManagementPage.ets', ['replaceCard', 'txtTocCard', 'dictCard', 'subscriptionCard', 'input'], {
+    const rules = c.actor('features/settings/ui/RulesManagementPage.ets', ['replaceCard', 'txtTocCard', 'dictCard', 'subscriptionCard', 'input', 'draftKey', 'draftIsCurrent'], {
       snapshot: { replaceRules: [], txtTocRules: [], dictRules: [], subscriptions: [] }, replaceId: -1, txtId: -1, subId: -1,
-      heading() {}, booleanField() {}, actionButton() {}, replaceName: '', replacePattern: '', replaceValue: '', replaceOrder: '',
+      heading() {}, booleanField() {}, actionButton() {}, subscriptionTypeButton() {}, draftOpening: 1, replaceDraftRevision: 0, txtDraftRevision: 0, dictDraftRevision: 0, subscriptionDraftRevision: 0, replaceName: '', replacePattern: '', replaceValue: '', replaceOrder: '',
       txtName: '', txtRule: '', txtExample: '', txtOrder: '', dictName: '', dictUrl: '', dictShow: '', dictOrder: '', subName: '', subUrl: '', subOrder: '' });
     for (const method of ['replaceCard', 'txtTocCard', 'dictCard', 'subscriptionCard']) rules[method]();
     const fields = c.nodes(rules).filter(node => node.type === 'TextInput');

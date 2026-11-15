@@ -257,12 +257,12 @@ await (async (_label,fn)=>await fn())('actual standalone settings Add action has
   syntax.propCollection.set('ReaderToggle',new Set([...toggleSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class NativeChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   const foundation=foundationControls();
-  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{...foundation.dependencies,ReaderToggle:NativeChild,...rulesTypography},foundation.hooks);
+  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero','actionAllowed','draftKey','draftIsCurrent','currentReplace'],{...foundation.dependencies,ReaderToggle:NativeChild,...rulesTypography},foundation.hooks);
   let saved;
-  Object.assign(owner,{appThemeScheme:'day',snapshot:{replaceRules:[],busy:false},replaceId:-1,replaceName:'独立规则',
+  Object.assign(owner,{appThemeScheme:'day',mounted:true,draftOpening:1,replaceDraftRevision:0,txtDraftRevision:0,dictDraftRevision:0,subscriptionDraftRevision:0,snapshot:{replaceRules:[],busy:false},replaceId:-1,replaceName:'独立规则',
     replacePattern:'原文',replaceValue:'替换',replaceEnabled:true,replaceRegex:false,replaceOrder:'0',onSaveReplace:draft=>{saved=draft;},
     defaultScope:'不应污染设置页;https://reading.example'});
-  owner.replaceCard();const add=foundation.nodes(owner).find(n=>n.type==='Text'&&n.create==='新增替换规则');
+  owner.replaceCard();const add=foundation.nodes(owner).find(n=>n.type==='Button'&&n.accessibilityText==='新增替换规则');
   assert.ok(add);add.onClick();assert.equal(saved.name,'独立规则');assert.equal(Object.hasOwn(saved,'scope'),false);
   assert.equal(Object.hasOwn(saved,'sourceId'),false);assert.equal(Object.hasOwn(saved,'bookId'),false);
 });

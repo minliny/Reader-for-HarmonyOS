@@ -162,25 +162,25 @@ export struct SyncPage {
             .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
             .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_server_theme_night') : $r('app.media.sync_server')), '服务器地址', this.effectiveWebdavUrl(),
+          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_server_theme_night') : $r('app.media.sync_server')), '服务器地址', (): string => this.effectiveWebdavUrl(),
             'https://dav.example.com/reader/backup', false, (value: string): void => {
               this.webdavUrlEdited = true;
               this.webdavUrl = value;
             });
-          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_account_theme_night') : $r('app.media.sync_account')), '账号', this.effectiveWebdavUser(),
+          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_account_theme_night') : $r('app.media.sync_account')), '账号', (): string => this.effectiveWebdavUser(),
             'reader@example.com', false, (value: string): void => {
               this.webdavUserEdited = true;
               this.webdavUser = value;
             });
-          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_password_theme_night') : $r('app.media.sync_password')), '密码', this.webdavPass,
+          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_password_theme_night') : $r('app.media.sync_password')), '密码', (): string => this.webdavPass,
             '••••••••••••', true, (value: string): void => {
               this.webdavPass = value;
             });
-          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_backup_password_theme_night') : $r('app.media.sync_backup_password')), '备份加密密码', this.backupPass,
+          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_backup_password_theme_night') : $r('app.media.sync_backup_password')), '备份加密密码', (): string => this.backupPass,
             '与 WebDAV 登录密码分开保存', true, (value: string): void => {
               this.backupPass = value;
             });
-          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')), '同步目录', this.effectiveWebdavPath(),
+          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')), '同步目录', (): string => this.effectiveWebdavPath(),
             '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
               this.webdavPathEdited = true;
               this.webdavPath = value;
@@ -195,11 +195,11 @@ export struct SyncPage {
   }
 
   @Builder
-  private webdavInputRow(icon: Resource, label: string, value: string, placeholder: string,
+  private webdavInputRow(icon: () => Resource, label: string, value: () => string, placeholder: string,
     isPassword: boolean, onChange: (value: string) => void) {
     Row({ space: 12 }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image(icon).width(15).height(15);
+        Image(icon()).width(15).height(15);
       }
       .width(28)
       .constraintSize({ minHeight: 28 })
@@ -216,7 +216,7 @@ export struct SyncPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
         // Credential masking remains the original native password policy.
-        ReaderFormField({ scheme: this.appThemeScheme, specId: 'sync-credential', text: value, placeholder, password: isPassword,
+        ReaderFormField({ scheme: this.appThemeScheme, specId: 'sync-credential', text: value(), placeholder, password: isPassword,
           isEditable: this.canEdit(), onTextChange: (newValue: string): void => onChange(newValue) });
       }
       .layoutWeight(1)

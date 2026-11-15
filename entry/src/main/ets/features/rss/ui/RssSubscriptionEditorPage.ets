@@ -79,16 +79,16 @@ export struct RssSubscriptionEditorPage {
       .borderRadius(8);
     this.operationRecovery();
     Column({ space: TOK_SPACE_MD }) {
-      this.editorField('订阅名称', this.snapshot.title, '留空时由 Core 回退为 Feed URL',
+      this.editorField('订阅名称', (): string => this.snapshot.title, '留空时由 Core 回退为 Feed URL',
         (value: string): void => this.onTitleChanged(value));
-      this.editorField('Feed URL', this.snapshot.feedUrl, 'https://example.com/feed.xml',
+      this.editorField('Feed URL', (): string => this.snapshot.feedUrl, 'https://example.com/feed.xml',
         (value: string): void => this.onFeedUrlChanged(value));
       this.sectionTitle('来源组织与刷新');
-      this.editorField('分组', this.snapshot.sourceGroup, '例如：技术 / 新闻',
+      this.editorField('分组', (): string => this.snapshot.sourceGroup, '例如：技术 / 新闻',
         (value: string): void => this.onSourceFieldChanged('sourceGroup', value));
-      this.editorField('自定义排序', this.snapshot.customOrder, '非负整数，数值小的在前',
+      this.editorField('自定义排序', (): string => this.snapshot.customOrder, '非负整数，数值小的在前',
         (value: string): void => this.onSourceFieldChanged('customOrder', value));
-      this.editorField('更新间隔（分钟）', this.snapshot.updateIntervalMinutes, '正整数；留空由 Core 决定',
+      this.editorField('更新间隔（分钟）', (): string => this.snapshot.updateIntervalMinutes, '正整数；留空由 Core 决定',
         (value: string): void => this.onSourceFieldChanged('updateIntervalMinutes', value));
       Row() {
         Column({ space: TOK_SPACE_XS }) {
@@ -140,24 +140,24 @@ export struct RssSubscriptionEditorPage {
       .width('100%')
       .constraintSize({ minHeight: 60 })
       .alignItems(VerticalAlign.Center);
-      this.editorField('请求头规则', this.snapshot.header, 'JSON 对象；动态 JS 规则会由 Core fail-closed',
+      this.editorField('请求头规则', (): string => this.snapshot.header, 'JSON 对象；动态 JS 规则会由 Core fail-closed',
         (value: string): void => this.onSourceFieldChanged('header', value));
       this.sectionTitle('规则型 RSS（HTML）');
-      this.editorField('文章列表规则', this.snapshot.ruleArticles, '.article',
+      this.editorField('文章列表规则', (): string => this.snapshot.ruleArticles, '.article',
         (value: string): void => this.onSourceFieldChanged('ruleArticles', value));
-      this.editorField('标题规则', this.snapshot.ruleTitle, '.title@text',
+      this.editorField('标题规则', (): string => this.snapshot.ruleTitle, '.title@text',
         (value: string): void => this.onSourceFieldChanged('ruleTitle', value));
-      this.editorField('链接规则', this.snapshot.ruleLink, '.title@href',
+      this.editorField('链接规则', (): string => this.snapshot.ruleLink, '.title@href',
         (value: string): void => this.onSourceFieldChanged('ruleLink', value));
-      this.editorField('发布日期规则', this.snapshot.rulePubDate, '.date@text',
+      this.editorField('发布日期规则', (): string => this.snapshot.rulePubDate, '.date@text',
         (value: string): void => this.onSourceFieldChanged('rulePubDate', value));
-      this.editorField('摘要规则', this.snapshot.ruleDescription, '.summary@text',
+      this.editorField('摘要规则', (): string => this.snapshot.ruleDescription, '.summary@text',
         (value: string): void => this.onSourceFieldChanged('ruleDescription', value));
-      this.editorField('图片规则', this.snapshot.ruleImage, '.cover@src',
+      this.editorField('图片规则', (): string => this.snapshot.ruleImage, '.cover@src',
         (value: string): void => this.onSourceFieldChanged('ruleImage', value));
-      this.editorField('正文规则', this.snapshot.ruleContent, '.content@html',
+      this.editorField('正文规则', (): string => this.snapshot.ruleContent, '.content@html',
         (value: string): void => this.onSourceFieldChanged('ruleContent', value));
-      this.editorField('下一页规则', this.snapshot.ruleNextPage, '.next@href',
+      this.editorField('下一页规则', (): string => this.snapshot.ruleNextPage, '.next@href',
         (value: string): void => this.onSourceFieldChanged('ruleNextPage', value));
       this.saveAction();
     }
@@ -222,7 +222,7 @@ export struct RssSubscriptionEditorPage {
   }
 
   @Builder
-  private editorField(label: string, value: string, placeholder: string, onChange: (value: string) => void) {
+  private editorField(label: string, value: () => string, placeholder: string, onChange: (value: string) => void) {
     Column({ space: TOK_SPACE_XS }) {
       Text(label)
         .width('100%')
@@ -230,7 +230,7 @@ export struct RssSubscriptionEditorPage {
         .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
         .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'form-body', text: value, placeholder, onTextChange: onChange });
+      ReaderFormField({ scheme: this.appThemeScheme, specId: 'form-body', text: value(), placeholder, onTextChange: onChange });
     }
     .width('100%')
     .constraintSize({ minHeight: 60 });

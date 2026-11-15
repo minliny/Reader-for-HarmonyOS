@@ -593,8 +593,8 @@ if(selectedCase==='settings'){
  p.update(o,{operation:{action:'load'}});const stale=nativeToggle(p,actor);o.temporaryBackIdentity='visit-B';p.properties.flush();stale.onChange(false);assert.equal(calls.length,2,'old row opening never borrows a new control');o.mounted=false;stale.onChange(false);assert.equal(calls.length,2);cases++;
 }
 if(selectedCase==='rules'){
- const {p,o}=consumer('settings/RulesManagementPage',['snapshot','booleanField'],{snapshot:{busy:true,ruleMutation:{blocked:true},receipt:{receipt:{confirmation:'unknown'}}}},{EMPTY_RULES_MANAGEMENT_SNAPSHOT:{}});Object.assign(o,{replaceId:1,txtId:2,dictName:'词典',subId:3});let draft=false;
- o.booleanField('启用',draft,next=>draft=next);const actor=[...o.children.values()][0];nativeToggle(p,actor).onChange(true);assert.equal(draft,true,'local draft remains editable; pending write is not a draft mutation');cases++;
+ const {p,o}=consumer('settings/RulesManagementPage',['snapshot','booleanField','mounted','draftOpening','replaceDraftRevision','txtDraftRevision','dictDraftRevision','subscriptionDraftRevision','draftKey','draftIsCurrent'],{snapshot:{busy:true,ruleMutation:{blocked:true},receipt:{receipt:{confirmation:'unknown'}}}},{EMPTY_RULES_MANAGEMENT_SNAPSHOT:{}});Object.assign(o,{replaceId:1,txtId:2,dictName:'词典',subId:3});let draft=false;
+ o.mounted=true;o.draftOpening=1;o.booleanField('启用',()=>draft,next=>draft=next,o.draftKey('replace'));const actor=[...o.children.values()][0];nativeToggle(p,actor).onChange(true);assert.equal(draft,true,'local draft remains editable; pending write is not a draft mutation');cases++;
 }
 
 if(selectedCase==='rss-management'){

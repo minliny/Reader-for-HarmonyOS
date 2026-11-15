@@ -25,9 +25,9 @@ const liveSourcePaths = new Map([
 const source=file=>readFileSync(new URL('../entry/src/main/ets/features/'+(liveSourcePaths.get(file)??file)+'.ets',import.meta.url),'utf8');
 function parent(kind,options={}) {
  const shared=foundationControls(options),methods=kind==='source'?['smallButton','actionButton','fullWidthActionButton']:
-  kind==='rules'?['input','actionButton','smallButton']:['manualActionButton','webdavInputRow','canMutate','canEdit'];
+  kind==='rules'?['input','actionButton','smallButton','actionAllowed','draftKey','draftIsCurrent']:['manualActionButton','webdavInputRow','canMutate','canEdit'];
  const {owner}=createReaderBuilderProbe(source(kind==='source'?'source/SourceToolsPage':kind==='rules'?'settings/RulesManagementPage':'sync/SyncPage'),methods,shared.dependencies,shared.hooks);
- Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,config:{configured:true},configLoaded:true},busy:false,configSaving:false,operation:{},endpoint:'https://example',username:'name',password:'secret',sourceListRevision:1});
+ Object.assign(owner,{mounted:true,draftOpening:1,replaceDraftRevision:0,txtDraftRevision:0,dictDraftRevision:0,subscriptionDraftRevision:0,appThemeScheme:'day',snapshot:{busy:false,config:{configured:true},configLoaded:true},busy:false,configSaving:false,operation:{},endpoint:'https://example',username:'name',password:'secret',sourceListRevision:1});
  return {shared,owner,nodes:()=>shared.nodes(owner),flush:()=>shared.flush(owner)};
 }
 const updateButton=(child,changes)=>child.updateStateVars(Object.assign({scheme:child.scheme,specId:child.specId,label:child.label,primary:child.primary,actionEnabled:child.actionEnabled,layout:child.layout},changes));
@@ -63,7 +63,7 @@ for(const kind of ['source','rules'].filter(kind=>kind===selectedCase)){
 
 }
 if(selectedCase==='rules') {
- const p=parent('rules'),calls=[];p.owner.input('草稿','输入',(value)=>calls.push(value));
+ const p=parent('rules'),calls=[];p.owner.input(()=>'草稿','输入',(value)=>calls.push(value),p.owner.draftKey('replace'));
  const child=[...p.owner.children.values()][0];assert.equal(child.constructor,p.shared.field.Component);
  let input=p.nodes().find(n=>n.type==='TextInput');checkFont(input,readerTypographyRoles.TYPE_RULES_MANAGEMENT_INPUT);
  input.onChange('键盘编辑');assert.deepEqual(calls,['键盘编辑']);
@@ -73,7 +73,7 @@ if(selectedCase==='rules') {
 // Both native credential branches retain native kind, exact masking and the
 // controlled draft. Secrets remain local inputs and never become Text labels.
 if(selectedCase==='sync') for(const password of [false,true]){
- const p=parent('sync'),calls=[];p.owner.webdavInputRow('icon','字段','原草稿','提示',password,v=>calls.push(v));
+ const p=parent('sync'),calls=[];p.owner.webdavInputRow(()=>'icon','字段',()=>'原草稿','提示',password,v=>calls.push(v));
  const child=[...p.owner.children.values()][0],input=p.nodes().find(n=>n.type==='TextInput');
  assert.equal(child.constructor,p.shared.field.Component);checkFont(input,readerTypographyRoles.TYPE_SYNC_INPUT);
 
@@ -158,26 +158,26 @@ if(selectedCase==='rss') {
 // differences. URL Enter submission is owned by the same live draft owner.
 if(selectedCase==='json') {
  const shared=foundationControls(),calls=[];
- const {owner}=createReaderBuilderProbe(source('../app/composition/JsonImportDialog'),['formBody','localButton','submitOnlineImport'],shared.dependencies,shared.hooks);
- Object.assign(owner,{appThemeScheme:'day',description:'描述',urlDraft:'https://example.test/a.json',validationMessage:'',onImportOnline:u=>calls.push(u),onSelectLocal:()=>calls.push('local')});
- owner.formBody();const input=shared.nodes(owner).find(n=>n.type==='TextInput'),button=shared.nodes(owner).find(n=>n.type==='Text'&&n.create==='选择本地 JSON 文件');
+ const {owner}=createReaderBuilderProbe(source('../app/composition/JsonImportDialog'),['formBody','localButton','submitOnlineImport','updateUrlDraft','inputIsCurrent','focusScopeKey','localFocusKey','urlInputRevision','urlDraft','validationMessage','mounted'],shared.dependencies,shared.hooks);
+ Object.assign(owner,{mounted:true,openingId:1,appThemeScheme:'day',description:'描述',urlDraft:'https://example.test/a.json',validationMessage:'',onImportOnline:u=>calls.push(u),onSelectLocal:()=>calls.push('local')});
+ owner.formBody();const input=shared.nodes(owner).find(n=>n.type==='TextInput'),button=shared.nodes(owner).find(n=>n.type==='Button'&&n.accessibilityText==='选择本地 JSON 文件');
  checkFont(input,readerTypographyRoles.TYPE_FORM_URL_INPUT);
  assert.equal(input.placeholderColor,readerAppColor('TOK_MUTED','day'));assert.equal(input.backgroundColor,readerAppColor('TOK_SURFACE_FIELD','day'));
- assert.equal(Object.hasOwn(button,'border'),false);assert.equal(Object.hasOwn(button,'opacity'),false,'JSON original opacity AUTO');
+ assert.equal(Object.hasOwn(button,'border'),false);assert.equal(button.opacity,1,'current shared native Button paints enabled opacity');
  owner.validationMessage='旧错误';input.onChange('  https://example.test/b.json  ');assert.equal(owner.validationMessage,'');input.onSubmit('Enter');assert.deepEqual(calls,['https://example.test/b.json']);
- button.onClick();assert.deepEqual(calls,['https://example.test/b.json','local']);
+ button.onClick();assert.deepEqual(calls,['https://example.test/b.json','local']);shared.properties.flush();
  const field=[...owner.children.values()].find(c=>c instanceof shared.field.Component);
  updateField(field,{isEditable:false,text:'父层草稿'});shared.properties.flush();input.onChange('旧键盘');input.onSubmit('Enter');assert.equal(calls.length,2);assert.equal(input.create.text,'父层草稿');
  field.aboutToDisappear();input.onSubmit('Enter');assert.equal(calls.length,2);
  const rss=createReaderBuilderProbe(source('rss/RssSubscriptionEditorPage'),['editorField'],shared.dependencies,shared.hooks).owner;
- Object.assign(rss,{appThemeScheme:'day'});rss.editorField('字段','RSS草稿','占位',value=>calls.push(value));
+ Object.assign(rss,{appThemeScheme:'day'});rss.editorField('字段',()=>'RSS草稿','占位',value=>calls.push(value));
  const plain=shared.nodes(rss).find(n=>n.type==='TextInput');checkFont(plain,readerTypographyRoles.TYPE_FORM_INPUT);
  assert.equal(Object.hasOwn(plain,'onSubmit'),false,'RSS plain field retains native submit AUTO');assert.equal(Object.hasOwn(plain,'placeholderColor'),false,'RSS placeholder AUTO');
  assert.equal(plain.backgroundColor,readerAppColor('TOK_PAPER','day'));plain.onChange('新RSS草稿');assert.equal(calls.at(-1),'新RSS草稿');
  const management=createReaderBuilderProbe(source('rss/RssSubscriptionManagementPage'),['sourceDocumentAction'],shared.dependencies,shared.hooks).owner;
  Object.assign(management,{appThemeScheme:'day'});management.sourceDocumentAction('导入',()=>calls.push('import'));
- const action=shared.nodes(management).find(n=>n.type==='Text');checkFont(action,readerTypographyRoles.TYPE_FORM_COMPACT_ACTION);assert.equal(action.height,36);assert.equal(action.borderRadius,8);assert.equal(action.layoutWeight,1);
- assert.equal(action.backgroundColor,readerAppColor('TOK_PRIMARY_SOFT','day'));assert.equal(Object.hasOwn(action,'border'),false);assert.equal(Object.hasOwn(action,'opacity'),false);action.onClick();assert.equal(calls.at(-1),'import');
+ const label=shared.nodes(management).find(n=>n.type==='Text'),action=nativeAction(shared.nodes(management));checkFont(label,readerTypographyRoles.TYPE_FORM_COMPACT_ACTION);assert.equal(action.height,undefined);assert.equal(action.constraintSize.minHeight,44);assert.equal(action.borderRadius,8);assert.ok(shared.nodes(management).some(node=>node.layoutWeight===1));
+ assert.equal(action.backgroundColor,readerAppColor('TOK_PRIMARY_SOFT','day'));assert.equal(Object.hasOwn(action,'border'),false);assert.equal(action.opacity,1);action.onClick();assert.equal(calls.at(-1),'import');
 }
 console.log(`PASS foundation controls exact case: ${selectedCase}; current source/SDK component evidence only`);
 

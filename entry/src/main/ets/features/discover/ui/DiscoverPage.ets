@@ -347,7 +347,7 @@ export struct DiscoverPage {
   @Builder
   private paginationRow() {
     Row({ space: TOK_SPACE_SM }) {
-      this.pageAction('上一页', this.presentation.hasPrevious, (): void => this.onPreviousPage());
+      this.pageAction(true);
       Text(`第 ${this.presentation.page} 页`)
         .layoutWeight(1)
         .textAlign(TextAlign.Center)
@@ -355,7 +355,7 @@ export struct DiscoverPage {
         .fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
         .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      this.pageAction('下一页', this.presentation.hasNext, (): void => this.onNextPage());
+      this.pageAction(false);
     }
     .width('100%')
     .constraintSize({ minHeight: 48 })
@@ -365,9 +365,18 @@ export struct DiscoverPage {
   }
 
   @Builder
-  private pageAction(label: string, enabled: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-page', label, primary: enabled,
-      actionEnabled: enabled && !this.presentation.loading, isBusy: this.presentation.loading, onAction: action });
+  private pageAction(previous: boolean) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-page', label: previous ? '上一页' : '下一页',
+      primary: this.pageActionAvailable(previous), actionEnabled: this.pageActionAvailable(previous) && !this.presentation.loading,
+      isBusy: this.presentation.loading, onAction: (): void => {
+        if (!this.mounted || this.presentation.loading || !this.pageActionAvailable(previous)) return;
+        if (previous) this.onPreviousPage();
+        else this.onNextPage();
+      } });
+  }
+
+  private pageActionAvailable(previous: boolean): boolean {
+    return previous ? this.presentation.hasPrevious : this.presentation.hasNext;
   }
 
   @Builder
