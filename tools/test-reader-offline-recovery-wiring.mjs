@@ -8,6 +8,7 @@ const selected = selectContractCases({
     'manga-download-hosts': { description: 'Actual bounded catalog popup and reading download-sheet initializers forward original offline recovery into existing shared Surface. Current popup/panel identity and generation reject old callbacks. No native layout or business mutation.', resources: [] },
     'native-fixture': { description: 'Independent actual offline Host fixture keeps original unknown after availability succeeds, holds explicit read/continue replies, rejects stale/busy input, and never calls Core or storage.', resources: [] },
     'clear-progress-copy': { description: 'Actual Host with a valid failed-chapter projection keeps original clear facts. Legacy clear snapshots ignore download progress, while a real download keeps its partial-result copy.', resources: [] },
+    'normal-host-chain': { description: 'Actual retained parent, text and Manga reader payloads, live surface guards and shared native action callbacks reach the current original offline Host. Covered, stale and busy callbacks are rejected across the complete chain.', resources: [] },
 });
 if (selected.length === 0)
     process.exit(0);
@@ -75,6 +76,238 @@ function captureBuilder(path, members, childName, childPath, params, extra = {})
     return { sdk, owner, child: () => [...owner.children.values()].find(value => value instanceof Captured) };
 }
 for (const id of selected) {
+    if (id === 'normal-host-chain') {
+        const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+        const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+        const { ReaderOfflineRecoveryFixtureOwner } = await import('../entry/src/main/ets/pages/ReaderOfflineRecoveryFixtureOwner.ts');
+        const { readerDirectoryActions } = pureModuleProbe(read('features/reading/presentation/ReaderDirectoryActions.ets'),
+            'ReaderDirectoryActions.ets', {}, ['readerDirectoryActions']);
+        const shellSource = read('features/reading/ui/ReaderShell.ets');
+        const textStart = shellSource.indexOf('        ForEach([this.readingIdentityKey()]');
+        const textTail = '        }, (identity: string): string => identity);';
+        const textEnd = shellSource.indexOf(textTail, textStart) + textTail.length;
+        assert.ok(textStart >= 0 && textEnd > textStart, 'the actual text reader ForEach assembly is selected');
+        const textAssembly = '@Component struct OfflineTextReaderPayload { @Builder readingOwner() {' +
+            shellSource.slice(textStart, textEnd) + '} build() { Column() {} } }';
+        const Shell = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets', import.meta.url),
+            'ReaderShell', ['readingIdentityKey', 'mangaIdentityKey', 'readingContentIsForeground',
+                'acceptsTextInput', 'isMangaSurfaceCurrent', 'acceptsMangaInput']);
+
+        for (const kind of ['text', 'manga']) {
+            let current = true;
+            const runtime = { supportsCoreCapability: () => true };
+            const book = { sourceId: 'memory-source', bookId: 'memory-' + kind, title: 'Original ' + kind, author: 'Author' };
+            const entries = [{ index: 0, title: 'Chapter', navigable: true, downloadState: 'cached' }];
+            const scene = { owner: runtime, mount: 1, navigation: 2, presentation: 3, sessionGeneration: 4,
+                retired: false, directoryVisible: false, reading: true, acceptsProjection: true, foreground: true, book };
+            const Operations = selectedProductionMethods(operationsFile, 'ReaderDirectoryOperations',
+                ['recovery', 'bookmarkMessage', 'reconcileOffline', 'acceptsRecoveryPresentation', 'acceptsBinding',
+                    'bindingId', 'presentationId'], { readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY,
+                    ReaderDirectoryHost: { currentForRuntime: () => undefined } });
+            const operations = Object.assign(new Operations(), {
+                ports: { scene: () => scene, ownsRuntime: owner => owner === runtime, feedback() {} },
+            });
+            const original = new ReaderOfflineRecoveryFixtureOwner(operations.presentationId(scene), book,
+                () => entries, () => current, () => {});
+            original.binding.session.contentKind = kind;
+            scene.session = original.binding.session;
+            operations.offlineHost = owner => {
+                assert.equal(owner, runtime);
+                return original.host;
+            };
+            operations.offlineBinding = () => original.binding;
+            await original.load();
+            assert.equal(original.gateway.queryCount, 1);
+            const reading = { sessionActive: true, book, contentKind: kind, session: scene.session, toc: entries,
+                mangaStartsAtChapterBeginning: () => false, bookmarkIdentity: () => ({ sourceId: book.sourceId, bookId: book.bookId }),
+                offlineOperation: original.host.snapshot(), directoryCurrentChapterIndex: 0 };
+            const directoryActions = readerDirectoryActions(() => reading, () => undefined, () => operations);
+            const parent = captureBuilder('app/composition/RetainedReaderScene.ets', ['build'], 'ReaderShell',
+                'features/reading/ui/ReaderShell.ets', { reading, commits: {},
+                    source: { currentTransaction: () => undefined, isSurfacePresented: () => false, host: () => undefined },
+                    manga: { canCancelPreparation: () => false }, visibleRoute: 'reading', inputAllowed: true,
+                    directoryActions, ports: { runtime: () => runtime, directory: operations, sourceSwitch: {} } });
+            parent.owner.initialRender();
+            const shellParams = parent.child().params;
+            assert.equal(shellParams.directoryRecovery.offlineKind, 'pending');
+            assert.equal(shellParams.directoryRecovery.presentationId, operations.presentationId(scene));
+
+            let reader;
+            if (kind === 'text') {
+                reader = createReaderBuilderProbe(textAssembly, ['readingOwner'], { ReadingExperience: Captured }, {
+                    childSources: { ReadingExperience: read('features/reading/ui/LocalReadingExperience.ets') },
+                }).owner;
+                Object.assign(reader, shellParams, {
+                    readingIdentityKey: Shell.prototype.readingIdentityKey,
+                    readingContentIsForeground: Shell.prototype.readingContentIsForeground,
+                    acceptsTextInput: Shell.prototype.acceptsTextInput,
+                });
+                reader.readingOwner();
+            } else {
+                const mounted = captureBuilder('features/reading/ui/ReaderShell.ets',
+                    ['mangaSurface', 'mangaIdentityKey', 'isMangaSurfaceCurrent', 'readingContentIsForeground', 'acceptsMangaInput'],
+                    'MangaReadingSurface', 'features/manga/ui/MangaReadingSurface.ets', shellParams,
+                    { ReaderRuntimeOwner: { current: () => runtime } });
+                reader = mounted.owner;
+                reader.mangaSurface();
+            }
+            const child = [...reader.children.values()].find(value => value instanceof Captured);
+            const props = child.params;
+            assert.ok(props.onReconcileOffline && props.onContinueOffline, kind + ' normal reader forwards both original actions');
+            const identityKey = kind === 'text' ? reader.readingIdentityKey() : reader.mangaIdentityKey();
+            for (const updates of [{ inputAllowed: false }, { visible: false }, { route: 'directory' },
+                { sourceSwitchPresented: true }, { sourceSwitchCovered: true }]) {
+                const before = Object.fromEntries(Object.keys(updates).map(key => [key, reader[key]]));
+                Object.assign(reader, updates);
+                props.onReconcileOffline(1, operations.presentationId(scene));
+                props.onContinueOffline(1, operations.presentationId(scene));
+                await settle();
+                assert.equal(original.gateway.queryCount, 1, kind + ' covered parent rejects a retained read');
+                assert.equal(original.gateway.continueCount, 0, kind + ' covered parent rejects a retained continuation');
+                Object.assign(reader, before);
+            }
+            assert.equal(kind === 'text' ? reader.readingIdentityKey() : reader.mangaIdentityKey(), identityKey);
+
+            const host = kind === 'text' ? captureBuilder('features/reading/ui/LocalReadingExperience.ets',
+                ['readerOfflineRecoveryContent', 'reconcileOfflineRecovery', 'readerOfflineRecoveryVisible',
+                    'readerRecoveryOverlayId', 'readerRecoveryRequestCurrent', 'openReaderRecovery', 'retireReaderRecovery',
+                    'readerRecoveryInputCurrent'], 'ReaderDirectoryRecoverySurface', 'features/reading/ui/ReaderDirectoryRecoverySurface.ets', {
+                    ...props, lifecycleToken: 7, mounted: true, exitRequested: false, readerRecoveryRequested: false,
+                    controlVisible: () => false, controlMotionVisible: () => false, isControlInputEnabled: () => true,
+                    hasReaderRecoveryContent: () => true, hideControl() {},
+                }, { EMPTY_READING_DIRECTORY_RECOVERY }) : captureBuilder('features/manga/ui/MangaReadingSurface.ets',
+                ['actionPanelBody', 'panelInputCurrent', 'readerPanelForeground', 'ownsDownloadActions', 'downloadPanelInputCurrent'],
+                'MangaDownloadOperationsPanel', 'features/manga/ui/MangaDownloadOperationsPanel.ets', {
+                    ...props, mounted: true, exiting: false, appForeground: true, panel: 'downloads', panelPhase: 'open',
+                    actionPanelPresentationGeneration: 4, downloadActionsGeneration: 7, downloadActions: [],
+                    downloadActionsLoading: true, downloadActionsFailure: '',
+                    panelContentInset: () => 16, panelContentHeight: () => 300, actionHeaderHeight: () => 60, widePanel: () => false,
+                });
+            if (kind === 'text') {
+                assert.equal(host.owner.readerRecoveryInputCurrent(), false);
+                host.owner.openReaderRecovery(host.owner.readerRecoveryOverlayId());
+                assert.equal(host.owner.readerRecoveryInputCurrent(), true);
+                host.owner.readerOfflineRecoveryContent(true);
+            } else {
+                host.owner.actionPanelBody(4);
+            }
+            let surfaceParams = host.child().params;
+            let panel;
+            if (kind === 'manga') {
+                panel = captureBuilder('features/manga/ui/MangaDownloadOperationsPanel.ets', ['build', 'effectiveScheme'],
+                    'ReaderDirectoryRecoverySurface', 'features/reading/ui/ReaderDirectoryRecoverySurface.ets',
+                    { ...surfaceParams, foreground: true, panelScheme: 'day', loading: true }, { EMPTY_READING_DIRECTORY_RECOVERY });
+                panel.owner.initialRender();
+                surfaceParams = panel.child().params;
+            }
+            const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+            class Feedback { show() { return true; } reset() {} }
+            const surfaceSource = read('features/reading/ui/ReaderDirectoryRecoverySurface.ets');
+            const mountSurface = () => {
+                const value = sdk.consumer(surfaceSource, boundedMembers(surfaceSource), {
+                    ReaderTransientFeedback: Feedback, EMPTY_READING_DIRECTORY_RECOVERY,
+                });
+                Object.assign(value, surfaceParams);
+                value.aboutToAppear();
+                value.initialRender();
+                sdk.properties.flush();
+                return value;
+            };
+            let surface = mountSurface();
+            const actions = () => sdk.walk(surface).filter(view => view instanceof sdk.deps.ReaderRecoveryAction);
+            const button = label => {
+                const action = actions().find(view => view.label === label);
+                assert.ok(action, kind + ' actual shared action exists');
+                return [...action.nodes.values()].find(node => node.type === 'Button' && node.onClick);
+            };
+            const refreshPayload = () => {
+                reading.offlineOperation = original.host.snapshot();
+                parent.owner.replay();
+                Object.assign(reader, parent.child().params);
+                reader.replay();
+                const payload = [...reader.children.values()].find(value => value instanceof Captured).params;
+                if (kind === 'text') host.owner.bookmarkRecovery = payload.bookmarkRecovery;
+                else host.owner.directoryRecovery = payload.directoryRecovery;
+                host.owner.replay();
+                surfaceParams = host.child().params;
+                if (panel) {
+                    Object.assign(panel.owner, surfaceParams);
+                    panel.owner.replay();
+                    surfaceParams = panel.child().params;
+                }
+                return surfaceParams.recovery;
+            };
+            const refresh = () => {
+                const recovery = refreshPayload();
+                surface.updateStateVars(surfaceParams);
+                sdk.properties.flush();
+                return recovery;
+            };
+            const readButton = button('核对离线结果');
+            const continueButton = button('继续原操作');
+            const currentBookId = reader.bookId;
+            reader.bookId = currentBookId + '-successor';
+            readButton.onClick();
+            continueButton.onClick();
+            await settle();
+            assert.equal(original.gateway.queryCount, 1, kind + ' retained old-book actions cannot enter the original read');
+            assert.equal(original.gateway.continueCount, 0);
+            reader.bookId = currentBookId;
+            scene.foreground = false;
+            readButton.onClick();
+            continueButton.onClick();
+            await settle();
+            assert.equal(original.gateway.queryCount, 1, kind + ' actual Operations rejects a background business owner');
+            assert.equal(original.gateway.continueCount, 0);
+            scene.foreground = true;
+            readButton.onClick();
+            await settle();
+            assert.equal(original.gateway.queryCount, 2, kind + ' shared native callback reaches the original Host once');
+            assert.equal(refresh().offlineRecoveryAction, 'reconcile');
+            for (const action of actions()) {
+                assert.equal(action.actionEnabled, false, kind + ' both actions are disabled during the original read');
+            }
+            readButton.onClick();
+            continueButton.onClick();
+            await settle();
+            assert.equal(original.gateway.queryCount, 2);
+            assert.equal(original.gateway.continueCount, 0);
+            original.complete(false);
+            await settle();
+            assert.equal(original.host.snapshot().projection.receipt.confirmation, 'unknown');
+            assert.equal(original.gateway.rawOriginal().includes('000000000044/1'), true);
+            // The R native scene proves retention across spinner removal.
+            // This recording helper starts a fresh action tree for the settled
+            // state while retaining the same parent, reader and business owner.
+            surface.aboutToDisappear();
+            refreshPayload();
+            surface = mountSurface();
+            button('继续原操作').onClick();
+            await settle();
+            assert.equal(original.gateway.continueCount, 1, kind + ' current continuation reaches the original owner');
+            assert.equal(refresh().offlineRecoveryAction, 'continue');
+            button('核对离线结果').onClick();
+            button('继续原操作').onClick();
+            await settle();
+            assert.equal(original.gateway.queryCount, 2);
+            assert.equal(original.gateway.continueCount, 1);
+            original.complete(true);
+            await settle();
+            assert.equal(original.host.snapshot().projection.receipt.confirmation, 'confirmed');
+            assert.equal(original.gateway.rawOriginal(), '');
+            current = false;
+            scene.foreground = false;
+            props.onReconcileOffline(1, operations.presentationId(scene));
+            props.onContinueOffline(1, operations.presentationId(scene));
+            await settle();
+            assert.equal(original.gateway.queryCount, 2);
+            assert.equal(original.gateway.continueCount, 1);
+            assert.equal(original.runtime.unexpectedRequests, 0);
+            original.close();
+        }
+        recordContractCasePass(id);
+        continue;
+    }
     if (id === 'clear-progress-copy') {
         const current = await originalFixture('failed');
         const operation = current.host.snapshot();

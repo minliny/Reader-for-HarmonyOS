@@ -10,15 +10,23 @@
 
 用户明确授权正常重启VM并保留数据后，已执行一次正常重启。DMS启动时刻更新为16:53:33.897，SceneBoard从30321变为1426。物理分辨率保持1280×2832，VirtualPixelRatio和DensityInCurResolution均为3.5，屏幕挖孔信息恢复，状态栏窗口从58px恢复为136px。锁屏、完整桌面及Reader书架实屏均已查看。[重启、前后参数与实屏证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/display-recovery-after-reboot-20261115.json)
 
-原安装包0.2.0.D/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114.d61901614df1的版本、内容身份、UID及更新时间前后一致。正常启动后可见原四本书，Sample EPUB及Native Check保持未读，ReaderFramework显示27%，ReaderManga显示100%。本轮核验范围为正常重启、完整显示恢复、安装身份及可见书架数据，全部用户数据的逐字节审计沿其原范围保存。[完整原因与更正记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/display-density-incident-20261115.json)
+原安装包0.2.0.DEV.d61901614df1的版本、内容身份、UID及更新时间前后一致。正常启动后可见原四本书，Sample EPUB及Native Check保持未读，ReaderFramework显示27%，ReaderManga显示100%。本轮核验范围为正常重启、完整显示恢复、安装身份及可见书架数据，全部用户数据的逐字节审计沿其原范围保存。[完整原因与更正记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/display-density-incident-20261115.json)
 
-最初DGLES阻塞的底层触发点以及再次异常恢复后的保持行为仍有各自证据缺口。全应用框架实施目标按用户要求保持暂停。
+最初DGLES阻塞的底层触发点以及再次异常恢复后的保持行为仍有各自证据缺口。全应用框架实施目标已恢复为active，后继验证沿完整恢复的系统显示配置推进。
 
 
 ## 2026年11月15日当前实施状态
 
-全量实施目标已按用户要求暂停，当前处理VM显示异常。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`20443d1b`，已安装候选为`0.2.0.DEV.d61901614df1`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的剩余工作在目标恢复后继续。
+全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`20443d1b`，已安装候选为`0.2.0.DEV.d61901614df1`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
+
+### 正常阅读父级接线与恢复后的宿主验证
+
+本批新增准确用例normal-host-chain，通过正常单用例检查入口执行通过。实际RetainedReaderScene、ReaderShell文字ForEach及漫画根装配、readerDirectoryActions、ReaderDirectoryOperations和独立ReadingOfflineHost串联到共享Surface的Button回调。覆盖当前身份、遮挡、前景、旧书籍、忙态重复及原操作确认。属性递送由SDK测试显式重放，等待完成后的动作记录树重新装配，原生保留实例的绘制沿前批证据。当前641个生产输入沿已签名安装候选复用。[本批准确SDK与检查回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/normal-reader-recovery-code-s.json)
+
+正常重启恢复后，现有Sample EPUB从正常书架进入，实际打开更多菜单及待处理事项。原书签未知提示的覆盖Scroll为378px高，两动作均为154px高，对应44vp。一次Tab将焦点送到重新载入核对书签Button。Back关闭请求的提示投影，保留同一本书的正文，随后正文触摸可再次打开当前控制栏。Back后的原生树只有根和保留宿主Stack报告焦点，显式阅读目标焦点恢复及完整键盘顺序仍待对应证据。本次保留原书签任务，未发送核对或继续动作。[正常入口、实屏、原生树及精确边界](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/normal-reader-recovery-native-s.json)
+
+最终沿正常Back返回四本原有书籍的书架，两个DMS密度字段均保持3.5，状态栏窗口136px。两次驱动参数错误和一次书名简称断言失败保留原FAIL。后继按实际字段继续，书架完整标题由已取得的原生树离线核对，最后只补读显示参数。13项适用的目录登记更新本次测试指纹，层级判定沿原范围保存，本批沿当前安装候选完成验证。[登记输入更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-refresh-s.json)
 
 ### 当前原离线恢复接线与消息文本修复
 
@@ -28,11 +36,11 @@
 
 **UIF-46修正动作预留行被三行上限截断。** 首次原生popup内，业务标题后的装饰预留空间被Text的maxLines3裁掉，正文与动作发生重叠。当前已适配的业务标题可绘制其真实动作预留行，长业务正文继续沿现有三行折叠和展开入口。准确SDK用例包含32个样本，冻结旧maxLines的行为负例保留失败。[当前源码与SDK结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/offline-recovery-code-r.json)
 
-当前完整ArkTS编译、指定minliny_HarmonyOS证书签名及远程VM保数据覆盖安装通过。运行提交为20443d1b，候选为0.2.0.D/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114.d61901614df1，不可变run为20261115T073103Z-20443d1b-3a66831a，/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261115T073103Z-20443d1b-3a66831a的SHA-256为ccb23e54acc5e880800587a318f2894f2f10de70ddc1a749ed917e8f48e98074。641个运行输入与候选逐字节匹配，包含273个ETS和368个TS。Core及Reader-UI pin沿原值。首次两个编译前入口失败、首个原生布局失败和驱动入口失败均保留各自结果。[不可变manifest](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261115T073103Z-20443d1b-3a66831a/manifest.json) [当前源码绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-r.json)
+当前完整ArkTS编译、指定minliny_HarmonyOS证书签名及远程VM保数据覆盖安装通过。运行提交为20443d1b，候选为0.2.0.DEV.d61901614df1，不可变run为20261115T073103Z-20443d1b-3a66831a，已签名HAP的SHA-256为ccb23e54acc5e880800587a318f2894f2f10de70ddc1a749ed917e8f48e98074。641个运行输入与候选逐字节匹配，包含273个ETS和368个TS。Core及Reader-UI pin沿原值。首次两个编译前入口失败、首个原生布局失败和驱动入口失败均保留各自结果。[不可变manifest](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261115T073103Z-20443d1b-3a66831a/manifest.json) [当前源码绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-r.json)
 
-当前VM在密度3.5下完成正常BookDirectoryPage下载popup的有限原清理场景。两个原生恢复Button1452、1458高154px，对应44vp。原清理保持同一presentation和generation，独立可用内容回读成功后继续显示未知事实。实际核对进入忙态，两动作禁用，重复触摸后最终query计数只从2增到3。实际继续进入secondaryBusy，重复触摸后最终continue计数为1，准确有限回执将原操作推进为confirmed，rawOriginal清空，共享提示退休。正文及两动作实屏已查看。[当前原生按钮与原操作回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-offline-recovery-r.json)
+前批在重启前的VM上完成正常BookDirectoryPage下载popup的有限原清理场景。当时VirtualPixelRatio为3.5，DensityInCurResolution为1，状态栏窗口58px，布局结论保留该实际环境。两个原生恢复Button1452、1458高154px，对应44vp。原清理保持同一presentation和generation，独立可用内容回读成功后继续显示未知事实。实际核对进入忙态，两动作禁用，重复触摸后最终query计数只从2增到3。实际继续进入secondaryBusy，重复触摸后最终continue计数为1，准确有限回执将原操作推进为confirmed，rawOriginal清空，共享提示退休。正文及两动作实屏已查看。[当前原生按钮与原操作回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-offline-recovery-r.json)
 
-一次驱动错误将同步发布的busy观察误作异步gateway计数已更新，原会话保留FAIL。源码确认Host先发布recoveryAction，再await pendingClearOperation，计数在后续gateway调用内递增。后继沿同一PID及同一原操作补齐重复触摸和确认步骤，最终正常启动恢复书架，DMS保持3.5。该场景使用独立真实Host和有限公共回执端口，Core请求计数始终为0。正常文字阅读和漫画阅读宿主的完整原生动作、焦点及读屏矩阵继续由agent补齐。[观察顺序归因](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/offline-r-native-observation-failure.json)
+一次驱动错误将同步发布的busy观察误作异步gateway计数已更新，原会话保留FAIL。源码确认Host先发布recoveryAction，再await pendingClearOperation，计数在后续gateway调用内递增。后继沿同一PID及同一原操作补齐重复触摸和确认步骤，当时正常启动回到书架，VirtualPixelRatio保持3.5，完整系统显示随后经授权正常重启恢复。该场景使用独立真实Host和有限公共回执端口，Core请求计数始终为0。正常文字阅读和漫画阅读宿主的完整原生动作、焦点及读屏矩阵继续由agent补齐。[观察顺序归因](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/offline-r-native-observation-failure.json)
 
 21项登记更新本批实际变更的源码和测试指纹，原层级判定保持。引用检查0诊断，登记检查仍为37项既有诊断。完整E2/E3和整页visual保持各自原有条件。[登记输入更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-refresh-r.json) [引用检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-r-contract-refs-01.json) [登记判定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-r-register-01.json)
 

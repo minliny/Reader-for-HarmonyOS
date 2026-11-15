@@ -475,6 +475,7 @@
     "test-reader-native-text-measurement.mjs",
     "test-reader-navigable-toc.mjs",
     "test-reader-nonblocking-recovery.mjs",
+    "test-reader-offline-recovery-wiring.mjs",
     "test-reader-offscreen-fragment-publication.mjs",
     "test-reader-optional-entry-memory-launch.mjs",
     "test-reader-page-chrome.mjs",

@@ -11841,6 +11841,35 @@
           "qualification": "QUALIFIED"
         }
       }
+    },
+    "test-reader-offline-recovery-wiring.mjs": {
+      "sourceSha256": "6a4d3a19466c66c16bdfc1e36f87fd83d1f34274ef154255676cb0dd0a178109",
+      "cases": {
+        "owner-admission": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "reader-assembly": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "manga-download-hosts": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "native-fixture": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "clear-progress-copy": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "normal-host-chain": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
     }
   },
   "legacy": {
