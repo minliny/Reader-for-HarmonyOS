@@ -579,6 +579,12 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font-and-environment-40bc.json",
               "symbol": "sourceMax",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-night-theme-t.json",
+              "symbol": "actual320vp font1 night production component initial viewport; full host/state matrix remains open",
+              "result": "PASS"
             }
           ],
           "knownGap": "Current configuration and SDK budgets are bound separately. Native1/1.45 and same-actor Source reflow were observed, followed by restored system2/1/1 and native1. Exact1.3/1.6/2 native cells and complete page adaptation remain open. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
@@ -1060,7 +1066,7 @@
         }
       },
       "exceptions": [],
-      "revision": 46,
+      "revision": 47,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2077,6 +2083,12 @@
               "path": "tools/test-reader-window-font-configuration.mjs",
               "symbol": "configuration,entry-consumer,native-context",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-night-theme-t.json",
+              "symbol": "actual320vp font1 night production component initial viewport; full host/state matrix remains open",
+              "result": "PASS"
             }
           ],
           "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN."
@@ -2612,7 +2624,7 @@
         }
       },
       "exceptions": [],
-      "revision": 44,
+      "revision": 45,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -22639,6 +22651,12 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-download-popup-12cd.json",
               "symbol": "normal state popup true preference; selection and exact restore",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-night-theme-t.json",
+              "symbol": "actual320vp font1 night production component initial viewport; full host/state matrix remains open",
+              "result": "PASS"
             }
           ],
           "knownGap": "Current query/filter/sort/count parent budget wraps from actual page width and font scale, alongside prior row/dock budget. SDK15 private-tool combinations supplement previous selected contexts. Native production glyph/system-scale/wrap acceptance remains NOT_RUN."
@@ -23113,7 +23131,7 @@
         }
       },
       "exceptions": [],
-      "revision": 28,
+      "revision": 29,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -30638,6 +30656,12 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-tools-popup-12cd.json",
               "symbol": "normal mode popup under true preference; exact bounded trace and restoration",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-night-theme-t.json",
+              "symbol": "actual320vp font1 night production component initial viewport; full host/state matrix remains open",
+              "result": "PASS"
             }
           ],
           "knownGap": "Current320/366 ×1/1.3/1.6/2 SDK parent-budget covers16rows: real list padding/border costs, minHeight growth, explicit text line boxes and button wrap. The finite SDK/native-property port does not establish actual system glyph, clipping or focus acceptance. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored."
@@ -31186,7 +31210,7 @@
         }
       },
       "exceptions": [],
-      "revision": 38,
+      "revision": 39,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,

@@ -20,6 +20,14 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`20443d1b`，已安装候选为`0.2.0.DEV.d61901614df1`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### 深色主题原生补证与原偏好恢复
+
+正常通用设置的深色Button已取得selected=true原生回执。实际外观偏好只改变appThemeMode和activeTheme，冷启动后继续使用保存的深色选择。四个320vp、默认系统字号1样本已查看实际书源页、详情完整目录、书源工具初始卡片及下载书籍列表，当前文字、图标、选中项和容器使用原有夜间角色。下载排序sheet的四选项、选中标记和完成按钮完整可见，Back返回同一列表。原生实际父高度为770.2857vp。[当前深色实屏及精确范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-night-theme-t.json)
+
+初次诊断目标查找仅取得普通书架，该失败保留。旧辅助入口丢弃停应用输出，未观察实际进程退出。后继辅助入口记录停止输出及有界退出观察后，取得实际诊断页，随后只执行缺失样本。书源工具初始化另收到一次内存debug-key回调，原日志保留该计数，颜色取证沿实际初始卡片视口使用。完整宿主、其余状态、目标焦点及方向字号组合继续按各自条件验收。
+
+验证后沿正常通用设置恢复跟随模式并返回原书架。完整外观快照逐字段与验证前相等，包含原四个主题选择、字体和排版项。两个DMS密度字段仍为3.5，状态栏窗口136px。四个页面族追加本次夜间适配局部证据，21项完整层级结果沿原判定保存。[原外观完整恢复](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/theme-t-restoration.json) [四项登记更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-theme-evidence-t.json)
+
 ### 正常阅读父级接线与恢复后的宿主验证
 
 本批新增准确用例normal-host-chain，通过正常单用例检查入口执行通过。实际RetainedReaderScene、ReaderShell文字ForEach及漫画根装配、readerDirectoryActions、ReaderDirectoryOperations和独立ReadingOfflineHost串联到共享Surface的Button回调。覆盖当前身份、遮挡、前景、旧书籍、忙态重复及原操作确认。属性递送由SDK测试显式重放，等待完成后的动作记录树重新装配，原生保留实例的绘制沿前批证据。当前641个生产输入沿已签名安装候选复用。[本批准确SDK与检查回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/normal-reader-recovery-code-s.json)
