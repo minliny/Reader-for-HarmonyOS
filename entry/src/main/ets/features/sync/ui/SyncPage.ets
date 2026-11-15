@@ -379,9 +379,9 @@ export struct SyncPage {
       ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column() {
-          this.gatedRow('保存位置', this.snapshot.saveLocation);
+          this.gatedRow('保存位置', (): string => this.snapshot.saveLocation);
           Row().width('100%').height(1).backgroundColor(readerAppColor('app.border.statusCard', this.appThemeScheme));
-          this.gatedRow('备份频率', this.snapshot.backupFrequency);
+          this.gatedRow('备份频率', (): string => this.snapshot.backupFrequency);
           Row().width('100%').height(1).backgroundColor(readerAppColor('app.border.statusCard', this.appThemeScheme));
           this.scopeRow();
         }
@@ -392,7 +392,7 @@ export struct SyncPage {
   }
 
   @Builder
-  private gatedRow(label: string, value: string) {
+  private gatedRow(label: string, value: () => string) {
     Row() {
       Text(label)
         .layoutWeight(1)
@@ -400,7 +400,7 @@ export struct SyncPage {
         .fontWeight(TYPE_SYNC_ROW_LABEL.fontWeight)
         .fontSize(TYPE_SYNC_ROW_LABEL.fontSizeFp)
         .fontColor(readerAppColor('app.text.syncHeading', this.appThemeScheme));
-      Text(value)
+      Text(value())
         .fontFamily(TYPE_FORM_ACTION.fontFamily)
         .fontWeight(TYPE_FORM_ACTION.fontWeight)
         .fontSize(TYPE_FORM_ACTION.fontSizeFp)

@@ -153,16 +153,16 @@ export struct BookshelfMultiSelectPage {
     Column({ space: 0 }) {
       if (this.selectionHeaderInline()) {
         Row() {
-          this.selectionAction('取消', TextAlign.Start, (): void => this.onCancel());
+          this.selectionAction((): string => '取消', TextAlign.Start, (): void => this.onCancel());
           this.selectionHeading();
-          this.selectionAction(this.allSelected() ? '取消全选' : '全选', TextAlign.End, (): void => this.toggleAll());
+          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选', TextAlign.End, (): void => this.toggleAll());
         }.width('100%').alignItems(VerticalAlign.Center);
       } else {
         this.selectionHeading();
         Row() {
-          this.selectionAction('取消', TextAlign.Start, (): void => this.onCancel());
+          this.selectionAction((): string => '取消', TextAlign.Start, (): void => this.onCancel());
           Blank().layoutWeight(1);
-          this.selectionAction(this.allSelected() ? '取消全选' : '全选', TextAlign.End, (): void => this.toggleAll());
+          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选', TextAlign.End, (): void => this.toggleAll());
         }.width('100%').alignItems(VerticalAlign.Center);
       }
     }
@@ -219,9 +219,9 @@ export struct BookshelfMultiSelectPage {
   }
 
   @Builder
-  private selectionAction(label: string, alignment: TextAlign, action: () => void) {
+  private selectionAction(label: () => string, alignment: TextAlign, action: () => void) {
     Button({ type: ButtonType.Normal }) {
-      Text(label)
+      Text(label())
         .constraintSize({ minWidth: 72 }).maxLines(1)
         .fontFamily(TYPE_SHELF_SELECTION_ACTION.fontFamily)
         .fontWeight(TYPE_SHELF_SELECTION_ACTION.fontWeight)
@@ -234,7 +234,7 @@ export struct BookshelfMultiSelectPage {
     .constraintSize({ minWidth: 72, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
     .padding(0).backgroundColor(Color.Transparent).borderRadius(8)
     .enabled(this.selectionInputEnabled())
-    .accessibilityText(label)
+    .accessibilityText(label())
     .onClick((): void => { if (this.selectionInputEnabled()) action(); });
   }
 
@@ -329,9 +329,10 @@ export struct BookshelfMultiSelectPage {
   private onGeometryInputsChanged(): void {
     if (!this.mounted) return;
     const metrics = ReaderWindowCoordinator.metrics();
-    const headerInputs = JSON.stringify([this.liveWidth(), metrics.systemFontScale,
+    const geometryInputs = JSON.stringify([this.liveWidth(), metrics.systemFontScale,
       metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)]);
-    const footerInputs = JSON.stringify([headerInputs, this.bottomInset()]);
+    const headerInputs = JSON.stringify([geometryInputs, this.headerFontRevision]);
+    const footerInputs = JSON.stringify([geometryInputs, this.bottomInset()]);
     if (headerInputs !== this.headerInputs) {
       this.headerInputs = headerInputs;
       this.measurementKey += 1;

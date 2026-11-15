@@ -2417,7 +2417,7 @@ export struct MangaReadingSurface {
   @Builder
   private mangaTopBarBack() {
     Row() {
-      this.iconAction(this.backgroundPreference === 'ink' ? $r('app.media.book_detail_back_theme_night') :
+      this.iconAction((): Resource => this.backgroundPreference === 'ink' ? $r('app.media.book_detail_back_theme_night') :
         $r('app.media.book_detail_back'), '返回', (): void => { void this.handleBack(); });
       Blank().width(44);
     }.width(88);
@@ -2435,15 +2435,15 @@ export struct MangaReadingSurface {
         .id(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'manga-source'))
         .enabled(this.readerPanelForeground()).accessibilityText('换源')
         .onClick((): void => { void this.openSourceSwitch(); });
-      this.iconAction(this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_more_theme_night') :
+      this.iconAction((): Resource => this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_more_theme_night') :
         $r('app.media.reader_directory_more'), '更多', (): void => {
           void this.openPanel('more', this.panelTriggerFocusId('more'));
         }, this.panelTriggerFocusId('more'));
     }.width(88).justifyContent(FlexAlign.End);
   }
   @Builder
-  private iconAction(icon: Resource, label: string, action: () => void, focusId: string = '') {
-    ReaderIconButton({ icon, specId: 'manga-reader-action',
+  private iconAction(icon: () => Resource, label: string, action: () => void, focusId: string = '') {
+    ReaderIconButton({ icon: icon(), specId: 'manga-reader-action',
       scheme: this.backgroundPreference === 'ink' ? 'night' : 'day', accessibilityLabel: label, focusId, onTap: action });
   }
   private mangaTopBarRevision: number = -1;
@@ -2503,9 +2503,9 @@ export struct MangaReadingSurface {
           .enabled(this.opened).onClick((): void => { void this.stepPage(1); });
       }.width('100%').height(this.dockPageRowHeight()).alignItems(VerticalAlign.Top);
       Row() {
-        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
-        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
-        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
+        this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
+        this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
+        this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
       }.width('100%').height(this.dockActionHeight() + 1).border({ width: { top: 1 }, color: this.lineColor() });
     }.width(Math.max(1, this.viewportWidth - 60 - this.interactiveInsets(this.windowMetricsRevision).left -
       this.interactiveInsets(this.windowMetricsRevision).right)).padding({ left: 14, right: 14, top: 13, bottom: 11 })
@@ -2514,10 +2514,10 @@ export struct MangaReadingSurface {
       .constraintSize({ maxWidth: 560 });
   }
   @Builder
-  private footerAction(icon: Resource, label: string, panel: string) {
+  private footerAction(icon: () => Resource, label: string, panel: string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Column({ space: 4 }) {
-      Image(icon).width(22).height(22);
+      Image(icon()).width(22).height(22);
       Text(label).fontSize(11).fontColor(this.inkColor());
     }.width('100%').height('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
     }.id(this.panelTriggerFocusId(panel)).enabled(this.readerPanelForeground())

@@ -30,6 +30,12 @@ const definitions = {
     'shelf-filter-action-target': { description: 'Actual shelf filter clear and collapse Native two-axis targets, natural parent budget, and current callbacks', resources: [] },
 };
 const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
+const surfaceRect = await import('../entry/src/main/ets/ui/layout/ReaderSurfaceRect.ts');
+const nativeRectMeasurement = pureModuleProbe(read('ui/layout/ReaderSurfaceRectMeasurement.ets'),
+    'ReaderSurfaceRectMeasurement.ets', surfaceRect, ['readerMeasureSurfaceRect']);
+const nativeSlotMeasurement = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
+    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, ...nativeRectMeasurement }, ['ReaderNativeSlotMeasurement']);
+
 const shelf = name => read('features/bookshelf/ui/' + name + '.ets');
 const selectionSource = shelf('BookshelfMultiSelectPage');
 const detailsSource = shelf('ShelfBookListDetails');
@@ -73,9 +79,10 @@ class Cover {
 }
 const nodes = owner => [...owner.nodes.values()];
 const recursiveNodes = owner => [...nodes(owner), ...[...owner.children.values()].flatMap(child => child.nodes ? recursiveNodes(child) : [])];
+const recursiveActors = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? recursiveActors(child) : [])];
 function selectionSdk(candidate = selectionSource, detailCandidate = detailsSource, overrides = {}) {
     const properties = createArkUIPropertyRuntimeProbe();
-    const deps = { ...properties.sdk, ...readerTypographyRoles, ...readerFoundationTokens, ...windowMetrics, ...actualReaderPageLayout(), ...grid, ...action,
+    const deps = { ...properties.sdk, ...readerTypographyRoles, ...readerFoundationTokens, ...windowMetrics, ...actualReaderPageLayout(), ...nativeSlotMeasurement, ...grid, ...action,
         ...constants(candidate), Repeat, ListItemAlign: { Center: 'ListItemAlign.Center' }, ShelfBookPresentation, readerIsExpandedWidth, registerReaderFonts() { }, readerFontFamilyReady: () => true, prepareReaderFontFamily: async () => { },
         NoCoverCover: Cover, ReaderWindowCoordinator: { metrics: () => metrics }, readerActionIcon: () => '',
         uiContext: { getFont: () => ({}), px2vp: x => x, getMeasureUtils: () => ({ measureText(options) {
@@ -210,12 +217,14 @@ async function selectionFontReceipt(candidate = selectionSource) {
     assert.equal(owner.selectedKeys[0], owner.bookKey(book), 'normal page entry retains the long-pressed book before deriving its header budget');
     assert.equal(receipts.length, 2);
     const key = owner.measurementKey;
+    const footerKey = owner.footerMeasurementKey;
     owner.recordMeasurement('selection:header', 100, key);
     ready = true;
     receipts.forEach(resolve => resolve());
     await new Promise(done => setImmediate(done));
     assert.equal(owner.headerFontRevision, 1, 'checked font receipt changes the actual header observer input');
     assert.equal(owner.measurementKey, key + 1, 'font completion invalidates old header measurement generation');
+    assert.equal(owner.footerMeasurementKey, footerKey, 'header font completion preserves independent footer measurement');
     assert.notEqual(owner.geometry.header.height, 100, 'old fallback-font height is excluded from current geometry');
     assert.equal(owner.selectionHeaderInline(), true, 'ready fonts restore the single-line default header when it fits');
     owner.prepareSelectionHeaderFonts();
@@ -272,7 +281,7 @@ function detailActions(candidate = localBookDetailSource) {
         for (const scale of [1, 1.3, 1.6, 2, 3.2]) {
             setMetrics(320, scale, 28, 12);
             const switched = [], opened = [];
-            const sdk = localBookDetailSdk({ ...action, ...raisedShape, ...readerSurfaceSpecsForProbe(metrics), sourceSwitchTriggerFocusId, ReaderWindowCoordinator: { metrics: () => metrics } }, { source: candidate });
+            const sdk = localBookDetailSdk({ ...nativeSlotMeasurement, ...action, ...raisedShape, ...readerSurfaceSpecsForProbe(metrics), sourceSwitchTriggerFocusId, ReaderWindowCoordinator: { metrics: () => metrics } }, { source: candidate });
             const owner = sdk.owner;
             Object.assign(owner, { book: { ...book, contentKind: kind, intro: '长简介'.repeat(100), sourceName: '很长的当前来源', mangaPosition: undefined },
                 toc: [], mounted: true, viewportWidth: 320, viewportHeight: 844, appThemeScheme: 'day', sourceSwitchEnabled: true, removing: false, admissionIdentity: 'current',
@@ -288,8 +297,11 @@ function detailActions(candidate = localBookDetailSource) {
                 assert.ok(button, label);
                 assert.ok(button.constraintSize?.minHeight >= 44, `${kind} ${label} native target minimum44`);
                 if (kind === 'text' && label === '完整目录') {
-                    const nativeDirectory = recursiveNodes(owner).filter(node => node.type === 'Row' && node.constraintSize?.minHeight === 44 && node.padding?.top === 8);
-                    assert.ok(nativeDirectory.length > 0, 'novel directory inner row grows with its actual text');
+                    const directoryActor = recursiveActors(owner).find(actor => actor.specId === 'detail-directory');
+                    assert.ok(directoryActor, 'actual shared directory action');
+                    const nativeDirectory = recursiveNodes(directoryActor).filter(node => node.type === 'Row' && node.constraintSize?.minHeight === 30);
+                    assert.ok(nativeDirectory.length > 0 && nativeDirectory.every(node => node.height === undefined),
+                        'authored thirty-vp content row grows naturally within its paid44 native action');
                     assert.equal(button.width, undefined, 'novel directory native width follows its unbounded content');
                 }
                 else
@@ -308,14 +320,19 @@ function detailActions(candidate = localBookDetailSource) {
                 assert.equal(text.height, undefined);
                 assert.equal(text.maxFontScale, scale, 'detail dock inherits the current system font scale without a local cap');
             }
-            const oldEnd = owner.geometry.content.endInset, oldFooter = owner.geometry.footer.height, key = owner.measurementKey;
+            const oldEnd = owner.geometry.content.endInset, oldFooter = owner.geometry.footer.height, key = owner.footerMeasurementKey;
             owner.recordFrameHeight('detail:dock', 120, key);
             assert.equal(owner.geometry.footer.height, 120);
             assert.equal(owner.geometry.content.endInset, oldEnd + 120 - oldFooter);
             owner.invalidateFrame();
+            assert.equal(owner.footerMeasurementKey, key, 'unchanged geometry preserves the current dock generation');
+            assert.equal(owner.geometry.footer.height, 120);
+            owner.viewportWidth = 319;
+            owner.invalidateFrame();
+            assert.ok(owner.footerMeasurementKey > key, 'actual width change renews the dock measurement');
             const currentFooter = owner.geometry.footer.height;
             owner.recordFrameHeight('detail:dock', 200, key);
-            assert.equal(owner.geometry.footer.height, currentFooter, 'old font/frame height receipt cannot rewrite the new generation');
+            assert.equal(owner.geometry.footer.height, currentFooter, 'old width-dependent dock receipt cannot rewrite the new generation');
             const rows = nodes(owner).filter(node => node.type === 'Row' && node.width === '100%');
             assert.ok(rows.length > 0);
             for (const row of rows)
@@ -360,7 +377,7 @@ function managementFrame(candidate = shelf('BookshelfManagementPage')) {
         setMetrics(320, scale);
         const controls = foundationControls({ windowMetrics: () => metrics });
         const managementActions = [];
-        const methods = ['groupEditorCard', 'groupsCard', 'groupRow', 'assignmentCard', 'assignmentBookRow', 'recordsCard', 'recordRow', 'heading', 'actionButton', 'smallAction', 'isSelectedBook', 'managementTextRowHeight', 'formatDuration', 'formatTimestamp'];
+        const methods = ['groupEditorCard', 'groupsCard', 'groupRow', 'currentGroup', 'assignmentCard', 'assignmentBookRow', 'recordsCard', 'recordRow', 'heading', 'actionButton', 'smallAction', 'isSelectedBook', 'managementTextRowHeight', 'formatDuration', 'formatTimestamp'];
         const { owner } = createReaderBuilderProbe(candidate, methods, { ...controls.dependencies, registerReaderFonts() { }, ReaderWindowCoordinator: { metrics: () => metrics } }, controls.hooks);
         Object.assign(owner, { readerWindowMetricsRevision: 1, appThemeScheme: 'day', snapshot: { busy: false, selectedGroupId: 1, groupNameDraft: '组', groupOrderDraft: '1', assignmentGroupDraft: '组',
                 selectedSourceId: 's', selectedBookId: 'b', data: { groups: [{ groupId: 1, groupName: '很长的分组标题', order: 1, show: true }], books: [book], records: [{ deviceId: 'd', bookName: book.title, readTime: 120000, lastRead: 0 }] } },

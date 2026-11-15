@@ -166,7 +166,7 @@ export struct BookshelfManagementPage {
   @Builder
   private statisticsCard() {
     Column({ space: TOK_SPACE_XS }) {
-      this.heading('阅读统计');
+      this.heading((): string => '阅读统计');
       Text(`书架 ${this.snapshot.data.books.length} 本 · 分组 ${this.snapshot.data.groups.length} 个 · 阅读记录 ${this.snapshot.data.records.length} 条`)
         .fontFamily(TYPE_SHELF_MANAGEMENT_BODY.fontFamily)
         .fontWeight(TYPE_SHELF_MANAGEMENT_BODY.fontWeight)
@@ -189,17 +189,17 @@ export struct BookshelfManagementPage {
   @Builder
   private groupEditorCard() {
     Column({ space: TOK_SPACE_SM }) {
-      this.heading(this.snapshot.selectedGroupId === 0 ? '新建分组' : '编辑分组');
+      this.heading((): string => this.snapshot.selectedGroupId === 0 ? '新建分组' : '编辑分组');
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.groupNameDraft, placeholder: '分组名', onTextChange: this.onGroupNameChanged });
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-order', text: this.snapshot.groupOrderDraft, placeholder: '顺序整数', onTextChange: this.onGroupOrderChanged });
       Row({ space: TOK_SPACE_SM }) {
         Column() {
-          this.actionButton(this.snapshot.selectedGroupId === 0 ? '创建' : '保存', true,
+          this.actionButton((): string => this.snapshot.selectedGroupId === 0 ? '创建' : '保存', true,
             (): void => this.onSaveGroup());
         }.layoutWeight(1).constraintSize({ minWidth: 0 });
         if (this.snapshot.selectedGroupId !== 0) {
           Column() {
-            this.actionButton('取消编辑', false, (): void => this.onClearGroupEditor());
+            this.actionButton((): string => '取消编辑', false, (): void => this.onClearGroupEditor());
           }.layoutWeight(1).constraintSize({ minWidth: 0 });
         }
       }
@@ -213,7 +213,7 @@ export struct BookshelfManagementPage {
   @Builder
   private groupsCard() {
     Column({ space: TOK_SPACE_SM }) {
-      this.heading('Core 分组');
+      this.heading((): string => 'Core 分组');
       if (this.snapshot.data.groups.length === 0) {
 ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
       } else {
@@ -237,17 +237,21 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
     .alignItems(HorizontalAlign.Start);
   }
 
+  private currentGroup(group: BookGroup): BookGroup {
+    return this.snapshot.data.groups.find((candidate: BookGroup): boolean => candidate.groupId === group.groupId) ?? group;
+  }
+
   @Builder
   private groupRow(group: BookGroup) {
           Column({ space: TOK_SPACE_XS }) {
             Row() {
               Column({ space: 2 }) {
-                Text(group.groupName)
+                Text(this.currentGroup(group).groupName)
                   .fontFamily(TYPE_SHELF_MANAGEMENT_GROUP_TITLE.fontFamily)
                   .fontWeight(TYPE_SHELF_MANAGEMENT_GROUP_TITLE.fontWeight)
                   .fontSize(TYPE_SHELF_MANAGEMENT_GROUP_TITLE.fontSizeFp).lineHeight(18).width('100%')
                   .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-                Text(`id ${group.groupId} · 顺序 ${group.order} · ${group.show ? '显示' : '隐藏'}`)
+                Text(`id ${group.groupId} · 顺序 ${this.currentGroup(group).order} · ${this.currentGroup(group).show ? '显示' : '隐藏'}`)
                   .fontFamily(TYPE_SHELF_MANAGEMENT_META.fontFamily)
                   .fontWeight(TYPE_SHELF_MANAGEMENT_META.fontWeight)
                   .fontSize(TYPE_SHELF_MANAGEMENT_META.fontSizeFp).lineHeight(15).width('100%')
@@ -258,8 +262,8 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
             }
             .width('100%');
             Row({ space: TOK_SPACE_XS }) {
-              this.smallAction(group.show ? '隐藏' : '显示', (): void => this.onToggleGroupShown(group.groupId));
-              this.smallAction('删除实体', (): void => this.onDeleteGroup(group.groupId));
+              this.smallAction((): string => this.currentGroup(group).show ? '隐藏' : '显示', (): void => this.onToggleGroupShown(group.groupId));
+              this.smallAction((): string => '删除实体', (): void => this.onDeleteGroup(group.groupId));
             }
           }
           .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8);
@@ -268,12 +272,13 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
   @Builder
   private assignmentCard() {
     Column({ space: TOK_SPACE_SM }) {
-      this.heading('书籍分组');
+      this.heading((): string => '书籍分组');
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.assignmentGroupDraft, placeholder: '分组名；留空清除', onTextChange: this.onAssignmentGroupChanged });
       Scroll() {
         Row({ space: TOK_SPACE_XS }) {
           ForEach(this.snapshot.data.groups, (group: BookGroup) => {
-            this.smallAction(group.groupName, (): void => this.onAssignmentGroupChanged(group.groupName));
+            this.smallAction((): string => this.currentGroup(group).groupName,
+              (): void => this.onAssignmentGroupChanged(this.currentGroup(group).groupName));
           }, (group: BookGroup): string => `assign-group-${group.groupId}`);
         }
       }
@@ -293,7 +298,7 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
       .width('100%')
       .height(Math.min(360, Math.max(this.managementTextRowHeight(), this.snapshot.data.books.length * this.managementTextRowHeight())))
       .scrollBar(BarState.Off);
-      this.actionButton('应用到所选书籍', true, (): void => this.onAssignBook());
+      this.actionButton((): string => '应用到所选书籍', true, (): void => this.onAssignBook());
     }
     .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
@@ -324,7 +329,7 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
   @Builder
   private recordsCard() {
     Column({ space: TOK_SPACE_SM }) {
-      this.heading('Core 阅读记录');
+      this.heading((): string => 'Core 阅读记录');
       if (this.snapshot.data.records.length === 0) {
 ReaderPageState({ title: '暂无阅读记录' }).padding({ top: 24, bottom: 24 });
       } else {
@@ -373,8 +378,8 @@ ReaderPageState({ title: '暂无阅读记录' }).padding({ top: 24, bottom: 24 }
   }
 
   @Builder
-  private heading(label: string) {
-    Text(label).width('100%')
+  private heading(label: () => string) {
+    Text(label()).width('100%')
       .fontFamily(TYPE_SHELF_MANAGEMENT_HEADING.fontFamily)
       .fontWeight(TYPE_SHELF_MANAGEMENT_HEADING.fontWeight)
       .fontSize(TYPE_SHELF_MANAGEMENT_HEADING.fontSizeFp)
@@ -382,15 +387,15 @@ ReaderPageState({ title: '暂无阅读记录' }).padding({ top: 24, bottom: 24 }
   }
 
   @Builder
-  private actionButton(label: string, primary: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'shelf-action', label, primary, layout: 'full',
+  private actionButton(label: () => string, primary: boolean, action: () => void) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'shelf-action', label: label(), primary, layout: 'full',
       actionEnabled: !this.snapshot.busy && this.snapshot.mutationBlocked !== true,
       onAction: (): void => { if (!this.snapshot.busy && this.snapshot.mutationBlocked !== true) action(); } }).width('100%');
   }
 
   @Builder
-  private smallAction(label: string, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'shelf-small', label,
+  private smallAction(label: () => string, action: () => void) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'shelf-small', label: label(),
       actionEnabled: !this.snapshot.busy && this.snapshot.mutationBlocked !== true,
       onAction: (): void => { if (!this.snapshot.busy && this.snapshot.mutationBlocked !== true) action(); } });
   }

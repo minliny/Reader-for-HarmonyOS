@@ -100,7 +100,7 @@ function captureSharedConsumer(file, methods, render) {
 if(selectedCase==='source') captureSharedConsumer('features/source/ui/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
   owner.chip('未检测', 58, false, true); owner.bottomActionBar();
 });
-if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/ui/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
+if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/ui/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', () => 'icon', () => {}));
 if(selectedCase==='rss') captureSharedConsumer('features/rss/ui/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
   owner.statusTab('未读', 'unread'); owner.filterPill('未读'); owner.recentUnreadHeader();
 });

@@ -167,7 +167,7 @@ function batchSummary() {
   const labels = ['所选项通过 123456', '所选项未通过 123456', '检测错误 123456', '剩余 123456'];
   const owner = createReaderBuilderProbe(source, ['batchCounter'], deps).owner;
   owner.appThemeScheme = 'day';
-  labels.forEach(label => owner.batchCounter(label, '#123456'));
+  labels.forEach(label => owner.batchCounter(() => label, () => '#123456'));
   const counters = [...owner.nodes.values()].filter(node => node.type === 'Text');
   assert.equal(counters.length, 4);
   for (const node of counters) {

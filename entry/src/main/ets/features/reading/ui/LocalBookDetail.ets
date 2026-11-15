@@ -372,8 +372,8 @@ export struct LocalBookDetail {
       }
       Column({ space: 0 }) {
         Row({ space: visual.heroTagGap }) {
-          this.mangaMetadataTag('漫画', true);
-          this.mangaMetadataTag(this.book.sourceId === 'local' ? '本地' : '在线', false);
+          this.mangaMetadataTag((): string => '漫画', true);
+          this.mangaMetadataTag((): string => this.book.sourceId === 'local' ? '本地' : '在线', false);
         }.width('100%');
         Text(this.book.title).width('100%').fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD)
           .fontWeight(visual.summaryFontWeight).fontSize(visual.summaryFontSize).lineHeight(visual.summaryLineHeight)
@@ -444,8 +444,8 @@ export struct LocalBookDetail {
   }
 
   @Builder
-  private mangaMetadataTag(label: string, primary: boolean) {
-    Text(label).width(Math.max(visual.heroTagWidth, visual.heroTagFontSize * label.length * this.mangaFontScale() +
+  private mangaMetadataTag(label: () => string, primary: boolean) {
+    Text(label()).width(Math.max(visual.heroTagWidth, visual.heroTagFontSize * label().length * this.mangaFontScale() +
         visual.heroTagWidth - visual.heroTagFontSize * 2))
       .height(Math.max(visual.heroTagHeight, visual.heroTagLineHeight * this.mangaFontScale() + visual.heroTagHeight - visual.heroTagLineHeight))
       .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(visual.footerFontWeight)
@@ -472,8 +472,8 @@ export struct LocalBookDetail {
           .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         Row({ space: 6 }) {
-          this.metadataTag(this.book.contentKind === 'audio' ? '有声' : '小说');
-          this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');
+          this.metadataTag((): string => this.book.contentKind === 'audio' ? '有声' : '小说');
+          this.metadataTag((): string => this.book.sourceId === 'local' ? '本地' : '在线');
         }.width('100%');
       }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
     }.width('100%').constraintSize({ minHeight: 122 })
@@ -481,8 +481,8 @@ export struct LocalBookDetail {
   }
 
   @Builder
-  private metadataTag(label: string) {
-    Text(label).fontSize(10).lineHeight(18).padding({ left: 7, right: 7 })
+  private metadataTag(label: () => string) {
+    Text(label()).fontSize(10).lineHeight(18).padding({ left: 7, right: 7 })
       .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
       .border({ width: 0.5, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(4);

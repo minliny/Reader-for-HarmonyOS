@@ -473,11 +473,11 @@ export struct SourceToolsPage {
           .wordBreak(WordBreak.BREAK_ALL);
       }
       Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
-        this.batchCounter(`所选项通过 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
-        this.batchCounter(`所选项未通过 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.status.checkError', this.appThemeScheme));
-        this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, readerAppColor('app.status.checkWarning', this.appThemeScheme));
-        this.batchCounter(`剩余 ${Math.max(0,
-          this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, readerAppColor('TOK_MUTED', this.appThemeScheme));
+        this.batchCounter((): string => `所选项通过 ${this.snapshot.batchCheck.passed}`, (): string => readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+        this.batchCounter((): string => `所选项未通过 ${this.snapshot.batchCheck.failed}`, (): string => readerAppColor('app.status.checkError', this.appThemeScheme));
+        this.batchCounter((): string => `检测错误 ${this.snapshot.batchCheck.errors}`, (): string => readerAppColor('app.status.checkWarning', this.appThemeScheme));
+        this.batchCounter((): string => `剩余 ${Math.max(0,
+          this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, (): string => readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
       .width('100%');
       if (this.snapshot.batchCheck.results.length === 0) {
@@ -509,8 +509,8 @@ export struct SourceToolsPage {
   }
 
   @Builder
-  private batchCounter(label: string, color: string) {
-    Text(label)
+  private batchCounter(label: () => string, color: () => string) {
+    Text(label())
       .constraintSize({ maxWidth: '100%' })
       .padding({ left: 8, right: 8, top: 4, bottom: 4 })
       .textAlign(TextAlign.Center)
@@ -518,7 +518,7 @@ export struct SourceToolsPage {
       .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
       .wordBreak(WordBreak.BREAK_WORD)
       .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
-      .fontColor(color)
+      .fontColor(color())
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(7);
   }

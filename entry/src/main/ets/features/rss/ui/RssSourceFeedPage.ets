@@ -180,8 +180,8 @@ export struct RssSourceFeedPage {
   @Builder
   private sourceActions() {
     Row({ space: 2 }) {
-      this.actionTarget('刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')), (): void => { if (this.canRefresh()) this.onRefresh(); });
-      this.actionTarget('编辑源', (this.appThemeScheme === 'night' ? $r('app.media.rss_edit_theme_night') : $r('app.media.rss_edit')), (): void => this.onEditSource());
+      this.actionTarget('刷新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')), (): void => { if (this.canRefresh()) this.onRefresh(); });
+      this.actionTarget('编辑源', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_edit_theme_night') : $r('app.media.rss_edit')), (): void => this.onEditSource());
     }
     .width('100%')
     .constraintSize({ minHeight: 44 })
@@ -189,8 +189,8 @@ export struct RssSourceFeedPage {
   }
 
   @Builder
-  private actionTarget(label: string, icon: Resource, action: () => void) {
-    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-feed', fillWidth: true, label, icon, onAction: action }).layoutWeight(1);
+  private actionTarget(label: string, icon: () => Resource, action: () => void) {
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-feed', fillWidth: true, label, icon: icon(), onAction: action }).layoutWeight(1);
   }
 
   @Builder

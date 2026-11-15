@@ -923,7 +923,7 @@ export struct SearchPage {
         Column() {
           Column({ space: 0 }) {
             if (this.presentation.kind === 'sourceRequired') {
-              this.sourceRequiredContent(this.sourceRequiredReason());
+              this.sourceRequiredContent();
             } else {
               this.sourceLoadErrorContent();
             }
@@ -1691,17 +1691,19 @@ export struct SearchPage {
    * surface (illustration, title/description, primary+secondary pill row).
    */
   @Builder
-  private sourceRequiredContent(reason: string) {
-    ReaderPageState({ title: reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源',
-      message: reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :
-        '启用可搜索书籍的书源；本地导入的书仍可在上方搜索', padded: false,
-      leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
-      actionContent: (): void => {
-        this.sourceRecoveryActions(reason === 'noSources' ? '添加书源' : '管理书源', (): void => {
-          if (this.ownsPageQuery() && this.presentation.kind === 'sourceRequired' &&
-            this.presentation.reason === reason) this.onManageSources();
-        });
-      } });
+  private sourceRequiredContent() {
+    ForEach([this.sourceRequiredReason()], (reason: string): void => {
+      ReaderPageState({ title: reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源',
+        message: reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :
+          '启用可搜索书籍的书源；本地导入的书仍可在上方搜索', padded: false,
+        leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
+        actionContent: (): void => {
+          this.sourceRecoveryActions(reason === 'noSources' ? '添加书源' : '管理书源', (): void => {
+            if (this.ownsPageQuery() && this.presentation.kind === 'sourceRequired' &&
+              this.presentation.reason === reason) this.onManageSources();
+          });
+        } });
+    }, (reason: string): string => reason);
   }
 
   @Builder

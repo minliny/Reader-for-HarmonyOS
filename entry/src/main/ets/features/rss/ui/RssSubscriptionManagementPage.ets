@@ -368,13 +368,13 @@ export struct RssSubscriptionManagementPage {
   @Builder
   private actionBar(subscriptionId: string) {
     Column() {
-      this.actionTarget('查看文章', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_view_all_theme_night') : $r('app.media.rss_manage_view_all')), false, false,
+      this.actionTarget('查看文章', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_view_all_theme_night') : $r('app.media.rss_manage_view_all')), false, false,
         (): void => this.onViewArticles(subscriptionId));
-      this.actionTarget('编辑来源', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_edit_theme_night') : $r('app.media.rss_manage_edit')), false, true,
+      this.actionTarget('编辑来源', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_edit_theme_night') : $r('app.media.rss_manage_edit')), false, true,
         (): void => this.onEditSource(subscriptionId));
-      this.actionTarget('立即刷新', (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')), false, true,
+      this.actionTarget('立即刷新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')), false, true,
         (): void => this.onRefresh(subscriptionId));
-      this.actionTarget('删除', $r('app.media.rss_manage_delete'), true, true,
+      this.actionTarget('删除', (): Resource => $r('app.media.rss_manage_delete'), true, true,
         (): void => this.onDelete(subscriptionId));
     }
     .width('100%')
@@ -385,8 +385,8 @@ export struct RssSubscriptionManagementPage {
   }
 
   @Builder
-  private actionTarget(label: string, icon: Resource, danger: boolean, divider: boolean, action: () => void) {
-    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-management', fillWidth: true, label, icon, isDanger: danger, showDivider: divider, onAction: action }).width('100%');
+  private actionTarget(label: string, icon: () => Resource, danger: boolean, divider: boolean, action: () => void) {
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-management', fillWidth: true, label, icon: icon(), isDanger: danger, showDivider: divider, onAction: action }).width('100%');
   }
 
   private toggleDisclosure(subscriptionId: string): void {

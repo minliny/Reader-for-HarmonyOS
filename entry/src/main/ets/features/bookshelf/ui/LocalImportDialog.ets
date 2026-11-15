@@ -235,7 +235,7 @@ export struct LocalImportDialog {
 
   @Builder
   private fileSelectionHeader() {
-    this.importHeader('导入本地书籍');
+    this.importHeader((): string => '导入本地书籍');
   }
 
   @Builder
@@ -330,7 +330,7 @@ export struct LocalImportDialog {
   private importingPanel() {
     Scroll() {
       Column() {
-        this.importHeader('正在导入');
+        this.importHeader((): string => '正在导入');
         Column({ space: 16 }) {
           LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
             .enableLoading(this.foreground && !this.reduceMotion);
@@ -363,8 +363,8 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private importHeader(title: string) {
-    Text(title).width('100%').fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
+  private importHeader(title: () => string) {
+    Text(title()).width('100%').fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
       .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
       .padding({ left: 17, right: 17, top: 17, bottom: 16 });
@@ -402,7 +402,7 @@ export struct LocalImportDialog {
 
   @Builder
   private resultHeader() {
-    Column() { this.importHeader(this.summaryTitle()); }.width('100%')
+    Column() { this.importHeader((): string => this.summaryTitle()); }.width('100%')
       .onAreaChange((_old: Area, next: Area): void => {
         this.measuredHeaderHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
       });

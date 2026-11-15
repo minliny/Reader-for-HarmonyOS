@@ -262,7 +262,7 @@ export struct RssEntryDetailPage {
   @Builder
   private entryActions() {
     Row({ space: 7 }) {
-      this.actionTarget('源设置', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage')), (): void => this.onSourceSettings());
+      this.actionTarget('源设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage')), (): void => this.onSourceSettings());
     }
     .width('100%')
     .constraintSize({ minHeight: 44 })
@@ -270,8 +270,8 @@ export struct RssEntryDetailPage {
   }
 
   @Builder
-  private actionTarget(label: string, icon: Resource, action: () => void) {
-    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-entry', fillWidth: true, label, icon, onAction: action }).layoutWeight(1);
+  private actionTarget(label: string, icon: () => Resource, action: () => void) {
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-entry', fillWidth: true, label, icon: icon(), onAction: action }).layoutWeight(1);
   }
 
   @Builder

@@ -1730,7 +1730,7 @@ async function run(id) {
             assert.equal(changed, 2);
             const r = native('ReaderControlReplaceContent.ets', ['ruleIcon']);
             Object.assign(r, { state: { sessionKey: 'one' }, layer: '', appThemeScheme: 'day', fullInput: () => true, readyInput: () => true });
-            r.ruleIcon('edit', () => '编辑规则', () => changed++, () => true, () => 'rule1');
+            r.ruleIcon(() => 'edit', () => '编辑规则', () => changed++, () => true, () => 'rule1');
             target(nodes(r, 'Button')[0], 'replace edit');
             nodes(r, 'Button')[0].onClick();
             assert.equal(changed, 3);

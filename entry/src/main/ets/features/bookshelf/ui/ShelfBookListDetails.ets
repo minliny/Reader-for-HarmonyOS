@@ -29,8 +29,8 @@ export struct ShelfBookListDetails {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         Flex({ direction: this.textFrame.metadataColumns === 2 ? FlexDirection.Row : FlexDirection.Column }) {
-          this.metadataTag(ShelfBookPresentation.contentLabel(this.book), false);
-          this.metadataTag(ShelfBookPresentation.originLabel(this.book), true);
+          this.metadataTag((): string => ShelfBookPresentation.contentLabel(this.book), false);
+          this.metadataTag((): string => ShelfBookPresentation.originLabel(this.book), true);
         }.width(this.textFrame.metadataWidth).height(this.textFrame.metadataHeight).flexShrink(0);
       }.width('100%').height(this.textFrame.titleGroupHeight);
       Text(this.book.author).width('100%').constraintSize({ minHeight: (TYPE_SHELF_LIST_AUTHOR.lineHeightFp as number) * this.textFrame.scale }).fontFamily(TYPE_SHELF_LIST_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_LIST_AUTHOR.fontWeight)
@@ -62,8 +62,8 @@ export struct ShelfBookListDetails {
   }
 
   @Builder
-  private metadataTag(label: string, trailing: boolean) {
-    Text(label).constraintSize({ minWidth: Math.min(30, this.textFrame.width), maxWidth: this.textFrame.width, minHeight: this.textFrame.tagHeight })
+  private metadataTag(label: () => string, trailing: boolean) {
+    Text(label()).constraintSize({ minWidth: Math.min(30, this.textFrame.width), maxWidth: this.textFrame.width, minHeight: this.textFrame.tagHeight })
       .maxLines(this.textFrame.metadataColumns === 2 ? 1 : undefined).wordBreak(WordBreak.BREAK_WORD).flexShrink(0)
       .margin({ left: trailing && this.textFrame.metadataColumns === 2 ? 6 : 0,
         top: trailing && this.textFrame.metadataColumns === 1 ? 2 : 0 }).padding({ left: 4, right: 4 })

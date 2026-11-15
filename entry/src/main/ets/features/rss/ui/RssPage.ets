@@ -651,7 +651,7 @@ export struct RssPage {
     Column({ space: 6 }) {
       this.recentUnreadHeader();
       this.stateCard(
-        (this.appThemeScheme === 'night' ? $r('app.media.rss_empty_theme_night') : $r('app.media.rss_empty')),
+        (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_empty_theme_night') : $r('app.media.rss_empty')),
         '暂无未读订阅',
         '当前订阅源没有新的未读条目。你可以查看全部、管理订阅源或手动刷新。日常空状态仍保留 RSS 主导航上下文。',
         [],
@@ -666,7 +666,7 @@ export struct RssPage {
     Scroll() {
       Column() {
         this.stateCard(
-          (this.appThemeScheme === 'night' ? $r('app.media.rss_error_theme_night') : $r('app.media.rss_error')),
+          (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_error_theme_night') : $r('app.media.rss_error')),
           'RSS 暂时无法载入',
           `${failedSources.length} 个订阅源无法载入。可以稍后重试，或进入订阅源管理修复登录态和规则。`,
           failedSources,
@@ -694,10 +694,10 @@ export struct RssPage {
   }
 
   @Builder
-  private stateCard(icon: Resource, title: string, body: string, failedSources: RssFailedSource[],
+  private stateCard(icon: () => Resource, title: string, body: string, failedSources: RssFailedSource[],
     primaryLabel: string, primaryAction: () => void) {
     Column() {
-      Image(icon)
+      Image(icon())
         .width(28)
         .height(28);
 
