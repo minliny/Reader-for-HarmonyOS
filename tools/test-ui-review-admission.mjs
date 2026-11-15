@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { registerHooks } from 'node:module';
 import { selectedProductionMethods, selectedProductionValues, selectedProductionClasses, selectedProductionComponentCallback } from './lib/selected-production-methods.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
@@ -29,6 +30,7 @@ const cases = selectContractCases({
   'mode-async-admission': 'Both actual mode consumers recheck admission after prepare/load and retain dispatched ACKs.',
   'theme-async-admission': 'Actual Settings theme callback rechecks its captured input after barrier/load and preserves an accepted save.',
   'reader-live-input': 'Actual Root/Scene/Shell/reader/Panel and raw callbacks consume live input before delayed Props.',
+  'reader-grab-live-admission': 'Both actual grab touch callbacks reject a new unavailable DOWN, recover on the same actor and finish an accepted pointer while unavailable.',
   'manga-live-input': 'Actual Root/Shell/Manga settings Button and gesture/boundary first admission.',
   'continuous-live-input': 'Actual continuous Stage retires old parent revisions before native scrollPage.',
   'semantic-directory-input': 'Actual semantic marker checks original Content/Surface/List input and canonical chapter.',
@@ -665,8 +667,156 @@ async function searchLiveInput() {
   return { samples: result, acceptedHistoryReceiptRetained: true };
 }
 
+async function readerGrabLiveAdmission() {
+  const resolution = registerHooks({ resolve(specifier, context, nextResolve) {
+    try { return nextResolve(specifier, context); }
+    catch (error) {
+      if (error.code === 'ERR_MODULE_NOT_FOUND' && specifier.startsWith('.') && !specifier.endsWith('.ts'))
+        return nextResolve(`${specifier}.ts`, context);
+      throw error;
+    }
+  } });
+  try {
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts');
+const session = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { ReaderPageInputClock } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageInputClock.ts');
+const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const { admitReaderControlVisualSnapshot } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlVisualHostPort.ts');
+
+const root = new URL('../entry/src/main/ets/', import.meta.url);
+const file = path => new URL(path, root);
+const panelFile = file('features/reading/ui/ReaderControlPanel.ets');
+const localFile = file('features/reading/ui/LocalReadingExperience.ets');
+const shellFile = file('features/reading/ui/ReaderShell.ets');
+const Index = selectedProductionMethods(file('pages/Index.ets'), 'Index', ['readerContentInputCurrent'], {
+  retainedReaderRoute: route => route,
+});
+const Shell = selectedProductionMethods(shellFile, 'ReaderShell', ['readingContentIsForeground', 'readingIdentityKey']);
+const Local = selectedProductionMethods(localFile, 'ReadingExperience', [
+  'readerInputIsCurrent', 'isControlInputEnabled', 'onControlInputActivity',
+  'cancelControlNavigationIntent', 'invalidateControlBackdrop',
+], { readerControlHostInputEnabled, createReaderControlBackdropTouchState: () => ({ pointerId: -1 }) });
+const touchTypes = { Down: 0, Move: 1, Up: 2, Cancel: 3 };
+const dependencies = { DEBUG: false, TouchType: touchTypes, ReaderPageInputClock,
+  readerMotionNowMs: () => 1000, ...session };
+const names = ['headerGrabCap', 'controlTouchHandler', 'handleControlTouch', 'acceptRuntime', 'commitVisualSession',
+  'currentMinimumIdentity', 'committedMinimumIdentity', 'minimumPresentationAvailable', 'minimumInputReady'];
+
+function sample(lost, consumer, ending) {
+  const identity = JSON.stringify(['local', 'existing-book', 1]);
+  const index = Object.assign(new Index(), {
+    currentReadingRuntime: () => ({}), readingEntry: { sessionActive: true },
+    currentReaderPresentationIdentity: () => identity, route: 'reading', directoryReturnTarget: 'reading',
+    searchAppForeground: true, arkWebCapturesInput: false, shelfMotion: { pendingExitId: -1, request: undefined },
+    sourceSwitchPresentation: { isSurfacePresented: () => false }, mangaSourceSwitch: { selectionVisible: false },
+  });
+  const scene = { ports: { inputCurrent: value => index.readerContentInputCurrent(value) } };
+  const shell = Object.assign(new Shell(), {
+    inputCurrent: selectedProductionComponentCallback(file('app/composition/RetainedReaderScene.ets'), 'ReaderShell', 'inputCurrent', scene),
+    sourceId: 'local', bookId: 'existing-book', readingReadyGeneration: 1,
+    inputAllowed: true, visible: true, route: 'reading', sourceSwitchPresented: false, sourceSwitchCovered: false,
+  });
+  const local = Object.assign(new Local(), {
+    mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true,
+    interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
+    inputCurrent: selectedProductionComponentCallback(shellFile, 'ReadingExperience', 'inputCurrent', shell, { _identity: identity }),
+    controlNavigationIntent: { generation: 7, page: 'moduleDirectory' }, controlNavigationGeneration: 7,
+    controlMinimumGeneration: 4, controlInputRevision: 2, activeControlNavigationIntent() { return this.controlNavigationIntent; },
+    controlsPresentedForWindow: () => true, admitSessionControlClosing() {}, applyWindowPolicyForChromeOwner() {},
+  });
+  const actualSource = readFileSync(panelFile, 'utf8');
+  const anchor = actualSource.indexOf(".id('reader-control-motion-grabber')");
+  const nativeStart = actualSource.lastIndexOf('        Stack({ alignContent: Alignment.TopStart }) {', anchor);
+  const touchEnd = actualSource.indexOf('.onTouch(this.controlTouchHandler());', anchor) + '.onTouch(this.controlTouchHandler());'.length;
+  assert.ok(nativeStart > 0 && touchEnd > anchor);
+  const nativeSubtree = actualSource.slice(nativeStart, touchEnd);
+  // Preserve the exact central Stack and fluent attributes in a bounded SDK
+  // builder. The outer dock's geometry, AX builder and frame scheduler are ports.
+  const close = actualSource.lastIndexOf('\n}');
+  const probeSource = actualSource.slice(0, close) + '\n  @Builder private selectedCentralGrabber() {\n' + nativeSubtree + '\n  }\n' + actualSource.slice(close);
+  const panel = createReaderBuilderProbe(probeSource, [...names, 'selectedCentralGrabber'], dependencies).owner;
+  const config = { axis: { fullGrabberScreenY: 100, quickGrabberScreenY: 500, hiddenGrabberScreenY: 850 },
+    tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 0, coordinatedMotion: false };
+  const runtime = new ReaderControlRuntime(config);
+  const opened = session.openReaderControlSession(session.createReaderControlSessionState(), 0);
+  runtime.start(opened);
+  const geometry = { x: 0, y: 0, width: 300, height: 44 };
+  const receipt = { identity: 'original-minimum', ownerKey: 'original-owner', environmentKey: 'original-environment',
+    key: 'original-key', layout: { minimumKey: 'original-key', contentBudget: { quickContentHeightVp: 190 } },
+    profile: { identity: 'original-minimum', module: 'home' } };
+  const publications = [];
+  const visual = selectedProductionComponentCallback(localFile, 'ReaderControlPanel', 'onVisualSessionChange', local,
+    { admitReaderControlVisualSnapshot });
+  Object.assign(panel, {
+    runtime, runtimeMounted: true, runtimeLifecycle: 1, minimumOwnerKey: 'original-owner',
+    inputEnabled: true, controlObscured: false, temporaryLayerActive: false,
+    inputCurrent: selectedProductionComponentCallback(localFile, 'ReaderControlPanel', 'inputCurrent', local),
+    sessionLaunch: undefined, preparedMinimumRequired: true, presentationReceipt: receipt,
+    minimumCommittedIdentity: 'original-minimum', minimumEnvironmentKey: 'original-environment',
+    minimumReceiptCurrent: () => true, contentMotionProgress: 0, currentMoreMenuOwnerScope: () => 'same-opening',
+    headerGrabCapFrame: () => geometry, headerGrabResponseRegions: () => [geometry],
+    onInputActivity: selectedProductionComponentCallback(localFile, 'ReaderControlPanel', 'onInputActivity', local),
+    controlSession: session.copyReaderControlSessionState(opened),
+    visualSession: session.copyReaderControlSessionState(opened), moreMenuVisible: false,
+    rememberVisibleContentLocation() {}, syncProgressInput() {}, frame: () => ({ progress: 0, visibility: 1, grabber: { width: 24, height: 4, x: 150, y: 500, opacity: 1 },
+      content: { width: 286, height: 190 }, shell: geometry, dock: { translateY: 0 } }),
+    onSessionRequest() {}, onDismiss() {}, accessibleControlActions() {}, appScheme: 'day',
+    currentLayout: () => ({ fullPanelWidth: 300 }), contentLocation: () => ({ level: 'home', form: 'quick' }),
+    dockRect: {}, rootScreenX: 0, rootScreenY: 0, dockLeft: () => 0, dockTop: () => 0,
+    reportBackdropRegions() {}, confirmLaunchSourceReady() {}, scheduleRuntimeFrame() {},
+    onVisualSessionChange: state => { publications.push({ heldPointerId: state.heldPointerId, epoch: state.epoch }); visual(state); },
+  });
+  if (consumer === 'central') panel.selectedCentralGrabber(); else panel.headerGrabCap();
+  const cap = [...panel.nodes.values()].find(node => typeof node.onTouch === 'function');
+  assert.ok(cap, 'actual SDK header cap has the production onTouch');
+  if (lost) index.searchAppForeground = false;
+  const before = { originalLiveCurrent: panel.inputCurrent(), cachedInputEnabled: panel.inputEnabled,
+    geometryReady: panel.minimumInputReady(), heldPointerId: runtime.owner(), navigationPresent: !!local.controlNavigationIntent };
+  const event = { type: touchTypes.Down, timestamp: 1000000000,
+    changedTouches: [{ id: 5, windowY: 500 }], touches: [{ id: 5, windowY: 500 }], stopPropagation() {} };
+  const originalIntent = local.controlNavigationIntent, originalClock = panel.inputClock;
+  cap.onTouch(event);
+  const after = { heldPointerId: runtime.owner(), navigationPresent: !!local.controlNavigationIntent,
+    navigationGeneration: local.controlNavigationGeneration, inputRevision: local.controlInputRevision,
+    publishedHeldPointerId: local.latestControlVisualSession?.heldPointerId, publications: publications.slice() };
+  if (lost) {
+    assert.equal(runtime.owner(), -1);
+    assert.equal(local.controlNavigationIntent, originalIntent);
+    assert.equal(local.controlNavigationGeneration, 7);
+    assert.equal(local.controlMinimumGeneration, 4);
+    assert.equal(local.controlInputRevision, 2);
+    assert.equal(panel.inputClock, originalClock);
+    assert.equal(publications.length, 0);
+    index.searchAppForeground = true;
+    cap.onTouch(event);
+  }
+  assert.equal(runtime.owner(), 5, 'a fresh allowed DOWN owns its original pointer');
+  assert.equal(local.controlNavigationIntent, undefined);
+  assert.equal(local.controlNavigationGeneration, 8);
+  index.searchAppForeground = false;
+  cap.onTouch({ ...event, type: touchTypes.Move, timestamp: event.timestamp + 20000000,
+    changedTouches: [{ id: 5, windowY: 505 }], touches: [{ id: 5, windowY: 505 }] });
+  assert.equal(runtime.owner(), 5, 'accepted MOVE remains owned despite later live loss');
+  cap.onTouch({ ...event, type: ending === 'cancel' ? touchTypes.Cancel : touchTypes.Up,
+    timestamp: event.timestamp + 30000000,
+    changedTouches: [{ id: 5, windowY: 505 }], touches: [{ id: 5, windowY: 505 }] });
+  assert.equal(runtime.owner(), -1, 'accepted UP/CANCEL releases its pointer');
+  assert.equal(local.latestControlVisualSession.heldPointerId, -1);
+  index.searchAppForeground = true;
+  return { lost, consumer, ending, before, after, finalHeldPointerId: runtime.owner(),
+    finalInputCurrent: panel.inputCurrent(), finalNavigationGeneration: local.controlNavigationGeneration };
+
+}
+
+const samples = [];
+for (const consumer of ['header', 'central']) for (const lost of [false, true]) for (const ending of ['up', 'cancel'])
+  samples.push(sample(lost, consumer, ending));
+return { samples, boundary: 'Exact native SDK cap/central Stack subtree and current Root-to-Panel callbacks with actual Runtime/reducers. Finite geometry, AX/frame scheduler and session-request sinks. No device action.' };
+  } finally { resolution.deregister(); }
+}
+
 for (const id of cases) {
-  const result = await ({ 'shelf-filter-admission': shelfFilters, 'mode-async-admission': modeAdmission,
+  const result = await ({ 'reader-grab-live-admission': readerGrabLiveAdmission, 'shelf-filter-admission': shelfFilters, 'mode-async-admission': modeAdmission,
     'theme-async-admission': themeAdmission, 'reader-live-input': readerLiveInput, 'directory-flat-input': directoryFlatInput, 'manga-live-input': mangaLiveInput,
     'continuous-live-input': continuousLiveInput, 'semantic-directory-input': semanticDirectoryInput, 'search-live-input': searchLiveInput }[id])();
   console.log(JSON.stringify({ case: id, result,

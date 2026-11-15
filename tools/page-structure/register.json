@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 54,
+      "revision": 55,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2722,7 +2722,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-          "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+          "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
           "symbol": "controlContent"
         },
         {
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4240,7 +4240,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5875,7 +5875,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7516,7 +7516,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9172,7 +9172,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 52,
+            "revision": 53,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10697,7 +10697,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12113,7 +12113,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 51,
+            "revision": 52,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13686,7 +13686,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15147,7 +15147,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 52,
+            "revision": 53,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16664,7 +16664,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18080,7 +18080,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19727,7 +19727,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21373,7 +21373,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "a340f24d7355b19d041c1efa5c8ca798431c2f97ad861a16b8d98c3a2eccf7c1",
+                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
                 "symbol": "controlContent"
               },
               {

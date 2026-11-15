@@ -24,7 +24,11 @@ UIF-56 至 UIF-67 已完成当前代码修复，涵盖书架筛选导航准入�
 
 第六、七轮完整全局审计曾连续 PASS。第八轮最终封存前补查恢复路径，确认 UIF-79 与 UIF-80 两组 P2，连续计数从 2 归零。先前父层 live guard 没有覆盖叶节点一次性 dispatchedId 及选择面板 closeInFlight 的首次修改，失效后恢复场景遗漏已纠正。[第八轮最终报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-08.json)
 
-两组已修复。书籍操作与顶部 More 把原实时资格递送到叶节点 isCurrent，失效 token 保留未消费状态，同一 opening 的新动作在恢复后可被接纳。SourceGroup 把原 managementInputIsCurrent 递送到 SelectPanel，在 selectAndCollapse 首次修改前检查，已接纳的动画 finish／onDismiss 仍由原 owner 完成。两个新增恢复用例首次运行通过，当前本地候选为 0.2.0.DEV.7045c48f046a，一次规范全 ArkTS 编译及指定证书签名通过，642 个生产字节绑定零漂移。2 项受影响登记已同步，原 37 诊断保留。下一批重新从 0 开始三轮独立全局审计，VM 操作为 0。[修复及恢复回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round08-repair-summary.json)
+两组已修复。书籍操作与顶部 More 把原实时资格递送到叶节点 isCurrent，失效 token 保留未消费状态，同一 opening 的新动作在恢复后可被接纳。SourceGroup 把原 managementInputIsCurrent 递送到 SelectPanel，在 selectAndCollapse 首次修改前检查，已接纳的动画 finish／onDismiss 仍由原 owner 完成。两个新增恢复用例首次运行通过，第八轮本地候选为 0.2.0.DEV.7045c48f046a，一次规范全 ArkTS 编译及指定证书签名通过，642 个生产字节绑定零漂移。2 项受影响登记已同步，原 37 诊断保留。下一批重新从 0 开始三轮独立全局审计，VM 操作为 0。[修复及恢复回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round08-repair-summary.json)
+
+第九轮全 472 个必审文件审阅确认 UIF-81，两个控制栏抓手的共用首 DOWN 入口漏用已传入的实时 inputCurrent，可能取消原控制导航意图并占用指针。修复集中在唯一 Runtime.down 之前，已接纳 Move／Up／Cancel 继续沿原 owner 收尾，committed geometry 保留其显示事实。[第九轮报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-09.json)
+
+新增准确回归覆盖两个实际 SDK callback、live／lost-first-DOWN／同 actor 恢复及 Up／Cancel，共 8 场景。首个 fixture 的 accepted endpoint 遗漏 commitVisualSession 已补实际方法并保留失败记录。当前本地候选为 0.2.0.DEV.c14fc0e6178c，一次规范完整 ArkTS 编译与指定证书签名通过，642 个生产输入字节零漂移。13 项登记指纹同步，原 37 诊断保留。代码重新冻结后开始第十轮独立全局审计，连续通过为 0，VM 操作为 0。[修复与回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round09-repair-summary.json)
 
 连续三轮通过条件仍待完成。21 项登记的完整原生验收、独立整页视觉、可听读屏、G05 和历史 G10 保留原标准。VM 最后保存的字号为 1.3 倍，原字号恢复仍待执行。
 

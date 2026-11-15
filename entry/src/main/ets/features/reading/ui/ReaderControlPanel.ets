@@ -1157,7 +1157,7 @@ export struct ReaderControlPanel {
     if (event.type === TouchType.Down) {
       // A successor measurement fences new gestures, not the original
       // pointer's Move/Up/Cancel while its accepted runtime rebases the axis.
-      if (!this.minimumInputReady()) return;
+      if (this.inputCurrent?.() === false || !this.minimumInputReady()) return;
       if (pointers.length > 0 && runtime.owner() < 0 && !this.temporaryLayerActive) {
         this.onInputActivity();
         this.inputClock = new ReaderPageInputClock();
