@@ -9,7 +9,7 @@ const selected=selectContractCases({
  'directory-focus':'Actual SearchField opt-in modifier and finite after-layout focus, current id/revision/mounted guards, cancel/old callback and default disabled/no setter negative controls; Toolbar local opt-in lifetime.',
  'measured-profile':'Actual shipping minimum producer and current Content profile consume one measured layout; short prefix/focus stays local, and retired providers cannot publish.',
  'keyboard-ack-delay':'Actual SDK before-source delayed Native focus ACK loses one-shot keyboard restore, while current pending request schedules once only after acknowledged focus; finite current/retired/repeated ACK ports.',
- 'keyboard-transfer':'Actual shipping Content/Field/Toolbar callbacks preserve visible editing through a retiring input inset0, request public showTextInput once after new Native focus, and reject explicit Back/stale/disabled/failed restore. Finite Native API ports only.',
+ 'keyboard-transfer':'Actual shipping Content/Field/Toolbar callbacks preserve visible editing through a retiring input inset0, admit explicit editing after Back through both current input hosts, request public showTextInput once after Native focus ACK, and reject Back/stale/disabled/failed work. Finite Native API ports only.',
  'keyboard-observation':'Actual SDK Content and Field modifier distinguish fresh unknown keyboard inset0 from observed-visible then hidden, retain policy across same-instance layout migration and retire old opening callbacks/frames. No Native keyboard service or IME claim.',
 });
 if(selected.length){
@@ -107,7 +107,7 @@ if(selected.length){
   t.owner.availableHeight=646;t.owner.syncContentLayout();t.owner.replayOnly([key]);assert.equal(t.owner.children.get(key),child);assert.equal(child.params.headerCount,0);assert.equal(t.portCreations(),1);const count=t.scroll.length;t.owner.onDirectoryFocus(p,id,false);assert.equal(t.owner.directoryInputFocused,true,'old removed input cannot blur successor epoch');
   t.owner.onInputChanged();t.owner.interactionEnabled=false;t.owner.onInputChanged();assert.equal(t.owner.directoryInputFocused,false);t.flush();assert.equal(t.scroll.length,count);
  }
- function focusField({variant='readerDirectory',id='directory:current',allowed=true,revision=1,keyboard=true,current=()=>true,source=field,ackFocus=false,show=()=>Promise.resolve()}={}){
+ function focusField({variant='readerDirectory',id='directory:current',allowed=true,revision=1,keyboard=true,current=()=>true,source=field,ackFocus=false,show=()=>Promise.resolve(),initial={}}={}){
   const sdk=boundedSurfaceSdk(),frames=[],focus=[],events=[],keyboardRequests=[],keyboardSettled=[];
   const deps={...sdk.deps,...fieldClasses,...accessibility,readerPageAreaLength,readerReadableFontScale,readerScaledControlHeight,
    ReaderWindowCoordinator:{metrics:()=>({systemFontScale:2})},TextInputController:class{},
@@ -115,17 +115,17 @@ if(selected.length){
    inputMethod:{getController:()=>({showTextInput:()=>{keyboardRequests.push(id);return show();}})},
    hilog:{warn(){}},KeyCode:{KEYCODE_BACK:2},KeyType:{Down:0,Up:1}};
   const{owner}=compile(()=>createReaderBuilderProbe(source,boundedMembers(source),deps,sdk.hooks));
-  Object.assign(owner,{variant,mode:'submit',readerWindowMetricsRevision:1,directoryFocusId:id,directoryFocusAllowed:allowed,directoryFocusRevision:revision,directoryKeyboardOnFocus:keyboard,directoryFocusCurrent:current,onDirectoryFocusChanged:(id,value)=>events.push([id,value]),onDirectoryKeyboardRestoreSettled:(id,value)=>keyboardSettled.push([id,value]),onTextChange(){},onSubmit(){}});owner.aboutToAppear();owner.initialRender();
+  Object.assign(owner,{variant,mode:'submit',readerWindowMetricsRevision:1,directoryFocusId:id,directoryFocusAllowed:allowed,directoryFocusRevision:revision,directoryKeyboardOnFocus:keyboard,directoryFocusCurrent:current,onDirectoryFocusChanged:(id,value)=>events.push([id,value]),onDirectoryKeyboardRestoreSettled:(id,value)=>keyboardSettled.push([id,value]),onTextChange(){},onSubmit(){}},initial);owner.aboutToAppear();owner.initialRender();
   const inputEntry=[...owner.nodes.entries()].find(([,n])=>n.type==='TextInput');
   return{owner,sdk,frames,focus,events,keyboardRequests,keyboardSettled,input:inputEntry?.[1],updateKeyboard(value){owner.directoryKeyboardOnFocus=value;owner.replayOnly([inputEntry[0]]);},flush(){while(frames.length){const f=frames.shift();f.onFrame?.(0);f.onIdle?.(0);}}};
  }
 
- function toolbarSdk({id='toolbar:current',current=()=>true}={}){
+ function toolbarSdk({id='toolbar:current',current=()=>true,initial={}}={}){
   const sdk=boundedSurfaceSdk(),children=[],events=[];
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});children.push(this);}updateStateVars(next){Object.assign(this.params,next);}}
   const deps={...sdk.deps,ReaderSearchField:Child,READER_DIRECTORY_TOOLBAR_HEIGHT:50,readerReadableFontScale,readerScaledControlHeight,ReaderWindowCoordinator:{metrics:()=>({systemFontScale:2})}};
   const{owner}=compile(()=>createReaderBuilderProbe(toolbar,boundedMembers(toolbar),deps,{...sdk.hooks,childSources:{...sdk.childSources,ReaderSearchField:field}}));
-  Object.assign(owner,{directoryFocusId:id,directoryFocusAllowed:id.length>0,directoryFocusRevision:1,directoryKeyboardOnFocus:false,directoryFocusCurrent:current,onTextChange:v=>events.push(['text',v]),onSearch:()=>events.push(['search']),onDirectoryFocusChanged:(id,value)=>events.push(['focus',id,value])});owner.aboutToAppear();owner.initialRender();
+  Object.assign(owner,{directoryFocusId:id,directoryFocusAllowed:id.length>0,directoryFocusRevision:1,directoryKeyboardOnFocus:false,directoryFocusCurrent:current,onTextChange:v=>events.push(['text',v]),onSearch:()=>events.push(['search']),onDirectoryFocusChanged:(id,value)=>events.push(['focus',id,value])},initial);owner.aboutToAppear();owner.initialRender();
   return{owner,sdk,children,events};
  }
  async function directoryFocus(){
@@ -209,6 +209,64 @@ if(selected.length){
  async function keyboardTransfer(){
   const beforeContent=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt',import.meta.url),'utf8');
   const beforeField=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt',import.meta.url),'utf8');
+  const previousInput=focusField({source:beforeField,keyboard:false,revision:0});
+  previousInput.input.onAreaChange({}, {width:200,height:44});
+  previousInput.input.onFocus();
+  previousInput.input.onClick?.();
+  previousInput.flush();
+  assert.equal(previousInput.input.enableKeyboardOnFocus,false);
+  assert.equal(previousInput.keyboardRequests.length,0,'actual previous field has no explicit editing path after Back');
+  for(const height of [646,122]){
+   const contentOwner=actor({height});
+   contentOwner.render();
+   const toolbarParams=contentOwner.children.find(child=>child.params.variant==='full-directory')?.params;
+   const inputParams=contentOwner.children.find(child=>child.params.variant==='readerDirectory')?.params;
+   const toolbarOwner=toolbarParams===undefined?undefined:toolbarSdk({initial:toolbarParams});
+   const params=toolbarOwner?.children[0].params??inputParams;
+   assert(params,'actual fixed toolbar or scrolling prefix mounts its current query');
+   const editing=focusField({initial:params});
+   editing.input.onAreaChange({}, {width:200,height:44});
+   editing.input.onFocus();
+   editing.input.onKeyPreIme({type:0,keyCode:2});
+   assert.equal(contentOwner.owner.directoryRestoreKeyboard,false,'real Back callback reaches Content through its mounted query');
+   editing.updateKeyboard(contentOwner.owner.directoryRestoreKeyboard);
+   assert.equal(editing.input.enableKeyboardOnFocus,false);
+   if(height===646) editing.input.onBlur();
+   editing.input.onClick();
+   assert.equal(contentOwner.owner.directoryRestoreKeyboard,true,'actual input click reaches current Content editing admission');
+   // This finite SDK observer replay applies the parent policy. Native frame
+   // scheduling and focus ACK delivery remain explicit ports below.
+   editing.updateKeyboard(contentOwner.owner.directoryRestoreKeyboard);
+   assert.equal(editing.input.enableKeyboardOnFocus,true);
+   editing.flush();
+   assert.equal(editing.focus.length,1,'explicit editing admits one current focus request even at revision zero');
+   if(height===646){
+    assert.equal(editing.keyboardRequests.length,0,'a blurred input waits for actual native focus ACK');
+    editing.input.onFocus();
+    editing.flush();
+   }
+   await new Promise(resolve=>setImmediate(resolve));
+   assert.equal(editing.keyboardRequests.length,1,'one explicit edit issues one acknowledged keyboard request');
+   editing.input.onFocus();
+   editing.input.onAreaChange({}, {width:200,height:44});
+   editing.flush();
+   assert.equal(editing.keyboardRequests.length,1,'repeated ACK and unchanged Area do not replay explicit editing');
+   const oldClick=editing.input.onClick;
+   contentOwner.owner.aboutToDisappear();
+   contentOwner.owner.aboutToAppear();
+   contentOwner.owner.directoryRestoreKeyboard=false;
+   oldClick();
+   editing.flush();
+   assert.equal(contentOwner.owner.directoryRestoreKeyboard,false,'retired input cannot change successor keyboard intent');
+   assert.equal(editing.focus.length,1);
+  }
+  const cancelledEdit=focusField({revision:0,ackFocus:true});
+  cancelledEdit.input.onAreaChange({}, {width:200,height:44});
+  cancelledEdit.input.onClick();
+  cancelledEdit.frames.shift().onFrame(0);
+  cancelledEdit.input.onKeyPreIme({type:0,keyCode:2});
+  cancelledEdit.flush();
+  assert.equal(cancelledEdit.keyboardRequests.length,0,'Back cancels an explicit revision-zero editing request before its keyboard frame');
   function migration(source=content){
    const x=actor({height:646,scale:1,source});
    x.owner.onDirectoryFocus(x.owner.layoutPresentation,x.owner.directoryFocusId(),true);
@@ -258,7 +316,7 @@ if(selected.length){
   let finish;const stale=focusField({ackFocus:true,show:()=>new Promise(resolve=>{finish=resolve;})});stale.input.onAreaChange({}, {width:200,height:44});stale.flush();stale.owner.aboutToDisappear();finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(stale.keyboardSettled.length,0,'late keyboard Promise does not settle successor');
   const tool=toolbarSdk();const child=tool.children[0];const settles=[];tool.owner.onDirectoryKeyboardRestoreSettled=(id,value)=>settles.push([id,value]);child.params.onDirectoryKeyboardRestoreSettled('toolbar:current',true);assert.deepEqual(settles,[['toolbar:current',true]]);tool.owner.directoryFocusId='toolbar:next';child.params.onDirectoryKeyboardRestoreSettled('toolbar:current',true);assert.equal(settles.length,1,'actual Toolbar rejects old restore callback');
   const revision=x.owner.directoryRestoreKeyboard;x.owner.onDirectoryKeyboardRestoreSettled(x.presentation,x.id,true);assert.equal(x.owner.directoryRestoreKeyboard,revision,'retired Content presentation cannot settle successor');
-  console.log(JSON.stringify({kind:'directory-native-ime-transfer-policy',beforeSourceNegative:true,afterRealNativeFocus:true,singlePublicShowRequest:true,explicitBackCancels:true,oldCallbacksRejected:true,boundary:'Actual shipping Content/Field/Toolbar SDK and finite native API port. Physical IME geometry remains Root Native verification.'}));
+  console.log(JSON.stringify({kind:'directory-native-ime-transfer-policy',beforeSourceNegative:true,afterRealNativeFocus:true,singlePublicShowRequest:true,explicitBackCancels:true,explicitEditingAfterBack:['fixed-toolbar','scrolling-prefix'],zeroRevisionNeedsExplicitClick:true,oldCallbacksRejected:true,boundary:'Actual shipping Content/Field/Toolbar SDK and finite native API port. Physical IME geometry remains Root Native verification.'}));
  }
  async function measuredProfile(){
   const {selectedProductionClasses}=await import('./lib/selected-production-methods.mjs');

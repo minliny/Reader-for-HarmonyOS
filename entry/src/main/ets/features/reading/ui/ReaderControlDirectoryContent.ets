@@ -604,6 +604,12 @@ export struct ReaderControlDirectoryContent {
     this.directoryKeyboardVisible = readerWindowMetrics().keyboardInsets.bottom > 0;
     if (!requested) this.directoryRestoreKeyboard = false;
   }
+  private onDirectoryEditingRequested(presentation: number, id: string): void {
+    if (!this.currentContent(presentation) || !this.toolbarInteractive() || id !== this.directoryFocusId()) return;
+    // A new explicit edit can open the keyboard after Back. Layout-only
+    // restoration continues to use the previously observed hidden policy.
+    this.directoryRestoreKeyboard = true;
+  }
   private onListLayout(): void {
     if (this.layoutRestorePending) { this.queueLayoutRestore(); return; }
     this.queuePosition();
@@ -725,6 +731,7 @@ export struct ReaderControlDirectoryContent {
         directoryKeyboardOnFocus: this.directoryRestoreKeyboard,
         directoryFocusCurrent: (id: string): boolean => this.mounted && this.toolbarInteractive() && id === this.directoryFocusId(),
         onDirectoryFocusChanged: (id: string, focused: boolean): void => this.onDirectoryFocus(this.layoutPresentation, id, focused),
+        onDirectoryEditingRequested: (id: string): void => this.onDirectoryEditingRequested(this.layoutPresentation, id),
         onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(this.layoutPresentation, id, requested),
         onTextChange: (value: string): void => { if (this.mounted && this.toolbarInteractive()) this.draft = value; },
         onSearch: (): void => { if (this.mounted && this.toolbarInteractive()) this.search(); },
@@ -792,6 +799,7 @@ export struct ReaderControlDirectoryContent {
         directoryKeyboardOnFocus: this.directoryRestoreKeyboard,
         directoryFocusCurrent: (id: string): boolean => this.mounted && this.toolbarInteractive() && id === this.directoryFocusId(),
         onDirectoryFocusChanged: (id: string, focused: boolean): void => this.onDirectoryFocus(presentation, id, focused),
+        onDirectoryEditingRequested: (id: string): void => this.onDirectoryEditingRequested(presentation, id),
         onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(presentation, id, requested),
         onTextChange: (value: string): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.draft = value; },
         onSubmit: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.search(); } });

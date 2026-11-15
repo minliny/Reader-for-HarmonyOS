@@ -114,6 +114,7 @@ export struct ReaderSearchField {
   @Prop directoryKeyboardOnFocus: boolean = true;
   directoryFocusCurrent: (id: string) => boolean = (_id: string): boolean => true;
   onDirectoryFocusChanged: (id: string, focused: boolean) => void = (_id: string, _focused: boolean): void => {};
+  onDirectoryEditingRequested: (id: string) => void = (_id: string): void => {};
   onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean) => void = (_id: string, _requested: boolean): void => {};
   private directoryLayoutId: string = '';
   private directoryInputLoaded: boolean = false;
@@ -246,7 +247,7 @@ export struct ReaderSearchField {
   private queueAcknowledgedDirectoryKeyboardRestore(id: string): void {
     const revision = this.directoryKeyboardRestorePendingRevision;
     const ticket = this.directoryKeyboardRestorePendingTicket;
-    if (revision <= 0 || !this.directoryKeyboardRestoreCurrent(id, revision, ticket)) return;
+    if (revision < 0 || !this.directoryKeyboardRestoreCurrent(id, revision, ticket)) return;
     // Consume the request when its current native focus ACK owns it. A late
     // ACK can schedule this once without polling or losing its revision.
     this.directoryKeyboardRestorePendingRevision = -1;
@@ -254,10 +255,17 @@ export struct ReaderSearchField {
     this.queueDirectoryKeyboardRestore(id, revision, ticket);
   }
 
-  private queueDirectoryFocus(): void {
+  private requestDirectoryEditing(id: string): void {
+    if (!this.directoryFocusEnabled(id)) return;
+    this.onDirectoryEditingRequested(id);
+    this.queueDirectoryFocus(true);
+  }
+
+  private queueDirectoryFocus(explicitEditing: boolean = false): void {
     const id = this.directoryFocusId, revision = this.directoryFocusRevision;
     if (!this.directoryFocusEnabled(id) || !this.directoryInputLoaded || this.directoryLayoutId !== id ||
-      revision <= 0 || revision === this.directoryFocusAppliedRevision || revision === this.directoryFocusScheduledRevision) return;
+      (!explicitEditing && (revision <= 0 || revision === this.directoryFocusAppliedRevision ||
+        revision === this.directoryFocusScheduledRevision))) return;
     const ticket = ++this.directoryFocusTicket;
     this.directoryFocusScheduledRevision = revision;
     this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
@@ -427,6 +435,7 @@ export struct ReaderSearchField {
           .width(this.iconSize())
           .height(this.iconSize());
         TextInput({ placeholder: this.placeholder, text: this.text })
+          .onClick((): void => this.requestDirectoryEditing(inputFocusId))
           .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
           .layoutWeight(1)
           .height(this.inputHeight())
