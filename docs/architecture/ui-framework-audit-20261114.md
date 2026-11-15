@@ -20,6 +20,16 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### 书源恢复动作与34目标原生对账
+
+当前b2a0候选在实际366vp请求、365.7143vp宽、770.2857vp高、系统字号1的Source页面中完成六次场景打开。状态动作、保留列表刷新、空列表重试、未知回执核对、原操作核对、继续原操作及继续清理，共七次业务意图均取得当前进程和当前presentation的唯一回执。刷新后原恢复动作退出，空列表重试后呈现“暂无书源”，未知回执或原操作处理后提示退出，保留行Toggle恢复启用。实际页头返回Button触摸后取得夹具菜单回执。[完整原生动作与逐步断言](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-recovery-y.json)
+
+未知回执与原操作长文均完成实际展开、收起及动作命中，两个展开实屏已查看。当前正文与动作在该完整Source视口内可见，原生文字范围和动作范围另存。该场景使用正常SourceManagementPage、公共Notice和公共动作控件，业务投影及回执来自现有独立内存owner。源码几何换代、短窗、大字号、实际业务写入及完整读屏继续沿各自条件验收。[入口、当前代次与有限回执范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-recovery-native-plan-y.json)
+
+书源34个交互目标现已逐项对应当前证据。九项目标取得本批准确原生动作回执，一项Toggle行按已核对的源码范围复用，另24项继续逐项核对当前动作或准确复用依据。七个历史目标的原始局部回执保留在对应行。Source正式登记修订为48，仅interaction层追加本批证据，完整E2/E3判定沿原条件保存。[34目标对账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-native-target-map-y.json) [正式登记更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-recovery-y.json)
+
+本批沿当前c189905d运行代码及原签装回执复用候选。五个原生会话均完成并释放租约，正常启动后回到原四本书架，原TXT27%、两本测试书未读、漫画100%。两个密度字段保持3.5，状态栏136px，SceneBoard1426。后继准确工作继续留在全量目标内。[当前收尾及剩余范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-y-delivery-review.json)
+
 ### Toggle消费者核对与正常设置补证
 
 全树八处生产构造已按七个页面族核对。正常通用设置已有四次纯读屏及四次混合激活的原生证据。书源页已有两次键盘及两次纯读屏激活证据，本次核对共享Toggle完整字节、十二个实际行方法及LazyForEach行键和回调装配均未变化，按原范围复用。书源sourceList整段方法已有其他修改，其前缀、状态和完整页面布局继续沿各自证据范围验收。[八处消费者及入口](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/toggle-caller-audit-x.json) [书源准确复用依据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/toggle-source-reuse-x.json)

@@ -540,9 +540,15 @@
               "path": "tools/test-recovery-notice-flow.mjs",
               "result": "PASS",
               "symbol": "hit-boundary,approved-composition"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-recovery-y.json",
+              "symbol": "Source six openings, seven current memory intents and nine exact native target scopes",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has scoped actual Source query/IME/header and1.45 font observations, plus exact current lower-bound SDK samples. General Settings Toggle focus observations bind their own normal host. Complete Source native target routing, all states, glyph/clipping and screen-reader semantics remain open. Current20261115O actual SDK covers Notice/Group hit declarations and bounded Scroll hierarchy boundary, busy callback and three policy negatives. Exact original168vp Download touch passes in its separate native report. Complete native target/focus/reader criteria remain open."
+          "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage. Current40bc candidate has scoped native1.45x system-font evidence. Actual Source query receives IME focus and Back restores input/footer with continuous header rectangle. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has scoped actual Source query/IME/header and1.45 font observations, plus exact current lower-bound SDK samples. General Settings Toggle focus observations bind their own normal host. Complete Source native target routing, all states, glyph/clipping and screen-reader semantics remain open. Current20261115O actual SDK covers Notice/Group hit declarations and bounded Scroll hierarchy boundary, busy callback and three policy negatives. Exact original168vp Download touch passes in its separate native report. Complete native target/focus/reader criteria remain open. Current20261115Y adds default-font366vp current Source state/refresh/retry, unknown/original expand-collapse/reconcile/continue/cleanup and header-back pointer evidence. Seven actual finite memory-owner intents and current native enablement/notice retirement pass. Nine target action scopes and the exact prior Toggle row scope are reconciled in source-native-target-map-y.json. Remaining24target current actions/reuse and full edge/state/focus/reader/adaptation criteria stay individual."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -1066,7 +1072,7 @@
         }
       },
       "exceptions": [],
-      "revision": 47,
+      "revision": 48,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
