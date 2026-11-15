@@ -10,7 +10,11 @@ UIF-56 至 UIF-67 已完成当前代码修复，涵盖书架筛选导航准入�
 
 新增 12 个准确局部用例和 9 个旧行为负例已有通过结果。22 个修改脚本完成语法核验。当前候选为 0.2.0.DEV.d1b2e9ce101d，完整 ArkTS 编译和原指定证书签名通过，642 个生产 ETS/TS 输入与产物清单逐字节一致。首次编译发现本次空筛选状态的 ForEach 需要单一 Column 子宿主，修正后第二次编译通过。13 项受影响登记的指纹已同步，引用检查 0 诊断，登记继续保留 37 项原有诊断。[生产字节绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round02-repair-production-build-binding.json)
 
-下一阶段从修复候选开始完整独立审计，连续三轮通过条件仍待完成。21 项登记的完整原生验收、独立整页视觉、可听读屏、G05 和历史 G10 保留原标准。VM 最后保存的字号为 1.3 倍，原字号恢复仍待执行。
+第三轮绑定 8d6d8bdc，完成 472 个必审文件，结论为 FAIL，确认 4 项 P2。UIF-68 至 UIF-71 已修复，涵盖设置分区标题自然增长、多选书籍同身份当前字段、Root 至阅读页的实时输入准入和未接受指针退休，以及平面目录和书签旧动作的原模块准入。原有已接受翻页结算、业务回执及几何事实继续按各自归属处理。4 个新准确用例和 2 个投影旧行为负例通过，13 个修改脚本语法通过。[第三轮修复与验证](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round03-repair-summary.json)
+
+当前本地候选为 0.2.0.DEV.d9f70a1af08b，完整 ArkTS 编译及指定证书签名通过，642 个生产 ETS/TS 输入与产物清单逐字节一致。局部夹具的两次遗漏已保留失败记录并修正。连续通过仍为 0，下一轮将由新的 review agent 做完整全局审计。[第三轮完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-03.json)
+
+连续三轮通过条件仍待完成。21 项登记的完整原生验收、独立整页视觉、可听读屏、G05 和历史 G10 保留原标准。VM 最后保存的字号为 1.3 倍，原字号恢复仍待执行。
 
 ## 2026-11-15 执行量与效率复核，VM 验证已禁止
 

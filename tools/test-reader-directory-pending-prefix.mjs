@@ -21,6 +21,7 @@ const state = await import('../entry/src/main/ets/features/reading/ui/ReaderCont
 const host = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const model = await import('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts');
 const hierarchy = await import('../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts');
+const { sameReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
 const marker = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts');
 const bookmarkGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
 const { EMPTY_READING_DIRECTORY_RECOVERY } = await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
@@ -52,7 +53,7 @@ function listFixture(source = contentSource, short = false, tab = 'directory', p
     }
   }; } });
   const owner = sdk.consumer(source, ['flatList', 'headerCount', 'prefixHeight', 'onPrefixArea', 'currentContent',
-    'currentInputEnabled', 'bookmarkWriteEnabled', 'queuePosition', 'displaySnapshot', 'displayedFacts'], {
+    'currentInputEnabled', 'flatBookmarkIsCurrent', 'bookmarkWriteEnabled', 'queuePosition', 'displaySnapshot', 'displayedFacts'], {
     ...classes, readerPageAreaLength: Number, LazyForEach, ListItem, ReaderBookmarkRow: sdk.deps.ReaderBookmarkRow, ScrollAlign: { CENTER: 'center' },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
   });
@@ -144,13 +145,14 @@ async function assertTreeActors() {
 function assertParentLivePorts() {
   const source = contentSource, sdk = boundedSurfaceSdk();
   sdk.hooks.childSources.ReaderDirectoryChapterRow = ui('ReaderDirectoryChapterRow');
-  const owner = sdk.consumer(source, ['chapterRow', 'bookmarkWriteEnabled'], { ReaderDirectoryChapterRow: ChildPort });
+  const owner = sdk.consumer(source, ['chapterRow', 'bookmarkWriteEnabled', 'flatChapterIsCurrent', 'currentContent', 'currentInputEnabled'], { ReaderDirectoryChapterRow: ChildPort, sameReaderDirectoryData });
   const calls = [];
-  Object.assign(owner, { bookmarkRecovery: { ...recovery, bookmarkWriteEnabled: true }, chapterStartBookmarkCreationEnabled: true,
+  Object.assign(owner, { mounted: true, layoutPresentation: 1, interactionEnabled: true, preparedMinimumRequired: false,
+    tab: 'directory', navigationActive: false, entries: [chapter([mark])], bookmarkRecovery: { ...recovery, bookmarkWriteEnabled: true }, chapterStartBookmarkCreationEnabled: true,
     chapterDownloadEnabled: true, rowHeight: () => 44, currentChapterIndex: 0,
     onSelectChapter: () => calls.push('read'), onDownloadChapter: () => calls.push('download'),
     onDeleteBookmarks: () => calls.push('delete'), onCreateChapterStartBookmark: () => calls.push('create') });
-  owner.chapterRow(chapter([mark])); const old = childOf(owner).params;
+  owner.chapterRow(chapter([mark]), 1); const old = childOf(owner).params;
   assert.equal(old.bookmarkActionsEnabled, true);
   owner.bookmarkRecovery = { ...recovery, bookmarks: { ...recovery.bookmarks, visible: false } };
   assert.equal(old.bookmarkActionsEnabled, true, 'retain physical child parameters before native Prop delivery');
@@ -239,7 +241,8 @@ function assertGestureAdmission() {
   const sdk = boundedSurfaceSdk();
   const owner = sdk.consumer(ui('LocalReadingExperience'), ['bookmarkWriteEnabled', 'canStartReaderBookmarkGesture', 'toggleCurrentPageBookmark']);
   const calls = [];
-  Object.assign(owner, { bookmarkRecovery: recovery, bookmarkMutationGeneration: 7, bookmarkPendingTarget: '',
+  Object.assign(owner, { mounted: true, layoutPresentation: 1, interactionEnabled: true, preparedMinimumRequired: false,
+    tab: 'directory', navigationActive: false, entries: [chapter([mark])], bookmarkRecovery: recovery, bookmarkMutationGeneration: 7, bookmarkPendingTarget: '',
     onReaderBookmarkGestureUnavailable: reason => calls.push(reason), onTogglePageBookmark: () => assert.fail('disabled gesture dispatched') });
   assert.equal(owner.canStartReaderBookmarkGesture(), false); owner.toggleCurrentPageBookmark();
   assert.deepEqual(calls, ['unavailable']); assert.equal(owner.bookmarkMutationGeneration, 7); assert.equal(owner.bookmarkPendingTarget, '');

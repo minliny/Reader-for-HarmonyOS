@@ -19,7 +19,7 @@ const source = readFileSync(new URL(
 const methodNames = ['controlVisible', 'controlShellExitArmed', 'controlPage',
   'controlMotionSession', 'controlMotionVisible', 'controlMotionPage',
   'isReaderPageInteractionEnabled', 'requestPageTurn', 'canTurnPage', 'onControlBackdropTouch',
-  'isControlInputEnabled'];
+  'isControlInputEnabled', 'readerInputIsCurrent'];
 function method(name) {
   const start = source.indexOf(`  private ${name}(`);
   assert.ok(start >= 0, `ordinary production ${name} method exists`);

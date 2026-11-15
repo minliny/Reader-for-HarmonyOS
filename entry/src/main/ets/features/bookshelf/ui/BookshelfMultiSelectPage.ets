@@ -242,8 +242,8 @@ export struct BookshelfMultiSelectPage {
   private selectionCard(book: ShelfBook) {
     Column({ space: 6 }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
-        if (this.hasCover(book)) {
-          Image(book.coverUrl as string)
+        if (this.hasCover(this.currentBook(book))) {
+          Image(this.currentBook(book).coverUrl as string)
             .width(this.cardWidth())
             .height(this.coverHeight())
             .objectFit(ImageFit.Cover)
@@ -258,7 +258,7 @@ export struct BookshelfMultiSelectPage {
       .width(this.cardWidth())
       .height(this.coverHeight());
 
-      Text(book.title)
+      Text(this.currentBook(book).title)
         .width(this.cardWidth())
         .fontFamily(TYPE_SHELF_SELECTION_TITLE.fontFamily)
         .fontWeight(TYPE_SHELF_SELECTION_TITLE.fontWeight)
@@ -268,7 +268,7 @@ export struct BookshelfMultiSelectPage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-      Text(book.author)
+      Text(this.currentBook(book).author)
         .width(this.cardWidth())
         .fontFamily(TYPE_SHELF_SELECTION_AUTHOR.fontFamily)
         .fontWeight(TYPE_SHELF_SELECTION_AUTHOR.fontWeight)
@@ -445,7 +445,12 @@ export struct BookshelfMultiSelectPage {
 
   private selectionRowAction(book: ShelfBook): ReaderActionAccessibility {
     const selected = this.isSelected(book);
-    return new ReaderActionAccessibility(`${book.title}，${selected ? '已选择' : '未选择'}`, this.selectionInputEnabled(), selected);
+    return new ReaderActionAccessibility(`${this.currentBook(book).title}，${selected ? '已选择' : '未选择'}`, this.selectionInputEnabled(), selected);
+  }
+
+  private currentBook(snapshot: ShelfBook): ShelfBook {
+    return this.books.find((book: ShelfBook): boolean =>
+      book.sourceId === snapshot.sourceId && book.bookId === snapshot.bookId) ?? snapshot;
   }
 
   private hasBookKey(key: string): boolean {
@@ -475,8 +480,8 @@ export struct BookshelfMultiSelectPage {
   private selectionListCard(book: ShelfBook) {
     Row({ space: 12 }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
-        if (this.hasCover(book)) {
-          Image(book.coverUrl as string)
+        if (this.hasCover(this.currentBook(book))) {
+          Image(this.currentBook(book).coverUrl as string)
             .width(48)
             .height(80)
             .objectFit(ImageFit.Cover)
@@ -488,7 +493,7 @@ export struct BookshelfMultiSelectPage {
       }
       .width(48)
       .height(80);
-      ShelfBookListDetails({ book, textFrame: this.listTextFrame() }).layoutWeight(1).constraintSize({ minWidth: 0 });
+      ShelfBookListDetails({ book: this.currentBook(book), textFrame: this.listTextFrame() }).layoutWeight(1).constraintSize({ minWidth: 0 });
     }
     .width(this.gridWidth())
     .height(Math.max(80, this.listTextFrame().height))

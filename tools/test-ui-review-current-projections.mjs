@@ -4,6 +4,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
@@ -13,6 +14,7 @@ import { createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/fea
 import { createDefaultReaderReadingLayout, ReaderReadingLayoutSnapshot } from '../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
 import { ReaderTtsWaveformMotion, createReaderTtsWaveformSample } from '../entry/src/main/ets/features/reading/ui/ReaderTtsWaveformModel.ts';
 import { readerTtsConfigChoices } from '../entry/src/main/ets/features/reading/presentation/ReaderTtsConfigOptions.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -26,6 +28,8 @@ const selected = selectContractCases({
   'waveform-current': 'Retained waveform bars consume current base height, scale and opacity.',
   'tts-choice-current': 'Retained TTS options consume current visible and accessibility labels.',
   'tts-picker-capacity': 'Non-manager TTS overlays fit positive short slots and share a bounded scroll.',
+  'section-heading-growth': 'Real CategorySection/Card/Heading permits current system-scale line growth.',
+  'multi-select-current': 'Real retained multi-select card/list readback updates all current visible and AX facts.',
 });
 
 function discoverCurrent(source) {
@@ -324,6 +328,106 @@ function ttsPickerCapacity(source) {
   return { capacities: cases.length };
 }
 
+function sectionHeadingGrowth(source) {
+  for (const scale of [1, 1.3, 1.6, 2]) {
+    const controls = foundationControls({ windowMetrics: () => ({ systemFontScale: scale }) });
+    controls.hooks.childSources.ReaderSectionHeading = source;
+    controls.dependencies.ReaderSectionHeading = createReaderBuilderProbe(source,
+      ['appThemeScheme', 'title', 'variant', 'build'],
+      { ...controls.dependencies, ...readerTypographyRoles, readerAppColor }, controls.hooks).Component;
+    const category = read('features/settings/ui/CategorySection.ets');
+    const { owner } = createReaderBuilderProbe(category, ['title', 'cardWidth', 'content', 'build'],
+      controls.dependencies, controls.hooks);
+    Object.assign(owner, { title: '通用设置', content() {} });
+    owner.initialRender();
+    const text = controls.nodes(owner).find(node => node.type === 'Text' && node.create === '通用设置');
+    assert.ok(text);
+    assert.equal(text.height, undefined, 'settings heading allows its native line box to grow');
+    assert.equal(text.constraintSize.minHeight, 16);
+    assert.equal(text.constraintSize.maxHeight, undefined);
+    assert.equal(text.lineHeight, readerTypographyRoles.TYPE_SECTION_HEADING.lineHeightFp);
+    assert.equal(text.fontSize, readerTypographyRoles.TYPE_SECTION_HEADING.fontSizeFp);
+    owner.updateStateVars({ title: '当前设置类别' });
+    controls.properties.flush();
+    assert.equal(text.create, '当前设置类别');
+    const heading = [...owner.children.values()].find(child => child instanceof controls.dependencies.ReaderSectionHeading);
+    heading.appThemeScheme = 'night';
+    controls.properties.flush();
+    assert.equal(text.fontColor, readerAppColor('TOK_INK', 'night'));
+    const natural = new controls.dependencies.ReaderSectionHeading(undefined, { title: '工具标题', variant: 'tool-card' });
+    natural.initialRender();
+    assert.equal(controls.nodes(natural).find(node => node.type === 'Text').height, undefined);
+  }
+  return { scales: 4, nativeGlyphLayout: 'NOT_RUN' };
+}
+
+function multiSelectCurrent(source) {
+  const details = read('features/bookshelf/ui/ShelfBookListDetails.ets');
+  const grid = pureModuleProbe(read('features/bookshelf/ui/BookshelfGridSpec.ets'), 'BookshelfGridSpec.ets',
+    { ...readerTypographyRoles, ...readerFoundationTokens, readerFontFamilyReady: () => true }, ['bookshelfListTextFrame']);
+  const action = pureModuleProbe(read('ui/controls/ReaderActionAccessibility.ets'), 'ReaderActionAccessibility.ets',
+    { AccessibilityRoleType: { BUTTON: 'button' } }, ['ReaderActionAccessibility']);
+  for (const mode of ['cover', 'list']) {
+    const controls = foundationControls();
+    let currentRows = [];
+    // This finite Repeat port delivers current data to retained SDK item closures.
+    function Repeat(data) {
+      currentRows = data;
+      let each;
+      return { each(callback) { each = callback; return this; }, key() { return this; }, virtualScroll() { return this; },
+        render(initial) {
+          if (initial) data.forEach((_row, index) => each({ get item() { return currentRows[index]; } }));
+        } };
+    }
+    class Cover { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+    const dependencies = { ...controls.dependencies, ...readerTypographyRoles, ...readerFoundationTokens,
+      ...grid, ...action, ShelfBookPresentation, Repeat, GRID_ROW_GAP: 12,
+      ListItemAlign: { Center: 'center' }, readerAppColor, readerActionIcon: () => 'check', NoCoverCover: Cover,
+      readerScrollStartOffset: () => 0, readerScrollEndOffset: () => 0 };
+    const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources,
+      ShelfBookListDetails: details, NoCoverCover: read('ui/patterns/NoCoverCover.ets') } };
+    dependencies.ShelfBookListDetails = createReaderBuilderProbe(details, boundedMembers(details), dependencies, hooks).Component;
+    const members = ['books', 'ready', 'busy', 'selectedKeys', 'selectionList', 'selectionCard', 'selectionListCard',
+      'selectionBadge', 'selectionRowAction', 'currentBook', 'hasCover', 'bookKey', 'isSelected', 'hasBookKey',
+      'toggleBook', 'visibleBooks', 'bookRows', 'isListMode', 'selectionInputEnabled', 'reconcileSelection', 'canRetainSelectedKey'];
+    const { owner } = createReaderBuilderProbe(source, members, dependencies, hooks);
+    const first = { sourceId: 'source', bookId: 'one', title: '旧标题', author: '旧作者',
+      coverUrl: 'https://example.invalid/old.png', contentKind: 'text', currentChapterTitle: '旧章节',
+      lastChapter: '旧最新章', readProgress: 1000 };
+    const current = { ...first, title: '当前标题', author: '当前作者', coverUrl: 'https://example.invalid/current.png',
+      currentChapterTitle: '当前新版章节', lastChapter: '当前最新章', readProgress: 6500 };
+    Object.assign(owner, { mounted: true, books: [first], ready: false, busy: false, selectedKeys: [],
+      storedViewMode: mode, storedSelectedGroup: '', readingFilter: 'all', sourceFilter: 'all', mangaRevision: 0,
+      appThemeScheme: 'day', geometry: { content: { frame: { width: 300, left: 0 } } },
+      gridFrame: () => ({ columnGap: 20 }), gridWidth: () => 300, cardWidth: () => 90, coverHeight: () => 140,
+      cardHeight: () => 190, isWide: () => false, scrollLayout: () => ({}),
+      listTextFrame: () => grid.bookshelfListTextFrame(1, 240) });
+    owner.selectionList();
+    const image = controls.nodes(owner).find(node => node.type === 'Image');
+    const title = controls.nodes(owner).find(node => node.type === 'Text' && node.create === '旧标题');
+    owner.updateStateVars({ books: [current], ready: true });
+    controls.properties.flush(); owner.replay(); controls.properties.flush();
+    assert.equal(title.create, current.title, 'current multi-select title');
+    assert.equal(image.create, current.coverUrl);
+    const nodes = controls.nodes(owner);
+    const texts = nodes.filter(node => node.type === 'Text').map(node => node.create);
+    assert.ok(texts.includes(current.author));
+    if (mode === 'list') {
+      assert.ok(texts.some(text => text.includes(current.currentChapterTitle)));
+      assert.ok(texts.some(text => text.includes(current.lastChapter)));
+      assert.ok(texts.includes(ShelfBookPresentation.progress(current)));
+    }
+    const selection = nodes.find(node => node.accessibilityText === `${current.title}，未选择`);
+    assert.ok(selection && selection.enabled);
+    selection.onClick();
+    assert.deepEqual(Array.from(owner.selectedKeys), [owner.bookKey(current)]);
+    owner.updateStateVars({ books: [] });
+    selection.onClick();
+    assert.equal(owner.selectedKeys.length, 0);
+  }
+  return { modes: 2, sameIdReadyTransitions: 2, removedCallbacksRejected: true };
+}
+
 const cases = {
   'discover-current': ['features/discover/ui/DiscoverPage.ets', discoverCurrent, source => source.replaceAll('this.currentBook(book)', 'book')],
   'rss-summary': ['features/rss/ui/RssEntryDetailPage.ets', rssSummary, source => source.replace("this.summaryParagraphs()[index] ?? ''", 'paragraph')],
@@ -337,6 +441,10 @@ const cases = {
   'tts-picker-capacity': ['features/reading/ui/ReaderTtsConfigOverlay.ets', ttsPickerCapacity, source => source
     .replace('Math.max(0, Math.min(content, this.availableHeight - 2 * this.pickerOuterPadding()))', 'Math.max(44, Math.min(content, this.availableHeight - 16))')
     .replace('const padding = this.pickerOuterPadding();', 'const padding = 8;')],
+  'section-heading-growth': ['ui/controls/ReaderSectionHeading.ets', sectionHeadingGrowth,
+    source => source.replace('.constraintSize({ minHeight: 16 })', '.height(16)')],
+  'multi-select-current': ['features/bookshelf/ui/BookshelfMultiSelectPage.ets', multiSelectCurrent,
+    source => source.replaceAll('this.currentBook(book)', 'book')],
 };
 for (const id of selected) {
   const [path, run, mutate] = cases[id];

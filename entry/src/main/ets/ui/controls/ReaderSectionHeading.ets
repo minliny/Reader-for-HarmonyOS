@@ -4,7 +4,7 @@ import { TYPE_SECTION_HEADING, TYPE_SOURCE_TOOLS_HEADING } from '../foundation/R
 
 type ReaderSectionHeadingVariant = 'settings-section' | 'tool-card';
 
-/** Settings uses a fixed section label. Tool cards keep their natural title line boxes. */
+/** Settings keeps a 16vp minimum label slot. Both variants grow with their text. */
 @Component
 export struct ReaderSectionHeading {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -23,7 +23,7 @@ export struct ReaderSectionHeading {
     } else {
       Text(this.title)
         .width('100%')
-        .height(16)
+        .constraintSize({ minHeight: 16 })
         .fontFamily(TYPE_SECTION_HEADING.fontFamily)
         .fontWeight(TYPE_SECTION_HEADING.fontWeight)
         .fontSize(TYPE_SECTION_HEADING.fontSizeFp)

@@ -453,7 +453,7 @@ function normalRelease(h, cancelled = false) {
 // bookmark settling before raw pointer release and the business UP callback;
 // blocking new DOWN must not change the predicate that admits this same UP.
 const ReboundInput = productionMotionMethods(file('ReaderPageInteractionLayer.ets'),
-  ['startRawPointer', 'handleTouch', 'cancelPan', 'resetRawPointer'],
+  ['acceptCurrentInput', 'startRawPointer', 'handleTouch', 'cancelPan', 'resetRawPointer'],
   { ...gesture, TouchType: { Down: 'down', Up: 'up', Move: 'move', Cancel: 'cancel' } });
 for (const reduced of [false, true]) for (const cancelled of [false, true]) {
   const { h, requests, animations } = normalHost();

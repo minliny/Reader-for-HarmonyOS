@@ -16,6 +16,7 @@ import type { ReaderSourceSwitchActions } from './ReaderSourceSwitchActions';
 
 export interface RetainedReaderScenePorts {
   runtime: () => ReaderRuntimeOwner | undefined;
+  inputCurrent: (readerIdentity: string) => boolean;
   directory: ReaderDirectoryOperations;
   directoryNavigation: ReadingDirectoryNavigationPorts;
   toggleMangaShelf: () => void;
@@ -78,6 +79,7 @@ export struct RetainedReaderScene {
         requestedBookmarkAnchor: this.reading.requestedBookmarkAnchor, bookmarkIdentity: this.reading.bookmarkIdentity(),
         expandedLayout: this.expandedLayout, reduceMotion: this.reduceMotion,
         visible: this.visibleRoute !== undefined, route: this.visibleRoute ?? 'reading', inputAllowed: this.inputAllowed,
+        inputCurrent: (readerIdentity: string): boolean => this.ports?.inputCurrent(readerIdentity) === true,
         tocEntries: this.reading.toc, catalogMessage: this.reading.loadingMessage, catalogBusy: this.reading.catalogBusy,
         bookmarkLoadMessage: this.ports.directory.bookmarkMessage(this.reading.directoryOperation),
         directoryCurrentChapterIndex: this.reading.directoryCurrentChapterIndex, directoryChapterTitle: this.reading.directoryChapterTitle,

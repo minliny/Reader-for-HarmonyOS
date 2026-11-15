@@ -593,7 +593,7 @@ const {readFileSync}=await import('node:fs');
 const hostUrl=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
 const HostProbe=selectedProductionMethods(hostUrl,'ReadingExperience',[
  'loadControlBookmarks','onControlBookmarkFailureChanged','onControlDirectoryDataChanged',
- 'bookmarkRecoveryIdentity','reconcileBookmarkRecovery','isControlInputEnabled','isSessionActive','isMountedToken'],
+ 'bookmarkRecoveryIdentity','reconcileBookmarkRecovery','isControlInputEnabled', 'readerInputIsCurrent','isSessionActive','isMountedToken'],
  {readerControlContentLocation:sessionPolicy.readerControlContentLocation,readerControlHostInputEnabled,hilog:{warn(){}}});
 const Directory=compile('features/reading/application/ReaderDirectoryHost.ts','ReaderDirectoryHost',
  {ReaderWriteEvidence,projectPersistedReceipt,loadReaderControlBookmarkProjection},true);

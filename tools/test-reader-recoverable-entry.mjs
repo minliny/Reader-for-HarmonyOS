@@ -67,7 +67,7 @@ const Reader = productionMotionMethods(source, ['ensureReadingSession','restartP
   'loadInitialReading','loadInitialChapter','openChapter','fail','retryReading','resetForChapterSelection',
   'isSessionActive','isMountedToken','isSelectionCurrent','isSelectionActive',
   'armFirstPageReadyDeadline','cancelFirstPageReadyDeadline','openReaderControl','isReaderPageInteractionEnabled',
-  'isControlInputEnabled','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged',
+  'isControlInputEnabled', 'readerInputIsCurrent','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged',
   'controlSelectionOwner'], {
   LOCAL_READING_SOURCE_ID:'local', ReaderRuntimeOwner:{current:()=>runtime}, ReadingSessionFlowGateway:Gateway,
   ReadingSurfaceLayoutMap, RemoteReadingSourceError, RemoteChapterCacheRefreshError, remoteReadingFailureKindOf,
@@ -354,7 +354,7 @@ const Reader = productionMotionMethods(source, ['ensureReadingSession','restartP
   'loadInitialReading','loadInitialChapter','openChapter','fail','retryReading','resetForChapterSelection',
   'isSessionActive','isMountedToken','isSelectionCurrent','isSelectionActive',
   'armFirstPageReadyDeadline','cancelFirstPageReadyDeadline','openReaderControl','isReaderPageInteractionEnabled',
-  'isControlInputEnabled','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged',
+  'isControlInputEnabled', 'readerInputIsCurrent','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged',
   'controlSelectionOwner'], {
   LOCAL_READING_SOURCE_ID:'local', ReaderRuntimeOwner:{current:()=>runtime}, ReadingSessionFlowGateway:Gateway,
   ReadingSurfaceLayoutMap, RemoteReadingSourceError, RemoteChapterCacheRefreshError, remoteReadingFailureKindOf,
@@ -570,7 +570,7 @@ const Reader = productionMotionMethods(source, ['ensureReadingSession','restartP
   'loadInitialReading','loadInitialChapter','openChapter','fail','retryReading','resetForChapterSelection',
   'isSessionActive','isMountedToken','isSelectionCurrent','isSelectionActive',
   'armFirstPageReadyDeadline','cancelFirstPageReadyDeadline','openReaderControl','isReaderPageInteractionEnabled',
-  'isControlInputEnabled','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged',
+  'isControlInputEnabled', 'readerInputIsCurrent','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged',
   'controlSelectionOwner'], {
   LOCAL_READING_SOURCE_ID:'local', ReaderRuntimeOwner:{current:()=>runtime}, ReadingSessionFlowGateway:Gateway,
   ReadingSurfaceLayoutMap, RemoteReadingSourceError, RemoteChapterCacheRefreshError, remoteReadingFailureKindOf,

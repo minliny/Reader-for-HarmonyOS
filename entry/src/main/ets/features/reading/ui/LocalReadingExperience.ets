@@ -566,6 +566,7 @@ export struct ReadingExperience {
   @Prop @Watch('onRemoteCatalogChanged') remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   isReaderIdentityCurrent: () => boolean = (): boolean => true;
+  inputCurrent: (() => boolean) | undefined = undefined;
   @Prop sourceSwitchFailureMessage: string = '';
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
   onRetryFailedSourceSwitch: (scopeId?: number) => void = (): void => {};
@@ -1957,6 +1958,8 @@ export struct ReadingExperience {
         controlSession: $controlSession,
         onSessionRequest: (next: ReaderControlSessionState): void => this.requestControlSession(next),
         inputEnabled: this.isControlInputEnabled() && (this.sessionLaunch === undefined || this.sessionLaunch.ownership === 'released'),
+        inputCurrent: (): boolean => this.isControlInputEnabled() &&
+          (this.sessionLaunch === undefined || this.sessionLaunch.ownership === 'released'),
         controlObscured: this.controlObscured,
         controlOpenRevision: this.controlOpenRevision,
         dismissTemporaryRevision: this.dismissControlTemporaryRevision,
@@ -2161,6 +2164,10 @@ export struct ReadingExperience {
       // fallbacks still use the existing committed pagination flow.
       ReaderPageInteractionLayer({
               inputRevision: this.pageTurnInputRevision,
+              inputCurrent: (revision: number): boolean => revision === this.pageTurnInputRevision && this.isReaderPageInteractionEnabled(),
+              onInputLost: (revision: number): void => {
+                if (revision === this.pageTurnInputRevision) this.retirePagePointer();
+              },
               onRegrab: (width: number, height: number, x: number, y: number, time: number,
                 direction: ReaderPageTurnDirection): ReaderPageGestureState | undefined =>
                 this.regrabReaderPageGesture(width, height, x, y, time, direction),
@@ -10868,8 +10875,7 @@ export struct ReadingExperience {
     // must never disable the full-screen arena or the centre control tap.
     // Page/bookmark motion is gated separately by canStartReaderPageTurn and
     // canStartReaderBookmarkGesture while the background lane is busy.
-    return this.mounted && !this.exitRequested && !this.controlVisible() && !this.controlObscured &&
-      !this.interactionBlocked;
+    return this.readerInputIsCurrent() && !this.controlVisible();
   }
 
   /**
@@ -11027,9 +11033,14 @@ export struct ReadingExperience {
   }
 
   private isControlInputEnabled(): boolean {
+    return this.readerInputIsCurrent();
+  }
+
+  private readerInputIsCurrent(): boolean {
     return readerControlHostInputEnabled({ mounted: this.mounted, exitRequested: this.exitRequested,
       appForeground: this.appForeground, windowChromeActive: this.windowChromeActive,
-      interactionBlocked: this.interactionBlocked, controlObscured: this.controlObscured });
+      interactionBlocked: this.interactionBlocked, controlObscured: this.controlObscured }) &&
+      this.isReaderIdentityCurrent?.() !== false && (this.inputCurrent?.() ?? true);
   }
 
   private controlKeyboardHost(): ReaderControlKeyboardHost {
@@ -11051,6 +11062,7 @@ export struct ReadingExperience {
   }
 
   private onControlInputBoundaryChanged(): void {
+    if (!this.isControlInputEnabled()) this.retirePagePointer();
     this.controlMinimumGeneration += 1;
     this.scheduleControlMinimum();
     if (!this.appForeground || this.interactionBlocked || this.controlObscured) this.cancelAutomaticPageStart?.();
@@ -11062,6 +11074,17 @@ export struct ReadingExperience {
     }
     this.invalidateControlBackdrop();
     this.syncVolumeKeyPolicy();
+  }
+
+  private retirePagePointer(): void {
+    const phase = this.pageTurnInputPhase();
+    if (this.activePagePointerId < 0 && !this.pendingPointerSegmentReserved &&
+      phase !== 'tracking' && phase !== 'dragging') return;
+    this.pageTurnInputRevision += 1;
+    this.activePagePointerId = -1;
+    this.pagePointerEpoch += 1;
+    this.pendingPointerSegmentReserved = false;
+    if (phase === 'tracking' || phase === 'dragging') this.rollbackPageTurnForDeferredMutation();
   }
 
   private dismissControlTemporaryLayers(): void {
@@ -14268,11 +14291,8 @@ export struct ReadingExperience {
     if (!this.mounted || this.exitRequested) {
       return { kind: 'blocked', reason: 'lifecycle' };
     }
-    if (this.interactionBlocked || this.controlObscured) {
-      return { kind: 'blocked', reason: 'overlay' };
-    }
-    if (this.controlVisible()) {
-      return { kind: 'blocked', reason: 'control' };
+    if (!this.isReaderPageInteractionEnabled()) {
+      return { kind: 'blocked', reason: this.controlVisible() ? 'control' : 'overlay' };
     }
     const boundary = this.readerSettingsSnapshot.navigationMode === 'continuous' || !this.canTurnPage() ?
       undefined : this.knownPageTurnBoundary(direction);
@@ -14315,8 +14335,7 @@ export struct ReadingExperience {
   }
 
   private drainRapidPageTurn(): ReaderPageTurnOutcome {
-    if (!this.mounted || this.exitRequested || this.controlVisible() || this.controlObscured ||
-      this.interactionBlocked) {
+    if (!this.isReaderPageInteractionEnabled()) {
       this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
       return { kind: 'blocked', reason: !this.mounted || this.exitRequested ? 'lifecycle' :
         (this.controlVisible() ? 'control' : 'overlay') };
@@ -14390,6 +14409,7 @@ export struct ReadingExperience {
   /** Manual tap, pan release, and Auto Page all converge on this one gate. */
   private performPageTurn(direction: ReaderPageTurnDirection, origin: ReaderPageTurnOrigin = 'manual',
     ttsOwner?: ReaderTtsFollowLease): ReaderPageTurnOutcome {
+    if (origin === 'manual' && !this.isReaderPageInteractionEnabled()) return { kind: 'blocked', reason: 'overlay' };
     if (origin !== 'manual' && (!this.mounted || !this.appForeground || this.exitRequested ||
       this.controlVisible() || this.controlObscured || this.interactionBlocked || this.pendingPointerSegmentReserved ||
       this.pageTurnSettlementActive || this.pageTurnSettlingPrepared !== undefined ||

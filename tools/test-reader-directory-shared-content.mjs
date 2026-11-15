@@ -7,6 +7,7 @@ const { readFileSync }=await import('node:fs');
 const { createRequire }=await import('node:module');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts');
+const { sameReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
 const { readerAppColor }=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { readerDirectoryAccessibilityText, readerDirectoryIndentVp }=await import('../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts');
 const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
@@ -163,9 +164,10 @@ for (const [state, label, enabled] of [
 // Execute the actual control wrappers. Motion wrappers and the native List stay owned by the control.
 {
   const calls = [];
-  const owner = createReaderBuilderProbe(controlSource, ['directoryToolbar', 'chapterRow'],
-    { ReaderDirectoryToolbar: Child, ReaderDirectoryChapterRow: Child, Edge: { Top: 'top', Bottom: 'bottom' } }).owner;
-  Object.assign(owner, { appThemeScheme: 'day', draft: '已有搜索', ascending: true, tab: 'directory', availableWidth: 338,
+  const owner = createReaderBuilderProbe(controlSource, ['directoryToolbar', 'chapterRow', 'flatChapterIsCurrent', 'currentContent', 'currentInputEnabled', 'bookmarkWriteEnabled'],
+    { sameReaderDirectoryData, ReaderDirectoryToolbar: Child, ReaderDirectoryChapterRow: Child, Edge: { Top: 'top', Bottom: 'bottom' } }).owner;
+  Object.assign(owner, { mounted: true, layoutPresentation: 1, interactionEnabled: true, preparedMinimumRequired: false,
+    navigationActive: false, entries: [entry], bookmarkRecovery: { bookmarkWriteEnabled: true }, appThemeScheme: 'day', draft: '已有搜索', ascending: true, tab: 'directory', availableWidth: 338,
     progress: 1, placeholder: () => '搜索章节名称', value: (quick, full) => full,
     search: () => calls.push('search'), sort: () => calls.push('sort'), userScroll: () => calls.push('user'),
     scrollCatalogEdge: bottom => { calls.push('user', bottom ? 'bottom' : 'top'); },
@@ -173,7 +175,7 @@ for (const [state, label, enabled] of [
     chapterDownloadEnabled: true, chapterStartBookmarkCreationEnabled: true,
     onSelectChapter: index => calls.push(['select', index]), onDownloadChapter: index => calls.push(['download', index]),
     onDeleteBookmarks: times => calls.push(['delete', times]), onCreateChapterStartBookmark: request => calls.push(['create', request]) });
-  owner.directoryToolbar(); owner.chapterRow(entry);
+  owner.directoryToolbar(); owner.chapterRow(entry, 1);
   const [toolbar, chapter] = [...owner.children.values()].map(child => child.params);
   toolbar.onTextChange('新搜索'); assert.equal(owner.draft, '新搜索'); toolbar.onSearch(); toolbar.onTop(); toolbar.onBottom(); toolbar.onToggleSort();
   assert.deepEqual(calls, ['search', 'user', 'top', 'user', 'bottom', 'sort']);

@@ -21,7 +21,7 @@ function production(file, names, bindings = {}) {
 let now = 1000;
 let timers = [];
 const Pointer = production('ReaderPageInteractionLayer.ets', [
-  'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
+  'acceptCurrentInput', 'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
   'resetRawPointer', 'reportManualInteraction', 'isPageOwner', 'resolveDeferredSegment',
   'onReadinessChanged', 'armPointerWatchdog', 'schedulePointerWatchdog', 'clearPointerWatchdog', 'cancelPan', 'handleRawTap',
   'onInteractionModeChanged', 'tapOnlyNow',

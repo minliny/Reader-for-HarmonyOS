@@ -28,7 +28,7 @@ try {
 const hostPolicy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const Host = selectedCase==='grabber-ownership'?productionMotionMethods(
   new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
-  ['isControlInputEnabled'], hostPolicy):undefined;
+  ['isControlInputEnabled', 'readerInputIsCurrent'], hostPolicy):undefined;
 
 const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');

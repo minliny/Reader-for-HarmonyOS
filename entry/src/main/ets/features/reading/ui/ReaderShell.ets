@@ -82,6 +82,7 @@ export struct ReaderShell {
   @Prop visible: boolean = false;
   @Prop route: PreparedReaderRoute = 'reading';
   @Prop inputAllowed: boolean = true;
+  inputCurrent?: (readerIdentity: string) => boolean;
   // 目录 overlay。
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
@@ -187,7 +188,7 @@ export struct ReaderShell {
   }
 
   private readingContentIsForeground(): boolean {
-    return this.inputAllowed && this.visible && this.route === 'reading' &&
+    return (this.inputCurrent?.(this.readingIdentityKey()) ?? true) && this.inputAllowed && this.visible && this.route === 'reading' &&
       !this.sourceSwitchPresented && !this.sourceSwitchCovered;
   }
 
@@ -212,6 +213,7 @@ export struct ReaderShell {
           sourceId: this.sourceId,
           bookId: this.bookId,
           isReaderIdentityCurrent: (): boolean => _identity === this.readingIdentityKey(),
+          inputCurrent: (): boolean => (this.inputCurrent?.(_identity) ?? true) && this.readingContentIsForeground(),
           bookKind: this.bookKind,
           remoteSession: this.remoteSession,
           remoteBookSeed: this.remoteBookSeed,

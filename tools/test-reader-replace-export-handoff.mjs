@@ -24,7 +24,7 @@ async function runCase() {
 
   const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
   const names = ['exportControlReplace', 'controlReplaceCurrent', 'readerReplaceRuntimeCurrent',
-    'isControlInputEnabled', 'isSessionActive', 'isMountedToken', 'controlVisible'];
+    'isControlInputEnabled', 'readerInputIsCurrent', 'isSessionActive', 'isMountedToken', 'controlVisible'];
   let currentRuntime;
   const ReaderRuntimeOwner = { current() { if (currentRuntime === undefined) throw Error('runtime unavailable'); return currentRuntime; } };
   const Actual = selectedProductionMethods(source, 'ReadingExperience', names,

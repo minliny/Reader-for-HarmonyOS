@@ -306,6 +306,7 @@ export struct ReaderControlPanel {
     level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick',
   };
   @Prop @Watch('onRuntimeEnabledChanged') inputEnabled: boolean = true;
+  inputCurrent: (() => boolean) | undefined = undefined;
   @Prop @Watch('onRuntimeEnabledChanged') controlObscured: boolean = false;
   @Prop @Watch('syncProgressInput') controlOpenRevision: number = 0;
   @Prop @Watch('onMinimumIdentityChanged') minimumIdentity: string = '';
@@ -1312,7 +1313,7 @@ export struct ReaderControlPanel {
     // events or doing avoidable work while their parent opacity is zero.
     const visibility = this.visualVisibilityProgress;
     const currentOwner = !this.preparedMinimumRequired || this.currentMinimumIdentity() === this.committedMinimumIdentity();
-    return currentOwner && this.inputEnabled && !this.controlObscured &&
+    return currentOwner && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
       (this.minimumInputReady() || this.hasCurrentTemporaryInput()) && visibility > 0 &&
       (this.visualTransitionKind === '' || this.visualTransitionKind === 'open') &&
       this.visualHeldPointerId < 0;
@@ -1410,7 +1411,7 @@ export struct ReaderControlPanel {
   }
 
   private controlActionInputEnabled(): boolean {
-    return this.runtimeMounted && this.inputEnabled && !this.controlObscured &&
+    return this.runtimeMounted && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
       (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
       !this.hasCurrentTemporaryInput() && !this.moreMenuVisible && this.visualVisibilityProgress > 0 &&
       this.visualHeldPointerId < 0;

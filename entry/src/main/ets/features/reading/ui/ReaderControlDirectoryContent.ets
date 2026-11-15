@@ -12,7 +12,8 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { sampleReaderControlMotionPresentation, type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
-import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
+import type { ReaderBookIdentity, ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection';
+import { sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import { readerControlDirectorySnapshot, ReaderControlDirectoryPosition,
   type ReaderControlDirectoryRow, type ReaderControlDirectorySnapshot } from './ReaderControlDirectoryModel';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
@@ -770,18 +771,39 @@ export struct ReaderControlDirectoryContent {
   }
 
   @Builder
-  private chapterRow(entry: LocalReadingTocEntry) {
+  private chapterRow(entry: LocalReadingTocEntry, presentation: number) {
     ReaderDirectoryChapterRow({
       entry: entry, rowHeight: this.rowHeight(), currentChapterIndex: this.currentChapterIndex,
       chapterDownloadEnabled: this.chapterDownloadEnabled,
       bookmarkActionsEnabled: this.bookmarkWriteEnabled(),
       chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled && this.bookmarkWriteEnabled(),
-      onSelectChapter: (index: number): void => this.onSelectChapter(index),
-      onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
-      onDeleteBookmarks: (times: number[]): void => { if (this.bookmarkWriteEnabled()) this.onDeleteBookmarks(times); },
+      canActOnEntry: (current: LocalReadingTocEntry): boolean =>
+        sameReaderDirectoryData([current], [entry]) && this.flatChapterIsCurrent(entry, presentation),
+      onSelectChapter: (index: number): void => {
+        if (index === entry.index && this.flatChapterIsCurrent(entry, presentation)) this.onSelectChapter(index);
+      },
+      onDownloadChapter: (index: number): void => {
+        if (index === entry.index && this.flatChapterIsCurrent(entry, presentation)) this.onDownloadChapter(index);
+      },
+      onDeleteBookmarks: (times: number[]): void => {
+        if (this.bookmarkWriteEnabled() && this.flatChapterIsCurrent(entry, presentation)) this.onDeleteBookmarks(times);
+      },
       onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-        { if (this.bookmarkWriteEnabled()) this.onCreateChapterStartBookmark(request); },
+        { if (this.bookmarkWriteEnabled() && this.flatChapterIsCurrent(entry, presentation)) this.onCreateChapterStartBookmark(request); },
     });
+  }
+
+  private flatChapterIsCurrent(entry: LocalReadingTocEntry, presentation: number): boolean {
+    if (!this.currentContent(presentation) || !this.currentInputEnabled() || this.tab !== 'directory' ||
+      this.navigationActive || entry.navigable === false) return false;
+    const current = this.entries.find((chapter: LocalReadingTocEntry): boolean => chapter.index === entry.index);
+    return current !== undefined && sameReaderDirectoryData([entry], [current]);
+  }
+
+  private flatBookmarkIsCurrent(bookmark: ReaderBookmarkRowModel, presentation: number): boolean {
+    return this.currentContent(presentation) && this.currentInputEnabled() && this.tab === 'bookmarks' &&
+      this.displaySnapshot().rows.some((row: ReaderControlDirectoryRow): boolean =>
+        row.bookmark?.bookmarkId === bookmark.bookmarkId && JSON.stringify(row.bookmark) === JSON.stringify(bookmark));
   }
 
   @Builder
@@ -864,13 +886,15 @@ export struct ReaderControlDirectoryContent {
       LazyForEach(this.dataSource, (row: ReaderControlDirectoryRow) => {
         ListItem() {
           if (row.chapter !== undefined) {
-            this.chapterRow(row.chapter);
+            this.chapterRow(row.chapter, presentation);
           } else if (row.bookmark !== undefined) {
             ReaderBookmarkRow({ row: row.bookmark, embeddedInControl: true,
               naturalSize: this.bookmarkNaturalSize(),
               motionProgress: this.progress, availableWidth: this.rowWidth(),
               onSelectBookmark: (id: string, chapter: number, offset: number, positionScope?: RemoteReadingPositionScope): void => {
-                if (this.onSelectBookmark !== undefined) this.onSelectBookmark(id, chapter, offset, positionScope);
+                if (this.flatBookmarkIsCurrent(row.bookmark!, presentation) &&
+                  id === row.bookmark!.bookmarkId && chapter === row.bookmark!.chapterIndex && offset === row.bookmark!.chapterOffset &&
+                  this.onSelectBookmark !== undefined) this.onSelectBookmark(id, chapter, offset, positionScope);
               } });
           }
         }.width('100%').height(this.rowHeight());

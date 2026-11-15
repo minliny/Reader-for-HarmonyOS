@@ -41,6 +41,8 @@ export struct ReaderPageInteractionLayer {
   currentTapOnly: (() => boolean) | undefined = undefined;
   @Prop @Watch('onReadinessInputsChanged') readinessRevision: number = 0;
   @Prop @Watch('onInputRevisionInputsChanged') inputRevision: number = 0;
+  inputCurrent: ((revision: number) => boolean) | undefined = undefined;
+  onInputLost: (revision: number) => void = (_revision: number): void => {};
   @Prop @Watch('onPointerGeometryInputsChanged') viewportWidth: number = 0;
   @Prop @Watch('onPointerGeometryInputsChanged') viewportHeight: number = 0;
   @Prop allowTextSelection: boolean = false;
@@ -136,7 +138,15 @@ export struct ReaderPageInteractionLayer {
       .onTouch((event: TouchEvent): void => this.handleTouch(event));
   }
 
+  private acceptCurrentInput(): boolean {
+    if (this.inputCurrent?.(this.inputRevision) !== false) return true;
+    this.onInputLost(this.inputRevision);
+    this.onInputRevisionChanged();
+    return false;
+  }
+
   private handleTouch(event: TouchEvent): void {
+    if (!this.acceptCurrentInput()) return;
     if (!this.interactionEnabled) {
       this.cancelPan();
       this.resolveDeferredSegment(undefined);
@@ -511,7 +521,7 @@ export struct ReaderPageInteractionLayer {
   }
 
   private handleRawTap(localX: number, viewportWidth: number): void {
-    if (!this.interactionEnabled || this.gestureState.phase !== 'idle') {
+    if (!this.acceptCurrentInput() || !this.interactionEnabled || this.gestureState.phase !== 'idle') {
       return;
     }
     const intent = readerPageTapIntent(localX, viewportWidth);
@@ -768,6 +778,7 @@ export struct ReaderPageInteractionLayer {
     if (!this.allowTextSelection || this.tapOnlyPointer || this.activePointerId < 0) return;
     this.longPressTimer = setTimeout((): void => {
       this.longPressTimer = -1;
+      if (!this.acceptCurrentInput()) return;
       if (this.activePointerId < 0 || this.gestureState.owner !== 'undecided') return;
       this.gestureState = updateReaderPagePanInPlace(
         this.gestureState,
@@ -801,6 +812,7 @@ export struct ReaderPageInteractionLayer {
   private schedulePointerWatchdog(delayMs: number): void {
     this.pointerWatchdogTimer = setTimeout((): void => {
       this.pointerWatchdogTimer = -1;
+      if (!this.acceptCurrentInput()) return;
       if (this.activePointerId < 0) return;
       const remaining = READER_PAGE_POINTER_STALL_TIMEOUT_MS -
         Math.max(0, readerMotionNowMs() - this.pointerLastActivityMs);
@@ -821,6 +833,7 @@ export struct ReaderPageInteractionLayer {
   }
 
   private onInteractionEnabledChanged(): void {
+    if (!this.acceptCurrentInput()) return;
     if (!this.interactionEnabled) {
       this.cancelPan();
       this.resolveDeferredSegment(undefined);
@@ -837,6 +850,7 @@ export struct ReaderPageInteractionLayer {
   }
 
   private onReadinessChanged(): void {
+    if (!this.acceptCurrentInput()) return;
     const direction = this.gestureState.direction;
     if (this.activePointerId < 0 || !this.pointerRejected || this.tapOnlyPointer ||
       !this.interactionEnabled || direction === undefined || !this.canStartTurn(direction)) return;
@@ -866,6 +880,7 @@ export struct ReaderPageInteractionLayer {
   }
 
   private onInteractionModeChanged(): void {
+    if (!this.acceptCurrentInput()) return;
     if (this.activePointerId < 0) return;
     const tapOnly = this.tapOnlyNow();
     if (this.tapOnlyPointer && !tapOnly) {

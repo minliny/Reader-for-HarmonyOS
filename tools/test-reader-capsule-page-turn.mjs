@@ -271,7 +271,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
   let pointerTime = 1000;
   const Pointer = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets', import.meta.url), [
-    'handleTouch', 'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
+    'acceptCurrentInput', 'handleTouch', 'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
     'resetRawPointer', 'reportManualInteraction', 'isPageOwner', 'resolveDeferredSegment', 'cancelPan', 'handleRawTap', 'tapOnlyNow',
     'pointerForEvent', 'changedPointerForEvent', 'ownPointer', 'eventViewportWidth', 'eventViewportHeight',
     'pageViewportWidth', 'pageViewportHeight', 'pageLocalX', 'pageLocalY', 'systemOwnsPointer', 'finiteInset',

@@ -1477,6 +1477,7 @@ struct Index {
   private retainedReaderPorts(): RetainedReaderScenePorts {
     return {
       runtime: (): ReaderRuntimeOwner | undefined => this.currentReadingRuntime(),
+      inputCurrent: (readerIdentity: string): boolean => this.readerContentInputCurrent(readerIdentity),
       directory: this.directoryJourney.operations, directoryNavigation: this.directoryNavigationPorts(),
       toggleMangaShelf: (): void => this.requestMangaShelfMutation(),
       loginMangaSource: (): Promise<void> => this.mangaSourceLogin.openCurrent((): MangaSourceLoginScene => ({
@@ -1604,6 +1605,15 @@ struct Index {
     if (this.shelfReceiptRetired) return undefined;
     const owner = this.libraryAcquisition.currentOwner();
     return owner === this.mountedRuntimeOwner ? owner : undefined;
+  }
+
+  private readerContentInputCurrent(readerIdentity: string): boolean {
+    return this.currentReadingRuntime() !== undefined && this.readingEntry.sessionActive &&
+      readerIdentity === this.currentReaderPresentationIdentity() &&
+      retainedReaderRoute(this.route, this.directoryReturnTarget) === 'reading' &&
+      this.searchAppForeground && !this.arkWebCapturesInput &&
+      this.shelfMotion.pendingExitId < 0 && this.shelfMotion.request?.direction !== 'open' &&
+      !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible;
   }
 
   private chooseCachedChapterRefresh(error: RemoteChapterCacheRefreshError, current: () => boolean): Promise<boolean> {

@@ -35,7 +35,7 @@ async function run(id){
   }
  }else{
   const {startReaderPagePan,updateReaderPagePanInPlace}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
-  const Layer=selectedProductionMethods(new URL('ui/ReaderPageInteractionLayer.ets',base),'ReaderPageInteractionLayer',['onReadinessChanged'],{updateReaderPagePanInPlace});
+  const Layer=selectedProductionMethods(new URL('ui/ReaderPageInteractionLayer.ets',base),'ReaderPageInteractionLayer',['acceptCurrentInput','onReadinessChanged'],{updateReaderPagePanInPlace});
   const delivered=[];const state=startReaderPagePan(390,300,100,1,844);
   updateReaderPagePanInPlace(state,-80,0,0,220,100,0,10);
   const owner=Object.assign(new Layer(),{gestureState:state,activePointerId:1,pointerRejected:true,tapOnlyPointer:false,interactionEnabled:true,
