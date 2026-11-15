@@ -374,11 +374,16 @@ export struct SourceToolsPage {
   }
 
   private batchButtonLabel(action: SourceToolsBatchAction): string {
-    const labels: Record<string, string> = {
-      selectAll: '全选', clear: '清空', exportSelected: '导出所选', check: '检测所选',
-      stop: '停止检测', enable: '启用', disable: '停用', delete: '删除',
-    };
-    return action === 'stop' && this.snapshot.batchCheck.phase === 'stopping' ? '停止中…' : labels[action];
+    switch (action) {
+      case 'selectAll': return '全选';
+      case 'clear': return '清空';
+      case 'exportSelected': return '导出所选';
+      case 'check': return '检测所选';
+      case 'stop': return this.snapshot.batchCheck.phase === 'stopping' ? '停止中…' : '停止检测';
+      case 'enable': return '启用';
+      case 'disable': return '停用';
+      case 'delete': return '删除';
+    }
   }
 
   private batchButtonEnabled(action: SourceToolsBatchAction): boolean {

@@ -1320,7 +1320,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-          "sha256": "befb1cbf108bece2e061f226db02266971b892a6fbc123e0566a17635777fb3e"
+          "sha256": "d4b28d65203efbbb45623de7751289d79977645e0f4e04f2e9cdbd8f7b40128c"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -29391,7 +29391,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-        "sha256": "befb1cbf108bece2e061f226db02266971b892a6fbc123e0566a17635777fb3e"
+        "sha256": "d4b28d65203efbbb45623de7751289d79977645e0f4e04f2e9cdbd8f7b40128c"
       },
       "layers": {
         "route": {
@@ -30447,7 +30447,7 @@
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
           "symbol": "build",
-          "sha256": "befb1cbf108bece2e061f226db02266971b892a6fbc123e0566a17635777fb3e"
+          "sha256": "d4b28d65203efbbb45623de7751289d79977645e0f4e04f2e9cdbd8f7b40128c"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
