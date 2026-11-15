@@ -20,6 +20,16 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### Toggle消费者核对与正常设置补证
+
+全树八处生产构造已按七个页面族核对。正常通用设置已有四次纯读屏及四次混合激活的原生证据。书源页已有两次键盘及两次纯读屏激活证据，本次核对共享Toggle完整字节、十二个实际行方法及LazyForEach行键和回调装配均未变化，按原范围复用。书源sourceList整段方法已有其他修改，其前缀、状态和完整页面布局继续沿各自证据范围验收。[八处消费者及入口](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/toggle-caller-audit-x.json) [书源准确复用依据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/toggle-source-reuse-x.json)
+
+当前b2a0候选从正常设置进入书架设置，一次Tab到达当前Toggle。两次受控Enter使原生代次0→1→2，值true→false→true，三个捕获点均enabled=true、focused=true。返回并重新打开后，新页面身份7:1:0仍读取原值true。开发者页面从正常通用设置进入，两次Tab到达“显示组件边界”，原生代次0→1→2，值false→true→false，换代后均保持启用和键盘焦点。重新打开的developer:7页面仍读取原值false。[正常书架设置](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-bookshelf-toggle-x.json) [正常开发者设置](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-developer-toggle-x.json)
+
+两项新场景复用当前已签名安装候选，实际修改的是应用级偏好。书架与开发者原值均已恢复，最后回到原四本书架。两个DMS密度字段保持3.5，状态栏136px，SceneBoard1426。规则管理缺少当前正常设置触发，RSS两页面继续保留L0条件。新场景的结论限定于实际键盘焦点、受控值及重新打开读数，完整读屏语义、声音、异步时序与页面E2/E3保留各自范围。[消费者结果与收尾](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-toggle-consumers-x.json)
+
+本批驱动有两项失败。底部导航隐藏了普通文字节点，按“设置”文字查找失败后，改用当前原生Button的实际范围进入。UITest再次拒绝accessibilityText扩展属性，私有驱动已将可选扩展属性限定为当前支持的uniqueId，后继使用默认原生树。两次失败均发生在偏好动作之前，原始输出保留。生产源码保持c189905d，本批增加准确原生证据和账本更新。
+
 ### 原始截图像素复核与误判撤销
 
 **UIF-49已撤销，原始目录四行像素实际存在。** 原V批Back和后续静止态两张PNG的完整文件校验和分别保持f2b2a545245a0f13af36cf2c0f91a4039eb798dd56892870443ef84f8b51d875和6bcc0a04cf31fd4bd375cf5fc2b5a96f3b4e6c56b03d11c64f074844ff58c5d8。四行区域为[120,930,1160,1510]，含13163个深色像素，RGB像素SHA-256均为3a3cd1c6fd140d55c81e828029c90d18b669bf7130dccfda0c0c138cf46e9d9f，与W批可见四行截图完全一致。四个标题区域分别有892、4065、4078、4128个深色像素。原图、原生树和客户端文字命令相互吻合。[原始字节与逐区域比较](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-back-paint-w-original-byte-review.json)
