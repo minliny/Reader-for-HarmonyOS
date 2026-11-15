@@ -2085,9 +2085,15 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-directory-normal-u.json",
               "symbol": "normal detail local TXT rules/default/Back and captured reader return only; input editing and complete E2 remain open",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+              "symbol": "Detail text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18, current bookmark tab and visible retained new bookmark.",
+              "result": "PASS"
             }
           ],
-          "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch."
+          "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch. Current20261115AD adds Detail text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18, current bookmark tab and visible retained new bookmark. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -2131,9 +2137,15 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-aa.json",
               "symbol": "directory actual1.3 initial320/366 contexts; full state and variant criteria remain open",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+              "symbol": "Detail text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18, current bookmark tab and visible retained new bookmark.",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN. Current20261115AA actual system font Slider4 provides configuration1.3 and independent native fp2px/vp2px1.2999999523. The base initial context at requested320 and366vp, actual320 and365.7142857vp, height770.2857143vp has current native layout and inspected raster evidence. Other states, variants, orientation, native semantic/audio and complete page adaptation retain their individual conditions. Original system sliders2/1/1 and native1 restored. The inspected system font UI maximum Slider5 gives1.45; actual1.6/2 input remains unestablished through that route."
+          "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN. Current20261115AA actual system font Slider4 provides configuration1.3 and independent native fp2px/vp2px1.2999999523. The base initial context at requested320 and366vp, actual320 and365.7142857vp, height770.2857143vp has current native layout and inspected raster evidence. Other states, variants, orientation, native semantic/audio and complete page adaptation retain their individual conditions. Original system sliders2/1/1 and native1 restored. The inspected system font UI maximum Slider5 gives1.45; actual1.6/2 input remains unestablished through that route. Current20261115AD adds Detail text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18, current bookmark tab and visible retained new bookmark. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
         },
         "accessibility": {
           "applicability": "applicable",
@@ -2666,7 +2678,7 @@
         }
       },
       "exceptions": [],
-      "revision": 47,
+      "revision": 48,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -5241,9 +5253,15 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
                     "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Reader-context text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18 and current bookmark tab. Actual originating reading session/navigation remain open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. Current20261115AD adds Reader-context text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18 and current bookmark tab. Actual originating reading session/navigation remain open. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -5275,9 +5293,15 @@
                     "path": "tools/test-reader-window-font-configuration.mjs",
                     "symbol": "configuration,entry-consumer,native-context",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Reader-context text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18 and current bookmark tab. Actual originating reading session/navigation remain open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN."
+                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN. Current20261115AD adds Reader-context text component actual320/font1.3, complete46vp chapter19 row and accessory carriers, create18 then download18 and current bookmark tab. Actual originating reading session/navigation remain open. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "accessibility": {
                 "applicability": "applicable",
@@ -5787,7 +5811,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -8578,9 +8602,15 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-directory-reflow-v.json",
                     "result": "PASS",
                     "symbol": "current normal TXT embedded Full query focus, visible IME, actual draft, Back, explicit re-edit and original four-row pixels only"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Control component tree/flat Full/Quick actual320parent/font1.3. Actual Full content272.5714x533.7143vp and Quick220.5714x190vp. Tree Full create18/download18, flat Full create18, flat Quick create20 from above26vp paint inside38vp row, and all four actual bookmark tab captures.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes, flat26xrow marker responses and semantic44xrow accessory lanes. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Currentc96f scoped actual semantic-directory download boundaries pay44vp horizontal carriers and deliver only chapter16/18 intent once per left/right band tap. Disabled adjacentbookmark rejects. The compact32/40vp vertical capacity, enabledbookmark, Quick and remaining native obligations retain their scope. Current continuation reconciliation20261115. Current continuation has actual semantic44vp horizontal accessory edge delivery and memory callback once per target, plus Control Full/Quick flat bookmark delete→create and queued-download disable on new native rows. Compact Quick32/Full40 heights and flat26vp width follow the approved retained-layout decision. Complete remaining target/reader/state coverage remains open. Currentd600 actualFull memoryflatcatalog accepts chapter→bookmark→chapter→bookmark withsameNative110/119 andthreeowner tab receipts. Actualcontent315.33×620vp in366vp fixture/font1. Other target/focus/readout/fulladaptation requirements remainopen. U-batch ea174 normal TXT editing failure remains historical in native-directory-normal-u.json. Current b2a0 normal embedded Full query has scoped real focus/visible IME/draft/Back/re-edit evidence in native-directory-reflow-v.json. UIF48 repairs missing current-editor parent admission during reflow. Original four-row pixels are present, and UIF49 visual-review error is withdrawn in directory-back-paint-w-correction.json. Short-prefix, other target/state/readout and complete E2/E3 criteria retain their exact scope."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes, flat26xrow marker responses and semantic44xrow accessory lanes. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Currentc96f scoped actual semantic-directory download boundaries pay44vp horizontal carriers and deliver only chapter16/18 intent once per left/right band tap. Disabled adjacentbookmark rejects. The compact32/40vp vertical capacity, enabledbookmark, Quick and remaining native obligations retain their scope. Current continuation reconciliation20261115. Current continuation has actual semantic44vp horizontal accessory edge delivery and memory callback once per target, plus Control Full/Quick flat bookmark delete→create and queued-download disable on new native rows. Compact Quick32/Full40 heights and flat26vp width follow the approved retained-layout decision. Complete remaining target/reader/state coverage remains open. Currentd600 actualFull memoryflatcatalog accepts chapter→bookmark→chapter→bookmark withsameNative110/119 andthreeowner tab receipts. Actualcontent315.33×620vp in366vp fixture/font1. Other target/focus/readout/fulladaptation requirements remainopen. U-batch ea174 normal TXT editing failure remains historical in native-directory-normal-u.json. Current b2a0 normal embedded Full query has scoped real focus/visible IME/draft/Back/re-edit evidence in native-directory-reflow-v.json. UIF48 repairs missing current-editor parent admission during reflow. Original four-row pixels are present, and UIF49 visual-review error is withdrawn in directory-back-paint-w-correction.json. Short-prefix, other target/state/readout and complete E2/E3 criteria retain their exact scope. Current20261115AD adds Control component tree/flat Full/Quick actual320parent/font1.3. Actual Full content272.5714x533.7143vp and Quick220.5714x190vp. Tree Full create18/download18, flat Full create18, flat Quick create20 from above26vp paint inside38vp row, and all four actual bookmark tab captures. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -8612,9 +8642,15 @@
                     "path": "tools/test-reader-window-font-configuration.mjs",
                     "symbol": "configuration,entry-consumer,native-context",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Control component tree/flat Full/Quick actual320parent/font1.3. Actual Full content272.5714x533.7143vp and Quick220.5714x190vp. Tree Full create18/download18, flat Full create18, flat Quick create20 from above26vp paint inside38vp row, and all four actual bookmark tab captures.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN."
+                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN. Current20261115AD adds Control component tree/flat Full/Quick actual320parent/font1.3. Actual Full content272.5714x533.7143vp and Quick220.5714x190vp. Tree Full create18/download18, flat Full create18, flat Quick create20 from above26vp paint inside38vp row, and all four actual bookmark tab captures. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "accessibility": {
                 "applicability": "applicable",
@@ -9052,7 +9088,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19010,9 +19046,15 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
                     "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Same control actor7 actual272.5714vp/font1.3, directory122→168→190→168→122 sequence retains native List6007. Actual prefix tabs/query/tools reached by List scrolling, five complete154x154px native tool carriers observed. Individual tool callbacks and focus remain open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. Current20261115AD adds Same control actor7 actual272.5714vp/font1.3, directory122→168→190→168→122 sequence retains native List6007. Actual prefix tabs/query/tools reached by List scrolling, five complete154x154px native tool carriers observed. Individual tool callbacks and focus remain open. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -19044,9 +19086,15 @@
                     "path": "tools/test-reader-window-font-configuration.mjs",
                     "symbol": "configuration,entry-consumer,native-context",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Same control actor7 actual272.5714vp/font1.3, directory122→168→190→168→122 sequence retains native List6007. Actual prefix tabs/query/tools reached by List scrolling, five complete154x154px native tool carriers observed. Individual tool callbacks and focus remain open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN."
+                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN. Current20261115AD adds Same control actor7 actual272.5714vp/font1.3, directory122→168→190→168→122 sequence retains native List6007. Actual prefix tabs/query/tools reached by List scrolling, five complete154x154px native tool carriers observed. Individual tool callbacks and focus remain open. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "accessibility": {
                 "applicability": "applicable",
@@ -19495,7 +19543,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -20645,9 +20693,15 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
                     "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Same control actor7 actual272.5714vp/font1.3, bookmarks122→168→190→168→122 sequence retains native List5837. Native rows and current tab transitions captured. Full bookmark actions and native reader/focus remain open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. Current20261115AD adds Same control actor7 actual272.5714vp/font1.3, bookmarks122→168→190→168→122 sequence retains native List5837. Native rows and current tab transitions captured. Full bookmark actions and native reader/focus remain open. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -20679,9 +20733,15 @@
                     "path": "tools/test-reader-window-font-configuration.mjs",
                     "symbol": "configuration,entry-consumer,native-context",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json",
+                    "symbol": "Same control actor7 actual272.5714vp/font1.3, bookmarks122→168→190→168→122 sequence retains native List5837. Native rows and current tab transitions captured. Full bookmark actions and native reader/focus remain open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN."
+                "knownGap": "Existing real font scale feeds the same pure measured profile and actual consumer text growth.320/366 and1/1.3/1.6/2 are scoped code/SDK budget inputs. Formal view/profile are adopted atomically; shared shell uses preferred736 then the real safe-area cap, including705 where required. Correct native production glyphs, real system scale, orientation, IME and focus remain OPEN. Current20261115AD adds Same control actor7 actual272.5714vp/font1.3, bookmarks122→168→190→168→122 sequence retains native List5837. Native rows and current tab transitions captured. Full bookmark actions and native reader/focus remain open. Approved compact capacity constraints, unobserved actual targets, normal host/reader/focus, other states/themes/orientation and full E2/E3 keep their own conditions. Original system2/1/1 and independent nativefont1 restored."
               },
               "accessibility": {
                 "applicability": "applicable",
@@ -21125,7 +21185,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,

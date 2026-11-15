@@ -20,6 +20,18 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### 1.3倍字体下的文字目录与短槽控制内容
+
+当前b2a0候选通过现有DEBUG装配调用生产ReaderFullDirectory和ReaderControlDirectoryContent，补齐文字详情、阅读上下文，以及树／平面Full／Quick和短槽共七个实际场景。九个捕获点分别核对配置1.3与独立原生倍率1.2999999523。文字父槽为320×770.2857vp，控制父槽为320×809.1429vp，实际Full内容为272.5714×533.7143vp，Quick为220.5714×190vp。正常应用路由、原阅读会话和业务写入继续按各自入口验收。[准确场景及证据范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-directory-ad.json)
+
+文字详情、阅读上下文和树Full的46vp完整章节行分别完成章首书签及下载附属动作，平面Full完成书签创建。平面Quick在38vp行内、26vp原生按钮盒上方18px的位置触摸，准确创建第21章章首书签。八次附属动作共取得五次书签创建和三次下载回调，四个控制场景均捕获实际书签页。26vp横向容量和Quick38vp行高的已知约束继续登记。
+
+同一短槽actor的目录和书签模式分别完成122→168→190→168→122vp。十个点均保留各模式自己的原生List，实际高度为427／588／665／588／427px。122vp前缀经滚动到达标签、查询及工具，五个工具原生盒均完整154×154px并位于同一List内。当前工具可见性和八次附属动作各有明确范围，其余动作、焦点、读屏、方向及完整E2/E3继续按各自条件处理。
+
+私有驱动修正两项入口问题。首次控制会话因标准输入关闭，在零UI动作时正常结束。后续详情动作与书签页完成后，菜单允许列表漏列已有阅读及控制入口，在查找阅读入口前停止。现已按当前菜单源码补齐允许列表，并复用已完成的详情范围。章节动作检查还显式拒绝裁切后的行和按钮盒，支持本次实测46／38vp行高。原始FAIL及准确续接均已保留。[驱动问题与修正](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-directory-driver-failure-ad.json)
+
+Directory基础登记修订为48，reading-text、control-text及两个短槽变体分别修订为47。十四次有限内存owner回调由八次附属动作和六次标签切换组成。系统三个滑块最终恢复2／1／1，独立原生字体回到1，正常启动返回原四本书架，TXT27%、两本测试书未读、漫画100%。两个密度字段均3.5，状态栏136px，SceneBoard1426。漫画及换源目标的1.3倍场景、其余正常宿主与焦点条件继续由agent执行。[登记范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-font13-directory-ad.json) [本批收尾与后继工作](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-ad-delivery-review.json)
+
 ### 1.3倍字体下的下载变体、九状态与可见性判据修正
 
 当前b2a0候选在320vp、实际系统字体1.3下补齐五个下载变体。全高父槽实测770.2857vp，书籍固定管理栏、章节浏览及章节固定管理栏已有当前原生依据。168vp父槽补齐书籍和章节流内管理栏，原生List归属、实际0→12本书及0→18个条目的全选、准确书籍身份和Back返回均已核对。原九状态及布局回执保留其当时的1倍字体和1849.3333vp全高输入。[本批完整原生范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-download-ac.json)
