@@ -20,6 +20,20 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### 1.3倍字体下的下载变体、九状态与可见性判据修正
+
+当前b2a0候选在320vp、实际系统字体1.3下补齐五个下载变体。全高父槽实测770.2857vp，书籍固定管理栏、章节浏览及章节固定管理栏已有当前原生依据。168vp父槽补齐书籍和章节流内管理栏，原生List归属、实际0→12本书及0→18个条目的全选、准确书籍身份和Back返回均已核对。原九状态及布局回执保留其当时的1倍字体和1849.3333vp全高输入。[本批完整原生范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-download-ac.json)
+
+读取中、空书架、读取失败、保留内容失败、原操作待核对、核对读取中、筛空、章节投影读取中及章节投影失败共九种实际有限状态已补证。读取失败重试接纳一次，清除筛选后查询为空、意图计数仍为0，章节失败的两次重试合并为一个未完成读取。全高恢复提示的重复触摸保持一次刷新，原操作结果仍未确认。[准确入口与已有证据不足之处](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-download-plan-ac.json)
+
+**私有可见性判据已修正。** 旧查找只检查裁切后的bounds，短窗章节全选载体曾只露出83px，原始高度为154px。该次实际回调及List归属证据保留。当前文字查找比较原始范围，布局断言显式检查完整摘要及154px全选载体，实际断言分支拒绝旧裁切样本，接受当前完整样本。固定栏四份及流内四份完整载体范围均已核对，一份流内初始截图通过同一实际断言分支复用。其余动作和整页E2/E3继续按各自条件处理。[判据、更正及当前证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-download-visibility-correction-ac.json) [真实分支负例与正例](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-download-visibility-method-ac.json)
+
+168vp恢复样本中的Notice Scroll实测217px，正文原始高400px。两次实际滚动补齐分段正文和末项刷新动作，当前按钮完整高154px。刷新后的禁用重复触摸保持意图计数0→1→1，底层查询focused始终为false，当前捕获窗口中没有IME。原未知事实在读取中继续保留，正文分段及动作实屏已查看。
+
+本批五次driver FAIL均保留，包含两次固定八步查找不足、一次断言顺序错误、一次把流内页头可见性加作详情身份前提，以及一次菜单45秒总限。查找与前提已按当前源码、原生位置和准确回执修正，已完成步骤逐项复用。末端菜单采用有界较快拖动，本次准确查找实测8545ms，四次及45秒限制继续生效。[失败及定位](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-download-driver-failure-ac.json)
+
+Downloads基础登记修订为31，五个变体分别修订为28，interaction及adaptation附上各自实际范围。当前七次有限owner回调来自三个准确打开书籍场景、读取重试、全高恢复、章节重试和短窗恢复，队列、文件及网络业务继续沿原范围验收。系统三个滑块最终恢复2／1／1，独立原生字体回到1，正常启动返回原四本书架，原TXT27%、两本测试书未读、漫画100%，两个密度字段均3.5，状态栏136px，SceneBoard1426。[登记更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-font13-download-ac.json) [本批收尾与后继范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-ac-delivery-review.json)
+
 ### 1.3倍字体下的书源与工具恢复提示
 
 当前b2a0候选补齐320vp、实际系统字体1.3、父槽高770.2857vp下的六个恢复状态。Source的回执待核对及原操作未确认分别完成实际核对，待清理完成实际继续清理，三次当前意图均被接纳。提示退休后原保留行Toggle恢复启用。Tools的未知回执完成核对，原操作未确认和待清理分别完成继续及继续清理，三次当前有限内存意图均只增加一次，原未决事实继续保留。[六状态及当前动作回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-recovery-ab.json)
