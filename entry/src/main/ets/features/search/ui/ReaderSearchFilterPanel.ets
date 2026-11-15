@@ -142,60 +142,60 @@ export struct ReaderSearchFilterPanel {
   }
   private sourceGroup(index: number): string { return index === 0 ? '全部' : (index === 1 ? '本地' : '在线'); }
   @Builder
-  private groupChip(label: string, index: number, identity: string, geometry: SearchFilterGeometry) {
+  private groupChip(label: string, index: number, identity: string) {
     ReaderButton({ scheme: this.scheme, specId: 'search-filter-option', label, primary: this.selectedGroup === label,
       actionAccessibilityLabel: this.selectedGroup === label ? `当前来源:${label}` : `筛选来源:${label}`,
       onAction: (): void => { if (this.accepts(identity)) this.onGroup(label, identity); } })
-      .width(geometry.choiceWidths[index]).height(geometry.choiceHeight);
+      .width(this.sheetGeometry().choiceWidths[index]).height(this.sheetGeometry().choiceHeight);
   }
   @Builder
-  private typeChip(label: SearchContentType, index: number, identity: string, geometry: SearchFilterGeometry) {
+  private typeChip(label: SearchContentType, index: number, identity: string) {
     ReaderButton({ scheme: this.scheme, specId: 'search-filter-option', label: label === '全部类型' ? '全部' : label,
       primary: this.selectedType === label,
       actionAccessibilityLabel: this.selectedType === label ? `当前内容:${label}` : `筛选内容:${label}`,
       onAction: (): void => { if (this.accepts(identity)) this.onType(label, identity); } })
-      .width(geometry.choiceWidths[index]).height(geometry.choiceHeight).id(`search-content-type-${label}`);
+      .width(this.sheetGeometry().choiceWidths[index]).height(this.sheetGeometry().choiceHeight).id(`search-content-type-${label}`);
   }
   @Builder
-  private groupLabel(label: string, geometry: SearchFilterGeometry) {
+  private groupLabel(label: string) {
     Text(label).fontFamily(TYPE_APP_FILTER_OPTION.fontFamily).fontWeight(TYPE_APP_FILTER_OPTION.fontWeight)
       .fontSize(TYPE_APP_FILTER_OPTION.fontSizeFp).lineHeight(TYPE_APP_FILTER_OPTION.lineHeightFp as number)
       .minFontScale(1)
       .maxFontScale(Math.max(1, this.systemFontScale()))
-      .width(geometry.stackedLabels ? geometry.innerWidth : geometry.labelWidth)
+      .width(this.sheetGeometry().stackedLabels ? this.sheetGeometry().innerWidth : this.sheetGeometry().labelWidth)
       .fontColor(readerAppColor('TOK_MUTED', this.scheme));
   }
   @Builder
-  private choiceRows(isContent: boolean, identity: string, geometry: SearchFilterGeometry) {
-    Column({ space: geometry.choiceGap }) {
-      ForEach(geometry.choiceRows, (row: number[]) => {
-        Row({ space: geometry.choiceGap }) {
+  private choiceRows(isContent: boolean, identity: string) {
+    Column({ space: this.sheetGeometry().choiceGap }) {
+      ForEach(this.sheetGeometry().choiceRows, (row: number[]) => {
+        Row({ space: this.sheetGeometry().choiceGap }) {
           ForEach(row, (index: number) => {
-            if (isContent) this.typeChip(this.contentType(index), index, identity, geometry);
-            else this.groupChip(this.sourceGroup(index), index, identity, geometry);
-          }, (index: number): string => `${identity}:${isContent}:${index}:${geometry.choiceWidths[index]}:${geometry.choiceHeight}`);
+            if (isContent) this.typeChip(this.contentType(index), index, identity);
+            else this.groupChip(this.sourceGroup(index), index, identity);
+          }, (index: number): string => `${identity}:${isContent}:${index}:${this.sheetGeometry().choiceWidths[index]}:${this.sheetGeometry().choiceHeight}`);
         }.alignItems(VerticalAlign.Center);
-      }, (row: number[]): string => `${identity}:${row.join(':')}:${geometry.choiceWidths.join(':')}:${geometry.choiceHeight}`);
+      }, (row: number[]): string => `${identity}:${row.join(':')}:${this.sheetGeometry().choiceWidths.join(':')}:${this.sheetGeometry().choiceHeight}`);
     }.alignItems(HorizontalAlign.Start);
   }
   @Builder
-  private optionGroup(label: string, isContent: boolean, identity: string, geometry: SearchFilterGeometry) {
-    if (geometry.stackedLabels) {
-      Column({ space: geometry.groupGap }) {
-        this.groupLabel(label, geometry); this.choiceRows(isContent, identity, geometry);
-      }.width(geometry.innerWidth).alignItems(HorizontalAlign.Start);
+  private optionGroup(label: string, isContent: boolean, identity: string) {
+    if (this.sheetGeometry().stackedLabels) {
+      Column({ space: this.sheetGeometry().groupGap }) {
+        this.groupLabel(label); this.choiceRows(isContent, identity);
+      }.width(this.sheetGeometry().innerWidth).alignItems(HorizontalAlign.Start);
     } else {
-      Row({ space: geometry.labelGap }) {
-        this.groupLabel(label, geometry); this.choiceRows(isContent, identity, geometry);
-      }.width(geometry.innerWidth).alignItems(VerticalAlign.Center);
+      Row({ space: this.sheetGeometry().labelGap }) {
+        this.groupLabel(label); this.choiceRows(isContent, identity);
+      }.width(this.sheetGeometry().innerWidth).alignItems(VerticalAlign.Center);
     }
   }
   @Builder
-  private optionContent(identity: string, geometry: SearchFilterGeometry) {
-    Column({ space: geometry.groupGap }) {
-      this.optionGroup('内容', true, identity, geometry);
-      this.optionGroup('来源', false, identity, geometry);
-    }.width('100%').alignItems(HorizontalAlign.Start).padding(geometry.padding);
+  private optionContent(identity: string) {
+    Column({ space: this.sheetGeometry().groupGap }) {
+      this.optionGroup('内容', true, identity);
+      this.optionGroup('来源', false, identity);
+    }.width('100%').alignItems(HorizontalAlign.Start).padding(this.sheetGeometry().padding);
   }
   @Builder
   private resetAction(identity: string) {
@@ -212,10 +212,10 @@ export struct ReaderSearchFilterPanel {
   @Builder
   private sheetBody(identity: string) {
     if (this.sheetGeometry().naturalHeight > this.bodyHeightLimit()) {
-      Scroll() { this.optionContent(identity, this.sheetGeometry()); }
+      Scroll() { this.optionContent(identity); }
         .width('100%').constraintSize({ maxHeight: this.bodyHeightLimit() }).scrollBar(BarState.Auto);
     } else {
-      this.optionContent(identity, this.sheetGeometry());
+      this.optionContent(identity);
     }
   }
   @Builder

@@ -66,8 +66,8 @@ if(selected.length){
    const x=actor({height,tab,width});assert.equal(x.owner.shortContent,true);x.render();
    const nodes=x.sdk.nodes(x.owner),lists=nodes.filter(n=>n.type==='List');assert.equal(lists.length,1,'prefix and results/state share exactly one native List');
    assert.equal(x.owner.listHeight(),height);assert.equal(x.owner.listTop(),0);assert.equal(x.owner.headerCount(),1);
-   const items=nodes.filter(n=>n.type==='ListItem');assert.equal(items.length,x.owner.snapshot.rows.length+1);assert.equal(items[0].height,x.owner.prefixHeight());assert(items[0].height>0);
-   if(tab==='directory'){const summary=nodes.find(n=>n.type==='Text'&&typeof n.create==='string'&&n.create.startsWith('当前章节 '));assert(summary);assert.deepEqual(summary.textOverflow,{overflow:'TextOverflow.Ellipsis'},'actual summary uses SDK TextOverflowOptions object');for(const item of items.slice(1))assert.equal(item.height,64);assert(height>=items[1].height,'after prefix scrolls away a real SDK-declared64 row fits');}
+   const items=nodes.filter(n=>n.type==='ListItem');assert.equal(items.length,x.owner.snapshot.rows.length+1);assert.equal(items[0].constraintSize.minHeight,x.owner.prefixHeight());assert(items[0].constraintSize.minHeight>0);
+   if(tab==='directory'){const summary=nodes.find(n=>n.type==='Text'&&typeof n.create==='string'&&n.create.startsWith('当前章节 '));assert(summary);assert.deepEqual(summary.textOverflow,{overflow:'TextOverflow.Ellipsis'},'actual summary uses SDK TextOverflowOptions object');for(const item of items.slice(1))assert.equal(item.height,60);assert(height>=items[1].height,'after prefix scrolls away the authored 40vp row with 20vp large-text growth fits');}
    else assert(items.slice(1).every(n=>n.height>=44),'large bookmark cards keep their full declared content, no shrink');
    const tools=nodes.filter(n=>n.type==='Button'&&['搜索','到顶部','到底部','切换排序','清除搜索'].includes(n.accessibilityText));
    assert.equal(tools.length,tab==='directory'?5:2);for(const tool of tools){assert.equal(tool.width,44);assert.equal(tool.height,44);assert(height>=tool.height,'every declared action fits the sole scrolling viewport');}

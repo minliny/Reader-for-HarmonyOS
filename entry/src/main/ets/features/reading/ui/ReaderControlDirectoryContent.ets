@@ -672,7 +672,7 @@ export struct ReaderControlDirectoryContent {
   }
 
   @Builder
-  private tabButton(tab: string, title: string, presentation: number = this.layoutPresentation ?? 0) {
+  private tabButton(tab: string, title: string, presentation: () => number = (): number => this.layoutPresentation ?? 0) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Stack({ alignContent: Alignment.Bottom }) {
       Row({ space: 5 }) {
@@ -700,7 +700,7 @@ export struct ReaderControlDirectoryContent {
       .responseRegion({ x: 0, y: 0, width: this.tabWidth(), height: this.tabHeight() })
       .attributeModifier(new ReaderActionAccessibility(title, this.tabsInteractive(), this.tab === tab, true, undefined, 'nativeButton'))
       .onClick((): void => {
-        if (!this.currentContent(presentation) || !this.tabsInteractive()) return;
+        if (!this.currentContent(presentation()) || !this.tabsInteractive()) return;
         if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
           'stage=directory-tab tab=%{public}d current=%{public}s input=%{public}s',
           tab === 'bookmarks' ? 1 : 0, String(this.tab === tab), String(this.currentInputEnabled()));
@@ -781,7 +781,7 @@ export struct ReaderControlDirectoryContent {
   private shortHeader() {
     ForEach([this.layoutPresentation], (presentation: number): void => {
     Column({ space: 6 }) {
-      Row({ space: 6 }) { this.tabButton('directory', '章节', presentation); this.tabButton('bookmarks', '书签', presentation); }
+      Row({ space: 6 }) { this.tabButton('directory', '章节', (): number => presentation); this.tabButton('bookmarks', '书签', (): number => presentation); }
         .width('100%').height(this.tabHeight());
       ReaderSearchField({ variant: 'readerDirectory', mode: 'submit', text: this.draft,
         placeholder: this.placeholder(), accessibilityLabel: this.placeholder(),

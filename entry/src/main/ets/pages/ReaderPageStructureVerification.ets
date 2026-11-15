@@ -76,7 +76,7 @@ struct ReaderPageStructureVerification {
   @State private intentCount: number = 0;
   private filters: SourceManagementFilterState = defaultSourceManagementFilters();
   private mounted: boolean = false;
-  private fontAttempt: number = 0;
+  @State private fontAttempt: number = 0;
   private presentation: number = 0;
   private operationRevision: number = 0;
   private temporaryBack: (() => boolean) | undefined;
@@ -367,13 +367,15 @@ struct ReaderPageStructureVerification {
   }
 
   @Builder
-  private fontPreparationState(attempt: number, menuPresentation: number) {
-    ReaderPageState({ title: this.fontState === 'denied' ? '当前构建不提供组件验证' :
-      this.fontState === 'failed' ? '生产字体准备失败' : '生产字体准备中',
-      message: '字体checked完成前不挂载被测页面；失败详见诊断记录。',
-      loading: this.fontState === 'loading',
-      actionLabel: this.fontState === 'failed' ? '重试字体准备' : '',
-      onAction: (): void => this.retryFonts(attempt, menuPresentation) });
+  private fontPreparationState(menuPresentation: number) {
+    ForEach([this.fontAttempt], (attempt: number): void => {
+      ReaderPageState({ title: this.fontState === 'denied' ? '当前构建不提供组件验证' :
+        this.fontState === 'failed' ? '生产字体准备失败' : '生产字体准备中',
+        message: '字体checked完成前不挂载被测页面；失败详见诊断记录。',
+        loading: this.fontState === 'loading',
+        actionLabel: this.fontState === 'failed' ? '重试字体准备' : '',
+        onAction: (): void => this.retryFonts(attempt, menuPresentation) });
+    }, (attempt: number): string => attempt.toString());
   }
 
   @Builder
@@ -389,7 +391,7 @@ struct ReaderPageStructureVerification {
         Button('宽度 320').id('reader-page-structure-width-320').onClick((): void => this.selectWidth(320, menuPresentation));
         Button('宽度 366').id('reader-page-structure-width-366').onClick((): void => this.selectWidth(366, menuPresentation));
       }
-      if (this.fontState !== 'ready') { this.fontPreparationState(this.fontAttempt, menuPresentation); }
+      if (this.fontState !== 'ready') { this.fontPreparationState(menuPresentation); }
       Button('书源 · 默认').enabled(this.fontState === 'ready').id('reader-page-structure-source-default')
         .onClick((): void => this.launchSource('default', menuPresentation));
       Button('书源 · 空').enabled(this.fontState === 'ready').id('reader-page-structure-source-empty')
@@ -538,11 +540,11 @@ struct ReaderPageStructureVerification {
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
-      if (!this.admitted) { this.fontPreparationState(this.fontAttempt, this.presentation); }
+      if (!this.admitted) { this.fontPreparationState(this.presentation); }
       else if (this.scene === 'menu') { this.menu(); }
       else if (this.fontState === 'ready' && this.sourceScene()) { this.sourceStage(); }
       else if (this.fontState === 'ready') { this.fixtureStage(); }
-      else { this.fontPreparationState(this.fontAttempt, this.presentation); }
+      else { this.fontPreparationState(this.presentation); }
     }.width('100%').height('100%')
       .padding({ top: this.appContentTopInset() })
       .expandSafeArea(this.scene === 'directory-manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
