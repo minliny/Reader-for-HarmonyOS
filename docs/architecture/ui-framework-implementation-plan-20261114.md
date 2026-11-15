@@ -1,5 +1,19 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-15 执行量与效率复核，VM 验证已禁止
+
+用户已要求停止 VM 验证，先核算原计划、实际完成量和效率。当前阶段使用本地 Git、原计划、构建台账、部署回执及已保存的原生会话。统计截止于北京时间11月15日23时21分19秒，源码为e8b80d12。下方各轮进度保留其当时输入，当前限制和核算以本节及原账本executionAssessment20261115为准。
+
+原计划为6个批次，包含5项初始问题、2个条件风险和4个页面族含变体共21项的16层验收。初始5项的应用侧修复和准确局部回归均已有交付。批次0至3已有应用侧成果，批次4和5继续开放。正式336层保存结果仍为19 PASS、27 FAIL和290 NOT_RUN，较10a5d58d基线新增PASS为0，完整关闭页面为0/21。
+
+实施跨时段为35小时14分9秒，包含中断与等待。记录中有65次HAP构建尝试，其中52次成功、13次失败。52个不可变候选均有成功保数据安装记录。464个VM会话包含5077项动作，382个正常结束、82个失败，其中15个会话没有动作。会话正常结束不计为页面验收通过。构建台账累计34分59秒，VM会话累计3小时33分36秒，部署从首个记录阶段至结束累计26分17秒。三个区间合并去重为4小时34分34秒，其余跨时段包含源码与测试修改、分析、文档、编排、中断及等待，当前日志不足以逐秒分摊。
+
+确认的低效因素包含过早代码完成判定、零散补夹具与候选、至少21个驱动或判据错误会话、13个Toggle修改提交、39个纯文档或登记提交，以及未及时同步的当前状态别名。13次构建失败分为6次ArkTS编译、4次漏传已有Native缓存路径、2次worker优先级准入和1次构建输入漂移。详细逐条统计、原始路径和口径保存在[执行核算记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/execution-assessment-20261115.json)。
+
+最后保存的VM会话已释放，页面停在诊断菜单，临时系统字号仍为第4档、实际1.3倍，原字号第2档恢复待执行。保存的VirtualPixelRatio和DensityInCurResolution均为3.5。当前候选为0.2.0.DEV.9014de0e4eca，641个ETS/TS运行时输入与不可变快照逐字节一致。AE漫画自然行命中修复及已有原生动作已追加到原账本，13项Directory登记已同步生产组件和测试入口指纹，8个漫画变体补入准确组件证据。选定引用检查0诊断，登记保留27项既有E2/E3及测量、范围诊断，来源漂移为0。
+
+漫画自然行的UIF-50已经由e8b80d12修复。原响应区固定44vp，实际长标题行高488px时，标题中心点击超出原154px响应高度45px。当前响应区消费整行自然宽高，既有身份、禁用、选择及分组准入继续由原owner持有。准确SDK12样本及旧44vp负例已有结果，保存的font1.3组件原生记录包含标题中部、另一行下缘和独立章节下载动作。语义和平面换源的完整及168vp短槽首目标均有0→1→1的忙态拒重记录。[AE现有证据对账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json) [13项登记更新及检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-followup-ae.json)
+
 ## 2026-11-15 VM 显示异常与正常重启恢复
 
 本轮读屏和Toggle验证期间，11月15日04:14:13的RenderService绘制线程卡在模拟器DGLES的eglSwapBuffers，随后出现SERVICE_BLOCK和Watchdog退出。foundation、DMS及SceneBoard重建，OEM显示配置读取失败，保存DPI的user_set_dpi_value查询count为0，defaultDpi为0，实际显示密度回退到1.5。具体交互触发DGLES阻塞的直接因果继续保留。

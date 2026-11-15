@@ -1,5 +1,13 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-15 当前执行限制与完成量更正
+
+用户已禁止VM验证，当前转入本地执行量和效率评估。初始5项应用侧修复及准确回归已有交付，全应用21项登记的完整验收继续开放。336层结果较10a5d58d基线新增PASS为0，现存19 PASS、27 FAIL和290 NOT_RUN。原账本中过早的代码完成状态、空remainingTasks及陈旧候选和字号恢复别名已注明历史边界并更新当前归属。[计划与效率复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/docs/architecture/ui-framework-implementation-plan-20261114.md:3) [详细执行核算](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/execution-assessment-20261115.json)
+
+最后保存会话停在诊断菜单，临时系统字号实际1.3倍，原字号恢复待执行，两个DMS密度字段均为3.5。当前安装候选为9014de0e4eca，运行时源码为e8b80d12，13项Directory登记已同步该行组件及测试入口指纹，选定引用检查通过。后文各轮结果按其记录时刻和原证据范围使用。
+
+UIF-50原生自然行命中问题的原因、e8b80d12生产修复、12项SDK样本及现有font1.3组件动作已完成对账。13项Directory依赖指纹和8个漫画变体的组件证据已同步，选定引用检查0诊断。正式整页关闭仍为0/21。[漫画行与换源的准确证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json)
+
 ## 2026-11-15 VM 显示异常与正常重启恢复
 
 本轮读屏和Toggle验证期间，11月15日04:14:13的RenderService绘制线程卡在模拟器DGLES的eglSwapBuffers，随后出现SERVICE_BLOCK和Watchdog退出。foundation、DMS及SceneBoard重建，OEM显示配置读取失败，保存DPI的user_set_dpi_value查询count为0，defaultDpi为0，实际显示密度回退到1.5。具体交互触发DGLES阻塞的直接因果继续保留。

@@ -2678,7 +2678,7 @@
         }
       },
       "exceptions": [],
-      "revision": 48,
+      "revision": 49,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2743,7 +2743,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-          "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+          "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
           "symbol": "selectTarget"
         },
         {
@@ -2916,7 +2916,7 @@
         },
         {
           "path": "tools/test-directory-native-row-target.mjs",
-          "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+          "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
         },
         {
           "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -3750,6 +3750,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -4180,7 +4192,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4245,7 +4257,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -4418,7 +4430,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -5811,7 +5823,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5876,7 +5888,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -6049,7 +6061,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -6988,6 +7000,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has normal manga→Quick directory→full catalog→download popup with actual loading node and0 custom-animation samples under reduceMotiontrue. Existing historical manga manifests are evicted and provide no current offline-readable head. Healthy body and complete native target/state/reader coverage remain open. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -7436,7 +7460,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7501,7 +7525,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -7674,7 +7698,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -9088,7 +9112,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9153,7 +9177,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -9326,7 +9350,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -10223,6 +10247,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -10597,7 +10633,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10662,7 +10698,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -10835,7 +10871,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -11611,6 +11647,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -11997,7 +12045,7 @@
               }
             },
             "exceptions": [],
-            "revision": 48,
+            "revision": 49,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12062,7 +12110,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -12235,7 +12283,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -13130,6 +13178,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -13554,7 +13614,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13619,7 +13679,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -13792,7 +13852,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -14563,6 +14623,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -14999,7 +15071,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15064,7 +15136,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -15237,7 +15309,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -16126,6 +16198,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -16500,7 +16584,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16565,7 +16649,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -16738,7 +16822,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -17514,6 +17598,18 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
                     "result": "PASS",
                     "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-directory-native-row-target.mjs",
+                    "symbol": "manga-named-row-target;12actualSDKscale/kind samples; complete natural-row response and current selection/group/disabled callbacks",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-font13-manga-ae.json",
+                    "symbol": "Dependency-scope actual320/font1.3 manga named-row title/lower-edge and semantic/flat source-switch first-target pointer callbacks. Diagnostic components. This registered normal host, complete target/focus/reader/state/visual conditions remain open.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
@@ -17900,7 +17996,7 @@
               }
             },
             "exceptions": [],
-            "revision": 48,
+            "revision": 49,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -17965,7 +18061,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -18138,7 +18234,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -19543,7 +19639,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19608,7 +19704,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -19781,7 +19877,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -21185,7 +21281,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21250,7 +21346,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
+                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
                 "symbol": "selectTarget"
               },
               {
@@ -21423,7 +21519,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "5d9ce418074585d1c942526e27fc434c4c12aa9c7af154a4a93fdeca7de79b78"
+                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
