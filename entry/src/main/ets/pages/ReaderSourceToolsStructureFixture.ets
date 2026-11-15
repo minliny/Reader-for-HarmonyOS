@@ -131,13 +131,24 @@ export struct ReaderSourceToolsStructureFixture {
       snapshot.debugLogs = this.sampleLogs(sources[0].sourceId);
       snapshot.batchCheck = this.sampleProgress(sources.slice(0, 3));
     }
-    if (this.scenario === 'loading') snapshot.busy = true;
+    if (this.scenario === 'loading') {
+      snapshot.busy = true;
+      snapshot.statusMessage = '内存夹具：正在读取书源工具数据…';
+      snapshot.readFacts = projectOperationFacts<BookSource[]>({ phase: 'loading', generation: this.fixtureGeneration });
+    }
+    if (this.scenario === 'empty') {
+      snapshot.readFacts = projectOperationFacts<BookSource[]>({
+        phase: 'succeeded', value: sources, generation: this.fixtureGeneration });
+    }
     if (this.scenario === 'read-error' || this.scenario === 'read-empty-error') {
       snapshot.readFacts = projectOperationFacts<BookSource[]>({
-        phase: this.scenario === 'read-error' ? 'refreshFailed' : 'failed',
+        phase: 'failed',
         value: this.scenario === 'read-error' ? sources : undefined,
         generation: this.fixtureGeneration, canRetry: true,
         message: '内存夹具：读取失败，重试仅记录当前读取代次。' });
+      snapshot.statusEvent = 'feedback';
+      snapshot.statusMessage = this.scenario === 'read-error' ?
+        '内存夹具：书源刷新失败，已保留现有列表' : '内存夹具：书源读取失败，请稍后重试';
     }
     if (this.scenario === 'unknown') {
       snapshot.receipt = projectPersistedReceipt<BookSource[]>({

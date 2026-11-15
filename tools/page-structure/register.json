@@ -1054,7 +1054,7 @@
         }
       },
       "exceptions": [],
-      "revision": 42,
+      "revision": 43,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1324,7 +1324,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
-          "sha256": "83d74d4af07cb2949b19c515c107a0475cc6839d9414d93df9ed48886265759c"
+          "sha256": "47b7143e0063db8f3141b892cb70136eac355449d1f100f39739a6876d4bde13"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceHost.ets",
@@ -1336,7 +1336,7 @@
         },
         {
           "path": "tools/test-source-tools-native-fixture.mjs",
-          "sha256": "227c2c32e87af351a1ad39b075a87809106cf3b01c9233e39669780d5a8e18a9"
+          "sha256": "b21d26687409d8e3329e424175b69faace1cef0bed73dc3dd5c337a6874d880a"
         },
         {
           "path": "tools/test-source-management-typography.mjs",
@@ -30478,7 +30478,7 @@
         }
       },
       "exceptions": [],
-      "revision": 32,
+      "revision": 33,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -30655,7 +30655,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
-          "sha256": "83d74d4af07cb2949b19c515c107a0475cc6839d9414d93df9ed48886265759c"
+          "sha256": "47b7143e0063db8f3141b892cb70136eac355449d1f100f39739a6876d4bde13"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
@@ -30695,7 +30695,7 @@
         },
         {
           "path": "tools/test-source-tools-native-fixture.mjs",
-          "sha256": "227c2c32e87af351a1ad39b075a87809106cf3b01c9233e39669780d5a8e18a9"
+          "sha256": "b21d26687409d8e3329e424175b69faace1cef0bed73dc3dd5c337a6874d880a"
         },
         {
           "path": "tools/test-source-group-border-budget.mjs",

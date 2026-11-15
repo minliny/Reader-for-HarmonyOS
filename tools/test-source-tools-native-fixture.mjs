@@ -156,11 +156,20 @@ if (selected.length) {
         assert.equal(s.debugSourceId, ''); assert.equal(s.debugLogs.length, 0);
         assert.equal(s.batchCheck.phase, 'idle');
       }
-      if (value === 'loading') assert.equal(s.busy, true);
-      if (value === 'empty') assert.equal(s.busy, false);
+      if (value === 'loading') {
+        assert.equal(s.busy, true); assert.equal(s.readFacts.fact, 'loading');
+        assert.equal(s.readFacts.generation, f.page.fixtureGeneration);
+        assert.ok(s.statusMessage.startsWith('内存夹具：'));
+      }
+      if (value === 'empty') {
+        assert.equal(s.busy, false); assert.equal(s.readFacts.fact, 'current');
+        assert.deepEqual(s.readFacts.value, []);
+      }
       if (value === 'read-error' || value === 'read-empty-error') {
         assert.equal(s.readFacts.fact, empty ? 'failed' : 'refreshFailed');
         assert.equal(s.readFacts.hasValue, !empty); assert.equal(s.readFacts.canRetry, true);
+        assert.equal(s.statusEvent, 'feedback');
+        assert.ok(s.statusMessage.startsWith('内存夹具：'));
         ports.onReconcile(s.readFacts.generation);
         assert.equal(f.actions.at(-1), 'source-tools-fixture:reconcile-memory');
         assert.equal(f.page.snapshot, s, 'a memory retry intent never invents a read ACK');
