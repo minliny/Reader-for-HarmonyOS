@@ -6,7 +6,7 @@ import {readerAppColor} from '../entry/src/main/ets/ui/foundation/ReaderThemeReg
 const file = name=>new URL(`../entry/src/main/ets/features/${name}.ets`,import.meta.url);
 const {owner}=createReaderBuilderProbe(readFileSync(file('reading/ReaderControlAppearanceContent'),'utf8'),['stepperRow','stepButton'],{readerAppearanceCanStep:()=>true});
 Object.assign(owner,{appThemeScheme:'day',frame:()=>({sectionWidth:316}),metricLabel:()=> '字号',metricValue:()=> '18',fullInput:()=>true,snapshot:{}});
-owner.stepperRow('fontSize',100);
+owner.stepperRow('fontSize',()=>100);
 for(const scheme of ['day','night','day']){
  owner.appThemeScheme=scheme;owner.replay();
  const field=[...owner.nodes.values()].find(n=>n.type==='Row'&&n.width===98);

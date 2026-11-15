@@ -963,12 +963,12 @@ export struct ReaderControlAppearanceContent {
         .height(this.selectRowHeight() * 2 + this.stepperRowHeight() * 4 + 2)
         .backgroundColor(readerAppColor('app.appearance.layoutSurface', this.appThemeScheme)).border({ width: 1, color: readerAppColor('app.appearance.layoutBorder', this.appThemeScheme) })
         .borderRadius(12).position({ x: 2, y: this.layoutRowTop(0) - 1 }).hitTestBehavior(HitTestMode.None);
-      this.selectField('indent', this.layoutRowTop(0));
-      this.selectField('language', this.layoutRowTop(1));
-      this.stepperRow('fontSize', this.layoutRowTop(2));
-      this.stepperRow('lineHeightMultiplier', this.layoutRowTop(3));
-      this.stepperRow('paragraphSpacing', this.layoutRowTop(4));
-      this.stepperRow('letterSpacing', this.layoutRowTop(5));
+      this.selectField('indent', (): number => this.layoutRowTop(0));
+      this.selectField('language', (): number => this.layoutRowTop(1));
+      this.stepperRow('fontSize', (): number => this.layoutRowTop(2));
+      this.stepperRow('lineHeightMultiplier', (): number => this.layoutRowTop(3));
+      this.stepperRow('paragraphSpacing', (): number => this.layoutRowTop(4));
+      this.stepperRow('letterSpacing', (): number => this.layoutRowTop(5));
     }.width(this.frame().layout.width).height(this.frame().layout.height).position(this.actorPosition(this.frame().layout))
       .opacity(this.frame().layout.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
@@ -976,24 +976,24 @@ export struct ReaderControlAppearanceContent {
   }
 
   @Builder
-  private selectField(kind: string, y: number) {
+  private selectField(kind: string, y: () => number) {
     if (this.minimumProfile()?.selectStacked) {
       Column() { this.selectFieldContent(kind, y); }
         .width(Math.max(0, this.frame().sectionWidth - 6)).height(this.selectRowHeight())
         .padding({ left: 13, right: 9, top: 6, bottom: 6 })
         .border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-        .position({ x: 3, y: y });
+        .position({ x: 3, y: y() });
     } else {
       Row() { this.selectFieldContent(kind, y); }
         .width(Math.max(0, this.frame().sectionWidth - 6)).height(this.selectRowHeight())
         .padding({ left: 13, right: 9 })
         .border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-        .position({ x: 3, y: y });
+        .position({ x: 3, y: y() });
     }
   }
 
   @Builder
-  private selectFieldContent(kind: string, y: number) {
+  private selectFieldContent(kind: string, y: () => number) {
       Text(this.selectLabel(kind)).fontFamily(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.lineHeightFp as number)
         .height(this.minimumProfile()?.selectLabelHeight ?? 18)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
@@ -1001,7 +1001,7 @@ export struct ReaderControlAppearanceContent {
       ReaderSelect({ value: this.selectValue(kind), options: this.selectOptions(kind),
         isOpen: this.openSelect === kind && !this.selectClosing, variant: 'appearanceLibrary',
         focusId: this.selectTriggerFocusId(kind),
-        reduceMotion: this.reduceMotion, onToggle: (): void => this.toggleSelect(kind, y),
+        reduceMotion: this.reduceMotion, onToggle: (): void => this.toggleSelect(kind, y()),
       }).enabled(this.fullInput())
         .accessibilityText(`${this.selectLabel(kind)}，当前${this.selectValue(kind)}`);
   }
@@ -1085,7 +1085,7 @@ export struct ReaderControlAppearanceContent {
   }
 
   @Builder
-  private stepperRow(metric: ReaderAppearanceMetric, y: number) {
+  private stepperRow(metric: ReaderAppearanceMetric, y: () => number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.metricLabel(metric)).height(this.minimumProfile()?.stepperLabelHeight ?? 18).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.lineHeightFp as number)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
@@ -1096,26 +1096,26 @@ export struct ReaderControlAppearanceContent {
         .border({ width: 1, color: readerAppColor('app.appearance.selectBorder', this.appThemeScheme) }).borderRadius(8)
         .position({ x: Math.max(0, this.stepperValueX() - (this.minimumProfile()?.stepButtonTextWidth ?? 26) - 1),
           y: this.stepperControlTop(7) }).hitTestBehavior(HitTestMode.None);
-      this.stepButton(metric, -1, Math.max(0, this.stepperMinusX()));
+      this.stepButton(metric, -1, (): number => Math.max(0, this.stepperMinusX()));
       Text(this.metricValue(metric)).width(this.minimumProfile()?.stepperValueWidth ?? 44)
         .height(this.minimumProfile()?.stepperValueHeight ?? 25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center)
         .border({ width: { left: 1, right: 1 }, color: readerAppColor('app.border.stepper', this.appThemeScheme) })
         .position({ x: Math.max(0, this.stepperValueX()), y: this.stepperControlTop(8) }).hitTestBehavior(HitTestMode.None);
-      this.stepButton(metric, 1, Math.max(0, this.stepperPlusX()));
+      this.stepButton(metric, 1, (): number => Math.max(0, this.stepperPlusX()));
     }.width(Math.max(0, this.frame().sectionWidth - 6)).height(this.stepperRowHeight())
       .border({ width: { bottom: metric === 'letterSpacing' ? 0 : 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-      .position({ x: 3, y: y });
+      .position({ x: 3, y: y() });
   }
 
   @Builder
-  private stepButton(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection, x: number) {
+  private stepButton(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection, x: () => number) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(direction < 0 ? '−' : '+').width(this.minimumProfile()?.stepButtonTextWidth ?? 26)
         .height(this.minimumProfile()?.stepButtonTextHeight ?? 25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.width(this.minimumProfile()?.stepButtonWidth ?? 44).height(this.stepperRowHeight() - this.stepperOffset())
-      .padding(0).backgroundColor(Color.Transparent).borderRadius(0).position({ x: x, y: this.stepperOffset() })
+      .padding(0).backgroundColor(Color.Transparent).borderRadius(0).position({ x: x(), y: this.stepperOffset() })
       .opacity(readerAppearanceCanStep(this.displaySnapshot(), metric, direction) ? 1 : 0.38)
       .enabled(this.fullInput() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction))
       .accessibilityText(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`)

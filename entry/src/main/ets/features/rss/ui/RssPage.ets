@@ -1,6 +1,7 @@
 import { LengthMetrics } from '@kit.ArkUI';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
+import { RssPresentationProjection } from '../presentation/RssPresentationProjection';
 import type { RssFailedSource, RssMode, RssPresentation } from '../presentation/RssPresentationContract';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -125,13 +126,17 @@ export struct RssPage {
     Row() {
       Stack({ alignContent: Alignment.TopStart }) {
         if (this.presentation.kind === 'feed') {
-          this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, false);
+          this.feedScroll(
+            (): RssSubscription[] => RssPresentationProjection.subscriptions(this.presentation),
+            (): RssItem[] => RssPresentationProjection.recentUnread(this.presentation), false);
         } else if (this.presentation.kind === 'refreshing') {
-          this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, true);
+          this.feedScroll(
+            (): RssSubscription[] => RssPresentationProjection.subscriptions(this.presentation),
+            (): RssItem[] => RssPresentationProjection.recentUnread(this.presentation), true);
         } else if (this.presentation.kind === 'emptyUnread') {
-          this.emptyUnreadScroll(this.presentation.subscriptions);
+          this.emptyUnreadScroll((): RssSubscription[] => RssPresentationProjection.subscriptions(this.presentation));
         } else {
-          this.errorContent(this.presentation.failedSources);
+          this.errorContent();
         }
       }.layoutWeight(1).height('100%');
     }.width('100%').height('100%')
@@ -316,7 +321,7 @@ export struct RssPage {
   }
 
   @Builder
-  private feedScroll(subscriptions: RssSubscription[], recentUnread: RssItem[], refreshing: boolean) {
+  private feedScroll(subscriptions: () => RssSubscription[], recentUnread: () => RssItem[], refreshing: boolean) {
     Scroll() {
       Column({ space: TOK_SPACE_XS }) {
         this.readFeedback();
@@ -358,7 +363,7 @@ export struct RssPage {
   }
 
   @Builder
-  private subscriptionSection(subscriptions: RssSubscription[]) {
+  private subscriptionSection(subscriptions: () => RssSubscription[]) {
     Column({ space: TOK_SPACE_XS }) {
       Row() {
         Text('订阅源')
@@ -420,17 +425,17 @@ export struct RssPage {
       }
 
       List() {
-        Repeat(this.filteredSubscriptions(subscriptions))
+        Repeat(this.filteredSubscriptions(subscriptions()))
           .each((repeatItem: RepeatItem<RssSubscription>) => {
           ListItem() {
-            this.sourceItem(repeatItem.item, repeatItem.index);
+            this.sourceItem((): RssSubscription => repeatItem.item, (): number => repeatItem.index);
           }
         })
         .key((sub: RssSubscription): string => `rss-sub-${sub.subscriptionId}`)
         .virtualScroll({ reusable: true });
       }
       .width('100%')
-      .height(Math.min(420, Math.max(62, this.filteredSubscriptions(subscriptions).length * 62)))
+      .height(Math.min(420, Math.max(62, this.filteredSubscriptions(subscriptions()).length * 62)))
       .scrollBar(BarState.Off)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
@@ -462,7 +467,7 @@ export struct RssPage {
   }
 
   @Builder
-  private sourceItem(sub: RssSubscription, index: number) {
+  private sourceItem(sub: () => RssSubscription, index: () => number) {
     Row({ space: TOK_SPACE_XS }) {
       Stack({ alignContent: Alignment.Center }) {
         Image((this.appThemeScheme === 'night' ? $r('app.media.rss_source_theme_night') : $r('app.media.rss_source')))
@@ -475,7 +480,7 @@ export struct RssPage {
       .borderRadius(16);
 
       Column({ space: 3 }) {
-        Text(sub.title)
+        Text(sub().title)
           .width('100%')
           .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)
           .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)
@@ -483,7 +488,7 @@ export struct RssPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(this.sourceSubtitle(sub))
+        Text(this.sourceSubtitle(sub()))
           .width('100%')
           .fontFamily(TYPE_RSS_META.fontFamily)
           .fontWeight(TYPE_RSS_META.fontWeight)
@@ -495,7 +500,7 @@ export struct RssPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      Text(`${sub.unreadCount}`)
+      Text(`${sub().unreadCount}`)
         .fontFamily(TYPE_RSS_UNREAD_COUNT.fontFamily)
         .fontWeight(TYPE_RSS_UNREAD_COUNT.fontWeight)
         .fontSize(TYPE_RSS_UNREAD_COUNT.fontSizeFp)
@@ -503,29 +508,29 @@ export struct RssPage {
         .maxLines(1);
 
       StatusBadge({
-        status: this.sourceBadgeStatus(sub),
-        label: this.sourceBadgeLabel(sub),
+        status: this.sourceBadgeStatus(sub()),
+        label: this.sourceBadgeLabel(sub()),
       });
     }
     .width('100%')
     .constraintSize({ minHeight: 62 })
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .opacity(this.sourceRowOpacity(sub))
-    .onClick((): void => this.onSelectSubscription(sub.subscriptionId));
+    .border({ width: { top: index() > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
+    .opacity(this.sourceRowOpacity(sub()))
+    .onClick((): void => this.onSelectSubscription(sub().subscriptionId));
   }
 
   @Builder
-  private recentUnreadSection(subscriptions: RssSubscription[], recentUnread: RssItem[]) {
+  private recentUnreadSection(subscriptions: () => RssSubscription[], recentUnread: () => RssItem[]) {
     Column({ space: 6 }) {
       this.recentUnreadHeader();
 
       List() {
-        Repeat(recentUnread)
+        Repeat(recentUnread())
           .each((repeatItem: RepeatItem<RssItem>) => {
           ListItem() {
-            this.recentUnreadItem(subscriptions, repeatItem.item, repeatItem.index);
+            this.recentUnreadItem(subscriptions, (): RssItem => repeatItem.item, (): number => repeatItem.index);
           }
         })
         .key((item: RssItem): string =>
@@ -533,7 +538,7 @@ export struct RssPage {
         .virtualScroll({ reusable: true });
       }
       .width('100%')
-      .height(Math.min(420, Math.max(72, recentUnread.length * 72)))
+      .height(Math.min(420, Math.max(72, recentUnread().length * 72)))
       .scrollBar(BarState.Off)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
@@ -563,7 +568,7 @@ export struct RssPage {
   }
 
   @Builder
-  private recentUnreadItem(subscriptions: RssSubscription[], item: RssItem, index: number) {
+  private recentUnreadItem(subscriptions: () => RssSubscription[], item: () => RssItem, index: () => number) {
     Row({ space: TOK_SPACE_XS }) {
       Text('')
         .width(7)
@@ -572,7 +577,7 @@ export struct RssPage {
         .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme));
 
       Column({ space: 3 }) {
-        Text(item.title)
+        Text(item().title)
           .width('100%')
           .fontFamily(TYPE_RSS_ENTRY_TITLE.fontFamily)
           .fontWeight(TYPE_RSS_ENTRY_TITLE.fontWeight)
@@ -581,8 +586,8 @@ export struct RssPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        if (this.itemSubtitle(subscriptions, item) !== '') {
-          Text(this.itemSubtitle(subscriptions, item))
+        if (this.itemSubtitle(subscriptions(), item()) !== '') {
+          Text(this.itemSubtitle(subscriptions(), item()))
             .width('100%')
             .fontFamily(TYPE_RSS_META.fontFamily)
             .fontWeight(TYPE_RSS_META.fontWeight)
@@ -591,8 +596,8 @@ export struct RssPage {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
-        if (item.description !== undefined && item.description.trim().length > 0) {
-          Text(item.description)
+        if ((item().description ?? '').trim().length > 0) {
+          Text(item().description ?? '')
             .width('100%')
             .fontFamily(TYPE_RSS_ENTRY_DESCRIPTION.fontFamily)
             .fontWeight(TYPE_RSS_ENTRY_DESCRIPTION.fontWeight)
@@ -613,8 +618,8 @@ export struct RssPage {
     .width('100%')
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .onClick((): void => this.onSelectItem(item.subscriptionId, item.guid));
+    .border({ width: { top: index() > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
+    .onClick((): void => this.onSelectItem(item().subscriptionId, item().guid));
   }
 
   private onMainTab(key: string): void {
@@ -629,7 +634,7 @@ export struct RssPage {
   }
 
   @Builder
-  private emptyUnreadScroll(subscriptions: RssSubscription[]) {
+  private emptyUnreadScroll(subscriptions: () => RssSubscription[]) {
     Scroll() {
       Column({ space: TOK_SPACE_XS }) {
         this.readFeedback();
@@ -653,8 +658,8 @@ export struct RssPage {
       this.stateCard(
         (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_empty_theme_night') : $r('app.media.rss_empty')),
         '暂无未读订阅',
-        '当前订阅源没有新的未读条目。你可以查看全部、管理订阅源或手动刷新。日常空状态仍保留 RSS 主导航上下文。',
-        [],
+        (): string => '当前订阅源没有新的未读条目。你可以查看全部、管理订阅源或手动刷新。日常空状态仍保留 RSS 主导航上下文。',
+        (): RssFailedSource[] => [],
         '查看全部',
         (): void => this.onModeRequested('all'));
     }
@@ -662,14 +667,14 @@ export struct RssPage {
   }
 
   @Builder
-  private errorContent(failedSources: RssFailedSource[]) {
+  private errorContent() {
     Scroll() {
       Column() {
         this.stateCard(
           (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_error_theme_night') : $r('app.media.rss_error')),
           'RSS 暂时无法载入',
-          `${failedSources.length} 个订阅源无法载入。可以稍后重试，或进入订阅源管理修复登录态和规则。`,
-          failedSources,
+          (): string => `${this.failedSources().length} 个订阅源无法载入。可以稍后重试，或进入订阅源管理修复登录态和规则。`,
+          (): RssFailedSource[] => this.failedSources(),
           '重试刷新',
           (): void => this.onRefresh());
       }
@@ -687,6 +692,10 @@ export struct RssPage {
     .scrollBar(BarState.Off);
   }
 
+  private failedSources(): RssFailedSource[] {
+    return this.presentation.kind === 'fatalError' ? this.presentation.failedSources : [];
+  }
+
   private bottomContentInset(): number {
     if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_LG;
     const metrics = ReaderWindowCoordinator.metrics();
@@ -694,7 +703,7 @@ export struct RssPage {
   }
 
   @Builder
-  private stateCard(icon: () => Resource, title: string, body: string, failedSources: RssFailedSource[],
+  private stateCard(icon: () => Resource, title: string, body: () => string, failedSources: () => RssFailedSource[],
     primaryLabel: string, primaryAction: () => void) {
     Column() {
       Image(icon())
@@ -710,7 +719,7 @@ export struct RssPage {
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
-      Text(body)
+      Text(body())
         .margin({ top: TOK_SPACE_XS })
         .width('100%')
         .constraintSize({ maxWidth: 314 })
@@ -721,11 +730,11 @@ export struct RssPage {
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
-      if (failedSources.length > 0) {
+      if (failedSources().length > 0) {
         Column({ space: 6 }) {
-          ForEach(failedSources, (source: RssFailedSource) => {
+          ForEach(failedSources(), (source: RssFailedSource) => {
             this.errorSourceRow(source);
-          }, (source: RssFailedSource): string => `rss-fail-${source.name}`);
+          }, (source: RssFailedSource, index: number): string => JSON.stringify([index, source.name, source.reason ?? '']));
         }
         .width('100%')
         .margin({ top: TOK_SPACE_MD });

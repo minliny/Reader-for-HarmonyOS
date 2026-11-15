@@ -15,7 +15,7 @@ for(const [phase,canCancel,canRetry] of [['loading',true,false],['partial',true,
 }
 owner.presentation={kind:'empty',operation:projectOperationFacts({phase:'cancelled',canRetry:true}),stopped:false};assert.ok(owner.isStoppedEmpty(),'cancelled operation cannot masquerade as completed empty');
 owner.presentation={kind:'initial'};assert.equal(owner.operation(),undefined);assert.equal(owner.isSweeping(),false);owner.retryOperation();
-for(const [kind,spec,builder] of [['error','search-error-retry',p=>p.errorContent(7)],['results','search-retry-progress',p=>p.searchProgressDetails()],['empty','search-secondary',p=>p.emptyContent('原关键词',7)]]){
+for(const [kind,spec,builder] of [['error','search-error-retry',p=>p.errorContent(7)],['results','search-retry-progress',p=>p.searchProgressDetails()],['empty','search-secondary',p=>p.emptyContent(()=>'原关键词',()=>7)]]){
  for(const canRetry of[false,true]){
   const operation=projectOperationFacts({phase:kind==='error'?'failed':kind==='empty'?'cancelled':'partial',value,canRetry,generation:3});
   // Whole-query error/empty retry is the fallback when no individual source
@@ -55,7 +55,7 @@ for(const [kind,spec,builder] of [['error','search-error-retry',p=>p.errorConten
 {
  const mutant=source.replace('if (operation !== undefined && !operation.canRetry) return;','');assert.notEqual(mutant,source);
  const f=currentFixture({kind:'empty',operation:projectOperationFacts({phase:'cancelled',canRetry:false}),localSearchFailed:false,sourceListFailed:false,failedSourceCount:0},{pageDefinition:mutant});
- f.page.emptyContent('原关键词',7);f.action('search-secondary','重新搜索').click();
+ f.page.emptyContent(()=>'原关键词',()=>7);f.action('search-secondary','重新搜索').click();
  assert.equal(f.calls.filter(c=>c[0]==='retrySearch').length,1,'negative control: deleting the real business retry guard makes the same physical empty actor dispatch');
 }
 assert.match(source,/this\.operation\(\)\?\.fact === 'cancelled'/,'real results actor labels interrupted progress');

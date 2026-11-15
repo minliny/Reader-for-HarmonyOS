@@ -310,15 +310,25 @@ async function footerPropagation(overrides={}) {
     assert.ok(scaffoldParams,'actual nonstandard shell forwards footer measurement');
     const scaffold=builder('ui/layout/ReaderPageScaffold.ets',['footerAreaChangeHandler']).owner;
     Object.assign(scaffold,scaffoldParams);
+    scaffoldParams.content();
+    const initialPageChild=children(scene).find(child=>Object.hasOwn(child.params??{},'measuredFooterHeight'));
+    assert.ok(initialPageChild, 'actual shelf state mounts before its first footer receipt');
+    assert.equal(initialPageChild.params.measuredFooterHeight,0);
     scaffold.footerAreaChangeHandler(scaffold.footerMeasurementKey)({},{height:`${occupied}vp`});
     assert.equal(shell.measuredFooterHeight,occupied,'actual Scaffold→MainTabShell→BookshelfShell callback chain accepts occupied footer');
     // Invoke the real source closures, rather than hand-forwarding the value:
     // Scaffold -> MainTabShell.content -> BookshelfShell.content -> Scene -> state page.
-    scaffoldParams.content();
+    scene.replay();
     const pageChild=children(scene).find(child=>Object.hasOwn(child.params??{},'measuredFooterHeight'));
     assert.ok(pageChild instanceof deps[name],`${state}: actual scene instantiates the matching bookshelf state consumer`);
     const pageParams=pageChild.params;
-    assert.equal(pageParams.measuredFooterHeight,occupied,`${state}: occupied budget reaches actual state consumer`);
+    assert.equal(pageChild,initialPageChild, 'footer receipt keeps the same state child');
+    assert.equal(pageParams.measuredFooterHeight,occupied,`${state}: retained occupied budget reaches actual state consumer`);
+    scaffold.footerAreaChangeHandler(scaffold.footerMeasurementKey)({},{height:`${occupied+16}vp`});
+    scene.replay();
+    assert.equal(pageParams.measuredFooterHeight,occupied+16,`${state}: later footer receipt updates the retained consumer`);
+    scaffold.footerAreaChangeHandler(scaffold.footerMeasurementKey)({},{height:`${occupied}vp`});
+    scene.replay();
     const path=`features/bookshelf/ui/${name}.ets`,Type=c.ordinary(path,[method]);
     const page=Object.assign(new Type(),{...pageParams,readerWindowMetricsRevision:0,isWideViewport:()=>false,railActive:()=>false});
     assert.equal(page[method](),occupied+16,`${state}: actual consumer replaces fallback and does not double bottom margin`);
@@ -328,11 +338,11 @@ async function footerPropagation(overrides={}) {
   }
   const standard=builder('ui/layout/ReaderStandardPage.ets',undefined,overrides.pagePolicy??{}).owner;
   Object.assign(standard,{mounted:true,variant:'settingsHome',appThemeScheme:'day',measurements:new Store(),
-    measurementKey:4,geometryRevision:0,viewportWidth:390,viewportHeight:844,contentLeadingRail:0,contentEndInset:-1});
+    measurementKey:4,footerMeasurementKey:4,geometryRevision:0,viewportWidth:390,viewportHeight:844,contentLeadingRail:0,contentEndInset:-1});
   standard.refreshGeometry();standard.initialRender();
   const standardInput=children(standard).find(child=>child.params?.onFooterHeightChange)?.params;
   assert.ok(standardInput,'actual standard settings surface publishes footer callback');
-  standardInput.onFooterHeightChange(occupied,4);
+  standardInput.onFooterHeightChange(occupied,standardInput.footerMeasurementKey);
   assert.equal(standard.geometry.content.endInset,occupied+16,'actual standard settings uses measured footer extent through PageShell');
   standardInput.content();
   const scrollParams=children(standard).find(child=>child.params?.layout)?.params;
@@ -342,16 +352,22 @@ async function footerPropagation(overrides={}) {
   assert.ok(c.nodes(scroll,'Column').some(n=>n.padding?.bottom===occupied+16),'actual native scroll content consumes the adopted footer budget');
   for(const bad of [0,NaN,Infinity,-1])assert.equal(deps.readerFloatingTabContentInset(c.metrics,bad),deps.readerFloatingTabContentInset(c.metrics),'invalid/unmeasured receipt keeps authored fallback');
   if(!overrides.negative){
-    const scene=c.read('features/bookshelf/ui/BookshelfScene.ets'),needle='measuredFooterHeight: measuredFooterHeight,';
+    const scene=c.read('features/bookshelf/ui/BookshelfScene.ets'),needle='measuredFooterHeight: measuredFooterHeight(),';
     assert.equal(scene.split(needle).length-1,3,'three actual bookshelf rendering states forward the budget');
     for(let target=0;target<3;target++){
       let index=0;const mutant=scene.replaceAll(needle,match=>index++===target?'measuredFooterHeight: 0,':match);
       await rejected(c,`bookshelf-state-${target}-drops-footer`,()=>footerPropagation({negative:true,sceneSource:mutant}),/occupied budget reaches actual state consumer/);
     }
     const shell=c.read('features/bookshelf/ui/BookshelfShell.ets');
-    const noShell=replaceOnce(c,shell,'this.content(this.measuredFooterHeight);','this.content(0);');
+    const capturedScene=scene.replaceAll('measuredFooterHeight: () => number', 'measuredFooterHeight: number')
+      .replaceAll('measuredFooterHeight()', 'measuredFooterHeight');
+    const capturedShell=c.read('features/bookshelf/ui/BookshelfShell.ets')
+      .replace('content: (measuredFooterHeight: () => number)', 'content: (measuredFooterHeight: number)')
+      .replace('this.content((): number => this.measuredFooterHeight)', 'this.content(this.measuredFooterHeight)');
+    await rejected(c,'shelf-footer-old-value-capture',()=>footerPropagation({negative:true,sceneSource:capturedScene,shellSource:capturedShell}),/retained occupied budget reaches actual state consumer/);
+    const noShell=replaceOnce(c,shell,'this.content((): number => this.measuredFooterHeight);','this.content((): number => 0);');
     await rejected(c,'bookshelf-shell-drops-footer',()=>footerPropagation({negative:true,shellSource:noShell}),/occupied budget reaches actual state consumer/);
-    const noScene=replaceOnce(c,scene,'this.shelfContent(measuredFooterHeight);','this.shelfContent(0);');
+    const noScene=replaceOnce(c,scene,'this.shelfContent(measuredFooterHeight);','this.shelfContent((): number => 0);');
     await rejected(c,'bookshelf-scene-closure-drops-footer',()=>footerPropagation({negative:true,sceneSource:noScene}),/occupied budget reaches actual state consumer/);
     const wrongConsumer=replaceOnce(c,scene,'BookshelfEmptyPage({','BookshelfStatusContent({');
     await rejected(c,'bookshelf-empty-mounts-status-consumer',()=>footerPropagation({negative:true,sceneSource:wrongConsumer}),/empty: actual scene instantiates the matching bookshelf state consumer/);

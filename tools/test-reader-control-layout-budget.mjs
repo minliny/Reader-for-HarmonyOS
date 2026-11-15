@@ -1719,7 +1719,7 @@ async function run(id) {
                 readerAppearanceCanStep: () => true,
             });
             Object.assign(step, { minimumProfile: () => profile, snapshot: {}, metricLabel: () => '字号', fullInput: () => true, onMetricStep: () => { }, appThemeScheme: 'day' });
-            step.stepButton('fontSize', 1, 0);
+            step.stepButton('fontSize', 1, () => 0);
             paidResponse(nodes(step, 'Button')[0], { width: profile.stepButtonWidth,
                 height: step.stepperRowHeight() }, 'appearance stepper');
             const back = native('ReaderControlQuickBack.ets', ['build', 'icon', 'labelStyle']);

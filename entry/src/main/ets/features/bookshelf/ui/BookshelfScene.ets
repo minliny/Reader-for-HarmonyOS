@@ -54,13 +54,13 @@ export struct BookshelfScene {
   }
 
   @Builder
-  private shelfContent(measuredFooterHeight: number, navigation: number = this.navigation) {
+  private shelfContent(measuredFooterHeight: () => number, navigation: number = this.navigation) {
     if (this.read.snapshot.visualAdmitted) {
       BookshelfPage({
         feedbackEnabled: this.feedbackEnabled,
         noticeTopInset: this.read.noticeTopInset(),
         headerBottom: this.read.headerBottom,
-        measuredFooterHeight: measuredFooterHeight,
+        measuredFooterHeight: measuredFooterHeight(),
         onHeaderScrolledChanged: (scrolled: boolean, presentedNavigation: number): void => {
           if (this.isCurrent(presentedNavigation)) this.read.headerScrolled = scrolled;
         },
@@ -118,7 +118,7 @@ export struct BookshelfScene {
     } else if (this.read.snapshot.coreEmpty) {
       BookshelfEmptyPage({
         headerBottom: this.read.headerBottom,
-        measuredFooterHeight: measuredFooterHeight,
+        measuredFooterHeight: measuredFooterHeight(),
         onImportRequested: (focusTarget: string): void => {
           if (this.isInteractive(navigation)) this.mutations.openImport(focusTarget);
         },
@@ -127,7 +127,7 @@ export struct BookshelfScene {
     } else {
       BookshelfStatusContent({
         headerBottom: this.read.headerBottom,
-        measuredFooterHeight: measuredFooterHeight,
+        measuredFooterHeight: measuredFooterHeight(),
         failed: this.read.failed,
         onRetry: (): void => { if (this.isInteractive(navigation)) this.read.refresh(); },
       });
@@ -188,7 +188,7 @@ export struct BookshelfScene {
       onCurrentTabTap: (navigation?: number): void => {
         if (this.isInteractive(navigation) && this.tapBottomScrollTop) this.read.scrollTopToken += 1;
       },
-      content: (measuredFooterHeight: number): void => { this.shelfContent(measuredFooterHeight); },
+      content: (measuredFooterHeight: () => number): void => { this.shelfContent(measuredFooterHeight); },
     });
   }
 }

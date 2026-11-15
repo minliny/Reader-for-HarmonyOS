@@ -133,7 +133,7 @@ function fixture(source = journeySource) {
         .map(name => [name, read('features/bookshelf/ui/' + name + '.ets')])) }).owner;
     Object.assign(scene, { navigation: index.navigationGeneration, read: { snapshot: { coreEmpty: true } },
       ports: index.bookshelfScenePorts(runtime, index.detailShelfAdmissionMount) });
-    scene.shelfContent();
+    scene.shelfContent(() => 0);
     const child = [...scene.children.values()].find(child => child.params.onSearchRequested);
     assert.ok(child, 'actual empty-shelf scene binds its search intent');
     return child.params.onSearchRequested;

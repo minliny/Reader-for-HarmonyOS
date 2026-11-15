@@ -283,10 +283,10 @@ export struct LocalImportDialog {
           .alignItems(HorizontalAlign.Center);
 
           Row({ space: 6 }) {
-            this.formatBadge('TXT', readerAppColor('TOK_GREEN', this.appThemeScheme));
-            this.formatBadge('EPUB', readerAppColor('app.import.formatText', this.appThemeScheme));
-            this.formatBadge('MOBI', readerAppColor('app.import.formatEpub', this.appThemeScheme));
-            this.formatBadge('AZW3', readerAppColor('app.import.formatArchive', this.appThemeScheme));
+            this.formatBadge('TXT', 'TOK_GREEN');
+            this.formatBadge('EPUB', 'app.import.formatText');
+            this.formatBadge('MOBI', 'app.import.formatEpub');
+            this.formatBadge('AZW3', 'app.import.formatArchive');
           }
         }
         .width('100%')
@@ -489,7 +489,7 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private formatBadge(label: string, color: string) {
+  private formatBadge(label: string, colorRole: string) {
     Text(label)
       .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
       .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
@@ -498,7 +498,7 @@ export struct LocalImportDialog {
       .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      .backgroundColor(color)
+      .backgroundColor(readerAppColor(colorRole, this.appThemeScheme))
       .borderRadius(4);
   }
 

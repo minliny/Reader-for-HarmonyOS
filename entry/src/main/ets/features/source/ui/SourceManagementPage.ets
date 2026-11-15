@@ -432,7 +432,7 @@ export struct SourceManagementPage {
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },
-      overlayContent: (): void => { this.pendingOverlay(this.geometry.content.startInset); this.groupOverlay(); },
+      overlayContent: (): void => { this.pendingOverlay(); this.groupOverlay(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
         this.recordMeasurement('source:header', height, presentedKey);
       },
@@ -629,16 +629,16 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private pendingOverlay(contentStartInset: number) {
+  private pendingOverlay() {
     Column() {
       if (this.operation.original?.blocked === true) { this.originalRecovery(); }
       else if (this.operation.receipt?.receipt.confirmation === 'unknown') {
-        ReaderRecoveryNotice({ view: this.recovery(), layoutWidthVp: this.contentFrame().width, maxHeightVp: Math.max(0, this.overlayBottom() - contentStartInset), actionLabel: '核对', busy: this.statusKind === 'loading',
+        ReaderRecoveryNotice({ view: this.recovery(), layoutWidthVp: this.contentFrame().width, maxHeightVp: Math.max(0, this.overlayBottom() - this.geometry.content.startInset), actionLabel: '核对', busy: this.statusKind === 'loading',
           onReconcile: this.onReconcile });
       }
     }.width('100%')
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right,
-        top: contentStartInset })
+        top: this.geometry.content.startInset })
       .enabled(this.appForeground && !this.groupOpen)
       .accessibilityLevel(this.appForeground && !this.groupOpen ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.appForeground && !this.groupOpen ? HitTestMode.Transparent : HitTestMode.None);

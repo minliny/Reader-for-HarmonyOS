@@ -51,7 +51,7 @@ export struct BookshelfShell {
   onCheckUpdatesRequested: (generation?: number) => void = (_generation?: number): void => {};
   onMainTab: (key: string, presentedNavigation?: number) => void = (_key: string): void => {};
   onCurrentTabTap: (presentedNavigation?: number) => void = (_presentedNavigation?: number): void => {};
-  @BuilderParam content: (measuredFooterHeight: number) => void;
+  @BuilderParam content: (measuredFooterHeight: () => number) => void;
   private readonly footerMeasurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private footerMeasurementKey: number = 0;
   @State private measuredFooterHeight: number = 0;
@@ -251,7 +251,7 @@ export struct BookshelfShell {
           if (!this.mounted || (generation ?? this.navigationGeneration) !== this.navigationGeneration) return;
           this.onCurrentTabTap(generation);
         },
-        content: (): void => { this.content(this.measuredFooterHeight); },
+        content: (): void => { this.content((): number => this.measuredFooterHeight); },
         overlayContent: (): void => { this.shellOverlay(); },
       });
     }

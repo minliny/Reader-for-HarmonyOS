@@ -1294,7 +1294,9 @@ export struct SearchPage {
           if (this.presentation.kind === 'loading') {
             ListItem() { this.loadingContent(); }
           } else if (this.presentation.kind === 'empty') {
-            ListItem() { this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount); }
+            ListItem() { this.emptyContent(
+              (): string => this.presentation.kind === 'empty' ? this.presentation.keyword : '',
+              (): number => this.presentation.kind === 'empty' ? this.presentation.searchedSourceCount : 0); }
           } else if (this.presentation.kind === 'error') {
             ListItem() { this.errorContent(this.presentation.searchedSourceCount); }
           } else if (this.visibleGroups.length === 0) {
@@ -1639,14 +1641,14 @@ export struct SearchPage {
   }
 
   @Builder
-  private emptyContent(keyword: string, searchedSourceCount: number) {
+  private emptyContent(keyword: () => string, searchedSourceCount: () => number) {
         Column() {
           ReaderPageState({ title: this.isStoppedEmpty() ? '搜索已停止' : '没有找到相关书籍', padded: false,
             message: this.isStoppedEmpty()
-            ? (searchedSourceCount > 0
-              ? `已搜索 ${searchedSourceCount} 个书源后停止,未找到「${keyword}」的相关结果`
+            ? (searchedSourceCount() > 0
+              ? `已搜索 ${searchedSourceCount()} 个书源后停止,未找到「${keyword()}」的相关结果`
               : '停止前尚未返回结果，可继续搜索')
-            : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`,
+            : `已搜索 ${searchedSourceCount()} 个书源,未找到「${keyword()}」的相关结果`,
             leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
             actionContent: (): void => { this.emptyStateActions(); } });
         }.width('100%').padding({ top: 50, bottom: this.searchBottomInset(40) });
