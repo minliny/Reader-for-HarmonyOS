@@ -329,8 +329,8 @@ async function directPageSameArea() {
   const directorySource = read('features/reading/ui/BookDirectoryPage.ets');
   class ChildPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
   const nativeOwner = createReaderBuilderProbe(directorySource, ['mangaToolbar', 'mangaCurrentFooter',
-    'mangaHeightHandler', 'recordMangaHeight', 'toolsMeasurement', 'flowToolsMeasurement',
-    'footerMeasurement', 'flowFooterMeasurement', 'mangaMeasurementKey'],
+    'mangaHeightHandler', 'recordMangaHeight', 'toolsMeasurement', 'flowToolsMeasurement', 'treeToolsMeasurement',
+    'footerMeasurement', 'flowFooterMeasurement', 'treeFooterMeasurement', 'mangaMeasurementKey'],
     { ...properties.sdk, ...fonts, ReaderNativeSlotMeasurement, ReaderDirectoryToolbar: ChildPort, MangaDirectoryCurrentFooter: ChildPort,
       uiContext: context, readerPageAreaLength: layout.readerPageAreaLength },
     { ...properties.hooks, childSources: {
@@ -363,6 +363,15 @@ async function directPageSameArea() {
   currentToolsFrame.onIdle(1000000); assert.equal(nativeOwner.mangaToolsHeight, 105,
     'old overlay disappearance cannot retire the current native toolbar in List content');
   flowTools.onDisAppear(); nativeHeight = 88;
+  nativeOwner.mangaToolbar('current', true, nativeOwner.treeToolsMeasurement, nativeOwner.treeFooterMeasurement);
+  const treeTools = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.treeToolsMeasurement.id);
+  flowTools.onAppear(); const retiredFlatToolsFrame = frames.shift();
+  treeTools.onAppear(); const currentTreeToolsFrame = frames.shift();
+  flowTools.onDisAppear(); nativeHeight = 123;
+  retiredFlatToolsFrame.onIdle(1000000); assert.equal(nativeOwner.mangaToolsHeight, 105);
+  currentTreeToolsFrame.onIdle(1000000); assert.equal(nativeOwner.mangaToolsHeight, 123,
+    'retired fallback cannot cancel the current semantic Grid toolbar producer');
+  treeTools.onDisAppear(); nativeHeight = 88;
   nativeOwner.mangaCurrentFooter(nativeOwner.flowFooterMeasurement);
   const flowFooter = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.flowFooterMeasurement.id);
   assert.ok(flowFooter?.onAppear && flowFooter?.onDisAppear);
@@ -374,6 +383,15 @@ async function directPageSameArea() {
   currentFlowFrame.onIdle(1000000); assert.equal(nativeOwner.mangaFooterMeasured, 105,
     'old fixed-footer disappearance cannot retire the distinct current in-flow native producer');
   flowFooter.onDisAppear(); nativeHeight = 88;
+  nativeOwner.mangaCurrentFooter(nativeOwner.treeFooterMeasurement);
+  const treeFooter = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.treeFooterMeasurement.id);
+  flowFooter.onAppear(); const retiredFlatFooterFrame = frames.shift();
+  treeFooter.onAppear(); const currentTreeFooterFrame = frames.shift();
+  flowFooter.onDisAppear(); nativeHeight = 123;
+  retiredFlatFooterFrame.onIdle(1000000); assert.equal(nativeOwner.mangaFooterMeasured, 105);
+  currentTreeFooterFrame.onIdle(1000000); assert.equal(nativeOwner.mangaFooterMeasured, 123,
+    'retired fallback cannot cancel the current semantic Grid footer producer');
+  treeFooter.onDisAppear(); nativeHeight = 88;
   const Directory = selectedProductionMethods(new URL('features/reading/ui/BookDirectoryPage.ets', root), 'BookDirectoryPage',
     ['invalidateFrame', 'recordHeaderHeight', 'recordMangaHeight', 'mangaHeightHandler', 'onMangaMetricsChanged',
       'onMangaPositionChanged', 'onMangaContentChanged', 'identity'], { readerWindowMetrics: () => metrics, readerPageAreaLength: layout.readerPageAreaLength });
@@ -381,6 +399,7 @@ async function directPageSameArea() {
     viewportWidth: 320, mangaFontsReady: true, measurementKey: 0, mangaMeasurementKey: 0,
     headerInputs: '', mangaInputs: '', mangaFooterMeasured: 0, mangaToolsHeight: 175,
     toolsMeasurement: new ReaderNativeSlotMeasurement(), flowToolsMeasurement: new ReaderNativeSlotMeasurement(),
+    treeToolsMeasurement: new ReaderNativeSlotMeasurement(), treeFooterMeasurement: new ReaderNativeSlotMeasurement(),
     footerMeasurement: new ReaderNativeSlotMeasurement(),
     flowFooterMeasurement: new ReaderNativeSlotMeasurement(),
     measurements: new layout.ReaderMeasurementStore(), headerFrame: () => ({ left: 8, right: 8 }),

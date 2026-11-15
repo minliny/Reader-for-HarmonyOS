@@ -102,8 +102,10 @@ export struct BookDirectoryPage {
   private geometryRevision: number = 0;
   private readonly toolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly flowToolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
+  private readonly treeToolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly footerMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly flowFooterMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
+  private readonly treeFooterMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private mangaToolsHeight: number = 175;
   @State private mangaFooterMeasured: number = 0;
@@ -150,8 +152,10 @@ export struct BookDirectoryPage {
     this.mangaInputs = '';
     this.toolsMeasurement.unmount();
     this.flowToolsMeasurement.unmount();
+    this.treeToolsMeasurement.unmount();
     this.footerMeasurement.unmount();
     this.flowFooterMeasurement.unmount();
+    this.treeFooterMeasurement.unmount();
     this.projectionGeneration += 1;
     this.scrollGeneration += 1;
     this.admittedIdentity = '';
@@ -224,7 +228,7 @@ export struct BookDirectoryPage {
           headerCount: this.mangaFlowFooter() ? 1 : 0,
           prefixHeight: this.mangaFlowFooter() ? this.geometry.content.startInset : 0,
           prefixIdentity: identity,
-          prefixBuilder: (): void => { this.mangaFlatPrefix(identity); },
+          prefixBuilder: (): void => { this.mangaFlatPrefix(identity, this.treeToolsMeasurement, this.treeFooterMeasurement); },
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
           bookmarkActionsEnabled: false,
@@ -283,7 +287,8 @@ export struct BookDirectoryPage {
 
   @Builder
   private mangaToolbar(identity: string, inline: boolean = false,
-    measurement: ReaderNativeSlotMeasurement = this.toolsMeasurement) {
+    measurement: ReaderNativeSlotMeasurement = this.toolsMeasurement,
+    footerMeasurement: ReaderNativeSlotMeasurement = this.flowFooterMeasurement) {
     Column() {
       Column({ space: visual.summaryGap }) {
         Text(this.bookTitle || '漫画目录').fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD)
@@ -305,7 +310,7 @@ export struct BookDirectoryPage {
         onLocateCurrent: (): void => { if (this.directoryInputIsCurrent(identity)) this.locateCurrent(); },
       }).hitTestBehavior(inline ? HitTestMode.Default : HitTestMode.BLOCK_HIERARCHY);
       if (this.mangaFlowFooter()) {
-        Row() { this.mangaCurrentFooter(this.flowFooterMeasurement); }.width('100%').justifyContent(FlexAlign.Center)
+        Row() { this.mangaCurrentFooter(footerMeasurement); }.width('100%').justifyContent(FlexAlign.Center)
           .margin({ top: this.mangaFooterBottomOffset() });
       }
     }.width(this.geometry.content.frame.width).alignItems(HorizontalAlign.Start)
@@ -476,10 +481,12 @@ export struct BookDirectoryPage {
   }
 
   @Builder
-  private mangaFlatPrefix(identity: string) {
+  private mangaFlatPrefix(identity: string,
+    measurement: ReaderNativeSlotMeasurement = this.flowToolsMeasurement,
+    footerMeasurement: ReaderNativeSlotMeasurement = this.flowFooterMeasurement) {
     Column() {
       Blank().height(Math.max(0, this.geometry.content.startInset - this.mangaToolsHeight));
-      this.mangaToolbar(identity, true, this.flowToolsMeasurement);
+      this.mangaToolbar(identity, true, measurement, footerMeasurement);
     }.width('100%');
   }
 
@@ -884,8 +891,10 @@ export struct BookDirectoryPage {
       this.mangaFooterMeasured = 0;
       this.toolsMeasurement.request(this.mangaMeasurementKey);
       this.flowToolsMeasurement.request(this.mangaMeasurementKey);
+      this.treeToolsMeasurement.request(this.mangaMeasurementKey);
       this.footerMeasurement.request(this.mangaMeasurementKey);
       this.flowFooterMeasurement.request(this.mangaMeasurementKey);
+      this.treeFooterMeasurement.request(this.mangaMeasurementKey);
     }
     this.refreshGeometry();
   }

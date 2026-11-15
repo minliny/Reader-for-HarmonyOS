@@ -303,7 +303,9 @@ async function shortGridPrefix() {
       geometry: { content: { frame: { left: 18, right: 18, width: 330 }, startInset: 360 } },
       mangaFlowFooter: () => flowing, navigationActive: true, interactive: true,
       mangaVisibleTopInset: () => 98, mangaNarrow: () => true, directoryScrollLayout: () => new ReaderScrollLayout(360, 18, 'contentOffset'),
-      mangaToolbar: () => overlays.push('overlay'), mangaFlatPrefix: identity => prefixes.push(identity),
+      mangaToolbar: () => overlays.push('overlay'),
+      treeToolsMeasurement: { id: 'semantic-tools' }, treeFooterMeasurement: { id: 'semantic-footer' },
+      mangaFlatPrefix: (identity, tools, footer) => prefixes.push({ identity, tools, footer }),
     });
     page.mangaContent();
     const navigation = [...page.children.values()].find(child => child instanceof Captured);
@@ -311,7 +313,9 @@ async function shortGridPrefix() {
     assert.equal(navigation.params.prefixHeight, flowing ? 360 : 0);
     assert.equal(navigation.params.prefixIdentity, 'current');
     assert.equal(overlays.length, flowing ? 0 : 1);
-    navigation.params.prefixBuilder(); assert.deepEqual(prefixes, ['current']);
+    navigation.params.prefixBuilder();
+    assert.deepEqual(prefixes, [{ identity: 'current', tools: page.treeToolsMeasurement, footer: page.treeFooterMeasurement }],
+      'semantic and fallback native producers have independent measurement owners');
   }
   let anchor;
   const Policy = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url),
@@ -396,6 +400,7 @@ async function shortGridPrefix() {
   }
   const Surface = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets', import.meta.url),
     'ReaderDirectoryNavigationSurface', ['hasPrefix']);
-  assert.equal(Surface.prototype.hasPrefix.call({ mangaDisplay: true, headerCount: 1 }), true);
+  assert.equal(Surface.prototype.hasPrefix.call({ mangaDisplay: true, headerCount: 1 }), false,
+    'manga loading keeps its existing page-state owner while the ready Grid owns its native prefix');
   console.log('PASS exact SDK manga semantic prefix, native/Core ranks and spans, initial/current placement and actual Grid render/event inputs. No Core paging or native pixels simulated.');
 }

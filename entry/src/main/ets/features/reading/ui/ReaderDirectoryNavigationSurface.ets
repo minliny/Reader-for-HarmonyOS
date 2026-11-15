@@ -556,7 +556,7 @@ export struct ReaderDirectoryNavigationSurface {
   @Builder
   private emptyPrefix() {}
 
-  private hasPrefix(): boolean { return this.headerCount === 1; }
+  private hasPrefix(): boolean { return !this.mangaDisplay && this.headerCount === 1; }
 
   private currentInputOwnerKey(): string {
     return JSON.stringify([this.sourceId, this.bookId, this.openRevision]);
