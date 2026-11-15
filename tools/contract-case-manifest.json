@@ -11187,7 +11187,7 @@
       }
     },
     "test-control-directory-short-content.mjs": {
-      "sourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "sourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
       "cases": {
         "short-sdk": {
           "resources": [],
@@ -11199,7 +11199,7 @@
         },
         "directory-focus": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "measured-profile": {
           "resources": [],
@@ -11207,11 +11207,11 @@
         },
         "keyboard-ack-delay": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "keyboard-transfer": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "keyboard-observation": {
           "resources": [],

@@ -392214,87 +392214,15 @@
         "controlled before-source fixtures"
       ],
       "estimatedCostType": "sdk-transpile",
-      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "reviewedSourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
       "definitionInputs": [
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
-          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
-          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
-          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
-          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
-          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
-          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
-          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
-          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
-          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
-          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
-        },
-        {
-          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
-          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
-        },
-        {
-          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
-          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
-        },
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
           "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
         },
         {
-          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
-          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-initial-area-field.ets.txt",
+          "sha256": "9a648bbaff43afe01bd9f3ab679234eea0038e0dbf5bad0dded4d71271bc6385"
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
@@ -392305,12 +392233,16 @@
           "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
         },
         {
-          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+          "sha256": "a9300ad871060c6b13dae66deebd5dc8f1ea3acae432a626ac4b841d21358f8c"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -392322,31 +392254,23 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
-        },
-        {
-          "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+          "sha256": "d190f6c4a838c1ab3dbcb439443b90c8901a8627de04d6be52c7622f73428e58"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
           "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
         },
         {
-          "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
         },
         {
           "path": "tools/run-contract-tests.mjs",
           "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/gate-index.mjs",
-          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
-        },
-        {
-          "path": "tools/retired-contract-tests.json",
-          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
         }
       ],
       "definitionInputProblems": [],
@@ -392355,35 +392279,36 @@
       "id": "H-control-directory-short-content#directory-focus",
       "parentId": "H-control-directory-short-content",
       "caseId": "directory-focus",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "caseSelection": {
         "test-control-directory-short-content.mjs": [
           "directory-focus"
         ]
       },
       "protectedBehavior": "Actual SearchField opt-in target/focus modifiers and Toolbar callbacks enforce current id/revision/mounted admission and keep default consumers inactive.",
-      "mechanism": "Actual SearchField opt-in modifier and finite after-layout focus, current id/revision/mounted guards, cancel/old callback and default disabled/no setter negative controls; Toolbar local opt-in lifetime.",
+      "mechanism": "Actual modifier opt-in emits id/keyboard policy/area/focus callbacks. Current layout/revision requests once. Current-id, allowed, mounted and live owner closures reject stale work. Default/unopted/sourceManagement paths have no focus setter. Content local migration policy uses real current methods and explicit geometry.",
       "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
       "failureExample": "Actual SearchField opt-in target/focus modifiers and Toolbar callbacks enforce current id/revision/mounted admission and keep default consumers inactive.",
       "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
       "necessityReason": "The selected leaf never expands to the other six cases.",
-      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "limitations": "Current local production SDK callbacks/attributes with explicit observer delivery and finite frame/focus/IME/Scroller ports. Prepared-profile parent admission, real Native scheduling/focus/keyboard geometry, physical pointer, reading output and full-page acceptance remain separate.",
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "resourceDefinitionSha256": "c7d638c21085891f5661af035f01a1a3689387597345eca2d68c7c85a04822e1",
       "repair": null,
       "repairAction": null,
       "nestedActions": [],
       "nestedCalls": [],
       "validationEvidence": {
-        "case": "REUSED_PASS",
-        "newBusinessExecution": "NOT_RUN",
-        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+        "case": "PASS_CURRENT_NORMAL_DISPATCH",
+        "newBusinessExecution": "RUN_SELECTED_LOCAL_SDK_CASE",
+        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/results.json",
+        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/test-control-directory-short-content.mjs.log"
       },
       "overlayAssemblyMethodReview": {
-        "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
-        "decision": "REVIEW_NEEDED",
+        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v.json",
+        "decision": "QUALIFIED_LOCAL_METHOD_SCOPE",
         "currentPublicationExecution": "NOT_RUN",
-        "sha256": "739f6b28a421faa981f9812d9576cebba3675856dcd324a75486e33a3a4de22b"
+        "sha256": "57e4570dbb8bc0032afae4bf57f07878bf545af04e428ad4feab6a132d3d166d"
       }
     },
     {
@@ -392598,87 +392523,15 @@
         "controlled before-source fixtures"
       ],
       "estimatedCostType": "sdk-transpile",
-      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "reviewedSourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
       "definitionInputs": [
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
-          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
-          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
-          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
-          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
-          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
-          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
-          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
-          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
-          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
-          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
-        },
-        {
-          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
-          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
-        },
-        {
-          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
-          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
-        },
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
           "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
         },
         {
-          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
-          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-initial-area-field.ets.txt",
+          "sha256": "9a648bbaff43afe01bd9f3ab679234eea0038e0dbf5bad0dded4d71271bc6385"
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
@@ -392689,12 +392542,16 @@
           "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
         },
         {
-          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+          "sha256": "a9300ad871060c6b13dae66deebd5dc8f1ea3acae432a626ac4b841d21358f8c"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -392706,31 +392563,23 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
-        },
-        {
-          "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+          "sha256": "d190f6c4a838c1ab3dbcb439443b90c8901a8627de04d6be52c7622f73428e58"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
           "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
         },
         {
-          "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
         },
         {
           "path": "tools/run-contract-tests.mjs",
           "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/gate-index.mjs",
-          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
-        },
-        {
-          "path": "tools/retired-contract-tests.json",
-          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
         }
       ],
       "definitionInputProblems": [],
@@ -392739,35 +392588,36 @@
       "id": "H-control-directory-short-content#keyboard-transfer",
       "parentId": "H-control-directory-short-content",
       "caseId": "keyboard-transfer",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "caseSelection": {
         "test-control-directory-short-content.mjs": [
           "keyboard-transfer"
         ]
       },
       "protectedBehavior": "Actual Content/Field/Toolbar callbacks retain editing intent across a retiring input, issue one public show request after Native focus and reject Back/disabled/stale/failed restore.",
-      "mechanism": "Actual shipping Content/Field/Toolbar callbacks preserve visible editing through a retiring input inset0, request public showTextInput once after new Native focus, and reject explicit Back/stale/disabled/failed restore. Finite Native API ports only.",
+      "mechanism": "Actual Content fixed toolbar and short-prefix SDK callbacks reach current editing owner through actual Toolbar callback forwarding. Back→explicit edit updates actual emitted enableKeyboardOnFocus. Native focus ACK gates one public show request. Exact f6 before-source loses initial Area; actual current rectangle supplies one layout receipt. Invalid/stale/disabled/no rectangle and explicit revision-zero Back controls reject work. Earlier transfer source witnesses retiring-input misclassification and zero show requests. Promise failure and late completion guards remain explicit.",
       "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
       "failureExample": "Actual Content/Field/Toolbar callbacks retain editing intent across a retiring input, issue one public show request after Native focus and reject Back/disabled/stale/failed restore.",
       "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
       "necessityReason": "The selected leaf never expands to the other six cases.",
-      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "limitations": "Current local production SDK callbacks/attributes with explicit observer delivery and finite frame/focus/IME/Scroller ports. Prepared-profile parent admission, real Native scheduling/focus/keyboard geometry, physical pointer, reading output and full-page acceptance remain separate.",
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "resourceDefinitionSha256": "c7d638c21085891f5661af035f01a1a3689387597345eca2d68c7c85a04822e1",
       "repair": null,
       "repairAction": null,
       "nestedActions": [],
       "nestedCalls": [],
       "validationEvidence": {
-        "case": "REUSED_PASS",
-        "newBusinessExecution": "NOT_RUN",
-        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+        "case": "PASS_CURRENT_NORMAL_DISPATCH",
+        "newBusinessExecution": "RUN_SELECTED_LOCAL_SDK_CASE",
+        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/results.json",
+        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/test-control-directory-short-content.mjs.log"
       },
       "overlayAssemblyMethodReview": {
-        "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
-        "decision": "REVIEW_NEEDED",
+        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v.json",
+        "decision": "QUALIFIED_LOCAL_METHOD_SCOPE",
         "currentPublicationExecution": "NOT_RUN",
-        "sha256": "739f6b28a421faa981f9812d9576cebba3675856dcd324a75486e33a3a4de22b"
+        "sha256": "57e4570dbb8bc0032afae4bf57f07878bf545af04e428ad4feab6a132d3d166d"
       }
     },
     {
@@ -392790,87 +392640,15 @@
         "controlled before-source fixtures"
       ],
       "estimatedCostType": "sdk-transpile",
-      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "reviewedSourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
       "definitionInputs": [
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
-          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
-          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
-          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
-          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
-          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
-          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
-          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
-          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
-          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
-        },
-        {
-          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
-          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
-        },
-        {
-          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
-          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
-        },
-        {
-          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
-          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
-        },
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
           "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
         },
         {
-          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
-          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-initial-area-field.ets.txt",
+          "sha256": "9a648bbaff43afe01bd9f3ab679234eea0038e0dbf5bad0dded4d71271bc6385"
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
@@ -392881,12 +392659,16 @@
           "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
         },
         {
-          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+          "sha256": "a9300ad871060c6b13dae66deebd5dc8f1ea3acae432a626ac4b841d21358f8c"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -392898,31 +392680,23 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
-        },
-        {
-          "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+          "sha256": "d190f6c4a838c1ab3dbcb439443b90c8901a8627de04d6be52c7622f73428e58"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
           "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
         },
         {
-          "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
         },
         {
           "path": "tools/run-contract-tests.mjs",
           "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/gate-index.mjs",
-          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
-        },
-        {
-          "path": "tools/retired-contract-tests.json",
-          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
         }
       ],
       "definitionInputProblems": [],
@@ -392931,35 +392705,36 @@
       "id": "H-control-directory-short-content#keyboard-ack-delay",
       "parentId": "H-control-directory-short-content",
       "caseId": "keyboard-ack-delay",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "caseSelection": {
         "test-control-directory-short-content.mjs": [
           "keyboard-ack-delay"
         ]
       },
       "protectedBehavior": "Actual before-source loses delayed focus ACK; current pending revision/ticket schedules exactly one frame after acknowledged Native focus and rejects repeated or retired ACK.",
-      "mechanism": "Actual SDK before-source delayed Native focus ACK loses one-shot keyboard restore, while current pending request schedules once only after acknowledged focus; finite current/retired/repeated ACK ports.",
+      "mechanism": "Exact before-source loses delayed Native ACK. Current source schedules one after-ACK frame and single public show request, settles the same parent transfer, and rejects repeated/old-id ACK. Early ACK is also covered. Native ACK and keyboard API are finite ports, visibility remains open.",
       "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
       "failureExample": "The exact24fe before-source emits no show request after late Native ACK, while the current scheduler emits one.",
       "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
       "necessityReason": "The selected leaf never expands to the other six cases.",
-      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "limitations": "Current local production SDK callbacks/attributes with explicit observer delivery and finite frame/focus/IME/Scroller ports. Prepared-profile parent admission, real Native scheduling/focus/keyboard geometry, physical pointer, reading output and full-page acceptance remain separate.",
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "resourceDefinitionSha256": "c7d638c21085891f5661af035f01a1a3689387597345eca2d68c7c85a04822e1",
       "repair": null,
       "repairAction": null,
       "nestedActions": [],
       "nestedCalls": [],
       "validationEvidence": {
-        "case": "REUSED_PASS",
-        "newBusinessExecution": "NOT_RUN",
-        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+        "case": "PASS_CURRENT_NORMAL_DISPATCH",
+        "newBusinessExecution": "RUN_SELECTED_LOCAL_SDK_CASE",
+        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/results.json",
+        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/test-control-directory-short-content.mjs.log"
       },
       "overlayAssemblyMethodReview": {
-        "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
-        "decision": "REVIEW_NEEDED",
+        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v.json",
+        "decision": "QUALIFIED_LOCAL_METHOD_SCOPE",
         "currentPublicationExecution": "NOT_RUN",
-        "sha256": "739f6b28a421faa981f9812d9576cebba3675856dcd324a75486e33a3a4de22b"
+        "sha256": "57e4570dbb8bc0032afae4bf57f07878bf545af04e428ad4feab6a132d3d166d"
       }
     },
     {
@@ -448140,8 +447915,8 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 1448,
-    "REVIEW_NEEDED": 1012,
+    "QUALIFIED": 1451,
+    "REVIEW_NEEDED": 1009,
     "DIAGNOSTIC_ONLY": 22,
     "NEEDS_EVIDENCE": 1
   },
