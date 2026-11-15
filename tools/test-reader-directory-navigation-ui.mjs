@@ -83,7 +83,7 @@ if(selectedCase==="actions")
 
 const fullScrollEvents = [];
 
-const FullControls = productionMotionMethods(fullPath, ['handleControl'], {
+const FullControls = productionMotionMethods(fullPath, ['panelInputCurrent', 'handleControl'], {
   Edge: { Top: 'top', Bottom: 'bottom' },
   ReaderDirectoryTrace, readerDirectoryScopeKey: (_source, book) => book,
   readerDirectorySignalScrollIntent: bookId => fullScrollEvents.push(['intent', bookId]),
@@ -92,7 +92,7 @@ const FullControls = productionMotionMethods(fullPath, ['handleControl'], {
 if(selectedCase==="actions")
 {
   const panel = Object.assign(new FullControls(), {
-    activeTab: 'directory', bookmarkIdentity: { sourceId: 'local', bookId: 'full-book' },
+    positioningMounted: true, chapterActionsEnabled: true, motionActive: false, activeTab: 'directory', bookmarkIdentity: { sourceId: 'local', bookId: 'full-book' },
     cancelProjectionTopScroll: () => fullScrollEvents.push(['cancel']),
     listScroller: { scrollEdge: edge => fullScrollEvents.push(['edge', edge]) },
   });
@@ -300,6 +300,7 @@ if(selectedCase==="surface-admission")
   assert.equal(surface.loadPending, false);
   assert.equal(surface.loadFailed, true, 'failed Core directory request remains visible and retryable');
   assert.equal(surface.view, undefined);
+  surface.inputOwnerKey = surface.currentInputOwnerKey();
   surface.retryOpen();
   assert.equal(pending.length, start + 2, 'explicit retry issues exactly one new production directory request');
   assert.equal(surface.loadPending, true);
@@ -351,6 +352,7 @@ if(selectedCase==="surface-admission")
   assert.equal(surface.view, old, 'failed refresh preserves the already admitted complete view');
   assert.equal(surface.loadFailed, true);
   assert.equal(surface.settledFlat, false);
+  surface.inputOwnerKey = surface.currentInputOwnerKey();
   surface.retryOpen();
   assert.equal(surface.view, old, 'retry keeps the prior complete view until replacement pages are ready');
   pending[start + 1].resolve(readyCatalog('refreshed-ready'));

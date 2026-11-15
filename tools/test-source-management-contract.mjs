@@ -31,10 +31,10 @@ if (selected.length) {
   const methods = names => selectedProductionMethods(file, 'SourceManagementPage', names, { sourceManagementFilterKey });
 
   async function projection() {
-    const Page = methods(['normalizedSourceGroup', 'groupOptions', 'filteredSources', 'matchesStatus', 'rebuildSourceProjection', 'clearFilters', 'filteredEnabledCount', 'statsText', 'currentFilterKey']);
+    const Page = methods(['normalizedSourceGroup', 'groupOptions', 'filteredSources', 'matchesStatus', 'rebuildSourceProjection', 'clearFilters', 'managementInputIsCurrent', 'managementOpeningIsCurrent', 'filteredEnabledCount', 'statsText', 'currentFilterKey']);
     const page = new Page();
     let replaced;
-    Object.assign(page, { sources: [{ ...base('a'), group: ' 玄幻 ' }, { ...base('b'), group: '玄幻', enabled: false, checkState: 'checking' }, { ...base('c'), group: '', checkState: 'passed' }],
+    Object.assign(page, { mounted: true, appForeground: true, groupOpen: false, isOpeningCurrent: () => true, sources: [{ ...base('a'), group: ' 玄幻 ' }, { ...base('b'), group: '玄幻', enabled: false, checkState: 'checking' }, { ...base('c'), group: '', checkState: 'passed' }],
       lastProjectionFilterKey:'', scheduleSourceAnchorRestore(){}, searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '玄幻',
       sourceDataSource: { replace: value => { replaced = value; } }, onRetryLoad() { assert.fail('local filters must not dispatch reads'); } });
     assert.deepEqual(page.groupOptions(), ['全部分组', '玄幻']);

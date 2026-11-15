@@ -30,7 +30,7 @@ const deps = { ...directoryState, mangaDirectoryDisplay, visual, mangaDirectoryS
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'admitEntries', 'publishProjection',
   'preparePresentation', 'rowPresentation', 'prepareLayout', 'fontScale', 'onViewportChanged', 'layoutEntryRows', 'layoutRow', 'showContext',
   'onLayoutInputsChanged', 'onCurrentChapterChanged', 'expandCurrentAncestors', 'onIdentityChanged', 'onEntriesChanged', 'onViewInputsChanged', 'onLocateCurrent', 'requestScroll', 'activeScroller',
-  'onFirstLayout', 'onListFirstLayout', 'onListUserScroll', 'onUserScrollIntent', 'selectEntry', 'toggleBranch', 'downloadEntry'];
+  'onFirstLayout', 'onListFirstLayout', 'onListUserScroll', 'onUserScrollIntent', 'currentInputEnabled', 'selectEntry', 'toggleBranch', 'downloadEntry'];
 const Directory = productionMotionMethods(path, methods, deps);
 const entries = Object.freeze(Array.from({ length: 681 }, (_, ordinal) => Object.freeze({
   index: ordinal * 2 + 1, title: `第${ordinal + 1}话`, navigable: ordinal !== 10, downloadState: 'unknown',

@@ -16,7 +16,11 @@ UIF-56 至 UIF-67 已完成当前代码修复，涵盖书架筛选导航准入�
 
 第四轮绑定 8c4bd963，完成 472 个必审文件，结论为 FAIL，确认 4 项 P2。UIF-72 至 UIF-75 已成批修复。漫画设置、页码、亮度和边界手势接入同一 Root 实时输入准入，未接受手势保留原修订。连续阅读 Stage 接入父输入修订及实时函数，旧指针在恢复前景后继续退休。语义目录校验原 Content、Surface、List 和当前章节事实。搜索的历史、提交、停止、重试、结果与筛选入口在首次动作前消费当前可见性，发布与已接纳队列保留原生命周期。[第四轮全局报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-04.json)
 
-4 个新准确用例及平面目录共用判据复查通过，9 个修改脚本语法通过。当前本地候选为 0.2.0.DEV.436dbd994df8，完整 ArkTS 编译及指定证书签名通过，642 个生产 ETS/TS 字节绑定无漂移。首次构建期间继续修改测试适配器导致受控输入封存失败，固定全部输入后第二次构建通过，失败记录保留。13 项受影响登记已同步，引用 0 诊断，原有登记诊断仍为 37。连续通过仍为 0，VM、HDC 和设备操作继续为 0。[第四轮修复与验证](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round04-repair-summary.json)
+4 个新准确用例及平面目录共用判据复查通过，9 个修改脚本语法通过。第四轮本地候选为 0.2.0.DEV.436dbd994df8，完整 ArkTS 编译及指定证书签名通过，642 个生产 ETS/TS 字节绑定无漂移。首次构建期间继续修改测试适配器导致受控输入封存失败，固定全部输入后第二次构建通过，失败记录保留。13 项受影响登记已同步，引用 0 诊断，原有登记诊断仍为 37。连续通过仍为 0，VM、HDC 和设备操作继续为 0。[第四轮修复与验证](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round04-repair-summary.json)
+
+第五轮绑定 f22699d4，完成 472 个必审文件，结论为 FAIL，确认 3 组 P2。UIF-76 至 UIF-78 已按 68 项同族入口表修复。书架首读、长按／More 首开、book-action 和顶部 More token 在本地写状态或排队前消费原 live input。书源类别、状态、分组、清空在首次修改前复用已有管理输入资格。Manga semantic／flat、BookDirectoryPage semantic、FullDirectoryPanel 及上层 opening 均递送原宿主当前资格，Surface 直属 fold／retry／clear 与 Full 本地工具也消费它。[第五轮全局报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-05.json)
+
+3 个新增准确用例及原 Reader／semantic 共享适配复查通过，11 个修改脚本语法通过。当前本地候选为 0.2.0.DEV.012ee74c63d5，一次完整 ArkTS 编译及指定证书签名通过，642 个生产 ETS/TS 字节绑定无漂移。21 项登记指纹已同步，引用 0 诊断，原登记诊断继续为 37。原已接纳 pending action、native 消失／分组收起清理与业务回执保留原 owner。连续通过仍为 0，下一轮从当前冻结代码开始。[第五轮修复与验证](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round05-repair-summary.json)
 
 连续三轮通过条件仍待完成。21 项登记的完整原生验收、独立整页视觉、可听读屏、G05 和历史 G10 保留原标准。VM 最后保存的字号为 1.3 倍，原字号恢复仍待执行。
 

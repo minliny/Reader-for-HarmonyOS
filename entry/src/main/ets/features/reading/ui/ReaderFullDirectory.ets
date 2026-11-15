@@ -232,6 +232,7 @@ export struct ReaderFullDirectory {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({ navigationPortFactory: this.navigationPortFactory,
+          inputCurrent: (): boolean => this.directoryInputCurrent(identity, bookId) && !this.directoryRulesVisible,
           entries: this.entries,
           catalogMessage: this.catalogMessage,
           catalogBusy: this.catalogBusy,
@@ -295,6 +296,11 @@ export struct ReaderFullDirectory {
     return this.mounted && this.interactive && !this.exitRequested &&
       identity.length > 0 && identity === this.temporaryBackIdentity && bookId === this.bookId &&
       this.directoryRulesAvailable() && this.isOpeningCurrent();
+  }
+
+  private directoryInputCurrent(identity: string, bookId: string): boolean {
+    return this.mounted && this.interactive && !this.exitRequested && identity.length > 0 &&
+      identity === this.temporaryBackIdentity && bookId === this.bookId && this.isOpeningCurrent();
   }
 
   private retireDirectoryRules(): void {

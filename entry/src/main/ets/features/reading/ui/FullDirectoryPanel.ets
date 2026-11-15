@@ -131,6 +131,7 @@ export struct FullDirectoryPanel {
   @Prop @Watch('onListSessionKeyChanged') listSessionKey: string = '';
   @Prop directoryRulesRevision: number = 0;
   @Prop chapterActionsEnabled: boolean = true;
+  inputCurrent: (() => boolean) | undefined = undefined;
   onTabChange: (tab: string) => void = (_tab: string): void => {};
   onGeometryProbe: (event: string) => void = (_event: string): void => {};
   @Prop geometryProbeEnabled: boolean = false;
@@ -348,7 +349,7 @@ export struct FullDirectoryPanel {
       message: this.catalogBusy && this.entries.length === 0 ? '正在加载目录' : this.catalogEmptyMessage(),
       actionLabel: this.catalogRetryVisible() ? '重试加载目录' : '',
       mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
-      onAction: (): void => { if (this.chapterActionsEnabled && this.catalogRetryVisible()) this.onRetryCatalog(); } });
+      onAction: (): void => { if (this.panelInputCurrent() && this.catalogRetryVisible()) this.onRetryCatalog(); } });
   }
 
   @Builder
@@ -482,7 +483,7 @@ export struct FullDirectoryPanel {
         .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).flexShrink(0)
         .backgroundColor(Color.Transparent).borderRadius(8)
         .attributeModifier(new ReaderActionAccessibility('收起目录'))
-        .onClick((): void => this.onExit());
+        .onClick((): void => { if (this.panelInputCurrent()) this.onExit(); });
       } else {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           this.collapsePaint();
@@ -490,7 +491,7 @@ export struct FullDirectoryPanel {
         .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).padding(0).flexShrink(0)
         .backgroundColor(Color.Transparent).borderRadius(8)
         .attributeModifier(new ReaderActionAccessibility('收起目录', true, false, true, undefined, 'nativeButton'))
-        .onClick((): void => this.onExit());
+        .onClick((): void => { if (this.panelInputCurrent()) this.onExit(); });
       }
     }
     .width(this.innerWidth())
@@ -537,7 +538,7 @@ export struct FullDirectoryPanel {
               message: this.catalogBusy && this.entries.length === 0 ? '正在加载目录' : this.catalogEmptyMessage(),
               actionLabel: this.catalogRetryVisible() ? '重试加载目录' : '',
               mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
-              onAction: (): void => { if (this.catalogRetryVisible()) this.onRetryCatalog(); } });
+              onAction: (): void => { if (this.panelInputCurrent() && this.catalogRetryVisible()) this.onRetryCatalog(); } });
           }
         }
         .width('100%')
@@ -673,6 +674,7 @@ export struct FullDirectoryPanel {
   }
 
   private choosePanelTab(tab: string): void {
+    if (!this.panelInputCurrent()) return;
     if (this.activeTab === tab) {
       this.cancelProjectionTopScroll();
       this.listScroller.scrollEdge(Edge.Top);
@@ -689,7 +691,7 @@ export struct FullDirectoryPanel {
         ascending: this.ascending, showChapterTools: this.activeTab === 'directory',
         availableWidthVp: this.innerWidth(), inputMinimumWidthVp: this.toolbarInputMinimumWidth(),
         naturalFieldHeightVp: this.queryHeight(), naturalToolbarHeightVp: this.searchControlsHeight() - (this.embeddedInControl ? 0 : 1),
-        onTextChange: (value: string): void => { this.searchDraft = value; },
+        onTextChange: (value: string): void => { if (this.panelInputCurrent()) this.searchDraft = value; },
         onSearch: (): void => this.handleControl('search'),
         onTop: (): void => this.handleControl('top'),
         onBottom: (): void => this.handleControl('bottom'),
@@ -714,6 +716,7 @@ export struct FullDirectoryPanel {
       Column() {
         if (this.bookmarkIdentity !== undefined) {
           ReaderDirectoryNavigationSurface({ navigationPortFactory: this.navigationPortFactory,
+            inputCurrent: (): boolean => this.panelInputCurrent(),
             sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey, prepareLocalTxt: this.prepareLocalTxt,
             refreshRevision: this.directoryRulesRevision,
@@ -802,12 +805,16 @@ export struct FullDirectoryPanel {
   }
 
   private flatChapterIsCurrent(entry: LocalReadingTocEntry): boolean {
-    if (!this.chapterActionsEnabled || !this.positioningMounted || !this.initialListPositionReady ||
+    if (!this.panelInputCurrent() || !this.initialListPositionReady ||
       this.navigationActive || entry.navigable === false) {
       return false;
     }
     const current = this.projectedEntries.find((chapter: LocalReadingTocEntry): boolean => chapter.index === entry.index);
     return current !== undefined && sameReaderDirectoryData([entry], [current]);
+  }
+
+  private panelInputCurrent(): boolean {
+    return this.positioningMounted && this.chapterActionsEnabled && !this.motionActive && (this.inputCurrent?.() ?? true);
   }
 
   /**
@@ -816,6 +823,7 @@ export struct FullDirectoryPanel {
    * that read can still expose the previous value, keeping the old projection.
    */
   private switchTab(nextTab: string): void {
+    if (!this.panelInputCurrent()) return;
     this.activeTab = nextTab;
     this.rebuildProjection(nextTab, this.ascending, this.searchQuery);
     this.beginListPositioning(nextTab);
@@ -824,7 +832,7 @@ export struct FullDirectoryPanel {
   }
 
   private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
-    if (!this.chapterActionsEnabled) return;
+    if (!this.panelInputCurrent()) return;
     if (this.onSelectBookmark !== undefined) {
       this.onSelectBookmark(bookmarkId, chapterIndex, chapterOffset, positionScope);
       return;
@@ -845,7 +853,7 @@ export struct FullDirectoryPanel {
               message: this.bookmarkLoadFailed ? this.bookmarkLoadMessage : this.bookmarkTabLoading ? '书签载入中…' : '在阅读页面下拉，收藏当前位置。',
               actionLabel: this.bookmarkLoadFailed ? '重试' : this.bookmarkTabLoading ? '' : '返回目录',
               onAction: (): void => {
-                if (!this.chapterActionsEnabled) return;
+                if (!this.panelInputCurrent()) return;
                 if (this.bookmarkLoadFailed) this.onRetryBookmarkLoad();
                 else if (!this.bookmarkTabLoading) this.switchTab('directory');
               } });
@@ -854,7 +862,7 @@ export struct FullDirectoryPanel {
       } else if (this.bookmarkLoadFailed) {
         ReaderBookmarkErrorState({
           message: this.bookmarkLoadMessage.length > 0 ? this.bookmarkLoadMessage : '书签载入失败，请稍后重试',
-          onRetry: (): void => this.onRetryBookmarkLoad(),
+          onRetry: (): void => { if (this.panelInputCurrent()) this.onRetryBookmarkLoad(); },
         });
       } else if (this.bookmarkTabLoading) {
         ReaderBookmarkLoadingState();
@@ -953,6 +961,7 @@ export struct FullDirectoryPanel {
   }
 
   private handleControl(kind: string): void {
+    if (!this.panelInputCurrent()) return;
     if (kind === 'search') {
       this.applySearch();
       return;

@@ -22,7 +22,7 @@ function leafMembers(source){
   const methods=source.includes('export struct SettingsPage')?
     ['aboutToAppear','aboutToDisappear','consumeTemporaryBack','onSnapshotChanged','onCacheCleanupChanged','syncSnapshotValues','buildOverlay','currentValue','selectOptions','setSelectValue','toggleSelection','retireSelection','ownsSelection','commitSelection','dismissSelection']:
     source.includes('export struct SourceManagementPage')?
-    ['aboutToAppear','aboutToDisappear','consumeTemporaryBack','retireGroupSelection','ownsGroupSelection','toggleGroupSelection','groupCloseAction','commitGroupSelection','dismissGroupSelection','build','groupOptions','onSourcesChanged','rebuildSourceProjection','filteredSources','matchesStatus','numericAreaLength']:
+    ['aboutToAppear','aboutToDisappear','consumeTemporaryBack','managementInputIsCurrent','managementOpeningIsCurrent','retireGroupSelection','ownsGroupSelection','toggleGroupSelection','groupCloseAction','commitGroupSelection','dismissGroupSelection','build','groupOptions','onSourcesChanged','rebuildSourceProjection','filteredSources','matchesStatus','numericAreaLength']:
     boundedMembers(source);
   return struct.members.filter(m=>m.name&&(ts.isPropertyDeclaration(m)||methods.includes(m.name.getText(tree)))).map(m=>m.name.getText(tree));
 }

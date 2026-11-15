@@ -259,8 +259,12 @@ export struct SourceManagementPage {
     return this.managementOpeningIsCurrent() && this.groupOpen && identity.length > 0 && identity === this.groupSelectionId;
   }
 
+  private managementInputIsCurrent(): boolean {
+    return this.managementOpeningIsCurrent() && this.appForeground && this.isInputAllowed?.() !== false;
+  }
+
   private toggleGroupSelection(): void {
-    if (!this.managementOpeningIsCurrent()) return;
+    if (!this.managementInputIsCurrent()) return;
     if (this.requestGroupClose(this.groupSelectionId) || this.groupOptions().length <= 1) return;
     this.cancelGroupFocus();
     this.cancelToolsReturnFocus('group');
@@ -279,11 +283,11 @@ export struct SourceManagementPage {
   }
 
   private groupCloseAction(identity: string): () => void {
-    return (): void => { this.requestGroupClose(identity); };
+    return (): void => { if (this.managementInputIsCurrent()) this.requestGroupClose(identity); };
   }
 
   private commitGroupSelection(option: string, identity: string): void {
-    if (!this.ownsGroupSelection(identity) || this.groupClosing || this.groupOptions().indexOf(option) < 0) return;
+    if (!this.managementInputIsCurrent() || !this.ownsGroupSelection(identity) || this.groupClosing || this.groupOptions().indexOf(option) < 0) return;
     this.cancelGroupFocus();
     this.groupValue = option;
     this.rebuildSourceProjection();
@@ -705,6 +709,7 @@ export struct SourceManagementPage {
             primary: this.categoryValue === category, selectionSemantic: true,
             actionAccessibilityLabel: `书源类型，${category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory)}`,
             onAction: (): void => {
+              if (!this.managementInputIsCurrent() || this.groupOpen) return;
               this.cancelToolsReturnFocus('selection');
               this.categoryValue = category;
               this.rebuildSourceProjection();
@@ -748,7 +753,7 @@ export struct SourceManagementPage {
       label, primary: enabled && this.statusValue === label, actionEnabled: enabled, availableWidth: this.filterControlWidth(),
       selectionSemantic: true, actionAccessibilityLabel: `书源状态，${label}${enabled ? '' : '，暂不可用'}`,
       onAction: (): void => {
-        if (!enabled) return;
+        if (!enabled || !this.managementInputIsCurrent() || this.groupOpen) return;
         this.cancelToolsReturnFocus('selection');
         this.statusValue = label;
         this.rebuildSourceProjection();
@@ -1315,6 +1320,7 @@ export struct SourceManagementPage {
   }
 
   private clearFilters(): void {
+    if (!this.managementInputIsCurrent() || this.groupOpen) return;
     this.searchQuery = '';
     this.statusValue = '全部';
     this.categoryValue = 'all';

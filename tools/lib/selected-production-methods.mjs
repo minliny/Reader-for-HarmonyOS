@@ -3,6 +3,31 @@ import { readFileSync } from 'node:fs';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
 
+// Select the unchanged callback expression at one normal component assembly.
+// Native event delivery still requires the separate SDK/component probes.
+export function selectedProductionComponentCallback(file, component, property, owner, bindings = {}) {
+  const { ts, options } = installedEtsCompiler();
+  const source = readFileSync(file, 'utf8');
+  const tree = ts.createSourceFile(String(file), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.deepEqual(tree.parseDiagnostics, [], 'production assembly parses');
+  const expressions = [];
+  const visit = node => {
+    if (ts.isCallExpression(node) && node.expression.getText(tree) === component) {
+      const value = node.arguments[0]?.properties?.find(item => item.name?.getText(tree) === property);
+      if (value) expressions.push(value.initializer.getText(tree));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
+  assert.equal(expressions.length, 1, 'one actual component callback');
+  const emitted = ts.transpileModule(`const action = ${expressions[0]};`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },
+    reportDiagnostics: true,
+  });
+  assert.deepEqual(emitted.diagnostics, [], 'production callback emits');
+  return new Function(...Object.keys(bindings), emitted.outputText + '\nreturn action;').call(owner, ...Object.values(bindings));
+}
+
 // Ordinary method adapter only. It copies AST-selected production declarations,
 // never a hand-maintained implementation. Callers supply platform I/O explicitly.
 // It does not lower ArkUI Builders or imply native/runtime equivalence.

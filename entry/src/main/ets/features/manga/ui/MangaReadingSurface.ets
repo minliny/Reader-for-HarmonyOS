@@ -2841,6 +2841,10 @@ export struct MangaReadingSurface {
     return this.panel === 'directory' && this.panelPhase === 'open' && identity === this.directoryOuterIdentity() &&
       this.readerPanelForeground();
   }
+  private directoryContentInputCurrent(catalog: boolean, identity: string): boolean {
+    return catalog ? this.readerPanelForeground() && (this.panelPhase === 'closed' || this.panelPhase === 'open') :
+      this.directorySheetInputCurrent(identity);
+  }
   private openDirectoryDestination(catalog: boolean, identity: string): void {
     if (!catalog && !this.directorySheetInputCurrent(identity)) return;
     void this.performPanelAction((): void => {
@@ -2936,6 +2940,7 @@ export struct MangaReadingSurface {
   @Builder
   private directoryBody(catalog: boolean, directoryIdentity: string = this.directoryOuterIdentity()) {
     ReaderDirectoryNavigationSurface({
+      inputCurrent: (): boolean => this.directoryContentInputCurrent(catalog, directoryIdentity),
       sourceId: this.sourceId, bookId: this.bookId, query: catalog ? '' : this.directoryQuery, ascending: this.directoryAscending,
       currentChapterIndex: this.directoryCurrentIndex(),
       openRevision: catalog ? this.publishedManifestVersion : `${this.publishedManifestVersion}:${this.directoryOpenRevision}`,
@@ -2966,6 +2971,7 @@ export struct MangaReadingSurface {
   @Builder
   private directoryFallback(catalog: boolean = false, directoryIdentity: string = this.directoryOuterIdentity()) {
     MangaReadingDirectoryFallback({
+      inputCurrent: (): boolean => this.directoryContentInputCurrent(catalog, directoryIdentity),
       sourceId: this.sourceId, bookId: this.bookId, entries: this.directoryEntries(),
       query: catalog ? '' : this.directoryQuery, ascending: this.directoryAscending,
       currentChapterIndex: this.directoryCurrentIndex(),

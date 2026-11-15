@@ -32,7 +32,7 @@ function fixture(definition=pageSource,{width=390,left=0,right=0}={}){
     {...p.hooks,initialParams:{books:[A,B],navigationGeneration:7}});
   const {owner}=probe;
   assert.match(probe.output,/bookActionSheetPresentation[^\n]*ObservedObject\.GetRawObject\(this\.actionBook\)/,'actual SDK unwraps the State value at the Builder call');
-  const calls=[];Object.assign(owner,{mounted:true,appThemeScheme:'day',
+  const calls=[];Object.assign(owner,{mounted:true,isCurrentShelfInput:()=>true,appThemeScheme:'day',
     readerWindowMetricsRevision:0,viewportWidth:0,
     viewModePending:()=>false,isWideViewport:()=>false,phoneContent(){},tabletContent(){},tabletNavigation(){},numericAreaLength:Number,
     shelfContentWidth:()=>assert.fail('native book actions must not use the old cover frame'),

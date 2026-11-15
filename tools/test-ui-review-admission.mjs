@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { selectedProductionMethods, selectedProductionValues, selectedProductionClasses } from './lib/selected-production-methods.mjs';
-import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
+import { selectedProductionMethods, selectedProductionValues, selectedProductionClasses, selectedProductionComponentCallback } from './lib/selected-production-methods.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
@@ -43,22 +41,7 @@ function deferred() {
   return { promise, resolve };
 }
 function componentCallback(path, component, property, owner, bindings) {
-  const { ts, options } = installedEtsCompiler();
-  const source = read(path);
-  const tree = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const expressions = [];
-  const visit = node => {
-    if (ts.isCallExpression(node) && node.expression.getText(tree) === component) {
-      const value = node.arguments[0].properties.find(item => item.name?.getText(tree) === property);
-      if (value) expressions.push(value.initializer.getText(tree));
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(tree);
-  assert.equal(expressions.length, 1);
-  return new Function(...Object.keys(bindings),
-    stripTypeScriptTypes(`const action = ${expressions[0]};`) + '\nreturn action;')
-    .call(owner, ...Object.values(bindings));
+  return selectedProductionComponentCallback(new URL(path, root), component, property, owner, bindings);
 }
 
 function shelfFilters() {
@@ -596,7 +579,11 @@ function semanticDirectoryInput() {
   const inputCurrent = componentCallback(contentPath, 'ReaderDirectoryNavigationSurface', 'inputCurrent', content, { presentation: 1 });
   const chapterInputCurrent = componentCallback(contentPath, 'ReaderDirectoryNavigationSurface', 'chapterInputCurrent', content, { presentation: 1 });
   const onDeleteBookmarks = componentCallback(contentPath, 'ReaderDirectoryNavigationSurface', 'onDeleteBookmarks', content, { presentation: 1 });
-  const surface = { mounted: true, interactionEnabled: true, awaitingRulesRefresh: false, bookmarkActionsEnabled: true, inputCurrent, chapterInputCurrent, onDeleteBookmarks };
+  const Surface = selectedProductionMethods(new URL('features/reading/ui/ReaderDirectoryNavigationSurface.ets', root),
+    'ReaderDirectoryNavigationSurface', ['directoryInputCurrent', 'currentInputOwnerKey']);
+  const surface = Object.assign(new Surface(), { mounted: true, interactionEnabled: true, awaitingRulesRefresh: false,
+    sourceId: 'source', bookId: 'book', openRevision: 'opening', bookmarkActionsEnabled: true, inputCurrent, chapterInputCurrent, onDeleteBookmarks });
+  surface.inputOwnerKey = surface.currentInputOwnerKey();
   const listInput = componentCallback('features/reading/ui/ReaderDirectoryNavigationSurface.ets', 'ReaderDirectoryNavigationList', 'inputCurrent', surface, {});
   const listDelete = componentCallback('features/reading/ui/ReaderDirectoryNavigationSurface.ets', 'ReaderDirectoryNavigationList', 'onDeleteBookmarks', surface, {});
   const controls = foundationControls();

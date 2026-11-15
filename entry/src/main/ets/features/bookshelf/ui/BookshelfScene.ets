@@ -136,6 +136,7 @@ export struct BookshelfScene {
 
   build() {
     BookshelfShell({
+      isCurrentShelfInput: (navigation: number): boolean => this.isInteractive(navigation),
       onMoreBridge: (handler: (() => void) | undefined, identity: string, navigation?: number): void => {
         if (navigation !== undefined) this.ports?.registerMore(handler, identity, navigation);
       },

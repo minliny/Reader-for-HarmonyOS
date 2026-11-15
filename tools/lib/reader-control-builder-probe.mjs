@@ -207,6 +207,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     for (const name of ['toolbarBudget', 'toolbarInputMinimumWidth', 'toolbarInputWidthKey', 'toolbarInputWidthCached',
       'fontScale', 'queryHeight', 'searchPlaceholder', 'directoryQueryHeight', 'embeddedToolbarGrowth']) chromeMembers.add(name);
   }
+  for (const name of ['managementInputIsCurrent', 'managementOpeningIsCurrent', 'panelInputCurrent',
+    'currentInputEnabled', 'directoryInputCurrent', 'currentInputOwnerKey', 'directoryContentInputCurrent']) chromeMembers.add(name);
   let addedChrome;
   do {
     addedChrome = false;

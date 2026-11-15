@@ -37,6 +37,7 @@ export struct BookshelfShell {
   @Prop removalActionLabel: string = '继续原删除操作';
   onContinueRemoval: (generation: number, navigation: number) => void = (_generation: number, _navigation: number): void => {};
   @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
+  isCurrentShelfInput: ((navigation: number) => boolean) | undefined = undefined;
   @Prop populated: boolean = false;
   @Prop @Watch('onReadRecoveryChanged') feedbackEnabled: boolean = true;
   @Prop reduceMotion: boolean = false;
@@ -238,7 +239,7 @@ export struct BookshelfShell {
     const generation = this.navigationGeneration;
     return (): void => {
       if (!this.mounted || generation !== this.navigationGeneration || !this.moreMenuVisible ||
-        identity.length === 0 || identity !== this.moreSelectionId) return;
+        identity.length === 0 || identity !== this.moreSelectionId || this.isCurrentShelfInput?.(generation) === false) return;
       action(generation);
     };
   }

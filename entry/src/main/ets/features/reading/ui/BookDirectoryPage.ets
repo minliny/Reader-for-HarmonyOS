@@ -214,6 +214,7 @@ export struct BookDirectoryPage {
     Stack({ alignContent: Alignment.Top }) {
       ForEach([this.admittedIdentity], (identity: string) => {
         ReaderDirectoryNavigationSurface({ navigationPortFactory: this.navigationPortFactory,
+          inputCurrent: (): boolean => this.directoryInputIsCurrent(identity) && !this.selectionBusy,
           sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
           currentChapterIndex: this.currentChapterIndex, openRevision: identity,
           interactionEnabled: this.interactive && !this.selectionBusy,

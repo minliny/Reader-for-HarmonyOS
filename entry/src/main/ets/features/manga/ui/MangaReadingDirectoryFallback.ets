@@ -17,6 +17,7 @@ import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/Read
  * Reuse the shared list/projection, preserving Core indexes and disabled rows. */
 @Component
 export struct MangaReadingDirectoryFallback {
+  inputCurrent: (() => boolean) | undefined = undefined;
   @StorageLink('readerWindowMetricsRevision') @Watch('onLayoutInputsChanged') private windowMetricsRevision: number = 0;
   @Prop @Watch('onIdentityChanged') sourceId: string = '';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
@@ -221,7 +222,7 @@ export struct MangaReadingDirectoryFallback {
   }
 
   private selectEntry(entry: LocalReadingTocEntry, identity: string): void {
-    if (!this.mounted || identity !== this.identity() || identity !== this.admittedIdentity ||
+    if (!this.currentInputEnabled() || identity !== this.identity() || identity !== this.admittedIdentity ||
       !sameReaderDirectoryData(this.admittedEntries, this.entries)) return;
     const current = this.projectedEntries.find((item: LocalReadingTocEntry): boolean => item.index === entry.index);
     if (current === undefined || !sameReaderDirectoryData([current], [entry])) return;
@@ -234,7 +235,7 @@ export struct MangaReadingDirectoryFallback {
   }
 
   private toggleBranch(entry: LocalReadingTocEntry, identity: string): void {
-    if (!this.mounted || this.query.trim().length > 0 || identity !== this.identity() || identity !== this.admittedIdentity ||
+    if (!this.currentInputEnabled() || this.query.trim().length > 0 || identity !== this.identity() || identity !== this.admittedIdentity ||
       !sameReaderDirectoryData(this.admittedEntries, this.entries) || this.rowPresentation(entry)?.hasChildren !== true) return;
     const current = this.projectedEntries.find((item: LocalReadingTocEntry): boolean => item.index === entry.index);
     if (current === undefined || !sameReaderDirectoryData([current], [entry])) return;
@@ -245,11 +246,13 @@ export struct MangaReadingDirectoryFallback {
   }
 
   private downloadEntry(entry: LocalReadingTocEntry, identity: string): void {
-    if (!this.mounted || !this.chapterDownloadEnabled || entry.navigable === false || entry.downloadState === 'unknown' ||
+    if (!this.currentInputEnabled() || !this.chapterDownloadEnabled || entry.navigable === false || entry.downloadState === 'unknown' ||
       identity !== this.admittedIdentity || identity !== this.identity() || !sameReaderDirectoryData(this.admittedEntries, this.entries)) return;
     const current = this.projectedEntries.find((item: LocalReadingTocEntry): boolean => item.index === entry.index);
     if (current !== undefined && sameReaderDirectoryData([current], [entry])) this.onDownloadChapter(entry.index);
   }
+
+  private currentInputEnabled(): boolean { return this.mounted && (this.inputCurrent?.() ?? true); }
 
   @Builder
   private emptyActionLabel(label: string) {
@@ -271,11 +274,11 @@ export struct MangaReadingDirectoryFallback {
         Stack() { this.emptyActionLabel('清除搜索'); }
           .constraintSize({ minHeight: visual.quietEmptyClearHeight })
           .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.mangaScheme))
-          .onClick((): void => this.onClearSearch()).accessibilityText('清除目录搜索');
+          .onClick((): void => { if (this.currentInputEnabled()) this.onClearSearch(); }).accessibilityText('清除目录搜索');
       } else if (this.admittedEntries.length === 0) {
         Button() { this.emptyActionLabel('打开完整目录'); }.constraintSize({ minHeight: visual.gridHeight })
           .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.mangaScheme, 'nativeButton'))
-          .onClick((): void => this.onOpenFullDirectory());
+          .onClick((): void => { if (this.currentInputEnabled()) this.onOpenFullDirectory(); });
       }
     }.width('100%').constraintSize({ minHeight: visual.quietEmptyMinHeight })
       .padding({ left: visual.quietEmptyPaddingX, right: visual.quietEmptyPaddingX,

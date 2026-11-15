@@ -12,7 +12,7 @@ const { owner } = createReaderBuilderProbe(source, ['panelHeader', 'collapseLabe
   'searchControls', 'searchPlaceholder'], {ReaderDirectoryToolbar:ToolbarChild}, {childSources:{ReaderDirectoryToolbar:toolbarSource}});
 let close = 0, directory = 0, bookmarks = 0;
 const toolIntents = [];
-Object.assign(owner, { appThemeScheme: 'day', expandedLayout:false, activeTab: 'directory', currentChapterIndex: 2, chapters: [{title:'一'}, {title:'二'}, {title:'三'}],
+Object.assign(owner, { panelInputCurrent: () => true, appThemeScheme: 'day', expandedLayout:false, activeTab: 'directory', currentChapterIndex: 2, chapters: [{title:'一'}, {title:'二'}, {title:'三'}],
   totalChapters: 3, innerWidth: () => 328, tabHeight: () => 32, activeTabLineWidth: () => 38,
   ascending: true, handleControl: kind => toolIntents.push(kind),
   onExit: () => close++, switchTab: tab => tab === 'directory' ? directory++ : bookmarks++,

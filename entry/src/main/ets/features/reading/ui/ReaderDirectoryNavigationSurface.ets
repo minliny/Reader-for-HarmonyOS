@@ -527,7 +527,7 @@ export struct ReaderDirectoryNavigationSurface {
   }
 
   private retryOpen(): void {
-    if (!this.mounted || !this.interactionEnabled || this.loadPending) return;
+    if (!this.directoryInputCurrent() || this.loadPending) return;
     this.cancelQueryTimer();
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
@@ -537,7 +537,7 @@ export struct ReaderDirectoryNavigationSurface {
 
   private toggle(node: ReaderDirectoryNavigationNode): void {
     const view = this.view;
-    if (view === undefined || !node.hasChildren) return;
+    if (!this.directoryInputCurrent() || view === undefined || !node.hasChildren) return;
     this.cancelQueryTimer();
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
@@ -568,9 +568,13 @@ export struct ReaderDirectoryNavigationSurface {
     return JSON.stringify([this.currentInputOwnerKey(), this.query, this.ascending, this.currentChapterIndex]);
   }
 
+  private directoryInputCurrent(): boolean {
+    return this.mounted && this.interactionEnabled && !this.awaitingRulesRefresh &&
+      this.inputOwnerKey === this.currentInputOwnerKey() && (this.inputCurrent?.() ?? true);
+  }
+
   private recoveryInputCurrent(expected: number): boolean {
-    return this.mounted && this.interactionEnabled && expected === this.generation &&
-      this.inputOwnerKey === this.currentInputOwnerKey() && this.lastQuery === this.query &&
+    return this.directoryInputCurrent() && expected === this.generation && this.lastQuery === this.query &&
       this.lastAscending === this.ascending && this.lastChapterIndex === this.currentChapterIndex &&
       (this.navigationPortFactory !== undefined ||
         (this.runtimeOwner !== undefined && ReaderRuntimeOwner.isCurrent(this.runtimeOwner)));
@@ -643,8 +647,7 @@ export struct ReaderDirectoryNavigationSurface {
         } else {
           Stack({ alignContent: this.mangaDisplay ? Alignment.TopStart : Alignment.Center }) {
             ReaderDirectoryNavigationList({
-              inputCurrent: (): boolean => this.mounted && this.interactionEnabled &&
-                !this.awaitingRulesRefresh && (this.inputCurrent?.() ?? true),
+              inputCurrent: (): boolean => this.directoryInputCurrent(),
               chapterInputCurrent: this.chapterInputCurrent,
               navigationPortFactory: this.navigationPortFactory,
               view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
@@ -672,10 +675,10 @@ export struct ReaderDirectoryNavigationSurface {
               emptyReadStateVisible: this.showLoadStatus && (this.loadPending || this.loadFailed),
               scroller: this.scroller,
               onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void => {
-                if (!this.awaitingRulesRefresh) this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
+                if (this.directoryInputCurrent()) this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
               },
               onToggleNode: (node: ReaderDirectoryNavigationNode): void => {
-                if (!this.awaitingRulesRefresh) this.toggle(node);
+                if (this.directoryInputCurrent()) this.toggle(node);
               },
               onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
               onScrollSettled: (): void => this.onTreeScrollSettled(),
@@ -684,13 +687,13 @@ export struct ReaderDirectoryNavigationSurface {
               onClearSearch: (): void => this.onClearSearch(),
               onInvalidated: (): void => { if (!this.awaitingRulesRefresh) this.invalidate(); },
               onDeleteBookmarks: (times: number[]): void => {
-                if (!this.awaitingRulesRefresh && this.bookmarkActionsEnabled) this.onDeleteBookmarks(times);
+                if (this.directoryInputCurrent() && this.bookmarkActionsEnabled) this.onDeleteBookmarks(times);
               },
               onDownloadChapter: (chapterIndex: number): void => {
-                if (!this.awaitingRulesRefresh) this.onDownloadChapter(chapterIndex);
+                if (this.directoryInputCurrent()) this.onDownloadChapter(chapterIndex);
               },
               onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
-                if (!this.awaitingRulesRefresh && this.bookmarkActionsEnabled) this.onCreateChapterStartBookmark(request);
+                if (this.directoryInputCurrent() && this.bookmarkActionsEnabled) this.onCreateChapterStartBookmark(request);
               },
             });
             if (this.view.visibleTotal === 0 && !this.mangaDisplay && !this.hasPrefix()) {

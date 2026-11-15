@@ -1253,7 +1253,8 @@ export struct BookshelfPage {
 
 
   private presentBookActionSheet(book: ShelfBook, focusTarget?: string): void {
-    if (!this.mounted || this.actionBook !== undefined || !this.books.some((candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId)) return;
+    if (!this.mounted || !this.isCurrentShelfInput(this.navigationGeneration) || this.actionBook !== undefined ||
+      !this.books.some((candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId)) return;
     this.actionSheetId = `bookshelf-action:${++this.actionSheetRevision}`;
     this.actionSheetNavigation = this.navigationGeneration;
     this.actionSheetFocusTarget = focusTarget;
@@ -1341,7 +1342,8 @@ export struct BookshelfPage {
 
   private performBookAction(presentationId: string, book: ShelfBook | undefined,
     action: (book: ShelfBook, navigation?: number, focusTarget?: string) => void): void {
-    if (!this.isCurrentBookActionSheet(presentationId, book) || book === undefined) return;
+    if (!this.isCurrentBookActionSheet(presentationId, book) || !this.isCurrentShelfInput(this.actionSheetNavigation) ||
+      book === undefined) return;
     const navigation = this.actionSheetNavigation;
     const focusTarget = this.actionSheetFocusTarget;
     this.pendingBookAction = (): void => action(book, navigation, focusTarget);
@@ -1681,7 +1683,7 @@ export struct BookshelfPage {
   private bookSelectionHandler(provider: () => ShelfBook | undefined, continuing: boolean = false): () => void {
     const navigation = this.navigationGeneration;
     return (): void => {
-      if (!this.isShelfPresentationCurrent(navigation) || this.actionBook !== undefined) return;
+      if (!this.isShelfPresentationCurrent(navigation) || !this.isCurrentShelfInput(navigation) || this.actionBook !== undefined) return;
       const book = provider();
       if (book === undefined) return;
       this.viewState.openedBookKey = JSON.stringify([book.sourceId, book.bookId]);
