@@ -17,8 +17,27 @@
 
 ## 2026年11月15日当前实施状态
 
-全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`1523faef`，已安装候选为`0.2.0.DEV.ea1747817c17`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
+全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
+
+### 正常目录编辑的同宿主重算修复与 Back 后绘制失败
+
+**UIF-48已完成代码、准确回归、编译签名及当前目录编辑的有限原生验证。** 当前34f诊断候选实际进入原生焦点ACK和公开键盘请求，随后同一输入收到allowed=false，键盘显示后立即隐藏。完整Reader进程日志补齐了最初过滤日志采样之后的失效边沿。Parent已有当前Search编辑资格，Directory缺少对应接线。前序同型输入装配核对遗漏了这条目录链，本轮已修正。[原始事件与原因链](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-keyboard-observation-v.json)
+
+当前Panel复用同一按模块和语义作用域判定的编辑入口，Directory只在真实原生焦点回执后报告编辑活动。查询输入和草稿保留当前编辑资格，普通搜索、排序、章节及其他动作仍使用几何准入。Back、失焦、失败、卸载、换实体及新列表打开清理原编辑资格。四个普通工具发出实际enabled=false并拒绝其回调，Native Button继续使用平台焦点依赖。旧609源码负例复现准入失效，当前正常Panel装配和SDK回调通过。[准确用例复审](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v-reflow.json) [回归与失败尝试归档](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-reflow-regression-v.json)
+
+三个准确用例已重新审读并通过正常调度入口，keyboard-transfer、directory-focus、keyboard-ack-delay共三项PASS。搜索原有search-native-editor-scope准确方法也通过。首个新增断言错误地要求Native Button显式focusable=false，已按共享modifier实现改为检查无显式覆盖，并保留enabled=false和实际动作拒绝。一次资格发布脚本误选父项集合导致派发前拒绝，已改为只发布三个准确caseEntries后正常执行。其他用例及完整套件保持NOT_RUN。[正常调度结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/selected-directory-reflow-v/results.json)
+
+当前候选0.2.0.DEV.b2a0c9e4d9eb绑定运行代码c189905d，不可变run为20261115T105219Z-c189905d-55212394，签名HAP的SHA-256为d34c3fa9c3c2431e482fc4747633ec88ba8e156999626c33911400a42b08a3c3。641个运行源码输入与候选逐字节匹配。指定minliny_HarmonyOS证书验签通过，当前停止态存储副本经正式FFI准入后保数据覆盖并启动。[当前源码与候选绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-v-reflow.json)
+
+原正常TXT同一目录输入实际保持focused=true，重算后的allowed仍为true，实屏可见键盘，草稿晋江已进入输入。一次Back使focused=false并隐藏键盘，再次显式点击恢复focused=true、可见键盘和原草稿。原四个条目在键盘可见时均显示。UIF-47的显式再次编辑有了当前原生依据，独立首次Area缺口在本次loaded=true场景中未触发。[当前输入、Back及再次编辑](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-reflow-v.json)
+
+**UIF-49仍为当前原生绘制FAIL。** IME经Back收起后，List高度从582px增至1583px，四个原生条目、坐标、opacity及客户端文字绘制命令仍在，实屏列表区域持续空白。后续同一静止态截图仍为空白。再次编辑使高度回到582px，四个条目像素随之恢复。已审当前List、裁切、透明度及RS客户端和合成树，应用与平台之间的具体失效原因继续由agent定位。完整目录interaction及整页视觉保持原判定。[失败、已排除范围与后续准确问题](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-ime-back-paint-v.json)
+
+70处实际变化的登记源码及测试引用已按字节更新，原21项逐层结果保留，引用检查0诊断。[准确引用更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-refresh-v.json) [引用检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-v-contract-refs-01.json)
+
+
+本批最终沿正常Back依次退出输入、Full、Quick和控制栏，正文仍为原第一章段落4，随后返回原四本书架。原TXT显示27%，Sample EPUB及Native Check保持未读，原漫画显示第2页及100%。最终实际书架为native/1794740421722，前一份文件名带final-shelf的截图实际仍是正文，原文件名和回执保留。两个密度字段均为3.5，状态栏136px，SceneBoard1426。[当前签装、原生边界和最终实屏](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-v-delivery-review.json)
 
 ### 正常文字目录续接、入口归属与本书规则
 
@@ -26,7 +45,7 @@
 
 三个准确SDK用例直接运行通过，覆盖keyboard-transfer、directory-focus和keyboard-ack-delay。统一调度器因它们原有的REVIEW_NEEDED状态在派发前拒绝执行，原FAIL及原资格保留。本次证据使用实际生产Content、Toolbar、Field回调和显式属性重放，焦点与键盘服务由有限端口提供。后继完整ArkTS编译和指定证书签名通过。[当前输入与候选绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-u.json)
 
-**原正常目录编辑仍为FAIL。** 首个后继27ca和当前ea174均保留原生失败。当前显式点击日志为enabled=true、loaded=true，随后原生onFocus回调为true，但采样树仍报告输入focused=false、收起Button focused=true，实屏及窗口记录均未出现IME。本次已有布局回执，首次Area缺口没有在该次触发。已查看的当前Reader日志没有blur或键盘恢复错误，继续追查ACK之后的revision、ticket及键盘请求准入。[原生回执和剩余问题](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-normal-u.json)
+**U批原正常目录编辑当时为FAIL。** 首个后继27ca和当前ea174均保留原生失败。当前显式点击日志为enabled=true、loaded=true，随后原生onFocus回调为true，但采样树仍报告输入focused=false、收起Button focused=true，实屏及窗口记录均未出现IME。本次已有布局回执，首次Area缺口没有在该次触发。已查看的当前Reader日志没有blur或键盘恢复错误，继续追查ACK之后的revision、ticket及键盘请求准入。[原生回执和剩余问题](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-normal-u.json)
 
 正常文字阅读当前通过Quick/Full嵌入ReaderControlDirectoryContent。独立reading-text目录登记是保留的路由装配分支，当前ReaderShell的onOpenDirectory实际调用来自mangaSurface。文字通过书籍信息和详情进入独立完整目录。正式登记保留该分支及原层级判定，补充实际入口归属。[完整入口链核对](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/normal-directory-entry-source-u.json) [13项登记输入更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-refresh-u.json)
 
