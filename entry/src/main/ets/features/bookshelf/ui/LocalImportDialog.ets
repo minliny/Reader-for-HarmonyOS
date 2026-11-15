@@ -10,6 +10,7 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import type { ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { motionAnimateParam, motionAnimateParamDelayed } from '../../../ui/foundation/MotionSpec';
 import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion';
 import { readerMotionCurve, readerMotionDurationMs } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -489,7 +490,7 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private formatBadge(label: string, colorRole: string) {
+  private formatBadge(label: string, colorRole: ReaderAppColorRole) {
     Text(label)
       .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
       .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
