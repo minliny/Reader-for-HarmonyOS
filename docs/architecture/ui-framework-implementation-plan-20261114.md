@@ -2,7 +2,15 @@
 
 ## 2026-11-16 代码收口与连续三轮全局审计
 
-用户要求先完成全部代码侧未闭环项，再由 review agent 做全局审计，连续三轮通过后可以解除 VM 禁令。当前连续通过为 0，VM 禁令有效，本阶段 VM、HDC 和设备操作为 0。
+第十一、十二、十三轮在同一代码候选 62c55a41 上连续完整通过，代码侧修复队列为 0，VM 禁令的三轮通过条件已满足。本代码收口与审计阶段的 VM、HDC、设备、远程和 CUA 操作均为 0。
+
+每轮独立审阅 472 个必审 UI 文件，包含 93 个共享 UI、289 个功能 UI／presentation 和 90 个 App／root 文件。每轮核对 73 项输入与已接纳回执链、83 个历史问题 ID，新增代码问题为 0。642 个生产输入与 1,765 个审阅输入在三轮起止均同字节。[第十一轮](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-11.json)、[第十二轮](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-12.json)、[第十三轮](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-13.json)
+
+本阶段修复 UIF-51 至 UIF-83，共 33 项新增确认代码问题。本地候选 0.2.0.DEV.d33f5b7933c2 完成规范完整 ArkTS 编译及指定证书签名，642 个生产 ETS／TS 文件与不可变产物逐字节一致，签名 HAP 字节哈希已读回匹配。全量测试状态为 NOT_RUN。[代码收口证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/code-closure.json)
+
+正式登记共 21 项、336 层，当前结果为 19 PASS、27 FAIL、290 NOT_RUN，整页原生闭环为 0。37 项登记诊断开放，原生、原稿、G05／G10 的待补证据和关闭条件见原实施批次。只读 Sync 历史采用按顺序分配的呈现键，保留同分钟重复记录的独立行，该实现选择由本次代码整改作出。
+
+### 各轮修复与审阅记录
 
 第一轮绑定 aa015470，结论为 INCOMPLETE，确认五项 P2。UIF-51 至 UIF-55 已在 1b6b846a 修复，13 个准确用例及 6 个旧行为负例取得结果。第二轮复核这五项修复通过，并完成 472 个必审 UI 文件的合同审阅，包含 93 个共享 UI、289 个功能 UI/presentation 和 90 个 App/root 文件，剩余必审文件为 0。第二轮确认另外 12 项 P2，结论为 FAIL。[完整第二轮报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-02.json)
 
@@ -34,7 +42,7 @@ UIF-56 至 UIF-67 已完成当前代码修复，涵盖书架筛选导航准入�
 
 新增两项准确回归一次通过，共 8 组场景，覆盖结果发布、后台／前台恢复、同页面新输入、旧查询拒收、scroll stop 和两类 native sheet 消失。当前本地候选为 0.2.0.DEV.d33f5b7933c2，一次规范完整 ArkTS 编译及指定证书签名通过，642 个生产 ETS／TS 字节绑定无漂移。登记源输入无需更新，引用 0 诊断，37 项原有登记诊断保留。重新冻结后开始第十一轮，连续通过为 0，VM、HDC 和设备操作为 0。[第十轮修复与回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round10-repair-summary.json)
 
-连续三轮通过条件仍待完成。21 项登记的完整原生验收、独立整页视觉、可听读屏、G05 和历史 G10 保留原标准。VM 最后保存的字号为 1.3 倍，原字号恢复仍待执行。
+第十一至十三轮连续通过，代码阶段收口。后续原生与视觉证据按原实施批次和关闭条件执行。21 项登记的完整原生验收、独立整页视觉、可听读屏、G05 和历史 G10 保留原标准。VM 最后保存的字号为 1.3 倍，原字号恢复仍待执行。
 
 ## 2026-11-15 执行量与效率复核，VM 验证已禁止
 
