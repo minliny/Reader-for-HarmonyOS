@@ -7,6 +7,7 @@ import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/ui/
 import { ReaderScrollLayout, readerScrollStartOffset, readerScrollEndOffset } from '../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts';
 
 const definitions = {
+  'short-query-scroll': { description: 'Actual Book applySearch preserves its inline query viewport and cancels pending old scroll work. Full overlay retains existing scroll-to-top entry.', resources: [] },
   'empty-prefix-transition': {
     description: 'Actual manga Surface keeps the existing prefix consumer through confirmed-empty to current pending/failed query input. Finite public child renderer and font/navigation ports, no native Grid or Core filter simulation.',
     resources: [],
@@ -293,6 +294,40 @@ function consumerAssembly() {
 }
 
 for (const id of selectContractCases(definitions)) {
+  if (id === 'short-query-scroll') {
+    const pageSource = read('BookDirectoryPage');
+    const run = (short, implementation = pageSource) => {
+      const timers = [], calls = [], projections = [];
+      const owner = createReaderBuilderProbe(implementation,
+        ['applySearch', 'scheduleTopScroll', 'onListUserScroll', 'flushPendingScroll'], {
+          projectReaderDirectoryEntries: entries => entries,
+          mangaDirectoryContextEntries: entries => entries,
+          setTimeout: action => { timers.push(action); }, Edge: { Top: 'Top' },
+        }).owner;
+      Object.assign(owner, { searchDraft: 'MissingA', admittedEntries: entries,
+        projectedEntries: entries, scrollGeneration: 0, pendingMangaCurrentScroll: true,
+        mounted: true, listReady: true, navigationActive: true,
+        mangaFlowFooter: () => short, publishProjection: value => projections.push(value),
+        listScroller: { scrollEdge: edge => calls.push(edge) } });
+      owner.scheduleTopScroll();
+      owner.applySearch();
+      for (const timer of timers) timer();
+      assert.equal(owner.searchQuery, 'MissingA'); assert.equal(projections.length, 1);
+      if (short) {
+        assert.deepEqual(calls, [], 'typing in the inline prefix cannot scroll its query field offscreen');
+        assert.equal(owner.pendingScrollEdge, undefined);
+        assert.equal(owner.pendingMangaCurrentScroll, false);
+        assert.equal(owner.navigationInteracted, true);
+      } else assert.deepEqual(calls, ['Top'], 'full overlay retains current scroll-to-top semantics');
+    };
+    run(true); run(false);
+    const legacy = pageSource.replace(
+      'if (this.mangaFlowFooter()) this.onListUserScroll();\n    else this.scheduleTopScroll();', 'this.scheduleTopScroll();');
+    assert.notEqual(legacy, pageSource);
+    assert.throws(() => run(true, legacy), /offscreen/);
+    recordContractCasePass(id);
+    continue;
+  }
   if (id === 'empty-prefix-transition') {
     const f = fixture({ retained: true, prefix: true, manga: true, query: 'missing-a', render: 'defer' });
     await settle();

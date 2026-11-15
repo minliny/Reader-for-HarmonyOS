@@ -107,7 +107,7 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
       nodes.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === query.chapterIndex);
     return { status: 'ready', identity: { sourceId: this.sourceId, bookId: this.bookId,
       catalogRevision: this.viewId, structureRevision: this.viewId },
-      viewId: this.viewId, navigationRevision: this.viewId, visibleTotal: nodes.length,
+      viewId: empty ? `${this.viewId}:${query.query}` : this.viewId, navigationRevision: this.viewId, visibleTotal: nodes.length,
       currentVisibleIndex: current >= 0 ? current : undefined,
       nodes: nodes };
   }

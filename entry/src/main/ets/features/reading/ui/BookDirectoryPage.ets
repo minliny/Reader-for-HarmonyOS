@@ -776,7 +776,8 @@ export struct BookDirectoryPage {
     this.searchQuery = nextQuery;
     this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
       nextQuery, this.ascending, true));
-    this.scheduleTopScroll();
+    if (this.mangaFlowFooter()) this.onListUserScroll();
+    else this.scheduleTopScroll();
   }
 
   private toggleSort(): void {

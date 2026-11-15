@@ -74,13 +74,16 @@ if(selected.length){
       () => active, kind => reads.push(kind), false, true);
     const input = query => ({ sourceId: 'fixture', bookId: 'book', query });
     assert.equal((await port.open(input(''))).visibleTotal, 64, 'normal acquisition has readable chapters');
-    assert.equal((await port.open(input('MissingA'))).visibleTotal, 0);
+    const emptyA = await port.open(input('MissingA'));
+    assert.equal(emptyA.visibleTotal, 0); assert.notEqual(emptyA.viewId, 'view');
     const pending = port.open(input('MissingB'));
     assert.equal(timers.size, 1); assert.equal(reads.at(-1), 'tree-query-pending');
     [...timers.values()][0]();
     await assert.rejects(pending, /explicit query read failure/);
     assert.equal(reads.at(-1), 'tree-query-failed');
-    assert.equal((await port.open(input('MissingB'))).visibleTotal, 0, 'original retry returns an explicit public ready response');
+    const emptyB = await port.open(input('MissingB'));
+    assert.equal(emptyB.visibleTotal, 0, 'original retry returns an explicit public ready response');
+    assert.notEqual(emptyB.viewId, emptyA.viewId, 'distinct query projections own distinct public views');
     const retired = new Port('fixture', 'book', 'view2', () => readerDirectoryFixtureEntries(true),
       () => active, kind => reads.push(kind), false, true);
     const abandoned = retired.open(input('MissingB')), late = [...timers.values()].at(-1);
