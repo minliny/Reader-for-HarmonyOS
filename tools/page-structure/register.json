@@ -891,7 +891,7 @@
         },
         "B1": {
           "result": "NOT_RUN",
-          "reason": "D1用户仅决定本轮保留现有入口；主次/上下文关系仍待裁决，不据此宣称合规。",
+          "reason": "D1保留现有入口的决定已落实。主次及上下文关系继续由agent按现有设计依据、真实入口和平台行为补齐核对，当前证据保留NOT_RUN。",
           "evidence": []
         },
         "B2": {
@@ -1054,7 +1054,7 @@
         }
       },
       "exceptions": [],
-      "revision": 37,
+      "revision": 38,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -29836,9 +29836,15 @@
               "path": "tools/test-source-tools-selection.mjs",
               "symbol": "batch,rows",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-focus-1c2e.json",
+              "symbol": "after.batch,after.rows",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. UIF18 current actual SDK regression retains seven batch and three row controls, current selection/catalog attributes and actions, busy/unknown/removed/opening fences and three historical defect negatives. Native keyboard focus recheck is pending on the repaired candidate."
+          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. UIF18 current actual SDK regression retains seven batch and three row controls, current selection/catalog attributes and actions, busy/unknown/removed/opening fences and three historical defect negatives. Current1c2e native memoryfixture320/font1 passed AllSelect3→12 andfirstsource12→11→12, same nativeButton201 and248/251/254, actualkeyboardfocus retained. Intentcounts2/3/4, entrydebug1. Pure reader, fullactionstate andwholepage acceptance remainopen."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -30436,7 +30442,7 @@
         }
       },
       "exceptions": [],
-      "revision": 24,
+      "revision": 25,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
