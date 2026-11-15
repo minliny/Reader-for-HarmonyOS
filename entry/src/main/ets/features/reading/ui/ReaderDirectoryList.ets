@@ -37,6 +37,8 @@ export struct ReaderDirectoryList {
   @Prop @Watch('onRowHeightChanged') rowHeight: number = 44;
   /** Manga titles wrap naturally; text keeps its existing fixed virtual extent. */
   @Prop naturalRowHeight: boolean = false;
+  /** Short manga viewports need scrollable spacers when native offsets would be reset. */
+  @Prop materializedInsets: boolean = false;
   @State private itemSizes: ChildrenMainSize = new ChildrenMainSize(44);
   @Prop listPaddingX: number = 0;
   @Prop listPaddingRight: number = -1;
@@ -156,6 +158,9 @@ export struct ReaderDirectoryList {
 
   build() {
     List({ space: 0, scroller: this.scroller }) {
+      if (this.materializedInsets) {
+        ListItem() {}.width('100%').height(this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY);
+      }
       if (this.prefixHeight > 0) {
         ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: this.prefixHeight });
       }
@@ -172,6 +177,9 @@ export struct ReaderDirectoryList {
           .width('100%')
           .height(this.naturalRowHeight ? undefined : this.rowHeight);
         }, (entry: LocalReadingTocEntry): string => `reader-directory-row-${entry.index}-${JSON.stringify(entry)}`);
+      if (this.materializedInsets) {
+        ListItem() {}.width('100%').height(this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY);
+      }
     }
     .width('100%')
     .height('100%')
@@ -184,9 +192,9 @@ export struct ReaderDirectoryList {
     })
     // Publish one pair: text keeps the parent's overlay clearance, while
     // natural manga rows carry their own padding inside the scroll content.
-    .contentStartOffset(this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) :
+    .contentStartOffset(this.materializedInsets ? 0 : this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) :
       readerScrollStartOffset(this.scrollLayout))
-    .contentEndOffset(this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) :
+    .contentEndOffset(this.materializedInsets ? 0 : this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) :
       readerScrollEndOffset(this.scrollLayout))
     .scrollBar(this.naturalRowHeight ? BarState.Auto : BarState.Off)
     .scrollBarWidth(this.naturalRowHeight ? 4 : undefined)

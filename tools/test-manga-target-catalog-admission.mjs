@@ -4,6 +4,10 @@ import { createRequire, registerHooks } from 'node:module';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'short-fallback-insets': {
+    description: 'Actual SDK short manga fallback materializes scrollable insets, preserves chapter target indices and signed chrome offsets, and separates summary drag from toolbar actions.',
+    resources: [],
+  },
   'busy-catalog': {
     description: 'Actual pending manga selection reaches SDK target catalog row eligibility, coalesces repeated selection and preserves current Back cancellation. Finite pending progress RPC, no commit or network.',
     resources: [],
@@ -11,6 +15,11 @@ const selected = selectContractCases({
 });
 
 for (const id of selected) {
+  if (id === 'short-fallback-insets') {
+    await shortFallbackInsets();
+    recordContractCasePass(id);
+    continue;
+  }
   registerHooks({ resolve(specifier, context, next) {
     try { return next(specifier, context); }
     catch (error) {
@@ -159,4 +168,88 @@ for (const id of selected) {
   await legacyPending;
   console.log('PASS exact source-switch SDK target inputs, pending native eligibility and actual owner coalescing/Back. Native dispatch, imagery and commit remain separate.');
   recordContractCasePass(id);
+}
+
+async function shortFallbackInsets() {
+  const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
+  const snapshot = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+  const scrollLayout = await import('../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
+  const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+  const { MANGA_DIRECTORY_VISUAL: visual } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+  const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
+  const pageSource = read('features/reading/ui/BookDirectoryPage.ets');
+  const listSource = read('features/reading/ui/ReaderDirectoryList.ets');
+  const { DirectoryListDataSource } = selectedProductionClasses(
+    new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets', import.meta.url),
+    ['DirectoryListDataSource'], snapshot);
+  class Captured {
+    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+    updateStateVars(params) { this.params = params; }
+  }
+  function check(candidate = pageSource, listCandidate = listSource) {
+    for (const flowing of [true, false]) {
+      const sdk = boundedSurfaceSdk();
+      const start = flowing ? 360 : 280, end = 18, moves = [], offsets = [];
+      const page = createReaderBuilderProbe(candidate,
+        ['mangaFlatList', 'mangaToolbar', 'scrollMangaCurrent', 'mangaHeightHandler'], {
+          ...sdk.deps, ...fonts, visual, ReaderDirectoryList: Captured,
+          ReaderDirectoryToolbar: Captured, MangaDirectoryCurrentFooter: Captured,
+          ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => value },
+        }, { ...sdk.hooks, childSources: {
+          ReaderDirectoryList: listCandidate, ReaderDirectoryToolbar: read('features/reading/ui/ReaderDirectoryToolbar.ets'),
+          MangaDirectoryCurrentFooter: read('features/manga/ui/MangaDirectoryCurrentFooter.ets'),
+        } }).owner;
+      Object.assign(page, {
+        geometry: { content: { frame: { left: 18, right: 18, width: 330 }, startInset: start, endInset: end } },
+        listScroller: { scrollToIndex: (...args) => moves.push(args) },
+        mangaFlowFooter: () => flowing, mangaContentTopInset: () => start, mangaVisibleTopInset: () => 80,
+        mangaLayoutEntries: () => [], directoryListIsCurrent: () => true, mangaScrollOffset: 0,
+        onMangaScrollOffset: value => offsets.push(value), appThemeScheme: 'day', bookTitle: '长标题',
+        mangaToolsHeight: 250, toolsMeasurement: { id: 'toolbar', mount() {}, unmount() {} },
+        mangaFontScale: () => 1, mangaSummaryLabel: () => '60 个条目', searchDraft: '', ascending: true,
+        mangaFooterBottomOffset: () => 8, mangaCurrentFooter() {},
+      });
+      page.mangaFlatList('current');
+      const child = [...page.children.values()].find(value => value instanceof Captured);
+      assert.equal(child.params.materializedInsets, flowing, 'short viewport uses actual scroll content');
+      const list = createReaderBuilderProbe(listCandidate, boundedMembers(listCandidate), {
+        ...sdk.deps, ...scrollLayout, DirectoryListDataSource,
+        ChildrenMainSize: class { constructor(size) { this.childDefaultSize = size; } },
+      }, { ...sdk.hooks, initialParams: child.params }).owner;
+      list.initialRender();
+      const viewport = [...list.nodes.values()].find(node => node.type === 'List');
+      assert.equal(viewport.contentStartOffset, flowing ? 0 : start);
+      assert.equal(viewport.contentEndOffset, flowing ? 0 : end);
+      const spacers = [...list.nodes.values()].filter(node => node.type === 'ListItem' && typeof node.height === 'number');
+      assert.deepEqual(spacers.map(node => node.height), flowing ? [start, end] : []);
+      child.params.onScrollOffset(flowing ? 0 : -start);
+      child.params.onScrollOffset(flowing ? 93 : -start + 93);
+      child.params.onScrollOffset(flowing ? -7 : -start - 7);
+      assert.deepEqual(offsets, [0, 93, -7], 'native content origin preserves signed displacement');
+      page.scrollMangaCurrent(4, 12);
+      assert.deepEqual(moves, [[flowing ? 5 : 4, false, 'start', { extraOffset: (flowing ? 0 : start) - 92 }]],
+        'canonical chapter index and painted header clearance reach the current native List');
+      page.mangaToolbar('current');
+      const overlay = [...page.nodes.values()].find(node => node.id === 'toolbar');
+      assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
+      const toolbar = [...page.nodes.values()].find(node => node.type === '__Common__' &&
+        node.hitTestBehavior === 'HitTestMode.BLOCK_HIERARCHY');
+      assert.ok(toolbar, 'actual toolbar actions stop lower sibling collection');
+    }
+  }
+  check();
+  for (const [label, page, list] of [
+    ['native short offsets', pageSource.replace('materializedInsets: this.mangaFlowFooter(),', ''), listSource],
+    ['chapter prefix index', pageSource.replace('index + (flowing ? 1 : 0)', 'index'), listSource],
+    ['short content origin', pageSource.replace('offset + (this.mangaFlowFooter() ? 0 : this.mangaContentTopInset())', 'offset + this.mangaContentTopInset()'), listSource],
+    ['summary hit boundary', pageSource.replace('.hitTestBehavior(HitTestMode.Transparent)\n      .position', '.hitTestBehavior(HitTestMode.Default)\n      .position'), listSource],
+    ['toolbar action boundary', pageSource.replace('}).hitTestBehavior(HitTestMode.BLOCK_HIERARCHY);', '});'), listSource],
+    ['missing scroll spacers', pageSource, listSource.replaceAll('if (this.materializedInsets) {', 'if (false) {')],
+  ]) {
+    assert.ok(page !== pageSource || list !== listSource, label);
+    assert.throws(() => check(page, list), assert.AssertionError, label);
+  }
+  console.log('PASS actual short/full SDK List content, canonical index, signed offsets and toolbar hit boundaries with six rejected regressions.');
 }

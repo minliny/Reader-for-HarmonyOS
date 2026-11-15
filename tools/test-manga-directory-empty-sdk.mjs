@@ -14,6 +14,7 @@ const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-r
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { sameReaderDirectoryData, snapshotReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
 const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const scrollLayout = await import('../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
 const { MANGA_DIRECTORY_VISUAL: visual, mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
 
 
@@ -43,28 +44,33 @@ function check(candidate = pageSource, listCandidate = listSource, exhaustive = 
     // The platform owns when it is invoked; no layout/compositor is simulated.
     const shared = boundedSurfaceSdk({ properties });
     const actualState = shared.consumer(stateSource, boundedMembers(stateSource)).constructor;
-    const deps = { ...shared.deps, ...properties.sdk, ...fonts, ReaderPageState: actualState, DirectoryListDataSource, ChildrenMainSize,
+    const deps = { ...shared.deps, ...properties.sdk, ...fonts, ...scrollLayout, ReaderPageState: actualState, DirectoryListDataSource, ChildrenMainSize,
       ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
       ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: scale }) } };
     const actualList = createReaderBuilderProbe(listCandidate, boundedMembers(listCandidate), deps, properties.hooks).Component;
     const { owner } = createReaderBuilderProbe(candidate, names, { ...deps, ReaderDirectoryList: actualList },
-      { ...properties.hooks, childSources: { ReaderDirectoryList: listCandidate, ReaderPageState: stateSource }, mountChildren: true });
+      { ...properties.hooks, initialParams: { sourceId: 'source', bookId: 'book' },
+        childSources: { ReaderDirectoryList: listCandidate, ReaderPageState: stateSource }, mountChildren: true });
     const searches = [];
     Object.assign(owner, { appThemeScheme: scheme, searchDraft: '找不到', searchQuery: '找不到', catalogMessage: '',
-      mangaToolsHeight: 175, readerWindowMetricsRevision: 0, mounted: true,
-      sourceId: 'source', bookId: 'book', admittedIdentity: 'source\0book',
+      mangaToolsHeight: 175, readerWindowMetricsRevision: 0, mounted: false,
+      geometry: { content: { frame: { left: 20, right: 20, width: 280 }, startInset: 260, endInset: 82 } },
+      admittedIdentity: 'source\0book',
       contentFrame: () => ({ left: 20, right: 20, width: 280 }), topInset: () => 24,
       mangaLayoutEntries: () => [], mangaFlowFooter: () => true, mangaBottomClearance: () => 82,
       emptyMessage: () => '没有匹配章节', applySearch() { searches.push(this.searchDraft); },
       onListFirstLayout() {}, onMangaScrollOffset() {}, onListUserScroll() {}, mangaFlatRow() {} });
+    owner.mounted = true;
     owner.mangaFlatList('source\0book');
     const list = [...owner.children.values()].find(child => child.nodes);
     assert.ok(list, 'mount the real SDK-compiled shared List rather than a child stub');
     const viewport = [...list.nodes.values()].find(node => node.type === 'List');
-    assert.equal(viewport.contentStartOffset, owner.mangaContentTopInset());
+    assert.equal(list.materializedInsets, true);
+    assert.equal(viewport.contentStartOffset, 0);
     assert.equal(viewport.padding.top, 0, 'natural manga clearance stays inside scroll content');
-    assert.equal(viewport.contentEndOffset, 82);
-    const item = [...list.nodes.values()].find(node => node.type === 'ListItem');
+    assert.equal(viewport.contentEndOffset, 0);
+    assert.deepEqual([...list.nodes.values()].filter(node => node.type === 'ListItem' && typeof node.height === 'number').map(node => node.height), [owner.mangaContentTopInset(), 82]);
+    const item = [...list.nodes.values()].find(node => node.type === 'ListItem' && node.height === undefined);
     assert.ok(item, 'empty manga is an actual scroll-content item');
     assert.equal(typeof item.create[0], 'function', 'actual SDK emits the deferred native empty slot');
     item.create[0](item.id, true);
@@ -93,9 +99,9 @@ function check(candidate = pageSource, listCandidate = listSource, exhaustive = 
 }
 check();
 for (const [label, page, list] of [
-  ['missing actual empty slot', pageSource, listSource.replace('this.naturalRowHeight && this.entries.length === 0', 'false')],
+  ['missing actual empty slot', pageSource, listSource.replace('(this.naturalRowHeight || this.prefixHeight > 0) && this.entries.length === 0', 'false')],
   ['lost business clear callback', pageSource.replaceAll("this.searchDraft = ''; this.applySearch();", "this.searchDraft = '';"), listSource],
-  ['novel receives manga slot', pageSource, listSource.replace('this.naturalRowHeight && this.entries.length === 0', 'this.entries.length === 0')],
+  ['novel receives manga slot', pageSource, listSource.replace('(this.naturalRowHeight || this.prefixHeight > 0) && this.entries.length === 0', 'this.entries.length === 0')],
   ['empty loses clear operation', pageSource.replaceAll("? '清除搜索'", "? ''"), listSource],
 ]) {
   assert.ok(page !== pageSource || list !== listSource, label);

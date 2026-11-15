@@ -296,12 +296,13 @@ export struct BookDirectoryPage {
         onSearch: (): void => { if (this.directoryInputIsCurrent(identity)) this.applySearch(); },
         onToggleSort: (): void => { if (this.directoryInputIsCurrent(identity)) this.toggleSort(); },
         onLocateCurrent: (): void => { if (this.directoryInputIsCurrent(identity)) this.locateCurrent(); },
-      });
+      }).hitTestBehavior(HitTestMode.BLOCK_HIERARCHY);
       if (this.mangaFlowFooter()) {
         Row() { this.mangaCurrentFooter(this.flowFooterMeasurement); }.width('100%').justifyContent(FlexAlign.Center)
           .margin({ top: this.mangaFooterBottomOffset() });
       }
     }.width(this.geometry.content.frame.width).alignItems(HorizontalAlign.Start)
+      .hitTestBehavior(HitTestMode.Transparent)
       .position({ x: this.geometry.content.frame.left, y: this.geometry.content.startInset - this.mangaToolsHeight - this.mangaScrollOffset })
       .id(this.toolsMeasurement.id)
       .onAppear((): void => this.toolsMeasurement.mount(this.getUIContext(), this.mangaMeasurementKey,
@@ -350,8 +351,9 @@ export struct BookDirectoryPage {
   }
 
   private scrollMangaCurrent(index: number, currentInset: number = 12): void {
-    this.listScroller.scrollToIndex(index, false, ScrollAlign.START, { extraOffset: LengthMetrics.vp(
-      this.mangaContentTopInset() - this.mangaVisibleTopInset() - currentInset) });
+    const flowing = this.mangaFlowFooter();
+    this.listScroller.scrollToIndex(index + (flowing ? 1 : 0), false, ScrollAlign.START, { extraOffset: LengthMetrics.vp(
+      (flowing ? 0 : this.mangaContentTopInset()) - this.mangaVisibleTopInset() - currentInset) });
   }
 
   private mangaContentTopInset(): number {
@@ -445,6 +447,7 @@ export struct BookDirectoryPage {
   private mangaFlatList(identity: string) {
     ReaderDirectoryList({
       entries: this.mangaLayoutEntries(), rowHeight: visual.gridHeight, naturalRowHeight: true,
+      materializedInsets: this.mangaFlowFooter(),
       listPaddingX: this.geometry.content.frame.left, listPaddingY: 8,
       listPaddingRight: this.geometry.content.frame.right,
       listPaddingTop: this.geometry.content.startInset, listPaddingBottom: this.geometry.content.endInset,
@@ -453,7 +456,8 @@ export struct BookDirectoryPage {
         if (this.directoryListIsCurrent(identity, false)) this.onListFirstLayout(identity);
       },
       onScrollOffset: (offset: number): void => {
-        if (this.directoryListIsCurrent(identity, false)) this.onMangaScrollOffset(offset + this.mangaContentTopInset());
+        if (this.directoryListIsCurrent(identity, false))
+          this.onMangaScrollOffset(offset + (this.mangaFlowFooter() ? 0 : this.mangaContentTopInset()));
       },
       onUserScrollIntent: (): void => {
         if (!this.navigationActive && this.directoryInputIsCurrent(identity)) this.onListUserScroll();
