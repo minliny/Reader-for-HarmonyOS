@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
-  'initializer-safety': 'Actual SDK SharedDownloadPage initializer, exact debug and parent/shared checked font gates. No injected managing/detail state.',
+  'initializer-safety': 'Actual SDK SharedDownloadPage initializer, exact debug and parent/shared checked font gates, normal public initial view. Management and modal state remain owned by the page.',
   'no-business': 'Typed in-memory text/manga chapter and policy samples; no Entry or runtime Core/Host/network/file port, scale setter or substituted font.',
   'callback-retire': 'Actual initializer callbacks and bridge: memory/log-only actions, current generation/read target validation, stale callback and cleanup retirement, actual area separate from system scale.',
+  'state-samples': 'Actual ten public input projections, default and restored query/detail views, one pending refresh/recovery and coalesced chapter read with generation/retirement guards.',
 });
 if (selected.length) {
   registerHooks({ resolve(specifier, context, next) {
@@ -21,11 +22,13 @@ if (selected.length) {
   const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-  const { createDownloadBookView, projectDownloadBookAvailability, downloadChapterStateLabel } =
+  const { createDownloadBookView, projectDownloadBookAvailability, downloadChapterStateLabel, filterDownloadBooks } =
     await import('../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts');
   const { readerPageAreaLength } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
   const file = new URL('../entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets', import.meta.url);
   const source = readFileSync(file, 'utf8');
+  const { selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+  const { DOWNLOAD_FIXTURE_SCENARIOS } = selectedProductionValues(file, ['DOWNLOAD_FIXTURE_SCENARIOS']);
   const actor = readFileSync(new URL('../entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets', import.meta.url), 'utf8');
   const stateActor = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderPageState.ets', import.meta.url), 'utf8');
   const require = createRequire(import.meta.url), componentMap = require(resolveEtsLoaderRoot() + '/lib/component_map.js');
@@ -35,7 +38,7 @@ if (selected.length) {
     const ids = componentMap.ID_ATTRS, saved = new Map(ids); ids.clear();
     try { return body(); } finally { ids.clear(); for (const [key, value] of saved) ids.set(key, value); }
   }
-  function fixture({ debug = true, mode = 'debug', parentFonts = true, fonts = () => Promise.resolve(true) } = {}) {
+  function fixture({ debug = true, mode = 'debug', parentFonts = true, fonts = () => Promise.resolve(true), scenario = 'content' } = {}) {
     const sdk = boundedSurfaceSdk(), children = [], actions = [], bridges = [], events = []; let fontCalls = 0, backs = 0;
     class Child { constructor(owner, params, _storage, id) { this.owner = owner; this.params = params; this.id = id; children.push(this); } updateStateVars(params) { Object.assign(this.params, params); } }
     class StateChild { constructor(owner, params, _storage, id) { this.owner = owner; this.params = params; this.id = id; } updateStateVars(params) { Object.assign(this.params, params); } }
@@ -46,7 +49,7 @@ if (selected.length) {
       prepareSharedDownloadFonts: () => { fontCalls++; return fonts(); },
       hilog: { info(_domain, _tag, _format, payload) { events.push(JSON.parse(payload)); } },
     }, { ...sdk.hooks, childSources: { ...sdk.childSources, SharedDownloadPage: actor, ReaderPageState: stateActor } }));
-    Object.assign(page, { fontsReady: parentFonts, onAction: action => actions.push(action), onBack: () => backs++,
+    Object.assign(page, { fontsReady: parentFonts, scenario, onAction: action => actions.push(action), onBack: () => backs++,
       onTemporaryBackBridge: (handler, identity) => bridges.push({ handler, identity }) });
     return { page, children, actions, bridges, events, sdk, fontCalls: () => fontCalls, backs: () => backs, props: () => children.at(-1)?.params };
   }
@@ -58,8 +61,9 @@ if (selected.length) {
       assert.equal(f.children.length, allowed ? 1 : 0); assert.equal(f.fontCalls(), allowed ? 1 : 0);
       if (allowed) {
         const params = f.props(); assert.equal(params.books.length, 12); assert(params.presentationIdentity.startsWith('download-fixture-'));
-        for (const field of ['managing', 'detailKey', 'sheet', 'fontsReady', 'initialViewState']) assert(!Object.hasOwn(params, field), `${field} is owned by actual page UI`);
-        assert.deepEqual(Object.keys(params).sort(), ['books','error','loading','onBack','onIntent','onOpenBook','onReadTarget','onRefresh','onTemporaryBackBridge','onViewStateChanged','batchRecovery','isOpeningCurrent','onRefreshStorage','presentationIdentity','storagePolicy','storageSummary'].sort());
+        for (const field of ['managing', 'detailKey', 'sheet', 'fontsReady']) assert(!Object.hasOwn(params, field), `${field} is owned by actual page UI`);
+        assert.deepEqual(params.initialViewState, {query:'',type:'all',state:'all',sourceId:'all',sort:'recent',direction:'desc',detailKey:''});
+        assert.deepEqual(Object.keys(params).sort(), ['books','error','loading','onBack','onIntent','onOpenBook','onReadTarget','onRefresh','onTemporaryBackBridge','onViewStateChanged','batchRecovery','isOpeningCurrent','onRefreshStorage','presentationIdentity','storagePolicy','storageSummary','initialViewState','onRefreshBatchRecovery'].sort());
       }
     }
     const gate = deferred(), f = fixture({ fonts: () => gate.promise }); f.page.aboutToAppear(); f.page.initialRender(); assert.equal(f.children.length, 0);
@@ -90,9 +94,10 @@ if (selected.length) {
   }
   async function callbackRetire() {
     const f = fixture(); f.page.aboutToAppear(); await tick(); f.page.initialRender(); const old = f.props(), book = old.books[0];
-    old.onRefresh(); old.onOpenBook(book); old.onReadTarget({sourceId:book.sourceId,bookId:book.bookId,chapterIndex:2,chapterId:book.chapters[2].chapterId});
+    old.onOpenBook(book); old.onReadTarget({sourceId:book.sourceId,bookId:book.bookId,chapterIndex:2,chapterId:book.chapters[2].chapterId});
     old.onIntent({action:'download',scope:'chapters',books:[{sourceId:book.sourceId,bookId:book.bookId,chapterIndices:[2]}]});
     old.onIntent({action:'configureStorage',scope:'storage',books:[],cacheLimitMb:512,cleanupAfterDays:3});
+    old.onRefresh();
     assert.equal(f.actions.length,5); assert.equal(f.page.storagePolicy.capacityBytes,536870912); assert.equal(f.page.books[0].state,'downloaded');
     const beforePartial=f.actions.length;
     old.onIntent({action:'configureStorage',scope:'storage',books:[],cacheLimitMb:768});
@@ -116,6 +121,55 @@ if (selected.length) {
     f.page.aboutToAppear(); await tick(); f.page.initialRender(); const next=f.props(); next.onTemporaryBackBridge(()=>true,'next'); old.onTemporaryBackBridge(undefined,'next'); assert.equal(f.page.childBackIdentity,'next');
     f.page.fontsReady=false; f.page.onParentFontsChanged(); assert.equal(f.page.downloadFontsReady,false); assert.equal(f.page.consumeBack(),false); next.onRefresh(); assert.equal(f.actions.length,count);
   }
-  const cases={'initializer-safety':initializerSafety,'no-business':noBusiness,'callback-retire':callbackRetire};
+  async function stateSamples() {
+    assert.equal(DOWNLOAD_FIXTURE_SCENARIOS.length, 9);
+    for (const scenario of ['content', ...DOWNLOAD_FIXTURE_SCENARIOS.map(item => item.value)]) {
+      const f = fixture({ scenario }); f.page.aboutToAppear(); await tick(); f.page.initialRender();
+      const ports = f.props(), books = ports.books;
+      const empty = ['loading','empty','read-error'].includes(scenario);
+      assert.equal(books.length, empty ? 0 : 12);
+      assert.equal(ports.loading, ['loading','pending'].includes(scenario));
+      assert.equal(ports.error.length > 0, ['read-error','retained-error'].includes(scenario));
+      const recovery = ['recovery','pending'].includes(scenario);
+      assert.equal(ports.batchRecovery.visible, recovery);
+      assert.equal(ports.batchRecovery.canRetry, recovery);
+      assert.equal(ports.batchRecovery.generation, recovery ? f.page.fixtureGeneration : 0);
+      assert.equal(ports.initialViewState.query, scenario === 'filtered-empty' ? 'fixture-no-matching-book' : '');
+      if (scenario === 'filtered-empty') assert.deepEqual(filterDownloadBooks(books, ports.initialViewState), []);
+      if (scenario.startsWith('chapter-')) {
+        assert.equal(ports.initialViewState.detailKey, books[0].key);
+        assert.equal(books[0].projectionStatus, scenario === 'chapter-error' ? 'unavailable' : 'unloaded');
+        assert.equal(books[0].chapters.length, 0);
+        assert.equal(books[0].downloadError, undefined, 'a projection error never creates a task failure');
+        if (scenario === 'chapter-error') {
+          assert.ok(books[0].projectionError.startsWith('内存夹具：'));
+          ports.onOpenBook(books[0]); ports.onOpenBook(books[0]);
+          assert.equal(f.actions.length, 1); assert.equal(f.page.pendingBookReads.size, 1);
+          assert.equal(f.page.books, books, 'pending chapter read supplies no fabricated projection result');
+        }
+      }
+      if (scenario === 'read-error') {
+        ports.onRefresh(); ports.onRefresh();
+        assert.equal(f.page.loading, true); assert.equal(f.page.error, '');
+        assert.equal(f.actions.length, 1); assert.equal(f.page.books, books);
+      }
+      if (recovery) {
+        ports.onRefreshBatchRecovery(ports.batchRecovery.generation - 1); assert.equal(f.actions.length, 0);
+        ports.onRefreshBatchRecovery(ports.batchRecovery.generation);
+        ports.onRefreshBatchRecovery(ports.batchRecovery.generation);
+        assert.equal(f.page.loading, true); assert.equal(f.actions.length, scenario === 'recovery' ? 1 : 0);
+        assert.equal(f.page.recovery, ports.batchRecovery, 'refresh keeps the original unresolved facts');
+      }
+      f.page.observeArea(f.page.fixtureGeneration, {width:366,height:168});
+      const event = f.events.at(-1);
+      assert.equal(event.scenario, scenario); assert.equal(event.bookCount, books.length);
+      assert.equal(event.loading, f.page.loading); assert.equal(event.recoveryVisible, recovery);
+      f.page.aboutToDisappear(); const count = f.actions.length;
+      ports.onRefresh(); ports.onRefreshBatchRecovery(ports.batchRecovery.generation);
+      if (books.length) ports.onOpenBook(books[0]);
+      assert.equal(f.actions.length, count, 'retired callbacks cannot refresh the next scene');
+    }
+  }
+  const cases={'initializer-safety':initializerSafety,'no-business':noBusiness,'callback-retire':callbackRetire,'state-samples':stateSamples};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

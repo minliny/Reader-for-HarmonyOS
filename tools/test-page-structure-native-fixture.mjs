@@ -14,6 +14,7 @@ const selected = selectContractCases({
   'source-states': 'Actual memory-only Source read/original/unknown recovery initializers, full long-message path through real projections, accurate generations and retired callbacks; no Host/RPC, native clipping or hit claim.',
   'fixture-scenes': 'Actual Directory/Download/Tools child initializers, checked admission, outer width vs actual Area, current-scene intent/Back and same-identity old bridge cleanup retirement. No native child subtree execution.',
   'tools-state-scenes': 'Actual Tools scenario menu callbacks forward the selected state, retain default content and reject denied or old menu callbacks. Frozen-state negative is rejected.',
+  'download-state-scenes': 'Actual Download scenario menu callbacks across full and168vp stages, normal default reset, checked admission and old callback rejection. Frozen scenario negative is rejected.',
   'downloads-short': 'New typed DEBUG 168vp Download wrapper through actual SDK initializer/safe top and real child/actor Area callbacks; full Download initializer and canonical recovery remain unchanged. Native geometry/inflow not asserted.',
   'group-recovery': 'Actual SDK DEBUG group fixture initializer, checked fonts, current-scene temporary Back and retired bridge rejection.',
   'framework-geometry': 'Actual SDK DEBUG geometry/removal fixture initializer, checked fonts and current-scene temporary Back ownership.',
@@ -46,6 +47,8 @@ if (selected.length) {
   const stateActor = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderPageState.ets',import.meta.url),'utf8');
   const directoryFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets',import.meta.url),'utf8');
   const downloadFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets',import.meta.url),'utf8');
+  const { DOWNLOAD_FIXTURE_SCENARIOS } = selectedProductionValues(
+    new URL('../entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets', import.meta.url), ['DOWNLOAD_FIXTURE_SCENARIOS']);
   const toolsFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets',import.meta.url),'utf8');
   const { SOURCE_TOOLS_FIXTURE_SCENARIOS } = selectedProductionValues(
     new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets', import.meta.url), ['SOURCE_TOOLS_FIXTURE_SCENARIOS']);
@@ -73,7 +76,7 @@ if (selected.length) {
     const {owner:page}=compile(()=>createReaderBuilderProbe(sourceText,boundedMembers(sourceText),{
       ...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:mode,SourceManagementPage:SourceChild,ReaderPageState:StateChild,
       ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,ReaderGroupRecoveryStructureFixture:GroupChild,ReaderFrameworkGeometryStructureFixture:GeometryChild,ReaderLegacyBookmarkRecoveryStructureFixture:LegacyChild,
-      defaultSourceManagementFilters,SOURCE_TOOLS_FIXTURE_SCENARIOS,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
+      defaultSourceManagementFilters,SOURCE_TOOLS_FIXTURE_SCENARIOS,DOWNLOAD_FIXTURE_SCENARIOS,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
       readerContentSafeTop,readerInteractiveSafeBottom,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
       prepareReaderFonts:()=>{fontCalls++;return fonts();},
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));},error(){}},
@@ -222,7 +225,8 @@ if (selected.length) {
       const launch=f.sdk.nodes(f.page).findLast(n=>n.id==='reader-page-structure-downloads-short')?.onClick;assert.equal(typeof launch,'function');launch();assert.equal(f.page.scene,'downloads-short');
       f.page.initialRender();const root=[...f.page.nodes.values()].find(n=>n.type==='Stack'&&n.expandSafeArea);assert.equal(root.padding.top,43);assert.equal([...f.page.nodes.values()].filter(n=>n.padding?.top===43).length,1);
       const child=f.children.at(-1);assert.equal(child.kind,'downloads');assert.equal(child.hostAtCreation.id,'reader-download-short-viewport');assert.equal(child.hostAtCreation.height,168);assert.equal(child.hostAtCreation.width,'100%');assert.equal(child.hostAtCreation.clip,true);assert.equal(child.hostAtCreation.align,'Alignment.Top');
-      assert.deepEqual(Object.keys(child.params).sort(),['fontsReady','onAction','onBack','onTemporaryBackBridge'].sort());
+      assert.deepEqual(Object.keys(child.params).sort(),['fontsReady','scenario','onAction','onBack','onTemporaryBackBridge'].sort());
+      assert.equal(child.params.scenario, 'content');
       for(const key of['pageHeight','viewportHeight','metrics','initialViewState','managing'])assert(!Object.hasOwn(child.params,key),'no synthetic viewport or state prop');
       const full=fixture({metrics});full.page.aboutToAppear();await tick();full.page.launchFixture('downloads',full.page.presentation);full.page.fixtureStage();assert.equal(full.children.at(-1).hostAtCreation.height,'100%');assert.deepEqual(Object.keys(full.props()).sort(),Object.keys(child.params).sort());
       const sdk=boundedSurfaceSdk(),children=[],events=[];
@@ -233,7 +237,7 @@ if (selected.length) {
       Object.assign(download,child.params);download.aboutToAppear();await tick();download.initialRender();
       const childArea=sdk.nodes(download).find(n=>n.id==='reader-download-structure-fixture'&&n.onAreaChange);assert(childArea);assert.equal(childArea.height,'100%','actual child fills real168 wrapper, it does not replace it with a fake metric');
       const area=width===320?{width:320,height:168}:{width:'366vp',height:'168vp'};childArea.onAreaChange({},area);assert.equal(events.at(-1).kind,'actual-area');assert.equal(events.at(-1).actualHeightVp,168);assert.equal(events.at(-1).actualWidthVp,width);
-      const actorSdk=boundedSurfaceSdk();const {owner:actor}=compile(()=>createReaderBuilderProbe(actorSource,['pageWidth','pageHeight','readerWindowMetricsRevision','availableHeight','currentMetrics','build'],{...actorSdk.deps,readerPageAreaLength,readerAvailableWindowHeight,readerWindowMetrics:()=>metrics},{...actorSdk.hooks}));
+      const actorSdk=boundedSurfaceSdk();const {owner:actor}=compile(()=>createReaderBuilderProbe(actorSource,['pageWidth','pageHeight','readerWindowMetricsRevision','availableHeight','currentMetrics'],{...actorSdk.deps,readerPageAreaLength,readerAvailableWindowHeight,readerWindowMetrics:()=>metrics},{...actorSdk.hooks}));
       assert.equal(actor.pageHeight,0,'actual SDK property initializer before any Area receipt');const actualArea=bindArea.call(actor);actualArea({},area);assert.equal(actor.pageHeight,168);assert.equal(actor.availableHeight(),168);assert.equal(JSON.stringify(metrics),originalMetrics,'never mutate window/scale to manufacture short height');
       actualArea({}, {width:'bad',height:'bad'});assert.equal(actor.pageHeight,168,'invalid Area does not invent another viewport');
       const before=f.page.intentCount;child.params.onAction('short-memory');assert.equal(f.page.intentCount,before+1);child.params.onBack();assert.equal(f.page.scene,'menu');child.params.onAction('retired');assert.equal(f.page.intentCount,before+1);download.aboutToDisappear();
@@ -267,6 +271,41 @@ if (selected.length) {
       const frozen = source.replace('scenario: this.toolsScenario', "scenario: 'content'");
       assert.notEqual(frozen, source);
       await assert.rejects(() => toolsStateScenes(frozen), /current selected Tools scenario reaches the actual child/);
+    }
+  }
+
+  async function downloadStateScenes(sourceText = source) {
+    for (const { value } of DOWNLOAD_FIXTURE_SCENARIOS) {
+      for (const short of [false, true]) {
+        const f = fixture({ sourceText }); f.page.aboutToAppear(); await tick(); f.page.menu();
+        const id = `reader-page-structure-downloads-${short ? 'short-' : ''}${value}`;
+        const action = f.sdk.nodes(f.page).findLast(node => node.id === id)?.onClick;
+        assert.equal(typeof action, 'function'); action();
+        assert.equal(f.page.scene, short ? 'downloads-short' : 'downloads');
+        assert.equal(f.page.downloadScenario, value);
+        f.page.fixtureStage();
+        assert.equal(f.props().scenario, value, 'current Download scenario reaches the actual child');
+        assert.equal(f.props().fontsReady, true);
+        if (short) assert.equal(f.sdk.nodes(f.page).find(node => node.id === 'reader-download-short-viewport').height, 168);
+        const active = f.page.presentation;
+        f.page.launchDownloadFixture('empty', active, short);
+        assert.equal(f.page.presentation, active); assert.equal(f.page.downloadScenario, value);
+        f.props().onBack(); assert.equal(f.page.scene, 'menu');
+        action(); assert.equal(f.page.scene, 'menu', 'old menu callback is retired');
+        f.page.launchFixture(short ? 'downloads-short' : 'downloads', f.page.presentation);
+        f.page.fixtureStage(); assert.equal(f.props().scenario, 'content');
+      }
+    }
+    const pending = deferred(), f = fixture({ fonts: () => pending.promise, sourceText });
+    f.page.aboutToAppear(); f.page.launchDownloadFixture('recovery', f.page.presentation, false);
+    assert.equal(f.page.scene, 'menu'); assert.equal(f.page.downloadScenario, 'content');
+    pending.resolve(); await tick();
+    const denied = fixture({ debug: false, sourceText }); denied.page.aboutToAppear(); await tick();
+    denied.page.launchDownloadFixture('empty', denied.page.presentation, true); assert.equal(denied.children.length, 0);
+    if (sourceText === source) {
+      const frozen = source.replaceAll('scenario: this.downloadScenario', "scenario: 'content'");
+      assert.notEqual(frozen, source);
+      await assert.rejects(() => downloadStateScenes(frozen), /current Download scenario reaches the actual child/);
     }
   }
 
@@ -451,7 +490,7 @@ if (selected.length) {
     page.page.onBackPress(); assert.equal(page.page.scene, 'menu');
     old.onTemporaryBackBridge(() => true, 'retired'); assert.equal(page.page.temporaryBackIdentity, '');
   }
-  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'tools-state-scenes':toolsStateScenes,
+  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'tools-state-scenes':toolsStateScenes,'download-state-scenes':downloadStateScenes,
     'group-recovery': () => componentFixtureBack('group-recovery', 'group', 'reader-page-structure-group-recovery'),
     'framework-geometry': () => componentFixtureBack('framework-geometry', 'geometry', 'reader-page-structure-framework-geometry'),
     'legacy-recovery': () => componentFixtureBack('legacy-recovery', 'legacy', 'reader-page-structure-legacy-recovery')};

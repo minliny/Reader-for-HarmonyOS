@@ -15,7 +15,8 @@ import { readerContentSafeTop, readerInteractiveSafeBottom } from '../ui/foundat
 import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
 import { projectCommitReadback, projectOperationFacts } from '../app/ReaderOperationFacts';
 import { ReaderDirectoryStructureFixture } from './ReaderDirectoryStructureFixture';
-import { ReaderDownloadStructureFixture } from './ReaderDownloadStructureFixture';
+import { ReaderDownloadStructureFixture, DOWNLOAD_FIXTURE_SCENARIOS } from './ReaderDownloadStructureFixture';
+import type { DownloadFixtureCase, DownloadFixtureScenario } from './ReaderDownloadStructureFixture';
 import { ReaderSourceToolsStructureFixture, SOURCE_TOOLS_FIXTURE_SCENARIOS } from './ReaderSourceToolsStructureFixture';
 import type { SourceToolsFixtureCase, SourceToolsFixtureScenario } from './ReaderSourceToolsStructureFixture';
 import { ReaderGroupRecoveryStructureFixture } from './ReaderGroupRecoveryStructureFixture';
@@ -68,6 +69,7 @@ struct ReaderPageStructureVerification {
   @State private admitted: boolean = false;
   @State private scene: PageStructureFixtureScene = 'menu';
   @State private toolsScenario: SourceToolsFixtureScenario = 'content';
+  @State private downloadScenario: DownloadFixtureScenario = 'content';
   @State private fontState: string = 'loading';
   @State private requestedWidth: number = 366;
   @State private actualWidth: number = 0;
@@ -217,6 +219,7 @@ struct ReaderPageStructureVerification {
     this.temporaryBackIdentity = '';
     this.actualWidth = 0; this.actualHeight = 0;
     if (scene === 'source-tools') this.toolsScenario = 'content';
+    if (scene === 'downloads' || scene === 'downloads-short') this.downloadScenario = 'content';
     this.scene = scene;
     this.record('launch');
   }
@@ -227,6 +230,15 @@ struct ReaderPageStructureVerification {
     const previousPresentation = this.presentation;
     this.launchFixture('source-tools', menuPresentation);
     if (this.presentation !== previousPresentation && this.scene === 'source-tools') this.toolsScenario = scenario;
+  }
+
+  private launchDownloadFixture(scenario: DownloadFixtureScenario, menuPresentation: number, short: boolean): void {
+    if (!DOWNLOAD_FIXTURE_SCENARIOS.some((item: DownloadFixtureCase): boolean => item.value === scenario)) return;
+    const previousPresentation = this.presentation;
+    this.launchFixture(short ? 'downloads-short' : 'downloads', menuPresentation);
+    if (this.presentation !== previousPresentation && (this.scene === 'downloads' || this.scene === 'downloads-short')) {
+      this.downloadScenario = scenario;
+    }
   }
 
   private sourceScene(): boolean {
@@ -457,6 +469,12 @@ struct ReaderPageStructureVerification {
         Button(item.title).enabled(this.fontState === 'ready').id(`reader-page-structure-tools-${item.value}`)
           .onClick((): void => this.launchToolsFixture(item.value, menuPresentation));
       }, (item: SourceToolsFixtureCase): string => item.value);
+      ForEach(DOWNLOAD_FIXTURE_SCENARIOS, (item: DownloadFixtureCase): void => {
+        Button(`下载 · ${item.title}`).enabled(this.fontState === 'ready').id(`reader-page-structure-downloads-${item.value}`)
+          .onClick((): void => this.launchDownloadFixture(item.value, menuPresentation, false));
+        Button(`短页下载 · ${item.title}`).enabled(this.fontState === 'ready').id(`reader-page-structure-downloads-short-${item.value}`)
+          .onClick((): void => this.launchDownloadFixture(item.value, menuPresentation, true));
+      }, (item: DownloadFixtureCase): string => item.value);
     }.width('100%').padding(20);
     }.width('100%').height(`calc(100% - ${this.menuBottomInset()}vp)`)
       .align(Alignment.Top).clip(true).id('reader-page-structure-menu-scroll');
@@ -520,14 +538,14 @@ struct ReaderPageStructureVerification {
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
         } else if (this.scene === 'downloads') {
-          ReaderDownloadStructureFixture({ fontsReady: this.fontState === 'ready',
+          ReaderDownloadStructureFixture({ fontsReady: this.fontState === 'ready', scenario: this.downloadScenario,
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string): void => this.fixtureAction(presentation, kind),
             onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
         } else if (this.scene === 'downloads-short') {
           // A real constrained Native viewport; no injected window/page metric.
           Stack({ alignContent: Alignment.TopStart }) {
-            ReaderDownloadStructureFixture({ fontsReady: this.fontState === 'ready',
+            ReaderDownloadStructureFixture({ fontsReady: this.fontState === 'ready', scenario: this.downloadScenario,
               onBack: (): void => this.leaveScene(presentation),
               onAction: (kind: string): void => this.fixtureAction(presentation, kind),
               onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });

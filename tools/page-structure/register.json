@@ -21359,7 +21359,7 @@
         },
         {
           "path": "tools/test-download-native-fixture.mjs",
-          "sha256": "f6a8edc89c3033eb5195a18dda33f008474f805c95450ae8fa09081942bfc130"
+          "sha256": "39abc2b4d94b60a3d9edc34421fddf0c7cf2c7a6f7b7677a9096ea22e17f6d0f"
         },
         {
           "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadUiContract.ts",
@@ -21375,7 +21375,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-          "sha256": "d51c17d479c822f80f9a1425db9ad4750f7efc31cdbbdcbc069233179928628a"
+          "sha256": "e062aea51aa3d2c3c441863357ebd0eca0c1b25cfab97c419c7e66caeb178091"
         },
         {
           "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadPresentation.ets",
@@ -22516,7 +22516,7 @@
         }
       },
       "exceptions": [],
-      "revision": 25,
+      "revision": 26,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -22750,7 +22750,7 @@
               },
               {
                 "path": "tools/test-download-native-fixture.mjs",
-                "sha256": "f6a8edc89c3033eb5195a18dda33f008474f805c95450ae8fa09081942bfc130"
+                "sha256": "39abc2b4d94b60a3d9edc34421fddf0c7cf2c7a6f7b7677a9096ea22e17f6d0f"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadUiContract.ts",
@@ -22766,7 +22766,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-                "sha256": "d51c17d479c822f80f9a1425db9ad4750f7efc31cdbbdcbc069233179928628a"
+                "sha256": "e062aea51aa3d2c3c441863357ebd0eca0c1b25cfab97c419c7e66caeb178091"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadPresentation.ets",
@@ -23907,7 +23907,7 @@
               }
             },
             "exceptions": [],
-            "revision": 24,
+            "revision": 25,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -24142,7 +24142,7 @@
               },
               {
                 "path": "tools/test-download-native-fixture.mjs",
-                "sha256": "f6a8edc89c3033eb5195a18dda33f008474f805c95450ae8fa09081942bfc130"
+                "sha256": "39abc2b4d94b60a3d9edc34421fddf0c7cf2c7a6f7b7677a9096ea22e17f6d0f"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadUiContract.ts",
@@ -24158,7 +24158,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-                "sha256": "d51c17d479c822f80f9a1425db9ad4750f7efc31cdbbdcbc069233179928628a"
+                "sha256": "e062aea51aa3d2c3c441863357ebd0eca0c1b25cfab97c419c7e66caeb178091"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadPresentation.ets",
@@ -25299,7 +25299,7 @@
               }
             },
             "exceptions": [],
-            "revision": 24,
+            "revision": 25,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -25534,7 +25534,7 @@
               },
               {
                 "path": "tools/test-download-native-fixture.mjs",
-                "sha256": "f6a8edc89c3033eb5195a18dda33f008474f805c95450ae8fa09081942bfc130"
+                "sha256": "39abc2b4d94b60a3d9edc34421fddf0c7cf2c7a6f7b7677a9096ea22e17f6d0f"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadUiContract.ts",
@@ -25550,7 +25550,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-                "sha256": "d51c17d479c822f80f9a1425db9ad4750f7efc31cdbbdcbc069233179928628a"
+                "sha256": "e062aea51aa3d2c3c441863357ebd0eca0c1b25cfab97c419c7e66caeb178091"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadPresentation.ets",
@@ -26647,7 +26647,7 @@
               }
             },
             "exceptions": [],
-            "revision": 24,
+            "revision": 25,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -26882,7 +26882,7 @@
               },
               {
                 "path": "tools/test-download-native-fixture.mjs",
-                "sha256": "f6a8edc89c3033eb5195a18dda33f008474f805c95450ae8fa09081942bfc130"
+                "sha256": "39abc2b4d94b60a3d9edc34421fddf0c7cf2c7a6f7b7677a9096ea22e17f6d0f"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadUiContract.ts",
@@ -26898,7 +26898,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-                "sha256": "d51c17d479c822f80f9a1425db9ad4750f7efc31cdbbdcbc069233179928628a"
+                "sha256": "e062aea51aa3d2c3c441863357ebd0eca0c1b25cfab97c419c7e66caeb178091"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadPresentation.ets",
@@ -27995,7 +27995,7 @@
               }
             },
             "exceptions": [],
-            "revision": 24,
+            "revision": 25,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -28230,7 +28230,7 @@
               },
               {
                 "path": "tools/test-download-native-fixture.mjs",
-                "sha256": "f6a8edc89c3033eb5195a18dda33f008474f805c95450ae8fa09081942bfc130"
+                "sha256": "39abc2b4d94b60a3d9edc34421fddf0c7cf2c7a6f7b7677a9096ea22e17f6d0f"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadUiContract.ts",
@@ -28246,7 +28246,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-                "sha256": "d51c17d479c822f80f9a1425db9ad4750f7efc31cdbbdcbc069233179928628a"
+                "sha256": "e062aea51aa3d2c3c441863357ebd0eca0c1b25cfab97c419c7e66caeb178091"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/presentation/SharedDownloadPresentation.ets",
@@ -29343,7 +29343,7 @@
               }
             },
             "exceptions": [],
-            "revision": 24,
+            "revision": 25,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,

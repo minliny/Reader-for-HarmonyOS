@@ -27,6 +27,8 @@ if (selected.length) {
   const read = path => readFileSync(new URL(path, root), 'utf8');
   const { SOURCE_TOOLS_FIXTURE_SCENARIOS } = selectedProductionValues(
     new URL('entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets', root), ['SOURCE_TOOLS_FIXTURE_SCENARIOS']);
+  const { DOWNLOAD_FIXTURE_SCENARIOS } = selectedProductionValues(
+    new URL('entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets', root), ['DOWNLOAD_FIXTURE_SCENARIOS']);
   const results = {};
 
   function filterGeometry(source = read(filterPath)) {
@@ -77,7 +79,7 @@ if (selected.length) {
     let registrations = 0;
     const owner = createReaderBuilderProbe(source, ['fontState', 'fontAttempt', 'menu', 'fontPreparationState',
       'retryFonts', 'loadFonts', 'debugBuild'], { ...controls.dependencies, ...feedback.deps,
-      DEBUG: true, BUILD_MODE_NAME: 'debug', SOURCE_TOOLS_FIXTURE_SCENARIOS, readerWindowMetrics: () => ({ systemFontScale: 1 }),
+      DEBUG: true, BUILD_MODE_NAME: 'debug', SOURCE_TOOLS_FIXTURE_SCENARIOS, DOWNLOAD_FIXTURE_SCENARIOS, readerWindowMetrics: () => ({ systemFontScale: 1 }),
       prepareReaderFonts: async () => { if (++registrations < 3) throw Error('finite font failure'); },
       hilog: { error() {} } }, hooks).owner;
     Object.assign(owner, { mounted: true, admitted: true, scene: 'menu', presentation: 7,

@@ -107,8 +107,10 @@ for (const id of selectContractCases(definitions)) {
     assert.equal(nodes(paragraph).find(node => node.type === 'Scroll').align, 'Alignment.Top');
     const { SOURCE_TOOLS_FIXTURE_SCENARIOS } = selectedProductionValues(
       new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets', import.meta.url), ['SOURCE_TOOLS_FIXTURE_SCENARIOS']);
+    const { DOWNLOAD_FIXTURE_SCENARIOS } = selectedProductionValues(
+      new URL('../entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets', import.meta.url), ['DOWNLOAD_FIXTURE_SCENARIOS']);
     const menu = createReaderBuilderProbe(read('pages/ReaderPageStructureVerification.ets'), ['fontAttempt', 'menu', 'fontPreparationState'],
-      { SOURCE_TOOLS_FIXTURE_SCENARIOS, readerWindowMetrics: windowFacts.createDefaultReaderWindowMetrics }).owner;
+      { SOURCE_TOOLS_FIXTURE_SCENARIOS, DOWNLOAD_FIXTURE_SCENARIOS, readerWindowMetrics: windowFacts.createDefaultReaderWindowMetrics }).owner;
     Object.assign(menu, { presentation: 1, requestedWidth: 366, actualWidth: 366, actualHeight: 844, fontState: 'loading',
       menuBottomInset: () => 24 }); menu.menu();
     assert.equal(nodes(menu).find(node => node.type === 'Scroll').align, 'Alignment.Top');
