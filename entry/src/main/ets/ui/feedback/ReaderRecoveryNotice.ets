@@ -83,7 +83,10 @@ export struct ReaderRecoveryNotice {
           .fontWeight(MESSAGE_NOTICE_TITLE.fontWeight).fontSize(MESSAGE_NOTICE_TITLE.fontSizeFp)
           .lineHeight(MESSAGE_NOTICE_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_NOTICE_INK', this.appThemeScheme))
-          .wordBreak(WordBreak.BREAK_WORD).maxLines(this.expanded ? 10000 : 3)
+          // A fitting business title may need one more native line for its
+          // decorative action reservation. Folding still uses the title alone.
+          .wordBreak(WordBreak.BREAK_WORD)
+          .maxLines(this.expanded || (!this.clipped && this.reservedSpace.length > 0) ? 10000 : 3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .onAreaChange(this.flowAreaHandler());
           if (this.hasNoticeActions()) {

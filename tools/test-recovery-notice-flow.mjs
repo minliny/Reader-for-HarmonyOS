@@ -251,6 +251,9 @@ async function approvedComposition() {
         if (notice.separateActions) assert.equal(notice.reservedSpace, '');
         else assert.ok((notice.reservedSpace.length - 1) * 3.15 * scale >= expected + 8,
           'reservation pays complete action carriers, coarse gap18 and text gap8');
+        const paintedTitle = sdk.nodes(notice).find(node => node.type === 'Text' && node.onAreaChange);
+        if (notice.reservedSpace.length > 0) assert.ok(paintedTitle.maxLines > 3,
+          'a fitting three-line business title retains the additional line reserved for its actions');
         assert.ok(measured.filter(value => value.constraintWidth).every(value => !value.textContent.includes('\u00a0')));
         const flex = sdk.nodes(notice).find(node => node.type === 'Flex');
         assert.equal(flex.create.space.main.value, 18);

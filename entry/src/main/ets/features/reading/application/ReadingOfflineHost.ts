@@ -562,7 +562,7 @@ export class ReadingOfflineHost {
           readback: 'succeeded', generation: operation.generation, value: entries,
           message: operation.materializationFailure ?? operation.operationFailure, blockedReason: operation.projection.facts.blockedReason,
           canRetry: operation.projection.receipt.confirmation === 'unknown' || operation.materialization === 'failed' || operation.canContinueOriginal === true });
-        operation.progress = this.progress(binding.session, entries, operation.progress);
+        if (operation.action !== 'clear') operation.progress = this.progress(binding.session, entries, operation.progress);
         this.publish(binding);
       }
     } catch (error) {

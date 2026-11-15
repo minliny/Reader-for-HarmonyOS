@@ -5,7 +5,7 @@ import type { ReadingGatewayRuntime } from '../features/reading/application/Read
 import type { ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from '../features/reading/application/ReadingOperationIntents';
 import type { ReaderWriteEvidence } from '../app/ReaderWriteEvidence';
 import type { LocalReadingTocEntry } from '../features/reading/application/LocalReadingFlowGateway';
-import type { RemoteReadingSession } from '../features/reading/application/RemoteReadingFlowGateway';
+import type { RemoteReadingSession, RemoteReadingTocEntry } from '../features/reading/application/RemoteReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/presentation/ReadingBookDetail';
 import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../features/reading/presentation/ReadingDirectoryRecovery';
 
@@ -94,7 +94,8 @@ export class ReaderOfflineRecoveryFixtureOwner {
     this.binding = {
       session: { contentKind: 'manga', acquisitionMode: 'online', identity: { sourceId: book.sourceId, bookId: book.bookId },
         detailUrl: 'memory-detail', tocUrl: 'memory-catalog', book: { title: book.title, author: book.author },
-        continuationVariables: [], entries: [], hostRequirements: [] },
+        continuationVariables: [], entries: entries().map((entry: LocalReadingTocEntry): RemoteReadingTocEntry => ({ index: entry.index, title: entry.title,
+          navigable: entry.navigable, url: `memory://chapter/${entry.index}`, variables: [] })), hostRequirements: [] },
       current: (): boolean => this.current(), currentEntries: entries,
       emitEntries: (_entries: LocalReadingTocEntry[]): void => this.changed(),
       emitOperation: (): void => this.changed(),

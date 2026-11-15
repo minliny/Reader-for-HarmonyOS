@@ -7,6 +7,7 @@ const selected = selectContractCases({
     'reader-assembly': { description: 'Actual text recovery availability, grouped/nonpending SDK slot and current callback generation reach original owner. Normal Manga root forwards original facts/callbacks. Known results retain their dedicated host.', resources: [] },
     'manga-download-hosts': { description: 'Actual bounded catalog popup and reading download-sheet initializers forward original offline recovery into existing shared Surface. Current popup/panel identity and generation reject old callbacks. No native layout or business mutation.', resources: [] },
     'native-fixture': { description: 'Independent actual offline Host fixture keeps original unknown after availability succeeds, holds explicit read/continue replies, rejects stale/busy input, and never calls Core or storage.', resources: [] },
+    'clear-progress-copy': { description: 'Actual Host with a valid failed-chapter projection keeps original clear facts. Legacy clear snapshots ignore download progress, while a real download keeps its partial-result copy.', resources: [] },
 });
 if (selected.length === 0)
     process.exit(0);
@@ -32,10 +33,10 @@ class Captured {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
     updateStateVars(params) { Object.assign(this.params, params); }
 }
-async function originalFixture() {
+async function originalFixture(downloadState = 'cached') {
     const { ReadingOfflineHost } = selectedProductionClasses(offlineFile, ['ReadingOfflineHost'], { projectPersistedReceipt });
     const book = { sourceId: 'source', bookId: 'manga-book', title: 'Original book', author: 'Author' };
-    const entries = [{ index: 0, title: 'Chapter', url: 'https://example.invalid/chapter', navigable: true, downloadState: 'cached' }];
+    const entries = [{ index: 0, title: 'Chapter', url: 'https://example.invalid/chapter', navigable: true, downloadState }];
     const session = { identity: { sourceId: book.sourceId, bookId: book.bookId }, contentKind: 'manga', entries };
     const reads = [], publications = [];
     const pending = { version: 1, method: 'cache.clear', params: { scope: 'book', sourceId: book.sourceId, bookId: book.bookId, operationId: 'original-id/1', sequence: 1 }, context: book, phase: 'pending' };
@@ -74,6 +75,27 @@ function captureBuilder(path, members, childName, childPath, params, extra = {})
     return { sdk, owner, child: () => [...owner.children.values()].find(value => value instanceof Captured) };
 }
 for (const id of selected) {
+    if (id === 'clear-progress-copy') {
+        const current = await originalFixture('failed');
+        const operation = current.host.snapshot();
+        assert.equal(operation.progress, undefined, 'clear readback never acquires a download-progress owner');
+        assert.doesNotMatch(current.recovery.offline.message, /下载部分完成/);
+        const progress = { processedChapters: 1, totalChapters: 1, completedChapters: 0,
+            cachedChapters: 0, failedChapters: 1, entries: current.entries };
+        const legacy = { ...operation, progress };
+        assert.doesNotMatch(readingDirectoryRecovery('legacy', current.book, undefined, legacy).offline.message, /下载部分完成/);
+        const confirmed = { ...legacy, canContinueOriginal: false, projection: projectPersistedReceipt({
+                confirmation: 'confirmed', readback: 'succeeded', generation: operation.generation,
+                canRetry: false, value: current.entries,
+            }) };
+        assert.equal(readingDirectoryRecovery('legacy', current.book, undefined, confirmed).offlineKind, 'none');
+        const download = { ...confirmed, action: 'book' };
+        const downloadRecovery = readingDirectoryRecovery('download', current.book, undefined, download);
+        assert.equal(downloadRecovery.offlineKind, 'result');
+        assert.match(downloadRecovery.offline.message, /下载部分完成/);
+        recordContractCasePass(id);
+        continue;
+    }
     if (id === 'native-fixture') {
         const { ReaderOfflineRecoveryFixtureOwner } = await import('../entry/src/main/ets/pages/ReaderOfflineRecoveryFixtureOwner.ts');
         const book = { sourceId: 'memory-source', sourceName: 'Memory', bookId: 'memory-book', title: 'Original', author: 'Author' };

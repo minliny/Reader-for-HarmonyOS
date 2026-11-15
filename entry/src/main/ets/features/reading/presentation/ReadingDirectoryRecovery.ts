@@ -40,6 +40,7 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
   const dir = directory !== undefined && directory.book.sourceId === book.sourceId && directory.book.bookId === book.bookId &&
     directory.book.title === book.title && directory.book.author === book.author ? directory : undefined;
   const cached = offline !== undefined && offline.sourceId === book.sourceId && offline.bookId === book.bookId ? offline : undefined;
+  const downloadProgress = cached?.action === 'clear' ? undefined : cached?.progress;
   let bookmarks = readerRecoveryView(dir?.projection, undefined, dir?.confirmedCount ?? 0);
   if (dir?.projection.receipt.confirmation === 'unknown') {
     // A successful list read cannot qualify the original write. Retain the
@@ -67,8 +68,8 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
   if (cached?.materializationFailure !== undefined) cache = { ...cache, visible: true, generation: cached.generation,
     message: `${cached.projection.receipt.confirmation === 'confirmed' ? '缓存操作已确认；' : ''}${readingOfflineFailureHint(new Error(cached.materializationFailure)) || '离线操作已取消'}`,
     canRetry: cached.projection.facts.canRetry };
-  else if (cached?.progress !== undefined && cached.progress.failedChapters > 0) cache = { ...cache, visible: true,
-    generation: cached.generation, message: `离线下载部分完成：${cached.progress.completedChapters}/${cached.progress.totalChapters} 章已完成，${cached.progress.failedChapters} 章失败` };
+  else if (downloadProgress !== undefined && downloadProgress.failedChapters > 0) cache = { ...cache, visible: true,
+    generation: cached!.generation, message: `离线下载部分完成：${downloadProgress.completedChapters}/${downloadProgress.totalChapters} 章已完成，${downloadProgress.failedChapters} 章失败` };
   const bookmarksReadbackFailed = dir?.projection.receipt.confirmation === 'confirmed' && dir.projection.receipt.readback === 'failed';
   const offlineReadbackFailed = cached?.projection.receipt.confirmation === 'confirmed' && cached.projection.receipt.readback === 'failed';
   // These are presentation channels, never a new confirmation or a retry
@@ -83,7 +84,7 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
   let offlineKind: ReadingDirectoryMessageKind = 'none';
   if (cache.visible) {
     if (cached === undefined || cached.projection.receipt.confirmation === 'unknown' || cached.canContinueOriginal === true) offlineKind = 'pending';
-    else if (cached.materializationFailure !== undefined || (cached.progress?.failedChapters ?? 0) > 0 ||
+    else if (cached.materializationFailure !== undefined || (downloadProgress?.failedChapters ?? 0) > 0 ||
       (cached.projection.receipt.confirmation === 'undispatched' && cached.projection.receipt.readback === 'failed')) offlineKind = 'result';
     else if (offlineReadbackFailed || (cached.recoveryAction !== undefined && cached.projection.receipt.readback === 'reading')) offlineKind = 'readback';
   }
