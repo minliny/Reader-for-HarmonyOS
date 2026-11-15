@@ -190,6 +190,11 @@ export class ReaderDirectoryOperations {
     return scene.directoryVisible && identity === this.presentationId(scene) && this.acceptsBinding(scene, this.bindingId(scene), owner);
   }
 
+  private acceptsRecoveryPresentation(scene: ReaderDirectoryScene, identity: string, owner: ReadingGatewayRuntime): boolean {
+    return scene.foreground && (scene.directoryVisible || scene.reading) && identity === this.presentationId(scene) &&
+      this.acceptsBinding(scene, this.bindingId(scene), owner);
+  }
+
   private bookmarkHost(owner: ReadingGatewayRuntime): ReaderDirectoryHost | undefined {
     const current = (): boolean => this.ports.ownsRuntime(owner);
     const host = ReaderDirectoryHost.forRuntime(owner, current,
@@ -308,9 +313,7 @@ export class ReaderDirectoryOperations {
     // Both the independent directory and the retained reader's existing
     // recovery notice carry this exact presentation. Their UI input leases
     // still decide whether the visible actor can submit the original intent.
-    if (owner === undefined || book === undefined || !scene.foreground ||
-      (!scene.directoryVisible && !scene.reading) || identity !== this.presentationId(scene) ||
-      !this.acceptsBinding(scene, this.bindingId(scene), owner)) return;
+    if (owner === undefined || book === undefined || !this.acceptsRecoveryPresentation(scene, identity, owner)) return;
     const host = this.bookmarkHost(owner);
     if (host !== undefined) {
       const binding = this.bookmarkBinding(owner, book);
@@ -350,7 +353,7 @@ export class ReaderDirectoryOperations {
   reconcileOffline(generation: number, identity: string, continueOriginal: boolean): void {
     const scene = this.ports.scene();
     const { owner, session } = scene;
-    if (owner === undefined || session === undefined || !this.acceptsPresentation(scene, identity, owner)) return;
+    if (owner === undefined || session === undefined || !this.acceptsRecoveryPresentation(scene, identity, owner)) return;
     const host = this.offlineHost(owner);
     if (host !== undefined) {
       const binding = this.offlineBinding(owner, session);

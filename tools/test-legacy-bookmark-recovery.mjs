@@ -250,7 +250,8 @@ async function runUi() {
   owner.aboutToDisappear(); action.onClick(); assert.equal(calls.length, 1);
   const lre = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
   const probe = createReaderBuilderProbe(lre, ['hasReaderRecoveryContent', 'hasReaderPendingGroup', 'readerBookmarkPending',
-    'readerPreferenceModule', 'bookmarkRecoveryIdentity', 'reconcileBookmarkRecovery'], {}).owner;
+    'readerPreferenceModule', 'bookmarkRecoveryIdentity', 'reconcileBookmarkRecovery',
+    'readerOfflineRecoveryVisible', 'readerOfflinePending'], {}).owner;
   Object.assign(probe, { readerRecoveryView: { visible: false }, readerSettingsRecovery: { visible: false }, ttsPreferencesRecovery: { visible: false },
     ttsConfigurationRecovery: { visible: false }, replaceRecovery: { visible: false }, bookmarkRecovery: recovery,
     lifecycleToken: 4, isSessionActive: () => true, isControlInputEnabled: () => true,

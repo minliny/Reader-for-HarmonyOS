@@ -388,11 +388,13 @@ if(selectedCase==='global-write-admission'){
   sdk.deps.ReaderDirectoryRecoverySurface=createReaderBuilderProbe(recoverySource,boundedMembers(recoverySource),
    {...sdk.deps,EMPTY_READING_DIRECTORY_RECOVERY},sdk.hooks).Component;
   const owner=sdk.consumer(input,['readerRecoveryContent','readerRecoveryInputCurrent','hasReaderRecoveryContent',
-   'bookmarkRecoveryIdentity','reconcileBookmarkRecovery','reconcileReaderRecovery','showReaderRecovery','readerRecoveryOwnerKey'],
+   'bookmarkRecoveryIdentity','reconcileBookmarkRecovery','readerOfflineRecoveryVisible','readerOfflinePending',
+   'hasReaderPendingGroup','readerBookmarkPending','readerRecoveryItems','readerBookmarkRecoveryContent','readerOfflineRecoveryContent','reconcileReaderRecovery','showReaderRecovery','readerRecoveryOwnerKey'],
    {EMPTY_READING_DIRECTORY_RECOVERY});
   let controlsVisible=!active;
   const view=generation=>({visible:true,canRetry:true,generation,message:'当前恢复事实'});
-  Object.assign(owner,{mounted:true,exitRequested:false,lifecycleToken:1,chapterSelectionToken:1,sourceId:book.sourceId,bookId:book.bookId,
+  Object.assign(owner,{mounted:true,exitRequested:false,readerRecoveryRequestCurrent:()=>true,
+   lifecycleToken:1,chapterSelectionToken:1,sourceId:book.sourceId,bookId:book.bookId,
    sourceSwitchPresentationVisible:false,readerRecoveryView:view(21),readerRecoveryActionLabel:'重试加载目录',
    readerRecoveryAction:()=>calls.push(['catalog']),readerSettingsRecovery:view(22),readerSettingsRecoveryBusy:false,
    ttsPreferencesRecovery:view(23),ttsPreferencesRecoveryBusy:false,ttsConfigurationRecovery:view(24),replaceRecovery:view(25),
@@ -407,6 +409,7 @@ if(selectedCase==='global-write-admission'){
    retryReaderPreferenceNotice:(domain,generation)=>calls.push([domain,generation]),
    openTtsConfigurationRecovery:generation=>calls.push(['configuration',generation]),
    openReplaceRecovery:generation=>calls.push(['replace',generation])});
+  owner.readerRecoveryIdentity = owner.readerRecoveryOwnerKey();
   owner.readerRecoveryContent();sdk.properties.flush();
   const scroll=[...owner.nodes.values()].find(node=>node.type==='Scroll');
   const actions=sdk.walk(owner).filter(child=>child instanceof sdk.deps.ReaderRecoveryAction);
@@ -466,13 +469,15 @@ if(selectedCase==='global-write-admission'){
  sdk.deps.ReaderDirectoryRecoverySurface=createReaderBuilderProbe(recoverySource,boundedMembers(recoverySource),
   {...sdk.deps,EMPTY_READING_DIRECTORY_RECOVERY},sdk.hooks).Component;
  let timeMs=1000,outsideDismissals=0;
- const owner=sdk.consumer(source,['readerRecoveryContent','readerRecoveryInputCurrent','hasReaderRecoveryContent','bookmarkRecoveryIdentity','reconcileBookmarkRecovery','onControlBackdropTouch'],
+ const owner=sdk.consumer(source,['readerRecoveryContent','readerRecoveryInputCurrent','hasReaderRecoveryContent','bookmarkRecoveryIdentity','reconcileBookmarkRecovery','readerOfflineRecoveryVisible','readerOfflinePending',
+  'hasReaderPendingGroup','readerBookmarkPending','readerRecoveryItems','readerBookmarkRecoveryContent','readerOfflineRecoveryContent','onControlBackdropTouch'],
   {...backdrop,TouchType,EMPTY_READING_DIRECTORY_RECOVERY,readerMotionNowMs:()=>timeMs});
  const empty={visible:false,canRetry:false,generation:0,message:''};
- Object.assign(owner,{mounted:false,lifecycleToken:1,sourceId:book.sourceId,bookId:book.bookId,
+ Object.assign(owner,{mounted:false,readerRecoveryRequestCurrent:()=>true,controlVisible:()=>false,
+  lifecycleToken:1,sourceId:book.sourceId,bookId:book.bookId,
   sourceSwitchPresentationVisible:false,readerRecoveryView:empty,readerSettingsRecovery:empty,
   ttsPreferencesRecovery:empty,ttsConfigurationRecovery:empty,replaceRecovery:empty,
-  bookmarkRecovery:{presentationId:'opening-1',bookmarks:{visible:true,canRetry:true,generation:8,
+  bookmarkRecovery:{...EMPTY_READING_DIRECTORY_RECOVERY,presentationId:'opening-1',bookmarks:{visible:true,canRetry:true,generation:8,
    message:'原操作结果尚未确认，可核对同一原操作'},bookmarksBusy:false,canContinueBookmarks:true},
   viewportWidth:366,readerWindowMetricsRevision:0,controlLayout:()=>({topBarWidth:334}),
   readerRecoveryViewportHeight:()=>180,readerRecoveryTop:()=>100,

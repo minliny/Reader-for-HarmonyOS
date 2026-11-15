@@ -36,7 +36,7 @@ function defaultSourceManagementFilters(): SourceManagementFilterState {
 
 type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'busy' |
   'read-error' | 'read-empty-error' | 'original-unknown' | 'original-cleanup' |
-  'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-source-switch' | 'directory-source-switch-short' |
+  'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-offline-recovery' | 'directory-source-switch' | 'directory-source-switch-short' |
   'directory-source-switch-flat' | 'directory-source-switch-flat-short' | 'directory-empty-retry' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
   'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
   'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery' | 'framework-geometry' | 'legacy-recovery';
@@ -210,7 +210,7 @@ struct ReaderPageStructureVerification {
   private launchFixture(scene: PageStructureFixtureScene, menuPresentation: number): void {
     if (!this.mounted || !this.admitted || !this.debugBuild() || this.fontState !== 'ready' || this.scene !== 'menu' ||
       menuPresentation !== this.presentation ||
-      (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' &&
+      (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' && scene !== 'directory-offline-recovery' &&
         scene !== 'directory-source-switch' && scene !== 'directory-source-switch-short' &&
         scene !== 'directory-source-switch-flat' && scene !== 'directory-source-switch-flat-short' && scene !== 'directory-empty-retry' &&
         scene !== 'directory-control-expanded' && scene !== 'directory-control-compact' &&
@@ -339,7 +339,7 @@ struct ReaderPageStructureVerification {
   }
 
   private readerOwnsWindowEdges(): boolean {
-    return this.scene === 'directory-reader' || this.scene === 'directory-manga' ||
+    return this.scene === 'directory-reader' || this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery' ||
       this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
       this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short' || this.scene === 'directory-empty-retry' ||
       this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
@@ -442,6 +442,8 @@ struct ReaderPageStructureVerification {
         .onClick((): void => this.launchFixture('directory-reader', menuPresentation));
       Button('目录 · 漫画').enabled(this.fontState === 'ready').id('reader-page-structure-directory-manga')
         .onClick((): void => this.launchFixture('directory-manga', menuPresentation));
+      Button('目录 · 原离线恢复').enabled(this.fontState === 'ready').id('reader-page-structure-directory-offline-recovery')
+        .onClick((): void => this.launchFixture('directory-offline-recovery', menuPresentation));
       Button('目录 · 控制内容展开').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-expanded')
         .onClick((): void => this.launchFixture('directory-control-expanded', menuPresentation));
       Button('目录 · 控制内容收拢').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-compact')
@@ -541,8 +543,9 @@ struct ReaderPageStructureVerification {
             catalogContext: this.scene === 'directory-reader' ? 'reader' : 'detail',
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
-        } else if (this.scene === 'directory-manga') {
+        } else if (this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') {
           ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', catalogContext: 'detail',
+            offlineRecovery: this.scene === 'directory-offline-recovery',
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
         } else if (this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
@@ -604,10 +607,10 @@ struct ReaderPageStructureVerification {
       else { this.fontPreparationState(this.presentation); }
     }.width('100%').height('100%')
       .padding({ top: this.appContentTopInset() })
-      .expandSafeArea(this.scene === 'directory-manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
-        this.scene === 'directory-manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+      .expandSafeArea((this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+        (this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
           this.readerOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
-      .ignoreLayoutSafeArea(this.scene === 'directory-manga' ? [LayoutSafeAreaType.SYSTEM] : [],
-        this.scene === 'directory-manga' ? [LayoutSafeAreaEdge.ALL] : []);
+      .ignoreLayoutSafeArea((this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [LayoutSafeAreaType.SYSTEM] : [],
+        (this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [LayoutSafeAreaEdge.ALL] : []);
   }
 }

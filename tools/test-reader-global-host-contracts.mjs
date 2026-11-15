@@ -4,7 +4,7 @@ import { registerHooks } from 'node:module';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
+import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
@@ -197,10 +197,15 @@ for (const id of selected) {
     await Promise.resolve();
   }
   if (id === 'manga-retry') {
+    const { EMPTY_READING_DIRECTORY_RECOVERY } = await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
     const sdk = boundedSurfaceSdk();
+    const recoverySource = read('features/reading/ui/ReaderDirectoryRecoverySurface.ets');
+    sdk.hooks.childSources.ReaderDirectoryRecoverySurface = recoverySource;
+    sdk.deps.ReaderDirectoryRecoverySurface = createReaderBuilderProbe(recoverySource, boundedMembers(recoverySource),
+      { ...sdk.deps, EMPTY_READING_DIRECTORY_RECOVERY }, sdk.hooks).Component;
     const model = sdk.consumer(read('features/manga/ui/MangaDownloadOperationsPanel.ets'), ['build', 'effectiveScheme']);
     let retries = 0;
-    Object.assign(model, { appThemeScheme: 'day', panelScheme: 'auto', loading: false, failureMessage: '读取失败', onRetry: () => retries++ });
+    Object.assign(model, { directoryRecovery: EMPTY_READING_DIRECTORY_RECOVERY, appThemeScheme: 'day', panelScheme: 'auto', loading: false, failureMessage: '读取失败', onRetry: () => retries++ });
     model.initialRender();
     assert.ok(sdk.walk(model).some(child => child instanceof sdk.deps.ReaderPageState),
       'local failure uses the actual common content-state component');

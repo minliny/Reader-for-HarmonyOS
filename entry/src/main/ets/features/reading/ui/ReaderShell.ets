@@ -255,6 +255,12 @@ export struct ReaderShell {
           onContinueBookmarks: (generation: number, presentationId: string): void => {
             if (this.acceptsTextInput(_identity)) this.onContinueBookmarks(generation, presentationId);
           },
+          onReconcileOffline: (generation: number, presentationId: string): void => {
+            if (this.acceptsTextInput(_identity)) this.onReconcileOffline(generation, presentationId);
+          },
+          onContinueOffline: (generation: number, presentationId: string): void => {
+            if (this.acceptsTextInput(_identity)) this.onContinueOffline(generation, presentationId);
+          },
           controlObscured: this.route === 'directory',
           interactionBlocked: !this.readingContentIsForeground(),
           reduceMotion: this.reduceMotion,
@@ -394,6 +400,13 @@ export struct ReaderShell {
         settingsGateway: this.mangaSettingsGateway,
         bookTitle: this.bookTitle, inBookshelf: this.inBookshelf,
         downloadEnabled: this.mangaDownloadEnabled,
+        directoryRecovery: this.directoryRecovery,
+        onReconcileOffline: (generation: number, presentation: string): void => {
+          if (this.acceptsMangaInput(_identity)) this.onReconcileOffline(generation, presentation);
+        },
+        onContinueOffline: (generation: number, presentation: string): void => {
+          if (this.acceptsMangaInput(_identity)) this.onContinueOffline(generation, presentation);
+        },
         moreMenuVariant: this.mangaMoreMenuVariant,
         directoryProjection: this.tocEntries,
         directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,

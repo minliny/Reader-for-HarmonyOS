@@ -1,3 +1,4 @@
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderExitRequest } from '../../reading/presentation/ReadingEntryPresentation';
 import type { ReaderDirectoryTargetProof } from '../../reading/application/ReaderDirectoryTargetProof';
@@ -139,6 +140,9 @@ export struct MangaReadingSurface {
   @Prop bookTitle: string = '';
   @Prop inBookshelf: boolean = true;
   @Prop reduceMotion: boolean = false;
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  onReconcileOffline: (generation: number, presentationId: string) => void = (): void => {};
+  onContinueOffline: (generation: number, presentationId: string) => void = (): void => {};
   @Prop @Watch('onReaderWindowOwnershipChanged') windowChromeActive: boolean = false;
   @Prop @Watch('onReaderWindowOwnershipChanged') windowChromeOverlayActive: boolean = false;
   @Prop @Watch('onReaderInteractionBlockedChanged') interactionBlocked: boolean = false;
@@ -2064,6 +2068,11 @@ export struct MangaReadingSurface {
     return generation === this.downloadActionsGeneration && this.downloadEnabled && this.readerPanelForeground();
   }
 
+  private downloadPanelInputCurrent(opening: number, generation: number): boolean {
+    return this.panel === 'downloads' && this.panelPhase === 'open' &&
+      this.panelInputCurrent(opening) && this.ownsDownloadActions(generation);
+  }
+
   private performDownloadAction(action: MangaDownloadActionId, generation: number): void {
     if (!this.ownsDownloadActions(generation) || this.panel !== 'downloads' || this.panelPhase !== 'open' ||
       this.downloadActionsLoading || !this.downloadActions.some(item => item.id === action)) return;
@@ -2688,6 +2697,14 @@ export struct MangaReadingSurface {
           ForEach([this.downloadActionsGeneration], (generation: number): void => {
             MangaDownloadOperationsPanel({ reduceMotion: this.reduceMotion,
               actions: this.downloadActions, loading: this.downloadActionsLoading,
+              directoryRecovery: this.directoryRecovery,
+              recoveryActive: this.downloadPanelInputCurrent(opening, generation),
+              onReconcileOffline: (expected: number, presentation: string): void => {
+                if (this.downloadPanelInputCurrent(opening, generation)) this.onReconcileOffline(expected, presentation);
+              },
+              onContinueOffline: (expected: number, presentation: string): void => {
+                if (this.downloadPanelInputCurrent(opening, generation)) this.onContinueOffline(expected, presentation);
+              },
               failureMessage: this.downloadActionsFailure, panelScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
               onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action, generation),
               onRetry: (): void => {

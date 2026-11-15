@@ -57,8 +57,8 @@ export struct BookDirectoryPage {
   @Prop selectionBusy: boolean = false;
   @Prop reduceMotion: boolean = false;
   isOpeningCurrent: () => boolean = (): boolean => true;
-  // Keep the parent's original operation contract while the catalog owns
-  // the foreground. Recovery presentation resumes at its reading host.
+  // The existing download popup presents original offline recovery. Other
+  // original operation facts remain with the parent while the catalog owns input.
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
@@ -617,6 +617,15 @@ export struct BookDirectoryPage {
           focusId: 'reader-manga-download:' + JSON.stringify([identity, this.temporaryBackIdentity]),
           availableWidth: this.contentFrame().width, actions: this.downloadActions, loading: this.downloadActionsLoading,
           failureMessage: this.downloadActionsFailure,
+          directoryRecovery: this.directoryRecovery, recoveryActive: this.directoryInputIsCurrent(identity),
+          onReconcileOffline: (generation: number, presentation: string, popupGeneration: number): void => {
+            if (this.directoryInputIsCurrent(identity) && this.downloadMenuVisible && popupGeneration === this.downloadMenuGeneration)
+              this.onReconcileOffline(generation, presentation);
+          },
+          onContinueOffline: (generation: number, presentation: string, popupGeneration: number): void => {
+            if (this.directoryInputIsCurrent(identity) && this.downloadMenuVisible && popupGeneration === this.downloadMenuGeneration)
+              this.onContinueOffline(generation, presentation);
+          },
           onOpen: (): void => { if (this.mounted && identity === this.identity()) void this.openDownloadActions(); },
           onClosed: (generation: number): void => {
             if (this.mounted && identity === this.identity() && generation === this.downloadMenuGeneration) this.retireDownloadMenu();

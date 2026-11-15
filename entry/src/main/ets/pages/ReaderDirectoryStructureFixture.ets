@@ -20,6 +20,7 @@ import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../feat
 import type { ReaderDirectoryNavigationPortFactory } from '../features/reading/application/ReaderDirectoryNavigation';
 import { readerDirectoryFixtureEntries, ReaderDirectoryFixturePort, readerDirectoryFixtureCopyEntry,
   nextReaderDirectoryFixtureInstanceId } from './ReaderDirectoryStructureFixtureData';
+import { ReaderOfflineRecoveryFixtureOwner } from './ReaderOfflineRecoveryFixtureOwner';
 
 export type ReaderDirectoryFixtureMode = 'text' | 'manga' | 'control';
 interface ReaderDirectoryFixtureObservation {
@@ -51,6 +52,7 @@ export struct ReaderDirectoryStructureFixture {
   @Prop @Watch('resetFixture') flatCatalog: boolean = false;
   @Prop @Watch('resetFixture') sourceSwitchCandidate: boolean = false;
   @Prop @Watch('resetFixture') emptyRetry: boolean = false;
+  @Prop @Watch('resetFixture') offlineRecovery: boolean = false;
   @Prop catalogContext: 'detail' | 'reader' = 'detail';
   @Prop controlExpanded: boolean = true;
   @Prop controlViewportHeight: number = 0;
@@ -75,9 +77,14 @@ export struct ReaderDirectoryStructureFixture {
   private controlMinimumMeasurer: ReaderControlModuleMeasurer | undefined = undefined;
   private actualControlWidth: number = 0;
   private actualControlHeight: number = 0;
+  @State private offlineRecoveryRevision: number = 0;
+  private offlineOwner: ReaderOfflineRecoveryFixtureOwner | undefined;
+  private offlineReceiptTimer: number = -1;
 
   aboutToAppear(): void { this.mounted = true; this.resetFixture(); }
-  aboutToDisappear(): void { this.mounted = false; this.presentation += 1; this.fixturePort?.close(); }
+  aboutToDisappear(): void {
+    this.mounted = false; this.presentation += 1; this.fixturePort?.close(); this.closeOfflineOwner();
+  }
 
   private admitted(): boolean {
     return this.mounted && DEBUG === true && BUILD_MODE_NAME === 'debug' && this.fontsReady;
@@ -85,6 +92,7 @@ export struct ReaderDirectoryStructureFixture {
 
   private resetFixture(): void {
     this.presentation += 1;
+    this.closeOfflineOwner();
     this.fixturePort?.close(); this.fixturePort = undefined;
     this.actualControlWidth = 0; this.actualControlHeight = 0;
     this.localControlViewportHeight = this.initialRequestedControlHeight();
@@ -113,6 +121,16 @@ export struct ReaderDirectoryStructureFixture {
         if (!this.current(presentation)) throw new Error('directory fixture factory has retired');
         return port;
       };
+      if (this.offlineRecovery && this.mode === 'manga') {
+        const owner = new ReaderOfflineRecoveryFixtureOwner(this.openingIdentity(), {
+          sourceId: identity.sourceId, sourceName: '内存目录样本', bookId: identity.bookId,
+          title: identity.bookName, author: identity.bookAuthor,
+        }, (): LocalReadingTocEntry[] => this.entries, (): boolean => this.current(presentation), (): void => {
+          if (this.current(presentation)) { this.offlineRecoveryRevision += 1; this.recordOffline('owner-change'); }
+        });
+        this.offlineOwner = owner;
+        void owner.load().then((): void => this.recordOffline('loaded')).catch((): void => this.recordOffline('load-failed'));
+      }
     }
     if (this.admitted()) this.record('mount');
   }
@@ -126,7 +144,36 @@ export struct ReaderDirectoryStructureFixture {
       bookName: '目录原生夹具 · 山海行记', bookAuthor: '内存样本' };
   }
 
-  private memoryRecovery(): ReadingDirectoryRecovery {
+  private closeOfflineOwner(): void {
+    if (this.offlineReceiptTimer >= 0) clearTimeout(this.offlineReceiptTimer);
+    this.offlineReceiptTimer = -1;
+    this.offlineOwner?.close(); this.offlineOwner = undefined;
+  }
+
+  private recordOffline(kind: string): void {
+    if (!this.admitted() || this.offlineOwner === undefined) return;
+    const operation = this.offlineOwner.host.snapshot();
+    hilog.info(0x5244, 'ReaderOfflineFixture', 'READER_OFFLINE_FIXTURE %{public}s', JSON.stringify({
+      kind, fixtureInstanceId: this.fixtureInstanceId, presentation: this.presentation,
+      bookId: this.identity().bookId, generation: operation?.generation ?? 0,
+      confirmation: operation?.projection.receipt.confirmation ?? 'idle',
+      readback: operation?.projection.receipt.readback ?? 'idle', recoveryAction: operation?.recoveryAction ?? '',
+      queryCount: this.offlineOwner.gateway.queryCount, continueCount: this.offlineOwner.gateway.continueCount,
+      rawOriginal: this.offlineOwner.gateway.rawOriginal(), unexpectedRequests: this.offlineOwner.runtime.unexpectedRequests,
+    }));
+  }
+
+  private recoverOffline(presentation: number, generation: number, identity: string, continuing: boolean): void {
+    const owner = this.offlineOwner;
+    if (!this.current(presentation) || owner === undefined || !owner.reconcile(generation, identity, continuing)) return;
+    this.offlineReceiptTimer = setTimeout((): void => {
+      this.offlineReceiptTimer = -1;
+      if (this.current(presentation) && owner === this.offlineOwner) owner.complete(continuing);
+    }, 6000);
+  }
+
+  private memoryRecovery(_revision: number): ReadingDirectoryRecovery {
+    if (this.offlineOwner !== undefined) return this.offlineOwner.recovery();
     const identity = this.identity();
     return readingDirectoryRecovery(this.openingIdentity(), {
       sourceId: identity.sourceId, sourceName: '内存目录样本', bookId: identity.bookId,
@@ -332,7 +379,7 @@ export struct ReaderDirectoryStructureFixture {
       catalogContext: this.catalogContext, sourceId: this.identity().sourceId, bookId: this.identity().bookId,
       isOpeningCurrent: (): boolean => this.current(presentation),
       bookmarkIdentity: this.identity(), navigationPortFactory: this.navigationFactory,
-      directoryRecovery: this.memoryRecovery(),
+      directoryRecovery: this.memoryRecovery(this.offlineRecoveryRevision),
       entries: this.entries, currentChapterIndex: this.currentChapterIndex,
       chapterStartBookmarkCreationEnabled: true,
       onSelectChapter: (index: number): void => this.intent(presentation, 'select-chapter', index),
@@ -367,6 +414,9 @@ export struct ReaderDirectoryStructureFixture {
       bookTitle: '目录原生夹具 · 山海画卷', entries: this.entries,
       currentChapterIndex: this.currentChapterIndex, currentPageOrdinal: 7, currentPageTotal: 24,
       mangaDownloadEnabled: true,
+      directoryRecovery: this.memoryRecovery(this.offlineRecoveryRevision),
+      onReconcileOffline: (generation: number, identity: string): void => this.recoverOffline(presentation, generation, identity, false),
+      onContinueOffline: (generation: number, identity: string): void => this.recoverOffline(presentation, generation, identity, true),
       onLoadDownloadActions: async (index?: number): Promise<MangaDownloadAction[]> => {
         if (!this.current(presentation)) return [];
         this.record('download-menu', index ?? -1);
@@ -391,7 +441,7 @@ export struct ReaderDirectoryStructureFixture {
         this.admitControlMinimum(presentation, identity, measurer),
       entries: this.entries, currentChapterIndex: this.currentChapterIndex,
       bookmarkIdentity: this.identity(), navigationPortFactory: this.navigationFactory,
-      bookmarkRecovery: this.memoryRecovery(),
+      bookmarkRecovery: this.memoryRecovery(this.offlineRecoveryRevision),
       catalogComplete: true, catalogChapterCount: this.entries.length,
       catalogReadableChapterCount: this.entries.length, catalogReadablePosition: this.currentChapterIndex,
       progress: this.controlExpanded ? 1 : 0, interactionEnabled: true,

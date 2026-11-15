@@ -1,3 +1,4 @@
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { READER_MANGA_DOWNLOAD_POPUP, ReaderMangaDownloadPopupRecipe } from './ReaderMangaDownloadPopupSpec';
 import { MangaDownloadOperationsPanel } from './MangaDownloadOperationsPanel';
@@ -16,6 +17,10 @@ export struct ReaderMangaDownloadPopup {
   @Prop availableWidth: number = 240;
   @Prop actions: MangaDownloadAction[] = [];
   @Prop loading: boolean = false;
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  @Prop recoveryActive: boolean = true;
+  onReconcileOffline: (generation: number, presentationId: string, popupGeneration: number) => void = (): void => {};
+  onContinueOffline: (generation: number, presentationId: string, popupGeneration: number) => void = (): void => {};
   @Prop failureMessage: string = '';
   onOpen: () => void = (): void => {};
   onClosed: (generation: number) => void = (_generation: number): void => {};
@@ -43,6 +48,9 @@ export struct ReaderMangaDownloadPopup {
     Scroll() {
       MangaDownloadOperationsPanel({ reduceMotion: this.reduceMotion,
         actions: this.actions, loading: this.loading, failureMessage: this.failureMessage,
+        directoryRecovery: this.directoryRecovery, recoveryActive: this.visible && this.recoveryActive,
+        onReconcileOffline: (expected: number, presentation: string): void => this.onReconcileOffline(expected, presentation, generation),
+        onContinueOffline: (expected: number, presentation: string): void => this.onContinueOffline(expected, presentation, generation),
         onAction: (action: MangaDownloadActionId): void => this.onAction(action, generation),
         onRetry: (): void => this.onRetry(generation) });
     }.width(Math.min(this.spec().maxWidth, this.availableWidth))

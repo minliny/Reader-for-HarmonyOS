@@ -767,6 +767,8 @@ export struct ReadingExperience {
   @Prop bookmarkRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, presentationId: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, presentationId: string) => void = (): void => {};
+  onReconcileOffline: (generation: number, presentationId: string) => void = (): void => {};
+  onContinueOffline: (generation: number, presentationId: string) => void = (): void => {};
   @State private controlBookmarkLoadFailed: boolean = false;
   private controlBookmarkLoadGeneration: number = 0;
   private controlBookmarkLoadPending: boolean = false;
@@ -2352,7 +2354,26 @@ export struct ReadingExperience {
   private hasReaderRecoveryContent(): boolean {
     return this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible ||
       this.ttsConfigurationRecovery.visible || (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace') ||
-      this.bookmarkRecovery.bookmarks.visible || this.bookmarkRecovery.originalBookmarks !== undefined;
+      this.bookmarkRecovery.bookmarks.visible || this.bookmarkRecovery.originalBookmarks !== undefined ||
+      this.readerOfflineRecoveryVisible();
+  }
+
+  private readerOfflineRecoveryVisible(): boolean {
+    return this.bookmarkRecovery.offline.visible && this.bookmarkRecovery.offlineKind !== 'result';
+  }
+
+  private readerOfflinePending(): boolean {
+    return this.readerOfflineRecoveryVisible() && (this.bookmarkRecovery.offlineKind ?? 'pending') === 'pending';
+  }
+
+  private reconcileOfflineRecovery(identity: string, generation: number, presentation: string, continuing: boolean): void {
+    const recovery = this.bookmarkRecovery;
+    if (!this.readerRecoveryInputCurrent() || identity !== `${this.lifecycleToken}:${recovery.presentationId}` ||
+      presentation !== recovery.presentationId || !this.readerOfflineRecoveryVisible() || recovery.offlineBusy === true ||
+      generation !== recovery.offline.generation ||
+      (continuing ? !recovery.canContinueOffline : !recovery.offline.canRetry)) return;
+    if (continuing) this.onContinueOffline(generation, presentation);
+    else this.onReconcileOffline(generation, presentation);
   }
 
   private openReaderRecovery(identity: string): void {
@@ -2423,6 +2444,9 @@ export struct ReadingExperience {
           if (this.bookmarkRecovery.bookmarks.visible && (this.bookmarkRecovery.bookmarksKind ?? 'pending') !== 'pending') {
             this.readerBookmarkRecoveryContent(false);
           }
+          if (this.readerOfflineRecoveryVisible() && (this.bookmarkRecovery.offlineKind ?? 'pending') !== 'pending') {
+            this.readerOfflineRecoveryContent(false);
+          }
           if (this.hasReaderPendingGroup()) {
             ReaderRecoveryGroup({ content: (): void => { this.readerRecoveryItems(); } });
           }
@@ -2449,7 +2473,7 @@ export struct ReadingExperience {
   }
 
   private hasReaderPendingGroup(): boolean {
-    return this.readerBookmarkPending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible ||
+    return this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible ||
       this.ttsPreferencesRecovery.visible || this.ttsConfigurationRecovery.visible ||
       (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace');
   }
@@ -2474,34 +2498,54 @@ export struct ReadingExperience {
     }, (identity: string): string => `bookmark:${identity}`);
   }
   @Builder
+  private readerOfflineRecoveryContent(grouped: boolean) {
+    ForEach([`${this.lifecycleToken}:${this.bookmarkRecovery.presentationId}`], (identity: string): void => {
+      ReaderDirectoryRecoverySurface({ grouped, recovery: {
+        presentationId: this.bookmarkRecovery.presentationId,
+        bookmarks: EMPTY_READING_DIRECTORY_RECOVERY.bookmarks, canContinueBookmarks: false, bookmarkWriteEnabled: false,
+        offline: this.bookmarkRecovery.offline, offlineKind: this.bookmarkRecovery.offlineKind,
+        offlineReadbackFailed: this.bookmarkRecovery.offlineReadbackFailed, offlineBusy: this.bookmarkRecovery.offlineBusy,
+        offlineRecoveryAction: this.bookmarkRecovery.offlineRecoveryAction, canContinueOffline: this.bookmarkRecovery.canContinueOffline,
+      }, presentationActive: this.readerRecoveryInputCurrent(),
+        isPresentationCurrent: (): boolean => this.readerRecoveryInputCurrent() &&
+          identity === `${this.lifecycleToken}:${this.bookmarkRecovery.presentationId}`,
+        onReconcileOffline: (generation: number, presentation: string): void =>
+          this.reconcileOfflineRecovery(identity, generation, presentation, false),
+        onContinueOffline: (generation: number, presentation: string): void =>
+          this.reconcileOfflineRecovery(identity, generation, presentation, true) });
+    }, (identity: string): string => `offline:${identity}`);
+  }
+
+  @Builder
   private readerRecoveryItems() {
     if (this.readerBookmarkPending()) { this.readerBookmarkRecoveryContent(true); }
+    if (this.readerOfflinePending()) { this.readerOfflineRecoveryContent(true); }
     if (this.readerRecoveryView.visible) {
       ForEach([this.readerRecoveryView.generation], (generation: number): void => {
-        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending(), view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
+        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending(), view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
           onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.reconcileReaderRecovery(generation); } });
       }, (generation: number): string => `recovery:${generation}`);
     }
     if (this.readerSettingsRecovery.visible) {
       ForEach([this.readerSettingsRecovery.generation], (generation: number): void => {
-        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerRecoveryView.visible, view: this.readerSettingsRecovery, tag: '阅读设置',
+        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible, view: this.readerSettingsRecovery, tag: '阅读设置',
           busy: this.readerSettingsRecoveryBusy, actionLabel: '重试保存',
           onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.retryReaderPreferenceNotice('settings', generation); } });
       }, (generation: number): string => `settings:${generation}`);
     }
     if (this.ttsPreferencesRecovery.visible) {
       ForEach([this.ttsPreferencesRecovery.generation], (generation: number): void => {
-        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible, view: this.ttsPreferencesRecovery, tag: '朗读设置',
+        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible, view: this.ttsPreferencesRecovery, tag: '朗读设置',
           busy: this.ttsPreferencesRecoveryBusy, actionLabel: '重试保存',
           onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.retryReaderPreferenceNotice('tts', generation); } });
       }, (generation: number): string => `tts:${generation}`);
     }
     if (this.ttsConfigurationRecovery.visible) {
-      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible, view: this.ttsConfigurationRecovery, tag: '朗读配置', actionLabel: '查看设置',
+      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible, view: this.ttsConfigurationRecovery, tag: '朗读配置', actionLabel: '查看设置',
         onReconcile: (generation: number): void => { if (this.readerRecoveryInputCurrent()) this.openTtsConfigurationRecovery(generation); } });
     }
     if (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace') {
-      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible || this.ttsConfigurationRecovery.visible, view: this.replaceRecovery, tag: '替换规则', actionLabel: '查看规则',
+      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible || this.ttsConfigurationRecovery.visible, view: this.replaceRecovery, tag: '替换规则', actionLabel: '查看规则',
         onReconcile: (generation: number): void => { if (this.readerRecoveryInputCurrent()) this.openReplaceRecovery(generation); } });
     }
   }

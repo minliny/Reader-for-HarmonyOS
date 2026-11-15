@@ -1,3 +1,5 @@
+import { ReaderDirectoryRecoverySurface } from '../../reading/ui/ReaderDirectoryRecoverySurface';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
@@ -10,6 +12,10 @@ export struct MangaDownloadOperationsPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private foreground: boolean = true;
   @Prop reduceMotion: boolean = false;
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  @Prop recoveryActive: boolean = true;
+  onReconcileOffline: (generation: number, presentationId: string) => void = (): void => {};
+  onContinueOffline: (generation: number, presentationId: string) => void = (): void => {};
   @Prop actions: MangaDownloadAction[] = [];
   @Prop loading: boolean = false;
   @Prop failureMessage: string = '';
@@ -19,6 +25,18 @@ export struct MangaDownloadOperationsPanel {
 
   build() {
     Column({ space: 8 }) {
+      if (this.directoryRecovery.offline.visible && this.directoryRecovery.offlineKind !== 'result') {
+        ReaderDirectoryRecoverySurface({ recovery: {
+          presentationId: this.directoryRecovery.presentationId,
+          bookmarks: EMPTY_READING_DIRECTORY_RECOVERY.bookmarks, canContinueBookmarks: false, bookmarkWriteEnabled: false,
+          offline: this.directoryRecovery.offline, offlineKind: this.directoryRecovery.offlineKind,
+          offlineReadbackFailed: this.directoryRecovery.offlineReadbackFailed, offlineBusy: this.directoryRecovery.offlineBusy,
+          offlineRecoveryAction: this.directoryRecovery.offlineRecoveryAction, canContinueOffline: this.directoryRecovery.canContinueOffline,
+        }, presentationActive: this.foreground && this.recoveryActive,
+          isPresentationCurrent: (): boolean => this.foreground && this.recoveryActive,
+          onReconcileOffline: (generation: number, presentation: string): void => this.onReconcileOffline(generation, presentation),
+          onContinueOffline: (generation: number, presentation: string): void => this.onContinueOffline(generation, presentation) });
+      }
       if (this.loading || this.failureMessage.length > 0) {
         ReaderPageState({ padded: false, loading: this.loading,
           loadingActive: this.foreground && !this.reduceMotion,

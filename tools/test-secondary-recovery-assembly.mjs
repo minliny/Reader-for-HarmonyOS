@@ -95,7 +95,8 @@ function readingItems() {
     // Builders are lowered. Omitted Reader lifecycle/IO is outside this test.
     boundedMembers(source, 'ReadingExperience');
     const owner = sdk.consumer(source, ['readerRecoveryContent', 'readerRecoveryItems', 'readerBookmarkRecoveryContent',
-      'readerBookmarkPending', 'hasReaderPendingGroup', 'hasReaderRecoveryContent'], {}, {});
+      'readerBookmarkPending', 'hasReaderPendingGroup', 'hasReaderRecoveryContent',
+      'readerOfflineRecoveryVisible', 'readerOfflinePending'], {}, {});
     Object.assign(owner, { bookmarkRecovery: { presentationId: 'reading-a', bookmarks: view(7, '书签事项'), offline: hidden,
       bookmarksKind: kind, bookmarksReadbackFailed: kind === 'readback', canContinueBookmarks: kind === 'pending' },
       readerRecoveryView: hidden, readerSettingsRecovery: settingsPending ? view(8, '设置待确认') : hidden,

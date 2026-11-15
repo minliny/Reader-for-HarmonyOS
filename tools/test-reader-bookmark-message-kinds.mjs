@@ -94,11 +94,14 @@ for(const id of selected){
   sdk.hooks.childSources.ReaderDirectoryRecoverySurface=surface;
   sdk.deps.ReaderDirectoryRecoverySurface=createReaderBuilderProbe(surface,boundedMembers(surface),
    {...sdk.deps,ReaderTransientFeedback:Feedback,EMPTY_READING_DIRECTORY_RECOVERY},sdk.hooks).Component;
-  const owner=sdk.consumer(read('LocalReadingExperience'),['readerRecoveryContent','readerRecoveryInputCurrent','hasReaderRecoveryContent','bookmarkRecoveryIdentity','reconcileBookmarkRecovery'],
+  const owner=sdk.consumer(read('LocalReadingExperience'),['readerRecoveryContent','readerRecoveryInputCurrent','hasReaderRecoveryContent','bookmarkRecoveryIdentity','reconcileBookmarkRecovery',
+   'hasReaderPendingGroup','readerBookmarkPending','readerOfflineRecoveryVisible','readerOfflinePending',
+   'readerRecoveryItems','readerBookmarkRecoveryContent','readerOfflineRecoveryContent'],
    {EMPTY_READING_DIRECTORY_RECOVERY});
   let controls=kind==='readback';
   const empty={visible:false,canRetry:false,generation:0,message:''};
-  Object.assign(owner,{bookmarkRecovery:recovery,lifecycleToken:4,readerRecoveryView:empty,readerSettingsRecovery:empty,
+  Object.assign(owner,{mounted:true,exitRequested:false,readerRecoveryRequestCurrent:()=>true,
+   controlVisible:()=>controls,bookmarkRecovery:recovery,lifecycleToken:4,readerRecoveryView:empty,readerSettingsRecovery:empty,
    ttsPreferencesRecovery:empty,ttsConfigurationRecovery:empty,replaceRecovery:empty,viewportWidth:366,
    sourceSwitchPresentationVisible:false,controlMotionVisible:()=>controls,isControlInputEnabled:()=>true,
    isSessionActive:()=>true,controlLayout:()=>({topBarWidth:334}),readerRecoveryTop:()=>100,readerRecoveryViewportHeight:()=>180,
