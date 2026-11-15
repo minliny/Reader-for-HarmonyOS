@@ -302,6 +302,7 @@ export struct ReaderDirectoryNavigationList {
   private mounted: boolean = false;
   private generation: number = 0;
   private layoutReady: boolean = false;
+  private mangaViewportHeight: number = 0;
   private chapterByIndex: Map<number, LocalReadingTocEntry> = new Map<number, LocalReadingTocEntry>();
   private chapterSignatures: Map<number, string> = new Map<number, string>();
   private chapterSource: LocalReadingTocEntry[] | undefined = undefined;
@@ -334,6 +335,7 @@ export struct ReaderDirectoryNavigationList {
     this.mounted = true;
     this.generation += 1;
     this.layoutReady = false;
+    this.mangaViewportHeight = 0;
     this.initialPositionPending = true;
     this.mangaDragging = false;
     this.pendingPages = [];
@@ -446,7 +448,7 @@ export struct ReaderDirectoryNavigationList {
   @Builder
   private emptyPrefix() {}
 
-  private nativeHeaderCount(): number { return !this.mangaDisplay && this.headerCount === 1 ? 1 : 0; }
+  private nativeHeaderCount(): number { return this.headerCount === 1 ? 1 : 0; }
 
   private retirePrefixPosition(): void {
     if (this.nativeHeaderCount() !== 1 && !this.prefixChangePending) return;
@@ -562,6 +564,7 @@ export struct ReaderDirectoryNavigationList {
         rowFraction: 0, align: this.mangaDisplay ? ScrollAlign.START : ScrollAlign.CENTER,
         currentInset: this.mangaDisplay ? (this.view.currentDisplayInset ?? 50) : undefined,
         smooth: false };
+    if (this.mangaDisplay && this.nativeHeaderCount() === 1) return undefined;
     if (this.view.visibleTotal > 0)
       return { viewId: this.view.viewId, index: 0, rowFraction: 0, align: ScrollAlign.START };
     return undefined;
@@ -657,14 +660,17 @@ export struct ReaderDirectoryNavigationList {
     if (displayIndex === undefined) return;
     try {
       if (plan.align === ScrollAlign.START) {
-        const startOffset = this.mangaDisplay ? this.mangaContentStartOffset() : 0;
+        const startOffset = this.mangaDisplay && this.nativeHeaderCount() === 0 ? this.mangaContentStartOffset() : 0;
         const visibleTop = this.mangaDisplay ? Math.max(0, this.mangaVisibleTopInset) : 0;
+        const currentInset = this.mangaDisplay && this.nativeHeaderCount() === 1 && this.mangaViewportHeight > 0 &&
+          plan.currentInset !== undefined ? Math.min(plan.currentInset,
+            Math.max(0, this.mangaViewportHeight - visibleTop - this.positionRowHeight(plan.index))) : plan.currentInset;
         // Official START aligns the item to contentStartOffset. Translate only
         // viewport geometry; canonical Core ranks and target proofs stay intact.
         this.scroller.scrollToIndex(displayIndex, plan.smooth === true, ScrollAlign.START,
-          { extraOffset: LengthMetrics.vp(plan.currentInset === undefined ?
+          { extraOffset: LengthMetrics.vp(currentInset === undefined ?
             startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : this.rowHeight) :
-            startOffset - visibleTop - plan.currentInset) });
+            startOffset - visibleTop - currentInset) });
       } else if (this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive) {
         this.scroller.scrollToIndex(displayIndex, false, ScrollAlign.CENTER);
       } else {
@@ -984,7 +990,7 @@ export struct ReaderDirectoryNavigationList {
       const offset = this.scroller.currentOffset().yOffset;
       // Grid currentOffset begins at -contentStartOffset. Chrome observes the
       // corresponding scroll-content origin, including signed native bounce.
-      if (Number.isFinite(offset)) this.onScrollOffset(offset + this.mangaContentStartOffset());
+      if (Number.isFinite(offset)) this.onScrollOffset(offset + (this.nativeHeaderCount() === 1 ? 0 : this.mangaContentStartOffset()));
     } catch (_error) { /* An unattached native scroller has no geometry yet. */ }
   }
 
@@ -1104,8 +1110,13 @@ export struct ReaderDirectoryNavigationList {
 
   private mangaGridLayoutOptions(): GridLayoutOptions {
     this.prepareMangaGridProjection();
-    return { regularSize: [1, 1], irregularIndexes: Array.from(this.mangaGridSpans.keys()),
-      onGetIrregularSizeByIndex: (index: number): [number, number] => [1, this.mangaGridSpans.get(index) ?? 12] };
+    const prefix = this.nativeHeaderCount();
+    const tail = Math.max(1, this.view.visibleTotal) + prefix;
+    const irregularIndexes = Array.from(this.mangaGridSpans.keys()).map((index: number): number => index + prefix);
+    if (prefix === 1) { irregularIndexes.unshift(0); irregularIndexes.push(tail); }
+    return { regularSize: [1, 1], irregularIndexes,
+      onGetIrregularSizeByIndex: (index: number): [number, number] =>
+        [1, prefix === 1 && (index === 0 || index === tail) ? 12 : this.mangaGridSpans.get(index - prefix) ?? 12] };
   }
 
   @Builder
@@ -1474,6 +1485,9 @@ export struct ReaderDirectoryNavigationList {
   build() {
     if (this.mangaDisplay) {
       Grid(this.scroller, this.mangaGridLayoutOptions()) {
+        if (this.nativeHeaderCount() === 1) {
+          GridItem() { this.prefixBuilder(); }.width('100%').height(Math.max(0, this.prefixHeight));
+        }
         if (this.view.visibleTotal === 0) {
           GridItem() { this.mangaEmptyState(); }.width('100%');
         }
@@ -1483,11 +1497,15 @@ export struct ReaderDirectoryNavigationList {
             else this.mangaRow(item);
           }.width('100%');
         }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
+        if (this.nativeHeaderCount() === 1) {
+          GridItem() {}.width('100%').height(this.mangaContentEndOffset());
+        }
       }.columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr')
         .columnsGap(0).rowsGap(0).width('100%').height('100%')
         .padding({ left: this.listPaddingX, right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
           top: 0, bottom: 0 })
-        .contentStartOffset(this.mangaContentStartOffset()).contentEndOffset(this.mangaContentEndOffset())
+        .contentStartOffset(this.nativeHeaderCount() === 1 ? 0 : this.mangaContentStartOffset())
+        .contentEndOffset(this.nativeHeaderCount() === 1 ? 0 : this.mangaContentEndOffset())
         .scrollBar(BarState.Auto).scrollBarWidth(MANGA_DIRECTORY_VISUAL.scrollbarWidth).scrollBarColor(this.mangaColor('scrollbar')).edgeEffect(this.edgeEffectMode)
         .enableScrollInteraction(this.interactionEnabled).cachedCount(4)
         .onWillStartDragging((): void => {
@@ -1497,15 +1515,17 @@ export struct ReaderDirectoryNavigationList {
           this.onUserScrollIntent();
         })
         .onScrollIndex((start: number, _end: number): void => {
-          this.firstVisibleIndex = this.dataSource.coreIndex(start);
+          this.firstVisibleIndex = this.dataIndex(start);
           if (!this.initialPositionPending) this.captureViewportAnchor();
         })
         .onDidScroll((): void => this.publishMangaScrollOffset())
         .onScrollStop((): void => { this.publishMangaScrollOffset(); this.settleMangaScroll(); })
         .onAreaChange((_oldArea: Area, newArea: Area): void => {
           const width = Number(newArea.width);
+          const height = Number(newArea.height);
           if (Number.isFinite(width) && width > 0 && this.mangaViewportWidth !== width) this.mangaViewportWidth = width;
-          if (!this.layoutReady && Number(newArea.height) > 0) {
+          if (Number.isFinite(height) && height > 0) this.mangaViewportHeight = height;
+          if (!this.layoutReady && height > 0) {
             this.layoutReady = true;
             this.onFirstLayout();
             this.positionInitialCurrent();

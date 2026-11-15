@@ -4,6 +4,10 @@ import { createRequire, registerHooks } from 'node:module';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'short-grid-prefix': {
+    description: 'Actual short manga semantic Grid consumes the current native prefix, maps native/Core indices and spans independently, and bounds current-row positioning by its actual viewport.',
+    resources: [],
+  },
   'short-fallback-insets': {
     description: 'Actual SDK short manga fallback materializes scrollable insets, preserves chapter target indices and signed chrome offsets, and separates summary drag from toolbar actions.',
     resources: [],
@@ -15,6 +19,11 @@ const selected = selectContractCases({
 });
 
 for (const id of selected) {
+  if (id === 'short-grid-prefix') {
+    await shortGridPrefix();
+    recordContractCasePass(id);
+    continue;
+  }
   if (id === 'short-fallback-insets') {
     await shortFallbackInsets();
     recordContractCasePass(id);
@@ -261,7 +270,7 @@ async function shortFallbackInsets() {
     ['short content origin', pageSource.replace('offset + (this.mangaFlowFooter() ? 0 : this.mangaContentTopInset())', 'offset + this.mangaContentTopInset()'), listSource],
     ['summary hit boundary', pageSource.replace('inline ? HitTestMode.Default : HitTestMode.Transparent', 'HitTestMode.Default'), listSource],
     ['toolbar action boundary', pageSource.replace('inline ? HitTestMode.Default : HitTestMode.BLOCK_HIERARCHY', 'HitTestMode.Default'), listSource],
-    ['duplicate overlay', pageSource.replace('if (!this.mangaFlowFooter() || this.navigationActive) { this.mangaToolbar(identity); }', 'this.mangaToolbar(identity);'), listSource],
+    ['duplicate overlay', pageSource.replace('if (!this.mangaFlowFooter()) { this.mangaToolbar(identity); }', 'this.mangaToolbar(identity);'), listSource],
     ['missing inline producer', pageSource, listSource.replace('ListItem() { this.prefixBuilder(); }.width', 'ListItem() {}.width')],
     ['missing scroll spacers', pageSource, listSource.replaceAll('if (this.materializedInsets) {', 'if (false) {')],
   ]) {
@@ -269,4 +278,124 @@ async function shortFallbackInsets() {
     assert.throws(() => check(page, list), assert.AssertionError, label);
   }
   console.log('PASS actual short/full SDK List content, canonical index, signed offsets and one inline/overlay toolbar producer with eight rejected regressions.');
+}
+
+async function shortGridPrefix() {
+  const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { ReaderScrollLayout } = await import('../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
+  const { MANGA_DIRECTORY_VISUAL: visual } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+  const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
+  const pageSource = read('features/reading/ui/BookDirectoryPage.ets');
+  const listSource = read('features/reading/ui/ReaderDirectoryNavigationList.ets');
+  const surfaceSource = read('features/reading/ui/ReaderDirectoryNavigationSurface.ets');
+  class Captured {
+    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+    updateStateVars(params) { this.params = params; }
+  }
+  for (const flowing of [true, false]) {
+    const sdk = boundedSurfaceSdk(), overlays = [], prefixes = [];
+    const page = createReaderBuilderProbe(pageSource, ['mangaContent'], {
+      ...sdk.deps, visual, ReaderDirectoryNavigationSurface: Captured,
+    }, { ...sdk.hooks, childSources: { ReaderDirectoryNavigationSurface: surfaceSource } }).owner;
+    Object.assign(page, { admittedIdentity: 'current', admittedEntries: [], viewportWidth: 366,
+      geometry: { content: { frame: { left: 18, right: 18, width: 330 }, startInset: 360 } },
+      mangaFlowFooter: () => flowing, navigationActive: true, interactive: true,
+      mangaVisibleTopInset: () => 98, mangaNarrow: () => true, directoryScrollLayout: () => new ReaderScrollLayout(360, 18, 'contentOffset'),
+      mangaToolbar: () => overlays.push('overlay'), mangaFlatPrefix: identity => prefixes.push(identity),
+    });
+    page.mangaContent();
+    const navigation = [...page.children.values()].find(child => child instanceof Captured);
+    assert.equal(navigation.params.headerCount, flowing ? 1 : 0, 'current short semantic Grid receives the native prefix contract');
+    assert.equal(navigation.params.prefixHeight, flowing ? 360 : 0);
+    assert.equal(navigation.params.prefixIdentity, 'current');
+    assert.equal(overlays.length, flowing ? 0 : 1);
+    navigation.params.prefixBuilder(); assert.deepEqual(prefixes, ['current']);
+  }
+  let anchor;
+  const Policy = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url),
+    'ReaderDirectoryNavigationList', ['nativeHeaderCount', 'nativeDisplayIndex', 'dataIndex', 'mangaGridLayoutOptions',
+      'publishMangaScrollOffset', 'positionInitialCurrent', 'planPosition'], {
+      ScrollAlign: { START: 'start', CENTER: 'center' }, LengthMetrics: { vp: value => value },
+      readerDirectoryScopeKey: (source, book) => source + ':' + book, readerDirectoryViewportAnchor: () => anchor,
+    });
+  const view = { viewId: 'view', visibleTotal: 3, navigationRevision: 'revision' }, moves = [], offsets = [];
+  const policy = Object.assign(new Policy(), {
+    mangaDisplay: true, headerCount: 1, mangaQuickDisplay: false, mangaSearchActive: false,
+    view, sourceId: 'source', bookId: 'book', mangaViewportHeight: 168, mangaVisibleTopInset: 98,
+    mangaGridSpans: new Map([[0, 12], [1, 6], [2, 6]]), prepareMangaGridProjection() {},
+    dataSource: { currentView: () => view, displayIndex: index => index, coreIndex: index => index },
+    scroller: { currentOffset: () => ({ yOffset: 93 }), scrollToIndex: (...args) => moves.push(args) },
+    mangaContentStartOffset: () => 360, mangaContentEndOffset: () => 18, positionRowHeight: () => 58,
+    onScrollOffset: offset => offsets.push(offset),
+  });
+  assert.equal(policy.nativeHeaderCount(), 1);
+  assert.equal(policy.nativeDisplayIndex(0), 1);
+  assert.equal(policy.nativeDisplayIndex(2), 3);
+  assert.equal(policy.nativeDisplayIndex(3), undefined);
+  assert.equal(policy.dataIndex(0), -1);
+  assert.equal(policy.dataIndex(2), 1);
+  assert.equal(policy.dataIndex(4), -1);
+  const options = policy.mangaGridLayoutOptions();
+  assert.deepEqual(options.irregularIndexes, [0, 1, 2, 3, 4]);
+  assert.deepEqual([0, 1, 2, 3, 4].map(index => options.onGetIrregularSizeByIndex(index)),
+    [[1, 12], [1, 12], [1, 6], [1, 6], [1, 12]]);
+  assert.equal(policy.planPosition(), undefined, 'opening without current or anchor preserves the visible prefix');
+  view.visibleTotal = 0; policy.mangaGridSpans = new Map([[0, 12]]);
+  assert.deepEqual(policy.mangaGridLayoutOptions().irregularIndexes, [0, 1, 2], 'empty body retains independent prefix and tail');
+  view.visibleTotal = 3; policy.mangaGridSpans = new Map([[0, 12], [1, 6], [2, 6]]);
+  view.currentVisibleIndex = 1;
+  policy.initialPositionPending = true;
+  policy.positionInitialCurrent();
+  assert.deepEqual(moves.pop(), [2, false, 'start', { extraOffset: -110 }], 'current row fits the actual remaining 70vp');
+  delete view.currentVisibleIndex;
+  anchor = { navigationRevision: 'revision', viewId: 'view', visibleIndex: 0, rowFraction: .25 };
+  assert.equal(policy.planPosition().index, 0, 'Core rank zero remains an actual anchor');
+  policy.publishMangaScrollOffset(); assert.equal(offsets.pop(), 93);
+  policy.headerCount = 0;
+  policy.publishMangaScrollOffset(); assert.equal(offsets.pop(), 453, 'full Grid retains its signed native content origin');
+  anchor = undefined;
+  assert.equal(policy.planPosition().index, 0);
+
+  const nativeIndexPolicy = Object.assign(new Policy(), policy, { headerCount: 1 });
+  function checkGrid(candidate = listSource) {
+    const sdk = boundedSurfaceSdk(), prefixCalls = [], firstLayouts = [];
+    const grid = createReaderBuilderProbe(candidate, ['build', 'prefixBuilder', 'emptyBuilder', 'emptyPrefix'], { ...sdk.deps,
+      LazyForEach: new Proxy({}, { get: () => () => {} }),
+      ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
+    }, sdk.hooks).owner;
+    Object.assign(grid, { mangaDisplay: true, view: { ...view }, scroller: {}, dataSource: { coreIndex: index => index },
+      nativeHeaderCount: () => 1, mangaGridLayoutOptions: () => options, prefixHeight: 360,
+      prefixBuilder: () => prefixCalls.push('current'), mangaContentStartOffset: () => 360,
+      mangaContentEndOffset: () => 18, listPaddingX: 18, listPaddingRight: 18,
+      mangaColor: () => '#000000', interactionEnabled: true, initialPositionPending: true, mangaViewportWidth: 330,
+      dataIndex: index => nativeIndexPolicy.dataIndex(index),
+      onFirstLayout: () => firstLayouts.push(grid.mangaViewportHeight),
+      positionInitialCurrent() {},
+    });
+    grid.initialRender();
+    const viewport = [...grid.nodes.values()].find(node => node.type === 'Grid');
+    assert.equal(viewport.contentStartOffset, 0); assert.equal(viewport.contentEndOffset, 0);
+    const spacers = [...grid.nodes.values()].filter(node => node.type === 'GridItem');
+    assert.deepEqual(spacers.map(node => node.height), [360, 18]);
+    spacers[0].create[0](spacers[0].id, true); assert.deepEqual(prefixCalls, ['current']);
+    viewport.onScrollIndex(0, 1); assert.equal(grid.firstVisibleIndex, -1);
+    viewport.onScrollIndex(2, 3); assert.equal(grid.firstVisibleIndex, 1);
+    viewport.onAreaChange({}, { width: 330, height: 168 }); assert.deepEqual(firstLayouts, [168]);
+  }
+  checkGrid();
+  for (const [label, candidate] of [
+    ['lost native prefix', listSource.replaceAll('if (this.nativeHeaderCount() === 1) {', 'if (false) {')],
+    ['oversized native offset', listSource.replace('.contentStartOffset(this.nativeHeaderCount() === 1 ? 0 : this.mangaContentStartOffset())', '.contentStartOffset(this.mangaContentStartOffset())')],
+    ['prefix saved as Core rank', listSource.replace('this.firstVisibleIndex = this.dataIndex(start);', 'this.firstVisibleIndex = this.dataSource.coreIndex(start);')],
+    ['missing actual height', listSource.replace('this.mangaViewportHeight = height;', 'void height;')],
+  ]) {
+    assert.notEqual(candidate, listSource, label);
+    assert.throws(() => checkGrid(candidate), assert.AssertionError, label);
+  }
+  const Surface = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets', import.meta.url),
+    'ReaderDirectoryNavigationSurface', ['hasPrefix']);
+  assert.equal(Surface.prototype.hasPrefix.call({ mangaDisplay: true, headerCount: 1 }), true);
+  console.log('PASS exact SDK manga semantic prefix, native/Core ranks and spans, initial/current placement and actual Grid render/event inputs. No Core paging or native pixels simulated.');
 }

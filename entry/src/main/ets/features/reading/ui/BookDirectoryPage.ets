@@ -221,6 +221,10 @@ export struct BookDirectoryPage {
           listPaddingRight: this.geometry.content.frame.right,
           listPaddingY: visual.gridGap, listPaddingTop: 0, listPaddingBottom: 0,
           scrollLayout: this.directoryScrollLayout(),
+          headerCount: this.mangaFlowFooter() ? 1 : 0,
+          prefixHeight: this.mangaFlowFooter() ? this.geometry.content.startInset : 0,
+          prefixIdentity: identity,
+          prefixBuilder: (): void => { this.mangaFlatPrefix(identity); },
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
           bookmarkActionsEnabled: false,
@@ -253,7 +257,7 @@ export struct BookDirectoryPage {
             this.navigationActive = active; this.listReady = false;
           },
         }).width('100%').height('100%');
-        if (!this.mangaFlowFooter() || this.navigationActive) { this.mangaToolbar(identity); }
+        if (!this.mangaFlowFooter()) { this.mangaToolbar(identity); }
       }, (identity: string): string => identity);
     }.width('100%').height('100%');
   }
