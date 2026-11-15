@@ -16,6 +16,7 @@ if (selected.length) {
   const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
   const { SearchFilterGeometry } = await import('../entry/src/main/ets/features/search/ui/SearchFilterGeometry.ts');
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
   const { ts, options } = installedEtsCompiler();
@@ -24,6 +25,8 @@ if (selected.length) {
   const directoryPath = 'entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets';
   const fixturePath = 'entry/src/main/ets/pages/ReaderPageStructureVerification.ets';
   const read = path => readFileSync(new URL(path, root), 'utf8');
+  const { SOURCE_TOOLS_FIXTURE_SCENARIOS } = selectedProductionValues(
+    new URL('entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets', root), ['SOURCE_TOOLS_FIXTURE_SCENARIOS']);
   const results = {};
 
   function filterGeometry(source = read(filterPath)) {
@@ -74,7 +77,7 @@ if (selected.length) {
     let registrations = 0;
     const owner = createReaderBuilderProbe(source, ['fontState', 'fontAttempt', 'menu', 'fontPreparationState',
       'retryFonts', 'loadFonts', 'debugBuild'], { ...controls.dependencies, ...feedback.deps,
-      DEBUG: true, BUILD_MODE_NAME: 'debug', readerWindowMetrics: () => ({ systemFontScale: 1 }),
+      DEBUG: true, BUILD_MODE_NAME: 'debug', SOURCE_TOOLS_FIXTURE_SCENARIOS, readerWindowMetrics: () => ({ systemFontScale: 1 }),
       prepareReaderFonts: async () => { if (++registrations < 3) throw Error('finite font failure'); },
       hilog: { error() {} } }, hooks).owner;
     Object.assign(owner, { mounted: true, admitted: true, scene: 'menu', presentation: 7,

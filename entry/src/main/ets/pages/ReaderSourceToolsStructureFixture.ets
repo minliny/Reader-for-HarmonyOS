@@ -7,6 +7,27 @@ import type { SourceToolsSnapshot, SourceBatchCheckProgress, SourceBatchCheckRes
 import { ReaderPageState } from '../ui/feedback/ReaderPageState';
 import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
 import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
+import { projectOperationFacts } from '../app/ReaderOperationFacts';
+import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
+
+export type SourceToolsFixtureScenario = 'content' | 'loading' | 'empty' | 'read-error' |
+  'read-empty-error' | 'unknown' | 'original-unknown' | 'original-cleanup' | 'running';
+
+export interface SourceToolsFixtureCase {
+  value: SourceToolsFixtureScenario;
+  title: string;
+}
+
+export const SOURCE_TOOLS_FIXTURE_SCENARIOS: SourceToolsFixtureCase[] = [
+  { value: 'loading', title: '工具 · 读取中' },
+  { value: 'empty', title: '工具 · 空列表' },
+  { value: 'read-error', title: '工具 · 保留列表读取失败' },
+  { value: 'read-empty-error', title: '工具 · 空列表读取失败' },
+  { value: 'unknown', title: '工具 · 回执待核对' },
+  { value: 'original-unknown', title: '工具 · 原操作待核对' },
+  { value: 'original-cleanup', title: '工具 · 原操作待清理' },
+  { value: 'running', title: '工具 · 检测与停止' },
+];
 
 const emptyToolsFixtureSnapshot = (): SourceToolsSnapshot => {
   return { sources: [], sourceListRevision: 0, selectionRevision: 0, selectedSourceIds: [], selectedSourceCount: 0,
@@ -18,6 +39,7 @@ const emptyToolsFixtureSnapshot = (): SourceToolsSnapshot => {
 
 interface SourceToolsFixtureObservation {
   kind: string;
+  scenario: SourceToolsFixtureScenario;
   generation: number;
   sourceId: string;
   actualWidthVp: number;
@@ -26,11 +48,18 @@ interface SourceToolsFixtureObservation {
   intentCount: number;
   busy: boolean;
   editorRevision: number;
+  sourceCount: number;
+  selectedCount: number;
+  batchPhase: string;
+  readFact: string;
+  confirmation: string;
+  operationGeneration: number;
 }
 
 @Component
 export struct ReaderSourceToolsStructureFixture {
   @Prop @Watch('onParentFontsChanged') fontsReady: boolean = false;
+  @Prop scenario: SourceToolsFixtureScenario = 'content';
   onBack: () => void = (): void => {};
   onAction: (kind: string) => void = (_kind: string): void => {};
   // Forward the real child keyboard-Back port under this scene identity.
@@ -83,7 +112,8 @@ export struct ReaderSourceToolsStructureFixture {
 
   private createSnapshot(): SourceToolsSnapshot {
     const sources: BookSource[] = [];
-    for (let index = 0; index < 12; index += 1) {
+    const count = this.scenario === 'loading' || this.scenario === 'empty' || this.scenario === 'read-empty-error' ? 0 : 12;
+    for (let index = 0; index < count; index += 1) {
       const sourceId = `fixture-tools-${index}.example.invalid`;
       sources.push({ sourceId, name: `${index + 1} · 长名称书源与内存工具验证 / Long Fixture Source`,
         baseUrl: `https://${sourceId}`, enabled: index % 3 !== 0, enabledExplore: index % 2 === 0,
@@ -96,9 +126,36 @@ export struct ReaderSourceToolsStructureFixture {
     snapshot.selectedSourceIds = sources.slice(0, 3).map((source: BookSource): string => source.sourceId);
     snapshot.selectedSourceCount = snapshot.selectedSourceIds.length;
     snapshot.selectionRevision = 1;
-    snapshot.debugSourceId = sources[0].sourceId;
-    snapshot.debugLogs = this.sampleLogs(sources[0].sourceId);
-    snapshot.batchCheck = this.sampleProgress(sources.slice(0, 3));
+    snapshot.debugSourceId = sources[0]?.sourceId ?? '';
+    if (sources.length > 0) {
+      snapshot.debugLogs = this.sampleLogs(sources[0].sourceId);
+      snapshot.batchCheck = this.sampleProgress(sources.slice(0, 3));
+    }
+    if (this.scenario === 'loading') snapshot.busy = true;
+    if (this.scenario === 'read-error' || this.scenario === 'read-empty-error') {
+      snapshot.readFacts = projectOperationFacts<BookSource[]>({
+        phase: this.scenario === 'read-error' ? 'refreshFailed' : 'failed',
+        value: this.scenario === 'read-error' ? sources : undefined,
+        generation: this.fixtureGeneration, canRetry: true,
+        message: '内存夹具：读取失败，重试仅记录当前读取代次。' });
+    }
+    if (this.scenario === 'unknown') {
+      snapshot.receipt = projectPersistedReceipt<BookSource[]>({
+        confirmation: 'unknown', readback: 'failed', value: sources, canRetry: true,
+        generation: this.fixtureGeneration,
+        message: '内存夹具：原回执待核对，核对仅记录当前代次。'.repeat(8) });
+    }
+    if (this.scenario === 'original-unknown' || this.scenario === 'original-cleanup') {
+      snapshot.original = { generation: this.fixtureGeneration, busy: false, blocked: true, canRetryOriginal: true,
+        confirmation: this.scenario === 'original-cleanup' ? 'confirmed' : 'unknown',
+        writeStage: this.scenario === 'original-cleanup' ? 'cleanup' : 'core',
+        label: '内存原操作', method: 'fixture.memory', operationId: `tools-fixture-${this.fixtureGeneration}`,
+        message: '内存夹具：原操作仍需核对，继续仅记录当前身份及代次。'.repeat(8) };
+    }
+    if (this.scenario === 'running') {
+      snapshot.busy = true;
+      snapshot.batchCheck = this.pendingProgress('running', sources.slice(0, 3));
+    }
     return snapshot;
   }
 
@@ -123,11 +180,39 @@ export struct ReaderSourceToolsStructureFixture {
       currentIndex: results.length, currentSourceId: '', currentSourceName: '', results };
   }
 
+  private pendingProgress(phase: 'running' | 'stopping', sources: BookSource[]): SourceBatchCheckProgress {
+    const progress = this.sampleProgress(sources);
+    progress.phase = phase;
+    progress.completed = Math.min(1, sources.length);
+    progress.passed = progress.completed;
+    progress.failed = 0;
+    progress.errors = 0;
+    progress.currentIndex = Math.min(2, sources.length);
+    progress.currentSourceId = sources[progress.currentIndex - 1]?.sourceId ?? '';
+    progress.currentSourceName = sources[progress.currentIndex - 1]?.name ?? '';
+    progress.results = progress.results.slice(0, progress.completed);
+    return progress;
+  }
+
+  private stopCheck(generation: number): void {
+    if (!this.current(generation) || this.snapshot.batchCheck.phase !== 'running') return;
+    const next = this.copySnapshot();
+    next.batchCheck = this.pendingProgress('stopping', next.sources.filter((source: BookSource): boolean =>
+      next.selectedSourceIds.includes(source.sourceId)));
+    this.snapshot = next;
+    this.action(generation, 'stop-memory');
+  }
+
   private record(kind: string, sourceId: string = ''): void {
-    const observation: SourceToolsFixtureObservation = { kind, generation: this.fixtureGeneration, sourceId,
+    const observation: SourceToolsFixtureObservation = { kind, scenario: this.scenario, generation: this.fixtureGeneration, sourceId,
       actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
       systemFontScale: readerWindowMetrics().systemFontScale, intentCount: this.intentCount,
-      busy: this.snapshot.busy, editorRevision: this.snapshot.editorRevision };
+      busy: this.snapshot.busy, editorRevision: this.snapshot.editorRevision,
+      sourceCount: this.snapshot.sources.length, selectedCount: this.snapshot.selectedSourceCount,
+      batchPhase: this.snapshot.batchCheck.phase, readFact: this.snapshot.readFacts?.fact ?? 'none',
+      confirmation: this.snapshot.original?.confirmation ?? this.snapshot.receipt?.receipt.confirmation ?? 'none',
+      operationGeneration: this.snapshot.original?.generation ?? this.snapshot.receipt?.facts.generation ??
+        this.snapshot.readFacts?.generation ?? 0 };
     hilog.info(0x5244, 'ReaderPageStructure', 'READER_SOURCE_TOOLS_FIXTURE %{public}s', JSON.stringify(observation));
   }
 
@@ -302,7 +387,7 @@ export struct ReaderSourceToolsStructureFixture {
           onExportAll: (): void => this.action(generation, 'export-all-memory'),
           onExportSelected: (selection: SourceToolsSelection): void => this.idsAction(generation, 'export-selected-memory', selection),
           onCheckSelected: (selection: SourceToolsSelection): void => this.checkSources(generation, selection),
-          onStopCheck: (): void => this.action(generation, 'stop-memory'),
+          onStopCheck: (): void => this.stopCheck(generation),
           onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void => this.checkSelection(generation, mode, depth),
           onSetSelectedEnabled: (selection: SourceToolsSelection, enabled: boolean): void => this.setEnabled(generation, selection, enabled),
           onDeleteSelected: (selection: SourceToolsSelection): void => this.idsAction(generation, 'delete-memory-intent', selection),

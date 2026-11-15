@@ -13,6 +13,7 @@ const selected = selectContractCases({
   'source-callbacks': 'Actual Source initializer callbacks: memory-only intents, scene generations, temporary Back before menu and real-area vs requested width. No native rendering or business receipt evidence.',
   'source-states': 'Actual memory-only Source read/original/unknown recovery initializers, full long-message path through real projections, accurate generations and retired callbacks; no Host/RPC, native clipping or hit claim.',
   'fixture-scenes': 'Actual Directory/Download/Tools child initializers, checked admission, outer width vs actual Area, current-scene intent/Back and same-identity old bridge cleanup retirement. No native child subtree execution.',
+  'tools-state-scenes': 'Actual eight Tools menu callbacks forward the selected state, retain default content and reject denied or old menu callbacks. Frozen-state negative is rejected.',
   'downloads-short': 'New typed DEBUG 168vp Download wrapper through actual SDK initializer/safe top and real child/actor Area callbacks; full Download initializer and canonical recovery remain unchanged. Native geometry/inflow not asserted.',
   'group-recovery': 'Actual SDK DEBUG group fixture initializer, checked fonts, current-scene temporary Back and retired bridge rejection.',
   'framework-geometry': 'Actual SDK DEBUG geometry/removal fixture initializer, checked fonts and current-scene temporary Back ownership.',
@@ -29,6 +30,7 @@ if (selected.length) {
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
   const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
   const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
@@ -45,6 +47,8 @@ if (selected.length) {
   const directoryFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets',import.meta.url),'utf8');
   const downloadFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets',import.meta.url),'utf8');
   const toolsFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets',import.meta.url),'utf8');
+  const { SOURCE_TOOLS_FIXTURE_SCENARIOS } = selectedProductionValues(
+    new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets', import.meta.url), ['SOURCE_TOOLS_FIXTURE_SCENARIOS']);
   const groupFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets',import.meta.url),'utf8');
   const geometryFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets',import.meta.url),'utf8');
   const legacyFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderLegacyBookmarkRecoveryStructureFixture.ets',import.meta.url),'utf8');
@@ -69,7 +73,7 @@ if (selected.length) {
     const {owner:page}=compile(()=>createReaderBuilderProbe(sourceText,boundedMembers(sourceText),{
       ...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:mode,SourceManagementPage:SourceChild,ReaderPageState:StateChild,
       ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,ReaderGroupRecoveryStructureFixture:GroupChild,ReaderFrameworkGeometryStructureFixture:GeometryChild,ReaderLegacyBookmarkRecoveryStructureFixture:LegacyChild,
-      defaultSourceManagementFilters,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
+      defaultSourceManagementFilters,SOURCE_TOOLS_FIXTURE_SCENARIOS,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
       readerContentSafeTop,readerInteractiveSafeBottom,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
       prepareReaderFonts:()=>{fontCalls++;return fonts();},
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));},error(){}},
@@ -237,6 +241,35 @@ if (selected.length) {
     const pending=deferred(),blocked=fixture({fonts:()=>pending.promise});blocked.page.aboutToAppear();blocked.page.launchFixture('downloads-short',blocked.page.presentation);assert.equal(blocked.page.scene,'menu');assert.equal(blocked.children.length,0);pending.resolve();await tick();
     const denied=fixture({debug:false});denied.page.aboutToAppear();await tick();denied.page.launchFixture('downloads-short',denied.page.presentation);assert.equal(denied.children.length,0);assert.equal(denied.routes[0].url,'pages/Index');
   }
+  async function toolsStateScenes(sourceText = source) {
+    for (const { value } of SOURCE_TOOLS_FIXTURE_SCENARIOS) {
+      const f = fixture({ sourceText }); f.page.aboutToAppear(); await tick(); f.page.menu();
+      const action = f.sdk.nodes(f.page).findLast(node => node.id === `reader-page-structure-tools-${value}`)?.onClick;
+      assert.equal(typeof action, 'function'); action();
+      assert.equal(f.page.scene, 'source-tools'); assert.equal(f.page.toolsScenario, value);
+      f.page.fixtureStage(); assert.equal(f.props().scenario, value, 'current selected Tools scenario reaches the actual child');
+      assert.equal(f.props().fontsReady, true);
+      const active = f.page.presentation;
+      f.page.launchToolsFixture('empty', active);
+      assert.equal(f.page.presentation, active); assert.equal(f.page.toolsScenario, value);
+      f.props().onBack(); assert.equal(f.page.scene, 'menu');
+      action(); assert.equal(f.page.scene, 'menu', 'old menu callback is retired');
+      f.page.launchFixture('source-tools', f.page.presentation); f.page.fixtureStage();
+      assert.equal(f.props().scenario, 'content', 'existing default entry resets the previous scenario');
+    }
+    const pending = deferred(), p = fixture({ fonts: () => pending.promise, sourceText });
+    p.page.aboutToAppear(); p.page.launchToolsFixture('unknown', p.page.presentation);
+    assert.equal(p.page.scene, 'menu'); assert.equal(p.page.toolsScenario, 'content');
+    pending.resolve(); await tick();
+    const denied = fixture({ debug: false, sourceText }); denied.page.aboutToAppear(); await tick();
+    denied.page.launchToolsFixture('empty', denied.page.presentation); assert.equal(denied.children.length, 0);
+    if (sourceText === source) {
+      const frozen = source.replace('scenario: this.toolsScenario', "scenario: 'content'");
+      assert.notEqual(frozen, source);
+      await assert.rejects(() => toolsStateScenes(frozen), /current selected Tools scenario reaches the actual child/);
+    }
+  }
+
   async function fixtureScenes() {
     const scenes=[
       ['directory-detail','directory','text','detail',undefined],
@@ -418,7 +451,7 @@ if (selected.length) {
     page.page.onBackPress(); assert.equal(page.page.scene, 'menu');
     old.onTemporaryBackBridge(() => true, 'retired'); assert.equal(page.page.temporaryBackIdentity, '');
   }
-  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,
+  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'tools-state-scenes':toolsStateScenes,
     'group-recovery': () => componentFixtureBack('group-recovery', 'group', 'reader-page-structure-group-recovery'),
     'framework-geometry': () => componentFixtureBack('framework-geometry', 'geometry', 'reader-page-structure-framework-geometry'),
     'legacy-recovery': () => componentFixtureBack('legacy-recovery', 'legacy', 'reader-page-structure-legacy-recovery')};

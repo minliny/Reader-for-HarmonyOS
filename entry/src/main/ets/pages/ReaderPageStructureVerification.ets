@@ -16,7 +16,8 @@ import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection
 import { projectCommitReadback, projectOperationFacts } from '../app/ReaderOperationFacts';
 import { ReaderDirectoryStructureFixture } from './ReaderDirectoryStructureFixture';
 import { ReaderDownloadStructureFixture } from './ReaderDownloadStructureFixture';
-import { ReaderSourceToolsStructureFixture } from './ReaderSourceToolsStructureFixture';
+import { ReaderSourceToolsStructureFixture, SOURCE_TOOLS_FIXTURE_SCENARIOS } from './ReaderSourceToolsStructureFixture';
+import type { SourceToolsFixtureCase, SourceToolsFixtureScenario } from './ReaderSourceToolsStructureFixture';
 import { ReaderGroupRecoveryStructureFixture } from './ReaderGroupRecoveryStructureFixture';
 import { ReaderFrameworkGeometryStructureFixture } from './ReaderFrameworkGeometryStructureFixture';
 import { ReaderLegacyBookmarkRecoveryStructureFixture } from './ReaderLegacyBookmarkRecoveryStructureFixture';
@@ -66,6 +67,7 @@ struct ReaderPageStructureVerification {
   @StorageLink('readerWindowMetricsRevision') @Watch('onMetricsChanged') private windowMetricsRevision: number = 0;
   @State private admitted: boolean = false;
   @State private scene: PageStructureFixtureScene = 'menu';
+  @State private toolsScenario: SourceToolsFixtureScenario = 'content';
   @State private fontState: string = 'loading';
   @State private requestedWidth: number = 366;
   @State private actualWidth: number = 0;
@@ -214,8 +216,17 @@ struct ReaderPageStructureVerification {
     this.temporaryBack = undefined;
     this.temporaryBackIdentity = '';
     this.actualWidth = 0; this.actualHeight = 0;
+    if (scene === 'source-tools') this.toolsScenario = 'content';
     this.scene = scene;
     this.record('launch');
+  }
+
+  private launchToolsFixture(scenario: SourceToolsFixtureScenario, menuPresentation: number): void {
+    if (scenario !== 'content' && !SOURCE_TOOLS_FIXTURE_SCENARIOS.some((item: SourceToolsFixtureCase): boolean =>
+      item.value === scenario)) return;
+    const previousPresentation = this.presentation;
+    this.launchFixture('source-tools', menuPresentation);
+    if (this.presentation !== previousPresentation && this.scene === 'source-tools') this.toolsScenario = scenario;
   }
 
   private sourceScene(): boolean {
@@ -433,7 +444,7 @@ struct ReaderPageStructureVerification {
       Button('下载 · 真实短视口 168').enabled(this.fontState === 'ready').id('reader-page-structure-downloads-short')
         .onClick((): void => this.launchFixture('downloads-short', menuPresentation));
       Button('书源 · 批量管理与工具').enabled(this.fontState === 'ready').id('reader-page-structure-source-tools')
-        .onClick((): void => this.launchFixture('source-tools', menuPresentation));
+        .onClick((): void => this.launchToolsFixture('content', menuPresentation));
       Button('分组 · 长恢复提示').enabled(this.fontState === 'ready').id('reader-page-structure-group-recovery')
         .onClick((): void => this.launchFixture('group-recovery', menuPresentation));
       Button('框架 · 页头与移除确认').enabled(this.fontState === 'ready').id('reader-page-structure-framework-geometry')
@@ -442,6 +453,10 @@ struct ReaderPageStructureVerification {
         .onClick((): void => this.launchFixture('legacy-recovery', menuPresentation));
       Text(`夹具意图 ${this.intentCount} · ${this.lastIntent}`).fontSize(12);
       Button('返回诊断菜单').id('reader-page-structure-back-pilot').onClick((): void => this.returnToPilot(menuPresentation));
+      ForEach(SOURCE_TOOLS_FIXTURE_SCENARIOS, (item: SourceToolsFixtureCase): void => {
+        Button(item.title).enabled(this.fontState === 'ready').id(`reader-page-structure-tools-${item.value}`)
+          .onClick((): void => this.launchToolsFixture(item.value, menuPresentation));
+      }, (item: SourceToolsFixtureCase): string => item.value);
     }.width('100%').padding(20);
     }.width('100%').height(`calc(100% - ${this.menuBottomInset()}vp)`)
       .align(Alignment.Top).clip(true).id('reader-page-structure-menu-scroll');
@@ -527,7 +542,7 @@ struct ReaderPageStructureVerification {
           ReaderGroupRecoveryStructureFixture({ fontsReady: this.fontState === 'ready',
             onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
         } else if (this.scene === 'source-tools') {
-          ReaderSourceToolsStructureFixture({ fontsReady: this.fontState === 'ready',
+          ReaderSourceToolsStructureFixture({ fontsReady: this.fontState === 'ready', scenario: this.toolsScenario,
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string): void => this.fixtureAction(presentation, kind),
             onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });

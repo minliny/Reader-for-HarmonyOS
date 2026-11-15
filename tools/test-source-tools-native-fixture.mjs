@@ -8,6 +8,7 @@ const selected = selectContractCases({
   'initializer-safety': 'Actual SDK SourceToolsPage initializer, exact debug/parent checked-font gate and typed memory rows, JSON/check controls.',
   'no-runtime': 'Non-Entry fixture imports no runtime business owner/services, performs no platform save/login calls and never replaces fonts/sets scale.',
   'editor-busy': 'Actual memory fixture editor accepts one save intent, publishes pending busy without save/readback ACK, rejects duplicate and old editor callback.',
+  'state-samples': 'Actual SDK scenario initializers publish typed empty/read/recovery/original/running facts and one pending stop, with checked-font and retirement guards.',
   'callback-retire': 'Actual initializer callbacks only log/mutate memory, reject foreign entities and stale scenes; JSON is retained without pretending save ACK; scene Back only.',
 });
 if (selected.length) {
@@ -24,27 +25,30 @@ if (selected.length) {
   const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
   const { readerPageAreaLength } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
+  const { projectOperationFacts } = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
+  const { projectPersistedReceipt } = await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
   const file = new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets', import.meta.url);
   const source = readFileSync(file, 'utf8');
   const actor = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), 'utf8');
   const stateActor = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderPageState.ets', import.meta.url), 'utf8');
-  const { emptyToolsFixtureSnapshot } = selectedProductionValues(file, ['emptyToolsFixtureSnapshot']);
+  const { emptyToolsFixtureSnapshot, SOURCE_TOOLS_FIXTURE_SCENARIOS } = selectedProductionValues(file,
+    ['emptyToolsFixtureSnapshot', 'SOURCE_TOOLS_FIXTURE_SCENARIOS']);
   const require = createRequire(import.meta.url), componentMap = require(resolveEtsLoaderRoot() + '/lib/component_map.js');
   function compile(body) {
     const ids = componentMap.ID_ATTRS, saved = new Map(ids); ids.clear();
     try { return body(); } finally { ids.clear(); for (const [key, value] of saved) ids.set(key, value); }
   }
-  function fixture({ debug = true, mode = 'debug', parentFonts = true } = {}) {
+  function fixture({ debug = true, mode = 'debug', parentFonts = true, scenario = 'content' } = {}) {
     const sdk = boundedSurfaceSdk(), children = [], actions = [], events = [], bridges = []; let backs = 0;
     class Child { constructor(owner, params, _storage, id) { this.owner = owner; this.params = params; this.id = id; children.push(this); } updateStateVars(params) { Object.assign(this.params, params); } }
     class StateChild { constructor(owner, params, _storage, id) { this.owner = owner; this.params = params; this.id = id; } updateStateVars(params) { Object.assign(this.params, params); } }
     const { owner: page } = compile(() => createReaderBuilderProbe(source, boundedMembers(source), {
       ...sdk.deps, DEBUG: debug, BUILD_MODE_NAME: mode, SourceToolsPage: Child, ReaderPageState: StateChild,
-      emptyToolsFixtureSnapshot, readerPageAreaLength,
+      emptyToolsFixtureSnapshot, readerPageAreaLength, projectOperationFacts, projectPersistedReceipt,
       readerWindowMetrics: () => ({ systemFontScale: 2 }),
       hilog: { info(_domain, _tag, _format, payload) { events.push(JSON.parse(payload)); } },
     }, { ...sdk.hooks, childSources: { ...sdk.childSources, SourceToolsPage: actor, ReaderPageState: stateActor } }));
-    Object.assign(page, { fontsReady: parentFonts, onAction: kind => actions.push(kind), onBack: () => backs++,
+    Object.assign(page, { fontsReady: parentFonts, scenario, onAction: kind => actions.push(kind), onBack: () => backs++,
       onTemporaryBackBridge: (handler, identity) => bridges.push({ handler, identity }) });
     return { page, children, actions, events, bridges, sdk, backs: () => backs, props: () => children.at(-1)?.params };
   }
@@ -139,6 +143,59 @@ if (selected.length) {
     f.page.aboutToDisappear(); ports.onSaveEditor(revision); assert.equal(saves(), 1);
   }
 
-  const cases={'initializer-safety':initializerSafety,'no-runtime':noRuntime,'callback-retire':callbackRetire,'editor-busy':editorBusy};
+  function stateSamples() {
+    assert.equal(SOURCE_TOOLS_FIXTURE_SCENARIOS.length, 8);
+    for (const { value } of SOURCE_TOOLS_FIXTURE_SCENARIOS) {
+      const f = fixture({ scenario: value }); f.page.aboutToAppear(); f.page.initialRender();
+      const ports = f.props(), s = ports.snapshot;
+      assert.ok(ports); assert.equal(f.events[0].scenario, value);
+      const empty = ['loading', 'empty', 'read-empty-error'].includes(value);
+      assert.equal(s.sources.length, empty ? 0 : 12);
+      assert.equal(s.selectedSourceCount, empty ? 0 : 3);
+      if (empty) {
+        assert.equal(s.debugSourceId, ''); assert.equal(s.debugLogs.length, 0);
+        assert.equal(s.batchCheck.phase, 'idle');
+      }
+      if (value === 'loading') assert.equal(s.busy, true);
+      if (value === 'empty') assert.equal(s.busy, false);
+      if (value === 'read-error' || value === 'read-empty-error') {
+        assert.equal(s.readFacts.fact, empty ? 'failed' : 'refreshFailed');
+        assert.equal(s.readFacts.hasValue, !empty); assert.equal(s.readFacts.canRetry, true);
+        ports.onReconcile(s.readFacts.generation);
+        assert.equal(f.actions.at(-1), 'source-tools-fixture:reconcile-memory');
+        assert.equal(f.page.snapshot, s, 'a memory retry intent never invents a read ACK');
+      }
+      if (value === 'unknown') {
+        assert.equal(s.receipt.receipt.confirmation, 'unknown');
+        assert.equal(s.receipt.facts.generation, f.page.fixtureGeneration); assert.equal(s.receipt.facts.canRetry, true);
+        assert.ok(s.receipt.facts.message.length > 100);
+      }
+      if (value === 'original-unknown' || value === 'original-cleanup') {
+        assert.equal(s.original.blocked, true); assert.equal(s.original.generation, f.page.fixtureGeneration);
+        assert.equal(s.original.confirmation, value === 'original-cleanup' ? 'confirmed' : 'unknown');
+        assert.equal(s.original.writeStage, value === 'original-cleanup' ? 'cleanup' : 'core');
+        assert.ok(s.original.message.length > 100);
+        ports.onReconcile(s.original.generation); ports.onContinueOriginal(s.original.generation);
+        assert.equal(f.page.snapshot, s, 'original memory intents keep the original pending facts');
+      }
+      if (value === 'running') {
+        assert.equal(s.busy, true); assert.equal(s.batchCheck.phase, 'running');
+        assert.equal(s.batchCheck.completed, 1); assert.equal(s.batchCheck.total, 3);
+        ports.onStopCheck();
+        assert.equal(f.page.snapshot.batchCheck.phase, 'stopping'); assert.equal(f.page.snapshot.busy, true);
+        assert.equal(f.page.snapshot.batchCheck.completed, 1);
+        assert.equal(f.actions.filter(x => x === 'source-tools-fixture:stop-memory').length, 1);
+        ports.onStopCheck();
+        assert.equal(f.actions.filter(x => x === 'source-tools-fixture:stop-memory').length, 1);
+      }
+      f.page.aboutToDisappear(); const count = f.actions.length;
+      ports.onReconcile(1); ports.onContinueOriginal(1); ports.onStopCheck();
+      assert.equal(f.actions.length, count, 'retired scenario cannot accept an old action');
+    }
+    const denied = fixture({ scenario: 'original-unknown', parentFonts: false });
+    denied.page.aboutToAppear(); denied.page.initialRender(); assert.equal(denied.children.length, 0);
+  }
+
+  const cases={'initializer-safety':initializerSafety,'no-runtime':noRuntime,'callback-retire':callbackRetire,'editor-busy':editorBusy,'state-samples':stateSamples};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }
