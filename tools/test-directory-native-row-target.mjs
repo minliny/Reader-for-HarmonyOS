@@ -5,11 +5,75 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {pureModuleProbe} from './lib/ets-pure-module-probe.mjs';
 import {selectedProductionMethods} from './lib/selected-production-methods.mjs';
+import {mangaRowBuilderMembers,mangaGridProbeDependencies} from './lib/manga-directory-grid-probe.mjs';
+import * as fontFamilies from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import * as motionTiming from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import {SOURCE_CHROME_VISUAL} from '../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
+import {DIRECTORY_CHROME_VISUAL} from '../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
 
-const cases=selectContractCases({'text-row-target':'Real SDK text Tree row uses the same full-height carrier/response as its current production parent at 1/1.3/1.45/2; group, current, disabled and independent accessory lanes. No native hit or glyph claim.'});
+const cases=selectContractCases({
+ 'text-row-target':'Real SDK text Tree row uses the same full-height carrier/response as its current production parent at 1/1.3/1.45/2; group, current, disabled and independent accessory lanes. No native hit or glyph claim.',
+ 'manga-named-row-target':'Real SDK naturally sized manga target/group/disabled rows retain their entire parent response at 1/1.3/1.45/2. The observed 488px native row and fixed44 negative bind the regression. Native dispatch remains separate.',
+});
 const base=new URL('../entry/src/main/ets/features/',import.meta.url),read=name=>readFileSync(new URL(name,base),'utf8');
+
+function checkMangaNamedRowTargets(source) {
+ const accessibility=pureModuleProbe(read('../ui/controls/ReaderActionAccessibility.ets'),'ReaderActionAccessibility.ets',
+  {AccessibilityRoleType:{BUTTON:'button'}},['readerActionTouchRegion','ReaderActionAccessibility']);
+ const {motionAnimateParam}=pureModuleProbe(read('../ui/foundation/MotionSpec.ets'),'MotionSpec.ets',{
+  ...motionTiming,SOURCE_SWITCH_VISUAL:SOURCE_CHROME_VISUAL,MANGA_DIRECTORY_VISUAL:DIRECTORY_CHROME_VISUAL,
+  Curve:new Proxy({},{get:(_target,key)=>`Curve.${String(key)}`}),
+  curves:new Proxy({},{get:(_target,key)=>(...args)=>({nativeCurve:String(key),args})}),
+ },['motionAnimateParam']);
+ const samples=[];
+ for(const scale of [1,1.3,1.45,2]) {
+  for(const kind of ['target','group','disabled']) {
+   const node={nodeId:`named-${kind}`,kind,title:'山海间的长标题与 English sample 23',depth:2,
+    chapterIndex:kind==='target'?22:undefined,hasChildren:kind==='group',expanded:true};
+   const view={viewId:'named-response'},events=[];
+   const dependencies={...mangaGridProbeDependencies,...fontFamilies,...accessibility,motionAnimateParam,globalThis,
+    readerWindowMetrics:()=>({systemFontScale:scale})};
+   const {owner}=createReaderBuilderProbe(source,[...mangaRowBuilderMembers,'emptyBuilder','emptyPrefix'],dependencies);
+   Object.assign(owner,{view,mangaScheme:'day',appThemeScheme:'day',mangaSearchActive:false,
+    mangaRowMinHeight:58,mangaCatalogDisplay:true,mangaCatalogNarrow:true,mangaQuickDisplay:false,
+    currentChapterIndex:-1,interactionEnabled:true,mangaPresentationRevision:0,windowMetricsRevision:1,
+    dataSource:{currentView:()=>view,loadedItemById:()=>({node,index:0}),loadedNode:()=>undefined},
+    selectTarget:current=>events.push(['select',current.nodeId]),toggleNode:current=>events.push(['toggle',current.nodeId])});
+   owner.mangaRow({node,index:0,key:node.nodeId});
+   const row=[...owner.nodes.values()].find(current=>current.type==='Row'&&current.layoutWeight===1&&current.onClick);
+   assert.ok(row,'actual SDK named manga row owns its selection callback');
+   const title=[...owner.nodes.values()].find(current=>current.type==='Text'&&current.create===node.title);
+   assert.equal(title.maxFontScale,scale,'actual production text consumes the selected system font scale');
+   assert.deepEqual(row.responseRegion,{x:0,y:0,width:'100%',height:'100%'},
+    'named manga response must cover the whole naturally sized parent');
+   assert.equal(row.enabled,kind!=='disabled');
+   for(const height of [58,488/3.5,240]) {
+    const responseHeight=row.responseRegion.height==='100%'?height:row.responseRegion.height;
+    for(const y of [1,height/2,height-1]) {
+     const before=events.length;
+     if(row.enabled&&y>=row.responseRegion.y&&y<row.responseRegion.y+responseHeight)row.onClick();
+     assert.equal(events.length-before,kind==='disabled'?0:1,'top, middle and bottom share the current row callback');
+     if(kind!=='disabled')assert.deepEqual(events.at(-1),[kind==='group'?'toggle':'select',node.nodeId]);
+    }
+    assert.equal(row.responseRegion.y+responseHeight,height,'response ends at its parent boundary');
+   }
+   samples.push({scale,kind,response:row.responseRegion,eligible:row.enabled});
+  }
+ }
+ return samples;
+}
+
 for(const id of cases){
  const source=read('reading/ui/ReaderDirectoryNavigationList.ets');
+ if(id==='manga-named-row-target') {
+  const samples=checkMangaNamedRowTargets(source);
+  const fixed44=source.replace("readerActionTouchRegion('100%', '100%')","readerActionTouchRegion('100%', 44)");
+  assert.notEqual(fixed44,source,'negative restores exactly the old fixed44 response');
+  assert.throws(()=>checkMangaNamedRowTargets(fixed44),/named manga response must cover the whole naturally sized parent/);
+  console.log(JSON.stringify({kind:'manga-named-row-target-evidence',proof:'Actual SDK final response and production selection callbacks; native pointer delivery remains separate',samples}));
+  recordContractCasePass(id);
+  continue;
+ }
  const scaleHelpers=pureModuleProbe(read('../ui/foundation/ReaderSurfaceResolvers.ts'),'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']);
  const accessibility=pureModuleProbe(read('../ui/controls/ReaderActionAccessibility.ets'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['readerActionTouchRegion','ReaderActionAccessibility']);
  const samples=[];

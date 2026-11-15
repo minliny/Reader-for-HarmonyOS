@@ -1395,7 +1395,7 @@ export struct ReaderDirectoryNavigationList {
         item.node?.kind !== 'group' || this.interactionEnabled && !this.mangaSearchActive,
         this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme)))
       .accessibilityText(this.mangaRowAccessibility(item, false))
-      .responseRegion( readerActionTouchRegion('100%', 44))
+      .responseRegion( readerActionTouchRegion('100%', '100%'))
       .onClick((): void => this.selectMangaRow(item));
   }
 
