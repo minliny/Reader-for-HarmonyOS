@@ -2,7 +2,22 @@
 
 ## 2026年11月15日当前实施状态
 
-全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`db3cea00`，测试迁移提交为`2783854c`，已安装候选为`0.2.0.DEV.e204cd67520d`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`72ba4ff5`，已安装候选为`0.2.0.DEV.6288efbd34ec`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+
+
+### 当前空结果续读与短页查询滚动修复
+
+**UIF-42修复已确认空结果后的读取装配。** 原Surface将visibleTotal为0视作无保留内容，再次搜索进入pending或failed时选择居中状态Column。短页查询已由真实Grid前缀承载，该分支会移走前缀消费者。当前保留已有view与native prefix的消费者分支，加载和失败继续通过原emptyBuilder进入Grid空态item，重试复用当前读取代次及拒旧能力。新鲜SDK分支见证确认旧实现缺少消费者，当前实际Grid Builder验证加载状态的递送。早期见证02使用的工具没有模拟分支移除，该次PASS没有作为保留演员依据。[当前10项准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json)
+
+**UIF-43修复短页输入后的顶部滚动。** 首次VM输入发现查询被滚回视口之外，当前方法见证确认applySearch每次输入都会安排scrollEdge Top。短页流内查询现复用onListUserScroll取消旧顶部及当前行定位任务，保留用户正在编辑的位置。完整覆盖工具栏继续沿原顶部滚动入口。有限读取夹具还修正了不同查询复用viewId的错误，当前两个明确查询拥有不同的公共viewId。首次候选35c4的观察保留原输入边界。[当前10项准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json)
+
+当前候选的完整ArkTS编译和指定证书签名通过，640个运行ETS/TS输入与不可变候选相同。远程VM保数据安装成功。10项准确代码与SDK用例通过，覆盖空态装配、当前重试、旧代次、卸载、短页滚动及原有忙态和Grid索引合同。[完整编译与签名](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-q-build-02.log) [当前源码候选绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-q.json)
+
+当前原生证据在366×168vp、系统字号1的同一个有限语义目录演员内取得。TextInput285和Grid244跨过MissingA空结果、MissingB未完成读取、明确失败及输入法Back，焦点依次为true、true、true、false。原读取在14:19:53.534进入pending，14:20:05.537记录失败。当前原生重试随后得到Ready空结果，清除搜索恢复普通章节读取，原生headerBack回到菜单，普通启动恢复书架。当前owner的intentCount保持0。[当前原生状态与动作证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json)
+
+查询可见时，读状态正文位于短页视口下方。失败正文、重试、后继空态正文和清除按钮按各自滚动位置核对可达，正文与动作的完整可见位置分别记录。原生字段与网格身份、读状态回执、正文动作可达及实际读屏继续沿各自证据范围保存。该场景使用明确有限公共读取回执，Core过滤和正常换源提交保留原范围。[当前原生状态与动作证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json)
+
+本批前七个driver会话保留FAIL。它们包含初始未滚到查询、夹具viewId、追加输入、成功输出误匹配、隐藏Text选择器、返回查询方向及日志mount时效前提。各会话已有准确断言逐项复用，后继只补缺席步骤，最后会话PASS_SESSION并恢复书架。登记首次刷新漏了两个测试输入，共26条漂移诊断，当前已按原批次修订补齐。13项目录登记更新实际输入，8项Book消费者增加准确原生范围，现有整层判定保持，引用检查0诊断，登记继续保留37项原诊断。[当前登记引用检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-q-contract-refs-02.json) [当前登记判定检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-q-register-02.json)
 
 ### 当前换源目录忙态、短页首行与测量归属修复
 

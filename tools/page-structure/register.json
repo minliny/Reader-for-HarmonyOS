@@ -2037,6 +2037,12 @@
               "path": "tools/test-framework-confluence-controls.mjs",
               "result": "PASS",
               "symbol": "inline-popup-layout"
+            },
+            {
+              "kind": "test",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+              "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+              "result": "PASS"
             }
           ],
           "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch."
@@ -2599,7 +2605,7 @@
         }
       },
       "exceptions": [],
-      "revision": 41,
+      "revision": 42,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2629,7 +2635,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-          "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+          "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
           "symbol": "mangaPage"
         },
         {
@@ -2659,12 +2665,12 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-          "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+          "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
           "symbol": "openTree"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-          "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+          "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
           "symbol": "selectTarget"
         },
         {
@@ -2923,11 +2929,11 @@
         },
         {
           "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-          "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+          "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-          "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+          "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -3011,7 +3017,7 @@
         },
         {
           "path": "tools/test-directory-native-fixture.mjs",
-          "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+          "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -3131,7 +3137,7 @@
         },
         {
           "path": "tools/test-reader-directory-retained-surface.mjs",
-          "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+          "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
@@ -3239,7 +3245,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -3645,9 +3651,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -4068,7 +4086,7 @@
               }
             },
             "exceptions": [],
-            "revision": 41,
+            "revision": 42,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4098,7 +4116,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -4128,12 +4146,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -4392,11 +4410,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -4480,7 +4498,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -4548,7 +4566,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -5127,6 +5145,12 @@
                     "path": "tools/test-framework-confluence-controls.mjs",
                     "result": "PASS",
                     "symbol": "inline-popup-layout"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
@@ -5666,7 +5690,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5696,7 +5720,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -5726,12 +5750,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -5990,11 +6014,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -6078,7 +6102,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -6270,7 +6294,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
@@ -6411,7 +6435,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -6823,9 +6847,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has normal manga→Quick directory→full catalog→download popup with actual loading node and0 custom-animation samples under reduceMotiontrue. Existing historical manga manifests are evicted and provide no current offline-readable head. Healthy body and complete native target/state/reader coverage remain open. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has normal manga→Quick directory→full catalog→download popup with actual loading node and0 custom-animation samples under reduceMotiontrue. Existing historical manga manifests are evicted and provide no current offline-readable head. Healthy body and complete native target/state/reader coverage remain open. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -7264,7 +7300,7 @@
               }
             },
             "exceptions": [],
-            "revision": 43,
+            "revision": 44,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7294,7 +7330,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -7324,12 +7360,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -7588,11 +7624,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -7676,7 +7712,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -7832,7 +7868,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
@@ -8403,6 +8439,12 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-directory-tab-renewal-d600.json",
                     "symbol": "selectedSequence,shots",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes, flat26xrow marker responses and semantic44xrow accessory lanes. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Currentc96f scoped actual semantic-directory download boundaries pay44vp horizontal carriers and deliver only chapter16/18 intent once per left/right band tap. Disabled adjacentbookmark rejects. The compact32/40vp vertical capacity, enabledbookmark, Quick and remaining native obligations retain their scope. Current continuation reconciliation20261115. Current continuation has actual semantic44vp horizontal accessory edge delivery and memory callback once per target, plus Control Full/Quick flat bookmark delete→create and queued-download disable on new native rows. Compact Quick32/Full40 heights and flat26vp width follow the approved retained-layout decision. Complete remaining target/reader/state coverage remains open. Currentd600 actualFull memoryflatcatalog accepts chapter→bookmark→chapter→bookmark withsameNative110/119 andthreeowner tab receipts. Actualcontent315.33×620vp in366vp fixture/font1. Other target/focus/readout/fulladaptation requirements remainopen."
@@ -8870,7 +8912,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -8900,7 +8942,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -8930,12 +8972,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -9194,11 +9236,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -9282,7 +9324,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -9446,7 +9488,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
@@ -9584,7 +9626,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -9985,9 +10027,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -10352,7 +10406,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10382,7 +10436,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -10412,12 +10466,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -10676,11 +10730,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -10764,7 +10818,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -10832,7 +10886,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -10942,7 +10996,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -11346,9 +11400,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -11725,7 +11791,7 @@
               }
             },
             "exceptions": [],
-            "revision": 44,
+            "revision": 45,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -11755,7 +11821,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -11785,12 +11851,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -12049,11 +12115,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -12137,7 +12203,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -12293,7 +12359,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
@@ -12438,7 +12504,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -12838,9 +12904,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -13255,7 +13333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 41,
+            "revision": 42,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13285,7 +13363,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -13315,12 +13393,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -13579,11 +13657,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -13667,7 +13745,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -13735,7 +13813,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -13844,7 +13922,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -14244,9 +14322,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -14673,7 +14763,7 @@
               }
             },
             "exceptions": [],
-            "revision": 43,
+            "revision": 44,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -14703,7 +14793,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -14733,12 +14823,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -14997,11 +15087,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -15085,7 +15175,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -15241,7 +15331,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
@@ -15379,7 +15469,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -15780,9 +15870,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -16147,7 +16249,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16177,7 +16279,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -16207,12 +16309,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -16471,11 +16573,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -16559,7 +16661,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -16627,7 +16729,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-pixel-budget.mjs",
@@ -16737,7 +16839,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5"
+              "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0"
             },
             "layers": {
               "route": {
@@ -17141,9 +17243,21 @@
                     "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
                     "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-empty-query-q.json",
+                    "result": "PASS",
+                    "symbol": "Current finite public semantic port366x168vp/font1. Query285/Grid244 retain native identity through Ready0/pending/failure/IMEBack, current retry/clear/headerBack. Registered normal-business/readout/fullE2 scope remains open."
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes. UIF-42/43 current6288 scoped continuation repairs admitted empty-prefix read-state assembly and short live-query Top scroll. Current exact finite semantic component retains native query/Grid through empty/pending/failure/IMEBack, with separately reachable read text/retry/clear and zero target intent. Full registered host/reader/state/visual criteria remain open."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -17520,7 +17634,7 @@
               }
             },
             "exceptions": [],
-            "revision": 44,
+            "revision": 45,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -17550,7 +17664,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -17580,12 +17694,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -17844,11 +17958,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -17932,7 +18046,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -18088,7 +18202,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
@@ -18652,6 +18766,12 @@
                     "path": "tools/test-framework-confluence-controls.mjs",
                     "symbol": "directory-query-targets",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
@@ -19130,7 +19250,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19160,7 +19280,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -19190,12 +19310,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -19454,11 +19574,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -19542,7 +19662,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -19706,7 +19826,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
@@ -20266,6 +20386,12 @@
                     "path": "tools/test-framework-confluence-controls.mjs",
                     "symbol": "directory-query-targets",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
+                    "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
+                    "result": "PASS"
                   }
                 ],
                 "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
@@ -20739,7 +20865,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -20769,7 +20895,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "0d215eb768f0224e0c57eb9ea13879a64188ebdab8bd21992c5b4405d4730ae5",
+                "sha256": "4aa0e14f3d5fc877cc816f10572189cc940d31ad4c343f16351dee53b7cecea0",
                 "symbol": "mangaPage"
               },
               {
@@ -20799,12 +20925,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
+                "sha256": "a01714ce68ac8695bc943f004964cfa06d9287b13c3bd1a3180c1c4f923e03eb",
                 "symbol": "openTree"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "4898e92851bd19e644532749c9fd361c94eb605ac2e1bb32296765f10231712b",
+                "sha256": "92eaa7a38c69ee714feb2fe4518040ca4fdc63c78bcf57e51ed594e2850b7175",
                 "symbol": "selectTarget"
               },
               {
@@ -21063,11 +21189,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
+                "sha256": "288030bbb2f075ba0f00a4f3cae55c0336d64a77cd8022a26bca8c645591c6c6"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "7c20e75529bc298ea5d2b9151642c71a06403aa8d775a7a9a5e3195f38085615"
+                "sha256": "b650e88d9ebb78b0e30559adbf58a0ff0ba085b107f50368493eb76d6216b4bb"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -21151,7 +21277,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "4c9ecd89cf5a69f5ec14651970aa13c7047d535b8d410154c607e45b8e42b61f"
+                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -21315,7 +21441,7 @@
               },
               {
                 "path": "tools/test-reader-directory-retained-surface.mjs",
-                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+                "sha256": "48003eea74bb74ada1b9f73295f81dcbeed1fe2efc7d135cb6f84fd7280f0a17"
               },
               {
                 "path": "tools/test-reader-control-child-composition.mjs",
