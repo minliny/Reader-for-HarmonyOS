@@ -20,7 +20,20 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
-### 正常目录编辑的同宿主重算修复与 Back 后绘制失败
+### 原始截图像素复核与误判撤销
+
+**UIF-49已撤销，原始目录四行像素实际存在。** 原V批Back和后续静止态两张PNG的完整文件校验和分别保持f2b2a545245a0f13af36cf2c0f91a4039eb798dd56892870443ef84f8b51d875和6bcc0a04cf31fd4bd375cf5fc2b5a96f3b4e6c56b03d11c64f074844ff58c5d8。四行区域为[120,930,1160,1510]，含13163个深色像素，RGB像素SHA-256均为3a3cd1c6fd140d55c81e828029c90d18b669bf7130dccfda0c0c138cf46e9d9f，与W批可见四行截图完全一致。四个标题区域分别有892、4065、4078、4128个深色像素。原图、原生树和客户端文字命令相互吻合。[原始字节与逐区域比较](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-back-paint-w-original-byte-review.json)
+
+此前将该图像读成目录空白并登记FAIL，是agent的视觉复核错误。该误判引出了额外静止态和RS读取、空草稿与非空草稿的Back对照、3.658秒输入到Back节奏对照，以及一次正常应用冷启动和首个目录入口。W批双截图均可见四个条目，随后原始像素对照确认误判。UIF-49及相应应用或平台归因任务已撤销，原始记录另存供追溯，原生产修复候选继续复用。[更正与额外执行范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-back-paint-w-correction.json)
+
+当前目录编辑的源码修复c189905d、三个正常调度SDK回归和Search准确方法，以及实际草稿、Back和再次编辑的有限原生结论继续有效。独立首次Area缺口在原生场景中未触发，完整E2/E3、整页视觉、可听读屏及G05/G10沿原条件记录。后续执行转回真实的逐目标、状态与原稿对账。
+
+
+本批当前b2a0候选继续沿c189905d及原不可变签装回执使用。正常收尾后已核对原四本书架，原TXT为27%，两本测试书保持未读，漫画为100%，两个密度字段均为3.5，状态栏136px，SceneBoard1426。当前正常Full目录查询的有限原生证据已补入directory::control-text的query和interaction层，完整层判定保留。[当前收尾与证据范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-w-delivery-review.json)
+
+现有原稿引用已逐项展开到全部21项登记与194个声明状态。五份现有来源的SHA-256均匹配，其实际授权范围分别保留。当前权威登记没有这些页面与状态的独立整页批准组合，整页视觉继续沿用户接受的原条件保存。逐页逐状态的来源对账已完成，剩余原生命中、焦点和状态格继续按准确入口核对。[完整页面与状态来源映射](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/whole-page-reference-state-map-w.json)
+
+### 正常目录编辑的同宿主重算修复与前序图像误判
 
 **UIF-48已完成代码、准确回归、编译签名及当前目录编辑的有限原生验证。** 当前34f诊断候选实际进入原生焦点ACK和公开键盘请求，随后同一输入收到allowed=false，键盘显示后立即隐藏。完整Reader进程日志补齐了最初过滤日志采样之后的失效边沿。Parent已有当前Search编辑资格，Directory缺少对应接线。前序同型输入装配核对遗漏了这条目录链，本轮已修正。[原始事件与原因链](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-keyboard-observation-v.json)
 
@@ -32,7 +45,7 @@
 
 原正常TXT同一目录输入实际保持focused=true，重算后的allowed仍为true，实屏可见键盘，草稿晋江已进入输入。一次Back使focused=false并隐藏键盘，再次显式点击恢复focused=true、可见键盘和原草稿。原四个条目在键盘可见时均显示。UIF-47的显式再次编辑有了当前原生依据，独立首次Area缺口在本次loaded=true场景中未触发。[当前输入、Back及再次编辑](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-reflow-v.json)
 
-**UIF-49仍为当前原生绘制FAIL。** IME经Back收起后，List高度从582px增至1583px，四个原生条目、坐标、opacity及客户端文字绘制命令仍在，实屏列表区域持续空白。后续同一静止态截图仍为空白。再次编辑使高度回到582px，四个条目像素随之恢复。已审当前List、裁切、透明度及RS客户端和合成树，应用与平台之间的具体失效原因继续由agent定位。完整目录interaction及整页视觉保持原判定。[失败、已排除范围与后续准确问题](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-ime-back-paint-v.json)
+**UIF-49的目录空白判断已撤销。** W批对原始V截图完成像素复核，原文件SHA-256保持原值，四个标题区域均有字形像素，整块四行区域与当前已确认可见的截图逐像素完全一致。此前将图像读成空白是agent的视觉复核错误。原图、原生树、绘制命令及误判历史均保留，更正后的依据见下方W批记录。完整目录interaction及整页视觉继续沿原验收条件保存。[失败、已排除范围与后续准确问题](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-ime-back-paint-v.json)
 
 70处实际变化的登记源码及测试引用已按字节更新，原21项逐层结果保留，引用检查0诊断。[准确引用更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-refresh-v.json) [引用检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-v-contract-refs-01.json)
 
