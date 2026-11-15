@@ -13,7 +13,7 @@ const selected = selectContractCases({
   'source-callbacks': 'Actual Source initializer callbacks: memory-only intents, scene generations, temporary Back before menu and real-area vs requested width. No native rendering or business receipt evidence.',
   'source-states': 'Actual memory-only Source read/original/unknown recovery initializers, full long-message path through real projections, accurate generations and retired callbacks; no Host/RPC, native clipping or hit claim.',
   'fixture-scenes': 'Actual Directory/Download/Tools child initializers, checked admission, outer width vs actual Area, current-scene intent/Back and same-identity old bridge cleanup retirement. No native child subtree execution.',
-  'tools-state-scenes': 'Actual eight Tools menu callbacks forward the selected state, retain default content and reject denied or old menu callbacks. Frozen-state negative is rejected.',
+  'tools-state-scenes': 'Actual Tools scenario menu callbacks forward the selected state, retain default content and reject denied or old menu callbacks. Frozen-state negative is rejected.',
   'downloads-short': 'New typed DEBUG 168vp Download wrapper through actual SDK initializer/safe top and real child/actor Area callbacks; full Download initializer and canonical recovery remain unchanged. Native geometry/inflow not asserted.',
   'group-recovery': 'Actual SDK DEBUG group fixture initializer, checked fonts, current-scene temporary Back and retired bridge rejection.',
   'framework-geometry': 'Actual SDK DEBUG geometry/removal fixture initializer, checked fonts and current-scene temporary Back ownership.',

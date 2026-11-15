@@ -7,11 +7,12 @@ import type { SourceToolsSnapshot, SourceBatchCheckProgress, SourceBatchCheckRes
 import { ReaderPageState } from '../ui/feedback/ReaderPageState';
 import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
 import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
-import { projectOperationFacts } from '../app/ReaderOperationFacts';
+import { projectCommitReadback, projectOperationFacts } from '../app/ReaderOperationFacts';
 import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
 
 export type SourceToolsFixtureScenario = 'content' | 'loading' | 'empty' | 'read-error' |
-  'read-empty-error' | 'unknown' | 'original-unknown' | 'original-cleanup' | 'running';
+  'read-empty-error' | 'unknown' | 'original-unknown' | 'original-cleanup' | 'running' |
+  'editor-readback-failed' | 'editor-unknown';
 
 export interface SourceToolsFixtureCase {
   value: SourceToolsFixtureScenario;
@@ -27,6 +28,8 @@ export const SOURCE_TOOLS_FIXTURE_SCENARIOS: SourceToolsFixtureCase[] = [
   { value: 'original-unknown', title: '工具 · 原操作待核对' },
   { value: 'original-cleanup', title: '工具 · 原操作待清理' },
   { value: 'running', title: '工具 · 检测与停止' },
+  { value: 'editor-readback-failed', title: '工具 · 编辑已确认回读失败' },
+  { value: 'editor-unknown', title: '工具 · 编辑回执待核对' },
 ];
 
 const emptyToolsFixtureSnapshot = (): SourceToolsSnapshot => {
@@ -54,6 +57,10 @@ interface SourceToolsFixtureObservation {
   readFact: string;
   confirmation: string;
   operationGeneration: number;
+  editorConfirmation: string;
+  editorReadback: string;
+  editorFact: string;
+  editorCanRetry: boolean;
 }
 
 @Component
@@ -167,6 +174,21 @@ export struct ReaderSourceToolsStructureFixture {
       snapshot.busy = true;
       snapshot.batchCheck = this.pendingProgress('running', sources.slice(0, 3));
     }
+    if (this.scenario === 'editor-readback-failed' || this.scenario === 'editor-unknown') {
+      const confirmation = this.scenario === 'editor-unknown' ? 'unknown' : 'confirmed';
+      const message = `内存夹具：${projectCommitReadback(confirmation, 'failed').message}；草稿保留供核对`;
+      const projection = projectPersistedReceipt<BookSource[]>({
+        confirmation, readback: 'failed', value: sources,
+        generation: this.fixtureGeneration, canRetry: true, message });
+      snapshot.editorSourceId = sources[0].sourceId;
+      snapshot.editorRevision = 1;
+      snapshot.editorText = this.editorJson(sources[0]);
+      snapshot.editorReadback = projection.receipt;
+      snapshot.editorOperation = projection.facts;
+      snapshot.receipt = projection;
+      snapshot.statusMessage = message;
+      snapshot.statusEvent = 'feedback';
+    }
     return snapshot;
   }
 
@@ -223,7 +245,11 @@ export struct ReaderSourceToolsStructureFixture {
       batchPhase: this.snapshot.batchCheck.phase, readFact: this.snapshot.readFacts?.fact ?? 'none',
       confirmation: this.snapshot.original?.confirmation ?? this.snapshot.receipt?.receipt.confirmation ?? 'none',
       operationGeneration: this.snapshot.original?.generation ?? this.snapshot.receipt?.facts.generation ??
-        this.snapshot.readFacts?.generation ?? 0 };
+        this.snapshot.readFacts?.generation ?? 0,
+      editorConfirmation: this.snapshot.editorReadback?.confirmation ?? 'none',
+      editorReadback: this.snapshot.editorReadback?.readback ?? 'none',
+      editorFact: this.snapshot.editorOperation?.fact ?? 'none',
+      editorCanRetry: this.snapshot.editorOperation?.canRetry ?? false };
     hilog.info(0x5244, 'ReaderPageStructure', 'READER_SOURCE_TOOLS_FIXTURE %{public}s', JSON.stringify(observation));
   }
 
@@ -288,6 +314,21 @@ export struct ReaderSourceToolsStructureFixture {
 
   private editorAction(generation: number, revision: number, kind: string): void {
     if (!this.editorIsCurrent(generation, revision) || this.snapshot.busy) return;
+    if (this.snapshot.editorReadback !== undefined) {
+      if (kind !== 'reconcile-editor-memory' || this.snapshot.editorOperation?.canRetry !== true) return;
+      const message = '内存夹具：正在读取已保存书源；尚未产生读取回执';
+      const projection = projectPersistedReceipt<BookSource[]>({
+        confirmation: this.snapshot.editorReadback.confirmation, readback: 'reading',
+        value: this.snapshot.sources, generation: this.snapshot.editorOperation.generation + 1, canRetry: false, message });
+      const next = this.copySnapshot();
+      next.busy = true;
+      next.editorReadback = projection.receipt;
+      next.editorOperation = projection.facts;
+      next.receipt = projection;
+      next.statusMessage = message;
+      next.statusEvent = 'state';
+      this.snapshot = next;
+    }
     if (kind === 'save-editor-memory') {
       // Keep the accepted memory intent pending until this scene exits.
       const next = this.copySnapshot();
@@ -316,23 +357,26 @@ export struct ReaderSourceToolsStructureFixture {
   private openEditor(generation: number, sourceId: string): void {
     const source = this.existingSource(sourceId);
     if (!this.current(generation) || source === undefined) return;
-    const text = JSON.stringify({ bookSourceUrl: source.sourceId, bookSourceName: source.name,
-      bookSourceGroup: source.group, bookSourceType: source.category === 'comic' ? 2 : 0,
-      enabled: source.enabled, enabledExplore: source.enabledExplore }, undefined, 2);
     const next = this.copySnapshot();
-    next.editorSourceId = sourceId; next.editorText = text; next.editorRevision += 1;
+    next.editorSourceId = sourceId; next.editorText = this.editorJson(source); next.editorRevision += 1;
     this.snapshot = next;
     this.action(generation, 'open-editor', sourceId);
   }
 
+  private editorJson(source: BookSource): string {
+    return JSON.stringify({ bookSourceUrl: source.sourceId, bookSourceName: source.name,
+      bookSourceGroup: source.group, bookSourceType: source.category === 'comic' ? 2 : 0,
+      enabled: source.enabled, enabledExplore: source.enabledExplore }, undefined, 2);
+  }
+
   private editorText(generation: number, text: string, revision: number): void {
-    if (!this.editorIsCurrent(generation, revision)) return;
+    if (!this.editorIsCurrent(generation, revision) || this.snapshot.editorReadback !== undefined) return;
     const next = this.copySnapshot(); next.editorText = text; this.snapshot = next;
     this.action(generation, 'editor-draft', this.snapshot.editorSourceId);
   }
 
   private cancelEditor(generation: number, revision: number): void {
-    if (!this.editorIsCurrent(generation, revision)) return;
+    if (!this.editorIsCurrent(generation, revision) || this.snapshot.editorReadback !== undefined) return;
     const next = this.copySnapshot(); next.editorSourceId = ''; next.editorText = ''; next.editorRevision += 1; this.snapshot = next;
     this.action(generation, 'cancel-editor');
   }
@@ -380,6 +424,17 @@ export struct ReaderSourceToolsStructureFixture {
 
   private onMetricsChanged(): void { if (this.current(this.fixtureGeneration)) this.record('window-metrics'); }
 
+  private reconcile(generation: number, operationGeneration: number): void {
+    if (!this.current(generation)) return;
+    const editor = this.snapshot.editorOperation;
+    if (this.snapshot.editorSourceId.length > 0 && editor?.generation === operationGeneration && editor.canRetry) {
+      this.editorAction(generation, this.snapshot.editorRevision, 'reconcile-editor-memory');
+      return;
+    }
+    if (this.snapshot.editorSourceId.length > 0) return;
+    this.action(generation, 'reconcile-memory');
+  }
+
   @Builder
   private fontPreparationState() {
     ReaderPageState({ title: this.debugBuild() ? '生产字体准备中' : '当前构建不提供组件验证',
@@ -412,7 +467,7 @@ export struct ReaderSourceToolsStructureFixture {
           onSelectAll: (): void => this.selection(generation, this.snapshot.sources.map((source: BookSource): string => source.sourceId)),
           onClearSelection: (): void => this.selection(generation, []),
           onToggleSelection: (id: string): void => this.toggleSelection(generation, id),
-          onReconcile: (_revision: number): void => this.action(generation, 'reconcile-memory'),
+          onReconcile: (revision: number): void => this.reconcile(generation, revision),
           onContinueOriginal: (_revision: number): void => this.action(generation, 'continue-memory'),
         }).width('100%').height('100%').id('reader-source-tools-structure-fixture')
           .onAreaChange((_old: Area, area: Area): void => this.observeArea(generation, area));

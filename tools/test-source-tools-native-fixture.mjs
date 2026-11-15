@@ -9,6 +9,7 @@ const selected = selectContractCases({
   'no-runtime': 'Non-Entry fixture imports no runtime business owner/services, performs no platform save/login calls and never replaces fonts/sets scale.',
   'editor-busy': 'Actual memory fixture editor accepts one save intent, publishes pending busy without save/readback ACK, rejects duplicate and old editor callback.',
   'state-samples': 'Actual SDK scenario initializers publish typed empty/read/recovery/original/running facts and one pending stop, with checked-font and retirement guards.',
+  'editor-recovery': 'Actual SDK editor receipt inputs retain draft/revision, current confirmed/unknown projection and one read-only pending reconcile with duplicate/old generation rejection.',
   'callback-retire': 'Actual initializer callbacks only log/mutate memory, reject foreign entities and stale scenes; JSON is retained without pretending save ACK; scene Back only.',
 });
 if (selected.length) {
@@ -25,7 +26,7 @@ if (selected.length) {
   const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
   const { readerPageAreaLength } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
-  const { projectOperationFacts } = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
+  const { projectCommitReadback, projectOperationFacts } = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
   const { projectPersistedReceipt } = await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
   const file = new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets', import.meta.url);
   const source = readFileSync(file, 'utf8');
@@ -44,7 +45,7 @@ if (selected.length) {
     class StateChild { constructor(owner, params, _storage, id) { this.owner = owner; this.params = params; this.id = id; } updateStateVars(params) { Object.assign(this.params, params); } }
     const { owner: page } = compile(() => createReaderBuilderProbe(source, boundedMembers(source), {
       ...sdk.deps, DEBUG: debug, BUILD_MODE_NAME: mode, SourceToolsPage: Child, ReaderPageState: StateChild,
-      emptyToolsFixtureSnapshot, readerPageAreaLength, projectOperationFacts, projectPersistedReceipt,
+      emptyToolsFixtureSnapshot, readerPageAreaLength, projectCommitReadback, projectOperationFacts, projectPersistedReceipt,
       readerWindowMetrics: () => ({ systemFontScale: 2 }),
       hilog: { info(_domain, _tag, _format, payload) { events.push(JSON.parse(payload)); } },
     }, { ...sdk.hooks, childSources: { ...sdk.childSources, SourceToolsPage: actor, ReaderPageState: stateActor } }));
@@ -144,7 +145,7 @@ if (selected.length) {
   }
 
   function stateSamples() {
-    assert.equal(SOURCE_TOOLS_FIXTURE_SCENARIOS.length, 8);
+    assert.equal(SOURCE_TOOLS_FIXTURE_SCENARIOS.length, 10);
     for (const { value } of SOURCE_TOOLS_FIXTURE_SCENARIOS) {
       const f = fixture({ scenario: value }); f.page.aboutToAppear(); f.page.initialRender();
       const ports = f.props(), s = ports.snapshot;
@@ -205,6 +206,45 @@ if (selected.length) {
     denied.page.aboutToAppear(); denied.page.initialRender(); assert.equal(denied.children.length, 0);
   }
 
-  const cases={'initializer-safety':initializerSafety,'no-runtime':noRuntime,'callback-retire':callbackRetire,'editor-busy':editorBusy,'state-samples':stateSamples};
+  function editorRecovery() {
+    for (const scenario of ['editor-readback-failed', 'editor-unknown']) {
+      for (const route of ['editor', 'page']) {
+        const f = fixture({ scenario }); f.page.aboutToAppear(); f.page.initialRender();
+        const ports = f.props(), initial = ports.snapshot;
+        const revision = initial.editorRevision, generation = initial.editorOperation.generation;
+        const confirmation = scenario === 'editor-unknown' ? 'unknown' : 'confirmed';
+        assert.equal(revision, 1); assert.equal(initial.editorSourceId, initial.sources[0].sourceId);
+        assert.equal(JSON.parse(initial.editorText).bookSourceUrl, initial.editorSourceId);
+        assert.equal(initial.editorReadback.confirmation, confirmation);
+        assert.equal(initial.editorReadback.readback, 'failed');
+        assert.equal(initial.editorReadback.fact, confirmation === 'unknown' ? 'pendingReconciliation' : 'confirmedRefreshFailed');
+        assert.equal(initial.editorOperation.fact, confirmation === 'unknown' ? 'pendingReconciliation' : 'refreshFailed');
+        assert.equal(initial.receipt.facts, initial.editorOperation);
+        assert.equal(initial.editorOperation.canRetry, true); assert.equal(initial.busy, false);
+        assert.equal(initial.statusEvent, 'feedback'); assert.equal(initial.statusMessage, initial.editorOperation.message);
+        assert.ok(initial.statusMessage.startsWith('内存夹具：'));
+        ports.onSaveEditor(revision); ports.onCancelEditor(revision); ports.onEditorDraftChanged('late change', revision);
+        ports.onReconcileEditor(revision - 1); ports.onReconcile(generation - 1);
+        assert.equal(f.page.snapshot, initial); assert.equal(f.actions.length, 0);
+        if (route === 'editor') ports.onReconcileEditor(revision);
+        else ports.onReconcile(generation);
+        const reading = f.page.snapshot;
+        assert.equal(reading.busy, true); assert.equal(reading.editorText, initial.editorText);
+        assert.equal(reading.editorRevision, revision); assert.equal(reading.editorSourceId, initial.editorSourceId);
+        assert.equal(reading.editorReadback.confirmation, confirmation);
+        assert.equal(reading.editorReadback.readback, 'reading');
+        assert.equal(reading.editorOperation.canRetry, false);
+        assert.equal(reading.editorOperation.generation, generation + 1);
+        assert.equal(reading.statusEvent, 'state'); assert.equal(reading.statusMessage, reading.editorOperation.message);
+        assert.equal(f.actions.length, 1); assert.equal(f.actions[0], 'source-tools-fixture:reconcile-editor-memory');
+        ports.onReconcileEditor(revision); ports.onReconcile(generation); ports.onSaveEditor(revision);
+        assert.equal(f.actions.length, 1); assert.equal(f.page.snapshot, reading);
+        f.page.aboutToDisappear(); ports.onReconcileEditor(revision); ports.onReconcile(generation + 1);
+        assert.equal(f.actions.length, 1);
+      }
+    }
+  }
+
+  const cases={'initializer-safety':initializerSafety,'no-runtime':noRuntime,'callback-retire':callbackRetire,'editor-busy':editorBusy,'state-samples':stateSamples,'editor-recovery':editorRecovery};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }
