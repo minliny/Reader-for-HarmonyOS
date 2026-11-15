@@ -20,6 +20,18 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### 1.3倍字体下的书源与工具恢复提示
+
+当前b2a0候选补齐320vp、实际系统字体1.3、父槽高770.2857vp下的六个恢复状态。Source的回执待核对及原操作未确认分别完成实际核对，待清理完成实际继续清理，三次当前意图均被接纳。提示退休后原保留行Toggle恢复启用。Tools的未知回执完成核对，原操作未确认和待清理分别完成继续及继续清理，三次当前有限内存意图均只增加一次，原未决事实继续保留。[六状态及当前动作回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-recovery-ab.json)
+
+Source三份及Tools两份长提示均完成展开、收起。五份原生正文范围保持完整，十四个启用的动作载体均至少154px高，对应当前密度下44vp，全部位于各自当前Notice Scroll内。五张展开实屏已查看正文末尾和动作。Tools未知回执沿现有投影使用短“等待核对”，其正文范围单独记录。实际配置和独立原生字体比值在六个状态中逐项核对，其他高度、方向、真实业务写入和完整读屏沿各自范围验收。[准确入口及原证据不足之处](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-recovery-plan-ab.json)
+
+本批私有菜单驱动保留两次FAIL。首次固定约900px拖动在四次后停于工具目标之前，后继按实际2597px视口分配跨度。较长拖动随后触发10秒客户端超时，当前只读原生树确认原拖动已生效、目标已完整可见，后继直接消费该目标。后续菜单拖动使用30秒普通命令上限，四次及45秒总限继续生效。[失败、现场位置及修正](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-recovery-driver-failure-ab.json)
+
+Source和Tools基础登记分别修订为51及41，interaction和adaptation追加本批范围。六次恢复动作与三个工具默认关键词初始化回调分开计数，原生收尾观察的全局计数为9。两份文档和当前原生清单已更新，完整21项逐层判定沿原条件保存。[登记更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-font13-recovery-ab.json) [当前后继范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/remaining-native-entry-review-ab.json)
+
+系统三个滑块已恢复原2／1／1，独立原生字体读数回到1，正常启动后回到原四本书架。原TXT27%、两本测试书未读、漫画100%，两个DMS密度字段均3.5，状态栏136px，SceneBoard1426。当前运行代码和原签装候选继续复用。[本批收尾](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-ab-delivery-review.json)
+
 ### 实际1.3倍系统字体与基础适配补证
 
 **系统字号第4档已实测为1.3倍，前序环境缺口分类已纠正。** 前序仅测量第2档和第5档，就把1.3与1.6、2一并列入环境缺口，缺少中间档实测依据。当前ReaderWindowCoordinator接受有限正字体值，Ability配置优先，原生观察另读UIContext的fp2px与vp2px比值。实际系统滑块为4／1／1时，配置值为1.3，原生字体比值为1.2999999523162842，跟随系统为true。[实际字体能力与更正](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font-intermediate-capability-aa.json)
