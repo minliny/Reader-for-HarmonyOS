@@ -187,6 +187,8 @@ async function hitBoundary() {
     const scroll = [...notice.nodes.values()].find(node => node.type === 'Scroll');
     assert.deepEqual(scroll?.constraintSize, { maxHeight: 62 });
     assert.equal(scroll.clip, true);
+    assert.equal(scroll.hitTestBehavior, 'HitTestMode.BLOCK_HIERARCHY',
+      'bounded Scroll carries its boundary through transparent overlay ancestors');
     const action = sdk.walk(notice).find(child => child instanceof sdk.deps.ReaderRecoveryAction);
     const button = [...action.nodes.values()].find(node => node.type === 'Button' && node.onClick);
     assert.equal(button.enabled, !busy);
@@ -210,7 +212,10 @@ async function hitBoundary() {
   assert.notEqual(transparentGroup, groupSource);
   assert.throws(() => noticeFixture(transparentNotice, true), /painted notice blocks sibling hit collection/);
   assert.throws(() => groupFixture(transparentGroup), /painted group blocks sibling hit collection/);
-  console.log(JSON.stringify({ kind: 'recovery-hit-boundary', notices: 2, groups: 1, transparentNegatives: 2,
+  const propagatingNotice = noticeSource.replace('hitTestBehavior(HitTestMode.BLOCK_HIERARCHY)', 'hitTestBehavior(HitTestMode.Default)');
+  assert.notEqual(propagatingNotice, noticeSource);
+  assert.throws(() => noticeFixture(propagatingNotice, true), /bounded Scroll carries its boundary/);
+  console.log(JSON.stringify({ kind: 'recovery-hit-boundary', notices: 2, groups: 1, transparentNegatives: 2, propagationNegative: 1,
     boundary: 'Actual SDK surface modes, bounded Scroll and current enabled/busy callbacks. Native sibling dispatch, focus and scrolling require the exact VM scene.' }));
 }
 

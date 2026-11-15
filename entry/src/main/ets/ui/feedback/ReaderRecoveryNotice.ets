@@ -55,7 +55,10 @@ export struct ReaderRecoveryNotice {
         ForEach([this.view.generation], (generation: number): void => {
         Scroll() { this.noticeBody(); }
           .width('100%').constraintSize({ maxHeight: this.maxHeightVp })
-          .scrollBar(BarState.Auto).clip(true);
+          .scrollBar(BarState.Auto).clip(true)
+          // The bounded Scroll owns its gestures, including over disabled actions.
+          // Carry its hit boundary through transparent page-overlay ancestors.
+          .hitTestBehavior(HitTestMode.BLOCK_HIERARCHY);
         }, (generation: number): string => `recovery-scroll:${generation}`);
       } else { this.noticeBody(); }
     }
