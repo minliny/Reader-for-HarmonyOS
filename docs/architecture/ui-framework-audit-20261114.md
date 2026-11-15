@@ -2,15 +2,27 @@
 
 ## 2026年11月15日当前实施状态
 
-全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`0e55a34c`，已安装候选为`0.2.0.DEV.d6005e1cdf9a`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`6323d632`，已安装候选为`0.2.0.DEV.b556c020a81d`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
 
-### 当前书源工具批量动作与导出确认补证
+### 当前书源工具八状态与停止回调补证
+
+本批生产提交为`6323d632`，沿既有DEBUG页面结构入口增加8种有限内存输入。读取中、空列表、保留列表读取失败、空列表读取失败、未知回执、原操作未确认、原操作待清理及检测运行均使用现有fact投影器和实际共享SourceToolsPage。原默认内容与旧入口位置保留，菜单当前presentation、字体准入和退休回调继续受既有条件约束。6项准确选择用例及2个历史失效负例形成通过结果。[代码与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-tools-state-code-m.json)
+
+首次候选`0.2.0.DEV.56d54d918fda`暴露了本批夹具输入遗漏。4种读取状态缺少正常Orchestrator发布的loading/current事实或失败feedback事件及消息。当前按正常open/reloadManagement链补齐，旧截图只保留其实际正文和动作资格范围。后继完整ArkTS编译、指定证书签名和保数据安装通过，当前候选为`0.2.0.DEV.b556c020a81d`。640个运行源码输入与不可变候选逐字节匹配，其中273个ETS、367个TS。[源码与当前候选绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-m-corrected.json)
+
+当前VM完成全部8种状态。保留列表的刷新列表及空列表失败的重试分别接纳一次当前内存核对意图。未知回执显示现有投影器的“等待核对”，核对动作接纳一次。原操作未确认和待清理的长提示均完成展开，全文及核对、继续或继续清理、收起在当前宽度和字号下可见。核对和继续分别各接纳一次当前owner意图。有限内存端口按设计继续保持未决事实，原业务写入、文件出口、真实取消及完整读屏语义沿各自条件验证。[8状态、原生目标及动作回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-states-m-b556.json)
+
+运行→停止中保持7个原生Button身份3152、3155、3158、3161、3164、3167、3170。运行时仅停止动作可用，实际点击原生3161后意图由0到1，7个按钮全部禁用；再次点击同一禁用按钮，计数保持1。实际根宽366vp，系统字号1。两类原操作长提示的展开范围限定于该当前高度，短瞬反馈在普通树及截图采样前已收起，其视觉和语音结果仍需对应证据。
+
+原生脚本在进入最后运行场景前曾因菜单末项被平台树省略而失败，未派发运行或停止动作。已有树明确显示Root菜单及被裁切的前一项，脚本现允许在唯一当前Scroll内向下有界查找缺席项，保持4次滚动及45秒上限。随后只补缺失运行→停止及禁用重复点击，恢复普通启动入口并释放租约。首次脚本失败与补跑结果分别保存。完整E2/E3、整页视觉及其他高度/字号条件保持原判定。
+
+### 前一批书源工具批量动作与导出确认补证
 
 本批复用已安装的`0.2.0.DEV.d6005e1cdf9a`完成当前内存内容场景。启用→停用→检测的原owner意图依次为2、3、4，七个原生批量Button身份201、204、207、210、213、216、219保持。当前实际根宽549px对应owner回执366vp，六十六像素高的动作对应44vp。清空选择后，全选保持可用，六个依赖选择的按钮全部禁用；实际点击禁用的启用按钮，owner计数保持5。[本批原生动作证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-actions-l-d600.json)
 
 原生导出确认的取消保持计数5，后继准确焦点检查后Enter确认使计数到6。另一次当前场景取得删除内存意图、首行调试及导出全部的回执，均按各自一次实际接纳记账。删除及导出业务回调使用既有有限内存端口，正常业务持久化和文件出口继续保留各自范围。首次标题选择器因共享Button隐藏子Text而在点击前停止，已按实际七动作卡及源声明顺序定位。另一次外部焦点断言失败后编排仍发出了Enter，实际接纳一次内存导出，原截图cancelled命名失实。该次失配原样保留，后继按键派发入口增加当前原生确认框、准确焦点及enabled检查，真正取消和确认分别使用独立回执。
 
-剩余书源工具状态已追到准确消费分支。现有夹具覆盖内容与一次保存待决busy，读取中、空列表、两类读取失败、未知回执、原操作未确认/清理及running→stopping仍需对应的DEBUG内存入口。后续沿现有fact投影器、原生公共组件和generation边界继续补齐。正式E2/E3及整页视觉、读屏和适配条件继续保留。[状态入口源码对账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-tools-native-state-entry-review-l.json)
+该批曾登记8种状态缺少准确DEBUG入口，本批已完成输入装配与当前VM的有界状态/动作补证。完整E2/E3及整页视觉、读屏和适配条件继续保留。[状态入口源码对账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-tools-native-state-entry-review-l.json)
 
 ### 当前几何、重试与目录换代修复
 
@@ -34,7 +46,7 @@
 
 ### 当前未决内容与关闭条件
 
-- 全应用正式登记仍有37项诊断，其中E2完整交互21项、E3适配5项、G-03视觉依据8项及SCOPE范围3项。各页全部目标、动作状态、字形、裁切和读屏语义的逐格证据继续由agent补齐。当前两个原生场景按其实际覆盖范围登记。
+- 全应用正式登记仍有37项诊断，其中E2完整交互21项、E3适配5项、G-03视觉依据8项及SCOPE范围3项。各页全部目标、动作状态、字形、裁切和读屏语义的逐格证据继续由agent补齐。本批与历史原生场景均按各自准确输入及行为范围登记。
 - 独立整页视觉依据继续按原图、原稿版本及当前页面状态对应。目录冻结层级与TTS Make V17已找到，当前Figma准确节点403只影响远端当前版本读取。冻结资料支持其已覆盖尺寸及比例，其余整页G-03条件保持。
 - 用户已决定保留紧凑布局。目录工具、行及TTS Quick的44vp容量冲突保留具体槽位核算，命中与相邻响应分别使用实际可达证据关闭。
 - 当前VM系统字号最大档实测1.45，原要求的1.3、1.6、2各档原生证据保持开放。对应有限SDK几何样本继续保留原判定。
