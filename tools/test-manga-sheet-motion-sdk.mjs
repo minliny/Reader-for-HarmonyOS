@@ -1,3 +1,4 @@
+import { drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"lifecycle": {"description": "实际two-frame enter/retained exit/current generation/cancel-reopen", "resources": []}, "font-admission": {"description": "实际所有panel与persistent标题checked receipts/迟到拒绝", "resources": []}, "directory-selection": {"description": "实际tablet right panel/left catalog canonical proof与close-save归属", "resources": []}, "download-navigation": {"description": "实际book/chapter0标题与download manager portal一次导航", "resources": []}, "preferences-reset": {"description": "实际reset保现背景/手动brightness/持久偏好回调", "resources": []}, "drag-reduced": {"description": "实际反向drag clamp/超额drag退出/reduce无帧与cancel token", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
@@ -105,20 +106,20 @@ function fixture(text = source, options = {}) {
   const walk = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? walk(child) : [])];
   return { owner, frames, animations, events, properties, pans, output: probe.output,
     nodes: () => walk(owner).flatMap(child => [...child.nodes.values()]),
-    frame: () => { const next = frames.shift(); assert.ok(next, 'native next-frame boundary was requested'); next.onFrame(16); next.onIdle(0); },
+    frame: () => { const next = frames.shift(); assert.ok(next, 'native next-frame boundary was requested'); next.onFrame(16); next.onIdle(0); drainReaderPostLayoutFallbacks(frames); },
     enterFrames: () => {
       const before = animations.length;
       assert.equal(frames.length, 1, 'one native idle admission precedes animation');
       const frame = frames.shift(); frame.onFrame(16);
       assert.equal(animations.length, before, 'onFrame may precede build: admission frame cannot start animation');
-      frame.onIdle(0);
+      frame.onIdle(0); drainReaderPostLayoutFallbacks(frames);
     },
     finish: index => {
       assert.equal(typeof animations[index]?.params.onFinish, 'function');
       const before = frames.length; animations[index].params.onFinish();
       // Native focus scheduling remains the real production frame callback.
       // Finish only frames admitted by this completion, not a later opening.
-      for (const frame of frames.splice(before)) { frame.onFrame(16); frame.onIdle(0); }
+      for (const frame of frames.splice(before)) { frame.onFrame(16); frame.onIdle(0); drainReaderPostLayoutFallbacks(frames); }
     },
   };
 }

@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -46,7 +47,7 @@ const component = tree.statements.find(node => node.name?.getText(tree) === 'Man
 const names = component.members.map(node => node.name?.getText(tree)).filter(Boolean);
 const classText = name => tree.statements.find(node => node.name?.getText(tree) === name).getText(tree);
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(classText('MangaStripDataSource'))};return MangaStripDataSource`)(Projection);
-const Frame = new Function('FrameCallback', `${stripTypeScriptTypes(classText('MangaLayoutFrame'))};return MangaLayoutFrame`)(class {});
+const Frame = new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(classText('MangaLayoutFrame'))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const gesture = new Proxy({}, {get: () => () => {}}), tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {let resolve; const promise = new Promise(done => {resolve = done;}); return {promise, resolve};}
 async function settle() {for (let i = 0; i < 12; i++) await tick();}
@@ -149,7 +150,7 @@ async function fixture(Type = Controller, {short = false, count = 6, ordinary = 
     const image = [...owner.nodes.values()].filter(node => node.type === 'Image' && typeof node.onComplete === 'function').at(-1);
     image.onComplete({loadingStatus: 1});
   };
-  const flush = () => {let count = 0; while (frames.length) {assert.ok(++count <= 24); const frame = frames.shift(); frame.onFrame(0); frame.onIdle(0);}};
+  const flush = () => {let count = 0; while (frames.length) {assert.ok(++count <= 24); const frame = frames.shift(); frame.onFrame(0); frame.onIdle(0); drainReaderPostLayoutFallbacks(frames);}};
   return {owner, controller, runtime, list, header, calls, images, released, tileWindows, rejections, noAdmission, complete, flush,
     reportNativeRange() {list.onScrollIndex(0, owner.scroller.getItemIndex(0.5, owner.viewportHeight - 0.5));},
     moveToRow(index) {

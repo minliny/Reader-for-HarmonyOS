@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"text-projection": {"description": "实际Gateway exact text cache selector/部分未知/正文bytes与过滤/读目标/失效", "resources": []}, "storage-admission": {"description": "实际storage bytes格式与已证cleanable<=automatic准入", "resources": []}, "manga-projection": {"description": "实际Manga entry解码与Host image证明/元数据不可冒充diskbytes", "resources": []}, "manga-proof-batch": {"description": "实际Gateway9章图片证明并发预算与缺页降级，受控microtask", "resources": []}, "page-actions": {"description": "实际SDK书/章节意图范围、精确reading target与最新Scroll保存", "resources": []}, "storage-policy": {"description": "实际SDK non-preset/fractional容量策略与dirty draft保护", "resources": []}, "storage-actions": {"description": "实际SDK清理确认/取消/最新证明/retired generation且不伪造删除", "resources": []}, "live-theme": {"description": "实际SDK业务控件语义色/当前资源scheme更新", "resources": []}, "host-single-flight": {"description": "完整实际Host同书single-flight与retired拒绝", "resources": []}, "host-index": {"description": "完整实际Host下载revision索引跨页面复用与重复burst单书刷新", "resources": []}, "host-intents": {"description": "实际Host Runtime任务变更刷新、注销observer及批量确认/未决/跳过回执", "resources": []}};
 definitions['sheet-choice'] = { description: '实际下载选项单一点击、稳定 identity、过期面板回调拒绝', resources: [] };
@@ -393,10 +394,7 @@ const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs'
 const bounded = boundedSurfaceSdk({ properties });
 const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const frames = [], timers = [], focus = [], intents = [];
-class IdleFrame {
-  constructor(action) { this.action = action; }
-  onIdle() { this.action(); }
-}
+const IdleFrame = actualReaderPostLayoutFrame();
 const { owner } = createReaderBuilderProbe(source, [...new Set([...helpers, 'sheet', 'confirmation', 'reduceMotion',
   'sheetExitPending', 'sheetOpeningGeneration', 'confirmationGeneration', 'previousConfirmation', 'sheetTriggerKey', 'focusGeneration', 'managementGeneration',
   'sheetWasVisible', 'sheetMaskReady', 'pageContent', 'pageOverlays',

@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -25,9 +26,9 @@ const ts=require(`${sdk}/node_modules/typescript`);
 const tree=ts.createSourceFile(virtualFilePath('MangaStripAnchorProbe.ets'),readFileSync(surfaceURL,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
 const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
-const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
+const MangaLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const timers=[],scrolls=[],frames=[],measurements=[],native={index:2,offset:237.5};
-function renderFrame(){const frame=frames.shift();assert.ok(frame instanceof MangaLayoutFrame);frame.onFrame(0);frame.onIdle(2_000_000);}
+function renderFrame(){const frame=frames.shift();assert.ok(frame instanceof MangaLayoutFrame);frame.onFrame(0);frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames);}
 const Surface=productionMotionMethods(surfaceURL,
   ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','positionIdentity','rememberVisible','resizeViewport','restore','finishLayout','onViewportScroll','measureVisibleWindow'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},
     LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame});

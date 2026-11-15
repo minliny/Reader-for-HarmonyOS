@@ -84,7 +84,8 @@ export struct LocalImportDialog {
   @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private foreground: boolean = true;
-  @State private viewportHeight: number = 0;
+  @State private viewportHeight: number = -1;
+  @State private viewportOriginY: number = 0;
   @State private measuredItemsHeight: number = 0;
   @State private measuredHeaderHeight: number = 61.75;
   @State private measuredSummaryHeight: number = 68;
@@ -189,10 +190,10 @@ export struct LocalImportDialog {
       .padding({ left: this.panelFrame().left, right: this.panelFrame().right });
       if (this.pendingImport()) {
         Column() {
-          ReaderRecoveryNotice({ view: this.recovery, tag: '导入待确认', actionLabel: '核对导入结果',
+          ReaderRecoveryNotice({ maxHeightVp: this.recoveryMaxHeight(), view: this.recovery, tag: '导入待确认', actionLabel: '核对导入结果',
             onReconcile: (generation: number): void => this.reconcilePendingImport(generation) });
         }.width('100%').padding({ left: this.panelFrame().left, right: this.panelFrame().right,
-          top: 8 })
+          top: this.recoveryTop() })
           .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
       }
     }
@@ -201,11 +202,13 @@ export struct LocalImportDialog {
     .clip(true)
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const height = this.numericAreaLength(newValue.height);
-      if (height > 0 && Math.abs(height - this.viewportHeight) >= .1) {
+      if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.viewportHeight) >= .1) {
         this.viewportHeight = height;
         if (this.state === 'importing') this.shellHeight = this.importingPanelHeight();
         if (this.state === 'result' && !this.pendingHandoff) this.shellHeight = this.resultPanelHeight();
       }
+      const originY = this.numericAreaLength(newValue.globalPosition?.y ?? 0);
+      if (Number.isFinite(originY)) this.viewportOriginY = originY;
       const width = this.numericAreaLength(newValue.width);
       if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
         this.viewportWidth = width;
@@ -549,9 +552,22 @@ export struct LocalImportDialog {
 
   private availableHeight(): number {
     const metrics = ReaderWindowCoordinator.metrics();
-    const height = this.viewportHeight > 0 ? this.viewportHeight : metrics.windowRect.height;
+    const height = this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height;
     return readerSurfaceMaxHeight(height,
       readerInteractiveSafeTop(metrics) + readerInteractiveSafeBottom(metrics) + 40);
+  }
+
+  private recoveryTop(): number {
+    this.readerWindowMetricsRevision;
+    return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics()) - this.viewportOriginY) + 8;
+  }
+
+  private recoveryMaxHeight(): number {
+    this.readerWindowMetricsRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const windowHeight = Math.max(0, metrics.windowRect.height - this.viewportOriginY);
+    const height = Math.min(this.viewportHeight >= 0 ? this.viewportHeight : windowHeight, windowHeight);
+    return readerSurfaceMaxHeight(height, this.recoveryTop() + readerInteractiveSafeBottom(metrics, true) + 8);
   }
 
   private allSucceeded(): boolean {

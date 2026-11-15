@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -26,7 +27,7 @@ const Projection = new Function(`${stripTypeScriptTypes(projectionSource)};retur
 const dataSourceText = tree.statements.find(node => node.name?.getText(tree) === 'MangaStripDataSource').getText(tree);
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(dataSourceText)};return MangaStripDataSource`)(Projection);
 const frameText = tree.statements.find(node => node.name?.getText(tree) === 'MangaLayoutFrame').getText(tree);
-const LayoutFrame = new Function('FrameCallback', `${stripTypeScriptTypes(frameText)};return MangaLayoutFrame`)(class {});
+const LayoutFrame = new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(frameText)};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const properties = createArkUIPropertyRuntimeProbe();
 const boundary = new Proxy({}, { get: () => () => {} });
 const timers = [], frames = [];
@@ -149,7 +150,7 @@ owner.restoringAnchor = true; owner.appliedLayoutGeneration = owner.layoutGenera
 list.onScrollIndex(0, 1);
 check('same range during restore still measures and confirms its native anchor', () => {
   assert.equal(owner.restoringAnchor, true, 'native range callback must defer geometry observation');
-  while (frames.length) {const frame=frames.shift();frame.onFrame(0);assert.equal(owner.restoringAnchor,true,'frame start cannot confirm native geometry');frame.onIdle(2_000_000);}
+  while (frames.length) {const frame=frames.shift();frame.onFrame(0);assert.equal(owner.restoringAnchor,true,'frame start cannot confirm native geometry');frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames);}
   assert.equal(owner.restoringAnchor, false);
   assert.equal(owner.confirmedPosition?.anchor.ordinal, 0);
 });

@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -48,8 +49,8 @@ export async function createSearchResultContinuityProbe({ source = readSearchRes
   });
   assert.deepEqual(emitted.diagnostics, [], 'actual group, datasource, frame and row key methods emit');
   const { SearchBookGroup, SearchResultDataSource, SearchLayoutFrame, RowKeys } = new Function('bookTitleAuthorKey', 'readerMediaIdentity',
-    'DataOperationType', 'FrameCallback', `${emitted.outputText};return { SearchBookGroup, SearchResultDataSource, SearchLayoutFrame, RowKeys };`)(
-      bookTitleAuthorKey, readerMediaIdentity, { ADD: 'add', DELETE: 'delete', CHANGE: 'change', RELOAD: 'reload', MOVE: 'move' }, class {});
+    'DataOperationType', 'FrameCallback', 'ReaderPostLayoutFrame', `${emitted.outputText};return { SearchBookGroup, SearchResultDataSource, SearchLayoutFrame, RowKeys };`)(
+      bookTitleAuthorKey, readerMediaIdentity, { ADD: 'add', DELETE: 'delete', CHANGE: 'change', RELOAD: 'reload', MOVE: 'move' }, class {}, actualReaderPostLayoutFrame());
   const makeGroup = (variants, onShelf = false, chosen = variants[0]) => {
     const next = new SearchBookGroup(variants[0], 1, onShelf);
     for (const candidate of variants.slice(1)) next.admit(candidate, onShelf);

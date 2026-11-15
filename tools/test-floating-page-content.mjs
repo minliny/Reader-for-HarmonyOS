@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions = {"search": {"description": "Search实际List/Scroll内部clearance与stats测量delta", "resources": []}, "source": {"description": "Source List与fixed footer边界/empty slots", "resources": []}, "multi-select": {"description": "多选实际remove footer测量delta保native List", "resources": []}, "directory": {"description": "目录实际header回执传tree/fallback", "resources": []}, "native-insets": {"description": "实际List/Grid单次inset发布/retained Surface传递", "resources": []}, "manga-catalog": {"description": "漫画实际toolbar→tree/flat→native inset闭包", "resources": []}, "search-anchor": {"description": "实际搜索saved anchor/signed offset/native top恢复", "resources": []}};
 for (const id of selectContractCases(definitions)) {
@@ -477,7 +478,7 @@ const frames = [], moves = [];
 const Restore = selectedProductionMethods(new URL('features/search/ui/SearchPage.ets', root), 'SearchPage',
   ['scheduleScrollRestore', 'searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'selectGroup'], {
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) },
-    SearchLayoutFrame: class { constructor(action) { this.action = action; } }, ScrollAlign: { START: 0 }, Edge: { Top: 'top' },
+    SearchLayoutFrame: actualReaderPostLayoutFrame(), ScrollAlign: { START: 0 }, Edge: { Top: 'top' },
   });
 const restoring = Object.assign(new Restore(), { pageMounted: true, listMounted: true, restoreCancelled: false,
   restoreScheduled: false, restoreEpoch: 0, pageEpoch: 1, listEpoch: 1,

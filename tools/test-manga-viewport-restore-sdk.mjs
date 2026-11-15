@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ const Projection=new Function(`${stripTypeScriptTypes(projectionSource)};return 
 const dataText=tree.statements.find(n=>n.name?.getText(tree)==='MangaStripDataSource').getText(tree);
 const DataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataText)};return MangaStripDataSource`)(Projection);
 const frameNode=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');
-const frameDeps=frameNode?{MangaLayoutFrame:new Function('FrameCallback',`${stripTypeScriptTypes(frameNode.getText(tree))};return MangaLayoutFrame`)(class {})}:{};
+const frameDeps=frameNode?{MangaLayoutFrame:new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frameNode.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame())}:{};
 const boundary=new Proxy({}, {get:()=>()=>{}});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function fixture({tiles=12,height=750}={}) {
@@ -63,7 +64,7 @@ function fixture({tiles=12,height=750}={}) {
   owner.data.registerDataChangeListener({onDataReloaded:()=>notifications.push('reload'),onDataChange:i=>notifications.push(i)});
   return {owner,list,timers,frames,scrolls,queries,windows,notifications,
     readyRows(indices){for(const index of indices)tileFacts.set(index,{image:{fileUri:`file://viewport-${index}.png`,revision:'ready'}});},
-    runFrame(){assert.ok(frames.length,'restore must schedule a native-frame geometry reconciliation');const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);}};
+    runFrame(){assert.ok(frames.length,'restore must schedule a native-frame geometry reconciliation');const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames);}};
 }
 
 // Same first index often has no new native callback; a callback during restore

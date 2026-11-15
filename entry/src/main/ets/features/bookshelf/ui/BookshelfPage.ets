@@ -10,6 +10,8 @@ import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from '../applic
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import { readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { TYPE_SHELF_UPDATE_BADGE, TYPE_SHELF_FILTER_LABEL, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_SECTION_HEADING } from '../../../ui/foundation/ReaderTypography';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { bookshelfHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
@@ -217,6 +219,8 @@ export struct BookshelfPage {
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
   @Prop noticeTopInset: number = 0;
+  @State private recoveryViewportHeight: number = -1;
+  @State private recoveryOriginY: number = 0;
   /** Presented header bottom (top + measured height), owned by the route. */
   @Prop @Watch('scheduleContinueCardMeasurement') headerBottom: number = bookshelfHeaderSpec().frameHeight;
   /** Full native footer slot, including the navigation's existing bottom margin. */
@@ -352,14 +356,17 @@ export struct BookshelfPage {
     return view;
   }
 
-  private retryViewMode(generation: number = this.viewModeRecovery().generation): void {
-    if (!this.mounted || this.modeReconcileBusy || generation !== this.viewModeRecovery().generation) return;
+  private retryViewMode(generation: number = this.viewModeRecovery().generation,
+    navigation: number = this.navigationGeneration): void {
+    if (!this.isShelfPresentationCurrent(navigation) || !this.feedbackEnabled || !this.isCurrentShelfInput(navigation) ||
+      this.modeReconcileBusy || generation !== this.viewModeRecovery().generation) return;
     this.lastModeFeedback = '';
     const revision = this.viewModeRevision;
     this.modeReconcileBusy = true;
-    void this.viewModeHost.reconcile(generation, (): boolean => this.mounted && revision === this.viewModeRevision)
+    void this.viewModeHost.reconcile(generation, (): boolean => this.isShelfPresentationCurrent(navigation) &&
+      revision === this.viewModeRevision)
       .then((snapshot): void => {
-        if (snapshot === undefined || !this.mounted || revision !== this.viewModeRevision) return;
+        if (snapshot === undefined || !this.isShelfPresentationCurrent(navigation) || revision !== this.viewModeRevision) return;
         this.applyViewModeSnapshot(snapshot);
       }).finally((): void => {
         if (this.mounted && revision === this.viewModeRevision) this.modeReconcileBusy = false;
@@ -437,16 +444,33 @@ export struct BookshelfPage {
       }
       if (this.viewModePending()) {
         Column() {
-          ReaderRecoveryNotice({ view: this.viewModeRecovery(), tag: '显示方式待确认', actionLabel: '核对显示方式',
-            busy: this.modeReconcileBusy || this.viewModeSnapshot.receipt?.facts.fact === 'refreshing' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',
-            onReconcile: (generation: number): void => this.retryViewMode(generation) });
+          ForEach([this.navigationGeneration], (navigation: number): void => {
+            ReaderRecoveryNotice({ maxHeightVp: this.viewModeRecoveryMaxHeight(), view: this.viewModeRecovery(), tag: '显示方式待确认', actionLabel: '核对显示方式',
+              busy: this.modeReconcileBusy || this.viewModeSnapshot.receipt?.facts.fact === 'refreshing' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',
+              onReconcile: this.viewModeReconcileAction(navigation) });
+          }, (navigation: number): string => `view-mode-recovery:${navigation}`);
         }.width('100%').padding({ left: 17, right: 17, top: this.shelfHeaderClearance() + this.noticeTopInset })
           .hitTestBehavior(HitTestMode.Transparent);
       }
     }
     .width('100%')
     .height('100%')
+    .onAreaChange((_old: Area, area: Area): void => {
+      const height = readerPageAreaLength(area.height);
+      const originY = readerPageAreaLength(area.globalPosition?.y ?? 0);
+      if (Number.isFinite(height) && height >= 0) this.recoveryViewportHeight = height;
+      if (Number.isFinite(originY)) this.recoveryOriginY = originY;
+    })
     .bindSheet(this.bookActionSheetVisible, this.bookActionSheetContent, this.bookActionSheetOptions());
+  }
+
+  private viewModeRecoveryMaxHeight(): number {
+    this.readerWindowMetricsRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const windowHeight = Math.max(0, metrics.windowRect.height - this.recoveryOriginY);
+    const height = Math.min(this.recoveryViewportHeight >= 0 ? this.recoveryViewportHeight : windowHeight, windowHeight);
+    const bottom = Math.max(this.shelfContentEndInset(), readerInteractiveSafeBottom(metrics, true));
+    return readerSurfaceMaxHeight(height, this.shelfHeaderClearance() + this.noticeTopInset + bottom + 8);
   }
 
   private bookActionSheetOptions(presentationId: string = this.actionSheetId,
@@ -696,16 +720,18 @@ export struct BookshelfPage {
       }
       ListItem() {
         Column() {
-          BookshelfSectionHeader({
-            contentWidth: this.shelfContentWidth(expandedLayout),
-            titleOpacity: this.viewSwitchHeaderOpacity,
-            viewMode: this.viewMode,
-            filterExpanded: this.filterRowVisible,
-            hasActiveFilters: this.hasActiveFilters(),
-            onCover: (): void => this.setViewMode('cover'),
-            onList: (): void => this.setViewMode('list'),
-            onFilter: (): void => this.setFilterExpanded(!this.filterRowVisible),
-          });
+          ForEach([this.navigationGeneration], (navigation: number): void => {
+            BookshelfSectionHeader({
+              contentWidth: this.shelfContentWidth(expandedLayout),
+              titleOpacity: this.viewSwitchHeaderOpacity,
+              viewMode: this.viewMode,
+              filterExpanded: this.filterRowVisible,
+              hasActiveFilters: this.hasActiveFilters(),
+              onCover: this.viewModeAction('cover', navigation),
+              onList: this.viewModeAction('list', navigation),
+              onFilter: (): void => this.setFilterExpanded(!this.filterRowVisible),
+            });
+          }, (navigation: number): string => `shelf-section:${navigation}`);
 
           this.filterPanel();
         }
@@ -1792,11 +1818,13 @@ export struct BookshelfPage {
     ]));
   }
 
-  private async persistRequestedViewMode(mode: BookshelfViewMode, revision: number): Promise<boolean> {
-    const snapshot = await this.viewModeHost.save(mode, (): boolean => this.mounted && revision === this.viewModeRevision);
+  private async persistRequestedViewMode(mode: BookshelfViewMode, revision: number,
+    navigation: number = this.navigationGeneration): Promise<boolean> {
+    const snapshot = await this.viewModeHost.save(mode, (): boolean => this.isShelfPresentationCurrent(navigation) &&
+      this.feedbackEnabled && this.isCurrentShelfInput(navigation) && revision === this.viewModeRevision);
     if (snapshot === undefined) return false;
     if (snapshot.canonical !== undefined) this.confirmedViewMode = snapshot.canonical;
-    if (this.mounted && revision === this.viewModeRevision) {
+    if (this.isShelfPresentationCurrent(navigation) && revision === this.viewModeRevision) {
       this.viewModeSnapshot = snapshot;
       this.viewModeError = this.viewModeRecovery().message;
       this.modeFeedback();
@@ -1805,16 +1833,25 @@ export struct BookshelfPage {
     return snapshot.receipt?.receipt.confirmation === 'confirmed';
   }
 
-  private setViewMode(mode: BookshelfViewMode): void {
-    if (!this.mounted || !this.viewModeHost.canSave()) return;
+  private viewModeAction(mode: BookshelfViewMode, navigation: number = this.navigationGeneration): () => void {
+    return (): void => this.setViewMode(mode, navigation);
+  }
+
+  private viewModeReconcileAction(navigation: number = this.navigationGeneration): (generation: number) => void {
+    return (generation: number): void => this.retryViewMode(generation, navigation);
+  }
+
+  private setViewMode(mode: BookshelfViewMode, navigation: number = this.navigationGeneration): void {
+    if (!this.isShelfPresentationCurrent(navigation) || !this.feedbackEnabled ||
+      !this.isCurrentShelfInput(navigation) || !this.viewModeHost.canSave()) return;
     this.modeReconcileBusy = false;
     const revision = ++this.viewModeRevision;
     this.requestedViewMode = mode;
     this.viewModeReadFailed = false;
     this.storedViewMode = mode;
     this.viewModeError = '';
-    void this.persistRequestedViewMode(mode, revision).catch((error: Error): void => {
-      if (!this.mounted || revision !== this.viewModeRevision) return;
+    void this.persistRequestedViewMode(mode, revision, navigation).catch((error: Error): void => {
+      if (!this.isShelfPresentationCurrent(navigation) || revision !== this.viewModeRevision) return;
       this.storedViewMode = this.confirmedViewMode;
       this.resetViewSwitchMotion();
       this.viewMode = this.confirmedViewMode;

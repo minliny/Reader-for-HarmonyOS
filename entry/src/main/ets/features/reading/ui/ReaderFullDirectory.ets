@@ -1,3 +1,4 @@
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import hilog from '@ohos.hilog';
@@ -58,12 +59,7 @@ class DirectoryRulesFocusFrame extends FrameCallback {
   onIdle(_timeLeftInNano: number): void {}
 }
 
-class FullDirectoryHeaderMeasurementFrame extends FrameCallback {
-  private readonly measure: () => void;
-  constructor(measure: () => void) { super(); this.measure = measure; }
-  onFrame(_frameTimeInNano: number): void {}
-  onIdle(_timeLeftInNano: number): void { this.measure(); }
-}
+class FullDirectoryHeaderMeasurementFrame extends ReaderPostLayoutFrame {}
 
 let fullDirectoryBackGeneration = 0;
 
@@ -719,7 +715,7 @@ export struct ReaderFullDirectory {
     if (this.usesExpandedLayout() || this.temporaryBackIdentity.length === 0) return;
     const key = this.measurementKey, identity = this.temporaryBackIdentity;
     try {
-      this.getUIContext().postFrameCallback(new FullDirectoryHeaderMeasurementFrame((): void => {
+      this.getUIContext().postFrameCallback(new FullDirectoryHeaderMeasurementFrame(this.getUIContext(), (): void => {
         if (!this.mounted || key !== this.measurementKey || identity !== this.temporaryBackIdentity ||
           this.usesExpandedLayout()) return;
         try {

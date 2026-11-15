@@ -11,6 +11,8 @@ import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor
 import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import { readerVisualSafeLeft, readerVisualSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { bookshelfHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 
@@ -55,6 +57,8 @@ export struct BookshelfShell {
   private readonly footerMeasurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private footerMeasurementKey: number = 0;
   @State private measuredFooterHeight: number = 0;
+  @State private recoveryViewportHeight: number = -1;
+  @State private recoveryOriginY: number = 0;
   /** Presented header bottom (top + measured height), owned by the route. */
   @Prop headerBottom: number = bookshelfHeaderSpec().frameHeight;
   @State private moreMenuVisible: boolean = false;
@@ -256,6 +260,12 @@ export struct BookshelfShell {
       });
     }
     .width('100%').height('100%')
+    .onAreaChange((_old: Area, area: Area): void => {
+      const height = this.numericAreaLength(area.height);
+      const originY = this.numericAreaLength(area.globalPosition?.y ?? 0);
+      if (Number.isFinite(height) && height >= 0) this.recoveryViewportHeight = height;
+      if (Number.isFinite(originY)) this.recoveryOriginY = originY;
+    })
     .bindSheet(this.moreMenuVisible, this.moreSheetContent, this.moreSheetOptions());
   }
 
@@ -321,7 +331,7 @@ export struct BookshelfShell {
   private recoveryNoticeContent(view: ReaderRecoveryView, read: boolean) {
     // Only the compact feedback actor changes identity; content stays mounted.
     ForEach([JSON.stringify([this.navigationGeneration, view.generation])], (identity: string): void => {
-      ReaderRecoveryNotice({ view, tag: '书架待处理', actionLabel: '核对操作结果', busy: !read && this.recoveryBusy,
+      ReaderRecoveryNotice({ maxHeightVp: this.recoveryMaxHeight(), view, tag: '书架待处理', actionLabel: '核对操作结果', busy: !read && this.recoveryBusy,
         secondaryActionLabel: !read && this.canContinueRemoval ? this.removalActionLabel : '',
         onSecondaryAction: (generation: number): void => {
           const tokens = JSON.parse(identity) as number[];
@@ -334,6 +344,15 @@ export struct BookshelfShell {
           if (read) this.onRetryRead(tokens[1], tokens[0]); else this.onReconcile(tokens[1], tokens[0]);
         } });
     }, (identity: string): string => identity);
+  }
+
+  private recoveryMaxHeight(): number {
+    this.readerWindowMetricsRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const windowHeight = Math.max(0, metrics.windowRect.height - this.recoveryOriginY);
+    const height = Math.min(this.recoveryViewportHeight >= 0 ? this.recoveryViewportHeight : windowHeight, windowHeight);
+    const bottom = Math.max(this.measuredFooterHeight, readerInteractiveSafeBottom(metrics, true));
+    return readerSurfaceMaxHeight(height, this.headerBottom + bookshelfHeaderSpec().contentGap + bottom + 8);
   }
 
   private onRecoveryChanged(): void {

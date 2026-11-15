@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -36,7 +37,7 @@ const members = declaration.members.filter(node => node.name?.getText(tree) !== 
 const dataText = tree.statements.find(node => node.name?.getText(tree) === 'MangaStripDataSource').getText(tree);
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(dataText)}; return MangaStripDataSource;`)(MangaStripProjection);
 const frames = Object.fromEntries(['MangaLayoutFrame', 'MangaSheetFrame'].map(name => [name,
-  new Function('FrameCallback', `${stripTypeScriptTypes(tree.statements.find(node => node.name?.getText(tree) === name).getText(tree))}; return ${name};`)(class {})]));
+  new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(tree.statements.find(node => node.name?.getText(tree) === name).getText(tree))}; return ${name};`)(class {}, actualReaderPostLayoutFrame())]));
 let oldSource = source;
 for (const name of ['restore', 'publish', 'onViewportScroll']) {
   const member = declaration.members.find(node => node.name?.getText(tree) === name);
@@ -133,7 +134,7 @@ function fixture(Component = Current, { tailKnown = false, prefixKnown = true, t
     for (const callback of batch) callback.onFrame(0);
     ports.layoutReady = true;
     if (ports.pendingOffset !== undefined) { ports.offset = ports.pendingOffset; ports.pendingOffset = undefined; }
-    for (const callback of batch) callback.onIdle(2_000_000);
+    for (const callback of batch) { callback.onIdle(2_000_000); drainReaderPostLayoutFallbacks(ports.frames); }
   }
   async function settle() { for (let i = 0; i < 4; i++) { frame(); await tick(); } }
   function receipt(ordinal) {

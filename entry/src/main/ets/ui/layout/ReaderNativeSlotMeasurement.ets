@@ -1,3 +1,4 @@
+import { ReaderPostLayoutFrame } from './ReaderPostLayoutFrame';
 import { FrameCallback } from '@kit.ArkUI';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { readerMeasureSurfaceRect } from './ReaderSurfaceRectMeasurement';
@@ -5,12 +6,7 @@ import type { ReaderSurfaceRectIdentity } from './ReaderSurfaceRect';
 
 let nextSlotId: number = 0;
 
-class ReaderSlotMeasurementFrame extends FrameCallback {
-  private readonly action: () => void;
-  constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
-}
+class ReaderSlotMeasurementFrame extends ReaderPostLayoutFrame {}
 
 /** One post-layout read per request. Area remains the producer for later changes. */
 export class ReaderNativeSlotMeasurement {
@@ -40,7 +36,7 @@ export class ReaderNativeSlotMeasurement {
     if (context === undefined) return;
     const presented = this.identity();
     try {
-      context.postFrameCallback(new ReaderSlotMeasurementFrame((): void => {
+      context.postFrameCallback(new ReaderSlotMeasurementFrame(context, (): void => {
         if (context !== this.context || revision !== this.revision) return;
         const rect = readerMeasureSurfaceRect(context, this.id, this.id, presented, (): ReaderSurfaceRectIdentity => this.identity());
         if (rect !== undefined && context === this.context && revision === this.revision) this.receive(rect.height, key);

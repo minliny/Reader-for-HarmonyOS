@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
@@ -27,7 +28,7 @@ const ts = require(`${sdk}/node_modules/typescript`);
 const tree = ts.createSourceFile(virtualFilePath('MangaMotionProgress.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length, 0);
 const frame = tree.statements.find(node => node.name?.getText(tree) === 'MangaLayoutFrame');
-const MangaLayoutFrame = new Function('FrameCallback', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
+const MangaLayoutFrame = new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const memberNames = new Set(tree.statements.find(node => node.name?.getText(tree) === 'MangaReadingSurface').members.map(node => node.name?.getText(tree)));
 const stopCallbacks = [];
 function visit(node) {
@@ -100,7 +101,7 @@ async function fixture(horizontal = false, offline = true) {
   return {surface, runtime, controller, projection, native, writes, failures, jumps, splitScrolls,
     holdSave(promise) { saveHold = promise; }, holdImage(promise) { imageHold = promise; },
     frames,
-    frame() { const callback = frames.shift(); assert.ok(callback instanceof MangaLayoutFrame); callback.onFrame(0); callback.onIdle(2_000_000); },
+    frame() { const callback = frames.shift(); assert.ok(callback instanceof MangaLayoutFrame); callback.onFrame(0); callback.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames); },
     flushFrames() { let count=0; while(frames.length) {assert.ok(++count<=16,'restoration cannot create an unbounded render retry loop');this.frame();} },
     close() { surface.aboutToDisappear(); timers.length = 0; frames.length = 0; }
   };

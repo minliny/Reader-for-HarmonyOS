@@ -1,3 +1,4 @@
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
 import { ColorMetrics, FrameCallback } from '@kit.ArkUI';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
@@ -34,12 +35,7 @@ import { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchNovelDr
   sourceSwitchNovelColumnHeight, sourceSwitchNovelFooterHeight, sourceSwitchNovelTimingWidth } from './SourceSwitchNovelPresentation';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
 
-class SourceSwitchLayoutFrame extends FrameCallback {
-  private action: () => void;
-  constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
-}
+class SourceSwitchLayoutFrame extends ReaderPostLayoutFrame {}
 
 /** A retained native row observes immutable gateway snapshots for its identity.
  * LazyForEach can reuse its child on CHANGE/reload without resetting @Prop. */
@@ -405,12 +401,12 @@ export struct SourceSwitchWindow {
     this.restoringAnchor = true;
     const current = (): boolean => this.mounted && this.listMounted && this.foreground && !this.touching &&
       epoch === this.presentationEpoch && anchorEpoch === this.anchorEpoch;
-    this.getUIContext().postFrameCallback(new SourceSwitchLayoutFrame((): void => {
+    this.getUIContext().postFrameCallback(new SourceSwitchLayoutFrame(this.getUIContext(), (): void => {
       if (!current()) return;
       const index = this.displayedCandidates.findIndex((candidate: SourceSwitchCandidate): boolean => this.candidateKey(candidate) === key);
       if (index < 0) { this.restoringAnchor = false; this.queueReorder(); return; }
       this.candidateScroller.scrollToIndex(index + this.listHeaderCount(), false, ScrollAlign.START);
-      this.getUIContext().postFrameCallback(new SourceSwitchLayoutFrame((): void => {
+      this.getUIContext().postFrameCallback(new SourceSwitchLayoutFrame(this.getUIContext(), (): void => {
         if (!current()) return;
         const actual = this.displayedCandidates.findIndex((candidate: SourceSwitchCandidate): boolean => this.candidateKey(candidate) === key);
         if (actual >= 0) {

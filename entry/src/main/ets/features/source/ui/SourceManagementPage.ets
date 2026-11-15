@@ -1,3 +1,4 @@
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { readerInteractiveSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -70,12 +71,7 @@ const GROUP_LABEL_GAP = 12;
 const GROUP_TRIGGER_GAP = 22;
 let sourceTemporaryGeneration: number = 0;
 
-class SourceListLayoutFrame extends FrameCallback {
-  private readonly action: () => void;
-  constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
-}
+class SourceListLayoutFrame extends ReaderPostLayoutFrame {}
 
 class SourceListDataSource implements IDataSource {
   private items: BookSource[] = [];
@@ -322,7 +318,7 @@ export struct SourceManagementPage {
     const mount = this.temporaryBackIdentity;
     const revision = ++this.groupFocusRevision;
     try {
-      this.getUIContext().postFrameCallback(new SourceListLayoutFrame((): void => {
+      this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
         if (!this.managementOpeningIsCurrent() || !this.appForeground || mount !== this.temporaryBackIdentity ||
           revision !== this.groupFocusRevision || (selection.length > 0 ?
             !this.ownsGroupSelection(selection) || this.groupClosing : this.groupOpen)) return;
@@ -397,7 +393,7 @@ export struct SourceManagementPage {
     const revision = this.toolsFocusRevision;
     this.toolsFocusScheduled = true;
     try {
-      this.getUIContext().postFrameCallback(new SourceListLayoutFrame((): void => {
+      this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
         if (!this.mounted || identity !== this.temporaryBackIdentity || revision !== this.toolsFocusRevision) return;
         this.toolsFocusScheduled = false;
         if (!this.managementOpeningIsCurrent() || !this.appForeground || this.isInputAllowed?.() === false ||
@@ -889,7 +885,7 @@ export struct SourceManagementPage {
     const current = (): boolean => this.managementOpeningIsCurrent() && this.listMounted &&
       identity === this.temporaryBackIdentity && epoch === this.scrollRestoreEpoch && this.sourceReturnFiltersMatch();
     try {
-      this.getUIContext().postFrameCallback(new SourceListLayoutFrame((): void => {
+      this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
         if (!current()) return;
         if (this.sourceAnchorReadPending()) { this.anchorRestoreScheduled = false; return; }
         const sourceId = pending?.anchorId ?? this.pendingSourceAnchor;
@@ -909,7 +905,7 @@ export struct SourceManagementPage {
         const targetId = this.projectedSources[index].sourceId;
         try { this.sourceScroller.scrollToIndex(index + 1, false, ScrollAlign.START); }
         catch (_unbound) { this.cancelScrollRestore(); return; }
-        this.getUIContext().postFrameCallback(new SourceListLayoutFrame((): void => {
+        this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
           if (!current()) return;
           try {
             const latest = this.projectedSources.findIndex((source: BookSource): boolean => source.sourceId === sourceId);

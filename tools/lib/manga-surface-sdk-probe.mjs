@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -30,7 +31,7 @@ const surfaceTree = ts.createSourceFile(virtualFilePath('MangaFrameSdkBoundary.e
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const sheetFrame = surfaceTree.statements.find(node => node.name?.getText(surfaceTree) === 'MangaSheetFrame');
 // Only scheduling is native: execute the unchanged production callback class.
-const MangaSheetFrame = new Function('FrameCallback', `${stripTypeScriptTypes(sheetFrame.getText(surfaceTree))};return MangaSheetFrame`)(class {});
+const MangaSheetFrame = new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(sheetFrame.getText(surfaceTree))};return MangaSheetFrame`)(class {}, actualReaderPostLayoutFrame());
 const nativeGesture = new Proxy({}, { get: () => () => {} });
 class ImportedChildBoundary {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }

@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -68,7 +69,7 @@ if (selected.length) {
     const tree=ts.createSourceFile('SourceScroll.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
     const frame=tree.statements.find(node=>node.name?.getText(tree)==='SourceListLayoutFrame');assert.ok(frame);
     const emitted=ts.transpileModule(frame.getText(tree),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-    const SourceListLayoutFrame=new Function('FrameCallback',emitted+';return SourceListLayoutFrame;')(class{});
+    const SourceListLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', emitted+';return SourceListLayoutFrame;')(class{}, actualReaderPostLayoutFrame());
     const names=['currentFilterKey','scrollLayoutKey','cancelScrollRestore','captureScroll','requestOpenTools',
       'scheduleSourceAnchorRestore','sourceAnchorReadPending','sourceReturnFiltersMatch','managementOpeningIsCurrent','managementBackIsCurrent','cancelToolsReturnFocus'];
     const Page=selectedProductionMethods(file,'SourceManagementPage',names,{SourceListLayoutFrame,sourceManagementFilterKey,copySourceManagementScroll,
@@ -113,7 +114,7 @@ if (selected.length) {
     const tree = ts.createSourceFile('SourceFocus.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     const frame = tree.statements.find(node => node.name?.getText(tree) === 'SourceListLayoutFrame');
     const emitted = ts.transpileModule(frame.getText(tree), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
-    const SourceListLayoutFrame = new Function('FrameCallback', emitted + ';return SourceListLayoutFrame;')(class {});
+    const SourceListLayoutFrame = new Function('FrameCallback', 'ReaderPostLayoutFrame', emitted + ';return SourceListLayoutFrame;')(class {}, actualReaderPostLayoutFrame());
     const Page = selectedProductionMethods(file, 'SourceManagementPage', ['sourceSearchInputIdentity', 'applySourceSearchInput',
       'cancelToolsReturnFocus', 'traceToolsReturnFocus', 'toolsFocusId', 'onToolsEntryLayout', 'scheduleToolsReturnFocus',
       'onToolsEntryFocused', 'managementOpeningIsCurrent', 'managementBackIsCurrent'],

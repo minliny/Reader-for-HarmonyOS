@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -28,7 +29,7 @@ assert.equal(tree.parseDiagnostics.length,0);
 const DataSourceText = tree.statements.find(node => node.name?.getText(tree) === 'MangaStripDataSource').getText(tree);
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(DataSourceText)};return MangaStripDataSource`)(MangaStripProjection);
 const frameClass = name => new Function('FrameCallback',
-  `${stripTypeScriptTypes(tree.statements.find(node=>node.name?.getText(tree)===name).getText(tree))};return ${name}`)(class {});
+  'ReaderPostLayoutFrame', `${stripTypeScriptTypes(tree.statements.find(node=>node.name?.getText(tree)===name).getText(tree))};return ${name}`)(class {}, actualReaderPostLayoutFrame());
 const MangaLayoutFrame = frameClass('MangaLayoutFrame');
 const MangaSheetFrame = frameClass('MangaSheetFrame');
 let activePorts;
@@ -112,7 +113,7 @@ function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetInde
   assert.equal(owner.rememberVisible(),true);
   origin.onChange=()=>owner.publish();
   function flushTimers(delay=0){activePorts=ports;for(const[id,timer]of[...ports.timers])if(timer.delay===delay){ports.timers.delete(id);timer.callback();}}
-  function flushFrames(){activePorts=ports;const batch=ports.frames.splice(0);for(const frame of batch)frame.onFrame(0);native.layoutReady=true;if(native.pendingOffset!==undefined){native.offset=native.pendingOffset;native.pendingOffset=undefined;}for(const frame of batch)frame.onIdle(2_000_000);}
+  function flushFrames(){activePorts=ports;const batch=ports.frames.splice(0);for(const frame of batch)frame.onFrame(0);native.layoutReady=true;if(native.pendingOffset!==undefined){native.offset=native.pendingOffset;native.pendingOffset=undefined;}for(const frame of batch)frame.onIdle(2_000_000);drainReaderPostLayoutFallbacks(ports.frames);}
   return {owner,ports,origin,target,candidate,native,entries,flushTimers,flushFrames};
 }
 async function begin(f){activePorts=f.ports;f.owner.onBoundaryActivity(true);const pending=f.owner.turnBoundaryChapter(1);await tick();assert.equal(f.owner.controller,f.target);return {pending};}
@@ -130,7 +131,7 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   f.flushFrames();await tick();}
 {
   let calls=0;
-  const frame=new MangaLayoutFrame(()=>calls++);
+  const frame=new MangaLayoutFrame({postFrameCallback(){}},()=>calls++);
   frame.onFrame(0);assert.equal(calls,0,'frame start cannot establish rendered native geometry');
   frame.onIdle(2_000_000);frame.onIdle(2_000_000);assert.equal(calls,1,'one idle receipt runs layout work exactly once');
   outcomes.push('official FrameCallback phases keep geometry work after rendering, with one receipt per posted frame');
@@ -150,7 +151,7 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   // replaced by the old JS timer. The native port rejects pre-layout scrolls.
   const declaration=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
   const restoreText=declaration.members.find(node=>node.name?.getText(tree)==='restore').getText(tree);
-  const oldText=restoreText.replace('this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {','setTimeout((): void => {')
+  const oldText=restoreText.replace('this.getUIContext().postFrameCallback(new MangaLayoutFrame(this.getUIContext(), (): void => {','setTimeout((): void => {')
     .replace("this.finishLayout(generation);\n    }, (): void => { if (generation === this.layoutGeneration) this.traceBoundary('restore-frame'); }));",'this.finishLayout(generation);\n    }, 0);');
   assert.notEqual(oldText,restoreText);
   const legacy=new Function('setTimeout','ScrollAlign','LengthMetrics',`${stripTypeScriptTypes(`class LegacyRestore {${oldText}}`)};return LegacyRestore`)(

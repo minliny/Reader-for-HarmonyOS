@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -54,7 +55,7 @@ function mountedText(source, width = 366, height = 844, context = 'detail') {
   metrics.windowRect.width = width; metrics.windowRect.height = height;
   const frames = [], sdk = boundedSurfaceSdk({ windowMetrics: () => metrics });
   const classes = pureModuleProbe(source.slice(source.indexOf('class DirectoryRulesFocusFrame'),
-    source.indexOf('let fullDirectoryBackGeneration')), 'DirectoryFrames.ets', { FrameCallback: class {} },
+    source.indexOf('let fullDirectoryBackGeneration')), 'DirectoryFrames.ets', { FrameCallback: class {} , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()},
   ['DirectoryRulesFocusFrame', 'FullDirectoryHeaderMeasurementFrame']);
   const tree = parse(source, 'ReaderFullDirectory.ets');
   const members = nonBuilders(tree);

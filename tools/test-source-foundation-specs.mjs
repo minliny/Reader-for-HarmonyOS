@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"action-admission": {"description": "实际Source consumer/native action/busy/captured source/retired", "resources": []}, "responsive-chip": {"description": "实际chip finite width消费在输入边界内", "resources": []}, "trailing-tools": {"description": "实际backBar trailing→shared Icon native callback", "resources": []}};
 definitions['status-badge-semantics']={description:'Actual native badge paths/labels, Source check facts and closed RSS/Settings compatibility, retired appearance API; no wide/device',resources:[]};
@@ -46,7 +47,7 @@ if(selectedCase==='action-admission') for(const g of golden.cases.filter(item=>i
  const {id,method,label,scheme,active}=g,p=labeledIconControls();
  const commands=['detectButton','loginButton'].includes(method)?['sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent']:[];
  const closure=sourceManagementRecoveryClosure(source,[],[method,...commands]);
- const support=new Function('FrameCallback',stripTypeScriptTypes(closure.support)+';return {SourceListDataSource,SourceListLayoutFrame};')(class {});
+ const support=new Function('FrameCallback','ReaderPostLayoutFrame', stripTypeScriptTypes(closure.support)+';return {SourceListDataSource,SourceListLayoutFrame};')(class {}, actualReaderPostLayoutFrame());
  const owner=createReaderBuilderProbe(source,closure.members,{...p.dependencies,...support,...actualSourceManagementGeometry(),readerSourceCategoryLabel,hilog:{info(){},warn(){},error(){}},ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'}},p.hooks).owner,calls=[];
  const book={sourceId:'exact-source',loginUrl:'https://source.test/login',checkState:active?'checking':'idle'},width=id.endsWith('wide')?72:58;
  owner.sources=[book]; // Real Source @Prop arrives before mounting and watched status updates.

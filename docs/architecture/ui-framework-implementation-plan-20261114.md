@@ -1,5 +1,15 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 代码收口与连续三轮全局审计
+
+用户要求先完成全部代码侧未闭环项，再由review agent做全局审计，连续三轮通过后解除VM禁令。第一轮绑定aa015470，结论为INCOMPLETE，已确认代码问题为FAIL，连续通过为0。报告明确记录22个共享文件、201个功能UI/presentation文件和22个composition/diagnostic ETS文件的待补覆盖，后续审计继续按完整UI框架范围补齐。[第一轮审计与覆盖](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-01.json)
+
+本轮修复UIF-51至55。共享post-layout适配保留idle路径，并由首帧安排下一帧fallback，一次执行原动作，沿原owner拒旧。漫画restore和landing继续各自持有独立屏障。LocalImport、书架显示方式和书架原操作的三处恢复覆盖槽分配当前视口、原点、头尾及安全区容量。稳定key的Tab和本书规则控件读取当前item/draft。显示方式的原点击及预派发谓词绑定当前输入资格和捕获的navigation，已派发写入事实继续由原Host处理。
+
+13个准确局部case及6个明确旧行为负例已有结果，31个脚本语法检查通过。642个生产ETS/TS输入的完整ArkTS编译和原指定证书签名通过，候选为0.2.0.DEV.a76ee7b882d0。21项登记来源指纹与新适配依赖已同步，引用检查0诊断，登记保留37项原有E2/E3及测量、范围诊断。全应用原生验收及原稿、G05、G10条件继续按原标准记录。[修复与本地验证](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/repair-summary.json)
+
+当前阶段进入修复后全局审计，连续通过仍为0，VM禁令有效。VM最后保存的字号为1.3倍，原字号恢复待执行。
+
 ## 2026-11-15 执行量与效率复核，VM 验证已禁止
 
 用户已要求停止 VM 验证，先核算原计划、实际完成量和效率。当前阶段使用本地 Git、原计划、构建台账、部署回执及已保存的原生会话。统计截止于北京时间11月15日23时21分19秒，源码为e8b80d12。下方各轮进度保留其当时输入，当前限制和核算以本节及原账本executionAssessment20261115为准。

@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -278,7 +279,7 @@ for (const id of selected) {
       metrics.windowRect.width = 366; metrics.windowRect.height = 844; metrics.systemFontScale = 1;
       const frames = [], sdk = boundedSurfaceSdk({ windowMetrics: () => metrics });
       const classes = pureModuleProbe(source.slice(source.indexOf('class DirectoryRulesFocusFrame'),
-        source.indexOf('let fullDirectoryBackGeneration')), 'FullDirectoryFrames.ets', { FrameCallback: class {} },
+        source.indexOf('let fullDirectoryBackGeneration')), 'FullDirectoryFrames.ets', { FrameCallback: class {} , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()},
       ['DirectoryRulesFocusFrame', 'FullDirectoryHeaderMeasurementFrame']);
       const tree = ts.createSourceFile('ReaderFullDirectory.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
       const declaration = tree.statements.find(node => ts.isStructDeclaration(node));

@@ -125,6 +125,9 @@ export struct ReaderDirectoryRules {
         field === 'level' ? value : rule.level, field === 'boundary' ? value : rule.boundary));
     this.changed();
   }
+  private currentRule(id: number): DirectoryRuleDraft | undefined {
+    return this.rules.find((rule: DirectoryRuleDraft): boolean => rule.id === id);
+  }
   aboutToDisappear(): void {
     this.mounted = false; this.generation += 1; this.presentationGeneration += 1;
     this.feedback.reset(); this.onRecoveryChanged(undefined);
@@ -280,21 +283,21 @@ export struct ReaderDirectoryRules {
         Scroll() { Column({ space: 8 }) {
       ForEach(this.rules, (rule: DirectoryRuleDraft) => {
         Column({ space: 6 }) {
-          ReaderFormField({ specId: 'directory-rule-pattern', scheme: this.scheme, text: rule.pattern,
+          ReaderFormField({ specId: 'directory-rule-pattern', scheme: this.scheme, text: this.currentRule(rule.id)?.pattern ?? '',
             fieldAccessibilityLabel: `规则${rule.id}匹配表达式`,
             isEditable: this.canEdit(), placeholder: '匹配完整标题或独立正文行的正则表达式',
             onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'pattern', value); } });
           Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
             space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
             Text('层级').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
-            ReaderFormField({ specId: 'directory-rule-level', scheme: this.scheme, text: rule.level,
+            ReaderFormField({ specId: 'directory-rule-level', scheme: this.scheme, text: this.currentRule(rule.id)?.level ?? '',
               fieldAccessibilityLabel: `规则${rule.id}层级`,
               isEditable: this.canEdit(),
               onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'level', value); } });
             ReaderInlineSelect({ reduceMotion: this.reduceMotion,
-              value: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'][Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(rule.boundary))],
+              value: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'][Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(this.currentRule(rule.id)?.boundary ?? 'title'))],
               options: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'],
-              selectedIndex: Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(rule.boundary)),
+              selectedIndex: Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(this.currentRule(rule.id)?.boundary ?? 'title')),
               actionEnabled: this.canEdit(),
               maxTriggerWidthVp: this.availableWidthVp >= 0 ? Math.max(0, this.availableWidthVp - 20) : -1,
               onSelect: (index: number, _value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'boundary', ['title', 'head', 'tail', 'any'][index]); },

@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -266,7 +267,7 @@ if (selected.length) {
     const labels = controls.nodes(owner).filter(node => node.type === 'Text').map(node => node.create);
     assert.ok(labels.includes('有声') && labels.includes('在线'), 'retained shelf metadata consumes current book facts');
     const { ReaderNativeSlotMeasurement } = pureModuleProbe(read('entry/src/main/ets/ui/layout/ReaderNativeSlotMeasurement.ets'),
-      'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, readerMeasureSurfaceRect() { throw Error('metadata fixture never measures native slots'); } }, ['ReaderNativeSlotMeasurement']);
+      'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, readerMeasureSurfaceRect() { throw Error('metadata fixture never measures native slots'); } , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()}, ['ReaderNativeSlotMeasurement']);
     for (const kind of ['text', 'manga']) {
       const actual = localBookDetailSdk({ ReaderNativeSlotMeasurement, sourceSwitchTriggerFocusId }, { source: read(detailPath) });
       const detail = actual.owner;

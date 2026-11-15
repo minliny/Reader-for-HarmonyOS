@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import { stripTypeScriptTypes } from 'node:module';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
@@ -94,7 +95,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
   metrics.windowRect.height = 844;
   const FramePort = class {};
   const support = new Function('FrameCallback',
-    stripTypeScriptTypes(closure.support) + ';return {SourceListDataSource,SourceListLayoutFrame};')(FramePort);
+    'ReaderPostLayoutFrame', stripTypeScriptTypes(closure.support) + ';return {SourceListDataSource,SourceListLayoutFrame};')(FramePort, actualReaderPostLayoutFrame());
   const owner = sdk.consumer(source, closure.members, {
     ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers,
     ...foundationSpecs(), ...labeledIconSpecs(),

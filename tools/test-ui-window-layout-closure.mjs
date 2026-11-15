@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
@@ -160,7 +161,7 @@ async function standardPageSameArea() {
     getComponentUtils: () => ({ getRectangleById: () => ({ scale: { x: 1, y: 1 }, rotate: { angle: 0 }, size: { width: 786, height: nativeHeight * 2 } }) }) };
   const measurement = pureModuleProbe(read('ui/layout/ReaderSurfaceRectMeasurement.ets'), 'ReaderSurfaceRectMeasurement.ets', rect, ['readerMeasureSurfaceRect']);
   const slots = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'), 'ReaderNativeSlotMeasurement.ets',
-    { FrameCallback: class {}, ...measurement }, ['ReaderNativeSlotMeasurement']);
+    { FrameCallback: class {}, ...measurement , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()}, ['ReaderNativeSlotMeasurement']);
   const properties = createArkUIPropertyRuntimeProbe();
   const source = read('ui/layout/ReaderFixedHeaderHost.ets');
   const probe = createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...layout, ...slots,
@@ -321,7 +322,7 @@ async function directPageSameArea() {
   const measurement = pureModuleProbe(read('ui/layout/ReaderSurfaceRectMeasurement.ets'), 'ReaderSurfaceRectMeasurement.ets',
     rect, ['readerMeasureSurfaceRect']);
   const { ReaderNativeSlotMeasurement } = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
-    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, ...measurement }, ['ReaderNativeSlotMeasurement']);
+    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, ...measurement , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()}, ['ReaderNativeSlotMeasurement']);
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
   const properties = createArkUIPropertyRuntimeProbe();

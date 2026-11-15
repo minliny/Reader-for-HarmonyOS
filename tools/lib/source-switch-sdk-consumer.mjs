@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -70,7 +71,7 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
  const tree=ts.createSourceFile(virtualFilePath('SourceSwitchLiveFixture.ets'),windowSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const frame=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchLayoutFrame');
- const SourceSwitchLayoutFrame=new Function('FrameCallback',stripTypeScriptTypes(frame.getText(tree))+';return SourceSwitchLayoutFrame;')(class FrameCallback{});
+ const SourceSwitchLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', stripTypeScriptTypes(frame.getText(tree))+';return SourceSwitchLayoutFrame;')(class FrameCallback{}, actualReaderPostLayoutFrame());
  const {SourceSwitchCandidateRow,SourceSwitchCandidateDataSource}=sourceSwitchRowSdk(p.properties,windowSource);
  require(sdk+'/lib/validate_ui_syntax.js').objectLinkCollection.set('SourceSwitchNovelRow',new Set(['row']));
  const gatewayTree=ts.createSourceFile(virtualFilePath('SourceCountFixture.ts'),read('features/source/application/SourceSwitchGateway.ts'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);

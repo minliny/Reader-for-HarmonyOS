@@ -1,3 +1,4 @@
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
@@ -98,12 +99,7 @@ interface SearchNoticeFacts {
   canRetry: boolean;
 }
 
-class SearchLayoutFrame extends FrameCallback {
-  private action: () => void;
-  constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void { this.action(); }
-}
+class SearchLayoutFrame extends ReaderPostLayoutFrame {}
 
 @Observed
 class SearchBookGroup {
@@ -718,7 +714,7 @@ export struct SearchPage {
     const focus = `${kind}:${identity}`;
     this.pendingPanelFocus = focus;
     try {
-      this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+      this.getUIContext().postFrameCallback(new SearchLayoutFrame(this.getUIContext(), (): void => {
         if (this.pendingPanelFocus !== focus) return;
         this.cancelSearchFocusRestore();
         if (!current()) return;
@@ -1012,7 +1008,7 @@ export struct SearchPage {
     const flush = ++this.resultFlushEpoch;
     const page = this.pageEpoch;
     const query = this.viewState.revision;
-    this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+    this.getUIContext().postFrameCallback(new SearchLayoutFrame(this.getUIContext(), (): void => {
       if (flush !== this.resultFlushEpoch || !this.pageMounted || page !== this.pageEpoch ||
         query !== this.viewState.revision || this.userInteracting || this.userScrolling) return;
       if (this.resultsDeferred) this.refreshVisibleResults();
@@ -1505,7 +1501,7 @@ export struct SearchPage {
     // The native scroll command settles at layout. Keep a remounted list out
     // of the presented surface until that frame has applied the saved anchor.
     if (this.retainedViewportPending) {
-      this.getUIContext().postFrameCallback(new SearchLayoutFrame(publish));
+      this.getUIContext().postFrameCallback(new SearchLayoutFrame(this.getUIContext(), publish));
     } else {
       publish();
     }
@@ -1522,7 +1518,7 @@ export struct SearchPage {
     const current = (): boolean => this.ownsList() && !this.restoreCancelled &&
       restore === this.restoreEpoch && page === this.pageEpoch && page === this.viewState.pageRevision &&
       list === this.listEpoch && query === this.viewState.revision;
-    this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+    this.getUIContext().postFrameCallback(new SearchLayoutFrame(this.getUIContext(), (): void => {
       if (!current()) return;
       let key = this.viewState.resolveKey(this.restoreKey);
       let index = this.visibleGroups.findIndex((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === key);
@@ -1579,7 +1575,7 @@ export struct SearchPage {
   private restoreResultFocus(current: () => boolean): void {
     const key = this.pendingResultFocus;
     try {
-      this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+      this.getUIContext().postFrameCallback(new SearchLayoutFrame(this.getUIContext(), (): void => {
         if (this.pendingResultFocus !== key || !current()) return;
         this.pendingResultFocus = '';
         if (!this.isPresentationVisible() || this.searchPanelOwnsInput()) return;
@@ -1932,7 +1928,7 @@ struct SearchResultCard {
       const selection = this.selectionEpoch;
       // Up precedes Click. Retire a drag/no-click after event dispatch rather
       // than dropping the pressed identity before the click can consume it.
-      this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+      this.getUIContext().postFrameCallback(new SearchLayoutFrame(this.getUIContext(), (): void => {
         if (selection === this.selectionEpoch) this.pressedSelection = undefined;
       }));
     }

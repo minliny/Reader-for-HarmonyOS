@@ -71,9 +71,9 @@ export struct ReaderBottomTabBar {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Column({ space: 2 }) {
         Stack({ alignContent: Alignment.Center }) {
-          Image(tab.icon).width(24).height(24).accessibilityLevel('no');
+          Image(this.currentTab(tab).icon).width(24).height(24).accessibilityLevel('no');
         }.width(30).height(30);
-        Text(tab.label)
+        Text(this.currentTab(tab).label)
           .width('100%')
           .fontFamily(TYPE_MAIN_TAB_LABEL.fontFamily)
           .fontWeight(TYPE_MAIN_TAB_LABEL.fontWeight)
@@ -91,9 +91,13 @@ export struct ReaderBottomTabBar {
     .padding(0)
     .backgroundColor(this.current === tab.key ? readerAppColor('TOK_PRIMARY_DARK', this.scheme) : Color.Transparent)
     .enabled(this.inputEnabled)
-    .accessibilityText(`${tab.label}${this.current === tab.key ? '，已选中' : ''}`)
+    .accessibilityText(`${this.currentTab(tab).label}${this.current === tab.key ? '，已选中' : ''}`)
     .accessibilitySelected(this.current === tab.key)
     .onClick((): void => this.activate(tab.key));
+  }
+
+  private currentTab(snapshot: ReaderBottomTabItem): ReaderBottomTabItem {
+    return this.items.find((item: ReaderBottomTabItem): boolean => item.key === snapshot.key) ?? snapshot;
   }
 
   private activate(key: string): void {

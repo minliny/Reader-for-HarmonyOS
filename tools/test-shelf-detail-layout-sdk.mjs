@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -34,7 +35,7 @@ const surfaceRect = await import('../entry/src/main/ets/ui/layout/ReaderSurfaceR
 const nativeRectMeasurement = pureModuleProbe(read('ui/layout/ReaderSurfaceRectMeasurement.ets'),
     'ReaderSurfaceRectMeasurement.ets', surfaceRect, ['readerMeasureSurfaceRect']);
 const nativeSlotMeasurement = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
-    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, ...nativeRectMeasurement }, ['ReaderNativeSlotMeasurement']);
+    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, ...nativeRectMeasurement , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()}, ['ReaderNativeSlotMeasurement']);
 
 const shelf = name => read('features/bookshelf/ui/' + name + '.ets');
 const selectionSource = shelf('BookshelfMultiSelectPage');

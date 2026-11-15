@@ -1,3 +1,4 @@
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -76,12 +77,7 @@ interface SharedDownloadListRestore {
   fontScale: number;
   managing: boolean;
 }
-class SharedDownloadIdleFrame extends FrameCallback {
-  private action: () => void;
-  constructor(action: () => void) { super(); this.action = action; }
-  onFrame(): void {}
-  onIdle(): void { this.action(); }
-}
+class SharedDownloadIdleFrame extends ReaderPostLayoutFrame {}
 
 /** Native implementation of the user-approved shared-download-demo.html layout. */
 @Component
@@ -1772,7 +1768,7 @@ export struct SharedDownloadPage {
       this.confirmation.length > 0 ? 'confirm-cancel' : this.sheet.length > 0 ? 'sheet' : this.sheetTriggerKey;
     if (target.length === 0 && readingReturn === undefined) return;
     try {
-      this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame((): void => {
+      this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
         if (!this.uiInputIsCurrent(generation) || focusGeneration !== this.focusGeneration ||
           detailKey !== this.detailKey || expectedManaging !== this.managing || (returning && this.modalBlocking())) return;
         if (readingReturn !== undefined) {
@@ -2181,7 +2177,7 @@ export struct SharedDownloadPage {
     const pending = this.managingScrollRestore;
     if (pending === undefined) return;
     if (!this.managingScrollIsCurrent(pending)) { this.cancelManagingScroll(); return; }
-    this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame((): void => {
+    this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
       if (this.managingScrollRestore !== pending) return;
       if (!this.managingScrollIsCurrent(pending)) { this.cancelManagingScroll(); return; }
       try {
@@ -2584,7 +2580,7 @@ export struct SharedDownloadPage {
       viewportHeight: this.availableHeight(), fontScale: this.fontScale(), managing: this.managing };
     this.listScrollRestorePending = pending;
     try {
-      this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame((): void => {
+      this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
         if (this.listScrollRestorePending !== pending || this.listScrollRestoreEpoch !== pending.epoch) return;
         if (!this.presentationIsCurrent(pending.presentation) || !this.fontsReady || this.mountedIdentity !== pending.identity ||
           this.fontPreparationGeneration !== pending.fonts || this.detailKey.length > 0 || this.managing !== pending.managing ||
@@ -2635,7 +2631,7 @@ export struct SharedDownloadPage {
     const fontScale = this.fontScale();
     const managing = this.managing;
     this.chapterScrollRestoreScheduled = true;
-    this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame((): void => {
+    this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
       if (epoch !== this.chapterScrollRestoreEpoch || !this.presentationIsCurrent(presentation) || this.mountedIdentity !== identity ||
         generation !== this.fontPreparationGeneration) return;
       this.chapterScrollRestoreScheduled = false;

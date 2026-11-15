@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import {mangaUserError} from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
@@ -30,7 +31,7 @@ const ts=require(`${sdk}/node_modules/typescript`);
 const tree=ts.createSourceFile(virtualFilePath('MangaNavigationProbe.ets'),surfaceSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
 const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
-const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
+const MangaLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const timers=[],scrolls=[],frames=[],measurements=[];
 function flushLayout(width,height) {
   timers.splice(0).forEach(callback=>callback());
@@ -41,7 +42,7 @@ function flushLayout(width,height) {
       frame.onFrame(0);
     }
     nativeWidth=width;nativeHeight=height;
-    for(const frame of batch) frame.onIdle(2_000_000);
+    for(const frame of batch) { frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames); }
   }
   assert.equal(frames.length,0,'scroll application and geometry confirmation use two rendered frames');
 }

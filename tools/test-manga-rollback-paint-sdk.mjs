@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -27,7 +28,7 @@ const component = tree.statements.find(node => node.name?.getText(tree) === 'Man
 const names = component.members.map(node => node.name?.getText(tree)).filter(Boolean);
 const classText = name => tree.statements.find(node => node.name?.getText(tree) === name).getText(tree);
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(classText('MangaStripDataSource'))};return MangaStripDataSource`)(MangaStripProjection);
-const MangaLayoutFrame = new Function('FrameCallback', `${stripTypeScriptTypes(classText('MangaLayoutFrame'))};return MangaLayoutFrame`)(class {});
+const MangaLayoutFrame = new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(classText('MangaLayoutFrame'))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const windowSource = readFileSync(new URL('app/ReaderWindowCoordinator.ts', root), 'utf8');
 const windowTree = ts.createSourceFile(virtualFilePath('MangaRollbackWindowValues.ts'), windowSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const windowValue = name => new Function('findReaderTheme', `${stripTypeScriptTypes(windowTree.statements.find(node => node.name?.getText(windowTree) === name).getText(windowTree).replace(/^export /, ''))};return ${name}`)(findReaderTheme);
@@ -125,10 +126,10 @@ async function completeRollback(f) {
   assert.equal(frames.length, 1);
   const frame = frames.shift(); frame.onFrame(0); properties.flush();
   assert.equal(owner.rollbackPainting, true, 'pre-render callback cannot retire the snapshot');
-  frame.onIdle(0); properties.flush();
+  frame.onIdle(0); drainReaderPostLayoutFallbacks(frames); properties.flush();
   assert.equal(owner.rollbackChapterController, undefined); assert.equal(owner.rollbackPainting, false); assert.equal(owner.previousChapterPixels.length, 0);
   assert.equal(owner.controller, controller, 'the actual Controller remains a plain stable owner');
-  const updates = f.built.owner.attributeCalls.length; frame.onIdle(0); properties.flush();
+  const updates = f.built.owner.attributeCalls.length; frame.onIdle(0); drainReaderPostLayoutFallbacks(frames); properties.flush();
   assert.equal(f.built.owner.attributeCalls.length, updates, 'a posted after-render receipt executes once');
 }
 

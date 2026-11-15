@@ -1,3 +1,4 @@
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderExitRequest } from '../../reading/presentation/ReadingEntryPresentation';
@@ -60,31 +61,10 @@ interface MangaConfirmedPosition { controller: MangaSessionController; manifest:
 interface MangaRetainedPixel { key: string; uri: string; x: number; y: number; width: number; height: number; }
 interface MangaNativeImageCompletion { loadingStatus: number; }
 
-class MangaLayoutFrame extends FrameCallback {
-  private readonly action: () => void;
-  private readonly started: (() => void) | undefined;
-  private pending: boolean = true;
-  constructor(action: () => void, started?: () => void) { super(); this.action = action; this.started = started; }
-  onFrame(_time: number): void { this.started?.(); }
-  onIdle(_remaining: number): void {
-    if (!this.pending) return;
-    this.pending = false;
-    this.action();
-  }
-}
+class MangaLayoutFrame extends ReaderPostLayoutFrame {}
 
 /** Sheet admission has its own frame fence; it does not own image layout. */
-class MangaSheetFrame extends FrameCallback {
-  private readonly action: () => void;
-  private pending: boolean = true;
-  constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void {}
-  onIdle(_remaining: number): void {
-    if (!this.pending) return;
-    this.pending = false;
-    this.action();
-  }
-}
+class MangaSheetFrame extends ReaderPostLayoutFrame {}
 
 class MangaStripDataSource implements IDataSource {
   readonly projection: MangaStripProjection = new MangaStripProjection();
@@ -648,7 +628,7 @@ export struct MangaReadingSurface {
     // A data-source reload is applied by native layout, not by the next JS
     // timer. Scroll only after that frame has rendered, then measure a later
     // rendered frame. Otherwise scrollToIndex can target the previous chapter.
-    this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
+    this.getUIContext().postFrameCallback(new MangaLayoutFrame(this.getUIContext(), (): void => {
       this.traceBoundary('restore-rendered');
       if (!this.mounted || generation !== this.layoutGeneration) return;
       const index = this.data.projection.index(ordinal, y);
@@ -669,7 +649,7 @@ export struct MangaReadingSurface {
     }, (): void => { if (generation === this.layoutGeneration) this.traceBoundary('restore-frame'); }));
   }
   private finishLayout(generation: number): void {
-    this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
+    this.getUIContext().postFrameCallback(new MangaLayoutFrame(this.getUIContext(), (): void => {
       if (!this.mounted || generation !== this.layoutGeneration) return;
       this.appliedLayoutGeneration = generation;
       this.onViewportScroll();
@@ -708,7 +688,7 @@ export struct MangaReadingSurface {
     const generation = ++this.viewportObservationGeneration;
     // Native input/scroll callbacks can arrive from both nested scrollers in
     // one frame. Observe only the latest layout after those callbacks finish.
-    this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
+    this.getUIContext().postFrameCallback(new MangaLayoutFrame(this.getUIContext(), (): void => {
       if (generation !== this.viewportObservationGeneration) return;
       this.viewportObservationPending = false;
       if (this.mounted) this.onViewportScroll();
@@ -1593,7 +1573,7 @@ export struct MangaReadingSurface {
     if (this.rollbackChapterController !== undefined && owner === this.rollbackChapterController && owner === this.controller &&
       manifest === owner.chapter?.manifest && this.rowRenderKey(row) === renderKey && owner.tile(row.ordinal, row.tileIndex)?.image?.fileUri === uri) {
       this.rollbackChapterImages.add(renderKey);
-      this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => { this.flushViewportObservation(); this.confirmBoundaryFrame(); }));
+      this.getUIContext().postFrameCallback(new MangaLayoutFrame(this.getUIContext(), (): void => { this.flushViewportObservation(); this.confirmBoundaryFrame(); }));
       return;
     }
     const candidate = this.pendingChapterTransition;
@@ -1603,7 +1583,7 @@ export struct MangaReadingSurface {
     this.nativeTransitionImages.add(renderKey);
     if (row.ordinal === candidate.targetOrdinal && row.tileIndex === candidate.landingTileIndex)
       this.nativeTransitionImageReady = true;
-    this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
+    this.getUIContext().postFrameCallback(new MangaLayoutFrame(this.getUIContext(), (): void => {
       this.flushViewportObservation(); this.confirmBoundaryFrame();
     }));
   }
@@ -1759,7 +1739,7 @@ export struct MangaReadingSurface {
     }
     // The native surface must finish its first layout at the offscreen
     // endpoint before either animation changes the observed values.
-    this.getUIContext().postFrameCallback(new MangaSheetFrame((): void => {
+    this.getUIContext().postFrameCallback(new MangaSheetFrame(this.getUIContext(), (): void => {
       if (this.panelPhase !== 'opening' || !this.panelOpeningCurrent(generation)) return;
       this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
         (): void => { this.panelScrimOpacity = 1; });
@@ -2050,7 +2030,7 @@ export struct MangaReadingSurface {
     const sourceId = this.sourceId, bookId = this.bookId;
     const controller = this.controller, chapter = controller?.chapter;
     try {
-      this.getUIContext().postFrameCallback(new MangaSheetFrame((): void => {
+      this.getUIContext().postFrameCallback(new MangaSheetFrame(this.getUIContext(), (): void => {
         if (!this.readerPanelForeground() || request !== this.panelFocusGeneration || generation !== this.panelGeneration ||
           sourceId !== this.sourceId || bookId !== this.bookId || this.controller !== controller || controller?.chapter !== chapter) return;
         if (opening ? this.panel.length === 0 || this.panelPhase !== 'open' :

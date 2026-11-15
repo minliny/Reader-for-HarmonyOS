@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions = {"chrome-current": {"description": "当前public MangaVisual→实际header/title和area delta/retained targets", "resources": []}, "adaptive-footer": {"description": "当前实际PageScaffold/geometry与fixed/inline footer装配、Area续接和保留演员；Grid/List映射使用独立准确case", "resources": []}, "vp-host": {"description": "实际vp-string viewport/toolbar/footer测量与invalid拒绝", "resources": []}};
 for (const id of selectContractCases(definitions)) {
@@ -227,7 +228,7 @@ async function adaptiveFooterCurrent() {
   const source = read('features/reading/ui/BookDirectoryPage.ets');
   const layout = actualReaderPageLayout();
   const { ReaderNativeSlotMeasurement } = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
-    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, readerMeasureSurfaceRect: () => undefined }, ['ReaderNativeSlotMeasurement']);
+    'ReaderNativeSlotMeasurement.ets', { FrameCallback: class {}, readerMeasureSurfaceRect: () => undefined , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()}, ['ReaderNativeSlotMeasurement']);
   class Captured {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
     updateStateVars(params) { this.params = params; }
