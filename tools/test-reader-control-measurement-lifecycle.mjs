@@ -149,7 +149,7 @@ if (selected.length) {
   const panelOrdinary = ['minimumPresentationAvailable', 'minimumInputReady', 'currentLayout',
     'currentMinimumKey', 'currentMinimumIdentity', 'committedMinimumIdentity', 'preparedMinimum', 'contentInputEnabled',
     'currentTemporaryInputScope', 'hasCurrentTemporaryInput', 'secondaryModuleInputEnabled',
-    'searchEditorInputEnabled', 'moduleTemporaryLayerHandler', 'navigationInputEnabled', 'controlActionInputEnabled',
+    'moduleEditorInputEnabled', 'moduleTemporaryLayerHandler', 'navigationInputEnabled', 'controlActionInputEnabled',
     'controlCallbackGuard', 'currentMoreMenuOwnerScope'];
   const Panel = selectedProductionMethods(ui('ReaderControlPanel.ets'), 'ReaderControlPanel', panelOrdinary, { DEBUG: false });
   const makePanel = host => {
@@ -473,7 +473,7 @@ if (selected.length) {
       Object.assign(search, { queryInputMounted: true, queryEditing: false, interactionEnabled: true,
         preparedMinimumRequired: true, preparedMinimum: panel.preparedMinimum(),
         minimumIdentity: h.owner.controlPresentationReceipt.identity, minimumKey: h.owner.controlPresentationReceipt.key,
-        inputCurrent: () => panel.secondaryModuleInputEnabled('search'), editorInputCurrent: () => panel.searchEditorInputEnabled(),
+        inputCurrent: () => panel.secondaryModuleInputEnabled('search'), editorInputCurrent: () => panel.moduleEditorInputEnabled('search'),
         onTemporaryLayerChange: report, inputController: { stopEditing: () => stopped++ }, onResultLayoutChanged() {} });
       search.onQueryEditingChanged(true); assert.equal(h.owner.controlTemporaryLayerPresented, false);
       assert.equal(panel.hasCurrentTemporaryInput(), true, 'accepted editor receives scope synchronously before projection');
@@ -484,14 +484,14 @@ if (selected.length) {
       }
       metrics = { ...metrics, systemFontScale: 1.6, revision: 2 };
       panel.minimumEnvironmentKey = h.owner.controlMinimumEnvironmentKey();
-      assert.equal(panel.searchEditorInputEnabled(), true);
+      assert.equal(panel.moduleEditorInputEnabled('search'), true);
       assert.equal(panel.secondaryModuleInputEnabled('search'), false, 'submit/back do not borrow native editor qualification');
       search.interactionEnabled = false; search.onInputChanged();
       assert.equal(stopped, 0, 'accepted editor remains through an actual pending environment reflow');
       h.owner.controlModuleVisitRevision++; panel.minimumIdentity = h.owner.controlMinimumIdentity();
       panel.minimumCommittedIdentity = h.owner.controlMinimumCommittedIdentity();
       report(false); assert.equal(panel.temporaryInputActive, true, 'retired callback cannot release a successor scope');
-      assert.equal(panel.searchEditorInputEnabled(), false, 'different current semantic owner invalidates the accepted editor');
+      assert.equal(panel.moduleEditorInputEnabled('search'), false, 'different current semantic owner invalidates the accepted editor');
       search.onInputChanged(); assert.equal(stopped, 1); assert.equal(search.queryEditing, false);
     }
     if (id === 'playback-source-reuse') {

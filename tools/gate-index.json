@@ -392214,7 +392214,7 @@
         "controlled before-source fixtures"
       ],
       "estimatedCostType": "sdk-transpile",
-      "reviewedSourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
+      "reviewedSourceSha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d",
       "definitionInputs": [
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
@@ -392270,7 +392270,7 @@
         },
         {
           "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
+          "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
         }
       ],
       "definitionInputProblems": [],
@@ -392293,7 +392293,7 @@
       "necessityReason": "The selected leaf never expands to the other six cases.",
       "limitations": "Current local production SDK callbacks/attributes with explicit observer delivery and finite frame/focus/IME/Scroller ports. Prepared-profile parent admission, real Native scheduling/focus/keyboard geometry, physical pointer, reading output and full-page acceptance remain separate.",
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "c7d638c21085891f5661af035f01a1a3689387597345eca2d68c7c85a04822e1",
+      "resourceDefinitionSha256": "6cbb383eaad22b246684a9a4d945dacd9d6bf5b441973332225e9380366b4af3",
       "repair": null,
       "repairAction": null,
       "nestedActions": [],
@@ -392301,14 +392301,14 @@
       "validationEvidence": {
         "case": "PASS_CURRENT_NORMAL_DISPATCH",
         "newBusinessExecution": "RUN_SELECTED_LOCAL_SDK_CASE",
-        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/results.json",
-        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/test-control-directory-short-content.mjs.log"
+        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-reflow-v/results.json",
+        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-reflow-v/test-control-directory-short-content.mjs.log"
       },
       "overlayAssemblyMethodReview": {
-        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v.json",
-        "decision": "QUALIFIED_LOCAL_METHOD_SCOPE",
+        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v-reflow.json",
+        "decision": "QUALIFIED_LOCAL_EDITOR_REFLOW_SCOPE",
         "currentPublicationExecution": "NOT_RUN",
-        "sha256": "57e4570dbb8bc0032afae4bf57f07878bf545af04e428ad4feab6a132d3d166d"
+        "sha256": "b351d47fe25cab50b3b66946cbee005410f4a9ab8f5053fec89523409dcdad39"
       }
     },
     {
@@ -392523,8 +392523,12 @@
         "controlled before-source fixtures"
       ],
       "estimatedCostType": "sdk-transpile",
-      "reviewedSourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
+      "reviewedSourceSha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d",
       "definitionInputs": [
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/editor-reflow-methods.ets.txt",
+          "sha256": "be3475a13c9c7e77b35e08e07f88db1da11fc2d115d9d34911a83b4d0f58dbb8"
+        },
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
           "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
@@ -392566,6 +392570,10 @@
           "sha256": "d190f6c4a838c1ab3dbcb439443b90c8901a8627de04d6be52c7622f73428e58"
         },
         {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
           "path": "tools/lib/tool-environment.mjs",
           "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
         },
@@ -392579,7 +392587,7 @@
         },
         {
           "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
+          "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
         }
       ],
       "definitionInputProblems": [],
@@ -392595,14 +392603,14 @@
         ]
       },
       "protectedBehavior": "Actual Content/Field/Toolbar callbacks retain editing intent across a retiring input, issue one public show request after Native focus and reject Back/disabled/stale/failed restore.",
-      "mechanism": "Actual Content fixed toolbar and short-prefix SDK callbacks reach current editing owner through actual Toolbar callback forwarding. Back→explicit edit updates actual emitted enableKeyboardOnFocus. Native focus ACK gates one public show request. Exact f6 before-source loses initial Area; actual current rectangle supplies one layout receipt. Invalid/stale/disabled/no rectangle and explicit revision-zero Back controls reject work. Earlier transfer source witnesses retiring-input misclassification and zero show requests. Promise failure and late completion guards remain explicit.",
+      "mechanism": "Actual Content fixed toolbar and short-prefix SDK callbacks reach current editing owner through actual Toolbar callback forwarding. Back→explicit edit updates actual emitted enableKeyboardOnFocus. Native focus ACK gates one public show request. Exact f6 before-source loses initial Area; actual current rectangle supplies one layout receipt. Invalid/stale/disabled/no rectangle and explicit revision-zero Back controls reject work. Earlier transfer source witnesses retiring-input misclassification and zero show requests. Promise failure and late completion guards remain explicit. Current normal Panel SDK binding plus actual current/frozen609 methods witness same-owner editor reflow, ordinary Native tool disabled callbacks, actual SDK dismissal and list-opening cleanup.",
       "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
       "failureExample": "Actual Content/Field/Toolbar callbacks retain editing intent across a retiring input, issue one public show request after Native focus and reject Back/disabled/stale/failed restore.",
       "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
       "necessityReason": "The selected leaf never expands to the other six cases.",
-      "limitations": "Current local production SDK callbacks/attributes with explicit observer delivery and finite frame/focus/IME/Scroller ports. Prepared-profile parent admission, real Native scheduling/focus/keyboard geometry, physical pointer, reading output and full-page acceptance remain separate.",
+      "limitations": "Actual current Panel/Directory methods and SDK child/toolbar attributes with explicit finite readiness, geometry, frame, focus and IME ports. Real native scheduling, focus hub, keyboard visibility and full-page acceptance remain separate.",
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "c7d638c21085891f5661af035f01a1a3689387597345eca2d68c7c85a04822e1",
+      "resourceDefinitionSha256": "6cbb383eaad22b246684a9a4d945dacd9d6bf5b441973332225e9380366b4af3",
       "repair": null,
       "repairAction": null,
       "nestedActions": [],
@@ -392610,14 +392618,14 @@
       "validationEvidence": {
         "case": "PASS_CURRENT_NORMAL_DISPATCH",
         "newBusinessExecution": "RUN_SELECTED_LOCAL_SDK_CASE",
-        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/results.json",
-        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/test-control-directory-short-content.mjs.log"
+        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-reflow-v/results.json",
+        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-reflow-v/test-control-directory-short-content.mjs.log"
       },
       "overlayAssemblyMethodReview": {
-        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v.json",
-        "decision": "QUALIFIED_LOCAL_METHOD_SCOPE",
+        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v-reflow.json",
+        "decision": "QUALIFIED_LOCAL_EDITOR_REFLOW_SCOPE",
         "currentPublicationExecution": "NOT_RUN",
-        "sha256": "57e4570dbb8bc0032afae4bf57f07878bf545af04e428ad4feab6a132d3d166d"
+        "sha256": "b351d47fe25cab50b3b66946cbee005410f4a9ab8f5053fec89523409dcdad39"
       }
     },
     {
@@ -392640,7 +392648,7 @@
         "controlled before-source fixtures"
       ],
       "estimatedCostType": "sdk-transpile",
-      "reviewedSourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
+      "reviewedSourceSha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d",
       "definitionInputs": [
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
@@ -392696,7 +392704,7 @@
         },
         {
           "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
+          "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
         }
       ],
       "definitionInputProblems": [],
@@ -392719,7 +392727,7 @@
       "necessityReason": "The selected leaf never expands to the other six cases.",
       "limitations": "Current local production SDK callbacks/attributes with explicit observer delivery and finite frame/focus/IME/Scroller ports. Prepared-profile parent admission, real Native scheduling/focus/keyboard geometry, physical pointer, reading output and full-page acceptance remain separate.",
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "c7d638c21085891f5661af035f01a1a3689387597345eca2d68c7c85a04822e1",
+      "resourceDefinitionSha256": "6cbb383eaad22b246684a9a4d945dacd9d6bf5b441973332225e9380366b4af3",
       "repair": null,
       "repairAction": null,
       "nestedActions": [],
@@ -392727,14 +392735,14 @@
       "validationEvidence": {
         "case": "PASS_CURRENT_NORMAL_DISPATCH",
         "newBusinessExecution": "RUN_SELECTED_LOCAL_SDK_CASE",
-        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/results.json",
-        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-focus-v/test-control-directory-short-content.mjs.log"
+        "source": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-reflow-v/results.json",
+        "log": ".reader-artifacts/app-ui-framework-audit-20261114/selected-directory-reflow-v/test-control-directory-short-content.mjs.log"
       },
       "overlayAssemblyMethodReview": {
-        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v.json",
-        "decision": "QUALIFIED_LOCAL_METHOD_SCOPE",
+        "path": ".reader-artifacts/app-ui-framework-audit-20261114/directory-method-review-v-reflow.json",
+        "decision": "QUALIFIED_LOCAL_EDITOR_REFLOW_SCOPE",
         "currentPublicationExecution": "NOT_RUN",
-        "sha256": "57e4570dbb8bc0032afae4bf57f07878bf545af04e428ad4feab6a132d3d166d"
+        "sha256": "b351d47fe25cab50b3b66946cbee005410f4a9ab8f5053fec89523409dcdad39"
       }
     },
     {

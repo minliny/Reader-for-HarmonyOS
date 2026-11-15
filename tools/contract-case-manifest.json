@@ -11187,7 +11187,7 @@
       }
     },
     "test-control-directory-short-content.mjs": {
-      "sourceSha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970",
+      "sourceSha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d",
       "cases": {
         "short-sdk": {
           "resources": [],

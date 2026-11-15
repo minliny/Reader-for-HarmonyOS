@@ -22,6 +22,7 @@ export struct ReaderDirectoryToolbar {
   @Prop placeholder: string = '搜索章节名称';
   @Prop ascending: boolean = true;
   @Prop showChapterTools: boolean = true;
+  @Prop actionEnabled: boolean = true;
   @Prop variant: 'standard' | 'full-directory' | 'manga-catalog' = 'standard';
   @Prop mangaFontScale: number = 1;
   @Prop locateEnabled: boolean = false;
@@ -128,10 +129,10 @@ export struct ReaderDirectoryToolbar {
       .width(this.variant === 'full-directory' ? 32 : 44).height(Math.max(44, this.controlFieldHeight()))
       .padding(0)
       .backgroundColor(Color.Transparent).borderRadius(8)
-      .attributeModifier(new ReaderActionAccessibility(this.toolLabel(kind), true, false, true,
-        new MangaDirectoryPressFeedback(true, this.variant === 'manga-catalog', this.appThemeScheme, 'nativeButton'), 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility(this.toolLabel(kind), this.actionEnabled, false, true,
+        new MangaDirectoryPressFeedback(this.actionEnabled, this.variant === 'manga-catalog', this.appThemeScheme, 'nativeButton'), 'nativeButton'))
       .responseRegion({ x: 0, y: 0, width: this.variant === 'full-directory' ? 32 : 44, height: Math.max(44, this.controlFieldHeight()) })
-      .onClick(action);
+      .onClick((): void => { if (this.actionEnabled) action(); });
   }
 
   private queryStacked(): boolean {

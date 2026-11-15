@@ -1345,8 +1345,8 @@ export struct ReaderControlPanel {
     };
   }
 
-  private searchEditorInputEnabled(): boolean {
-    return this.contentLocation().module === 'search' && this.contentInputEnabled() &&
+  private moduleEditorInputEnabled(module: 'search' | 'directory'): boolean {
+    return this.contentLocation().module === module && this.contentInputEnabled() &&
       (this.minimumInputReady() || this.hasCurrentTemporaryInput());
   }
 
@@ -2087,6 +2087,9 @@ export struct ReaderControlPanel {
           progress: this.contentMotionProgress,
           interactionEnabled: this.secondaryModuleInputEnabled('directory'),
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('directory'),
+          editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('directory'),
+          onTemporaryLayerChange: this.moduleTemporaryLayerHandler('directory'),
+          dismissTemporaryRevision: this.dismissTemporaryRevision,
           availableWidth: this.contentMotionWidth, availableHeight: this.contentMotionHeight,
           tab: this.contentLocation().directoryTab,
           sessionKey: this.listSessionKey(), bookmarkIdentity: this.bookmarkIdentity,
@@ -2192,7 +2195,7 @@ export struct ReaderControlPanel {
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('search'),
       dismissTemporaryRevision: this.dismissTemporaryRevision,
       onTemporaryLayerChange: this.moduleTemporaryLayerHandler('search'),
-      editorInputCurrent: (): boolean => this.searchEditorInputEnabled(),
+      editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('search'),
       query: this.searchQuery,
       searchPublication: this.searchPublication,
       searchRevision: this.searchRevision,

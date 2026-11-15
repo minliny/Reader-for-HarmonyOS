@@ -110,6 +110,9 @@ export struct ReaderControlDirectoryContent {
   @Prop @Watch('onProgressChanged') progress: number = 0;
   @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;
   inputCurrent?: () => boolean;
+  editorInputCurrent?: () => boolean;
+  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
+  @Prop @Watch('dismissDirectoryEditing') dismissTemporaryRevision: number = 0;
   @Prop @Watch('onGeometryChanged') availableWidth: number = 286;
   @Prop @Watch('onGeometryChanged') availableHeight: number = 190;
   @Prop chapterDownloadEnabled: boolean = false;
@@ -232,6 +235,7 @@ export struct ReaderControlDirectoryContent {
     this.layoutPresentation += 1; this.layoutRestorePending = false; this.layoutRestoreQueued = false;
     this.layoutRestoreTicket += 1;
     this.directoryInputFocused = false;
+    this.onTemporaryLayerChange(false);
     this.directoryKeyboardWasVisible = false; this.directoryRestoreKeyboard = true;
     this.directoryKeyboardVisible = undefined; this.directoryKeyboardTransferPending = false;
   }
@@ -239,6 +243,10 @@ export struct ReaderControlDirectoryContent {
   private currentInputEnabled(): boolean {
     return (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
       this.interactionEnabled && (this.inputCurrent?.() ?? true);
+  }
+  private currentEditorInputEnabled(): boolean {
+    return this.mounted && (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
+      (this.editorInputCurrent?.() ?? this.currentInputEnabled());
   }
 
   private minimumFacts(): ReaderDirectoryMinimumFacts {
@@ -315,6 +323,7 @@ export struct ReaderControlDirectoryContent {
     this.lifecycle += 1; this.layoutRestoreTicket += 1; this.layoutPresentation += 1;
     this.layoutRestorePending = false; this.layoutRestoreQueued = false;
     this.leadingPrefixOffset = undefined; this.directoryInputFocused = false;
+    this.onTemporaryLayerChange(false);
     this.directoryKeyboardWasVisible = false; this.directoryRestoreKeyboard = true;
     this.directoryKeyboardVisible = undefined; this.directoryKeyboardTransferPending = false;
     this.syncContentLayout();
@@ -459,8 +468,9 @@ export struct ReaderControlDirectoryContent {
   }
   private onInputChanged(): void {
     this.syncContentLayout();
-    if (!this.currentInputEnabled()) {
+    if (!this.currentEditorInputEnabled()) {
       this.directoryInputFocused = false; this.layoutRestoreTicket += 1;
+      this.onTemporaryLayerChange(false);
       this.directoryKeyboardTransferPending = false;
       this.layoutRestorePending = false; this.layoutRestoreQueued = false;
     }
@@ -502,6 +512,10 @@ export struct ReaderControlDirectoryContent {
     return this.mounted && this.currentInputEnabled() && this.progress === 1 &&
       (this.shortContent || this.contentGeometry().toolbarComplete);
   }
+  private queryInteractive(): boolean {
+    return this.currentEditorInputEnabled() && this.progress === 1 &&
+      (this.shortContent || this.contentGeometry().toolbarComplete);
+  }
   private tabsInteractive(): boolean {
     return this.mounted && this.currentInputEnabled() &&
       (this.shortContent || this.availableHeight >= this.contentGeometry().tabBottom);
@@ -534,7 +548,7 @@ export struct ReaderControlDirectoryContent {
   private onGeometryChanged(): void { this.syncContentLayout(); }
 
   private syncContentLayout(): void {
-    if (!this.mounted || !this.currentInputEnabled() || (this.progress !== 0 && this.progress !== 1)) return;
+    if (!this.currentEditorInputEnabled() || (this.progress !== 0 && this.progress !== 1)) return;
     if (this.directoryInputFocused) {
       const keyboardVisible = readerWindowMetrics().keyboardInsets.bottom > 0;
       if (keyboardVisible !== this.directoryKeyboardVisible) {
@@ -595,17 +609,28 @@ export struct ReaderControlDirectoryContent {
   }
   private onDirectoryFocus(presentation: number, id: string, focused: boolean): void {
     if (!this.currentContent(presentation) || id !== this.directoryFocusId()) return;
+    if (focused && !this.queryInteractive()) return;
     this.directoryInputFocused = focused;
+    this.onTemporaryLayerChange(focused);
     if (!focused) this.directoryKeyboardTransferPending = false;
   }
   private onDirectoryKeyboardRestoreSettled(presentation: number, id: string, requested: boolean): void {
     if (!this.currentContent(presentation) || id !== this.directoryFocusId()) return;
     this.directoryKeyboardTransferPending = false;
     this.directoryKeyboardVisible = readerWindowMetrics().keyboardInsets.bottom > 0;
-    if (!requested) this.directoryRestoreKeyboard = false;
+    if (!requested) {
+      this.dismissDirectoryEditing();
+    }
+  }
+  private dismissDirectoryEditing(): void {
+    if (!this.mounted) return;
+    this.directoryInputFocused = false;
+    this.directoryRestoreKeyboard = false;
+    this.directoryKeyboardTransferPending = false;
+    this.onTemporaryLayerChange(false);
   }
   private onDirectoryEditingRequested(presentation: number, id: string): void {
-    if (!this.currentContent(presentation) || !this.toolbarInteractive() || id !== this.directoryFocusId()) return;
+    if (!this.currentContent(presentation) || !this.queryInteractive() || id !== this.directoryFocusId()) return;
     // A new explicit edit can open the keyboard after Back. Layout-only
     // restoration continues to use the previously observed hidden policy.
     this.directoryRestoreKeyboard = true;
@@ -718,7 +743,7 @@ export struct ReaderControlDirectoryContent {
   private directoryToolbar(presentation: number = this.layoutPresentation ?? 0) {
     Stack({ alignContent: Alignment.TopStart }) {
       ReaderDirectoryToolbar({
-        variant: 'full-directory',
+        variant: 'full-directory', actionEnabled: this.toolbarInteractive(),
         naturalFieldHeightVp: this.selectedMinimum()?.full.fieldHeightVp ?? 0,
         naturalInputHeightVp: this.selectedMinimum()?.full.inputHeightVp ?? 0,
         inputMinimumWidthVp: this.selectedMinimum()?.full.inputMinimumWidthVp ?? 60 * this.fontScale(),
@@ -726,14 +751,14 @@ export struct ReaderControlDirectoryContent {
         naturalToolbarHeightVp: this.selectedMinimum() === undefined ? 0 : this.toolbarHeight() - 2,
         text: this.draft, placeholder: this.placeholder(), ascending: this.ascending,
         showChapterTools: this.tab === 'directory',
-        directoryFocusId: this.directoryFocusId(), directoryFocusAllowed: this.toolbarInteractive(),
+        directoryFocusId: this.directoryFocusId(), directoryFocusAllowed: this.queryInteractive(),
         directoryFocusRevision: this.directoryInputFocused ? this.directoryFocusRevision : 0,
         directoryKeyboardOnFocus: this.directoryRestoreKeyboard,
-        directoryFocusCurrent: (id: string): boolean => this.mounted && this.toolbarInteractive() && id === this.directoryFocusId(),
+        directoryFocusCurrent: (id: string): boolean => this.queryInteractive() && id === this.directoryFocusId(),
         onDirectoryFocusChanged: (id: string, focused: boolean): void => this.onDirectoryFocus(this.layoutPresentation, id, focused),
         onDirectoryEditingRequested: (id: string): void => this.onDirectoryEditingRequested(this.layoutPresentation, id),
         onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(this.layoutPresentation, id, requested),
-        onTextChange: (value: string): void => { if (this.mounted && this.toolbarInteractive()) this.draft = value; },
+        onTextChange: (value: string): void => { if (this.queryInteractive()) this.draft = value; },
         onSearch: (): void => { if (this.mounted && this.toolbarInteractive()) this.search(); },
         onTop: (): void => { if (this.mounted && this.toolbarInteractive()) this.scrollCatalogEdge(false); },
         onBottom: (): void => { if (this.mounted && this.toolbarInteractive()) this.scrollCatalogEdge(true); },
@@ -794,14 +819,14 @@ export struct ReaderControlDirectoryContent {
         placeholder: this.placeholder(), accessibilityLabel: this.placeholder(),
         naturalFieldHeightVp: this.selectedMinimum()?.full.fieldHeightVp ?? 0,
         naturalInputHeightVp: this.selectedMinimum()?.full.inputHeightVp ?? 0,
-        directoryFocusId: this.directoryFocusId(), directoryFocusAllowed: this.toolbarInteractive(),
+        directoryFocusId: this.directoryFocusId(), directoryFocusAllowed: this.queryInteractive(),
         directoryFocusRevision: this.directoryInputFocused ? this.directoryFocusRevision : 0,
         directoryKeyboardOnFocus: this.directoryRestoreKeyboard,
-        directoryFocusCurrent: (id: string): boolean => this.mounted && this.toolbarInteractive() && id === this.directoryFocusId(),
+        directoryFocusCurrent: (id: string): boolean => this.queryInteractive() && id === this.directoryFocusId(),
         onDirectoryFocusChanged: (id: string, focused: boolean): void => this.onDirectoryFocus(presentation, id, focused),
         onDirectoryEditingRequested: (id: string): void => this.onDirectoryEditingRequested(presentation, id),
         onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(presentation, id, requested),
-        onTextChange: (value: string): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.draft = value; },
+        onTextChange: (value: string): void => { if (this.currentContent(presentation) && this.queryInteractive()) this.draft = value; },
         onSubmit: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.search(); } });
       Flex({ wrap: FlexWrap.Wrap }) {
         this.shortTool('search', '搜索', presentation);
@@ -1002,9 +1027,9 @@ export struct ReaderControlDirectoryContent {
         .width(Math.max(0, this.availableWidth - 2)).height(this.contentGeometry().toolbarViewportHeight)
         .position({ x: 1, y: this.contentGeometry().toolbarTop }).clip(true)
         .opacity(this.progress * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
-        .enabled(this.toolbarInteractive())
-        .accessibilityLevel(this.toolbarInteractive() ? 'auto' : 'no-hide-descendants')
-        .hitTestBehavior(this.toolbarInteractive() ? HitTestMode.Default : HitTestMode.None);
+        .enabled(this.queryInteractive())
+        .accessibilityLevel(this.queryInteractive() ? 'auto' : 'no-hide-descendants')
+        .hitTestBehavior(this.queryInteractive() ? HitTestMode.Default : HitTestMode.None);
       }
       Stack({ alignContent: Alignment.TopStart }) { this.listBody(); }
         .width(Math.max(0, this.availableWidth - 2)).height(this.listHeight())

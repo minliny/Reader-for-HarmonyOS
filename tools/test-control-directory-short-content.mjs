@@ -207,7 +207,134 @@ if(selected.length){
   const retired=focusField();retired.input.onAreaChange({}, {width:200,height:44});retired.flush();retired.owner.directoryFocusId='next';retired.owner.onDirectoryFocusRequest();retired.input.onFocus();retired.flush();await new Promise(resolve=>setImmediate(resolve));assert.equal(retired.keyboardRequests.length,0,'late old-id ACK cannot restore a successor keyboard');
   console.log(JSON.stringify({kind:'directory-delayed-native-focus-ack',beforeSourceLostRequest:true,beforeParentTicketStranded:true,currentLateAckSingleShow:true,afterAckFrame:true,repeatAckRejected:true,earlyAck:true,boundary:'Actual shipping SDK callbacks with delayed finite Native focus port; no physical IME visibility claim.'}));
  }
+ async function directoryEditorReflow(){
+  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+  const panelSource=read('reading/ui/ReaderControlPanel.ets');
+  const panelMethods=['contentInputEnabled','currentTemporaryInputScope','hasCurrentTemporaryInput',
+   'moduleTemporaryLayerHandler','moduleEditorInputEnabled','secondaryModuleInputEnabled'];
+  const Panel=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),
+   'ReaderControlPanel',panelMethods);
+  const directoryMethods=['currentInputEnabled','currentEditorInputEnabled','toolbarInteractive','queryInteractive',
+   'currentContent','directoryFocusId','onDirectoryFocus','onInputChanged','onDirectoryKeyboardRestoreSettled','dismissDirectoryEditing'];
+  const Directory=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets',import.meta.url),
+   'ReaderControlDirectoryContent',directoryMethods,{readerWindowMetrics:()=>({keyboardInsets:{bottom:0}})});
+  const Before=selectedProductionMethods(new URL('./fixtures/design/directory-confluence-before/editor-reflow-methods.ets.txt',import.meta.url),
+   'ReaderControlDirectoryContent',['currentInputEnabled','toolbarInteractive','currentContent','directoryFocusId','onDirectoryFocus','onInputChanged']);
+  for(const Constructor of [Before,Directory]){
+   let ready=true,live=true,identity='opening-1';
+   const panel=new Panel(),reports=[];
+   Object.assign(panel,{preparedMinimumRequired:true,runtimeMounted:true,inputEnabled:true,controlObscured:false,
+    visualVisibilityProgress:1,visualTransitionKind:'',visualHeldPointerId:-1,moreMenuVisible:false,
+    temporaryInputActive:false,temporaryLayerActive:false,temporaryInputScope:'',sourceId:'fixture',
+    bookmarkIdentity:{bookId:'book',libraryBookId:'fixture:book'},controlOpenRevision:1,
+    currentMinimumIdentity:()=>identity,committedMinimumIdentity:()=>identity,minimumInputReady:()=>ready,
+    contentLocation:()=>({level:'secondary',module:'directory',form:'full',directoryTab:'directory'}),
+    onTemporaryLayerChange:value=>reports.push(value)});
+   const prepared={ownerCurrent:()=>live};
+   const sdk=boundedSurfaceSdk();
+   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
+   const assembly=compile(()=>createReaderBuilderProbe(panelSource,['controlContent'],
+    {...sdk.deps,DEBUG:false,ReaderControlDirectoryContent:Child},
+    {...sdk.hooks,childSources:{...sdk.childSources,ReaderControlDirectoryContent:content}})).owner;
+   Object.assign(assembly,panel,{minimumPresentationAvailable:()=>true,currentMinimumKey:()=>identity+'|geometry',
+    preparedMinimum:()=>prepared,frame:()=>({content:{width:338,height:646}}),contentMotionWidth:338,contentMotionHeight:646,
+    contentMotionProgress:1,listSessionKey:()=> 'fixture-book',dismissTemporaryRevision:0,
+    moduleEditorInputEnabled:module=>panel.moduleEditorInputEnabled(module),
+    secondaryModuleInputEnabled:module=>panel.secondaryModuleInputEnabled(module),
+    moduleTemporaryLayerHandler:module=>panel.moduleTemporaryLayerHandler(module)});
+   assembly.controlContent();
+   const child=[...assembly.children.values()].find(child=>child instanceof Child);
+   assert(child,'actual normal Panel directory branch mounts its child');
+   assert.equal(typeof child.params.editorInputCurrent,'function');
+   assert.equal(typeof child.params.onTemporaryLayerChange,'function');
+   assert.equal(child.params.dismissTemporaryRevision,0);
+   const directory=new Constructor();
+   Object.assign(directory,{mounted:true,preparedMinimumRequired:true,presentationPrepared:()=>prepared,
+    interactionEnabled:child.params.interactionEnabled,inputCurrent:child.params.inputCurrent,
+    editorInputCurrent:child.params.editorInputCurrent,onTemporaryLayerChange:child.params.onTemporaryLayerChange,
+    progress:1,shortContent:false,layoutPresentation:2,sessionKey:'fixture-book',tab:'directory',
+    directoryInputFocused:false,directoryRestoreKeyboard:true,layoutRestoreTicket:0,
+    syncContentLayout(){},displaySnapshot:()=>({rows:[]}),contentGeometry:()=>({toolbarComplete:true})});
+   const id=directory.directoryFocusId();
+   directory.onDirectoryFocus(2,id,true);
+   assert.equal(directory.directoryInputFocused,true);
+   ready=false;
+   assembly.replayOnly([child.id]);
+   directory.interactionEnabled=child.params.interactionEnabled;
+   directory.onInputChanged();
+   if(Constructor===Before){
+    assert.equal(panel.hasCurrentTemporaryInput(),false,'exact old directory focus has no current editor publication');
+    assert.equal(directory.directoryInputFocused,false,'exact old input change retires focused directory during pending reflow');
+    assert.equal(directory.toolbarInteractive(),false);
+    continue;
+   }
+   assert.equal(panel.hasCurrentTemporaryInput(),true,'current actual focus callback reaches the normal parent scope');
+   assert.equal(directory.directoryInputFocused,true,'current editor retains its acknowledged focus across the observed ready-to-pending edge');
+   assert.equal(directory.queryInteractive(),true);
+   assert.equal(directory.toolbarInteractive(),false,'ordinary actions still require current geometry');
+   const view=actor({height:646});
+   view.owner.editorInputCurrent=child.params.editorInputCurrent;
+   view.owner.onTemporaryLayerChange=child.params.onTemporaryLayerChange;
+   view.owner.interactionEnabled=false;
+   view.render();
+   const toolbarParams=view.children.find(child=>child.params.variant==='full-directory')?.params;
+   assert.equal(toolbarParams.directoryFocusAllowed,true,'actual Content SDK keeps the current input admitted');
+   assert.equal(toolbarParams.actionEnabled,false,'actual Content SDK separately disables ordinary toolbar tools');
+   const tools=toolbarSdk({initial:toolbarParams});
+   const buttons=tools.sdk.nodes(tools.owner).filter(node=>node.type==='Button');
+   assert.equal(buttons.length,4);
+   const callsBeforeDisabledTools=view.calls.slice();
+   for(const button of buttons){
+    assert.equal(button.enabled,false);
+    assert.equal(button.focusable,undefined,'Native Button keeps its platform focus dependency');
+    button.onClick();
+   }
+   assert.deepEqual(view.calls,callsBeforeDisabledTools,'disabled Native tool callbacks cannot dispatch an action');
+   toolbarParams.onTextChange('晋江');
+   assert.equal(view.owner.draft,'晋江','current drafting remains editable during a pending geometry receipt');
+   toolbarParams.onSearch();
+   assert.equal(view.owner.query,'','pending ordinary search cannot borrow editor admission');
+   view.owner.directoryInputFocused=true;
+   view.owner.dismissTemporaryRevision++;
+   assert.equal(view.owner.directoryInputFocused,false,'actual SDK dismiss revision retires current editing');
+   assert.equal(panel.hasCurrentTemporaryInput(),false);
+   ready=true;
+   directory.interactionEnabled=true;
+   directory.onDirectoryFocus(2,id,true);
+   view.owner.openList();
+   assert.equal(panel.hasCurrentTemporaryInput(),false,'new list opening releases the previous editor scope');
+   directory.onDirectoryFocus(2,id,true);
+   directory.onDirectoryKeyboardRestoreSettled(2,id,false);
+   assert.equal(panel.hasCurrentTemporaryInput(),false,'Back or failed editing request releases the current editor scope');
+   assert.equal(directory.directoryInputFocused,false);
+   assert.equal(directory.directoryRestoreKeyboard,false);
+   ready=true;
+   directory.interactionEnabled=true;
+   directory.onDirectoryFocus(2,id,true);
+   assert.equal(panel.hasCurrentTemporaryInput(),true);
+   directory.dismissDirectoryEditing();
+   assert.equal(panel.hasCurrentTemporaryInput(),false,'normal dismiss revision can release a retained native focus without trapping Back');
+   directory.onDirectoryFocus(2,id,true);
+   const oldReport=child.params.onTemporaryLayerChange;
+   identity='opening-2';panel.controlOpenRevision++;
+   ready=false;
+   oldReport(false);
+   assert.equal(panel.temporaryInputActive,true,'old callback cannot release successor state');
+   assert.equal(panel.hasCurrentTemporaryInput(),false,'new opening cannot borrow the old editor scope');
+   directory.onInputChanged();
+   assert.equal(directory.directoryInputFocused,false);
+   live=false;
+   ready=true;
+   directory.onDirectoryFocus(2,id,true);
+   assert.equal(directory.directoryInputFocused,false,'retired formal owner cannot reacquire query focus');
+  }
+  console.log(JSON.stringify({kind:'directory-normal-editor-reflow-admission',exact609Negative:true,
+   normalPanelBinding:true,acknowledgedEditorRetained:true,nativeToolsDisabled:true,ordinarySearchRejected:true,
+   currentDismissAndBack:true,successorRejected:true,
+   boundary:'Actual current Panel/Directory methods and SDK child/toolbar bindings with finite readiness and geometry ports. Native focus/keyboard reflow remains separately verified.'}));
+ }
  async function keyboardTransfer(){
+  await directoryEditorReflow();
   const beforeContent=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt',import.meta.url),'utf8');
   const beforeField=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt',import.meta.url),'utf8');
   const beforeArea=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-initial-area-field.ets.txt',import.meta.url),'utf8');
