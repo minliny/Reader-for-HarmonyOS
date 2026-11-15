@@ -147,6 +147,9 @@ export struct ReaderSearchField {
   }
 
   aboutToDisappear(): void {
+    if (DEBUG && this.directoryFocusId.length > 0) hilog.info(0xD004, 'ReaderControlDiagnostic',
+      'directory-input-retired revision=%{public}d ticket=%{public}d focused=%{public}s',
+      this.directoryFocusRevision, this.directoryFocusTicket, String(this.directoryNativeFocused));
     this.mounted = false;
     this.focusGeneration += 1;
     this.bookInputFocused = false;
@@ -168,6 +171,11 @@ export struct ReaderSearchField {
   }
 
   private onDirectoryFocusRequest(): void {
+    if (DEBUG && this.mounted && this.variant === 'readerDirectory') hilog.info(0xD004, 'ReaderControlDiagnostic',
+      'directory-focus-update revision=%{public}d applied=%{public}d ticket=%{public}d allowed=%{public}s focused=%{public}s keyboard=%{public}s sameLayout=%{public}s',
+      this.directoryFocusRevision, this.directoryFocusAppliedRevision, this.directoryFocusTicket,
+      String(this.directoryFocusAllowed), String(this.directoryNativeFocused), String(this.directoryKeyboardOnFocus),
+      String(this.directoryLayoutId === this.directoryFocusId));
     this.directoryFocusTicket += 1;
     this.directoryFocusScheduledRevision = -1;
     this.directoryKeyboardRestorePendingRevision = -1;
@@ -234,13 +242,25 @@ export struct ReaderSearchField {
 
   private queueDirectoryKeyboardRestore(id: string, revision: number, ticket: number): void {
     this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
-      if (!this.directoryKeyboardRestoreCurrent(id, revision, ticket) || !this.directoryKeyboardOnFocus) return;
+      const current = this.directoryKeyboardRestoreCurrent(id, revision, ticket);
+      if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+        'directory-keyboard-frame current=%{public}s keyboard=%{public}s revision=%{public}d currentRevision=%{public}d ticket=%{public}d currentTicket=%{public}d focused=%{public}s',
+        String(current), String(this.directoryKeyboardOnFocus), revision, this.directoryFocusRevision,
+        ticket, this.directoryFocusTicket, String(this.directoryNativeFocused));
+      if (!current || !this.directoryKeyboardOnFocus) return;
       try {
         // Focus ACK precedes this single editing request. Its Promise does
         // not prove that TYPE_KEYBOARD geometry has become visible.
+        if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic', 'directory-keyboard-show-request');
         void inputMethod.getController().showTextInput().then((): void => {
+          if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+            'directory-keyboard-result requested=true current=%{public}s',
+            String(this.directoryKeyboardRestoreCurrent(id, revision, ticket)));
           if (this.directoryKeyboardRestoreCurrent(id, revision, ticket)) this.onDirectoryKeyboardRestoreSettled(id, true);
         }).catch((error: Error): void => {
+          if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+            'directory-keyboard-result requested=false current=%{public}s',
+            String(this.directoryKeyboardRestoreCurrent(id, revision, ticket)));
           if (!this.directoryKeyboardRestoreCurrent(id, revision, ticket)) return;
           this.onDirectoryKeyboardRestoreSettled(id, false);
           hilog.warn(0x5244, 'Reader', 'Directory keyboard restore: %{private}s', error.message);
@@ -256,7 +276,12 @@ export struct ReaderSearchField {
   private queueAcknowledgedDirectoryKeyboardRestore(id: string): void {
     const revision = this.directoryKeyboardRestorePendingRevision;
     const ticket = this.directoryKeyboardRestorePendingTicket;
-    if (revision < 0 || !this.directoryKeyboardRestoreCurrent(id, revision, ticket)) return;
+    const current = revision >= 0 && this.directoryKeyboardRestoreCurrent(id, revision, ticket);
+    if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+      'directory-keyboard-ack current=%{public}s revision=%{public}d currentRevision=%{public}d ticket=%{public}d currentTicket=%{public}d focused=%{public}s keyboard=%{public}s',
+      String(current), revision, this.directoryFocusRevision, ticket, this.directoryFocusTicket,
+      String(this.directoryNativeFocused), String(this.directoryKeyboardOnFocus));
+    if (!current) return;
     // Consume the request when its current native focus ACK owns it. A late
     // ACK can schedule this once without polling or losing its revision.
     this.directoryKeyboardRestorePendingRevision = -1;
@@ -302,8 +327,13 @@ export struct ReaderSearchField {
     const ticket = ++this.directoryFocusTicket;
     this.directoryFocusScheduledRevision = revision;
     this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
-      if (!this.directoryFocusEnabled(id) || ticket !== this.directoryFocusTicket || revision !== this.directoryFocusRevision ||
-        !this.directoryInputLoaded || this.directoryLayoutId !== id) return;
+      const current = this.directoryFocusEnabled(id) && ticket === this.directoryFocusTicket &&
+        revision === this.directoryFocusRevision && this.directoryInputLoaded && this.directoryLayoutId === id;
+      if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+        'directory-focus-frame current=%{public}s revision=%{public}d currentRevision=%{public}d ticket=%{public}d currentTicket=%{public}d focused=%{public}s keyboard=%{public}s',
+        String(current), revision, this.directoryFocusRevision, ticket, this.directoryFocusTicket,
+        String(this.directoryNativeFocused), String(this.directoryKeyboardOnFocus));
+      if (!current) return;
       this.directoryFocusScheduledRevision = -1;
       this.directoryFocusAppliedRevision = revision;
       if (this.directoryKeyboardOnFocus) {
