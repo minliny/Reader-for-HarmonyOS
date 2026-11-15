@@ -36,7 +36,8 @@ function defaultSourceManagementFilters(): SourceManagementFilterState {
 
 type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'busy' |
   'read-error' | 'read-empty-error' | 'original-unknown' | 'original-cleanup' |
-  'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
+  'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-source-switch' | 'directory-source-switch-short' |
+  'directory-source-switch-flat' | 'directory-source-switch-flat-short' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
   'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
   'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery' | 'framework-geometry' | 'legacy-recovery';
 interface PageStructureFixtureObservation {
@@ -210,6 +211,8 @@ struct ReaderPageStructureVerification {
     if (!this.mounted || !this.admitted || !this.debugBuild() || this.fontState !== 'ready' || this.scene !== 'menu' ||
       menuPresentation !== this.presentation ||
       (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' &&
+        scene !== 'directory-source-switch' && scene !== 'directory-source-switch-short' &&
+        scene !== 'directory-source-switch-flat' && scene !== 'directory-source-switch-flat-short' &&
         scene !== 'directory-control-expanded' && scene !== 'directory-control-compact' &&
         scene !== 'directory-control-flat-expanded' && scene !== 'directory-control-flat-compact' &&
         scene !== 'directory-control-short-122' && scene !== 'directory-control-short-168' && scene !== 'directory-control-short-190' &&
@@ -337,6 +340,8 @@ struct ReaderPageStructureVerification {
 
   private readerOwnsWindowEdges(): boolean {
     return this.scene === 'directory-reader' || this.scene === 'directory-manga' ||
+      this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
+      this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short' ||
       this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
       this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' ||
       this.scene === 'directory-control-short-122' || this.scene === 'directory-control-short-168' ||
@@ -475,6 +480,14 @@ struct ReaderPageStructureVerification {
         Button(`短页下载 · ${item.title}`).enabled(this.fontState === 'ready').id(`reader-page-structure-downloads-short-${item.value}`)
           .onClick((): void => this.launchDownloadFixture(item.value, menuPresentation, true));
       }, (item: DownloadFixtureCase): string => item.value);
+      Button('目录 · 漫画换源目标').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch')
+        .onClick((): void => this.launchFixture('directory-source-switch', menuPresentation));
+      Button('短页目录 · 漫画换源目标').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch-short')
+        .onClick((): void => this.launchFixture('directory-source-switch-short', menuPresentation));
+      Button('目录 · 漫画换源平面回退').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch-flat')
+        .onClick((): void => this.launchFixture('directory-source-switch-flat', menuPresentation));
+      Button('短页目录 · 漫画换源平面回退').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch-flat-short')
+        .onClick((): void => this.launchFixture('directory-source-switch-flat-short', menuPresentation));
     }.width('100%').padding(20);
     }.width('100%').height(`calc(100% - ${this.menuBottomInset()}vp)`)
       .align(Alignment.Top).clip(true).id('reader-page-structure-menu-scroll');
@@ -530,6 +543,15 @@ struct ReaderPageStructureVerification {
           ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', catalogContext: 'detail',
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
+        } else if (this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
+          this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short') {
+          Stack({ alignContent: Alignment.TopStart }) {
+            ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', sourceSwitchCandidate: true,
+              flatCatalog: this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short',
+              catalogContext: 'detail', onBack: (): void => this.leaveScene(presentation),
+              onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
+          }.width('100%').height(this.scene === 'directory-source-switch-short' || this.scene === 'directory-source-switch-flat-short' ? 168 : '100%').clip(true)
+            .id('reader-directory-source-switch-viewport');
         } else if (this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
           this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' || this.shortControlHeight() > 0) {
           ReaderDirectoryStructureFixture({ mode: 'control', fontsReady: this.fontState === 'ready', catalogContext: 'reader',

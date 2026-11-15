@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases,recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected=selectContractCases({
+  'source-switch-target':'Actual memory target mirrors source-switch chapter/page -1, unknown download state and no markers; pending selection coalesces, preserves no current chapter and retires callbacks across semantic/flat ports.',
   'flat-fallback-port':'Actual current fixture NoStructure response enters the production Surface flat fallback without Runtime and retires old ports across openings.',
   'bookmark-memory-owner':'Actual DEBUG fixture uses production recovery projection for its current in-memory bookmark owner; normal production read-only default and retired callbacks remain bounded.',
   'initializer-safety':'Actual SDK fixture admission/production initializers and exact control parent geometry; no native child rendering.',
@@ -47,7 +48,7 @@ if(selected.length){
     ['ReaderControlDirectoryContent','reading/ui/ReaderControlDirectoryContent'],
   ].map(([name,path])=>[name,readFileSync(new URL('../entry/src/main/ets/features/'+path+'.ets',import.meta.url),'utf8')]));
   const require=createRequire(import.meta.url),componentMap=require(resolveEtsLoaderRoot()+'/lib/component_map.js');
-  function fixture({debug=true,build='debug',ready=true,mode='text',expanded=true,scale=1.6,controlHeight=0,flatCatalog=false,fixtureSource=source}={}){
+  function fixture({debug=true,build='debug',ready=true,mode='text',expanded=true,scale=1.6,controlHeight=0,flatCatalog=false,sourceSwitchCandidate=false,fixtureSource=source}={}){
     const sdk=boundedSurfaceSdk(),children=[],events=[],actions=[],back=[];
     const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=366;metrics.windowRect.height=844;metrics.systemFontScale=scale;
     const deps={...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:build,readerDirectoryFixtureEntries,ReaderDirectoryFixturePort,readerDirectoryFixtureCopyEntry,nextReaderDirectoryFixtureInstanceId,
@@ -58,8 +59,44 @@ if(selected.length){
     const saved=new Map(componentMap.ID_ATTRS);componentMap.ID_ATTRS.clear();let page;
     try{({owner:page}=createReaderBuilderProbe(fixtureSource,boundedMembers(fixtureSource),deps,{...sdk.hooks,childSources}));}
     finally{componentMap.ID_ATTRS.clear();for(const [k,v]of saved)componentMap.ID_ATTRS.set(k,v);}
-    Object.assign(page,{fontsReady:ready,mode,flatCatalog,controlExpanded:expanded,controlViewportHeight:controlHeight,onAction:(kind,index)=>actions.push([kind,index]),onBack:()=>back.push(true)});
+    Object.assign(page,{fontsReady:ready,mode,flatCatalog,sourceSwitchCandidate,controlExpanded:expanded,controlViewportHeight:controlHeight,onAction:(kind,index)=>actions.push([kind,index]),onBack:()=>back.push(true)});
     page.aboutToAppear();return{page,sdk,children,events,actions,back,metrics};
+  }
+  async function sourceSwitchTarget() {
+    for (const flatCatalog of [false, true]) {
+      const current = fixture({ mode: 'manga', sourceSwitchCandidate: true, flatCatalog, scale: 1 });
+      const page = current.page;
+      page.measure({ width: '366vp', height: '168vp' });
+      page.initialRender();
+      const child = current.children.at(-1), callbacks = child.params;
+      assert.equal(callbacks.currentChapterIndex, -1);
+      assert.equal(callbacks.currentPageOrdinal, -1);
+      assert.equal(callbacks.currentPageTotal, -1);
+      assert.equal(callbacks.catalogMessage, '请选择目标章节继续换源');
+      assert.equal(callbacks.mangaDownloadEnabled, undefined);
+      assert.equal(callbacks.selectionBusy, false);
+      assert.ok(callbacks.entries.every(entry => entry.downloadState === 'unknown' && entry.bookmarks === undefined));
+      const identity = page.identity();
+      const view = await callbacks.navigationPortFactory().open({ sourceId: identity.sourceId, bookId: identity.bookId });
+      assert.equal(view.status, flatCatalog ? 'unavailable' : 'ready');
+      callbacks.onSelectNavigationTarget(0, 0);
+      current.sdk.properties.flush();
+      assert.equal(current.children.at(-1), child);
+      assert.equal(child.params.selectionBusy, true);
+      callbacks.onSelectChapter(0);
+      assert.equal(page.intentCount, 1);
+      assert.equal(page.currentChapterIndex, -1);
+      assert.deepEqual(current.actions, [['select-target-chapter', 0]]);
+      callbacks.onBack();
+      assert.deepEqual(current.back, [true]);
+      page.resetFixture();
+      callbacks.onSelectChapter(0);
+      assert.equal(page.intentCount, 0);
+      assert.equal(page.targetSelectionBusy, false);
+      page.aboutToDisappear();
+      callbacks.onSelectChapter(0);
+      assert.equal(page.intentCount, 0);
+    }
   }
   async function bookmarkMemoryOwner() {
     function assertWritable(fixture) {
@@ -380,6 +417,6 @@ if(selected.length){
     list.selectTarget({kind:'target',nodeId:'n1',chapterIndex:1});assert.equal(guard(),true);
     list.mounted=false;list.generation+=1;assert.equal(guard(),false);resolveTarget({chapterIndex:1,chapterOffsetScalar:0});await tick();assert.deepEqual(selections,[]);
   }
-  const cases={'flat-fallback-port':flatFallbackPort,'bookmark-memory-owner':bookmarkMemoryOwner,'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
+  const cases={'source-switch-target':sourceSwitchTarget,'flat-fallback-port':flatFallbackPort,'bookmark-memory-owner':bookmarkMemoryOwner,'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

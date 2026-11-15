@@ -252,6 +252,10 @@ export class MangaSourceSwitchPresentation {
     return (): boolean => this.isMangaSourceSwitchSelectionCurrent(selection);
   }
 
+  directorySelectionBusy(selection: MangaSourceSwitchSelection): boolean {
+    return this.isMangaSourceSwitchSelectionCurrent(selection) && this.selectionBusy;
+  }
+
   directorySelection(selection: MangaSourceSwitchSelection):
     (chapterIndex: number, chapterOffsetScalar?: number, positionScope?: RemoteReadingPositionScope,
       directoryTargetProof?: ReaderDirectoryTargetProof) => void {

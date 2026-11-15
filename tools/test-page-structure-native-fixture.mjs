@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'source-switch-scenes': 'Actual guarded source-switch target entries retain checked fonts, exact semantic/flat choice, real full/168vp parent and retired menu/child callbacks. No native child rendering.',
   'safe-area': 'Actual SDK fixture root consumes App top exactly once, reader/manga/control own edges, live metrics revision/320/366/explicit122/168/190 child viewports/default release; no native pixel claim.',
   'native-font-observation': 'Actual same-instance SDK Root record and metrics callback reread readonly UIContext font policy/conversions after dynamic change; unavailable observations drop prior values and retired metrics emit nothing. No font or AppStorage write.',
   'menu-safe-area': 'Actual SDK menu Scroll viewport subtracts current interactive system/cutout/gesture/navigation bottom, clips buttons at its safe edge, updates on metrics revision and leaves actor stages intact; exact before-source100% negative. No Native hit claim.',
@@ -309,6 +310,34 @@ if (selected.length) {
     }
   }
 
+  async function sourceSwitchScenes() {
+    for (const suffix of ['', '-short', '-flat', '-flat-short']) {
+      const current = fixture(); current.page.aboutToAppear(); await tick(); current.page.menu();
+      const scene = 'directory-source-switch' + suffix;
+      const action = current.sdk.nodes(current.page).find(node => node.id === 'reader-page-structure-' + scene)?.onClick;
+      assert.equal(typeof action, 'function');
+      action(); current.page.fixtureStage();
+      const props = current.props();
+      assert.equal(current.page.scene, scene);
+      assert.equal(props.mode, 'manga'); assert.equal(props.sourceSwitchCandidate, true);
+      assert.equal(props.fontsReady, true); assert.equal(props.flatCatalog, suffix.includes('flat'));
+      const viewport = current.sdk.nodes(current.page).find(node => node.id === 'reader-directory-source-switch-viewport');
+      assert.equal(viewport.height, suffix.endsWith('short') ? 168 : '100%');
+      assert.equal(viewport.clip, true);
+      assert.equal(current.page.readerOwnsWindowEdges(), true);
+      props.onBack(); assert.equal(current.page.scene, 'menu');
+      action(); assert.equal(current.page.scene, 'menu');
+      const count = current.page.intentCount;
+      props.onAction('retired-target', 0); assert.equal(current.page.intentCount, count);
+    }
+    const gate = deferred(), waiting = fixture({ fonts: () => gate.promise });
+    waiting.page.aboutToAppear(); waiting.page.launchFixture('directory-source-switch', waiting.page.presentation);
+    assert.equal(waiting.page.scene, 'menu'); gate.resolve(); await tick();
+    const denied = fixture({ debug: false }); denied.page.aboutToAppear(); await tick();
+    denied.page.launchFixture('directory-source-switch-flat-short', denied.page.presentation);
+    assert.equal(denied.children.length, 0);
+  }
+
   async function fixtureScenes() {
     const scenes=[
       ['directory-detail','directory','text','detail',undefined],
@@ -490,7 +519,7 @@ if (selected.length) {
     page.page.onBackPress(); assert.equal(page.page.scene, 'menu');
     old.onTemporaryBackBridge(() => true, 'retired'); assert.equal(page.page.temporaryBackIdentity, '');
   }
-  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'tools-state-scenes':toolsStateScenes,'download-state-scenes':downloadStateScenes,
+  const cases={'source-switch-scenes':sourceSwitchScenes,'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'tools-state-scenes':toolsStateScenes,'download-state-scenes':downloadStateScenes,
     'group-recovery': () => componentFixtureBack('group-recovery', 'group', 'reader-page-structure-group-recovery'),
     'framework-geometry': () => componentFixtureBack('framework-geometry', 'geometry', 'reader-page-structure-framework-geometry'),
     'legacy-recovery': () => componentFixtureBack('legacy-recovery', 'legacy', 'reader-page-structure-legacy-recovery')};

@@ -2629,7 +2629,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-          "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+          "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
           "symbol": "mangaPage"
         },
         {
@@ -2887,11 +2887,11 @@
         },
         {
           "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-          "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+          "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
         },
         {
           "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-          "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+          "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -2923,7 +2923,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-          "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+          "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -3011,7 +3011,7 @@
         },
         {
           "path": "tools/test-directory-native-fixture.mjs",
-          "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+          "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -3239,7 +3239,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -4079,7 +4079,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -4337,11 +4337,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -4373,7 +4373,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -4461,7 +4461,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -5677,7 +5677,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -5935,11 +5935,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -5971,7 +5971,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -6059,7 +6059,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -6392,7 +6392,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -7256,7 +7256,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -7514,11 +7514,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -7550,7 +7550,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -7638,7 +7638,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -8862,7 +8862,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -9120,11 +9120,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -9156,7 +9156,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -9244,7 +9244,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -9546,7 +9546,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -9808,17 +9808,26 @@
                     "loading",
                     "empty",
                     "filteredEmpty",
-                    "error"
+                    "error",
+                    "busy",
+                    "disabled"
                   ],
                   "transitions": [
-                    "select current target chapter→prepareSelected→commitPrepared；busy仅Index方法准入",
+                    "select current target chapter→prepareSelected→commitPrepared. Current selection busy disables semantic/flat catalog input, pre-commit Back retains cancellation.",
                     "cancel before commitStarted→original source candidates；旧selection拒绝回调",
                     "fonts/loading/empty/query→现有组件页态，不注入书签/离线recovery"
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，调用方busy未完整投影。"
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "busy-catalog",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，当前selectionBusy已按原owner投影，准确SDK覆盖同actor更新、语义/平面输入禁用、重复回调及提交前Back。完整原生状态矩阵继续待补。"
               },
               "visual": {
                 "applicability": "applicable",
@@ -10276,7 +10285,7 @@
               }
             },
             "exceptions": [],
-            "revision": 36,
+            "revision": 37,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10306,7 +10315,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -10564,11 +10573,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -10600,7 +10609,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -10688,7 +10697,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -10806,6 +10815,10 @@
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
                 "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
+              },
+              {
+                "path": "tools/test-manga-target-catalog-admission.mjs",
+                "sha256": "af48eb0bb96f45b46f6ed8974bc9ba131bc17e73ab83be25004dbb1bf08d5fbd"
               }
             ]
           }
@@ -10862,7 +10875,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -11127,17 +11140,26 @@
                     "loading",
                     "empty",
                     "filteredEmpty",
-                    "error"
+                    "error",
+                    "busy",
+                    "disabled"
                   ],
                   "transitions": [
-                    "select current target chapter→prepareSelected→commitPrepared；busy仅Index方法准入",
+                    "select current target chapter→prepareSelected→commitPrepared. Current selection busy disables semantic/flat catalog input, pre-commit Back retains cancellation.",
                     "cancel before commitStarted→original source candidates；旧selection拒绝回调",
                     "fonts/loading/empty/query→现有组件页态，不注入书签/离线recovery"
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，调用方busy未完整投影。"
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "busy-catalog",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，当前selectionBusy已按原owner投影，准确SDK覆盖同actor更新、语义/平面输入禁用、重复回调及提交前Back。完整原生状态矩阵继续待补。"
               },
               "visual": {
                 "applicability": "applicable",
@@ -11607,7 +11629,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 39,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -11637,7 +11659,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -11895,11 +11917,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -11931,7 +11953,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -12019,7 +12041,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -12257,6 +12279,10 @@
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
                 "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
+              },
+              {
+                "path": "tools/test-manga-target-catalog-admission.mjs",
+                "sha256": "af48eb0bb96f45b46f6ed8974bc9ba131bc17e73ab83be25004dbb1bf08d5fbd"
               }
             ]
           }
@@ -12316,7 +12342,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -13144,7 +13170,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -13402,11 +13428,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -13438,7 +13464,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -13526,7 +13552,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -13703,7 +13729,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -14543,7 +14569,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -14801,11 +14827,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -14837,7 +14863,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -14925,7 +14951,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -15219,7 +15245,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -15481,17 +15507,26 @@
                     "loading",
                     "empty",
                     "filteredEmpty",
-                    "error"
+                    "error",
+                    "busy",
+                    "disabled"
                   ],
                   "transitions": [
-                    "select current target chapter→prepareSelected→commitPrepared；busy仅Index方法准入",
+                    "select current target chapter→prepareSelected→commitPrepared. Current selection busy disables semantic/flat catalog input, pre-commit Back retains cancellation.",
                     "cancel before commitStarted→original source candidates；旧selection拒绝回调",
                     "fonts/loading/empty/query→现有组件页态，不注入书签/离线recovery"
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，调用方busy未完整投影。"
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "busy-catalog",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，当前selectionBusy已按原owner投影，准确SDK覆盖同actor更新、语义/平面输入禁用、重复回调及提交前Back。完整原生状态矩阵继续待补。"
               },
               "visual": {
                 "applicability": "applicable",
@@ -15949,7 +15984,7 @@
               }
             },
             "exceptions": [],
-            "revision": 36,
+            "revision": 37,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15979,7 +16014,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -16237,11 +16272,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -16273,7 +16308,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -16361,7 +16396,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -16479,6 +16514,10 @@
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
                 "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
+              },
+              {
+                "path": "tools/test-manga-target-catalog-admission.mjs",
+                "sha256": "af48eb0bb96f45b46f6ed8974bc9ba131bc17e73ab83be25004dbb1bf08d5fbd"
               }
             ]
           }
@@ -16535,7 +16574,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4"
+              "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a"
             },
             "layers": {
               "route": {
@@ -16800,17 +16839,26 @@
                     "loading",
                     "empty",
                     "filteredEmpty",
-                    "error"
+                    "error",
+                    "busy",
+                    "disabled"
                   ],
                   "transitions": [
-                    "select current target chapter→prepareSelected→commitPrepared；busy仅Index方法准入",
+                    "select current target chapter→prepareSelected→commitPrepared. Current selection busy disables semantic/flat catalog input, pre-commit Back retains cancellation.",
                     "cancel before commitStarted→original source candidates；旧selection拒绝回调",
                     "fonts/loading/empty/query→现有组件页态，不注入书签/离线recovery"
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，调用方busy未完整投影。"
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "busy-catalog",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "implemented仅列源码已有类别，不宣称状态矩阵、离线、部分失败、旧回调或跨页旅程均执行。选择不承接书签/离线写状态：该矩阵是复用组件能力的上限，当前selectionBusy已按原owner投影，准确SDK覆盖同actor更新、语义/平面输入禁用、重复回调及提交前Back。完整原生状态矩阵继续待补。"
               },
               "visual": {
                 "applicability": "applicable",
@@ -17280,7 +17328,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 39,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -17310,7 +17358,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -17568,11 +17616,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -17604,7 +17652,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -17692,7 +17740,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -17930,6 +17978,10 @@
                 "path": "entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopup.ets",
                 "sha256": "b3680b27be263819084b9b61776f33bb8c63bf4c099346ab1a620870ed03f456",
                 "symbol": "popupOptions"
+              },
+              {
+                "path": "tools/test-manga-target-catalog-admission.mjs",
+                "sha256": "af48eb0bb96f45b46f6ed8974bc9ba131bc17e73ab83be25004dbb1bf08d5fbd"
               }
             ]
           }
@@ -18916,7 +18968,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -19174,11 +19226,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -19210,7 +19262,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -19298,7 +19350,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -20525,7 +20577,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "1c4eea8aa2bd39e20c4b0e23c5bc537f6e263c3d252811fda49d7a7409b3c6f4",
+                "sha256": "da5a5bb4ae986a54a471bbaf3e7aa5ad9a00e340a093b4fb69d87c35b7a7435a",
                 "symbol": "mangaPage"
               },
               {
@@ -20783,11 +20835,11 @@
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchSurfaces.ets",
-                "sha256": "92ad56aac9609b69f794372938068a6d40a65fdfc1533e89349b26f46a46f4ea"
+                "sha256": "dba5491d71a8b9020527f4ff72595f2739524262946b1a95499e893c531ffc0c"
               },
               {
                 "path": "entry/src/main/ets/features/manga/presentation/MangaSourceSwitchPresentation.ets",
-                "sha256": "cbbf66a66ca6a65c89821cc2fce1275aa8211ca953291eb2e87a56d1494af1ce"
+                "sha256": "1d207af52774c371a183ac6ae8811e547790ea0d8fffc3e60b710991bcde4322"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
@@ -20819,7 +20871,7 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "ed225642fc2daaf75c86561d3870fd8ff9bdb51e3a6e99601e08639bc55a654a"
+                "sha256": "cf8df239fe2b0f62727f9845b144e965a56f9ac58c900268aad954bc9b51397a"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
@@ -20907,7 +20959,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "92fe2538f0763ee48ed4782318fc11e84c55f4dac0cfce3e47e43d773f2310f3"
+                "sha256": "9dc95cd98cbc7c7ad942d56f2cb6b36ae7236f972c1fd511babf37744e477b67"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",

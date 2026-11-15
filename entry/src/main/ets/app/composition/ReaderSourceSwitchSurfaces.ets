@@ -26,6 +26,7 @@ export struct ReaderSourceSwitchSurfaces {
         sourceId: this.manga.selection.target.identity.sourceId,
         bookId: this.manga.selection.target.identity.bookId,
         interactive: this.interactive,
+        selectionBusy: this.manga.directorySelectionBusy(this.manga.selection),
         isOpeningCurrent: this.manga.directoryOpening(this.manga.selection),
         bookTitle: this.manga.selection.target.book.title,
         currentChapterIndex: -1,

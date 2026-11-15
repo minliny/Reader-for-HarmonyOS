@@ -54,6 +54,7 @@ export struct BookDirectoryPage {
   @Prop catalogMessage: string = '';
   @Prop catalogBusy: boolean = false;
   @Prop interactive: boolean = true;
+  @Prop selectionBusy: boolean = false;
   @Prop reduceMotion: boolean = false;
   isOpeningCurrent: () => boolean = (): boolean => true;
   // Keep the parent's original operation contract while the catalog owns
@@ -209,7 +210,7 @@ export struct BookDirectoryPage {
         ReaderDirectoryNavigationSurface({ navigationPortFactory: this.navigationPortFactory,
           sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
           currentChapterIndex: this.currentChapterIndex, openRevision: identity,
-          interactionEnabled: this.interactive,
+          interactionEnabled: this.interactive && !this.selectionBusy,
           locateCurrentRevision: this.locateCurrentRevision,
           interacted: this.navigationInteracted, mangaDisplay: true,
           mangaInitialViewportWidth: this.viewportWidth > 0 ? this.viewportWidth : readerWindowMetrics().windowRect.width,
@@ -229,7 +230,7 @@ export struct BookDirectoryPage {
           fallbackBuilder: (): void => { this.mangaFlatList(identity); },
           onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number,
             positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void => {
-            if (this.navigationActive && this.directoryInputIsCurrent(identity))
+            if (!this.selectionBusy && this.navigationActive && this.directoryInputIsCurrent(identity))
               this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
           },
           onFirstLayout: (): void => {
@@ -482,12 +483,12 @@ export struct BookDirectoryPage {
     MangaDirectoryEntryRow({ row: this.mangaLayoutRow(entry), presentation: this.mangaPresentation,
       scheme: this.appThemeScheme, currentChapterIndex: this.currentChapterIndex,
       collapsedBranches: this.mangaCollapsedGroups, query: this.searchQuery,
-      interactionEnabled: this.interactive && !this.navigationActive, chapterDownloadEnabled: this.mangaDownloadEnabled,
+      interactionEnabled: this.interactive && !this.selectionBusy && !this.navigationActive, chapterDownloadEnabled: this.mangaDownloadEnabled,
       onSelectEntry: (selected: LocalReadingTocEntry): void => {
-        if (!this.navigationActive && this.directoryInputIsCurrent(identity)) this.selectMangaEntry(selected, identity);
+        if (!this.selectionBusy && !this.navigationActive && this.directoryInputIsCurrent(identity)) this.selectMangaEntry(selected, identity);
       },
       onToggleBranch: (selected: LocalReadingTocEntry): void => {
-        if (!this.navigationActive && this.directoryInputIsCurrent(identity)) this.toggleMangaBranch(selected, identity);
+        if (!this.selectionBusy && !this.navigationActive && this.directoryInputIsCurrent(identity)) this.toggleMangaBranch(selected, identity);
       },
       onDownloadEntry: (selected: LocalReadingTocEntry): void => {
         if (!this.navigationActive && this.directoryInputIsCurrent(identity) && this.rowIsCurrent(selected, identity) &&

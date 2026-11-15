@@ -26,6 +26,8 @@ interface ReaderDirectoryFixtureObservation {
   kind: string;
   mode: string;
   flatCatalog: boolean;
+  sourceSwitchCandidate: boolean;
+  targetSelectionBusy: boolean;
   fixtureInstanceId: number;
   presentation: number;
   bookId: string;
@@ -47,6 +49,7 @@ export struct ReaderDirectoryStructureFixture {
   @Prop @Watch('resetFixture') mode: ReaderDirectoryFixtureMode = 'text';
   @Prop @Watch('resetFixture') fontsReady: boolean = false;
   @Prop @Watch('resetFixture') flatCatalog: boolean = false;
+  @Prop @Watch('resetFixture') sourceSwitchCandidate: boolean = false;
   @Prop catalogContext: 'detail' | 'reader' = 'detail';
   @Prop controlExpanded: boolean = true;
   @Prop controlViewportHeight: number = 0;
@@ -54,6 +57,7 @@ export struct ReaderDirectoryStructureFixture {
   onAction: (kind: string, chapterIndex: number) => void = (_kind: string, _chapterIndex: number): void => {};
   @State private entries: LocalReadingTocEntry[] = [];
   @State private currentChapterIndex: number = 21;
+  @State private targetSelectionBusy: boolean = false;
   @State private controlTab: string = 'directory';
   @State private actualWidth: number = 0;
   @State private actualHeight: number = 0;
@@ -82,7 +86,14 @@ export struct ReaderDirectoryStructureFixture {
     this.actualControlWidth = 0; this.actualControlHeight = 0;
     this.localControlViewportHeight = this.initialRequestedControlHeight();
     this.entries = this.admitted() ? readerDirectoryFixtureEntries(this.mode === 'manga') : [];
-    this.currentChapterIndex = 21;
+    if (this.sourceSwitchCandidate) {
+      this.entries = this.entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
+        index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable,
+        downloadState: 'unknown',
+      }));
+    }
+    this.currentChapterIndex = this.sourceSwitchCandidate ? -1 : 21;
+    this.targetSelectionBusy = false;
     this.controlTab = 'directory';
     this.intentCount = 0;
     this.nextBookmarkTime = 1793671200000;
@@ -123,6 +134,7 @@ export struct ReaderDirectoryStructureFixture {
 
   private record(kind: string, chapterIndex: number = -1): void {
     const observation: ReaderDirectoryFixtureObservation = { kind: kind, mode: this.mode, flatCatalog: this.flatCatalog,
+      sourceSwitchCandidate: this.sourceSwitchCandidate, targetSelectionBusy: this.targetSelectionBusy,
       fixtureInstanceId: this.fixtureInstanceId, bookId: this.identity().bookId,
       viewId: `${this.openingIdentity()}:${this.mode}`,
       presentation: this.presentation, actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
@@ -261,6 +273,16 @@ export struct ReaderDirectoryStructureFixture {
     this.onBack();
   }
 
+  private selectSourceSwitchTarget(presentation: number, chapterIndex: number): void {
+    if (!this.current(presentation) || !this.sourceSwitchCandidate || this.targetSelectionBusy) return;
+    const entry = this.entries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === chapterIndex);
+    if (entry === undefined || entry.navigable === false) return;
+    this.targetSelectionBusy = true;
+    this.intentCount += 1;
+    this.record('select-target-chapter', chapterIndex);
+    this.onAction('select-target-chapter', chapterIndex);
+  }
+
   private deleteBookmarks(presentation: number, times: number[]): void {
     if (!this.current(presentation)) return;
     this.entries = this.entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry =>
@@ -320,6 +342,18 @@ export struct ReaderDirectoryStructureFixture {
       onRetryCatalog: (): void => this.intent(presentation, 'retry-catalog'),
       onSwitchSource: (): void => this.intent(presentation, 'switch-source'),
       onExit: (): void => this.leave(presentation) });
+  }
+
+  @Builder
+  private sourceSwitchContent(presentation: number) {
+    BookDirectoryPage({ sourceId: this.identity().sourceId, bookId: this.identity().bookId,
+      navigationPortFactory: this.navigationFactory, isOpeningCurrent: (): boolean => this.current(presentation),
+      bookTitle: '目录原生夹具 · 山海画卷', entries: this.entries,
+      currentChapterIndex: -1, currentPageOrdinal: -1, currentPageTotal: -1,
+      catalogMessage: '请选择目标章节继续换源', selectionBusy: this.targetSelectionBusy,
+      onSelectChapter: (index: number): void => this.selectSourceSwitchTarget(presentation, index),
+      onSelectNavigationTarget: (index: number): void => this.selectSourceSwitchTarget(presentation, index),
+      onBack: (): void => this.leave(presentation) });
   }
 
   @Builder
@@ -404,7 +438,10 @@ export struct ReaderDirectoryStructureFixture {
             this.controlContent(presentation);
             if (this.viewportHudVisible()) this.viewportHud(presentation);
           }
-          else if (this.mode === 'manga') this.mangaContent(presentation);
+          else if (this.mode === 'manga') {
+            if (this.sourceSwitchCandidate) this.sourceSwitchContent(presentation);
+            else this.mangaContent(presentation);
+          }
         }, (presentation: number): string => presentation.toString());
       }
     }.width('100%').height('100%')
