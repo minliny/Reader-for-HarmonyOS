@@ -79,6 +79,14 @@ if(selected.length){
       const identity = page.identity();
       const view = await callbacks.navigationPortFactory().open({ sourceId: identity.sourceId, bookId: identity.bookId });
       assert.equal(view.status, flatCatalog ? 'unavailable' : 'ready');
+      if (!flatCatalog) {
+        assert.equal(view.currentVisibleIndex, undefined,
+          'absent current chapter cannot select a group with an absent chapterIndex');
+        const located = await callbacks.navigationPortFactory().open({ sourceId: identity.sourceId, bookId: identity.bookId, chapterIndex: 0 });
+        assert.equal(located.nodes[located.currentVisibleIndex].kind, 'target');
+        assert.equal(located.nodes[located.currentVisibleIndex].chapterIndex, 0,
+          'an explicit zero chapter remains an actual target');
+      }
       callbacks.onSelectNavigationTarget(0, 0);
       current.sdk.properties.flush();
       assert.equal(current.children.at(-1), child);

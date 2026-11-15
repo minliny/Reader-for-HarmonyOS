@@ -75,7 +75,8 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
     if (this.flatCatalog) return { status: 'unavailable', reason: 'NoStructure' };
     this.observe('tree-open-static-snapshot', query.chapterIndex ?? -1);
     const nodes = this.nodes();
-    const current = nodes.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === query.chapterIndex);
+    const current = query.chapterIndex === undefined ? -1 :
+      nodes.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === query.chapterIndex);
     return { status: 'ready', identity: { sourceId: this.sourceId, bookId: this.bookId,
       catalogRevision: this.viewId, structureRevision: this.viewId },
       viewId: this.viewId, navigationRevision: this.viewId, visibleTotal: nodes.length,
