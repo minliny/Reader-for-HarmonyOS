@@ -593,10 +593,17 @@ export struct ReaderDirectoryNavigationSurface {
 
   @Builder
   private treePrefixEmptyState() {
-    ReaderPageState({ message: '没有匹配的目录项', padded: false,
-      actionLabel: this.query.trim().length > 0 ? '清除搜索' : '', actionEnabled: this.clearInputCurrent(),
-      actionGeneration: this.generation, onAction: (expected: number): void => this.clearCurrent(expected),
-      mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
+    if (this.showLoadStatus && (this.loadPending || this.loadFailed)) {
+      ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
+        padded: false, actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.retryInputCurrent(),
+        actionGeneration: this.generation, mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+        onAction: (expected: number): void => this.retryCurrent(expected) });
+    } else {
+      ReaderPageState({ message: '没有匹配的目录项', padded: false,
+        actionLabel: this.query.trim().length > 0 ? '清除搜索' : '', actionEnabled: this.clearInputCurrent(),
+        actionGeneration: this.generation, onAction: (expected: number): void => this.clearCurrent(expected),
+        mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
+    }
   }
 
   build() {
@@ -605,6 +612,7 @@ export struct ReaderDirectoryNavigationSurface {
         if (this.mangaDisplay && !this.mangaFontsReady) {
           Blank().width('100%').height('100%');
         } else if (this.showLoadStatus && !this.hasRetainedContent() &&
+          !(this.view !== undefined && this.headerCount === 1) &&
           (this.loadPending || this.loadFailed)) {
           if (this.hasPrefix()) {
             List({ space: 0, scroller: this.scroller }) {
@@ -656,6 +664,7 @@ export struct ReaderDirectoryNavigationSurface {
               prefixRevealRevision: this.prefixRevealRevision,
               prefixBuilder: (): void => this.prefixBuilder(),
               emptyBuilder: (): void => this.treePrefixEmptyState(),
+              emptyReadStateVisible: this.showLoadStatus && (this.loadPending || this.loadFailed),
               scroller: this.scroller,
               onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void => {
                 if (!this.awaitingRulesRefresh) this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);

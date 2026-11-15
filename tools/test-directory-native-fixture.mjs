@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases,recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected=selectContractCases({
+  'empty-query-port':'Explicit finite public query responses enter ready-empty, pending, failure and retry. Retirement cancels the pending timer and late completion. No Core filtering or native rendering.',
   'source-switch-target':'Actual memory target mirrors source-switch chapter/page -1, unknown download state and no markers; pending selection coalesces, preserves no current chapter and retires callbacks across semantic/flat ports.',
   'flat-fallback-port':'Actual current fixture NoStructure response enters the production Surface flat fallback without Runtime and retires old ports across openings.',
   'bookmark-memory-owner':'Actual DEBUG fixture uses production recovery projection for its current in-memory bookmark owner; normal production read-only default and retired callbacks remain bounded.',
@@ -61,6 +62,37 @@ if(selected.length){
     finally{componentMap.ID_ATTRS.clear();for(const [k,v]of saved)componentMap.ID_ATTRS.set(k,v);}
     Object.assign(page,{fontsReady:ready,mode,flatCatalog,sourceSwitchCandidate,controlExpanded:expanded,controlViewportHeight:controlHeight,onAction:(kind,index)=>actions.push([kind,index]),onBack:()=>back.push(true)});
     page.aboutToAppear();return{page,sdk,children,events,actions,back,metrics};
+  }
+  async function emptyQueryPort() {
+    const timers = new Map(), reads = [];
+    let nextTimer = 0, active = true;
+    const { ReaderDirectoryFixturePort: Port } = pureModuleProbe(dataSource, 'ReaderDirectoryStructureFixtureData.ts', {
+      setTimeout(action, delay) { assert.equal(delay, 12000); timers.set(++nextTimer, action); return nextTimer; },
+      clearTimeout(id) { timers.delete(id); },
+    }, ['ReaderDirectoryFixturePort']);
+    const port = new Port('fixture', 'book', 'view', () => readerDirectoryFixtureEntries(true),
+      () => active, kind => reads.push(kind), false, true);
+    const input = query => ({ sourceId: 'fixture', bookId: 'book', query });
+    assert.equal((await port.open(input(''))).visibleTotal, 64, 'normal acquisition has readable chapters');
+    assert.equal((await port.open(input('MissingA'))).visibleTotal, 0);
+    const pending = port.open(input('MissingB'));
+    assert.equal(timers.size, 1); assert.equal(reads.at(-1), 'tree-query-pending');
+    [...timers.values()][0]();
+    await assert.rejects(pending, /explicit query read failure/);
+    assert.equal(reads.at(-1), 'tree-query-failed');
+    assert.equal((await port.open(input('MissingB'))).visibleTotal, 0, 'original retry returns an explicit public ready response');
+    const retired = new Port('fixture', 'book', 'view2', () => readerDirectoryFixtureEntries(true),
+      () => active, kind => reads.push(kind), false, true);
+    const abandoned = retired.open(input('MissingB')), late = [...timers.values()].at(-1);
+    const before = reads.length;
+    active = false; retired.close();
+    await assert.rejects(abandoned, /retired/);
+    late(); assert.equal(reads.length, before, 'late retired timer cannot emit a current observation');
+    const current = fixture({ mode: 'manga', sourceSwitchCandidate: true });
+    current.page.emptyRetry = true; current.page.resetFixture();
+    const old = current.page.fixturePort, identity = current.page.identity();
+    current.page.aboutToDisappear();
+    await assert.rejects(() => old.open({ sourceId: identity.sourceId, bookId: identity.bookId }), /retired/);
   }
   async function sourceSwitchTarget() {
     for (const flatCatalog of [false, true]) {
@@ -425,6 +457,6 @@ if(selected.length){
     list.selectTarget({kind:'target',nodeId:'n1',chapterIndex:1});assert.equal(guard(),true);
     list.mounted=false;list.generation+=1;assert.equal(guard(),false);resolveTarget({chapterIndex:1,chapterOffsetScalar:0});await tick();assert.deepEqual(selections,[]);
   }
-  const cases={'source-switch-target':sourceSwitchTarget,'flat-fallback-port':flatFallbackPort,'bookmark-memory-owner':bookmarkMemoryOwner,'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
+  const cases={'empty-query-port':emptyQueryPort,'source-switch-target':sourceSwitchTarget,'flat-fallback-port':flatFallbackPort,'bookmark-memory-owner':bookmarkMemoryOwner,'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

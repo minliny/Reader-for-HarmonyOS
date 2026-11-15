@@ -50,6 +50,7 @@ export struct ReaderDirectoryStructureFixture {
   @Prop @Watch('resetFixture') fontsReady: boolean = false;
   @Prop @Watch('resetFixture') flatCatalog: boolean = false;
   @Prop @Watch('resetFixture') sourceSwitchCandidate: boolean = false;
+  @Prop @Watch('resetFixture') emptyRetry: boolean = false;
   @Prop catalogContext: 'detail' | 'reader' = 'detail';
   @Prop controlExpanded: boolean = true;
   @Prop controlViewportHeight: number = 0;
@@ -67,6 +68,7 @@ export struct ReaderDirectoryStructureFixture {
   private intentCount: number = 0;
   private mounted: boolean = false;
   private nextBookmarkTime: number = 1793671200000;
+  private fixturePort: ReaderDirectoryFixturePort | undefined = undefined;
   private navigationFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   @State private controlMinimumKey: string = '';
   private controlMinimumRevision: number = 0;
@@ -75,7 +77,7 @@ export struct ReaderDirectoryStructureFixture {
   private actualControlHeight: number = 0;
 
   aboutToAppear(): void { this.mounted = true; this.resetFixture(); }
-  aboutToDisappear(): void { this.mounted = false; this.presentation += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.presentation += 1; this.fixturePort?.close(); }
 
   private admitted(): boolean {
     return this.mounted && DEBUG === true && BUILD_MODE_NAME === 'debug' && this.fontsReady;
@@ -83,6 +85,7 @@ export struct ReaderDirectoryStructureFixture {
 
   private resetFixture(): void {
     this.presentation += 1;
+    this.fixturePort?.close(); this.fixturePort = undefined;
     this.actualControlWidth = 0; this.actualControlHeight = 0;
     this.localControlViewportHeight = this.initialRequestedControlHeight();
     this.entries = this.admitted() ? readerDirectoryFixtureEntries(this.mode === 'manga') : [];
@@ -104,7 +107,8 @@ export struct ReaderDirectoryStructureFixture {
       const port = new ReaderDirectoryFixturePort(identity.sourceId, identity.bookId,
         `${this.openingIdentity()}:${this.mode}`, (): LocalReadingTocEntry[] => this.entries,
         (): boolean => this.current(presentation),
-        (kind: string, index: number): void => { if (this.current(presentation)) this.record(kind, index); }, this.flatCatalog);
+        (kind: string, index: number): void => { if (this.current(presentation)) this.record(kind, index); }, this.flatCatalog, this.emptyRetry);
+      this.fixturePort = port;
       this.navigationFactory = (): ReaderDirectoryFixturePort => {
         if (!this.current(presentation)) throw new Error('directory fixture factory has retired');
         return port;

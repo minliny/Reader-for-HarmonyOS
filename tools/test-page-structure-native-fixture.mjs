@@ -311,9 +311,9 @@ if (selected.length) {
   }
 
   async function sourceSwitchScenes() {
-    for (const suffix of ['', '-short', '-flat', '-flat-short']) {
+    for (const suffix of ['', '-short', '-flat', '-flat-short', 'empty-retry']) {
       const current = fixture(); current.page.aboutToAppear(); await tick(); current.page.menu();
-      const scene = 'directory-source-switch' + suffix;
+      const scene = suffix === 'empty-retry' ? 'directory-empty-retry' : 'directory-source-switch' + suffix;
       const action = current.sdk.nodes(current.page).find(node => node.id === 'reader-page-structure-' + scene)?.onClick;
       assert.equal(typeof action, 'function');
       action(); current.page.fixtureStage();
@@ -322,7 +322,8 @@ if (selected.length) {
       assert.equal(props.mode, 'manga'); assert.equal(props.sourceSwitchCandidate, true);
       assert.equal(props.fontsReady, true); assert.equal(props.flatCatalog, suffix.includes('flat'));
       const viewport = current.sdk.nodes(current.page).find(node => node.id === 'reader-directory-source-switch-viewport');
-      assert.equal(viewport.height, suffix.endsWith('short') ? 168 : '100%');
+      assert.equal(viewport.height, suffix.endsWith('short') || suffix === 'empty-retry' ? 168 : '100%');
+      assert.equal(props.emptyRetry, suffix === 'empty-retry');
       assert.equal(viewport.clip, true);
       assert.equal(current.page.readerOwnsWindowEdges(), true);
       props.onBack(); assert.equal(current.page.scene, 'menu');

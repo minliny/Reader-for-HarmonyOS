@@ -280,6 +280,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop @Watch('onPrefixReveal') prefixRevealRevision: number = 0;
   @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
   @BuilderParam emptyBuilder: () => void = this.emptyPrefix;
+  @Prop emptyReadStateVisible: boolean = false;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
@@ -1141,17 +1142,21 @@ export struct ReaderDirectoryNavigationList {
 
   @Builder
   private mangaEmptyState() {
-    Column({ space: MANGA_DIRECTORY_VISUAL.quietEmptyGap }) {
-      ForEach([this.view.viewId], (viewId: string): void => {
-        ReaderPageState({ message: this.mangaSearchActive ? '没有匹配的章节' : '暂无章节信息',
-          padded: false, mutedColor: this.mangaColor('muted'), customActions: true,
-          actionContent: (): void => this.mangaEmptyActions(viewId) });
-      }, (viewId: string): string => viewId);
-    }.width('100%').constraintSize({ minHeight: MANGA_DIRECTORY_VISUAL.quietEmptyMinHeight })
-      .padding({ top: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingY, bottom: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingY,
-        left: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingX, right: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingX })
-      .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-      .border({ width: { top: MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.mangaColor('line') });
+    if (this.emptyReadStateVisible) {
+      this.emptyBuilder();
+    } else {
+      Column({ space: MANGA_DIRECTORY_VISUAL.quietEmptyGap }) {
+        ForEach([this.view.viewId], (viewId: string): void => {
+          ReaderPageState({ message: this.mangaSearchActive ? '没有匹配的章节' : '暂无章节信息',
+            padded: false, mutedColor: this.mangaColor('muted'), customActions: true,
+            actionContent: (): void => this.mangaEmptyActions(viewId) });
+        }, (viewId: string): string => viewId);
+      }.width('100%').constraintSize({ minHeight: MANGA_DIRECTORY_VISUAL.quietEmptyMinHeight })
+        .padding({ top: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingY, bottom: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingY,
+          left: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingX, right: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingX })
+        .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+        .border({ width: { top: MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.mangaColor('line') });
+    }
   }
 
   private mangaQuickContextTitle(item: ReaderDirectoryNavigationItem): string {

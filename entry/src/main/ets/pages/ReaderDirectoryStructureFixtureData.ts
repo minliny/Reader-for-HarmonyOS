@@ -38,11 +38,23 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
   private readonly active: () => boolean;
   private readonly observe: (kind: string, chapterIndex: number) => void;
   private readonly flatCatalog: boolean;
+  private readonly emptyRetry: boolean;
+  private pendingTimer: number = -1;
+  private rejectPending: ((reason: Error) => void) | undefined = undefined;
+  private failedQueryAttempted: boolean = false;
 
   constructor(sourceId: string, bookId: string, viewId: string, entries: () => LocalReadingTocEntry[],
-    active: () => boolean, observe: (kind: string, chapterIndex: number) => void, flatCatalog: boolean = false) {
+    active: () => boolean, observe: (kind: string, chapterIndex: number) => void, flatCatalog: boolean = false, emptyRetry: boolean = false) {
     this.sourceId = sourceId; this.bookId = bookId; this.viewId = viewId;
-    this.entries = entries; this.active = active; this.observe = observe; this.flatCatalog = flatCatalog;
+    this.entries = entries; this.active = active; this.observe = observe; this.flatCatalog = flatCatalog; this.emptyRetry = emptyRetry;
+  }
+
+  close(): void {
+    if (this.pendingTimer >= 0) clearTimeout(this.pendingTimer);
+    this.pendingTimer = -1;
+    const reject = this.rejectPending;
+    this.rejectPending = undefined;
+    reject?.(new Error('directory fixture pending read retired'));
   }
 
   private admit(bookId: string, isCurrent?: () => boolean): void {
@@ -73,8 +85,24 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
     this.admit(query.bookId, isCurrent);
     if (query.sourceId !== this.sourceId) throw new Error('directory fixture source changed');
     if (this.flatCatalog) return { status: 'unavailable', reason: 'NoStructure' };
-    this.observe('tree-open-static-snapshot', query.chapterIndex ?? -1);
-    const nodes = this.nodes();
+    // Explicit finite public-port responses. These two strings select UI states
+    // and deliberately implement no Core filtering or query semantics.
+    if (this.emptyRetry && query.query === 'MissingB' && !this.failedQueryAttempted) {
+      this.failedQueryAttempted = true;
+      this.observe('tree-query-pending', -1);
+      await new Promise<void>((_resolve, reject): void => {
+        this.rejectPending = reject;
+        this.pendingTimer = setTimeout((): void => {
+          this.pendingTimer = -1;
+          this.rejectPending = undefined;
+          if (this.active() && isCurrent?.() !== false) this.observe('tree-query-failed', -1);
+          reject(new Error('directory fixture explicit query read failure'));
+        }, 12000);
+      });
+    }
+    const empty = this.emptyRetry && (query.query === 'MissingA' || query.query === 'MissingB');
+    this.observe(empty ? 'tree-query-empty' : 'tree-open-static-snapshot', query.chapterIndex ?? -1);
+    const nodes = empty ? [] : this.nodes();
     const current = query.chapterIndex === undefined ? -1 :
       nodes.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === query.chapterIndex);
     return { status: 'ready', identity: { sourceId: this.sourceId, bookId: this.bookId,

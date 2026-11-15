@@ -37,7 +37,7 @@ function defaultSourceManagementFilters(): SourceManagementFilterState {
 type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'busy' |
   'read-error' | 'read-empty-error' | 'original-unknown' | 'original-cleanup' |
   'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-source-switch' | 'directory-source-switch-short' |
-  'directory-source-switch-flat' | 'directory-source-switch-flat-short' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
+  'directory-source-switch-flat' | 'directory-source-switch-flat-short' | 'directory-empty-retry' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
   'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
   'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery' | 'framework-geometry' | 'legacy-recovery';
 interface PageStructureFixtureObservation {
@@ -212,7 +212,7 @@ struct ReaderPageStructureVerification {
       menuPresentation !== this.presentation ||
       (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' &&
         scene !== 'directory-source-switch' && scene !== 'directory-source-switch-short' &&
-        scene !== 'directory-source-switch-flat' && scene !== 'directory-source-switch-flat-short' &&
+        scene !== 'directory-source-switch-flat' && scene !== 'directory-source-switch-flat-short' && scene !== 'directory-empty-retry' &&
         scene !== 'directory-control-expanded' && scene !== 'directory-control-compact' &&
         scene !== 'directory-control-flat-expanded' && scene !== 'directory-control-flat-compact' &&
         scene !== 'directory-control-short-122' && scene !== 'directory-control-short-168' && scene !== 'directory-control-short-190' &&
@@ -341,7 +341,7 @@ struct ReaderPageStructureVerification {
   private readerOwnsWindowEdges(): boolean {
     return this.scene === 'directory-reader' || this.scene === 'directory-manga' ||
       this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
-      this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short' ||
+      this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short' || this.scene === 'directory-empty-retry' ||
       this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
       this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' ||
       this.scene === 'directory-control-short-122' || this.scene === 'directory-control-short-168' ||
@@ -480,6 +480,8 @@ struct ReaderPageStructureVerification {
         Button(`短页下载 · ${item.title}`).enabled(this.fontState === 'ready').id(`reader-page-structure-downloads-short-${item.value}`)
           .onClick((): void => this.launchDownloadFixture(item.value, menuPresentation, true));
       }, (item: DownloadFixtureCase): string => item.value);
+      Button('短页目录 · 空结果读取续接').enabled(this.fontState === 'ready').id('reader-page-structure-directory-empty-retry')
+        .onClick((): void => this.launchFixture('directory-empty-retry', menuPresentation));
       Button('目录 · 漫画换源目标').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch')
         .onClick((): void => this.launchFixture('directory-source-switch', menuPresentation));
       Button('短页目录 · 漫画换源目标').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch-short')
@@ -544,13 +546,13 @@ struct ReaderPageStructureVerification {
             onBack: (): void => this.leaveScene(presentation),
             onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
         } else if (this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
-          this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short') {
+          this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short' || this.scene === 'directory-empty-retry') {
           Stack({ alignContent: Alignment.TopStart }) {
-            ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', sourceSwitchCandidate: true,
+            ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', sourceSwitchCandidate: true, emptyRetry: this.scene === 'directory-empty-retry',
               flatCatalog: this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short',
               catalogContext: 'detail', onBack: (): void => this.leaveScene(presentation),
               onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
-          }.width('100%').height(this.scene === 'directory-source-switch-short' || this.scene === 'directory-source-switch-flat-short' ? 168 : '100%').clip(true)
+          }.width('100%').height(this.scene === 'directory-source-switch-short' || this.scene === 'directory-source-switch-flat-short' || this.scene === 'directory-empty-retry' ? 168 : '100%').clip(true)
             .id('reader-directory-source-switch-viewport');
         } else if (this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
           this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' || this.shortControlHeight() > 0) {

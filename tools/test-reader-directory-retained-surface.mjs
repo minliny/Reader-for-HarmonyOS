@@ -3,9 +3,14 @@ import { readFileSync } from 'node:fs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 import { ReaderScrollLayout, readerScrollStartOffset, readerScrollEndOffset } from '../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts';
 
 const definitions = {
+  'empty-prefix-transition': {
+    description: 'Actual manga Surface keeps the existing prefix consumer through confirmed-empty to current pending/failed query input. Finite public child renderer and font/navigation ports, no native Grid or Core filter simulation.',
+    resources: [],
+  },
   'retained-surface': {
     description: 'Actual SDK nested directory Surface keeps retained content in one fixed slot and uses current generation receivers',
     resources: [],
@@ -34,7 +39,7 @@ function materializeItems(owner) {
   }
 }
 
-function fixture({ retained = true, prefix = false, query = '', render = 'build', injected = false, tree = false, implementation = source } = {}) {
+function fixture({ retained = true, prefix = false, query = '', render = 'build', injected = false, tree = false, manga = false, implementation = source } = {}) {
   const sdk = boundedSurfaceSdk();
   sdk.hooks.childSources.ReaderDirectoryNavigationList = read('ReaderDirectoryNavigationList');
   const requests = [], timers = [], feedback = [];
@@ -48,6 +53,7 @@ function fixture({ retained = true, prefix = false, query = '', render = 'build'
     ReaderRuntimeOwner: { current: () => runtime, isCurrent: owner => owner === runtimeCurrent },
     ReaderDirectoryNavigationGateway: class {},
     ReaderScrollLayout,
+    prepareMangaSheetFonts: async () => true,
     readerScrollStartOffset, readerScrollEndOffset,
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
     readerDirectoryScopeKey: (sourceId, bookId) => sourceId + ':' + bookId,
@@ -78,7 +84,7 @@ function fixture({ retained = true, prefix = false, query = '', render = 'build'
     }
     updateStateVars(params) {
       super.updateStateVars(params);
-      Object.assign(this.list, params);
+      Object.assign(this.list, params, { mangaDisplay: false });
       this.list.replay();
     }
   }
@@ -86,6 +92,7 @@ function fixture({ retained = true, prefix = false, query = '', render = 'build'
   const owner = sdk.consumer(implementation, boundedMembers(implementation), deps, {
     sourceId: 'local', bookId: 'book-a', openRevision: 'open-a', query,
     chapterEntries: retained ? entries : [], headerCount: prefix ? 1 : 0,
+    mangaDisplay: manga,
     ...(injected ? { navigationPortFactory: () => ({}) } : {}),
   });
   Object.assign(owner, { fallbackBuilder() {}, prefixBuilder() {}, onClearSearch: () => { clears++; } });
@@ -191,8 +198,12 @@ async function retainedReceivers(prefix, implementation = source) {
   return f;
 }
 
-function clearDuringDebounce(implementation = source) {
-  const f = fixture({ retained: false, query: 'first', render: 'empty', implementation });
+async function clearDuringDebounce(implementation = source) {
+  const f = fixture({ retained: false, query: 'first', render: 'defer', implementation });
+  f.requests[0].resolve({ viewId: 'confirmed-empty', navigationRevision: 'nav', visibleTotal: 0, nodes: [],
+    identity: { sourceId: 'local', bookId: 'book-a', catalogRevision: 'catalog', structureRevision: 'structure' } });
+  await settle();
+  f.owner.treePrefixEmptyState();
   const first = actualAction(f), receiver = first.child.onReconcile;
   first.callback(); assert.equal(f.clears(), 1);
   f.nextQuery('successor');
@@ -252,7 +263,7 @@ function consumerAssembly() {
     admittedIdentity: 'book-open', sourceId: 'local', bookId: 'book-a', admittedEntries: entries,
     geometry: { content: { frame: { left: 10, right: 10 } } }, viewportWidth: 320,
     mangaVisibleTopInset: () => 0, mangaNarrow: () => true, directoryScrollLayout: () => ({}),
-    mangaToolbar() {},
+    mangaToolbar() {}, mangaFlowFooter: () => false,
   });
   assert.equal(book.child.params.mangaDisplay, true);
   assert.equal(book.child.params.openRevision, 'book-open');
@@ -282,11 +293,103 @@ function consumerAssembly() {
 }
 
 for (const id of selectContractCases(definitions)) {
+  if (id === 'empty-prefix-transition') {
+    const f = fixture({ retained: true, prefix: true, manga: true, query: 'missing-a', render: 'defer' });
+    await settle();
+    assert.equal(f.requests.length, 1);
+    f.requests[0].resolve({ viewId: 'confirmed-empty', navigationRevision: 'nav', visibleTotal: 0, nodes: [],
+      identity: { sourceId: 'local', bookId: 'book-a', catalogRevision: 'catalog', structureRevision: 'structure' } });
+    await settle();
+    f.owner.initialRender(); materializeItems(f.owner);
+    const renderCurrentState = (implementation = source) => {
+      const sdk = boundedSurfaceSdk();
+      const childSources = { ReaderDirectoryNavigationList: read('ReaderDirectoryNavigationList'),
+        ReaderPageState: readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderPageState.ets', import.meta.url), 'utf8'),
+        ReaderRecoveryAction: readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets', import.meta.url), 'utf8') };
+      const owner = createReaderBuilderProbe(implementation, ['build', 'hasPrefix', 'hasRetainedContent', 'treePrefixEmptyState'], {
+        ...sdk.deps, ReaderDirectoryNavigationList: ChildPort, ReaderPageState: ChildPort, ReaderRecoveryAction: ChildPort,
+      }, { ...sdk.hooks, childSources }).owner;
+      Object.assign(owner, { mangaDisplay: true, mangaFontsReady: true, headerCount: 1, showLoadStatus: true,
+        view: f.owner.view, loadPending: f.owner.loadPending, loadFailed: f.owner.loadFailed,
+        query: f.owner.query, chapterEntries: entries, prefixBuilder() {}, fallbackBuilder() {},
+        retryInputCurrent: () => f.owner.retryInputCurrent(), clearInputCurrent: () => f.owner.clearInputCurrent(),
+        retryCurrent: expected => f.owner.retryCurrent(expected), clearCurrent: expected => f.owner.clearCurrent(expected),
+        generation: f.owner.generation, mangaVisibleTopInset: 98, interactionEnabled: true,
+      });
+      owner.initialRender();
+      const child = [...owner.children.values()].find(child => child.params?.view !== undefined);
+      return { owner, child, state() {
+        assert.ok(child, 'current state keeps the actual prefix consumer slot');
+        child.params.emptyBuilder();
+        return [...owner.children.values()].find(value => value.params?.message !== undefined);
+      } };
+    };
+    const ready = renderCurrentState();
+    assert.ok(ready.child, 'confirmed empty state renders the actual prefix consumer slot');
+    assert.equal(ready.child.params.emptyReadStateVisible, false);
+    assert.equal(ready.state().params.actionLabel, '清除搜索');
+    f.nextQuery('missing-b');
+    f.timers.filter(timer => !timer.cancelled).at(-1).action();
+    await settle(); f.sdk.properties.flush();
+    assert.equal(f.owner.loadPending, true);
+    const pending = renderCurrentState();
+    assert.ok(pending.child, 'current pending query must keep rendering its prefix consumer slot');
+    assert.equal(pending.child.params.emptyReadStateVisible, true);
+    assert.equal(pending.state().params.loading, true);
+    assert.equal(pending.state().params.actionLabel, '');
+    await f.fail();
+    assert.equal(f.owner.loadFailed, true);
+    const failed = renderCurrentState(), retry = failed.state().params;
+    assert.equal(failed.child.params.emptyReadStateVisible, true);
+    assert.equal(retry.message, '目录加载失败'); assert.equal(retry.actionLabel, '重试加载目录');
+    assert.equal(retry.actionEnabled, true);
+    const count = f.requests.length;
+    retry.onAction(retry.actionGeneration); await settle();
+    assert.equal(f.requests.length, count + 1, 'current empty-view retry reaches the original reader');
+    retry.onAction(retry.actionGeneration); await settle();
+    assert.equal(f.requests.length, count + 1, 'current repeated retry is coalesced while pending');
+    await f.fail();
+    const currentRetry = renderCurrentState().state().params;
+    assert.notEqual(currentRetry.actionGeneration, retry.actionGeneration);
+    retry.onAction(retry.actionGeneration); await settle();
+    assert.equal(f.requests.length, count + 1, 'old request generation remains rejected');
+    const renderGridEmpty = (visible, implementation = read('ReaderDirectoryNavigationList')) => {
+      const sdk = boundedSurfaceSdk();
+      const owner = createReaderBuilderProbe(implementation,
+        ['mangaEmptyState', 'emptyReadStateVisible', 'emptyBuilder', 'emptyPrefix'],
+        { ...sdk.deps, MANGA_DIRECTORY_VISUAL, ReaderPageState: ChildPort },
+        { ...sdk.hooks, childSources: { ReaderPageState: readFileSync(new URL(
+          '../entry/src/main/ets/ui/feedback/ReaderPageState.ets', import.meta.url), 'utf8') } }).owner;
+      let builderCalls = 0;
+      Object.assign(owner, { emptyReadStateVisible: visible, emptyBuilder: () => { builderCalls++; },
+        view: f.owner.view, mangaSearchActive: true, mangaColor: () => '#777777', mangaEmptyActions() {} });
+      owner.mangaEmptyState();
+      return { builderCalls, owner };
+    };
+    assert.equal(renderGridEmpty(true).builderCalls, 1,
+      'actual native Grid empty-item Builder delegates the current loading/failure state');
+    const quiet = renderGridEmpty(false);
+    assert.equal(quiet.builderCalls, 0);
+    assert.equal([...quiet.owner.children.values()].at(-1).params.message, '没有匹配的章节',
+      'ordinary confirmed-empty manga presentation keeps its original recipe');
+    const discardedState = read('ReaderDirectoryNavigationList').replace(
+      'if (this.emptyReadStateVisible) {', 'if (false) {');
+    assert.equal(renderGridEmpty(true, discardedState).builderCalls, 0,
+      'negative detects the original Grid path discarding the shared read-state Builder');
+    const legacy = source.replace('!(this.view !== undefined && this.headerCount === 1) &&', '');
+    assert.notEqual(legacy, source);
+    assert.equal(renderCurrentState(legacy).child, undefined, 'historical empty read branch removes the prefix slot');
+    f.owner.aboutToDisappear();
+    currentRetry.onAction(currentRetry.actionGeneration); await settle();
+    assert.equal(f.requests.length, count + 1, 'retired owner cannot retry a successor');
+    recordContractCasePass(id);
+    continue;
+  }
   if (id !== 'retained-surface') continue;
   await retainedFailure();
   await retainedReceivers(false);
   await retainedReceivers(true);
-  clearDuringDebounce();
+  await clearDuringDebounce();
   consumerAssembly();
   const transparent = source.replace('.hitTestBehavior(HitTestMode.Default)\n          .onTouch',
     '.hitTestBehavior(HitTestMode.Transparent)\n          .onTouch');
@@ -315,7 +418,7 @@ for (const id of selectContractCases(definitions)) {
     };
   }
   private currentInputOwnerKey(): string {`);
-  assert.throws(() => clearDuringDebounce(capturedClear), /current clear targets current query/);
+  await assert.rejects(() => clearDuringDebounce(capturedClear), /current clear targets current query/);
   console.log(JSON.stringify({ kind: 'retained-directory-surface', sharedCallers: 4, upstreamWrapper: 1,
     proof: 'SDK emitted Surface root and actual shared PageState/RecoveryAction retained updateStateVars',
     nativeLayoutAndTouch: 'NOT_RUN' }));
