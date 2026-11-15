@@ -1192,7 +1192,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f"
+          "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -2049,6 +2049,12 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/empty-query-code-q.json",
               "symbol": "Current actual Surface empty-prefix/read-state Builder/current retry guards. Native identity, focus and Core semantics retain separate scopes.",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-directory-normal-u.json",
+              "symbol": "normal detail local TXT rules/default/Back and captured reader return only; input editing and complete E2 remain open",
+              "result": "PASS"
             }
           ],
           "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch."
@@ -2624,7 +2630,7 @@
         }
       },
       "exceptions": [],
-      "revision": 45,
+      "revision": 46,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2669,7 +2675,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+          "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
           "symbol": "build"
         },
         {
@@ -2679,7 +2685,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-          "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+          "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
           "symbol": "build"
         },
         {
@@ -2744,7 +2750,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+          "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
           "symbol": "build"
         },
         {
@@ -2858,7 +2864,7 @@
         },
         {
           "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+          "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
         },
         {
           "path": "tools/test-directory-native-row-target.mjs",
@@ -4126,7 +4132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 44,
+            "revision": 45,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4171,7 +4177,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -4181,7 +4187,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -4246,7 +4252,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -4360,7 +4366,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -4760,7 +4766,7 @@
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "nav.directory静态resolved；query/scroll=null表示未冻结，不能改成保留PASS；关闭按directoryReturnTarget回detail/reading。 Historical evidence remains verbatim in .reader-artifacts/framework-confluence-20261112/governance-history/pre-confluence-register.json and is not inherited as current confluence acceptance."
+                "knownGap": "nav.directory静态resolved；query/scroll=null表示未冻结，不能改成保留PASS；关闭按directoryReturnTarget回detail/reading。 Historical evidence remains verbatim in .reader-artifacts/framework-confluence-20261112/governance-history/pre-confluence-register.json and is not inherited as current confluence acceptance. Current normal-entry review 2026-11-15 identifies this standalone reading-text route as a retained assembled branch. ReaderShell invokes onOpenDirectory only from mangaSurface. Current text reader directory navigation mounts ReaderControlDirectoryContent inside its Quick/Full module. Normal text reaches standalone full catalog through BookInfo and detail. This variant keeps source/SDK assembly evidence and its original layer judgments. Native normal-entry admission requires an actual future text trigger."
               },
               "scaffold": {
                 "applicability": "applicable",
@@ -5745,7 +5751,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5790,7 +5796,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -5800,7 +5806,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -5865,7 +5871,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -5979,7 +5985,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -7370,7 +7376,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7415,7 +7421,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -7425,7 +7431,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -7490,7 +7496,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -7604,7 +7610,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -8087,7 +8093,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c"
+              "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd"
             },
             "layers": {
               "route": {
@@ -8525,7 +8531,7 @@
                     "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes, flat26xrow marker responses and semantic44xrow accessory lanes. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Currentc96f scoped actual semantic-directory download boundaries pay44vp horizontal carriers and deliver only chapter16/18 intent once per left/right band tap. Disabled adjacentbookmark rejects. The compact32/40vp vertical capacity, enabledbookmark, Quick and remaining native obligations retain their scope. Current continuation reconciliation20261115. Current continuation has actual semantic44vp horizontal accessory edge delivery and memory callback once per target, plus Control Full/Quick flat bookmark delete→create and queued-download disable on new native rows. Compact Quick32/Full40 heights and flat26vp width follow the approved retained-layout decision. Complete remaining target/reader/state coverage remains open. Currentd600 actualFull memoryflatcatalog accepts chapter→bookmark→chapter→bookmark withsameNative110/119 andthreeowner tab receipts. Actualcontent315.33×620vp in366vp fixture/font1. Other target/focus/readout/fulladaptation requirements remainopen."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes, flat26xrow marker responses and semantic44xrow accessory lanes. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current query response/carrier is at least44vp with original32vp paint. Exact SDK parent/prefix budget verified. Adjacent compact tabs, tools and chapter accessory lanes keep their separately recorded layout constraints. Currentc96f scoped actual semantic-directory download boundaries pay44vp horizontal carriers and deliver only chapter16/18 intent once per left/right band tap. Disabled adjacentbookmark rejects. The compact32/40vp vertical capacity, enabledbookmark, Quick and remaining native obligations retain their scope. Current continuation reconciliation20261115. Current continuation has actual semantic44vp horizontal accessory edge delivery and memory callback once per target, plus Control Full/Quick flat bookmark delete→create and queued-download disable on new native rows. Compact Quick32/Full40 heights and flat26vp width follow the approved retained-layout decision. Complete remaining target/reader/state coverage remains open. Currentd600 actualFull memoryflatcatalog accepts chapter→bookmark→chapter→bookmark withsameNative110/119 andthreeowner tab receipts. Actualcontent315.33×620vp in366vp fixture/font1. Other target/focus/readout/fulladaptation requirements remainopen. Current ea174 normal TXT query click entered the current editing callback and native onFocus=true, but sampled TextInput focus remains false and IME absent. See native-directory-normal-u.json. Original normal editing remains FAIL and awaits revision/ticket/keyboard request attribution."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -8997,7 +9003,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9042,7 +9048,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -9052,7 +9058,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -9117,7 +9123,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -9231,7 +9237,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -10506,7 +10512,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10551,7 +10557,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -10561,7 +10567,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -10626,7 +10632,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -10740,7 +10746,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -11906,7 +11912,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -11951,7 +11957,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -11961,7 +11967,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -12026,7 +12032,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -12140,7 +12146,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -13463,7 +13469,7 @@
               }
             },
             "exceptions": [],
-            "revision": 44,
+            "revision": 45,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13508,7 +13514,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -13518,7 +13524,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -13583,7 +13589,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -13697,7 +13703,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -14908,7 +14914,7 @@
               }
             },
             "exceptions": [],
-            "revision": 46,
+            "revision": 47,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -14953,7 +14959,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -14963,7 +14969,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -15028,7 +15034,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -15142,7 +15148,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -16409,7 +16415,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16454,7 +16460,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -16464,7 +16470,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -16529,7 +16535,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -16643,7 +16649,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -17809,7 +17815,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -17854,7 +17860,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -17864,7 +17870,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -17929,7 +17935,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -18043,7 +18049,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -18537,7 +18543,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c"
+              "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd"
             },
             "layers": {
               "route": {
@@ -19440,7 +19446,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19485,7 +19491,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -19495,7 +19501,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -19560,7 +19566,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -19674,7 +19680,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -20172,7 +20178,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c"
+              "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd"
             },
             "layers": {
               "route": {
@@ -21070,7 +21076,7 @@
               }
             },
             "exceptions": [],
-            "revision": 45,
+            "revision": 46,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21115,7 +21121,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "ed4b0ff5089a46be2d94717fc6fd77533c098c0c7fe7afe4ed2f0580ee91d78c",
+                "sha256": "48dfdbfb687f6317ff497033fbab59162e27e3b3e9179d24f10889216cf056dd",
                 "symbol": "build"
               },
               {
@@ -21125,7 +21131,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "70c3b8c9417027f8e66ab74804de98ed99e991ea773f0be6a5aca8f626374bee",
+                "sha256": "4bff431a7608327e9a4687effda11f4025ecb9965ddf7fcd2ac3fd607b74b24c",
                 "symbol": "build"
               },
               {
@@ -21190,7 +21196,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f",
+                "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06",
                 "symbol": "build"
               },
               {
@@ -21304,7 +21310,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "31bdf83a88b1093166fc1d852e88cff30b197ff2d69d5c6c567a2cfc5f230a8b"
+                "sha256": "c10ccfd714d9966cb73bd51bfd98e14bd40d7e771ee421df6d1b43d37f5a0970"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -31391,7 +31397,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "6f39099e1a810cd875af8f41272b6edda5001aa8d2748455ceafc1cff9f5d95f"
+          "sha256": "ccba928db319d30e125dd56745cf942cdafd28aece6fc337e03004d7acd72f06"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",

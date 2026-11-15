@@ -17,8 +17,24 @@
 
 ## 2026年11月15日当前实施状态
 
-全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`20443d1b`，已安装候选为`0.2.0.DEV.d61901614df1`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
+全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`1523faef`，已安装候选为`0.2.0.DEV.ea1747817c17`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
+
+### 正常文字目录续接、入口归属与本书规则
+
+**UIF-47补齐目录显式编辑和首个布局回执的续接。** Back会把键盘恢复偏好设为关闭，当前原输入的再次点击原先缺少重新表达编辑意图的接线。另一个旧源码负例复现首次Area在输入准入前被拒，同尺寸原生盒随后缺少新Area，显式点击仍因未载入布局而停止。当前固定工具栏和短页前缀均传递当前编辑意图，缺失回执时只安排一次同ID原生尺寸读取，再沿当前ticket和真实焦点ACK请求键盘。Back、卸载、旧身份、禁用及无效尺寸继续拒绝过期工作。[代码、旧源码负例和准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-explicit-editing-u.json)
+
+三个准确SDK用例直接运行通过，覆盖keyboard-transfer、directory-focus和keyboard-ack-delay。统一调度器因它们原有的REVIEW_NEEDED状态在派发前拒绝执行，原FAIL及原资格保留。本次证据使用实际生产Content、Toolbar、Field回调和显式属性重放，焦点与键盘服务由有限端口提供。后继完整ArkTS编译和指定证书签名通过。[当前输入与候选绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-u.json)
+
+**原正常目录编辑仍为FAIL。** 首个后继27ca和当前ea174均保留原生失败。当前显式点击日志为enabled=true、loaded=true，随后原生onFocus回调为true，但采样树仍报告输入focused=false、收起Button focused=true，实屏及窗口记录均未出现IME。本次已有布局回执，首次Area缺口没有在该次触发。已查看的当前Reader日志没有blur或键盘恢复错误，继续追查ACK之后的revision、ticket及键盘请求准入。[原生回执和剩余问题](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-normal-u.json)
+
+正常文字阅读当前通过Quick/Full嵌入ReaderControlDirectoryContent。独立reading-text目录登记是保留的路由装配分支，当前ReaderShell的onOpenDirectory实际调用来自mangaSurface。文字通过书籍信息和详情进入独立完整目录。正式登记保留该分支及原层级判定，补充实际入口归属。[完整入口链核对](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/normal-directory-entry-source-u.json) [13项登记输入更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-refresh-u.json)
+
+正常原TXT已核对四个目录条目、空书签标签及拖动展开。实际搜索Button提交无匹配查询的旧回执按未改动的提交方法范围保存，首次Enter只递送草稿的观察继续保留。当前正常书籍信息进入同书详情和完整目录，本书规则显示默认卷规则，添加规则和预览可见，应用禁用。实际Back依次退出规则、返回目录及捕获的详情来源，再回到同书第一章段落4，最终正常返回四本原有书籍的书架。规则标题采样焦点仍为false，动态编辑、应用及其余容量状态沿各自条件验收。[正常宿主、默认规则与返回证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-normal-u.json)
+
+当前运行提交为1523faef，已安装候选为0.2.0.DEV.ea1747817c17。不可变run为20261115T101238Z-1523faef-4e65b794，签名HAP的SHA-256为e059c58774204602b9266bc0fc9fd40184881576633881bede7106c1e7552262。641个运行输入与候选逐字节匹配。两次覆盖均沿当前停止态存储准入及指定签名身份保留数据，Core和Reader-UI pin沿原值。本批一次pixelMap截图失败经现有显示、窗口和控制栏日志检查后，在同一静止界面补取成功，原始空值原因保留。最终两个密度字段均为3.5，状态栏136px，SceneBoard1426。[当前不可变manifest](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261115T101238Z-1523faef-4e65b794/manifest.json)
+
+完整原生编辑、21项登记的其余状态和整页视觉仍由agent推进，既有外部资料及环境能力缺口按原条件保留。当前没有等待用户作出的实施决断。[后继准确工作范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/remaining-native-entry-review-u.json)
 
 ### 深色主题原生补证与原偏好恢复
 
