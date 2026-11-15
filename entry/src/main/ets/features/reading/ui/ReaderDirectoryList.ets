@@ -159,9 +159,10 @@ export struct ReaderDirectoryList {
   build() {
     List({ space: 0, scroller: this.scroller }) {
       if (this.materializedInsets) {
-        ListItem() {}.width('100%').height(this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY);
+        ListItem() { this.prefixBuilder(); }.width('100%')
+          .height(this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY);
       }
-      if (this.prefixHeight > 0) {
+      if (this.prefixHeight > 0 && !this.materializedInsets) {
         ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: this.prefixHeight });
       }
       if ((this.naturalRowHeight || this.prefixHeight > 0) && this.entries.length === 0) {

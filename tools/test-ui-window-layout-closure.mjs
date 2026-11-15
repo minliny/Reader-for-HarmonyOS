@@ -329,7 +329,8 @@ async function directPageSameArea() {
   const directorySource = read('features/reading/ui/BookDirectoryPage.ets');
   class ChildPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
   const nativeOwner = createReaderBuilderProbe(directorySource, ['mangaToolbar', 'mangaCurrentFooter',
-    'mangaHeightHandler', 'recordMangaHeight', 'toolsMeasurement', 'footerMeasurement', 'flowFooterMeasurement', 'mangaMeasurementKey'],
+    'mangaHeightHandler', 'recordMangaHeight', 'toolsMeasurement', 'flowToolsMeasurement',
+    'footerMeasurement', 'flowFooterMeasurement', 'mangaMeasurementKey'],
     { ...properties.sdk, ...fonts, ReaderNativeSlotMeasurement, ReaderDirectoryToolbar: ChildPort, MangaDirectoryCurrentFooter: ChildPort,
       uiContext: context, readerPageAreaLength: layout.readerPageAreaLength },
     { ...properties.hooks, childSources: {
@@ -352,6 +353,16 @@ async function directPageSameArea() {
     assert.equal(slot === 'tools' ? nativeOwner.mangaToolsHeight : nativeOwner.mangaFooterMeasured, 88);
     nativeHeight = 88;
   }
+  nativeOwner.mangaToolbar('current', true, nativeOwner.flowToolsMeasurement);
+  const fixedTools = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.toolsMeasurement.id);
+  const flowTools = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.flowToolsMeasurement.id);
+  fixedTools.onAppear(); const retiredToolsFrame = frames.shift();
+  flowTools.onAppear(); const currentToolsFrame = frames.shift();
+  fixedTools.onDisAppear(); nativeHeight = 105;
+  retiredToolsFrame.onIdle(1000000); assert.equal(nativeOwner.mangaToolsHeight, 88);
+  currentToolsFrame.onIdle(1000000); assert.equal(nativeOwner.mangaToolsHeight, 105,
+    'old overlay disappearance cannot retire the current native toolbar in List content');
+  flowTools.onDisAppear(); nativeHeight = 88;
   nativeOwner.mangaCurrentFooter(nativeOwner.flowFooterMeasurement);
   const flowFooter = [...nativeOwner.nodes.values()].find(node => node.id === nativeOwner.flowFooterMeasurement.id);
   assert.ok(flowFooter?.onAppear && flowFooter?.onDisAppear);
@@ -369,7 +380,8 @@ async function directPageSameArea() {
   const directory = Object.assign(new Directory(), { mounted: true, sourceId: 'local', bookId: 'manga-a', bookTitle: 'A',
     viewportWidth: 320, mangaFontsReady: true, measurementKey: 0, mangaMeasurementKey: 0,
     headerInputs: '', mangaInputs: '', mangaFooterMeasured: 0, mangaToolsHeight: 175,
-    toolsMeasurement: new ReaderNativeSlotMeasurement(), footerMeasurement: new ReaderNativeSlotMeasurement(),
+    toolsMeasurement: new ReaderNativeSlotMeasurement(), flowToolsMeasurement: new ReaderNativeSlotMeasurement(),
+    footerMeasurement: new ReaderNativeSlotMeasurement(),
     flowFooterMeasurement: new ReaderNativeSlotMeasurement(),
     measurements: new layout.ReaderMeasurementStore(), headerFrame: () => ({ left: 8, right: 8 }),
     mangaFooterFrame: () => ({ width: 284 }), mangaSummaryLabel: () => '2 个可读条目',

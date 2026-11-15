@@ -2599,7 +2599,7 @@
         }
       },
       "exceptions": [],
-      "revision": 37,
+      "revision": 39,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2629,7 +2629,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-          "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+          "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
           "symbol": "mangaPage"
         },
         {
@@ -2911,7 +2911,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-          "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+          "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
         },
         {
           "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -3239,7 +3239,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -4049,7 +4049,7 @@
               }
             },
             "exceptions": [],
-            "revision": 36,
+            "revision": 38,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4079,7 +4079,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -4361,7 +4361,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -5647,7 +5647,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 40,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5677,7 +5677,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -5959,7 +5959,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -6392,7 +6392,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -7226,7 +7226,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 40,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7256,7 +7256,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -7538,7 +7538,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -8832,7 +8832,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 40,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -8862,7 +8862,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -9144,7 +9144,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -9546,7 +9546,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -10285,7 +10285,7 @@
               }
             },
             "exceptions": [],
-            "revision": 37,
+            "revision": 39,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10315,7 +10315,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -10597,7 +10597,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -10818,7 +10818,7 @@
               },
               {
                 "path": "tools/test-manga-target-catalog-admission.mjs",
-                "sha256": "60a495b1c8901a3d1fcd74ffdde68612f251b8be4c2979b2ce476d7be9b643d5"
+                "sha256": "51c1b3c5c8e39b28139efc89b9559db1ddd313cea8bcbb664fa1b510eea96410"
               }
             ]
           }
@@ -10875,7 +10875,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -11629,7 +11629,7 @@
               }
             },
             "exceptions": [],
-            "revision": 39,
+            "revision": 41,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -11659,7 +11659,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -11941,7 +11941,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -12282,7 +12282,7 @@
               },
               {
                 "path": "tools/test-manga-target-catalog-admission.mjs",
-                "sha256": "60a495b1c8901a3d1fcd74ffdde68612f251b8be4c2979b2ce476d7be9b643d5"
+                "sha256": "51c1b3c5c8e39b28139efc89b9559db1ddd313cea8bcbb664fa1b510eea96410"
               }
             ]
           }
@@ -12342,7 +12342,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -13140,7 +13140,7 @@
               }
             },
             "exceptions": [],
-            "revision": 36,
+            "revision": 38,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13170,7 +13170,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -13452,7 +13452,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -13729,7 +13729,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -14539,7 +14539,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 40,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -14569,7 +14569,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -14851,7 +14851,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -15245,7 +15245,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -15984,7 +15984,7 @@
               }
             },
             "exceptions": [],
-            "revision": 37,
+            "revision": 39,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16014,7 +16014,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -16296,7 +16296,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -16517,7 +16517,7 @@
               },
               {
                 "path": "tools/test-manga-target-catalog-admission.mjs",
-                "sha256": "60a495b1c8901a3d1fcd74ffdde68612f251b8be4c2979b2ce476d7be9b643d5"
+                "sha256": "51c1b3c5c8e39b28139efc89b9559db1ddd313cea8bcbb664fa1b510eea96410"
               }
             ]
           }
@@ -16574,7 +16574,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549"
+              "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4"
             },
             "layers": {
               "route": {
@@ -17328,7 +17328,7 @@
               }
             },
             "exceptions": [],
-            "revision": 39,
+            "revision": 41,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -17358,7 +17358,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -17640,7 +17640,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -17981,7 +17981,7 @@
               },
               {
                 "path": "tools/test-manga-target-catalog-admission.mjs",
-                "sha256": "60a495b1c8901a3d1fcd74ffdde68612f251b8be4c2979b2ce476d7be9b643d5"
+                "sha256": "51c1b3c5c8e39b28139efc89b9559db1ddd313cea8bcbb664fa1b510eea96410"
               }
             ]
           }
@@ -18938,7 +18938,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 40,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18968,7 +18968,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -19250,7 +19250,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -20547,7 +20547,7 @@
               }
             },
             "exceptions": [],
-            "revision": 38,
+            "revision": 40,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -20577,7 +20577,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "30abfb45d0bd19bb7ea4ea7d3c76d8d59fabd15e79c5426edf3f33e1994bc549",
+                "sha256": "6bbd6f94502500ed1bd3e7a726f6547245228fbf83add6765f74d7818f807ec4",
                 "symbol": "mangaPage"
               },
               {
@@ -20859,7 +20859,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
-                "sha256": "b9149f092953ec6c3a284fad782950e963efc601e8413e76196e9e6bfd91905b"
+                "sha256": "d358ae4d87907ae7182dc89a849ccc4c0870c6a01cbc221ac6a0d68018836db1"
               },
               {
                 "path": "entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets",
@@ -21209,8 +21209,7 @@
             ]
           }
         }
-      ],
-      "reviewRevision": null
+      ]
     },
     {
       "pageId": "downloads",

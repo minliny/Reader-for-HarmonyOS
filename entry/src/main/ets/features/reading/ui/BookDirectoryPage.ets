@@ -101,6 +101,7 @@ export struct BookDirectoryPage {
   private mangaInputs: string = '';
   private geometryRevision: number = 0;
   private readonly toolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
+  private readonly flowToolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly footerMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly flowFooterMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
@@ -148,6 +149,7 @@ export struct BookDirectoryPage {
     this.headerInputs = '';
     this.mangaInputs = '';
     this.toolsMeasurement.unmount();
+    this.flowToolsMeasurement.unmount();
     this.footerMeasurement.unmount();
     this.flowFooterMeasurement.unmount();
     this.projectionGeneration += 1;
@@ -251,7 +253,7 @@ export struct BookDirectoryPage {
             this.navigationActive = active; this.listReady = false;
           },
         }).width('100%').height('100%');
-        this.mangaToolbar(identity);
+        if (!this.mangaFlowFooter() || this.navigationActive) { this.mangaToolbar(identity); }
       }, (identity: string): string => identity);
     }.width('100%').height('100%');
   }
@@ -276,7 +278,8 @@ export struct BookDirectoryPage {
   }
 
   @Builder
-  private mangaToolbar(identity: string) {
+  private mangaToolbar(identity: string, inline: boolean = false,
+    measurement: ReaderNativeSlotMeasurement = this.toolsMeasurement) {
     Column() {
       Column({ space: visual.summaryGap }) {
         Text(this.bookTitle || '漫画目录').fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD)
@@ -296,18 +299,18 @@ export struct BookDirectoryPage {
         onSearch: (): void => { if (this.directoryInputIsCurrent(identity)) this.applySearch(); },
         onToggleSort: (): void => { if (this.directoryInputIsCurrent(identity)) this.toggleSort(); },
         onLocateCurrent: (): void => { if (this.directoryInputIsCurrent(identity)) this.locateCurrent(); },
-      }).hitTestBehavior(HitTestMode.BLOCK_HIERARCHY);
+      }).hitTestBehavior(inline ? HitTestMode.Default : HitTestMode.BLOCK_HIERARCHY);
       if (this.mangaFlowFooter()) {
         Row() { this.mangaCurrentFooter(this.flowFooterMeasurement); }.width('100%').justifyContent(FlexAlign.Center)
           .margin({ top: this.mangaFooterBottomOffset() });
       }
     }.width(this.geometry.content.frame.width).alignItems(HorizontalAlign.Start)
-      .hitTestBehavior(HitTestMode.Transparent)
-      .position({ x: this.geometry.content.frame.left, y: this.geometry.content.startInset - this.mangaToolsHeight - this.mangaScrollOffset })
-      .id(this.toolsMeasurement.id)
-      .onAppear((): void => this.toolsMeasurement.mount(this.getUIContext(), this.mangaMeasurementKey,
+      .hitTestBehavior(inline ? HitTestMode.Default : HitTestMode.Transparent)
+      .position(inline ? undefined : { x: this.geometry.content.frame.left, y: this.geometry.content.startInset - this.mangaToolsHeight - this.mangaScrollOffset })
+      .id(measurement.id)
+      .onAppear((): void => measurement.mount(this.getUIContext(), this.mangaMeasurementKey,
         (height: number, key: number): void => this.recordMangaHeight('tools', height, key)))
-      .onDisAppear((): void => this.toolsMeasurement.unmount())
+      .onDisAppear((): void => measurement.unmount())
       .onAreaChange(this.mangaHeightHandler('tools', this.mangaMeasurementKey));
   }
 
@@ -448,6 +451,7 @@ export struct BookDirectoryPage {
     ReaderDirectoryList({
       entries: this.mangaLayoutEntries(), rowHeight: visual.gridHeight, naturalRowHeight: true,
       materializedInsets: this.mangaFlowFooter(),
+      prefixBuilder: (): void => { this.mangaFlatPrefix(identity); },
       listPaddingX: this.geometry.content.frame.left, listPaddingY: 8,
       listPaddingRight: this.geometry.content.frame.right,
       listPaddingTop: this.geometry.content.startInset, listPaddingBottom: this.geometry.content.endInset,
@@ -465,6 +469,14 @@ export struct BookDirectoryPage {
       rowBuilder: (item: RepeatItem<LocalReadingTocEntry>) => { this.mangaFlatRow(item.item, identity); },
       emptyBuilder: (): void => { this.mangaEmptyState(identity); },
     }).width('100%').height('100%');
+  }
+
+  @Builder
+  private mangaFlatPrefix(identity: string) {
+    Column() {
+      Blank().height(Math.max(0, this.geometry.content.startInset - this.mangaToolsHeight));
+      this.mangaToolbar(identity, true, this.flowToolsMeasurement);
+    }.width('100%');
   }
 
   @Builder
@@ -867,6 +879,7 @@ export struct BookDirectoryPage {
       this.mangaMeasurementKey += 1;
       this.mangaFooterMeasured = 0;
       this.toolsMeasurement.request(this.mangaMeasurementKey);
+      this.flowToolsMeasurement.request(this.mangaMeasurementKey);
       this.footerMeasurement.request(this.mangaMeasurementKey);
       this.flowFooterMeasurement.request(this.mangaMeasurementKey);
     }

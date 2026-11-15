@@ -113,7 +113,7 @@ for (const id of selected) {
   Object.assign(page, { mounted: true, admittedIdentity: page.identity(), admittedEntries: child.params.entries, viewportWidth: 366,
     geometry: { content: { frame: { left: 0, right: 0, width: 366 } } },
     mangaVisibleTopInset: () => 0, mangaNarrow: () => false, directoryScrollLayout: () => ({}),
-    mangaToolbar() {}, mangaHeaderTrailingSlot() {}, consumeTemporaryBack: () => false,
+    mangaToolbar() {}, mangaFlowFooter: () => false, mangaHeaderTrailingSlot() {}, consumeTemporaryBack: () => false,
     mangaLayoutRow: entry => ({ kind: 'row', columns: 1, entries: [entry], labels: [] }),
     mangaEntryIsDisplayed: () => true, rowIsCurrent: () => true,
     onSelectNavigationTarget: () => forwarded.push('semantic'), selectMangaEntry: () => forwarded.push('flat'),
@@ -193,13 +193,14 @@ async function shortFallbackInsets() {
       const sdk = boundedSurfaceSdk();
       const start = flowing ? 360 : 280, end = 18, moves = [], offsets = [];
       const page = createReaderBuilderProbe(candidate,
-        ['mangaFlatList', 'mangaToolbar', 'scrollMangaCurrent', 'mangaHeightHandler'], {
+        ['mangaContent', 'mangaFlatList', 'mangaFlatPrefix', 'mangaToolbar', 'scrollMangaCurrent', 'mangaHeightHandler'], {
           ...sdk.deps, ...fonts, visual, ReaderDirectoryList: Captured,
-          ReaderDirectoryToolbar: Captured, MangaDirectoryCurrentFooter: Captured,
+          ReaderDirectoryToolbar: Captured, MangaDirectoryCurrentFooter: Captured, ReaderDirectoryNavigationSurface: Captured,
           ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => value },
         }, { ...sdk.hooks, childSources: {
           ReaderDirectoryList: listCandidate, ReaderDirectoryToolbar: read('features/reading/ui/ReaderDirectoryToolbar.ets'),
           MangaDirectoryCurrentFooter: read('features/manga/ui/MangaDirectoryCurrentFooter.ets'),
+          ReaderDirectoryNavigationSurface: read('features/reading/ui/ReaderDirectoryNavigationSurface.ets'),
         } }).owner;
       Object.assign(page, {
         geometry: { content: { frame: { left: 18, right: 18, width: 330 }, startInset: start, endInset: end } },
@@ -208,15 +209,20 @@ async function shortFallbackInsets() {
         mangaLayoutEntries: () => [], directoryListIsCurrent: () => true, mangaScrollOffset: 0,
         onMangaScrollOffset: value => offsets.push(value), appThemeScheme: 'day', bookTitle: '长标题',
         mangaToolsHeight: 250, toolsMeasurement: { id: 'toolbar', mount() {}, unmount() {} },
+        flowToolsMeasurement: { id: 'flow-toolbar', mount() {}, unmount() {} },
+        admittedIdentity: 'current', admittedEntries: [], interactive: true, viewportWidth: 366, navigationActive: false,
+        mangaNarrow: () => true, directoryScrollLayout: () => new scrollLayout.ReaderScrollLayout(start, end, 'contentOffset'),
         mangaFontScale: () => 1, mangaSummaryLabel: () => '60 个条目', searchDraft: '', ascending: true,
         mangaFooterBottomOffset: () => 8, mangaCurrentFooter() {},
       });
+      page.mangaContent();
       page.mangaFlatList('current');
-      const child = [...page.children.values()].find(value => value instanceof Captured);
+      const child = [...page.children.values()].find(value => value.params?.naturalRowHeight === true);
       assert.equal(child.params.materializedInsets, flowing, 'short viewport uses actual scroll content');
       const list = createReaderBuilderProbe(listCandidate, boundedMembers(listCandidate), {
         ...sdk.deps, ...scrollLayout, DirectoryListDataSource,
         ChildrenMainSize: class { constructor(size) { this.childDefaultSize = size; } },
+        ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
       }, { ...sdk.hooks, initialParams: child.params }).owner;
       list.initialRender();
       const viewport = [...list.nodes.values()].find(node => node.type === 'List');
@@ -224,6 +230,14 @@ async function shortFallbackInsets() {
       assert.equal(viewport.contentEndOffset, flowing ? 0 : end);
       const spacers = [...list.nodes.values()].filter(node => node.type === 'ListItem' && typeof node.height === 'number');
       assert.deepEqual(spacers.map(node => node.height), flowing ? [start, end] : []);
+      if (flowing) {
+        spacers[0].create[0](spacers[0].id, true);
+        const inline = [...page.nodes.values()].find(node => node.id === 'flow-toolbar');
+        assert.ok(inline, 'actual native prefix callback mounts the original toolbar in scroll content');
+        assert.equal(inline.position, undefined);
+        assert.equal(inline.hitTestBehavior, 'HitTestMode.Default');
+        assert.ok([...page.nodes.values()].some(node => node.type === 'Blank' && node.height === start - 250));
+      }
       child.params.onScrollOffset(flowing ? 0 : -start);
       child.params.onScrollOffset(flowing ? 93 : -start + 93);
       child.params.onScrollOffset(flowing ? -7 : -start - 7);
@@ -231,12 +245,13 @@ async function shortFallbackInsets() {
       page.scrollMangaCurrent(4, 12);
       assert.deepEqual(moves, [[flowing ? 5 : 4, false, 'start', { extraOffset: (flowing ? 0 : start) - 92 }]],
         'canonical chapter index and painted header clearance reach the current native List');
-      page.mangaToolbar('current');
       const overlay = [...page.nodes.values()].find(node => node.id === 'toolbar');
-      assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
+      if (flowing) assert.equal(overlay, undefined, 'short flat prefix has one actual toolbar producer');
+      else assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
       const toolbar = [...page.nodes.values()].find(node => node.type === '__Common__' &&
         node.hitTestBehavior === 'HitTestMode.BLOCK_HIERARCHY');
-      assert.ok(toolbar, 'actual toolbar actions stop lower sibling collection');
+      assert.equal(toolbar !== undefined, !flowing,
+        'overlay actions stop lower siblings, inline actions keep their native List ancestor');
     }
   }
   check();
@@ -244,12 +259,14 @@ async function shortFallbackInsets() {
     ['native short offsets', pageSource.replace('materializedInsets: this.mangaFlowFooter(),', ''), listSource],
     ['chapter prefix index', pageSource.replace('index + (flowing ? 1 : 0)', 'index'), listSource],
     ['short content origin', pageSource.replace('offset + (this.mangaFlowFooter() ? 0 : this.mangaContentTopInset())', 'offset + this.mangaContentTopInset()'), listSource],
-    ['summary hit boundary', pageSource.replace('.hitTestBehavior(HitTestMode.Transparent)\n      .position', '.hitTestBehavior(HitTestMode.Default)\n      .position'), listSource],
-    ['toolbar action boundary', pageSource.replace('}).hitTestBehavior(HitTestMode.BLOCK_HIERARCHY);', '});'), listSource],
+    ['summary hit boundary', pageSource.replace('inline ? HitTestMode.Default : HitTestMode.Transparent', 'HitTestMode.Default'), listSource],
+    ['toolbar action boundary', pageSource.replace('inline ? HitTestMode.Default : HitTestMode.BLOCK_HIERARCHY', 'HitTestMode.Default'), listSource],
+    ['duplicate overlay', pageSource.replace('if (!this.mangaFlowFooter() || this.navigationActive) { this.mangaToolbar(identity); }', 'this.mangaToolbar(identity);'), listSource],
+    ['missing inline producer', pageSource, listSource.replace('ListItem() { this.prefixBuilder(); }.width', 'ListItem() {}.width')],
     ['missing scroll spacers', pageSource, listSource.replaceAll('if (this.materializedInsets) {', 'if (false) {')],
   ]) {
     assert.ok(page !== pageSource || list !== listSource, label);
     assert.throws(() => check(page, list), assert.AssertionError, label);
   }
-  console.log('PASS actual short/full SDK List content, canonical index, signed offsets and toolbar hit boundaries with six rejected regressions.');
+  console.log('PASS actual short/full SDK List content, canonical index, signed offsets and one inline/overlay toolbar producer with eight rejected regressions.');
 }
