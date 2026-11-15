@@ -73,8 +73,8 @@ export struct ReaderTtsWaveform {
   }
   build() {
     Row() {
-      ForEach(this.sample().heights, (height: number, index: number): void => {
-        Row().width(2.5).height(height).borderRadius(2)
+      ForEach(this.sample().heights, (_height: number, index: number): void => {
+        Row().width(2.5).height(this.sample().heights[index]).borderRadius(2)
           .scale({ x: 1, y: this.sample().scales[index], centerY: '50%' })
           .backgroundColor(this.barColor()).opacity(this.sample().opacities[index]);
       }, (_height: number, index: number): string => index.toString());

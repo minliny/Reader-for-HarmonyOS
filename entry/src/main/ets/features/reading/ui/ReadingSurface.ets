@@ -387,36 +387,36 @@ export struct ReadingSurface {
         Column() {
           if (this.renderFragments().length > 0) {
             ForEach(this.renderFragments(), (fragment: ReadingSurfacePageFragment, index: number) => {
-              if (fragment.nativeParagraph === undefined || fragment.nativeParagraphFirst) {
+              if (this.currentFragment(fragment).nativeParagraph === undefined || this.currentFragment(fragment).nativeParagraphFirst) {
               if (index > 0 && this.bottomJustifyGap > 0) {
                 Blank().height(this.bottomJustifyGap);
               }
               // A continuation is not a new semantic paragraph: it must not
               // acquire either a fresh 15.8px gap or a second 2em indent.
-              if (index > 0 && fragment.isParagraphStart) {
+              if (index > 0 && this.currentFragment(fragment).isParagraphStart) {
                 Blank().height(this.appearance.paragraphSpacing);
               }
-              if (fragment.fileUri !== undefined && fragment.fileUri.length > 0) {
-                Image(fragment.fileUri)
+              if (this.currentFragment(fragment).fileUri !== undefined && this.currentFragment(fragment).fileUri!.length > 0) {
+                Image(this.currentFragment(fragment).fileUri)
           .syncLoad(this.snapshotSynchronousImages)
-                  .width(`${fragment.imageWidthBasisPoints / 100}%`)
-                  .height(fragment.imageHeight)
+                  .width(`${this.currentFragment(fragment).imageWidthBasisPoints / 100}%`)
+                  .height(this.currentFragment(fragment).imageHeight)
                   .objectFit(ImageFit.Contain)
                   .interpolation(ImageInterpolation.High);
-              } else if (fragment.imageSource !== undefined) {
-                Image(fragment.imageSource)
+              } else if (this.currentFragment(fragment).imageSource !== undefined) {
+                Image(this.currentFragment(fragment).imageSource)
           .syncLoad(this.snapshotSynchronousImages)
-                  .width(`${fragment.imageWidthBasisPoints / 100}%`)
-                  .height(fragment.imageHeight)
+                  .width(`${this.currentFragment(fragment).imageWidthBasisPoints / 100}%`)
+                  .height(this.currentFragment(fragment).imageHeight)
                   .objectFit(ImageFit.Contain)
                   .interpolation(ImageInterpolation.High);
-              } else if (fragment.imageHeight > 0) {
+              } else if (this.currentFragment(fragment).imageHeight > 0) {
                 // One stable, measurable failed-resource block. Resource
                 // failure must not discard the rest of the chapter.
-                Blank().height(fragment.imageHeight);
-              } else if (fragment.nativeParagraph !== undefined) {
+                Blank().height(this.currentFragment(fragment).imageHeight);
+              } else if (this.currentFragment(fragment).nativeParagraph !== undefined) {
                 ReaderNativeParagraphView({
-                  recipe: fragment.nativeParagraph,
+                  recipe: this.currentFragment(fragment).nativeParagraph!,
                   inkColor: this.themeStyle().ink,
                   gapVp: this.bottomJustifyGap,
                   selectionEnabled: this.longPressSelectText,
@@ -426,16 +426,16 @@ export struct ReadingSurface {
                   highlightColor: this.ttsHighlightStart !== undefined ? this.themeStyle().ink :
                     readerThemeDefinition(this.appearance.activeTheme).selection,
                   underline: this.ttsHighlightStart !== undefined,
-                  highlightLayoutKey: readerNativeTextGeometryKey(fragment.nativeParagraph.style),
+                  highlightLayoutKey: readerNativeTextGeometryKey(this.currentFragment(fragment).nativeParagraph!.style),
                   queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
                   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]): void => this.acceptHighlightGeometry(fragment.id, rects),
                 });
               } else {
                 ReaderReadingTextFragment({
-                  text: fragment.text,
-                  isParagraphStart: fragment.isParagraphStart,
-                  startScalar: fragment.startScalar,
-                  endScalar: fragment.endScalar,
+                  text: this.currentFragment(fragment).text,
+                  isParagraphStart: this.currentFragment(fragment).isParagraphStart,
+                  startScalar: this.currentFragment(fragment).startScalar,
+                  endScalar: this.currentFragment(fragment).endScalar,
                   appearance: this.appearance,
                   ttsHighlightStart: this.ttsHighlightStart,
                   ttsHighlightEnd: this.ttsHighlightEnd,
@@ -652,6 +652,10 @@ export struct ReadingSurface {
     const fragments = this.pageFragments;
     return this.contentRevision >= 0 && this.fragmentsProvider !== undefined ?
       this.fragmentsProvider() : fragments;
+  }
+
+  private currentFragment(snapshot: ReadingSurfacePageFragment): ReadingSurfacePageFragment {
+    return this.renderFragments().find((fragment: ReadingSurfacePageFragment): boolean => fragment.id === snapshot.id) ?? snapshot;
   }
 
   private contentInsets(): Padding {

@@ -97,7 +97,7 @@ for (const id of selectContractCases(definitions)) {
       { ScrollDirection: { Vertical: 'ScrollDirection.Vertical' } }).owner;
     Object.assign(shelf, { filterPanelHeight: 180, filterContentOpacity: 1, filterRowVisible: true,
       appThemeScheme: 'day', contentFilter: 'all', sourceFilter: 'all' });
-    shelf.filterPanel();
+    shelf.filterPanel(7);
     const clip = nodes(shelf).find(node => node.type === 'Scroll');
     assert.equal(clip.align, 'Alignment.Top');
     assert.equal(clip.height, 180); assert.equal(clip.enableScrollInteraction, false);

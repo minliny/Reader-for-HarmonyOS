@@ -154,7 +154,7 @@ export struct ReaderTtsConfigOverlay {
       (this.statusMessage().length > 0 ? 80 : 0) + (this.showManage ? 44 : 0) + (this.errorText.length > 0 ? 48 : 0);
     if (this.manager) return Math.max(0, Math.min(content,
       this.modalUsableHeight - 2 * this.managerOuterPadding()));
-    return Math.max(44, Math.min(content, this.availableHeight - 16));
+    return Math.max(0, Math.min(content, this.availableHeight - 2 * this.pickerOuterPadding()));
   }
   private formatActionHeight(): number {
     this.metricsRevision;
@@ -188,12 +188,16 @@ export struct ReaderTtsConfigOverlay {
       choice.label.split(' · ').slice(1).join(' · '), TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, width)?.heightVp ?? 0 : 0;
     return Math.max(this.voicePicker ? 54 : 44, primary + meta + 16, this.voicePicker ? this.previewActionHeight() + 8 : 0);
   }
+  private pickerOuterPadding(): number {
+    return Math.min(8, Math.max(0, (this.availableHeight - 44) / 2));
+  }
   private panelY(): number {
     const h = this.panelHeight();
     if (this.manager) return 0;
+    const padding = this.pickerOuterPadding();
     const below = this.anchorY + 2;
-    const desired = below + h <= this.availableHeight - 8 ? below : this.anchorY - 54 - h;
-    return Math.max(8, Math.min(desired, this.availableHeight - h - 8));
+    const desired = below + h <= this.availableHeight - padding ? below : this.anchorY - 54 - h;
+    return Math.max(padding, Math.min(desired, this.availableHeight - h - padding));
   }
 
   private recoveryOverlayLeft(): number {
@@ -337,34 +341,38 @@ export struct ReaderTtsConfigOverlay {
     }
   }
 
+  private currentChoice(snapshot: ReaderTtsConfigChoice): ReaderTtsConfigChoice {
+    return this.choices.find((choice: ReaderTtsConfigChoice): boolean => choice.id === snapshot.id) ?? snapshot;
+  }
+
   @Builder
   private choiceRow(choice: ReaderTtsConfigChoice) {
     Row({ space: 10 }) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: 10 }) {
       if (this.voicePicker) {
-        Text(choice.label.includes('女') ? '女' : choice.label.includes('男') ? '男' : '声')
+        Text(this.currentChoice(choice).label.includes('女') ? '女' : this.currentChoice(choice).label.includes('男') ? '男' : '声')
           .width(34).height(34).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('app.control.paint.212F6373', this.appThemeScheme)).borderRadius(17);
       }
       Column({ space: 0 }) {
-        Text(this.voicePicker ? choice.label.split(' · ')[0] : choice.label).width('100%')
+        Text(this.voicePicker ? this.currentChoice(choice).label.split(' · ')[0] : this.currentChoice(choice).label).width('100%')
           .fontFamily(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontFamily : TYPE_READER_TTS_VOICE_REGULAR.fontFamily) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontFamily : TYPE_READER_TTS_CHOICE_REGULAR.fontFamily)).fontSize(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_CHOICE_REGULAR.fontSizeFp)).lineHeight((this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_VOICE_REGULAR.lineHeightFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_CHOICE_REGULAR.lineHeightFp)) as number)
           .fontWeight(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontWeight : TYPE_READER_TTS_VOICE_REGULAR.fontWeight) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontWeight : TYPE_READER_TTS_CHOICE_REGULAR.fontWeight),
             { enableVariableFontWeight: true })
           .fontColor(choice.id === this.selectedId ? readerAppColor('TOK_TTS_TEAL', this.appThemeScheme) : readerAppColor('TOK_TTS_INK', this.appThemeScheme))
           .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
-        if (this.voicePicker && choice.label.includes(' · ')) {
-          Text(choice.label.split(' · ').slice(1).join(' · ')).width('100%')
+        if (this.voicePicker && this.currentChoice(choice).label.includes(' · ')) {
+          Text(this.currentChoice(choice).label.split(' · ').slice(1).join(' · ')).width('100%')
             .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontWeight)
             .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).maxLines(1);
         }
       }.layoutWeight(1).constraintSize({ minHeight: 44 }).alignItems(HorizontalAlign.Start);
       }.width('100%').height('100%').alignItems(VerticalAlign.Center)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }.layoutWeight(1).height(this.choiceHeight(choice)).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .enabled(!this.busy).accessibilityText(choice.label).accessibilitySelected(choice.id === this.selectedId)
+      }.layoutWeight(1).height(this.choiceHeight(this.currentChoice(choice))).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+        .enabled(!this.busy).accessibilityText(this.currentChoice(choice).label).accessibilitySelected(choice.id === this.selectedId)
         .onClick((): void => this.choose(choice.id));
       if (this.voicePicker) {
         Button({ type: ButtonType.Capsule, stateEffect: false }) {
@@ -383,13 +391,13 @@ export struct ReaderTtsConfigOverlay {
             .borderRadius(Math.min(this.previewActionWidth(choice.id), this.previewPaintHeight()) / 2)
             .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
         }.width(this.previewActionWidth(choice.id)).height(this.previewActionHeight()).padding(0).backgroundColor(Color.Transparent)
-          .enabled(!this.busy).accessibilityText(`${choice.label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
+          .enabled(!this.busy).accessibilityText(`${this.currentChoice(choice).label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
           .onClick((): void => this.preview(choice.id));
       }
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check')))
         .width(this.voicePicker ? 16 : 11).height(this.voicePicker ? 16 : 9)
         .opacity(choice.id === this.selectedId ? 1 : 0).accessibilityLevel('no');
-    }.width('100%').height(this.choiceHeight(choice)).padding({ left: 12, right: 12 })
+    }.width('100%').height(this.choiceHeight(this.currentChoice(choice))).padding({ left: 12, right: 12 })
       .border({ width: { bottom: .5 }, color: readerAppColor('app.border.readerConfigSoft', this.appThemeScheme) })
       .backgroundColor(choice.id === this.selectedId ? readerAppColor('app.reader.choiceHover', this.appThemeScheme) : Color.Transparent)
       .enabled(!this.busy);

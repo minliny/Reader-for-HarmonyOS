@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 50,
+      "revision": 51,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2747,7 +2747,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-          "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+          "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
           "symbol": "selectTarget"
         },
         {
@@ -2885,7 +2885,7 @@
         },
         {
           "path": "tools/test-manga-directory-grid-sdk.mjs",
-          "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+          "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -2920,7 +2920,7 @@
         },
         {
           "path": "tools/test-directory-native-row-target.mjs",
-          "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+          "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
         },
         {
           "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -3094,7 +3094,7 @@
         },
         {
           "path": "tools/test-directory-native-fixture.mjs",
-          "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+          "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -3134,7 +3134,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
-          "sha256": "64d7c4580211859f8b7343cb18be042454b5659edf55dec51afb0832807e5809"
+          "sha256": "5ccc8c9819ccbac928e6ebaddc68ec90376fc1a9b1f46b8e8003d53afafc38bc"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReaderDirectoryRulesGateway.ts",
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4265,7 +4265,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -4403,7 +4403,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -4438,7 +4438,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -4612,7 +4612,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5900,7 +5900,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -6038,7 +6038,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -6073,7 +6073,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -6247,7 +6247,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -6275,7 +6275,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
-                "sha256": "64d7c4580211859f8b7343cb18be042454b5659edf55dec51afb0832807e5809"
+                "sha256": "5ccc8c9819ccbac928e6ebaddc68ec90376fc1a9b1f46b8e8003d53afafc38bc"
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReaderDirectoryRulesGateway.ts",
@@ -6375,7 +6375,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7541,7 +7541,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -7679,7 +7679,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -7714,7 +7714,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -7888,7 +7888,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -8008,7 +8008,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9197,7 +9197,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -9335,7 +9335,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -9370,7 +9370,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -9544,7 +9544,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -9652,7 +9652,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 48,
+            "revision": 49,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10722,7 +10722,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -10860,7 +10860,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -10895,7 +10895,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -11069,7 +11069,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 50,
+            "revision": 51,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12138,7 +12138,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -12276,7 +12276,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -12311,7 +12311,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -12485,7 +12485,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -12605,7 +12605,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 47,
+            "revision": 48,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13711,7 +13711,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -13849,7 +13849,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -13884,7 +13884,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -14058,7 +14058,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15172,7 +15172,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -15310,7 +15310,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -15345,7 +15345,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -15519,7 +15519,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -15639,7 +15639,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 48,
+            "revision": 49,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16689,7 +16689,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -16827,7 +16827,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -16862,7 +16862,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -17036,7 +17036,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 50,
+            "revision": 51,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18105,7 +18105,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -18243,7 +18243,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -18278,7 +18278,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -18452,7 +18452,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -18572,7 +18572,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19752,7 +19752,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -19890,7 +19890,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -19925,7 +19925,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -20099,7 +20099,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -20207,7 +20207,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 49,
+            "revision": 50,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21398,7 +21398,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
-                "sha256": "c181ede1157fa9544579f15591b9f137184ecca90c18a68ab052f1f9bac81f47",
+                "sha256": "a7d9c47cc57d22a583b2c19108c34bced388632f65209d5dc0d36e6d6e216b7b",
                 "symbol": "selectTarget"
               },
               {
@@ -21536,7 +21536,7 @@
               },
               {
                 "path": "tools/test-manga-directory-grid-sdk.mjs",
-                "sha256": "151d59824940369370f08ba1687bd260ff5eca93c3b573bc5e3796f9cdeabacd"
+                "sha256": "ae78d66b09535cab1b9513d5a00fecd8fe6cc5ddfd21c4241e57f51a62f8802a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
@@ -21571,7 +21571,7 @@
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
-                "sha256": "727cf35f381f23aa11c2c080cacbef57960a19635408d60d4d2ee860985221aa"
+                "sha256": "d1ccd0d5ee26ea7246e5ec45d356bf4832e4006a670060408cba040d218b97b8"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
@@ -21745,7 +21745,7 @@
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "ad0f870dfeb350d513271abbedbdb843bcbd4349ed4a638ee97e965baf238313"
+                "sha256": "85949e52c1f06a08f0f50d8a3a4c482397815b9b3ba8ac384a0bc768ac074c46"
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
@@ -21853,7 +21853,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "5b998b403f1fd93fc431a1f313586841bfc1013238e947e46eb85f98d6719617"
+                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",

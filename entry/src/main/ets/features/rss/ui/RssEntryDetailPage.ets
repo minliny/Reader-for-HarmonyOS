@@ -284,7 +284,7 @@ export struct RssEntryDetailPage {
         .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       ForEach(this.summaryParagraphs(), (paragraph: string, index: number) => {
-        Text(paragraph)
+        Text(this.summaryParagraphs()[index] ?? '')
           .width('100%')
           .fontFamily(TYPE_RSS_ARTICLE_BODY.fontFamily)
           .fontWeight(TYPE_RSS_ARTICLE_BODY.fontWeight)

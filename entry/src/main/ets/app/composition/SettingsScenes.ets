@@ -65,7 +65,8 @@ export struct SettingsScenes {
       isInputAllowed: (): boolean => this.route === 'settings' && this.inputIsCurrent(identity),
       onSelectAppTheme: (mode: ReaderAppThemeMode): Promise<void> =>
         this.route === 'settings' && this.section === 'general' && this.inputIsCurrent(identity) ?
-          ReaderThemeHost.selectApp(mode) : Promise.resolve(),
+          ReaderThemeHost.selectApp(mode, (): boolean => this.route === 'settings' &&
+            this.section === 'general' && this.inputIsCurrent(identity)) : Promise.resolve(),
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
         if (this.presentation.isCurrent(identity)) this.onTemporaryBackBridge(handler, bridgeIdentity);
       },

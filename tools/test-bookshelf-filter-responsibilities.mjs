@@ -27,12 +27,12 @@ assert.equal(books[2].group, '历史');
 
 const shelfSource = source('BookshelfPage');
 const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters',
-  'onShelfFiltersChanged','queueShelfProjection','setFilterExpanded','settleFilterPanel'];
+  'onShelfFiltersChanged','queueShelfProjection','setFilterExpanded','settleFilterPanel','isShelfPresentationCurrent'];
 const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',...memberNames]);
 Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',contentFilter:'all',sourceFilter:'all',
-  filterRowVisible:true, viewMode:'list', mounted:true,reduceMotion:true,viewState:{},filterMotionGeneration:0,
+  feedbackEnabled:true,navigationGeneration:7,isCurrentShelfInput:()=>true,filterRowVisible:true, viewMode:'list', mounted:true,reduceMotion:true,viewState:{},filterMotionGeneration:0,
   projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
-shelf.filterRow();
+shelf.filterRow(7);
 const button = label => [...shelf.nodes.values()].find(n => n.type === 'Button' &&
   (n.accessibilityText === '清除内容类型和来源筛选' && label === '清除' ||
     n.accessibilityText?.endsWith(`：${label}`)));
@@ -69,7 +69,7 @@ const visit = node => { if(ts.isCallExpression(node) && node.expression.getText(
   for(const property of node.arguments[0].properties) if(['onCover','onList','onFilter'].includes(property.name?.getText(tree)))
     callbacks.set(property.name.getText(tree),property.initializer.getText(tree));
 } ts.forEachChild(node,visit); }; visit(tree);
-const invoke = key => new Function(stripTypeScriptTypes(`const action = ${callbacks.get(key)};`)+'; action();').call(shelf);
+const invoke = key => new Function('navigation',stripTypeScriptTypes(`const action = ${callbacks.get(key)};`)+'; action();').call(shelf,7);
 assert.deepEqual([...callbacks.keys()],['onCover','onList','onFilter']);
 header.onFilter=()=>invoke('onFilter');header.activate('bookshelf_filter'); assert.equal(shelf.filterRowVisible,true);
 header.activate('bookshelf_filter'); assert.equal(shelf.filterRowVisible,false);
@@ -87,7 +87,7 @@ const updateIntent=new Function(stripTypeScriptTypes(`const action = ${checkUpda
 shell.moreIntentAction('live-menu',updateIntent)(); assert.equal(updates,1);assert.equal(shell.moreMenuVisible,false);assert.equal(shell.moreSelectionId,'');
 shell.backgroundUpdateRunning=true;shell.requestCheckUpdates();assert.equal(updates,1);
 shell.backgroundUpdateRunning=false;shell.canCheckUpdates=false;shell.requestCheckUpdates();assert.equal(updates,1);
-assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow()'),shelfSource.indexOf('private filterChip(')).includes('onCheckUpdates'));
+assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow(navigation:'),shelfSource.indexOf('private filterChip(')).includes('onCheckUpdates'));
 
 const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection',
   'toggleBook','hasBookKey','toggleAll','allSelected','selectionInputEnabled','canRemoveSelection'],{ShelfBookPresentation});

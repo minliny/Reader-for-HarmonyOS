@@ -729,11 +729,13 @@ export struct BookshelfPage {
               hasActiveFilters: this.hasActiveFilters(),
               onCover: this.viewModeAction('cover', navigation),
               onList: this.viewModeAction('list', navigation),
-              onFilter: (): void => this.setFilterExpanded(!this.filterRowVisible),
+              onFilter: (): void => this.setFilterExpanded(!this.filterRowVisible, navigation),
             });
           }, (navigation: number): string => `shelf-section:${navigation}`);
 
-          this.filterPanel();
+          ForEach([this.navigationGeneration], (navigation: number): void => {
+            this.filterPanel(navigation);
+          }, (navigation: number): string => `shelf-filters:${navigation}`);
         }
         .width(this.shelfContentWidth(expandedLayout))
         .padding({ top: this.continueReading === undefined ? this.shelfFirstItemPadding() : 0 });
@@ -741,8 +743,12 @@ export struct BookshelfPage {
 
       if (this.visibleBookCount === 0) {
         ListItem() {
-          ReaderPageState({ title: '没有符合条件的书籍', actionLabel: '清除全部条件',
-            onAction: (): void => this.clearFilters() }).padding({ top: 40, bottom: 40 });
+          Column() {
+            ForEach([this.navigationGeneration], (navigation: number): void => {
+              ReaderPageState({ title: '没有符合条件的书籍', actionLabel: '清除全部条件',
+                onAction: (): void => this.clearFilters(navigation) }).padding({ top: 40, bottom: 40 });
+            }, (navigation: number): string => `shelf-filter-empty:${navigation}`);
+          }.width('100%');
         }
       }
 
@@ -856,14 +862,14 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private filterPanel() {
+  private filterPanel(navigation: number) {
     // Scroll measures its content with an unbounded vertical constraint even
     // when the viewport is zero high. It is only a clip host: users cannot
     // scroll it. One live content tree therefore supplies the current height
     // after wrapping, window and font changes without a duplicate measure tree.
     Scroll() {
       Column() {
-        this.filterRow();
+        this.filterRow(navigation);
       }
       .width('100%')
       .padding({ top: TOK_SPACE_CONTROL_INLINE })
@@ -895,8 +901,9 @@ export struct BookshelfPage {
     else this.filterPanelHeight = height;
   }
 
-  private setFilterExpanded(expanded: boolean): void {
-    if (!this.mounted || expanded === this.filterRowVisible) return;
+  private setFilterExpanded(expanded: boolean, navigation: number): void {
+    if (!this.isShelfPresentationCurrent(navigation) || !this.feedbackEnabled ||
+      !this.isCurrentShelfInput(navigation) || expanded === this.filterRowVisible) return;
     this.filterRowVisible = expanded;
     this.viewState.filterExpanded = expanded;
     if (this.reduceMotion) this.settleFilterPanel();
@@ -944,7 +951,7 @@ export struct BookshelfPage {
 
   /** PH60: view-only state/type conditions; grouping and updates have separate owners. */
   @Builder
-  private filterRow() {
+  private filterRow(navigation: number) {
     Column({ space: 4 }) {
       Row({ space: TOK_SPACE_MD }) {
         Text('筛选').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
@@ -954,31 +961,31 @@ export struct BookshelfPage {
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .constraintSize({ minWidth: 44, minHeight: 44 }).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
           .attributeModifier(new ReaderActionAccessibility('清除内容类型和来源筛选', this.hasActiveFilters(), false, true, undefined, 'nativeButton'))
-          .onClick((): void => this.clearFilters());
+          .onClick((): void => this.clearFilters(navigation));
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text('收起').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .constraintSize({ minHeight: 44 });
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .constraintSize({ minWidth: 44, minHeight: 44 }).attributeModifier(new ReaderActionAccessibility('收起筛选', true, false, true, undefined, 'nativeButton'))
-          .onClick((): void => this.setFilterExpanded(false));
+          .onClick((): void => this.setFilterExpanded(false, navigation));
       }.width('100%');
       Text('内容类型').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.filterChip('content', 'all', '全部');
-        this.filterChip('content', 'text', '小说');
-        this.filterChip('content', 'manga', '漫画');
+        this.filterChip('content', 'all', '全部', navigation);
+        this.filterChip('content', 'text', '小说', navigation);
+        this.filterChip('content', 'manga', '漫画', navigation);
       }.width('100%');
       Text('来源').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.filterChip('source', 'all', '全部');
-        this.filterChip('source', 'local', '本地');
-        this.filterChip('source', 'online', '在线');
+        this.filterChip('source', 'all', '全部', navigation);
+        this.filterChip('source', 'local', '本地', navigation);
+        this.filterChip('source', 'online', '在线', navigation);
       }.width('100%');
     }.width('100%');
   }
 
   @Builder
-  private filterChip(dimension: string, value: string, label: string) {
+  private filterChip(dimension: string, value: string, label: string, navigation: number) {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Row() {
       Text(label)
@@ -1000,7 +1007,7 @@ export struct BookshelfPage {
       .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .constraintSize({ maxWidth: 160, minHeight: 44 })
       .attributeModifier(new ReaderActionAccessibility(`${dimension === 'content' ? '内容类型' : '来源'}：${label}`, true, this.isFilterSelected(dimension, value), true, undefined, 'nativeButton'))
-      .onClick((): void => this.selectFilter(dimension, value));
+      .onClick((): void => this.selectFilter(dimension, value, navigation));
   }
 
   private isFilterSelected(dimension: string, value: string): boolean {
@@ -1011,13 +1018,15 @@ export struct BookshelfPage {
     return this.contentFilter !== 'all' || this.sourceFilter !== 'all';
   }
 
-  private selectFilter(dimension: string, value: string): void {
+  private selectFilter(dimension: string, value: string, navigation: number): void {
+    if (!this.isShelfPresentationCurrent(navigation) || !this.feedbackEnabled || !this.isCurrentShelfInput(navigation)) return;
     if (dimension === 'content') this.contentFilter = value;
     else this.sourceFilter = value;
     this.queueShelfProjection();
   }
 
-  private clearFilters(): void {
+  private clearFilters(navigation: number): void {
+    if (!this.isShelfPresentationCurrent(navigation) || !this.feedbackEnabled || !this.isCurrentShelfInput(navigation)) return;
     this.contentFilter = 'all';
     this.sourceFilter = 'all';
     this.queueShelfProjection();
@@ -1822,7 +1831,15 @@ export struct BookshelfPage {
     navigation: number = this.navigationGeneration): Promise<boolean> {
     const snapshot = await this.viewModeHost.save(mode, (): boolean => this.isShelfPresentationCurrent(navigation) &&
       this.feedbackEnabled && this.isCurrentShelfInput(navigation) && revision === this.viewModeRevision);
-    if (snapshot === undefined) return false;
+    if (snapshot === undefined) {
+      if (this.isShelfPresentationCurrent(navigation) && revision === this.viewModeRevision) {
+        this.storedViewMode = this.confirmedViewMode;
+        this.resetViewSwitchMotion();
+        this.viewMode = this.confirmedViewMode;
+        this.setRestingProjectionOpacity(this.confirmedViewMode);
+      }
+      return false;
+    }
     if (snapshot.canonical !== undefined) this.confirmedViewMode = snapshot.canonical;
     if (this.isShelfPresentationCurrent(navigation) && revision === this.viewModeRevision) {
       this.viewModeSnapshot = snapshot;

@@ -75,7 +75,7 @@ const Fragment = productionMotionMethods(source('ReadingSurface'), ['scheduleHig
   { ...marks, ReaderHighlightFrame: Frame, graphicsText: { RectWidthStyle: { TIGHT: 1 }, RectHeightStyle: { TIGHT: 1 } },
     readerAppearanceParagraphIndentPrefix: () => '　　', readerAppearanceThemeStyle: () => ({ ink: '#101010' }) });
 const Surface = productionMotionMethods(source('ReadingSurface'), ['enqueueHighlightMeasurement', 'acceptHighlightGeometry',
-  'usesHighlightCanvas', 'scheduleDynamicHighlights', 'drawDynamicHighlights', 'renderFragments', 'onHighlightContentChanged', 'aboutToDisappear'],
+  'usesHighlightCanvas', 'scheduleDynamicHighlights', 'drawDynamicHighlights', 'renderFragments', 'currentFragment', 'onHighlightContentChanged', 'aboutToDisappear'],
   { ...marks, ReaderHighlightFrame: Frame });
 function makePage(number) {
   const queue = [], stats = { scheduled: 0, measured: 0, clears: 0, fills: 0, providerReads: 0, idReads: 0, outputs: [] };

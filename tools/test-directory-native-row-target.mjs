@@ -36,7 +36,7 @@ function checkMangaNamedRowTargets(source) {
    const {owner}=createReaderBuilderProbe(source,[...mangaRowBuilderMembers,'emptyBuilder','emptyPrefix'],dependencies);
    Object.assign(owner,{view,mangaScheme:'day',appThemeScheme:'day',mangaSearchActive:false,
     mangaRowMinHeight:58,mangaCatalogDisplay:true,mangaCatalogNarrow:true,mangaQuickDisplay:false,
-    currentChapterIndex:-1,interactionEnabled:true,mangaPresentationRevision:0,windowMetricsRevision:1,
+    currentChapterIndex:-1,interactionEnabled:true,rowPresentationRevision:0,windowMetricsRevision:1,
     dataSource:{currentView:()=>view,loadedItemById:()=>({node,index:0}),loadedNode:()=>undefined},
     selectTarget:current=>events.push(['select',current.nodeId]),toggleNode:current=>events.push(['toggle',current.nodeId])});
    owner.mangaRow({node,index:0,key:node.nodeId});
@@ -89,8 +89,8 @@ for(const id of cases){
   if(scale===1)assert.equal(height,form==='controlQuick'?32:40,'original Quick32/Full40 parent allocation');
   const row={nodeId:'chapter17',kind,title:'第17章 native carrier',depth:0,level:1,chapterIndex:kind==='target'?16:undefined,hasChildren:kind==='group'||accessories,expanded:false};
   const item={key:'chapter17',index:16,node:row},events=[];
-  const owner=createReaderBuilderProbe(candidate,['row','isCurrentNode','displayLevel','positionRowHeight','bookmarkActionEnabled'],deps,sdk.hooks).owner;
-  Object.assign(owner,{view:{currentVisibleIndex:current?16:undefined,currentAncestorNodeId:current?row.nodeId:undefined},dataSource:{loadedNode:()=>current?row:undefined},
+  const owner=createReaderBuilderProbe(candidate,['row','isCurrentNode','displayLevel','currentPaintNode','textRowAccessibility','positionRowHeight','bookmarkActionEnabled'],deps,sdk.hooks).owner;
+  Object.assign(owner,{view:{currentVisibleIndex:current?16:undefined,currentAncestorNodeId:current?row.nodeId:undefined},rowPresentationRevision:0,dataSource:{loadedNode:()=>current?row:undefined,currentView:()=>owner.view,loadedItemById:()=>({node:row})},
    rowHeight:height,appThemeScheme:'day',interactionEnabled:true,chapterDownloadEnabled:accessories,chapterDownloadActionsEnabled:false,
    chapterByIndex:new Map(accessories?[[16,{index:16,navigable:true,downloadState:'idle',bookmarks:[]}]]:[]),
    selectTarget:node=>events.push(['select',node.nodeId]),toggleNode:node=>events.push(['toggle',node.nodeId]),marker:entry=>events.push(['marker',entry.index]),

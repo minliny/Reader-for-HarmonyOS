@@ -462,9 +462,11 @@ export struct SyncPage {
         this.emptyState();
       } else {
         Column({ space: 9 }) {
-          ForEach(this.snapshot.history, (entry: SyncHistoryEntry) => {
-            this.historyRow(entry);
-          }, (entry: SyncHistoryEntry): string => `sync-history-${entry.timestamp}`);
+          // These read-only rows project the current ordered snapshot. The minute
+          // caption is shared by distinct events, so position owns each slot.
+          ForEach(this.snapshot.history, (_entry: SyncHistoryEntry, index: number) => {
+            this.historyRow(index);
+          }, (_entry: SyncHistoryEntry, index: number): string => `sync-history-${index}`);
         }
         .width('100%');
       }
@@ -496,7 +498,7 @@ export struct SyncPage {
   }
 
   @Builder
-  private historyRow(entry: SyncHistoryEntry) {
+  private historyRow(index: number) {
     ReaderCard({
       specId: 'sync-status',
       cardWidth: this.contentFrame().width,
@@ -505,7 +507,7 @@ export struct SyncPage {
         Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
           space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
           Stack({ alignContent: Alignment.Center }) {
-            Text(entry.destination)
+            Text(this.snapshot.history[index]?.destination ?? '')
               .fontFamily(TYPE_APP_SMALL_LABEL.fontFamily)
               .fontWeight(TYPE_APP_SMALL_LABEL.fontWeight)
               .fontSize(TYPE_APP_SMALL_LABEL.fontSizeFp)
@@ -518,7 +520,7 @@ export struct SyncPage {
           .borderRadius(12)
           .backgroundColor(readerAppColor('app.sync.badgeSurface', this.appThemeScheme));
 
-          Text(entry.timestamp)
+          Text(this.snapshot.history[index]?.timestamp ?? '')
             .fontFamily(TYPE_SYNC_INPUT.fontFamily)
             .fontWeight(TYPE_SYNC_INPUT.fontWeight)
             .fontSize(TYPE_SYNC_INPUT.fontSizeFp)
@@ -531,14 +533,14 @@ export struct SyncPage {
         Row() {
           // Figma's scope line (e.g. "书架、分组、设置") has no backing field on
           // SyncHistoryEntry; the entry's ok flag is shown as a real status.
-          Text(entry.ok ? '成功' : '失败')
+          Text(this.snapshot.history[index] === undefined ? '' : this.snapshot.history[index]?.ok ? '成功' : '失败')
             .layoutWeight(1)
             .fontFamily(TYPE_SYNC_HISTORY_STATUS.fontFamily)
             .fontWeight(TYPE_SYNC_HISTORY_STATUS.fontWeight)
             .fontSize(TYPE_SYNC_HISTORY_STATUS.fontSizeFp)
             .fontColor(readerAppColor('app.text.syncMeta', this.appThemeScheme))
             .maxLines(1);
-          Text(`${(entry.size / 1048576).toFixed(1)} MB`)
+          Text(`${((this.snapshot.history[index]?.size ?? 0) / 1048576).toFixed(1)} MB`)
             .fontFamily(TYPE_SYNC_INPUT.fontFamily)
             .fontWeight(TYPE_SYNC_INPUT.fontWeight)
             .fontSize(TYPE_SYNC_INPUT.fontSizeFp)

@@ -45,7 +45,7 @@ function reactiveSurface(params, source = surfaceSource) {
   const runtime = createArkUIPropertyRuntimeProbe();
   const { owner } = createReaderBuilderProbe(source,
     ['chapterTitle', 'showChapterTitle', 'pageFragments', 'contentRevision', 'fragmentsProvider', 'build',
-      'renderFragments', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'], {
+      'renderFragments', 'currentFragment', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'], {
       ...runtime.sdk,
       ReaderPageChrome: Child, ReaderNativeParagraphView: Child, ReaderReadingTextFragment: Child, ReaderPaperBackground: Child,
       TYPE_READER_CHAPTER_TITLE: { fontFamily: 'ReaderNotoSansSC', fontWeight: 500, fontSizeFp: 24 },

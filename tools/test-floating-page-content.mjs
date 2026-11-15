@@ -340,7 +340,7 @@ function nativeDirectoryFixture(key, values = {}) {
   const empty = emptyMangaGridState();
   const owner = fixture(key, key === 'flat' ? ['build', 'rowBuilder', 'emptyBuilder', 'emptyContent', 'probeGeometry'] :
     ['build', ...mangaGridBuilderMembers, 'mangaColor'], {
-    ...empty, mangaPresentationRevision: 0, entries: [], dataSource: { ...empty.dataSource, totalCount: () => 0 }, rowHeight: 40, itemSizes: {},
+    ...empty, rowPresentationRevision: 0, entries: [], dataSource: { ...empty.dataSource, totalCount: () => 0 }, rowHeight: 40, itemSizes: {},
     contentStartInset: values.mangaDisplay ? 0 : 273, contentEndInset: values.mangaDisplay ? 0 : 39, listPaddingX: 10, listPaddingRight: -1,
     listPaddingY: 0, listPaddingTop: -1, listPaddingBottom: -1,
     naturalRowHeight: false, mangaDisplay: false, mangaCatalogDisplay: false,

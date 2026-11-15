@@ -68,7 +68,7 @@ for (const [mangaCatalogDisplay, mangaCatalogNarrow] of [[false, false], [true, 
   class DirectoryChild extends actual {
     constructor(parent, params, storage, id) {
       super(parent, params, storage, id);
-      Object.assign(this, emptyMangaGridState(), params, {params, appThemeScheme: 'day', mangaPresentationRevision: 0,
+      Object.assign(this, emptyMangaGridState(), params, {params, appThemeScheme: 'day', rowPresentationRevision: 0,
         dataSource: {...emptyMangaGridState().dataSource, totalCount: () => 0, currentView: () => params.view},
         mangaSearchActive: params.mangaDisplay && parent.query.trim().length > 0});
     }

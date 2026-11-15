@@ -83,15 +83,16 @@ export class ReaderThemeHost {
     await commit?.saved;
   }
 
-  static async selectApp(mode: ReaderAppThemeMode): Promise<void> {
+  static async selectApp(mode: ReaderAppThemeMode, isInputCurrent: () => boolean = (): boolean => true): Promise<void> {
     const generation = ReaderThemeHost.generation;
+    if (!isInputCurrent()) throw new Error('THEME_OWNER_CHANGED');
     await ReaderThemeHost.prepareUserChange();
-    if (generation !== ReaderThemeHost.generation) throw new Error('THEME_OWNER_CHANGED');
+    if (generation !== ReaderThemeHost.generation || !isInputCurrent()) throw new Error('THEME_OWNER_CHANGED');
     const store = ReaderThemeHost.store;
     if (store === undefined) throw new Error('THEME_NOT_READY');
     const commit = await store.change((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
       changeAppearanceThemeSelection(current, 'app', mode, ReaderThemeHost.systemScheme),
-      (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store);
+      (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store && isInputCurrent());
     if (commit === undefined) throw new Error('THEME_OWNER_CHANGED');
     await commit.saved;
   }

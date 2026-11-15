@@ -417,7 +417,7 @@ function shelfFilterTargets(candidate = shelf('BookshelfPage')) {
     for (const scale of [1, 1.3, 1.6, 2]) {
         setMetrics(320, scale, 28, 12);
         const properties = createArkUIPropertyRuntimeProbe();
-        const methods = ['filterRow', 'filterChip', 'isFilterSelected', 'hasActiveFilters', 'selectFilter', 'clearFilters'];
+        const methods = ['filterRow', 'filterChip', 'isFilterSelected', 'hasActiveFilters', 'selectFilter', 'clearFilters', 'isShelfPresentationCurrent'];
         const { owner } = createReaderBuilderProbe(candidate, methods, {
             ...properties.sdk, ...readerFoundationTokens, ...action,
             ReaderWindowCoordinator: { metrics: () => metrics },
@@ -425,10 +425,11 @@ function shelfFilterTargets(candidate = shelf('BookshelfPage')) {
         const projectionRequests = [], collapseRequests = [];
         Object.assign(owner, {
             appThemeScheme: 'day', contentFilter: 'manga', sourceFilter: 'online',
+            mounted: true, navigationGeneration: 7, feedbackEnabled: true, isCurrentShelfInput: () => true,
             queueShelfProjection: () => projectionRequests.push('current'),
             setFilterExpanded: value => collapseRequests.push(value),
         });
-        owner.filterRow();
+        owner.filterRow(7);
         const all = nodes(owner);
         const targetLabels = ['清除内容类型和来源筛选', '收起筛选'];
         const targets = targetLabels.map(label => all.find(node => node.type === 'Button' && node.accessibilityText === label));

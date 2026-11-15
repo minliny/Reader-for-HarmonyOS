@@ -253,8 +253,13 @@ export struct BookshelfSettingsPage {
   }
 
   private async persistRequestedMode(mode: 'cover' | 'list', revision: number): Promise<boolean> {
-    const snapshot = await this.viewModeHost.save(mode, (): boolean => this.mounted && revision === this.revision);
-    if (snapshot === undefined) return false;
+    const identity = this.preferenceControlIdentity();
+    const snapshot = await this.viewModeHost.save(mode, (): boolean => this.userInputIsCurrent() &&
+      identity === this.preferenceControlIdentity() && revision === this.revision);
+    if (snapshot === undefined) {
+      if (this.mounted && identity === this.preferenceControlIdentity() && revision === this.revision) this.mode = this.confirmed;
+      return false;
+    }
     if (snapshot.canonical !== undefined) this.confirmed = snapshot.canonical;
     if (this.mounted && revision === this.revision) this.applyModeSnapshot(snapshot);
     return snapshot.receipt?.receipt.confirmation === 'confirmed';

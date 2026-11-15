@@ -7,7 +7,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url), 'utf8');
 // The pre-fix row has no displayLevel method; run its actual Builder too so
 // RED reports the wrong displayed level, rather than a missing test dependency.
-const members = ['row', ...(source.includes('private displayLevel(') ? ['displayLevel'] : [])];
+const members = ['row', 'currentPaintNode', 'textRowAccessibility', ...(source.includes('private displayLevel(') ? ['displayLevel'] : [])];
 const identity = { sourceId: 'source', bookId: 'book', catalogRevision: 'catalog', structureRevision: 'structure' };
 const longTitle = '长标题'.repeat(30);
 
@@ -20,7 +20,8 @@ async function render(depth, kind, v2, hasChildren = false) {
     decodeReaderDirectoryOpen(wire);
   const actions = [];
   const owner = createReaderBuilderProbe(source, members).owner;
-  Object.assign(owner, { appThemeScheme: 'day', rowHeight: 40, view,
+  Object.assign(owner, { appThemeScheme: 'day', rowHeight: 40, view, rowPresentationRevision: 0,
+    dataSource: { currentView: () => view, loadedItemById: () => ({ node: view.nodes[0] }) },
     chapterByIndex: new Map(), isCurrentNode: () => false,
     toggleNode: value => actions.push(['toggle', value.nodeId]),
     selectTarget: value => actions.push(['target', value.chapterIndex]) });

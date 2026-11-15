@@ -379,12 +379,17 @@ export struct DiscoverPage {
     return previous ? this.presentation.hasPrevious : this.presentation.hasNext;
   }
 
+  private currentBook(snapshot: DiscoverBook): DiscoverBook {
+    return this.presentation.books.find((book: DiscoverBook): boolean =>
+      book.sourceId === snapshot.sourceId && book.bookId === snapshot.bookId) ?? snapshot;
+  }
+
   @Builder
   private resultRow(book: DiscoverBook) {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Center }) {
-        if (book.coverUrl !== '') {
-          Image(book.coverUrl)
+        if (this.currentBook(book).coverUrl !== '') {
+          Image(this.currentBook(book).coverUrl)
             .width(52)
             .height(74)
             .objectFit(ImageFit.Cover)
@@ -399,7 +404,7 @@ export struct DiscoverPage {
       }
 
       Column({ space: TOK_SPACE_ROW_BLOCK }) {
-        Text(book.name)
+        Text(this.currentBook(book).name)
           .width('100%')
           .fontFamily(TYPE_DISCOVER_RANK_TITLE.fontFamily)
           .fontWeight(TYPE_DISCOVER_RANK_TITLE.fontWeight)
@@ -408,8 +413,8 @@ export struct DiscoverPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        if (book.author !== '') {
-          Text(book.author)
+        if (this.currentBook(book).author !== '') {
+          Text(this.currentBook(book).author)
             .width('100%')
             .fontFamily(TYPE_DISCOVER_AUTHOR.fontFamily)
             .fontWeight(TYPE_DISCOVER_AUTHOR.fontWeight)
@@ -419,8 +424,8 @@ export struct DiscoverPage {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
-        if (book.intro !== '') {
-          Text(book.intro)
+        if (this.currentBook(book).intro !== '') {
+          Text(this.currentBook(book).intro)
             .width('100%')
             .fontFamily(TYPE_DISCOVER_INTRO.fontFamily)
             .fontWeight(TYPE_DISCOVER_INTRO.fontWeight)

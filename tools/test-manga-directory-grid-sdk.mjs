@@ -76,7 +76,7 @@ function probe(scheme = 'day', quick = false, width = 390, fontScale = 1, candid
     readerDirectoryScopeKey, readerDirectoryViewportAnchor: () => undefined,
     readerDirectorySaveViewportAnchor: anchor => anchors.push(anchor) }, properties.hooks);
   Object.assign(result.owner, { dataSource: gridData, view: gridView, mangaDisplay: true, mangaQuickDisplay: quick,
-    mangaSearchActive: false, mangaCatalogDisplay: false, mangaCatalogNarrow: undefined, mangaPresentationRevision: 0,
+    mangaSearchActive: false, mangaCatalogDisplay: false, mangaCatalogNarrow: undefined, rowPresentationRevision: 0,
     windowMetricsRevision: 0, mangaViewportWidth: width, mangaInitialViewportWidth: 0, mangaGridSpans: new Map(), mangaScheme: scheme, appThemeScheme: 'day',
     currentChapterIndex: 5001, rowHeight: 40, mangaRowMinHeight: 58, interactionEnabled: true,
     listPaddingX: 10, listPaddingRight: -1, listPaddingY: 5, listPaddingTop: -1, listPaddingBottom: -1,
@@ -145,7 +145,7 @@ assert.equal(data.getData(0).node.title, '22上', 'late pages cannot replace a d
     }).owner;
   Object.assign(owner, { dataSource: far, view: farView, sourceId: 'manga', bookId: 'book',
     mounted: true, generation: 11, interactionEnabled: true, mangaDisplay: true, mangaQuickDisplay: false,
-    mangaSearchActive: false, mangaDragging: false, initialPositionPending: true, mangaPresentationRevision: 0, pendingPages: [],
+    mangaSearchActive: false, mangaDragging: false, initialPositionPending: true, rowPresentationRevision: 0, pendingPages: [],
     firstVisibleIndex: 6000, mangaRowMinHeight: 58, rowHeight: 40,
     mangaVisibleTopInset: 0, contentStartInset: 0, listPaddingTop: 0, listPaddingY: 0,
     scroller: { getItemRect(index) { return { y: -11, height: far.loadedNode(index) === undefined ? 58 : 44 }; },
@@ -230,13 +230,13 @@ function retainedMangaPaint(candidate = source, numeric = false) {
   const captured = retainedData.getData(0);
   const properties = createArkUIPropertyRuntimeProbe();
   const extra = ['view', 'onViewChanged', 'chapterEntries', 'onChapterEntriesChanged', 'chapterByIndex',
-    'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex', 'mangaGridSpans'];
+    'chapterSource', 'chapterSignatures', 'rowPresentationRevision', 'currentChapterIndex', 'mangaGridSpans'];
   const result = createReaderBuilderProbe(candidate, [...new Set([...names, ...extra])],
     { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
   const owner = result.owner, reads = [], downloads = [];
   Object.assign(owner, { mounted: false, dataSource: retainedData, view: initialView, mangaDisplay: true,
     mangaQuickDisplay: false, mangaSearchActive: true, mangaCatalogDisplay: false, mangaCatalogNarrow: undefined,
-    mangaPresentationRevision: 0, windowMetricsRevision: 0, mangaViewportWidth: 390,
+    rowPresentationRevision: 0, windowMetricsRevision: 0, mangaViewportWidth: 390,
     mangaInitialViewportWidth: 0, mangaScheme: 'day', appThemeScheme: 'day', currentChapterIndex: 5017,
     interactionEnabled: true, chapterDownloadEnabled: true, chapterDownloadActionsEnabled: false,
     listPaddingX: 0, listPaddingRight: 0, rowHeight: 44, mangaRowMinHeight: 58,
@@ -261,7 +261,7 @@ function retainedMangaPaint(candidate = source, numeric = false) {
   assert.equal(title.create, nextNode.title, 'retained title reads the current canonical node');
   if (!numeric) assert.ok([...owner.nodes.values()].some(native => native.type === 'Text' && native.create === '新卷'),
     'retained search context reads the current parent title');
-  owner.mangaSearchActive = false; owner.mangaPresentationRevision += 1; properties.flush();
+  owner.mangaSearchActive = false; owner.rowPresentationRevision += 1; properties.flush();
   assert.equal(owner.mangaRowPaddingLeft(captured), 26, 'same-kind depth changes use the current node facts');
   if (!numeric) assert.equal(read.padding.left, 26, 'the retained named actor receives the current depth geometry');
   assert.ok(read.accessibilityText.includes(nextNode.title), 'retained accessibility reads current title');
@@ -293,13 +293,13 @@ const capturedTitle = source.replace('return mangaDirectoryDisplay(this.mangaDis
 assert.notEqual(capturedTitle, source);
 assert.throws(() => retainedMangaPaint(capturedTitle), /retained title reads the current canonical node/,
   'the original item.node.title capture is rejected by actual retained SDK observers');
-const quietDownload = source.replace('if (this.mangaDisplay && changed.size > 0) this.mangaPresentationRevision += 1;',
+const quietDownload = source.replace('if (this.mangaDisplay && changed.size > 0) this.rowPresentationRevision += 1;',
   'if (this.mangaDisplay && changed.size > 0) {}');
 assert.notEqual(quietDownload, source);
 assert.throws(() => retainedMangaPaint(quietDownload), /retained download repaint/,
   'data notifications with equal keys cannot replace an observable download publication');
 console.log('PASS retained equal-key SDK observers: named/numeric title, parent, current, accessibility, canonical clicks and download authority; captured-title/unpublished-download negative controls');
-const capturedDepth = source.replace('this.displayLevel(this.mangaPaintNode(item.node))', 'this.displayLevel(item.node)');
+const capturedDepth = source.replace('this.displayLevel(this.currentPaintNode(item.node))', 'this.displayLevel(item.node)');
 assert.notEqual(capturedDepth, source);
 assert.throws(() => retainedMangaPaint(capturedDepth), /same-kind depth changes/,
   'a current title cannot hide retained stale geometry');
@@ -317,11 +317,11 @@ assert.throws(() => retainedMangaPaint(ghostPaint), /withdrawn cached actors can
   // Context animation instructions to the existing native observer recorder.
   const nativeGlobals = Object.create(globalThis);
   Object.defineProperty(nativeGlobals, 'Context', { get: () => globalThis.Context });
-  const result = createReaderBuilderProbe(source, [...new Set([...names, 'view', 'onViewChanged', 'mangaPresentationRevision'])],
+  const result = createReaderBuilderProbe(source, [...new Set([...names, 'view', 'onViewChanged', 'rowPresentationRevision'])],
     { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk, globalThis: nativeGlobals, motionAnimateParam }, properties.hooks);
   const owner = result.owner, toggles = [];
   Object.assign(owner, { mounted: false, dataSource: groupData, view: first, mangaDisplay: true,
-    mangaQuickDisplay: false, mangaSearchActive: false, mangaPresentationRevision: 0,
+    mangaQuickDisplay: false, mangaSearchActive: false, rowPresentationRevision: 0,
     mangaCatalogDisplay: false, mangaCatalogNarrow: undefined, mangaScheme: 'day', appThemeScheme: 'day',
     mangaViewportWidth: 390, mangaInitialViewportWidth: 0, windowMetricsRevision: 0,
     interactionEnabled: true, currentChapterIndex: -1, chapterDownloadEnabled: false,

@@ -322,7 +322,7 @@ function liveCurrentFamily(text = listSource) {
   const entry = { nodeId: 'leaf', title: '03', depth: 2, kind: 'target', chapterIndex: 79 };
   Object.assign(owner, { mangaScheme: 'day', mangaSearchActive: false, currentChapterIndex: -1,
     interactionEnabled: true, view: { viewId: 'v' }, mangaRowMinHeight: 58,
-    mangaCatalogDisplay: false, mangaCatalogNarrow: false, mangaPresentationRevision: 0,
+    mangaCatalogDisplay: false, mangaCatalogNarrow: false, rowPresentationRevision: 0,
     dataSource: { currentView: () => owner.view, loadedItemById: () => ({ node: entry, index: 0 }) } });
   owner.mangaRow({ node: entry, key: 'leaf', index: 0 });
   const title = [...owner.nodes.values()].find(node => node.type === 'Text' && node.create === '03');

@@ -201,11 +201,11 @@ let persistedMode = 'cover';
 let prepare = async () => {}, saved = [], load = async () => persistedMode,
   save = async mode => { saved.push(mode); persistedMode = mode; };
 let fontRegistrations = 0;
-const Model = productionMotionMethods(file, ['aboutToAppear', 'aboutToDisappear', 'persistRequestedMode', 'selectMode','viewModeRecovery','applyModeSnapshot','loadMode','retryMode','onOperationChanged','settingsPending','modePending','modeFeedback'], {
+const Model = productionMotionMethods(file, ['aboutToAppear', 'aboutToDisappear', 'persistRequestedMode', 'selectMode','userInputIsCurrent','preferenceControlIdentity','viewModeRecovery','applyModeSnapshot','loadMode','retryMode','onOperationChanged','settingsPending','modePending','modeFeedback'], {
   readerRecoveryView, registerReaderFonts: () => { fontRegistrations++; }, ReaderThemeHost: { prepareUserChange: () => prepare() },
   WebDavCredentialStore: { instance: { currentBookshelfViewMode:()=>persistedMode, loadBookshelfViewMode: () => load(), saveBookshelfViewMode: mode => save(mode) } },
 });
-const mount = () => { const owner = Object.assign(new Model(), { mode: 'cover', revision: 0, presentationRevision:0, operation:{action:'load'}, lastSettingsFeedback:'', lastModeFeedback:'', error: '',
+const mount = () => { const owner = Object.assign(new Model(), { mode: 'cover', revision: 0, presentationRevision:0,navigationGeneration:7,isInputAllowed:()=>true, operation:{action:'load'}, lastSettingsFeedback:'', lastModeFeedback:'', error: '',
   getUIContext: () => ({ getFont: () => ({}) }),viewModeHost:actualModeHost({currentBookshelfViewMode:()=>persistedMode,loadBookshelfViewMode:()=>load(),saveBookshelfViewMode:mode=>save(mode)},()=>prepare()),viewModeSnapshot:{canonical:undefined} }); owner.aboutToAppear(); return owner; };
 const settle = () => new Promise(resolve => setImmediate(resolve));
 let owner = mount(); owner.selectMode('list'); assert.equal(owner.mode, 'list'); await settle();

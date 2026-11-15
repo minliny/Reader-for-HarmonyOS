@@ -68,7 +68,7 @@ function slot(provider, revision = 1, params = {}) {
   return { owner, params: forwarded };
 }
 function surface(params, source = surfaceSource) {
-  const owner = createReaderBuilderProbe(source, ['build', 'renderFragments', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend'], {
+  const owner = createReaderBuilderProbe(source, ['build', 'renderFragments', 'currentFragment', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend'], {
     ReaderPageChrome: Child, ReaderNativeParagraphView: Child, ReaderReadingTextFragment: Child, ReaderPaperBackground: Child,
     readerNativeTextGeometryKey,
     TYPE_READER_CHAPTER_TITLE: { fontFamily: 'ReaderNotoSansSC', fontWeight: 500, fontSizeFp: 24 },

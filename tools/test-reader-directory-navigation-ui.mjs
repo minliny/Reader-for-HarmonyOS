@@ -617,9 +617,10 @@ if(selectedCase==="query-disclosure")
       const key = keys.rowKey(item);
       let row = mounted.get(key);
       if (row === undefined) {
-        row = createReaderBuilderProbe(listSource, ['row', 'displayLevel']).owner;
+        row = createReaderBuilderProbe(listSource, ['row', 'displayLevel', 'currentPaintNode', 'textRowAccessibility']).owner;
         Object.assign(row, { rowHeight:40, appThemeScheme:'day', view:{viewId},
-          chapterByIndex:new Map(), isCurrentNode:()=>false,
+          chapterByIndex:new Map(), isCurrentNode:()=>false,rowPresentationRevision:0,
+          dataSource:{currentView:()=>row.view,loadedItemById:()=>undefined},
           toggleNode: value=>toggles.push(value), selectTarget() {} });
         row.row(item);
       }
@@ -794,14 +795,15 @@ if(selectedCase==="target-download")
   const Download = productionMotionMethods(listPath, ['canDownloadTarget', 'downloadTarget', 'onChapterEntriesChanged']);
   const target = { nodeId: 'target', kind: 'target', title: 'Chapter', depth: 1,
     chapterIndex: 7, hasChildren: false, expanded: false };
-  const markerStart = listSource.indexOf("        if (item.node.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled", listSource.indexOf("  private row("));
-  const markerEnd = listSource.indexOf("        if (item.node.kind === 'target'", markerStart + 1);
+  const markerStart = listSource.indexOf("        if (this.currentPaintNode(item.node).kind === 'target' && this.currentPaintNode(item.node).chapterIndex !== undefined && this.chapterDownloadEnabled", listSource.indexOf("  private row("));
+  const markerEnd = listSource.indexOf("        if (this.currentPaintNode(item.node).kind === 'target'", markerStart + 1);
   assert.ok(markerStart > 0 && markerEnd > markerStart);
   const baseline = listSource.slice(0, markerStart) + listSource.slice(markerEnd);
   function render(source, node, state, enabled, scheme = 'day', navigable = true) {
     const calls = [];
-    const owner = createReaderBuilderProbe(source, ['row', 'displayLevel']).owner;
-    Object.assign(owner, { appThemeScheme: scheme, view: {viewId:'view'}, rowHeight:40,
+    const owner = createReaderBuilderProbe(source, ['row', 'displayLevel', 'currentPaintNode', 'textRowAccessibility']).owner;
+    Object.assign(owner, { appThemeScheme: scheme, view: {viewId:'view'}, rowHeight:40,rowPresentationRevision:0,
+      dataSource:{currentView:()=>owner.view,loadedItemById:()=>({node})},
       interactionEnabled: true, chapterDownloadEnabled: enabled, chapterByIndex: new Map([[7,
         {index:7,title:'Chapter',downloadState:state,navigable}]]), isCurrentNode:()=>false,
       toggleNode(){},selectTarget(){},downloadTarget:node=>calls.push(node.nodeId),

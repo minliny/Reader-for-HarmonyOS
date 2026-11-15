@@ -51,12 +51,12 @@ assert.throws(() => decodeReaderDirectoryOpen({ ...wire, nodes: [{ ...wireChild,
 assert.throws(() => decodeReaderDirectoryPage({ viewId: 'v1', visibleTotal: 319,
   nodes: [{ ...wireChild, parentTitle: ' ' }] }, 'v1', 256), /parent title/);
 
-const rowNames = [...mangaGridBuilderMembers, 'mangaPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaFontScale', 'mangaFirstDisplayRow', 'mangaRowBody', 'mangaRow', 'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
+const rowNames = [...mangaGridBuilderMembers, 'currentPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaFontScale', 'mangaFirstDisplayRow', 'mangaRowBody', 'mangaRow', 'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
 const gridNames = [...new Set(['row', ...rowNames, ...mangaGridBuilderMembers])];
 function rowProbe(source, node, { scheme = 'day', current = false, search = false, index = 0, height = 58, catalog = false, narrow = false } = {}) {
   const { owner } = createReaderBuilderProbe(source, rowNames, { ...mangaGridProbeDependencies, ...fontFamilies });
   Object.assign(owner, { view, mangaScheme: scheme, appThemeScheme: 'day', mangaSearchActive: search,
-    mangaRowMinHeight: height, mangaCatalogDisplay: catalog, mangaCatalogNarrow: narrow, currentChapterIndex: current ? node.chapterIndex : -1, interactionEnabled: true, mangaPresentationRevision: 0,
+    mangaRowMinHeight: height, mangaCatalogDisplay: catalog, mangaCatalogNarrow: narrow, currentChapterIndex: current ? node.chapterIndex : -1, interactionEnabled: true, rowPresentationRevision: 0,
     dataSource: { loadedItemById: () => ({ node, index }), currentView: () => view, loadedNode: () => undefined },
     onSelectTarget() {}, toggleNode() {}, selectTarget() {} });
   owner.mangaRow({ node, index, key: node.nodeId });
@@ -125,7 +125,7 @@ async function checkRetainedGroup(source) {
     preparedPages: [{ offset: 256, page: { viewId: 'retained-expanded', visibleTotal: 300, nodes: [{ ...view.nodes[0] }] } }] };
   const hooks = { ...properties.hooks, initialParams: { view: initial } };
   const { owner } = createReaderBuilderProbe(source,
-    [...rowNames, 'rowKey', 'view', 'mangaPresentationRevision', 'onViewChanged', 'loadPage', 'admitMangaPages'],
+    [...rowNames, 'rowKey', 'view', 'rowPresentationRevision', 'onViewChanged', 'loadPage', 'admitMangaPages'],
     { ...mangaGridProbeDependencies, ...properties.sdk, ...fontFamilies, readerDirectoryViewportAnchor: () => undefined, readerDirectoryScopeKey, setTimeout: action => timers.push(action), cacheReaderDirectoryNavigationPage }, hooks);
   const clicks = [];
   Object.assign(owner, { mangaDisplay: true, mangaScheme: 'day', appThemeScheme: 'day', mangaSearchActive: false,

@@ -19,13 +19,13 @@ catalog[0] = { ...node(0), nodeId: 'volume', title: '第一卷', kind: 'group', 
 function listFixture(data, view, quick, source = listSource) {
   const native = [], scrolls = [], anchors = [], properties = createArkUIPropertyRuntimeProbe();
   const Grid = new Proxy({}, { get: (_target, key) => (...args) => { if (key === 'create') native.push({ args }); else if (key !== 'pop') native.at(-1)[key] = args[0]; } });
-  const { owner } = createReaderBuilderProbe(source, [...mangaRowBuilderMembers, 'mangaPresentationRevision', 'build', 'row', 'rowKey', 'planPosition', 'positionInitialCurrent', 'positionRowHeight', 'captureViewportAnchor'], {
+  const { owner } = createReaderBuilderProbe(source, [...mangaRowBuilderMembers, 'rowPresentationRevision', 'build', 'row', 'rowKey', 'planPosition', 'positionInitialCurrent', 'positionRowHeight', 'captureViewportAnchor'], {
     ...mangaGridProbeDependencies, ...fonts, ...properties.sdk, Grid, LazyForEach: new Proxy({}, { get: () => () => {} }),
     readerDirectoryScopeKey, readerDirectoryViewportAnchor, readerDirectorySaveViewportAnchor: anchor => anchors.push(anchor),
     ScrollAlign: { START: 'start', CENTER: 'center' }, LengthMetrics: { vp: value => ({ value }) },
   }, properties.hooks);
   Object.assign(owner, { view, dataSource: data, mangaDisplay: true, mangaQuickDisplay: quick, mangaSearchActive: false,
-    mangaCatalogDisplay: false, mangaCatalogNarrow: false, mangaPresentationRevision: 0, mangaGridSpans: new Map(),
+    mangaCatalogDisplay: false, mangaCatalogNarrow: false, rowPresentationRevision: 0, mangaGridSpans: new Map(),
     windowMetricsRevision: 0, mangaViewportWidth: 393, mangaInitialViewportWidth: 393, listPaddingX: 0, listPaddingRight: 0,
     mangaVisibleTopInset: 0, listPaddingY: 0, listPaddingTop: -1, listPaddingBottom: -1, contentStartInset: 0, contentEndInset: 0,
     currentChapterIndex: view.currentVisibleIndex === 0 ? -1 : catalog[view.currentVisibleIndex].chapterIndex,
@@ -118,7 +118,7 @@ function retainedContext(candidate = listSource) {
   const label = [...built.owner.nodes.values()].find(node => node.type === 'Text'); assert.equal(label.create, '旧卷 / 旧组');
   const actors = [...built.owner.observers];
   data.admit(0, { viewId: view.viewId, visibleTotal: 2, nodes: [{ ...nodes[0], title: '新卷' }, { ...nodes[1], title: '新组' }] });
-  built.owner.mangaPresentationRevision += 1; built.properties.flush();
+  built.owner.rowPresentationRevision += 1; built.properties.flush();
   assert.equal(label.create, '新卷 / 新组', 'retained Quick context observes current group and ancestor facts');
   assert.equal(label.accessibilityText, '新卷 / 新组'); assert.equal(label.onClick, undefined);
   assert.deepEqual(built.owner.observers, actors, 'context revision preserves the actual native Text actor');

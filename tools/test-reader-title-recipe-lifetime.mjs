@@ -67,7 +67,7 @@ function instrument(source, mode) {
   const params = mode === 'paged' ? { contentRevision: 1, pageFragments: [], showChapterTitle: true,
     chapterTitle: 'chapter A', fragmentsProvider: () => current } : { appearance: { activeTheme: 'paper', paragraphSpacing: 16 } };
   const names = mode === 'paged' ? ['chapterTitle', 'showChapterTitle', 'pageFragments', 'contentRevision', 'fragmentsProvider', 'build',
-    'renderFragments', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'] : ['appearance', 'build'];
+    'renderFragments', 'currentFragment', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'] : ['appearance', 'build'];
   const { owner, output } = createReaderBuilderProbe(source, names, dependencies,
     { ...runtime.hooks, initialParams: params, allowEmptyBranchAdmission: true });
   Object.assign(owner, { pageParagraphs: [], snapshotSynchronousImages: false, bottomJustifyGap: 0, staticSnapshotId: '',

@@ -421,7 +421,7 @@ if(selected.length){
       ReaderDirectoryNavigationGateway:class{constructor(owner){assert.equal(owner,nativeRuntime);}},
       readerDirectoryObserveScrollCommand:()=>()=>{},readerDirectoryScopeKey:navigation.readerDirectoryScopeKey,
     });
-    const owner=Object.assign(new List(),{navigationPortFactory:factory,generation:0,mangaPresentationRevision:0,
+    const owner=Object.assign(new List(),{navigationPortFactory:factory,generation:0,rowPresentationRevision:0,
       sourceId:'directory-native-fixture',bookId:'text:1',view:{viewId:'injected'},
       dataSource:{replace(){}},planPosition:()=>undefined,onChapterEntriesChanged(){}});
     owner.aboutToAppear();return {owner,calls};

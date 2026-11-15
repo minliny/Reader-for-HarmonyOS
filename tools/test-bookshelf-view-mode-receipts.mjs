@@ -42,10 +42,10 @@ function fixture(){
  const page=(settings=false)=>{
   const path=settings?'features/bookshelf/ui/BookshelfSettingsPage.ets':'features/bookshelf/ui/BookshelfPage.ets';
   const toasts=[];
-  const names=settings?['selectMode','persistRequestedMode','viewModeRecovery','applyModeSnapshot','retryMode','loadMode','aboutToDisappear','modePending','modeFeedback']:
-   ['setViewMode','persistRequestedViewMode','viewModeRecovery','applyViewModeSnapshot','retryViewMode','loadViewMode','aboutToDisappear','viewModePending','modeFeedback'];
+  const names=settings?['selectMode','persistRequestedMode','userInputIsCurrent','preferenceControlIdentity','viewModeRecovery','applyModeSnapshot','retryMode','loadMode','aboutToDisappear','modePending','modeFeedback']:
+   ['setViewMode','persistRequestedViewMode','isShelfPresentationCurrent','viewModeRecovery','applyViewModeSnapshot','retryViewMode','loadViewMode','aboutToDisappear','viewModePending','modeFeedback'];
   const Model=productionMotionMethods(file(path),names,{readerRecoveryView});
-  const p=Object.assign(new Model(),{viewModeHost:host,viewModeSnapshot:{canonical:undefined},mounted:true,revision:0,viewModeRevision:0,mode:'cover',viewMode:'cover',
+  const p=Object.assign(new Model(),{viewModeHost:host,viewModeSnapshot:{canonical:undefined},mounted:true,revision:0,viewModeRevision:0,navigationGeneration:7,presentationRevision:0,isInputAllowed:()=>true,feedbackEnabled:true,isCurrentShelfInput:()=>true,mode:'cover',viewMode:'cover',
    storedViewMode:'cover',confirmed:'cover',confirmedViewMode:'cover',requestedMode:'cover',requestedViewMode:'cover',error:'',viewModeError:'',reduceMotion:true,
    viewSwitchRunning:false,projectionGeneration:0,viewportRestoreGeneration:0,viewState:{},resetViewSwitchMotion(){this.viewSwitchRunning=false;},
    setRestingProjectionOpacity(){},rebuildShelfProjection(){},saveShelfViewport(){},webDavCredentials:store,
@@ -157,7 +157,7 @@ function modeSdk(f,settings){
  const names=settings?[...common,'pendingOverlay','modePending','retryMode','revision','applyModeSnapshot','aboutToDisappear']:
   [...common,'bookshelfTabContent','viewModePending','retryViewMode','viewModeRevision','applyViewModeSnapshot','aboutToDisappear'];
  const owner=sdk.consumer(source(path),names,{readerRecoveryView});
- Object.assign(owner,{viewModeHost:f.host,viewModeSnapshot:f.host.current(),mounted:true,revision:0,viewModeRevision:0,
+ Object.assign(owner,{viewModeHost:f.host,viewModeSnapshot:f.host.current(),mounted:true,revision:0,viewModeRevision:0,navigationGeneration:7,presentationRevision:0,isInputAllowed:()=>true,feedbackEnabled:true,isCurrentShelfInput:()=>true,
   settingsRecovery(){},isWideViewport:()=>false,phoneContent(){},tabletContent(){},bookActionSheetContent(){},bookActionSheetOptions:()=>({}),
   headerClearance:74,noticeTopInset:0,viewState:{},saveShelfViewport(){},resetViewSwitchMotion(){},setRestingProjectionOpacity(){},rebuildShelfProjection(){},
   getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
