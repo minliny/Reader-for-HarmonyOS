@@ -2,9 +2,23 @@
 
 ## 2026年11月15日当前实施状态
 
-全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`852c2d2d`，已安装候选为`0.2.0.DEV.00d04806261d`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`a3d84a63`，已安装候选为`0.2.0.DEV.6c87d094e03a`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
 
-### 当前书源编辑器回执恢复补证
+### 当前下载状态、布局与触摸边界补证
+
+本批沿既有DEBUG入口增加9种下载状态输入，包含读取中、空书架、读取失败、保留内容失败、原操作待核对、核对读取中、筛选为空、章节投影读取中及章节投影失败。实际SharedDownloadPage消费正常公共props及initialViewState，管理、选择和弹层继续由页面拥有。有限内存owner按正常Host的loading/error、恢复generation和按书籍合并读取规则发布事实。9项准确选择用例通过，原菜单属性及测试提取器的两次失败按原日志保留。[代码与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/download-state-code-o.json)
+
+原VM已完成9种状态的准确观察。读取失败重试接纳一次，清除筛选恢复当前查询且没有新增业务意图，章节投影失败的两次实际重试合并为一个未完成读取。未决恢复保留原操作尚未确认的事实。普通及168vp父槽的书籍和章节浏览、固定管理栏、流内管理栏均已核对，实际全选分别从0到12本书及0到18个条目，Back回到当前菜单。该结果覆盖6个登记上下文的所列布局和当前状态输入。[状态、实际List归属与回调](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-download-states-and-layout-o.json)
+
+**UIF-39修复忙态恢复提示的触摸穿透。** 基线10a5d58d已使用Transparent提示外框及覆盖祖先。实际168vp下载恢复提示中，禁用按钮拒绝重复业务动作，下层搜索框仍获得焦点。首次把提示及分组外框改为Default后，原生复验继续失败，两个Transparent祖先仍让下层参与命中。后继将层级命中边界放在拥有手势的有界Notice Scroll上，使用当前最低API23支持的BLOCK_HIERARCHY，子按钮及Scroll自身继续参与，命中结果向外阻断低优先级层。平台源码按子节点返回结果决定后续兄弟遍历，相关节点自行收集手势后再返回层级边界。[平台命中实现](https://raw.githubusercontent.com/openharmony/arkui_ace_engine/master/frameworks/core/components_ng/base/frame_node.cpp)
+
+3项准确SDK用例通过，覆盖外框、分组、忙态回调、正文及动作容量、旧回执拒绝。恢复原Notice Transparent、Group Transparent和有界Scroll Default的3个负例分别失败。当前原生366×168vp父槽中的Notice Scroll高62vp，原正文可读，实际滚动后动作完整可达。原生按钮297首次刷新后禁用，意图计数0→1→1，下层输入在三次断言中均未获焦，捕获中均无IME面。随后一次实际Back返回当前Root。UITest对该Scroll的枚举字段仍输出Default，实际层级策略的依据沿编译输入及行为对照保存。[UIF-39原始失败、修复与原生回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/recovery-hit-boundary-o.json)
+
+当前生产提交为`a3d84a63`，已安装候选为`0.2.0.DEV.6c87d094e03a`。完整ArkTS编译、指定minliny_HarmonyOS证书签名和保数据部署通过，HAP的SHA-256为`b8cd4e9fc0a258bf804f6430df92677dcb1bc284fdade95d5e24f071e4654bdb`。640个运行输入均匹配不可变候选，其中273个ETS、367个TS。与首个下载状态候选相比，只有Notice及Group两份运行源码变化，其余638份同字节。此前状态和布局结果按其实际输入范围复用。VM已恢复普通书架，所有本批会话均已终止并释放租约。[源码绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-o-recovery2.json) [实际输入复用](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/download-input-reuse-o.json)
+
+本批保留了首次命中修复的原生失败，以及等待参数、启动后入口时序、Back参数和滚动查找方向的脚本失败。后继只补尚未派发或尚未获得的准确问题，已通过的状态和选择动作沿原回执复用。当前完整E2/E3及整页visual判据保持原结果。目录换源的准确装配和未覆盖状态继续由agent核对，原稿、声音、精确字号、真实窗口改高、连续像素和历史同期材料沿既有证据条件保留。当前没有等待用户作出的实施决断。
+
+### 前一批书源编辑器回执恢复补证
 
 本批生产提交为`852c2d2d`，沿既有DEBUG场景表补齐“保存已确认但回读失败”和“保存回执未知”两种编辑输入。输入按正常SourceToolsOrchestrator的readBackEditor/publish发布editorReadback、editorOperation、receipt、反馈事件及消息，正文使用实际共享SourceToolsPage。一次当前内存核对将读取阶段推进到reading、busy=true、回读代次加1，并保留原confirmation、草稿及编辑代次。6项准确选择用例通过，包含2种确认事实×2条恢复回调、旧编辑/操作代次、禁用编辑保存取消、重复及退休拒绝，既有菜单冻结输入负例也被拒绝。[代码与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-tools-editor-recovery-code-n.json)
 
