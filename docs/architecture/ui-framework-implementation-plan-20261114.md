@@ -20,6 +20,18 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### 书源其余24目标的实际动作补证
+
+当前b2a0候选在同一default内存宿主、同一presentation中完成其余24个交互目标。四个可用状态的原生selected与实际16/24、6/24、12/24及24项计数吻合，禁用“自定义”触摸后仍选择全部。七个分类逐项取得当前原生selected及投影计数，屏外项经真实横向Scroll到达，最后恢复全部类型。[24目标、34个断言点与完整原生范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-targets-z.json)
+
+分组当前项、两项样本分组及回到全部分组均取得实际回执，面板外部触摸关闭后保留当前值。五个关闭捕获点均回到同一原生触发器289，focused=true。页头工具回调捕获“科幻样本”，页脚工具回调捕获“纪实样本”，同一owner记录了对应当前筛选元组。查询TextInput272在实际IME、Back及清除后保持同一实例，值为NoMatchZ73129、NoMatchZ73129及空值，焦点为true、false、false，清除后恢复24个书源、16个启用。实际输入法和最终书架实屏均已查看。
+
+页头与页脚新增入口各接纳一次内存add意图，第一源登录和第三源检测分别接纳到准确实体。两项进入checking后，新原生按钮enabled=false，重复触摸后的业务意图总数仍为6。本批业务回执来自既有独立内存owner，实际导入、浏览器登录及网络检测沿各自业务范围使用。源码与回调准入先从当前入口核对，原签装候选继续复用。[当前入口及停止条件](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-target-native-plan-z.json)
+
+34个目标的动作证据现已逐项齐备，包含本批24项、前批9项及准确复用的Toggle行1项。每项保留其原始候选、宽度、密度、状态和回执范围。Source登记修订为49，interaction追加本批准确证据。完整页面E2/E3的边缘命中、其余焦点、读屏语义、字号及方向条件继续逐项核对。[当前34目标对账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-native-target-map-z.json) [登记更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-targets-z.json)
+
+六个会话均完成并释放租约，正常启动返回原四本书架。原TXT27%、两本测试书未读、漫画100%，两个显示密度字段均为3.5，状态栏136px，SceneBoard1426。全量目标继续处理剩余完整原生条件。[本批收尾与后继范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-z-delivery-review.json)
+
 ### 书源恢复动作与34目标原生对账
 
 当前b2a0候选在实际366vp请求、365.7143vp宽、770.2857vp高、系统字号1的Source页面中完成六次场景打开。状态动作、保留列表刷新、空列表重试、未知回执核对、原操作核对、继续原操作及继续清理，共七次业务意图均取得当前进程和当前presentation的唯一回执。刷新后原恢复动作退出，空列表重试后呈现“暂无书源”，未知回执或原操作处理后提示退出，保留行Toggle恢复启用。实际页头返回Button触摸后取得夹具菜单回执。[完整原生动作与逐步断言](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-recovery-y.json)
