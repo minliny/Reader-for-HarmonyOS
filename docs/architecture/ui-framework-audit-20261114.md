@@ -20,6 +20,20 @@
 全量实施目标已恢复为active。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`c189905d`，已安装候选为`0.2.0.DEV.b2a0c9e4d9eb`。下文保留各批次当时的源码、失败及验证范围。正常重启后的完整系统显示已恢复，代码、原稿和准确原生入口的剩余工作继续由agent推进。
 
 
+### 实际1.3倍系统字体与基础适配补证
+
+**系统字号第4档已实测为1.3倍，前序环境缺口分类已纠正。** 前序仅测量第2档和第5档，就把1.3与1.6、2一并列入环境缺口，缺少中间档实测依据。当前ReaderWindowCoordinator接受有限正字体值，Ability配置优先，原生观察另读UIContext的fp2px与vp2px比值。实际系统滑块为4／1／1时，配置值为1.3，原生字体比值为1.2999999523162842，跟随系统为true。[实际字体能力与更正](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font-intermediate-capability-aa.json)
+
+当前b2a0候选完成Source默认内容、详情文字Full目录、下载书籍浏览和书源工具内容四个基础页面的八个初始状态样本。请求宽度分别为320vp和366vp，实际宽度为320vp和365.7143vp，高度均为770.2857vp，每个样本独立确认配置及原生字体为1.3。八张实屏已查看，目录窄宽查询及工具形成分行，下载长标题与元数据自然增高，Source保留其横向筛选条和既定省略，工具七项动作均有原始字形像素。[八个样本、原生树与准确范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-font13-aa.json) [原始像素复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font13-aa-pixel-review.json)
+
+Source的320vp样本实际选择“纪实样本”，显示12／24个书源、8个启用。系统字号恢复后，同一进程31278、presentation8继续持有原生输入4222及分组Button4239，分组值、计数和触发器焦点均保留。触发器范围从[438,884][1135,1038]变为[413,823][1134,977]，恢复后的范围在后继分组Back观察之前已取得。晚于配置回调的当前公开Back回执另确认配置与原生字体均回到1。两次工具初始化使内存owner的意图计数为2，分组动作及字号恢复保持该值。
+
+恢复期间一次私有驱动检查失败。旧Source业务历史断言要求开场launch仍在当前日志中，该记录已退出返回范围，驱动因此停止。系统三个滑块当时已经恢复为2／1／1，原始FAIL保留。后继使用已核对的当前进程、页面身份、原生面板及公开Back回执完成续接，早期配置为1而原生读数仍为1.3的观察也按原值保存。[失败及准确续接](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/font-restoration-driver-aa-failure.json)
+
+Source、Directory、Downloads及Tools四项基础登记分别修订为50、47、30和40，adaptation层追加本批准确证据。其他状态、变体、完整原生命中、读屏、方向及整页适配继续逐项处理。当前暴露的系统字号滑块最高第5档实测为1.45，实际1.6及2的系统字体输入路径仍未建立。完整21项逐层判定沿原条件保存，1.3的其余可执行状态继续由agent推进。[四项登记更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-font13-aa.json) [当前剩余原生范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/remaining-native-entry-review-aa.json)
+
+本批复用c189905d运行代码、原签装候选及保数据安装依据。系统字号、字重和显示缩放最终恢复2／1／1，正常启动返回原四本书架，原TXT27%、两本测试书未读、漫画100%。物理分辨率1280×2832，两个密度字段均为3.5，状态栏136px，SceneBoard1426。[本批收尾与完整证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-aa-delivery-review.json)
+
 ### 书源其余24目标的实际动作补证
 
 当前b2a0候选在同一default内存宿主、同一presentation中完成其余24个交互目标。四个可用状态的原生selected与实际16/24、6/24、12/24及24项计数吻合，禁用“自定义”触摸后仍选择全部。七个分类逐项取得当前原生selected及投影计数，屏外项经真实横向Scroll到达，最后恢复全部类型。[24目标、34个断言点与完整原生范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-targets-z.json)
@@ -229,7 +243,7 @@
 - 全应用正式登记仍有37项诊断，其中E2完整交互21项、E3适配5项、G-03视觉依据8项及SCOPE范围3项。各页全部目标、动作状态、字形、裁切和读屏语义的逐格证据继续由agent补齐。本批与历史原生场景均按各自准确输入及行为范围登记。
 - 独立整页视觉依据继续按原图、原稿版本及当前页面状态对应。目录冻结层级与TTS Make V17已找到，当前Figma准确节点403只影响远端当前版本读取。冻结资料支持其已覆盖尺寸及比例，其余整页G-03条件保持。
 - 用户已决定保留紧凑布局。目录工具、行及TTS Quick的44vp容量冲突保留具体槽位核算，命中与相邻响应分别使用实际可达证据关闭。
-- 当前VM系统字号最大档实测1.45，原要求的1.3、1.6、2各档原生证据保持开放。对应有限SDK几何样本继续保留原判定。
+- 当前暴露的系统字号滑块最高第5档实测1.45，第4档已补证为1.3。1.3的八个基础初始样本及Source分组和恢复已有本批准确原生依据，其余状态和变体继续推进。实际1.6与2的输入路径仍未建立。对应有限SDK几何样本保留原判定。
 - 移除确认的实际纯高度变化及部分More回退锚点尚未达到准确运行前提。源码高度依赖修复与准确方法回归已完成，原生后果按实际窗口行为单列。
 - 当前读屏接口可记录client/window身份，普通UITest扩展项只返回uniqueId。完整spoken名称、role、实际语音队列及短反馈听觉结果仍缺对应可观察回执。
 - G05需要连续实际绘制帧。已有两次平台录屏调用均未获得实际授权及STARTED，独立C接口也未建立有效创建结果。G10需要历史异常同期原始录像、trace或绘制数据，沿用户确认的现有资料边界保留。
