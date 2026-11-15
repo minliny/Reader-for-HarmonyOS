@@ -2,11 +2,42 @@
 
 ## 2026年11月15日当前实施状态
 
-全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。本节的已交付基准为生产修复提交`8801ea4d`及已安装候选`0.2.0.DEV.2d056e9641ba`，后继代码状态见下文。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`0e55a34c`，已安装候选为`0.2.0.DEV.d6005e1cdf9a`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
 
-### 当前列表行、实体动作与时序索引的后继修复
+### 当前几何、重试与目录换代修复
 
-当前生产修复提交为`8771b09f`，本批修改3个生产UI文件。4个新增准确SDK用例及2个既有准确回归形成通过证据，含13个按最终属性或动作参数拒绝的负例。当前代码相对有效部署回执绑定的`0.2.0.DEV.2d056e9641ba`有19个生产ETS文件变化，当前完整工程编译、签名及本批VM验证待执行。[本批用例与准确复用范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/builder-data-results-j.json)
+当前生产提交为`0e55a34c`，本批修复代码提交为`fdf383b0`。本批修改4个生产UI文件，5项准确选择用例和4个历史失效负例取得通过结果。完整非增量ArkTS编译与指定`minliny_HarmonyOS`证书签名通过，当前候选`0.2.0.DEV.d6005e1cdf9a`已保数据安装并启动。640个运行源码输入与候选逐字节匹配，包含273个ETS和367个TS。[本批准确结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ui-layout-retry-results-k.json) [当前源码与候选绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-k.json)
+
+**UIF-36修正搜索筛选的窗口几何续接。** 原sheetBody把一次计算的SearchFilterGeometry对象传入六层Builder。相同布局分支下窗口缩窄时，两个已挂载分组继续保持284vp，当前应为264vp。当前消费处直接读取既有几何缓存方法。准确SDK覆盖inline/stacked及fit/scroll四种组合，检查八个当前分组宽度、四个堆叠标签宽度和四次当前筛选动作。冻结几何对象的旧实现负例被当前宽度断言拒绝。[原几何失效](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-k-witness-filter-geometry-01.log) [几何回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/live-layout-retry-k.json)
+
+**UIF-37修正验证页连续字体失败后的重试。** 原attempt按值传入，第二次失败后仍携带第一次attempt，第三次重试被拒绝。当前fontAttempt使用State，并以当前attempt为实际PageState动作建立子树身份。两次有限失败后第三次准备成功，旧attempt、旧菜单及退休owner的回调继续被拒绝。[原字体重试失效](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-k-witness-fixture-font-retry-01.log) [当前重试与拒旧回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/fixture-font-retry-k-final.json)
+
+**UIF-38修正Full目录的保留Tab。** 原默认参数捕获首次layoutPresentation，而tab的PropWatch每次调用openList都会换代，第一次切换后返回章节被拒绝。Full默认参数现读取当前代次，Short头部继续捕获自身ForEach代次。SDK检查三次切换及旧Short回调拒绝。当前VM的同一内存夹具完成章节→书签→章节→书签，两个原生Button身份110和119始终保持，三次原owner意图回执依次为1、2、3。该次内容实际宽315.33vp、高620vp，系统字号1。[原Tab失效](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-k-witness-directory-tabs-01.log) [SDK代次回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/directory-tab-renewal-k.json) [原生三次切换](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-directory-tab-renewal-d600.json)
+
+完整编译另检出了前一批UIF-29徽标的类型错误，colorRole原声明为string，公共颜色接口要求ReaderAppColorRole。当前复用已有联合类型，四个注册角色与当前主题行为保持原合同，准确徽标回归及冻结日间色负例通过。首次编译失败原样保留，后继完整编译和签名成功。Short既有回归还使用旧固定prefix高度及64vp行断言，已按当前minHeight及40+20=60vp的大字回退配方修正，准确short-sdk通过。[首次完整编译失败](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-k-build-01.log) [类型修正回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/import-formats-k-typed.json) [完整编译与签名](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-k-build-02.log) [Short回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-k-short-sdk-03.log)
+
+原343个显式原始参数候选现对账为32项修复、311项已有正常宿主/键/身份生命周期依据、0项待核对。额外37个有省略参数调用的默认参数完成核对，其中1项Full目录失效已修复，36项有固定角色、稳定对象、路由准入或原生打开代次依据。Index的runtime在EntryAbility中先安装，启动准入完成后才装配Index，SearchHost为只读实例。SourceTools日志由正常checkSource整批发布，每条均绑定source/trace/request身份。这些结论限定于逐项登记的当前生产入口。完整页面语义和原生矩阵继续按原条件关闭。[343项生命周期对账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/builder-parameter-lifetimes-k.json) [37项默认参数对账](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/builder-default-parameters-k.json)
+
+当前书源编辑器原生验证完成。TextArea540获焦后显示系统输入法，Back收起输入法并保留同一原生编辑器及251字节草稿，显式取消移除编辑器并保留批量已选3项。最后原owner记录cancel-editor、editorRevision2、intentCount4。此前过早启动采样、错误诊断枚举和已选0的前提失配均保留，前提失配在编辑动作前停止，后继沿实际已选3继续。[输入法返回与取消](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-ime-cancel-d600.json)
+
+13项正式登记的变更输入及一次修订已更新，引用检查0诊断，登记检查继续保留37项原验收诊断。当前Figma准确节点接口再次返回403及Token expired，冻结目录原稿和完整TTS Make V17仍是已有可读输入。用户已批准保留紧凑布局，容量冲突继续保留其原关闭条件。[登记输入更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/registration-source-refresh-k.json) [当前Figma接口回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/figma-api-k-20261115.json)
+
+漫画的当前原始原生失败已补齐。正常书架按准确source/book身份进入现有漫画，一次原操作在10:42:28.803返回当前网络无法解析书源域名，10:42:28.843记录Manga image unavailable NETWORK。界面显示章节加载失败及原重试/换源入口，本次未派发后续重试。此前标题选择器命中同一书架演员内两个保留Text，在点击前停止，后继改用已有原生行身份。当前可把该次失败定位到域名解析阶段，健康图片内容、保留头部与连续绘制仍沿原条件保留。[当前漫画原始回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-manga-original-result-d600.json)
+
+### 当前未决内容与关闭条件
+
+- 全应用正式登记仍有37项诊断，其中E2完整交互21项、E3适配5项、G-03视觉依据8项及SCOPE范围3项。各页全部目标、动作状态、字形、裁切和读屏语义的逐格证据继续由agent补齐。当前两个原生场景按其实际覆盖范围登记。
+- 独立整页视觉依据继续按原图、原稿版本及当前页面状态对应。目录冻结层级与TTS Make V17已找到，当前Figma准确节点403只影响远端当前版本读取。冻结资料支持其已覆盖尺寸及比例，其余整页G-03条件保持。
+- 用户已决定保留紧凑布局。目录工具、行及TTS Quick的44vp容量冲突保留具体槽位核算，命中与相邻响应分别使用实际可达证据关闭。
+- 当前VM系统字号最大档实测1.45，原要求的1.3、1.6、2各档原生证据保持开放。对应有限SDK几何样本继续保留原判定。
+- 移除确认的实际纯高度变化及部分More回退锚点尚未达到准确运行前提。源码高度依赖修复与准确方法回归已完成，原生后果按实际窗口行为单列。
+- 当前读屏接口可记录client/window身份，普通UITest扩展项只返回uniqueId。完整spoken名称、role、实际语音队列及短反馈听觉结果仍缺对应可观察回执。
+- G05需要连续实际绘制帧。已有两次平台录屏调用均未获得实际授权及STARTED，独立C接口也未建立有效创建结果。G10需要历史异常同期原始录像、trace或绘制数据，沿用户确认的现有资料边界保留。
+- 现有漫画资料在当前VM的一次原始请求中域名解析失败，健康内容路径的关闭仍需可用的既有输入或环境。当前失败阶段已有原生回执，历史主机输出与当前结论各自保存。
+
+### 前一批列表行、实体动作与时序索引修复
+
+该批生产修复提交为`8771b09f`，当时修改3个生产UI文件。4个新增准确SDK用例及2个既有准确回归形成通过证据，含13个按最终属性或动作参数拒绝的负例。当前代码相对有效部署回执绑定的`0.2.0.DEV.2d056e9641ba`有19个生产ETS文件变化，当前完整工程编译、签名及本批VM验证待执行。[本批用例与准确复用范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/builder-data-results-j.json)
 
 **UIF-33修正RSS其余两处Repeat行。** 全部条目与订阅管理的同键行在DTO替换后都实际保留“旧标题”。当前两个父ListItem把当前item和index递送到保留行。回归覆盖当前文章标题、摘要、日期及实际选择回调，管理行的名称、来源信息、Toggle输入值、行分隔和出现回调索引。两个行身份记录在同键更新中保持，四个旧DTO或索引捕获负例被拒绝。RepeatItem调度及Toggle输入采用有限平台port，原生复用、焦点及绘制继续按各自条件验证。[全部条目原失效](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-j-witness-rss-source-01.log) [订阅管理原失效](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/continuation-j-witness-rss-management-01.log) [当前管理行回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/builder-rss-management-rows-j-final.json)
 
