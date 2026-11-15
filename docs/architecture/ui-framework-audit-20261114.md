@@ -1,17 +1,23 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
-## 2026-11-15 VM 显示比例恢复与原因追溯
+## 2026-11-15 VM 显示异常与正常重启恢复
 
-用户指出当前应用比例过小后，现场读取到物理屏幕1280×2832、系统密度1.5，逻辑宽度约853vp。此前的基线为密度3.5、逻辑宽度约366vp。原生历史日志建立了故障链。11月15日04:14:13，RenderService绘制线程卡在模拟器DGLES的eglSwapBuffers，随后出现SERVICE_BLOCK和Watchdog退出。foundation、DMS及SceneBoard重新初始化，DMS读取OEM显示配置失败，设置表user_set_dpi_value查询count为0，GetSettingDpi返回ret=2，defaultDpi为0，最终保留密度1.5。这个时点位于本agent的读屏与Toggle复验、返回系统设置过程中，交互触发DGLES阻塞的直接因果仍待底层证据。
+本轮读屏和Toggle验证期间，11月15日04:14:13的RenderService绘制线程卡在模拟器DGLES的eglSwapBuffers，随后出现SERVICE_BLOCK和Watchdog退出。foundation、DMS及SceneBoard重建，OEM显示配置读取失败，保存DPI的user_set_dpi_value查询count为0，defaultDpi为0，实际显示密度回退到1.5。具体交互触发DGLES阻塞的直接因果继续保留。
 
-本次通过系统设置将显示缩放从大档2切回默认档1，DMS连续读取恢复3.5。字体大小2、字体粗细1、显示缩放1已按原生Slider值核对，同一已安装候选0.2.0.DEV.6288efbd34ec正常启动后的书架实屏已查看。后继已安装候选0.2.0.DEV.d61901614df1在普通入口及本批原生场景结束后再次恢复书架，DMS均为3.5。系统状态栏文字仍偏小，系统UI后果继续保留。系统服务再次异常恢复后的密度保持尚未运行。此前已发现密度变化却继续验证，漏做环境恢复与最终实屏复核，现已纠正这一遗漏。
+此前通过系统设置切到大档再切回默认档，Reader比例及VirtualPixelRatio恢复3.5。用户再次指出系统显示无法恢复后，本轮确认DensityInCurResolution仍为1，状态栏窗口只有58px高，完整桌面图标和系统文字仍过小。此前只核对Reader比例及VirtualPixelRatio就继续验证，恢复结论不完整。
 
-本次修复属于VM显示环境恢复。密度1.5期间的原始结果继续保留各自实际环境，后续本次VM几何验证先记录并核对当前3.5基线。[原因、动作与实屏记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/display-density-incident-20261115.json)
+恢复期间另有4次临时原生适配尝试。01/02在动态库加载处失败，03/04已调用ScreenManagerAdapter.SetVirtualPixelRatio(screen0,3.5)，均返回100。此前将4次都表述为未进入密度写入不准确，现按原始源码和输出纠正。临时二进制及依赖副本的清理沿原记录保存。
+
+用户明确授权正常重启VM并保留数据后，已执行一次正常重启。DMS启动时刻更新为16:53:33.897，SceneBoard从30321变为1426。物理分辨率保持1280×2832，VirtualPixelRatio和DensityInCurResolution均为3.5，屏幕挖孔信息恢复，状态栏窗口从58px恢复为136px。锁屏、完整桌面及Reader书架实屏均已查看。[重启、前后参数与实屏证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/display-recovery-after-reboot-20261115.json)
+
+原安装包0.2.0.D/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114.d61901614df1的版本、内容身份、UID及更新时间前后一致。正常启动后可见原四本书，Sample EPUB及Native Check保持未读，ReaderFramework显示27%，ReaderManga显示100%。本轮核验范围为正常重启、完整显示恢复、安装身份及可见书架数据，全部用户数据的逐字节审计沿其原范围保存。[完整原因与更正记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/display-density-incident-20261115.json)
+
+最初DGLES阻塞的底层触发点以及再次异常恢复后的保持行为仍有各自证据缺口。全应用框架实施目标按用户要求保持暂停。
 
 
 ## 2026年11月15日当前实施状态
 
-全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`20443d1b`，已安装候选为`0.2.0.DEV.d61901614df1`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+全量实施目标已按用户要求暂停，当前处理VM显示异常。现有批准资料和紧凑布局保留决定继续有效，未完成工作保留在账本。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`20443d1b`，已安装候选为`0.2.0.DEV.d61901614df1`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的剩余工作在目标恢复后继续。
 
 
 ### 当前原离线恢复接线与消息文本修复
