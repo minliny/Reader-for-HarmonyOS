@@ -595,7 +595,7 @@ export struct SearchPage {
   }
 
   private dismissSearchFilters(identity: string): void {
-    if (!this.acceptsFilter(identity)) return;
+    if (!this.ownsPageQuery() || !this.filtersExpanded || identity !== this.filterPresentationIdentity()) return;
     this.filtersExpanded = false;
     this.publishSurfacePanelInput();
   }
@@ -630,7 +630,7 @@ export struct SearchPage {
     return this.pageInputCurrent() && this.taskStatusExpanded && identity === this.taskStatusIdentity();
   }
   private dismissTaskStatus(identity: string): void {
-    if (!this.acceptsTaskStatus(identity)) return;
+    if (!this.ownsPageQuery() || !this.taskStatusExpanded || identity !== this.taskStatusIdentity()) return;
     this.taskStatusExpanded = false;
     this.publishSurfacePanelInput();
   }
@@ -1025,8 +1025,9 @@ export struct SearchPage {
   }
 
   private onListTouch(type: TouchType): void {
-    if (!this.pageInputCurrent() || !this.ownsList()) return;
+    if (!this.ownsList()) return;
     if (type === TouchType.Down) {
+      if (!this.pageInputCurrent()) return;
       this.cancelSearchFocusRestore();
       this.userInteracting = true;
       this.resultFlushEpoch += 1;

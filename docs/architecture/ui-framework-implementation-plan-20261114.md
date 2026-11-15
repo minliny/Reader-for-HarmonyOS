@@ -28,7 +28,11 @@ UIF-56 至 UIF-67 已完成当前代码修复，涵盖书架筛选导航准入�
 
 第九轮全 472 个必审文件审阅确认 UIF-81，两个控制栏抓手的共用首 DOWN 入口漏用已传入的实时 inputCurrent，可能取消原控制导航意图并占用指针。修复集中在唯一 Runtime.down 之前，已接纳 Move／Up／Cancel 继续沿原 owner 收尾，committed geometry 保留其显示事实。[第九轮报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-09.json)
 
-新增准确回归覆盖两个实际 SDK callback、live／lost-first-DOWN／同 actor 恢复及 Up／Cancel，共 8 场景。首个 fixture 的 accepted endpoint 遗漏 commitVisualSession 已补实际方法并保留失败记录。当前本地候选为 0.2.0.DEV.c14fc0e6178c，一次规范完整 ArkTS 编译与指定证书签名通过，642 个生产输入字节零漂移。13 项登记指纹同步，原 37 诊断保留。代码重新冻结后开始第十轮独立全局审计，连续通过为 0，VM 操作为 0。[修复与回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round09-repair-summary.json)
+新增准确回归覆盖两个实际 SDK callback、live／lost-first-DOWN／同 actor 恢复及 Up／Cancel，共 8 场景。首个 fixture 的 accepted endpoint 遗漏 commitVisualSession 已补实际方法并保留失败记录。第九轮本地候选为 0.2.0.DEV.c14fc0e6178c，一次规范完整 ArkTS 编译与指定证书签名通过，642 个生产输入字节零漂移。13 项登记指纹同步，原 37 诊断保留。代码重新冻结后开始第十轮独立全局审计，连续通过为 0，VM 操作为 0。[修复与回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round09-repair-summary.json)
+
+第十轮完成 472 个必审文件，确认 UIF-82 和 UIF-83，结论为 FAIL。第四轮 Search 的实时输入判据误用于已接纳回执，造成触摸收尾后的结果延迟和原生面板消失后的输入占用残留。当前修正三处判据，List 新 Down 继续校验实时输入，原 Up／Cancel 按原 query／list 收尾；Filter／Task dismiss 按原 page／query／opening identity 收尾，新选择、重置和重试保留原实时输入准入。[第十轮报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-10.json)
+
+新增两项准确回归一次通过，共 8 组场景，覆盖结果发布、后台／前台恢复、同页面新输入、旧查询拒收、scroll stop 和两类 native sheet 消失。当前本地候选为 0.2.0.DEV.d33f5b7933c2，一次规范完整 ArkTS 编译及指定证书签名通过，642 个生产 ETS／TS 字节绑定无漂移。登记源输入无需更新，引用 0 诊断，37 项原有登记诊断保留。重新冻结后开始第十一轮，连续通过为 0，VM、HDC 和设备操作为 0。[第十轮修复与回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round10-repair-summary.json)
 
 连续三轮通过条件仍待完成。21 项登记的完整原生验收、独立整页视觉、可听读屏、G05 和历史 G10 保留原标准。VM 最后保存的字号为 1.3 倍，原字号恢复仍待执行。
 
