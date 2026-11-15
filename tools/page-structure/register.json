@@ -1054,7 +1054,7 @@
         }
       },
       "exceptions": [],
-      "revision": 36,
+      "revision": 37,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1320,7 +1320,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-          "sha256": "e06edbc83db4845b3e7cf4c77e1ef92e73f3750ba016000fa7c467237177b882"
+          "sha256": "bef47af7a106ac45fdb622b8defe8bac05e158512918624b1b88b3f972754e82"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -1384,7 +1384,7 @@
         },
         {
           "path": "tools/test-source-tools-layout.mjs",
-          "sha256": "5fdec50f40d8cb7e2fffeffb2e936b8102293b9d68c901d3b9c1b62b1008f2bc"
+          "sha256": "517e7a6ac869c3299d127e591782ad82a167ec0ace1d4a60e3018a9472f4e198"
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
@@ -29391,7 +29391,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-        "sha256": "e06edbc83db4845b3e7cf4c77e1ef92e73f3750ba016000fa7c467237177b882"
+        "sha256": "bef47af7a106ac45fdb622b8defe8bac05e158512918624b1b88b3f972754e82"
       },
       "layers": {
         "route": {
@@ -29830,9 +29830,15 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-popup-40bc.json",
               "symbol": "after",
               "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-source-tools-selection.mjs",
+              "symbol": "batch,rows",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open."
+          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. UIF18 current actual SDK regression retains seven batch and three row controls, current selection/catalog attributes and actions, busy/unknown/removed/opening fences and three historical defect negatives. Native keyboard focus recheck is pending on the repaired candidate."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -30430,7 +30436,7 @@
         }
       },
       "exceptions": [],
-      "revision": 23,
+      "revision": 24,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -30441,7 +30447,7 @@
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
           "symbol": "build",
-          "sha256": "e06edbc83db4845b3e7cf4c77e1ef92e73f3750ba016000fa7c467237177b882"
+          "sha256": "bef47af7a106ac45fdb622b8defe8bac05e158512918624b1b88b3f972754e82"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
@@ -30545,7 +30551,7 @@
         },
         {
           "path": "tools/test-source-tools-typography-sdk.mjs",
-          "sha256": "82d499cb4b770b76c94cf85d40c4721805807cc1f473bb49818f29985c2e0a52"
+          "sha256": "aac312296a3a22ecf96c852d44982128ae414f93fe24062e2ee0f9f936c0538d"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
@@ -30727,7 +30733,7 @@
         },
         {
           "path": "tools/test-source-tools-layout.mjs",
-          "sha256": "5fdec50f40d8cb7e2fffeffb2e936b8102293b9d68c901d3b9c1b62b1008f2bc"
+          "sha256": "517e7a6ac869c3299d127e591782ad82a167ec0ace1d4a60e3018a9472f4e198"
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
@@ -30860,6 +30866,10 @@
         {
           "path": "entry/src/main/ets/ui/layout/ReaderSurfaceRect.ts",
           "sha256": "a345bc38ee4d857b61482afba70cc45323a4f71b511d186a87dfe5a3d2049552"
+        },
+        {
+          "path": "tools/test-source-tools-selection.mjs",
+          "sha256": "8d9a8dd941aca8a141fca2296ab74b8b7d29beb9f077abb89064208574f811ac"
         }
       ]
     }

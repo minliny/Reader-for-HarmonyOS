@@ -60,6 +60,8 @@ import {
 } from '../application/SourceToolsOrchestrator';
 
 let nextSourceToolsBackIdentity: number = 0;
+type SourceToolsBatchAction = 'selectAll' | 'clear' | 'exportSelected' | 'check' | 'stop' | 'enable' | 'disable' | 'delete';
+type SourceToolsRowAction = 'select' | 'edit' | 'debug';
 
 class SourceToolListRow {
   readonly source: BookSource;
@@ -309,14 +311,9 @@ export struct SourceToolsPage {
       this.recoveryAction();
     }
     this.exportCard();
-    // V1 @Builder parameters are captured when the builder subtree is
-    // mounted. Rebuild only this small controls card when its primitive
-    // inputs change so enabled guards and selected IDs never remain at
-    // the initial loading snapshot. The 1,777-row LazyForEach below is
-    // deliberately outside this keyed subtree.
-    ForEach([this.batchControlsRenderKey()], (key: string) => {
-      this.batchCard(key);
-    }, (key: string): string => `source-batch-controls:${key}`);
+    // Native controls retain their actors while their observable bindings
+    // read the current snapshot inside the ReaderButton initializer.
+    this.batchCard();
     if (this.snapshot.batchCheck.phase !== 'idle') {
       // The progress card has the same V1 builder-capture boundary.
       // Its compact subtree is keyed independently so every source
@@ -338,37 +335,24 @@ export struct SourceToolsPage {
 
 
   @Builder
-  private batchCard(key: string) {
+  private batchCard() {
     ReaderCard({ specId: 'editor-section' }) {
       ReaderSectionHeading({ variant: 'tool-card', title: `批量管理（已选 ${this.snapshot.selectedSourceCount}/${this.snapshot.sources.length}）` });
       Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
-        this.actionButton('全选', false, !this.snapshot.busy, (): void => this.onSelectAll());
-        this.actionButton('清空', false, !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
-          (): void => this.onClearSelection());
-        this.actionButton('导出所选', false,
-          !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
-          this.batchSelectionAction(key, (selection: SourceToolsSelection): void =>
-            this.confirmExportThen((): void => this.onExportSelected(selection))));
+        this.batchButton('selectAll');
+        this.batchButton('clear');
+        this.batchButton('exportSelected');
       }
       .width('100%');
       Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
         if (this.snapshot.batchCheck.phase === 'running' || this.snapshot.batchCheck.phase === 'stopping') {
-          this.actionButton(this.snapshot.batchCheck.phase === 'stopping' ? '停止中…' : '停止检测', false,
-            this.snapshot.batchCheck.phase === 'running', (): void => this.onStopCheck());
+          this.batchButton('stop');
         } else {
-          this.actionButton('检测所选', false,
-            !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
-            this.batchSelectionAction(key, this.onCheckSelected));
+          this.batchButton('check');
         }
-        this.actionButton('启用', false,
-          this.canWriteSources() && this.snapshot.selectedSourceCount > 0,
-          this.batchSelectionAction(key, (selection: SourceToolsSelection): void => this.onSetSelectedEnabled(selection, true)));
-        this.actionButton('停用', false,
-          this.canWriteSources() && this.snapshot.selectedSourceCount > 0,
-          this.batchSelectionAction(key, (selection: SourceToolsSelection): void => this.onSetSelectedEnabled(selection, false)));
-        this.actionButton('删除', false,
-          this.canWriteSources() && this.snapshot.selectedSourceCount > 0,
-          this.batchSelectionAction(key, this.onDeleteSelected));
+        this.batchButton('enable');
+        this.batchButton('disable');
+        this.batchButton('delete');
       }
       .width('100%');
       Text('批量操作复用 source.export / source.check.run / source.update / source.delete；删除由系统确认框二次确认。')
@@ -378,6 +362,59 @@ export struct SourceToolsPage {
         .lineHeight(TYPE_SOURCE_TOOLS_NOTE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
+  }
+
+  @Builder
+  private batchButton(action: SourceToolsBatchAction) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action',
+      label: this.batchButtonLabel(action), actionEnabled: this.batchButtonEnabled(action), layout: 'full',
+      onAction: this.batchButtonAction(action) })
+      .layoutWeight(1)
+      .constraintSize({ minWidth: this.actionMinimumWidth(this.batchButtonLabel(action)), maxWidth: '100%' });
+  }
+
+  private batchButtonLabel(action: SourceToolsBatchAction): string {
+    const labels: Record<SourceToolsBatchAction, string> = {
+      selectAll: '全选', clear: '清空', exportSelected: '导出所选', check: '检测所选',
+      stop: '停止检测', enable: '启用', disable: '停用', delete: '删除',
+    };
+    return action === 'stop' && this.snapshot.batchCheck.phase === 'stopping' ? '停止中…' : labels[action];
+  }
+
+  private batchButtonEnabled(action: SourceToolsBatchAction): boolean {
+    const phase = this.snapshot.batchCheck.phase;
+    if (action === 'stop') return phase === 'running';
+    if (this.snapshot.busy) return false;
+    if (action === 'selectAll') return true;
+    if (this.snapshot.selectedSourceCount === 0) return false;
+    if (action === 'enable' || action === 'disable' || action === 'delete') return this.canWriteSources();
+    return action !== 'check' || (phase !== 'running' && phase !== 'stopping');
+  }
+
+  private batchButtonAction(action: SourceToolsBatchAction): () => void {
+    const opening = this.temporaryBackIdentity;
+    return (): void => {
+      if (!this.toolsInputIsCurrent(opening) || !this.batchButtonEnabled(action)) return;
+      switch (action) {
+        case 'selectAll': this.onSelectAll(); break;
+        case 'clear': this.onClearSelection(); break;
+        case 'stop': this.onStopCheck(); break;
+        case 'exportSelected':
+          this.batchSelectionAction(this.batchControlsRenderKey(), (selection: SourceToolsSelection): void =>
+            this.confirmExportThen((): void => this.onExportSelected(selection)))();
+          break;
+        case 'check': this.batchSelectionAction(this.batchControlsRenderKey(), this.onCheckSelected)(); break;
+        case 'enable':
+          this.batchSelectionAction(this.batchControlsRenderKey(), (selection: SourceToolsSelection): void =>
+            this.onSetSelectedEnabled(selection, true))();
+          break;
+        case 'disable':
+          this.batchSelectionAction(this.batchControlsRenderKey(), (selection: SourceToolsSelection): void =>
+            this.onSetSelectedEnabled(selection, false))();
+          break;
+        case 'delete': this.batchSelectionAction(this.batchControlsRenderKey(), this.onDeleteSelected)(); break;
+      }
+    };
   }
 
   private batchSelectionAction(key: string, action: (selection: SourceToolsSelection) => void): () => void {
@@ -612,8 +649,7 @@ export struct SourceToolsPage {
           ListItem() {
             this.sourceRow(row);
           }
-        }, (row: SourceToolListRow): string =>
-          `source-tool-${row.sourceListRevision}-${row.source.sourceId}-${row.selected ? 1 : 0}-${row.actionsEnabled ? 1 : 0}`);
+        }, (row: SourceToolListRow): string => this.sourceRowKey(row));
       }
       .width('100%')
       .height(this.sourceListHeight())
@@ -624,13 +660,13 @@ export struct SourceToolsPage {
 
   @Builder
   private sourceRow(row: SourceToolListRow) {
-        Flex({ direction: this.sourceRowLayout(row.source).inline ? FlexDirection.Row : FlexDirection.Column,
+        Flex({ direction: this.sourceRowLayout(this.currentSourceForRow(row)).inline ? FlexDirection.Row : FlexDirection.Column,
           space: { main: LengthMetrics.vp(TOK_SPACE_XS) } }) {
           this.sourceRowInfo(row);
           this.sourceRowButtons(row);
         }
         .width('100%')
-        .constraintSize({ minHeight: this.sourceRowLayout(row.source).rowMinHeight })
+        .constraintSize({ minHeight: this.sourceRowLayout(this.currentSourceForRow(row)).rowMinHeight })
         .padding(TOK_SPACE_XS)
         .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
@@ -638,7 +674,7 @@ export struct SourceToolsPage {
   @Builder
   private sourceRowInfo(row: SourceToolListRow) {
           Column({ space: 3 }) {
-            Text(row.source.name)
+            Text(this.currentSourceForRow(row).name)
               .width('100%')
               .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
               .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
@@ -648,7 +684,7 @@ export struct SourceToolsPage {
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
-            Text(row.source.baseUrl)
+            Text(this.currentSourceForRow(row).baseUrl)
               .width('100%')
               .fontFamily(TYPE_SOURCE_TOOLS_URL.fontFamily as string)
               .fontSize(TYPE_SOURCE_TOOLS_URL.fontSizeFp)
@@ -657,8 +693,8 @@ export struct SourceToolsPage {
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
-            if (row.source.lastCheckSummary !== undefined) {
-              Text(row.source.lastCheckSummary)
+            if (this.currentSourceForRow(row).lastCheckSummary !== undefined) {
+              Text(this.currentSourceForRow(row).lastCheckSummary ?? '')
                 .width('100%')
                 .fontSize(TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp)
                 .lineHeight(TYPE_SOURCE_TOOLS_INHERITED_META.lineHeightFp ?? TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp * 1.5)
@@ -668,10 +704,10 @@ export struct SourceToolsPage {
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
           }
-          .layoutWeight(this.sourceRowLayout(row.source).inline ? 1 : 0)
-          .width(this.sourceRowLayout(row.source).inline ? undefined : '100%')
-          .constraintSize({ minWidth: this.sourceRowLayout(row.source).inline ?
-            this.sourceRowLayout(row.source).textMinWidth : 0 })
+          .layoutWeight(this.sourceRowLayout(this.currentSourceForRow(row)).inline ? 1 : 0)
+          .width(this.sourceRowLayout(this.currentSourceForRow(row)).inline ? undefined : '100%')
+          .constraintSize({ minWidth: this.sourceRowLayout(this.currentSourceForRow(row)).inline ?
+            this.sourceRowLayout(this.currentSourceForRow(row)).textMinWidth : 0 })
           .alignItems(HorizontalAlign.Start);
   }
 
@@ -679,14 +715,52 @@ export struct SourceToolsPage {
   private sourceRowButtons(row: SourceToolListRow) {
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap,
           space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
-          this.smallButton(row.selected ? '已选' : '选择', row.actionsEnabled,
-            this.sourceRowAction(row, 'select'));
-          this.smallButton('编辑', row.actionsEnabled && this.canWriteSources(), this.sourceRowAction(row, 'edit'));
-          this.smallButton('调试', row.actionsEnabled, this.sourceRowAction(row, 'debug'));
+          this.sourceRowButton(row, 'select');
+          this.sourceRowButton(row, 'edit');
+          this.sourceRowButton(row, 'debug');
         }
-        .width(this.sourceRowLayout(row.source).actionsWidth)
-        .constraintSize({ minHeight: this.sourceRowLayout(row.source).actionsMinHeight })
+        .width(this.sourceRowLayout(this.currentSourceForRow(row)).actionsWidth)
+        .constraintSize({ minHeight: this.sourceRowLayout(this.currentSourceForRow(row)).actionsMinHeight })
         .flexShrink(0);
+  }
+
+  private sourceRowKey(row: SourceToolListRow): string {
+    return row.source.sourceId;
+  }
+
+  private currentSourceForRow(row: SourceToolListRow): BookSource {
+    return this.snapshot.sources.find((source: BookSource): boolean => source.sourceId === row.source.sourceId) ?? row.source;
+  }
+
+  private currentSourceToolRow(row: SourceToolListRow): SourceToolListRow | undefined {
+    const source = this.snapshot.sources.find((value: BookSource): boolean => value.sourceId === row.source.sourceId);
+    return source === undefined ? undefined : new SourceToolListRow(source, this.snapshot.sourceListRevision,
+      this.snapshot.selectedSourceIds.includes(source.sourceId), !this.snapshot.busy);
+  }
+
+  @Builder
+  private sourceRowButton(row: SourceToolListRow, action: SourceToolsRowAction) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-compact',
+      label: this.sourceRowButtonLabel(row, action), actionEnabled: this.sourceRowButtonEnabled(row, action),
+      onAction: this.currentSourceRowAction(row, action) });
+  }
+
+  private sourceRowButtonLabel(row: SourceToolListRow, action: SourceToolsRowAction): string {
+    if (action === 'select') return this.snapshot.selectedSourceIds.includes(row.source.sourceId) ? '已选' : '选择';
+    return action === 'edit' ? '编辑' : '调试';
+  }
+
+  private sourceRowButtonEnabled(row: SourceToolListRow, action: SourceToolsRowAction): boolean {
+    return this.currentSourceToolRow(row)?.actionsEnabled === true && (action !== 'edit' || this.canWriteSources());
+  }
+
+  private currentSourceRowAction(row: SourceToolListRow, action: SourceToolsRowAction): () => void {
+    const opening = this.temporaryBackIdentity;
+    return (): void => {
+      if (!this.toolsInputIsCurrent(opening)) return;
+      const current = this.currentSourceToolRow(row);
+      if (current !== undefined) this.sourceRowAction(current, action)();
+    };
   }
 
   private toolsFontScale(): number {
@@ -722,7 +796,7 @@ export struct SourceToolsPage {
       this.sourceListWidth = width;
   }
 
-  private sourceRowAction(row: SourceToolListRow, action: 'select' | 'edit' | 'debug'): () => void {
+  private sourceRowAction(row: SourceToolListRow, action: SourceToolsRowAction): () => void {
     const opening = this.temporaryBackIdentity;
     const sourceId = row.source.sourceId;
     return (): void => {
@@ -865,11 +939,6 @@ export struct SourceToolsPage {
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
     }.width('100%').alignItems(VerticalAlign.Top).padding({ top: 13, bottom: 13 })
       .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) });
-  }
-
-  @Builder
-  private smallButton(label: string, enabled: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-compact', label, actionEnabled: enabled, onAction: action });
   }
 
   @Builder

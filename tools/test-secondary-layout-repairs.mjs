@@ -180,9 +180,10 @@ function actionsToolsRules() {
     const cardWidth = standard.geometry.content.frame.width - 2 * (cardFrame.padding + cardFrame.border.width);
     const snapshot = { busy: false, sources: [{}], selectedSourceIds: ['a'], selectedSourceCount: 1, sourceListRevision: 1, selectionRevision: 1,
       editorSourceId: 'a', editorRevision: 1, batchCheck: { phase: 'idle', passed: 12345, failed: 12345, errors: 12345, total: 99999, completed: 34567, currentSourceName: '', results: [] } };
-    const page = c.actor('features/source/ui/SourceToolsPage.ets', ['batchCard', 'actionButton', 'actionMinimumWidth', 'toolsFontScale', 'batchSelectionAction', 'batchCounter'], {
+    const page = c.actor('features/source/ui/SourceToolsPage.ets', ['batchCard', 'batchButton', 'batchButtonLabel', 'batchButtonEnabled', 'batchButtonAction',
+      'actionMinimumWidth', 'toolsFontScale', 'batchSelectionAction', 'batchCounter'], {
       snapshot, canWriteSources: () => true, toolsInputIsCurrent: () => true, batchControlsRenderKey: () => 'current', temporaryBackIdentity: 't' });
-    page.batchCard('current');
+    page.batchCard();
     const nodes = c.nodes(page), labels = ['全选', '清空', '导出所选', '检测所选', '启用', '停用', '删除'];
     assertOuterAllocation(nodes, labels);
     const lanes = nodes.filter(n => n.type === 'Flex');

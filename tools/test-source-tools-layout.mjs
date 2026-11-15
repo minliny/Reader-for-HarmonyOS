@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
+import { selectedProductionMethods, selectedProductionClasses } from './lib/selected-production-methods.mjs';
 import { foundationControls, withReaderSectionHeading, readerFoundationTokens, surfaceFontResolvers } from './lib/reader-foundation-control-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -20,7 +20,9 @@ const selected = selectContractCases({
 }, { argv: process.argv.slice(2).filter(arg => !arg.startsWith('--evidence-path=')) });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const pageSource = readFileSync(new URL('features/source/ui/SourceToolsPage.ets', root), 'utf8');
-const members = ['sourceCard', 'sourceRow', 'sourceRowInfo', 'sourceRowButtons', 'smallButton',
+const { SourceToolListRow } = selectedProductionClasses(new URL('features/source/ui/SourceToolsPage.ets', root), ['SourceToolListRow']);
+const members = ['sourceCard', 'sourceRow', 'sourceRowInfo', 'sourceRowButtons', 'sourceRowButton',
+  'sourceRowKey', 'currentSourceForRow', 'currentSourceToolRow', 'sourceRowButtonLabel', 'sourceRowButtonEnabled', 'currentSourceRowAction',
   'sourceRowLayout', 'sourceListHeight', 'toolsFontScale', 'recordSourceListWidth', 'sourceRowAction'];
 const samples = [];
 
@@ -44,7 +46,7 @@ function context(width, fontScale) {
   const rows = [false, true].map(summary => ({ source: { ...base, sourceId: base.sourceId + summary,
     ...(summary ? { lastCheckSummary: '检测完成' } : {}) }, sourceListRevision: 1, selected: false, actionsEnabled: true }));
   function make(definition = pageSource) {
-    const deps = { ...controls.dependencies, ...readerTypographyRoles, readerAppColor, readerReadableFontScale,
+    const deps = { ...controls.dependencies, SourceToolListRow, ...readerTypographyRoles, readerAppColor, readerReadableFontScale,
       readerScaledControlHeight, resolveSourceToolsRowLayout, ReaderWindowCoordinator: { metrics: () => metrics },
       readerPageAreaLength: geometry.readerPageAreaLength,
       LengthMetrics: { vp: value => value }, FlexDirection: { Row: 'row', Column: 'column' }, FlexWrap: { Wrap: 'wrap' },
@@ -128,12 +130,12 @@ for (const id of selected) {
   assert.ok(expected.height > 58, 'the real 2× native child rejects the historical fixed58 row');
   assert.ok(expected.width * 3 + 2 * readerFoundationTokens.TOK_SPACE_XS > expected.layout.availableWidth,
     'the real 2× native children reject the historical three-action inline parent');
-  const oldHeight = pageSource.replace('.constraintSize({ minHeight: this.sourceRowLayout(row.source).rowMinHeight })', '.height(58)');
+  const oldHeight = pageSource.replace('.constraintSize({ minHeight: this.sourceRowLayout(this.currentSourceForRow(row)).rowMinHeight })', '.height(58)');
   assert.notEqual(oldHeight, pageSource);
   const old = f.make(oldHeight); old.sourceRow(f.rows[1]);
   const oldOuter = [...old.nodes.values()].find(node => node.type === 'Flex' && node.padding !== undefined);
   assert.throws(() => assert.ok(oldOuter.height >= expected.requiredRowHeight), /AssertionError/);
-  const forcedInline = pageSource.replace('this.sourceRowLayout(row.source).inline ? FlexDirection.Row : FlexDirection.Column', 'FlexDirection.Row');
+  const forcedInline = pageSource.replace('this.sourceRowLayout(this.currentSourceForRow(row)).inline ? FlexDirection.Row : FlexDirection.Column', 'FlexDirection.Row');
   assert.notEqual(forcedInline, pageSource);
   assert.throws(() => checkRow(f, f.rows[1], forcedInline), /AssertionError/, 'old inline arrangement cannot pay current native actions');
   const result = { samples, rows: samples.length, contexts: 8, oldFixed58Rejected: true,

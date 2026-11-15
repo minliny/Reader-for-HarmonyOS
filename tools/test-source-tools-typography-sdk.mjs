@@ -11,17 +11,22 @@ const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
+const { resolveSourceToolsRowLayout } = await import('../entry/src/main/ets/features/source/presentation/SourceToolsLayout.ts');
 const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
 const sourceEditorReadbackPending = bookshelfOperationClass('features/source/application/SourceToolsOrchestrator.ets', 'sourceEditorReadbackPending');
 
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), 'utf8');
+const { SourceToolListRow } = selectedProductionClasses(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), ['SourceToolListRow']);
 const headerSource = readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets', import.meta.url), 'utf8');
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
 methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources',
   'editorDraftIsEditable', 'debugOptionsCurrent', 'batchControlsRenderKey', 'batchSelectionAction', 'toolsOpeningIsCurrent',
-  'sourceRowAction');
-if(selectedCase==='inline-native-admission')methods.push('debugKeyChange','toolsInputIsCurrent');
+  'sourceRowAction', 'batchButtonLabel', 'batchButtonEnabled', 'batchButtonAction', 'currentSourceForRow',
+  'currentSourceToolRow', 'sourceRowKey', 'sourceRowButtonLabel', 'sourceRowButtonEnabled', 'currentSourceRowAction',
+  'toolsFontScale', 'sourceRowLayout', 'actionMinimumWidth', 'toolsInputIsCurrent', 'editorAction', 'editorDraftChange');
+if(selectedCase==='inline-native-admission')methods.push('debugKeyChange');
 const bookSource={name:'测试书源',sourceId:'https://source.example',baseUrl:'https://source.example',lastCheckSummary:'上次检测已完成'};
 const owners=owner=>[owner,...[...owner.children.values()].flatMap(owners)];
 const nodes=owner=>owners(owner).flatMap(actor=>[...actor.nodes.values()]);
@@ -44,7 +49,8 @@ const make = (overrides = {}) => {
   const { owner } = createReaderBuilderProbe(source, selectedMethods, {
     // Virtual list painting is outside this typography probe. The actual row
     // Builders run separately below, with their real SDK observer closures.
-    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, sourceEditorReadbackPending,
+    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, sourceEditorReadbackPending, SourceToolListRow, resolveSourceToolsRowLayout,
+    uiContext: { px2vp: x => x, getMeasureUtils: () => ({ measureText: input => input.textContent.length * 12 }) },
     ...messages.deps,...controls.dependencies, PageBackBar, ...inline.dependencies, AppStorage: {get: () => true}, ...overrides,
   },controls.hooks);
   const replay=owner.replay.bind(owner);owner.replay=()=>{replay();controls.properties.flush();};
@@ -129,17 +135,20 @@ if(selectedCase==='input-selection'){
  const a=actors[0],before=calls.length;a.toggle();const stale=a.selectionId;a.toggle();a.toggle();a.commit('搜索',stale);a.commit('不在选项中',a.selectionId);assert.equal(calls.length,before);a.actionEnabled=false;a.commit('搜索',a.selectionId);assert.equal(calls.length,before);a.aboutToDisappear();a.actionEnabled=true;a.commit('搜索',a.selectionId);assert.equal(calls.length,before);
 }
 if(selectedCase==='guard-admission'){
- const {owner:buttons}=make();let accepted=0;buttons.actionButton('禁用',true,false,()=>accepted++);buttons.actionButton('允许',false,true,()=>accepted++);buttons.smallButton('禁用小操作',false,()=>accepted++);buttons.fullWidthActionButton('导出',true,()=>accepted++);const actions=nodes(buttons).filter(n=>typeof n.onClick==='function');actions.forEach(n=>n.onClick());assert.equal(accepted,2);buttons.snapshot.busy=true;buttons.replay();actions.at(-1).onClick();assert.equal(accepted,2);
- for(const state of ['busy','receiptUnknown','editorUnknown']){const {owner,calls}=make();if(state==='busy')owner.snapshot.busy=true;if(state==='receiptUnknown')owner.snapshot.receipt={receipt:{confirmation:'unknown'}};if(state==='editorUnknown')owner.snapshot.editorReadback={confirmation:'unknown'};owner.batchCard(owner.batchControlsRenderKey());owner.editorCard(owner.snapshot.editorRevision);for(const node of nodes(owner))if(['启用','停用','删除','校验并保存'].includes(node.create))node.onClick();assert.equal(calls.some(c=>['setEnabled','deleteSelected','save'].includes(c)),false,state);}
+ const {owner:buttons}=make();let accepted=0;buttons.actionButton('禁用',true,false,()=>accepted++);buttons.actionButton('允许',false,true,()=>accepted++);buttons.sourceRowButton({source:{...bookSource,sourceId:'missing'},sourceListRevision:1,selected:false,actionsEnabled:true},'edit');buttons.fullWidthActionButton('导出',true,()=>accepted++);const actions=nodes(buttons).filter(n=>typeof n.onClick==='function');actions.forEach(n=>n.onClick());assert.equal(accepted,2);buttons.snapshot.busy=true;buttons.replay();actions.at(-1).onClick();assert.equal(accepted,2);
+ for(const state of ['busy','receiptUnknown','editorUnknown']){const {owner,calls}=make();if(state==='busy')owner.snapshot.busy=true;if(state==='receiptUnknown')owner.snapshot.receipt={receipt:{confirmation:'unknown'}};if(state==='editorUnknown')owner.snapshot.editorReadback={confirmation:'unknown'};owner.batchCard();owner.editorCard(owner.snapshot.editorRevision);for(const node of nodes(owner))if(node.type==='Button'&&typeof node.onClick==='function'&&['启用','停用','删除','校验并保存'].includes(node.accessibilityText))node.onClick();assert.equal(calls.some(c=>['setEnabled','deleteSelected','save'].includes(c)),false,state);}
  const {owner,calls}=make();
  owner.onSetSelectedEnabled=(selection,enabled)=>calls.push({selection,enabled});
- owner.batchCard(owner.batchControlsRenderKey());
- const oldEnable=nodes(owner).find(node=>node.create==='启用').onClick;
+ owner.batchCard();
+ const oldProof=owner.batchSelectionAction(owner.batchControlsRenderKey(),selection=>calls.push({selection,enabled:true}));
+ const oldEnable=nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText==='启用').onClick;
  oldEnable();
  assert.deepEqual(calls,[{selection:{sourceIds:[bookSource.sourceId],sourceListRevision:1,selectionRevision:1},enabled:true}]);
  owner.snapshot={...owner.snapshot,selectedSourceIds:['https://next.test'],selectionRevision:2};
+ oldProof();
+ assert.equal(calls.length,1,'an old exact selection proof rejects a replacement selection');
  oldEnable();
- assert.equal(calls.length,1,'an old batch control cannot apply a replacement selection');
+ assert.deepEqual(calls.at(-1),{selection:{sourceIds:['https://next.test'],sourceListRevision:1,selectionRevision:2},enabled:true},'retained native action dispatches the current selection');
 }
 if(selectedCase==='raw-debug'){
  const {owner,cardType}=make(),message='目录读取失败。\n请求：https://example.test/very/long/source-and-chapter-identifier\n原始错误信息';owner.debugLogRow({state:-1,message},123);const actual=nodes(owner),body=actual.find(n=>n.create===message),ordinal=actual.find(n=>n.create==='124');assert.ok(body&&ordinal);assert.equal(body.fontSize,readerTypographyRoles.MESSAGE_BODY.fontSizeFp);assert.equal(body.lineHeight,readerTypographyRoles.MESSAGE_BODY.lineHeightFp);assert.equal(body.maxLines,undefined);assert.equal(body.textOverflow,undefined);assert.equal(body.fontColor,readerAppColor('TOK_MESSAGE_INK','day'));assert.equal(actual.find(n=>n.create==='检测失败').fontColor,readerAppColor('TOK_MESSAGE_DANGER','day'));owner.debugCard();const target=nodes(owner).find(n=>n.create===bookSource.sourceId);assert.equal(target.maxLines,undefined);assert.equal(target.textOverflow,undefined);
