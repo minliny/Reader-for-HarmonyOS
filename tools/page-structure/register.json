@@ -29854,9 +29854,15 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-reader-1c2e.json",
               "symbol": "observations",
               "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-editor-busy-51ef.json",
+              "symbol": "states",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. UIF18 current actual SDK regression retains seven batch and three row controls, current selection/catalog attributes and actions, busy/unknown/removed/opening fences and three historical defect negatives. Current1c2e native memoryfixture320/font1 passed AllSelect3→12 andfirstsource12→11→12, same nativeButton201 and248/251/254, actualkeyboardfocus retained. Intentcounts2/3/4, entrydebug1. Pure reader, fullactionstate andwholepage acceptance remainopen. UIF18 pureReader AllSelect3→12 andfirstrow12→11→12 retainNative201 and248/251/254, fivecaptures keyboardfocusfalse andgreenbbox exactly currenttarget. UIF19 currenteditor twoactions nowretainactors andreadcurrenteligibility, busy/unknown/readback/revision/opening SDKguard andprimitivecapture negative pass; nativeeditorrecheck pending."
+          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. UIF18 current actual SDK regression retains seven batch and three row controls, current selection/catalog attributes and actions, busy/unknown/removed/opening fences and three historical defect negatives. Current1c2e native memoryfixture320/font1 passed AllSelect3→12 andfirstsource12→11→12, same nativeButton201 and248/251/254, actualkeyboardfocus retained. Intentcounts2/3/4, entrydebug1. Remaining spoken semantics, fullactionstate andwholepage acceptance remainopen. UIF18 pureReader AllSelect3→12 andfirstrow12→11→12 retainNative201 and248/251/254, fivecaptures keyboardfocusfalse andgreenbbox exactly currenttarget. UIF19 currenteditor twoactions nowretainactors andreadcurrenteligibility, busy/unknown/readback/revision/opening SDKguard andprimitivecapture negative pass. Current51ef actual editor save/cancel/field Native462/459/457 retainIDs andbecome disabled afteroneaccepted memorysave. Draft251bytes retained, disabledrepeatclick keepssaveintentcount1. Othernativeeditorerror/reconciliation/font/reader/fullpage evidence remainsopen."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -30454,7 +30460,7 @@
         }
       },
       "exceptions": [],
-      "revision": 26,
+      "revision": 27,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
