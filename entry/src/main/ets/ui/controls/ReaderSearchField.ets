@@ -7,6 +7,7 @@ import hilog from '@ohos.hilog';
 import { KeyCode } from '@kit.InputKit';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { DEBUG } from '../../../../../build/default/generated/profile/default/BuildProfile';
 import {
   ReaderTextStyle,
   TYPE_SEARCH_BOOK_PANEL_INPUT,
@@ -187,14 +188,22 @@ export struct ReaderSearchField {
   }
 
   private onDirectoryInputArea(id: string, area: Area): void {
+    this.acceptDirectoryInputLayout(id, readerPageAreaLength(area.width), readerPageAreaLength(area.height));
+  }
+
+  private acceptDirectoryInputLayout(id: string, width: number, height: number): void {
     if (!this.directoryFocusEnabled(id)) return;
-    if (!(readerPageAreaLength(area.width) > 0) || !(readerPageAreaLength(area.height) > 0)) return;
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
     this.directoryLayoutId = id;
     this.directoryInputLoaded = true;
+    if (this.directoryNativeFocused) this.onDirectoryFocusChanged(id, true);
     this.queueDirectoryFocus();
   }
 
   private onDirectoryInputFocus(id: string, focused: boolean): void {
+    if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+      'directory-native-focus focused=%{public}s enabled=%{public}s loaded=%{public}s',
+      String(focused), String(this.directoryFocusEnabled(id)), String(this.directoryInputLoaded));
     if (!this.directoryFocusEnabled(id)) return;
     this.directoryNativeFocused = focused;
     if (!this.directoryInputLoaded || this.directoryLayoutId !== id) return;
@@ -256,9 +265,33 @@ export struct ReaderSearchField {
   }
 
   private requestDirectoryEditing(id: string): void {
-    if (!this.directoryFocusEnabled(id)) return;
+    const enabled = this.directoryFocusEnabled(id);
+    if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+      'directory-edit enabled=%{public}s loaded=%{public}s nativeFocused=%{public}s',
+      String(enabled), String(this.directoryInputLoaded), String(this.directoryNativeFocused));
+    if (!enabled) return;
     this.onDirectoryEditingRequested(id);
-    this.queueDirectoryFocus(true);
+    if (this.directoryInputLoaded && this.directoryLayoutId === id) {
+      this.queueDirectoryFocus(true);
+      return;
+    }
+    const ticket = ++this.directoryFocusTicket;
+    this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+      if (!this.directoryFocusEnabled(id) || ticket !== this.directoryFocusTicket) return;
+      try {
+        // The first Area can precede input admission. An unchanged native box
+        // still supplies a fresh layout receipt for this explicit edit.
+        const context = this.getUIContext();
+        const rect = context.getComponentUtils().getRectangleById(id);
+        if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
+          'directory-edit-layout width=%{public}f height=%{public}f', rect.size.width, rect.size.height);
+        this.acceptDirectoryInputLayout(id, context.px2vp(rect.size.width), context.px2vp(rect.size.height));
+        this.queueDirectoryFocus(true);
+      } catch (error) {
+        if (DEBUG) hilog.warn(0xD004, 'ReaderControlDiagnostic',
+          'Directory editing layout unavailable: %{private}s', (error as Error).message);
+      }
+    }));
   }
 
   private queueDirectoryFocus(explicitEditing: boolean = false): void {

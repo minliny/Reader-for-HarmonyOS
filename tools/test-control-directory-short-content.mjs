@@ -107,11 +107,12 @@ if(selected.length){
   t.owner.availableHeight=646;t.owner.syncContentLayout();t.owner.replayOnly([key]);assert.equal(t.owner.children.get(key),child);assert.equal(child.params.headerCount,0);assert.equal(t.portCreations(),1);const count=t.scroll.length;t.owner.onDirectoryFocus(p,id,false);assert.equal(t.owner.directoryInputFocused,true,'old removed input cannot blur successor epoch');
   t.owner.onInputChanged();t.owner.interactionEnabled=false;t.owner.onInputChanged();assert.equal(t.owner.directoryInputFocused,false);t.flush();assert.equal(t.scroll.length,count);
  }
- function focusField({variant='readerDirectory',id='directory:current',allowed=true,revision=1,keyboard=true,current=()=>true,source=field,ackFocus=false,show=()=>Promise.resolve(),initial={}}={}){
+ function focusField({variant='readerDirectory',id='directory:current',allowed=true,revision=1,keyboard=true,current=()=>true,source=field,ackFocus=false,show=()=>Promise.resolve(),initial={},rectangle}={}){
   const sdk=boundedSurfaceSdk(),frames=[],focus=[],events=[],keyboardRequests=[],keyboardSettled=[];
   const deps={...sdk.deps,...fieldClasses,...accessibility,readerPageAreaLength,readerReadableFontScale,readerScaledControlHeight,
    ReaderWindowCoordinator:{metrics:()=>({systemFontScale:2})},TextInputController:class{},
-   uiContext:{getFont:()=>({}),postFrameCallback:f=>frames.push(f),getFocusController:()=>({requestFocus:id=>{focus.push(id);if(ackFocus)owner.onDirectoryInputFocus(id,true);}})},
+   DEBUG:false,
+   uiContext:{getFont:()=>({}),postFrameCallback:f=>frames.push(f),getComponentUtils:()=>({getRectangleById:()=>rectangle}),px2vp:value=>value/3.5,getFocusController:()=>({requestFocus:id=>{focus.push(id);if(ackFocus)owner.onDirectoryInputFocus(id,true);}})},
    inputMethod:{getController:()=>({showTextInput:()=>{keyboardRequests.push(id);return show();}})},
    hilog:{warn(){}},KeyCode:{KEYCODE_BACK:2},KeyType:{Down:0,Up:1}};
   const{owner}=compile(()=>createReaderBuilderProbe(source,boundedMembers(source),deps,sdk.hooks));
@@ -209,6 +210,40 @@ if(selected.length){
  async function keyboardTransfer(){
   const beforeContent=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt',import.meta.url),'utf8');
   const beforeField=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt',import.meta.url),'utf8');
+  const beforeArea=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-initial-area-field.ets.txt',import.meta.url),'utf8');
+  for(const source of [beforeArea,field]){
+   const input=focusField({source,revision:0,rectangle:{size:{width:700,height:105}}});
+   input.owner.directoryFocusAllowed=false;
+   input.input.onAreaChange({}, {width:200,height:30});
+   input.owner.directoryFocusAllowed=true;
+   input.owner.onDirectoryFocusRequest();
+   input.input.onClick();
+   input.flush();
+   assert.equal(input.focus.length,source===field?1:0,'current real rectangle replaces an Area rejected before input readiness');
+   if(source===field){
+    assert.equal(input.keyboardRequests.length,0);
+    input.input.onFocus();
+    input.flush();
+    assert.equal(input.keyboardRequests.length,1,'current native ACK completes the explicit edit after its measured box');
+   }
+  }
+  for(const rectangle of [undefined,{size:{width:0,height:105}},{size:{width:700,height:NaN}}]){
+   const missing=focusField({revision:0,rectangle});
+   missing.input.onClick();
+   missing.flush();
+   assert.equal(missing.focus.length,0,'missing or invalid native rectangle cannot manufacture a layout receipt');
+  }
+  for(const invalidate of [
+   input=>input.owner.aboutToDisappear(),
+   input=>{input.owner.directoryFocusAllowed=false;input.owner.onDirectoryFocusRequest();},
+   input=>{input.owner.directoryFocusId='next';input.owner.onDirectoryFocusRequest();},
+  ]){
+   const retired=focusField({revision:0,rectangle:{size:{width:700,height:105}}});
+   retired.input.onClick();
+   invalidate(retired);
+   retired.flush();
+   assert.equal(retired.focus.length,0,'a queued rectangle read cannot admit an old or disabled input');
+  }
   const previousInput=focusField({source:beforeField,keyboard:false,revision:0});
   previousInput.input.onAreaChange({}, {width:200,height:44});
   previousInput.input.onFocus();
