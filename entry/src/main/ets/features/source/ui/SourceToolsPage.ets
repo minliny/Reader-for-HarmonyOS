@@ -374,7 +374,7 @@ export struct SourceToolsPage {
   }
 
   private batchButtonLabel(action: SourceToolsBatchAction): string {
-    const labels: Record<SourceToolsBatchAction, string> = {
+    const labels: Record<string, string> = {
       selectAll: '全选', clear: '清空', exportSelected: '导出所选', check: '检测所选',
       stop: '停止检测', enable: '启用', disable: '停用', delete: '删除',
     };
