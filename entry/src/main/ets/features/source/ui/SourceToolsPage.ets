@@ -62,6 +62,7 @@ import {
 let nextSourceToolsBackIdentity: number = 0;
 type SourceToolsBatchAction = 'selectAll' | 'clear' | 'exportSelected' | 'check' | 'stop' | 'enable' | 'disable' | 'delete';
 type SourceToolsRowAction = 'select' | 'edit' | 'debug';
+type SourceToolsEditorAction = 'cancel' | 'save' | 'reconcile';
 
 class SourceToolListRow {
   readonly source: BookSource;
@@ -834,19 +835,12 @@ export struct SourceToolsPage {
           placeholder: 'BookSource JSON', isEditable: this.editorDraftIsEditable(revision),
           onTextChange: this.editorDraftChange(revision, inputRevision) });
       }, (inputRevision: number): string => `source-editor-input:${revision}:${inputRevision}`);
-      // The retained draft keeps its identity. Only the action row needs a new
-      // V1 Builder capture when recovery changes write admission.
-      ForEach([sourceEditorReadbackPending(this.snapshot.editorReadback)], (recovering: boolean): void => {
-        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
-          this.actionButton('取消', false, !recovering && !this.snapshot.busy &&
-            this.snapshot.editorReadback?.confirmation !== 'unknown' && this.snapshot.original?.blocked !== true,
-            this.editorAction(revision, 'cancel'));
-          this.actionButton('校验并保存', true, this.canWriteSources(), this.editorAction(revision, 'save'));
-        }.width('100%');
-      }, (recovering: boolean): string => recovering ? 'source-editor-recovery' : 'source-editor-edit');
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
+        this.editorButton(revision, 'cancel');
+        this.editorButton(revision, 'save');
+      }.width('100%');
       if (sourceEditorReadbackPending(this.snapshot.editorReadback)) {
-        this.actionButton('重新读取已保存书源', false, !this.snapshot.busy,
-          this.editorAction(revision, 'reconcile'), false);
+        this.editorButton(revision, 'reconcile');
       }
     }
   }
@@ -947,10 +941,29 @@ export struct SourceToolsPage {
   }
 
   @Builder
-  private actionButton(label: string, primary: boolean, enabled: boolean, action: () => void, shareRow: boolean = true) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: enabled, layout: 'full', onAction: action })
-      .layoutWeight(shareRow ? 1 : undefined)
-      .constraintSize({ minWidth: shareRow ? this.actionMinimumWidth(label) : undefined, maxWidth: '100%' });
+  private editorButton(revision: number, action: SourceToolsEditorAction) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action',
+      label: this.editorButtonLabel(action), primary: action === 'save',
+      actionEnabled: this.editorButtonEnabled(revision, action), layout: 'full', onAction: this.editorAction(revision, action) })
+      .layoutWeight(action === 'reconcile' ? undefined : 1)
+      .constraintSize({ minWidth: action === 'reconcile' ? undefined : this.actionMinimumWidth(this.editorButtonLabel(action)), maxWidth: '100%' });
+  }
+
+  private editorButtonLabel(action: SourceToolsEditorAction): string {
+    switch (action) {
+      case 'cancel': return '取消';
+      case 'save': return '校验并保存';
+      case 'reconcile': return '重新读取已保存书源';
+    }
+  }
+
+  private editorButtonEnabled(revision: number, action: SourceToolsEditorAction): boolean {
+    if (!this.toolsInputIsCurrent() || revision !== this.snapshot.editorRevision ||
+      this.snapshot.editorSourceId.length === 0 || this.snapshot.busy) return false;
+    if (action === 'save') return this.canWriteSources();
+    const pending = sourceEditorReadbackPending(this.snapshot.editorReadback);
+    if (action === 'reconcile') return pending;
+    return !pending && this.snapshot.editorReadback?.confirmation !== 'unknown' && this.snapshot.original?.blocked !== true;
   }
 
   private actionMinimumWidth(label: string): number {
@@ -993,18 +1006,15 @@ export struct SourceToolsPage {
     };
   }
 
-  private editorAction(revision: number, action: 'cancel' | 'save' | 'reconcile'): () => void {
+  private editorAction(revision: number, action: SourceToolsEditorAction): () => void {
     const opening = this.temporaryBackIdentity;
     return (): void => {
-      if (!this.toolsInputIsCurrent(opening) || revision !== this.snapshot.editorRevision ||
-        this.snapshot.editorSourceId.length === 0 || this.snapshot.busy) return;
-      if (action === 'reconcile') {
-        if (sourceEditorReadbackPending(this.snapshot.editorReadback)) this.onReconcileEditor(revision);
-      } else if (action === 'save') {
-        if (this.canWriteSources()) this.onSaveEditor(revision);
-      } else if (!sourceEditorReadbackPending(this.snapshot.editorReadback) &&
-        this.snapshot.editorReadback?.confirmation !== 'unknown' && this.snapshot.original?.blocked !== true)
-        this.onCancelEditor(revision);
+      if (!this.toolsInputIsCurrent(opening) || !this.editorButtonEnabled(revision, action)) return;
+      switch (action) {
+        case 'reconcile': this.onReconcileEditor(revision); break;
+        case 'save': this.onSaveEditor(revision); break;
+        case 'cancel': this.onCancelEditor(revision); break;
+      }
     };
   }
 

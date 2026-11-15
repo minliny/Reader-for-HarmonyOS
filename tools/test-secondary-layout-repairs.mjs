@@ -198,14 +198,15 @@ function actionsToolsRules() {
     const requiredWidth = labels.slice(3).reduce((sum, label) => sum + page.actionMinimumWidth(label), 0) + 3 * 8;
     if (scale === 2) assert.ok(requiredWidth > cardWidth, 'four forced-inline old siblings cannot fit the actual Card');
     const cardMethods = ['batchCheckCard', 'batchCounter', 'batchCheckPercent', 'batchCheckPhaseLabel',
-      'exportCard', 'fullWidthActionButton', 'editorCard', 'actionButton', 'actionMinimumWidth', 'toolsFontScale'];
+      'exportCard', 'fullWidthActionButton', 'editorCard', 'editorButton', 'editorButtonLabel', 'editorButtonEnabled',
+      'actionMinimumWidth', 'toolsFontScale'];
     // Real production phase/readback predicates remain finite input seams here.
     c.deps.sourceEditorReadbackPending = () => false;
     const actualCards = createReaderBuilderProbe(read('features/source/ui/SourceToolsPage.ets'), cardMethods,
       { ...c.deps, sourceEditorReadbackPending: () => false }, c.hooks).owner;
     Object.assign(actualCards, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, mounted: true,
       snapshot: { ...snapshot, editorText: '{}' }, editorInputRevision: 0, canWriteSources: () => true,
-      editorDraftIsEditable: () => true, editorDraftChange: () => () => {}, editorAction: () => () => {} });
+      editorDraftIsEditable: () => true, editorDraftChange: () => () => {}, editorAction: () => () => {}, toolsInputIsCurrent: () => true });
     actualCards.batchCheckCard(); actualCards.exportCard(); actualCards.editorCard(1);
     const upperNodes = c.nodes(actualCards);
     for (const label of ['取消', '校验并保存', '导出全部书源']) assertNaturalButton(upperNodes.find(n => n.type === 'Button' && n.accessibilityText === label));
@@ -239,9 +240,11 @@ function actionsToolsRules() {
     results.push({ case: 'actions-tools-rules', width, scale, cardWidth, fourActionsNaturalWidth: requiredWidth, glyph: glyph('停止检测', 12 * scale, 700) });
   }
   const c = context(metrics()), rel = 'features/source/ui/SourceToolsPage.ets', source = read(rel);
-  const old = source.replace('.layoutWeight(shareRow ? 1 : undefined)', '');
-  const actor = c.actor(rel, ['actionButton', 'actionMinimumWidth', 'toolsFontScale'], {}, old); actor.actionButton('停止检测', false, true, () => {});
-  assert.throws(() => assertOuterAllocation(c.nodes(actor), ['停止检测']), /Row siblings/, 'old inner-only equal allocation rejected');
+  const old = source.replace(".layoutWeight(action === 'reconcile' ? undefined : 1)", '');
+  assert.notEqual(old, source, 'controlled regression removes only the actual editor action outer allocation');
+  const actor = c.actor(rel, ['editorButton', 'editorButtonLabel', 'actionMinimumWidth', 'toolsFontScale'],
+    { editorButtonEnabled: () => true, editorAction: () => () => {} }, old); actor.editorButton(1, 'save');
+  assert.throws(() => assertOuterAllocation(c.nodes(actor), ['校验并保存']), /Row siblings/, 'old inner-only equal allocation rejected');
   const specSource = read('ui/controls/ReaderControlSpecs.ets');
   const oldSpec = specSource.replace('SOURCE_TOOLS_ACTION.height = undefined;', 'SOURCE_TOOLS_ACTION.height = 44;');
   assert.notEqual(oldSpec, specSource);

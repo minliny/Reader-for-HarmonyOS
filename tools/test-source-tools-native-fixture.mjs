@@ -7,6 +7,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 const selected = selectContractCases({
   'initializer-safety': 'Actual SDK SourceToolsPage initializer, exact debug/parent checked-font gate and typed memory rows, JSON/check controls.',
   'no-runtime': 'Non-Entry fixture imports no runtime business owner/services, performs no platform save/login calls and never replaces fonts/sets scale.',
+  'editor-busy': 'Actual memory fixture editor accepts one save intent, publishes pending busy without save/readback ACK, rejects duplicate and old editor callback.',
   'callback-retire': 'Actual initializer callbacks only log/mutate memory, reject foreign entities and stale scenes; JSON is retained without pretending save ACK; scene Back only.',
 });
 if (selected.length) {
@@ -118,6 +119,26 @@ if (selected.length) {
     assert.equal(f.actions.length,before);assert.equal(f.backs(),1);
   }
 
-  const cases={'initializer-safety':initializerSafety,'no-runtime':noRuntime,'callback-retire':callbackRetire};
+  function editorBusy() {
+    const f = fixture(); f.page.aboutToAppear(); f.page.initialRender();
+    const ports = f.props(), id = ports.snapshot.sources[0].sourceId;
+    ports.onOpenEditor(id);
+    const revision = f.page.snapshot.editorRevision, draft = f.page.snapshot.editorText;
+    ports.onSaveEditor(revision);
+    assert.equal(f.page.snapshot.busy, true);
+    assert.equal(f.page.snapshot.editorText, draft);
+    assert.equal(f.page.snapshot.editorReadback, undefined);
+    assert.equal(f.page.snapshot.editorOperation, undefined);
+    assert.equal(f.page.snapshot.statusMessage, '');
+    const saves = () => f.actions.filter(kind => kind === 'source-tools-fixture:save-editor-memory').length;
+    assert.equal(saves(), 1);
+    assert.equal(f.events.findLast(event => event.kind === 'save-editor-memory').busy, true);
+    assert.equal(f.events.findLast(event => event.kind === 'save-editor-memory').editorRevision, revision);
+    ports.onSaveEditor(revision); ports.onSaveEditor(revision - 1);
+    assert.equal(saves(), 1);
+    f.page.aboutToDisappear(); ports.onSaveEditor(revision); assert.equal(saves(), 1);
+  }
+
+  const cases={'initializer-safety':initializerSafety,'no-runtime':noRuntime,'callback-retire':callbackRetire,'editor-busy':editorBusy};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

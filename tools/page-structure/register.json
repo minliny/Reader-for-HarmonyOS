@@ -1054,7 +1054,7 @@
         }
       },
       "exceptions": [],
-      "revision": 38,
+      "revision": 39,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1320,11 +1320,11 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-          "sha256": "d4b28d65203efbbb45623de7751289d79977645e0f4e04f2e9cdbd8f7b40128c"
+          "sha256": "7e353103b2b092d0852467210771db2da1d9be5b837875f9c5687dbfe0ba3235"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
-          "sha256": "6d5e2965269c54d471c72a68e1e9c62b29bc7e7ea0f23f73e6debdf0f42fede1"
+          "sha256": "edfec2473970d67371545affa54be2697fb0a2940e0db2f0a1506c11af4f2b68"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceHost.ets",
@@ -1336,7 +1336,7 @@
         },
         {
           "path": "tools/test-source-tools-native-fixture.mjs",
-          "sha256": "aa2def92572d11ce8588173c628e0e6c71cd7e333278d18edd38d68a0a156c25"
+          "sha256": "87b423776846e608946cca34492c0a685a7af3eb1c6c6a735d29be41305b1ab6"
         },
         {
           "path": "tools/test-source-management-typography.mjs",
@@ -29391,7 +29391,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-        "sha256": "d4b28d65203efbbb45623de7751289d79977645e0f4e04f2e9cdbd8f7b40128c"
+        "sha256": "7e353103b2b092d0852467210771db2da1d9be5b837875f9c5687dbfe0ba3235"
       },
       "layers": {
         "route": {
@@ -29842,9 +29842,21 @@
               "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-focus-1c2e.json",
               "symbol": "after.batch,after.rows",
               "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-source-tools-selection.mjs",
+              "symbol": "editor",
+              "result": "PASS"
+            },
+            {
+              "kind": "device",
+              "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-reader-1c2e.json",
+              "symbol": "observations",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. UIF18 current actual SDK regression retains seven batch and three row controls, current selection/catalog attributes and actions, busy/unknown/removed/opening fences and three historical defect negatives. Current1c2e native memoryfixture320/font1 passed AllSelect3→12 andfirstsource12→11→12, same nativeButton201 and248/251/254, actualkeyboardfocus retained. Intentcounts2/3/4, entrydebug1. Pure reader, fullactionstate andwholepage acceptance remainopen."
+          "knownGap": "Tools-only minimum44 actions and wrapped real parents pass selected SDK contexts; common/native remaining targets/hit/focus/readout are OPEN. Current ReaderButton action/compact actual Text width minimum44 preserves existing height constraints; exact tools-consumer and all45-spec style isolation passed. This does not close all Tools targets/Native obligations. Current40bc candidate has scoped native1.45x system-font evidence. Actual SourceTools popup last native option/text are wholly visible and its click updates the memory-fixture owner and closes the popup. Default-font bottom fitting and Back are recorded in native-popup-40bc.json. This retains the full-page E2/E3, glyph and screen-reader evidence requirements. Original system font-size2 and runtime scale1 restored. Current continuation reconciliation20261115. Current continuation has actual lower-edge shared popup last-option delivery and Back, plus normal Tools search→discover→search, retained depth/query and return focus under reduceMotiontrue. Complete target/action-state/reader semantics and full font/orientation matrix remain open. UIF18 current actual SDK regression retains seven batch and three row controls, current selection/catalog attributes and actions, busy/unknown/removed/opening fences and three historical defect negatives. Current1c2e native memoryfixture320/font1 passed AllSelect3→12 andfirstsource12→11→12, same nativeButton201 and248/251/254, actualkeyboardfocus retained. Intentcounts2/3/4, entrydebug1. Pure reader, fullactionstate andwholepage acceptance remainopen. UIF18 pureReader AllSelect3→12 andfirstrow12→11→12 retainNative201 and248/251/254, fivecaptures keyboardfocusfalse andgreenbbox exactly currenttarget. UIF19 currenteditor twoactions nowretainactors andreadcurrenteligibility, busy/unknown/readback/revision/opening SDKguard andprimitivecapture negative pass; nativeeditorrecheck pending."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -30442,7 +30454,7 @@
         }
       },
       "exceptions": [],
-      "revision": 25,
+      "revision": 26,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -30453,7 +30465,7 @@
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
           "symbol": "build",
-          "sha256": "d4b28d65203efbbb45623de7751289d79977645e0f4e04f2e9cdbd8f7b40128c"
+          "sha256": "7e353103b2b092d0852467210771db2da1d9be5b837875f9c5687dbfe0ba3235"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
@@ -30557,7 +30569,7 @@
         },
         {
           "path": "tools/test-source-tools-typography-sdk.mjs",
-          "sha256": "aac312296a3a22ecf96c852d44982128ae414f93fe24062e2ee0f9f936c0538d"
+          "sha256": "261f3bb05e5cc2ad6a7674cb8e273007ca6d2b7247a047db82d5202d87eb6f8f"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
@@ -30619,7 +30631,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
-          "sha256": "6d5e2965269c54d471c72a68e1e9c62b29bc7e7ea0f23f73e6debdf0f42fede1"
+          "sha256": "edfec2473970d67371545affa54be2697fb0a2940e0db2f0a1506c11af4f2b68"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
@@ -30659,7 +30671,7 @@
         },
         {
           "path": "tools/test-source-tools-native-fixture.mjs",
-          "sha256": "aa2def92572d11ce8588173c628e0e6c71cd7e333278d18edd38d68a0a156c25"
+          "sha256": "87b423776846e608946cca34492c0a685a7af3eb1c6c6a735d29be41305b1ab6"
         },
         {
           "path": "tools/test-source-group-border-budget.mjs",
@@ -30875,7 +30887,7 @@
         },
         {
           "path": "tools/test-source-tools-selection.mjs",
-          "sha256": "8d9a8dd941aca8a141fca2296ab74b8b7d29beb9f077abb89064208574f811ac"
+          "sha256": "ddf5ecc43b253c83e3f525416f4861070605850972e77bd106295c0b739ad4cb"
         }
       ]
     }

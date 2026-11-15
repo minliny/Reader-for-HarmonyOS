@@ -24,6 +24,8 @@ interface SourceToolsFixtureObservation {
   actualHeightVp: number;
   systemFontScale: number;
   intentCount: number;
+  busy: boolean;
+  editorRevision: number;
 }
 
 @Component
@@ -124,7 +126,8 @@ export struct ReaderSourceToolsStructureFixture {
   private record(kind: string, sourceId: string = ''): void {
     const observation: SourceToolsFixtureObservation = { kind, generation: this.fixtureGeneration, sourceId,
       actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
-      systemFontScale: readerWindowMetrics().systemFontScale, intentCount: this.intentCount };
+      systemFontScale: readerWindowMetrics().systemFontScale, intentCount: this.intentCount,
+      busy: this.snapshot.busy, editorRevision: this.snapshot.editorRevision };
     hilog.info(0x5244, 'ReaderPageStructure', 'READER_SOURCE_TOOLS_FIXTURE %{public}s', JSON.stringify(observation));
   }
 
@@ -188,7 +191,14 @@ export struct ReaderSourceToolsStructureFixture {
   }
 
   private editorAction(generation: number, revision: number, kind: string): void {
-    if (this.editorIsCurrent(generation, revision)) this.action(generation, kind);
+    if (!this.editorIsCurrent(generation, revision) || this.snapshot.busy) return;
+    if (kind === 'save-editor-memory') {
+      // Keep the accepted memory intent pending until this scene exits.
+      const next = this.copySnapshot();
+      next.busy = true;
+      this.snapshot = next;
+    }
+    this.action(generation, kind);
   }
 
   private idsAction(generation: number, kind: string, selection: SourceToolsSelection): void {

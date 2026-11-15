@@ -25,7 +25,7 @@ methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResu
   'editorDraftIsEditable', 'debugOptionsCurrent', 'batchControlsRenderKey', 'batchSelectionAction', 'toolsOpeningIsCurrent',
   'sourceRowAction', 'batchButtonLabel', 'batchButtonEnabled', 'batchButtonAction', 'currentSourceForRow',
   'currentSourceToolRow', 'sourceRowKey', 'sourceRowButtonLabel', 'sourceRowButtonEnabled', 'currentSourceRowAction',
-  'toolsFontScale', 'sourceRowLayout', 'actionMinimumWidth', 'toolsInputIsCurrent', 'editorAction', 'editorDraftChange');
+  'toolsFontScale', 'sourceRowLayout', 'actionMinimumWidth', 'toolsInputIsCurrent', 'editorAction', 'editorDraftChange', 'editorButtonLabel', 'editorButtonEnabled');
 if(selectedCase==='inline-native-admission')methods.push('debugKeyChange');
 const bookSource={name:'测试书源',sourceId:'https://source.example',baseUrl:'https://source.example',lastCheckSummary:'上次检测已完成'};
 const owners=owner=>[owner,...[...owner.children.values()].flatMap(owners)];
@@ -135,7 +135,7 @@ if(selectedCase==='input-selection'){
  const a=actors[0],before=calls.length;a.toggle();const stale=a.selectionId;a.toggle();a.toggle();a.commit('搜索',stale);a.commit('不在选项中',a.selectionId);assert.equal(calls.length,before);a.actionEnabled=false;a.commit('搜索',a.selectionId);assert.equal(calls.length,before);a.aboutToDisappear();a.actionEnabled=true;a.commit('搜索',a.selectionId);assert.equal(calls.length,before);
 }
 if(selectedCase==='guard-admission'){
- const {owner:buttons}=make();let accepted=0;buttons.actionButton('禁用',true,false,()=>accepted++);buttons.actionButton('允许',false,true,()=>accepted++);buttons.sourceRowButton({source:{...bookSource,sourceId:'missing'},sourceListRevision:1,selected:false,actionsEnabled:true},'edit');buttons.fullWidthActionButton('导出',true,()=>accepted++);const actions=nodes(buttons).filter(n=>typeof n.onClick==='function');actions.forEach(n=>n.onClick());assert.equal(accepted,2);buttons.snapshot.busy=true;buttons.replay();actions.at(-1).onClick();assert.equal(accepted,2);
+ const {owner:buttons}=make();let accepted=0;buttons.snapshot.busy=true;buttons.fullWidthActionButton('禁用',true,()=>accepted++);buttons.snapshot.busy=false;buttons.fullWidthActionButton('允许',false,()=>accepted++);buttons.sourceRowButton({source:{...bookSource,sourceId:'missing'},sourceListRevision:1,selected:false,actionsEnabled:true},'edit');buttons.fullWidthActionButton('导出',true,()=>accepted++);const actions=nodes(buttons).filter(n=>typeof n.onClick==='function');actions.forEach(n=>n.onClick());assert.equal(accepted,2);buttons.snapshot.busy=true;buttons.replay();actions.at(-1).onClick();assert.equal(accepted,2);
  for(const state of ['busy','receiptUnknown','editorUnknown']){const {owner,calls}=make();if(state==='busy')owner.snapshot.busy=true;if(state==='receiptUnknown')owner.snapshot.receipt={receipt:{confirmation:'unknown'}};if(state==='editorUnknown')owner.snapshot.editorReadback={confirmation:'unknown'};owner.batchCard();owner.editorCard(owner.snapshot.editorRevision);for(const node of nodes(owner))if(node.type==='Button'&&typeof node.onClick==='function'&&['启用','停用','删除','校验并保存'].includes(node.accessibilityText))node.onClick();assert.equal(calls.some(c=>['setEnabled','deleteSelected','save'].includes(c)),false,state);}
  const {owner,calls}=make();
  owner.onSetSelectedEnabled=(selection,enabled)=>calls.push({selection,enabled});

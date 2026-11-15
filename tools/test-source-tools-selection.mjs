@@ -10,6 +10,7 @@ const evidencePath = evidenceArgs[0]?.slice('--evidence-path='.length);
 if (evidencePath) assert.ok(evidencePath.startsWith('.reader-artifacts/') && !evidencePath.includes('..'));
 const selected = selectContractCases({
   batch: 'Retained actual SDK batch controls, current selection proof, busy/unknown/stopping/opening guards and keyed-remount negative. Native alert is a finite adapter seam.',
+  editor: 'Actual retained editor cancel/save/reconcile NativeButton eligibility through busy/unknown/original/readback updates and editor/opening retirement.',
   rows: 'Retained actual SDK source row controls, current catalog/selection bindings, entity and opening retirement, stale snapshot rejection and stale binding negatives.',
 }, { argv: args.filter(arg => !arg.startsWith('--evidence-path=')) });
 
@@ -47,7 +48,8 @@ if (selected.length) {
     const content = page.members.find(node => node.name?.getText(tree) === 'pageContent');
     const batch = content.body.statements.filter(node => node.getText(tree).includes('this.batchCard('));
     assert.equal(batch.length, 1, 'one actual production batch mount statement');
-    const body = kind === 'batch' ? batch[0].getText(tree) : 'this.sourceRow(this.sourceDataSource.getData(0));';
+    const body = kind === 'batch' ? batch[0].getText(tree) : kind === 'editor' ?
+      'this.editorCard(this.snapshot.editorRevision);' : 'this.sourceRow(this.sourceDataSource.getData(0));';
     return source.slice(0, build.body.getStart(tree)) + `{ ${body} }` + source.slice(build.body.end);
   }
 
@@ -62,7 +64,7 @@ if (selected.length) {
       retire() {}
     }
     const fragment = definition(kind, source);
-    const builders = new Set(['batchCard', 'batchButton', 'sourceRow', 'sourceRowInfo', 'sourceRowButtons', 'sourceRowButton']);
+    const builders = new Set(['batchCard', 'batchButton', 'sourceRow', 'sourceRowInfo', 'sourceRowButtons', 'sourceRowButton', 'editorCard', 'editorButton']);
     const excluded = new Set([...fragment.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)]
       .map(match => match[1]).filter(name => !builders.has(name)));
     const members = boundedMembers(fragment).filter(name => !excluded.has(name));
@@ -75,7 +77,7 @@ if (selected.length) {
       LengthMetrics: { vp: value => value }, FlexWrap: { Wrap: 'wrap' },
       FlexDirection: { Row: 'row', Column: 'column' }, HorizontalAlign: { Start: 'start' },
       TextOverflow: { Ellipsis: 'ellipsis' },
-    }, { ...controls.hooks, lifecycleChildren: true, initialParams: { snapshot: initial } });
+    }, { ...controls.hooks, lifecycleChildren: true, allowEmptyBranchAdmission: kind === 'editor', initialParams: { snapshot: initial } });
     const owner = probe.owner, calls = [];
     let inputAllowed = true;
     Object.assign(owner, { mounted: true, temporaryBackIdentity: 'tools-current', sourceListWidth: 282,
@@ -86,7 +88,10 @@ if (selected.length) {
       onSetSelectedEnabled: (value, enabled) => calls.push(['enabled', value, enabled]),
       onDeleteSelected: value => calls.push(['delete', value]),
       onToggleSelection: id => calls.push(['toggle', id]), onOpenEditor: id => calls.push(['edit', id]),
-      onDebugSource: id => calls.push(['debug', id]) });
+      onDebugSource: id => calls.push(['debug', id]),
+      onCancelEditor: revision => calls.push(['cancel-editor', revision]),
+      onSaveEditor: revision => calls.push(['save-editor', revision]),
+      onReconcileEditor: revision => calls.push(['reconcile-editor', revision]) });
     owner.syncListDataSources();
     owner.initialRender();
     const walk = actor => [actor, ...[...actor.children.values()].flatMap(walk)];
@@ -106,6 +111,72 @@ if (selected.length) {
   }
 
   const results = {};
+  function editorScenario(source = original) {
+    const f = fixture('editor', snapshot({ editorSourceId: sources[0].sourceId, editorRevision: 7, editorText: '{}' }), source);
+    const initial = f.buttons(), save = initial.find(button => button.label === '校验并保存');
+    const cancel = initial.find(button => button.label === '取消');
+    assert.ok(save && cancel);
+    assert.equal(f.native(save).enabled, true); assert.equal(f.native(cancel).enabled, true);
+    f.native(save).onClick(); assert.deepEqual(f.calls, [['save-editor', 7]]);
+    f.publish({ busy: true });
+    assert.equal(f.native(save).enabled, false, 'current busy disables retained editor save');
+    assert.equal(f.native(cancel).enabled, false, 'current busy disables retained editor cancel');
+    f.native(save).onClick(); f.native(cancel).onClick(); assert.equal(f.calls.length, 1);
+    f.publish({ busy: false });
+    assert.equal(f.native(save).enabled, true); assert.equal(f.native(cancel).enabled, true);
+    assert.equal(f.buttons()[0], initial[0]); assert.equal(f.buttons()[1], initial[1]);
+    return { f, initial, save, cancel };
+  }
+
+  if (selected.includes('editor')) {
+    const { f, initial, save, cancel } = editorScenario();
+    for (const patch of [{ editorReadback: { confirmation: 'unknown' } },
+      { editorReadback: undefined, original: { blocked: true } }]) {
+      f.publish(patch);
+      assert.equal(f.native(save).enabled, false); assert.equal(f.native(cancel).enabled, false);
+      f.native(save).onClick(); f.native(cancel).onClick(); assert.equal(f.calls.length, 1);
+    }
+    f.publish({ original: undefined, editorReadback: undefined,
+      receipt: { facts: { generation: 1 }, receipt: { confirmation: 'unknown' } } });
+    assert.equal(f.native(save).enabled, false);
+    // Cancel retains the original independent admission when only the other
+    // write receipt is unknown. The page's original modal/input port owns it.
+    assert.equal(f.native(cancel).enabled, true);
+    f.publish({ receipt: undefined, editorReadback: { fact: 'confirmedRefreshFailed', confirmation: 'confirmed' } });
+    assert.equal(f.buttons()[0], initial[0]); assert.equal(f.buttons()[1], initial[1]);
+    assert.equal(f.native(save).enabled, false); assert.equal(f.native(cancel).enabled, false);
+    const reconcile = f.buttons().find(button => button.label === '重新读取已保存书源');
+    assert.ok(reconcile); assert.equal(f.native(reconcile).enabled, true);
+    f.native(reconcile).onClick(); assert.deepEqual(f.calls.at(-1), ['reconcile-editor', 7]);
+    f.publish({ busy: true });
+    assert.equal(f.native(reconcile).enabled, false);
+    const count = f.calls.length;
+    f.native(reconcile).onClick(); f.native(save).onClick(); f.native(cancel).onClick();
+    assert.equal(f.calls.length, count, 'busy reconciliation rejects all three actual native actions');
+    f.publish({ busy: false });
+    assert.equal(f.native(reconcile).enabled, true);
+    f.publish({ editorRevision: 8 });
+    assert.ok(f.buttons().every(button => f.native(button).enabled === false), 'old editor revision retires every retained actor');
+    f.buttons().forEach(button => f.native(button).onClick()); assert.equal(f.calls.length, count);
+    const retired = editorScenario();
+    retired.f.owner.aboutToDisappear();
+    retired.f.buttons().forEach(button => retired.f.native(button).onClick());
+    assert.deepEqual(retired.f.calls, [['save-editor', 7]], 'retired page cannot save or cancel');
+    const captured = original.replace('private editorButton(revision: number, action: SourceToolsEditorAction)',
+      'private editorButton(revision: number, action: SourceToolsEditorAction, enabled: boolean)')
+      .replace('actionEnabled: this.editorButtonEnabled(revision, action)', 'actionEnabled: enabled')
+      .replace("this.editorButton(revision, 'cancel');", "this.editorButton(revision, 'cancel', this.editorButtonEnabled(revision, 'cancel'));")
+      .replace("this.editorButton(revision, 'save');", "this.editorButton(revision, 'save', this.editorButtonEnabled(revision, 'save'));")
+      .replace("this.editorButton(revision, 'reconcile');", "this.editorButton(revision, 'reconcile', this.editorButtonEnabled(revision, 'reconcile'));");
+    assert.notEqual(captured, original);
+    assert.throws(() => editorScenario(captured), /current busy disables retained editor save/,
+      'actual SDK rejects the historical primitive enabled capture');
+    results.editor = { retainedActions: 2, busyRoundTrip: true, unknownAndOriginalRejected: true,
+      originalCancelPolicyPreserved: true, pendingReadbackReconcile: true, busyReconcileRejected: true,
+      editorRevisionAndOpeningRetired: true, primitiveCaptureNegativeRejected: true };
+    recordContractCasePass('editor');
+  }
+
   function batchScenario(source = original) {
     const f = fixture('batch', snapshot(), source), initial = f.buttons(), all = initial[0];
     assert.equal(initial.length, 7);
