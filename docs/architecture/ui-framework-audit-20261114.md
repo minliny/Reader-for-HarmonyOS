@@ -2,9 +2,19 @@
 
 ## 2026年11月15日当前实施状态
 
-全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`6323d632`，已安装候选为`0.2.0.DEV.b556c020a81d`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`852c2d2d`，已安装候选为`0.2.0.DEV.00d04806261d`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
 
-### 当前书源工具八状态与停止回调补证
+### 当前书源编辑器回执恢复补证
+
+本批生产提交为`852c2d2d`，沿既有DEBUG场景表补齐“保存已确认但回读失败”和“保存回执未知”两种编辑输入。输入按正常SourceToolsOrchestrator的readBackEditor/publish发布editorReadback、editorOperation、receipt、反馈事件及消息，正文使用实际共享SourceToolsPage。一次当前内存核对将读取阶段推进到reading、busy=true、回读代次加1，并保留原confirmation、草稿及编辑代次。6项准确选择用例通过，包含2种确认事实×2条恢复回调、旧编辑/操作代次、禁用编辑保存取消、重复及退休拒绝，既有菜单冻结输入负例也被拒绝。[代码与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-tools-editor-recovery-code-n.json)
+
+完整ArkTS编译、指定minliny_HarmonyOS证书签名及保数据部署通过。当前候选为`0.2.0.DEV.00d04806261d`，HAP的SHA-256为`d5bb1a2ba07dd4c0328af0c66228404da8b01a6ca0e727094c15e0e6d7bafc2b`。640个运行输入与不可变产物匹配。与前一候选的输入快照比较只有本批DEBUG夹具1个文件变化，其余639个运行输入字节匹配。此前8种准确原生状态按原b556身份和范围复用。[当前源码与候选绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-n.json)
+
+当前VM在366vp宽、系统字号1下完成两种编辑恢复。已确认场景的原生重新读取按钮342接纳一次，进入reading后该恢复按钮退出，TextArea334、取消336、保存339保持原生身份。未知回执场景由共享核对提示接纳一次，TextArea917、取消919、保存922保持。两条场景的251字节草稿及编辑代次1保持，owner意图计数均为1→2→2，最后一步为实际点击禁用保存，增量0。回读代次均为1→2→2，confirmation分别保持confirmed和unknown。当前事实停在读取中，完整业务的最终读取及持久化结果继续使用各自证据。[两条实际恢复与禁用保存回执](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-editor-recovery-n-00d0.json)
+
+移除确认与More的现有源码和旧能力取证已复核。移除内容读取当前主窗口高度及安全区，metricsRevision驱动订阅已存在；More第二锚点由topBarVisible=false及home输入准入。此前WMS、UITest、DisplayManager帮助及实际最近任务路径尚未提供已达成的同宽主窗口改高操作。单独改变页面内容高度的已有样本按其实际父槽范围使用，准确主窗口高度及短窗口More条件继续保留。该项没有产生用户决断要求。
+
+### 前一批书源工具八状态与停止回调补证
 
 本批生产提交为`6323d632`，沿既有DEBUG页面结构入口增加8种有限内存输入。读取中、空列表、保留列表读取失败、空列表读取失败、未知回执、原操作未确认、原操作待清理及检测运行均使用现有fact投影器和实际共享SourceToolsPage。原默认内容与旧入口位置保留，菜单当前presentation、字体准入和退休回调继续受既有条件约束。6项准确选择用例及2个历史失效负例形成通过结果。[代码与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-tools-state-code-m.json)
 
