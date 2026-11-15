@@ -2,9 +2,23 @@
 
 ## 2026年11月15日当前实施状态
 
-全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前已交付生产提交为`a3d84a63`，已安装候选为`0.2.0.DEV.6c87d094e03a`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
+全量目标保持执行中。既有授权、沿现有资料推进和保留紧凑布局的决定足以继续实施，当前没有等待用户作出的实施决断。此前把尚未完成的原稿检索、分支核对和原生场景提前写成待用户决定，现已纠正。当前运行代码提交为`db3cea00`，测试迁移提交为`2783854c`，已安装候选为`0.2.0.DEV.e204cd67520d`。下文保留各批次当时的源码、失败及验证范围。代码、原稿和准确原生入口的遗漏继续由agent补齐。
 
-### 当前下载状态、布局与触摸边界补证
+### 当前换源目录忙态、短页首行与测量归属修复
+
+**UIF-40修复漫画换源目录的忙态投影。** 正常MangaSourceSwitchPresentation已按当前selection合并章节准备请求，ReaderSourceSwitchSurfaces此前漏传该事实。当前沿原owner递送selectionBusy，语义及平面目录的原生行资格与保留回调同时读取当前忙态，提交前Back继续使用原取消入口。准确方法场景进入真实Gateway的一次有限未完成进度读取，检查当前页面演员更新、重复合并和Back，原书籍身份保持。[当前代码与9项准确用例](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-switch-code-p.json)
+
+**UIF-41修复短页目录的偏移容量和滚动归属。** 当前168vp父槽不足以容纳首尾native offset，List接口约定和Grid的CalcContentOffset均会在容量条件下归零。原生观察中，目录行因此与覆盖摘要重叠。首次加入真实List留白后，独立覆盖工具栏仍在进入可见带时挡住下层拖动。当前短页平面List和语义Grid均沿原prefixBuilder装配实际摘要、工具、流内页脚及原生首尾item，页头继续固定。Grid只平移native索引及span，Core rank、目标与原证明入口保持原定义。当前行定位按实际剩余高度限制默认间距。[平台Grid偏移实现](https://raw.githubusercontent.com/openharmony/arkui_ace_engine/master/frameworks/core/components_ng/pattern/grid/grid_layout_base_algorithm.cpp)
+
+平面、语义及固定槽分别持有当前工具和页脚测量owner。旧平面退出后，当前语义Grid的实际帧仍可发布工具和页脚高度。无当前章节的夹具已修正undefined误命中group的错误，显式chapter0继续定位实际章节。旧adaptive-footer用例在已删除的mangaToolHeight处提前失败，现已迁移到当前PageScaffold、geometry及原生Area回调，覆盖固定/流内唯一页脚及保留演员。当前9项准确选择用例形成通过记录，20个显式属性或行为失效负例被拒绝。全部测试范围沿各自真实生产方法、SDK和有限端口记录。[SDK、原夹具错误与旧用例修正](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-switch-code-p.json)
+
+当前VM在366×168vp、系统字号1下补齐两条首章路径。语义Row309完整边界为[393,1449][888,1536]，平面Row1217为[393,1452][888,1539]，均位于当前页头下方。首次选择后保持各自原生身份，enabled变为false，重复触摸的owner意图计数均为0→1→1，两次页头Back均回到当前Root。流内页脚在真实GridItem及ListItem内有完整文本样本。此前全高语义/平面第4章，以及原生查询→筛空→共享清除→IME Back→页头返回，继续按各自91de/eac候选保存。该查询保持TextInput1181与List621，选择意图始终为0。[原生首行、忙态、流内归属及查询证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json)
+
+当前运行代码提交为`db3cea00`，测试迁移提交为`2783854c`，已安装候选为`0.2.0.DEV.e204cd67520d`。完整ArkTS编译、指定minliny_HarmonyOS证书签名、保数据覆盖和启动通过。不可变run为`20261115T053552Z-db3cea00-edb16804`，HAP的SHA-256为`0b136de041581b26505b7024b9980561b6a99ac9fb23c3178a43952e554e4126`。640个运行ETS/TS输入与当前候选匹配，测试迁移发生在运行输入之外，沿用该包。VM已恢复普通书架，本批会话均已终止。[运行输入绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/source-candidate-binding-p-final.json) [不可变manifest](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261115T053552Z-db3cea00-edb16804/manifest.json)
+
+本批保留初始夹具、首次偏移修复、工具覆盖命中、语义首行及驱动对齐失败。固定步长曾在首行的可见窄带两侧往返，后继按实际行、页头和viewport中点分配最后一段拖动，再补未派发动作。完整登记的E2/E3、视觉、读屏及正常原始业务条件继续保留。目录其余动态状态、实际可执行主题和方向格、正常宿主动作的缺席证据继续由agent核对。当前没有等待用户作出的实施决断。
+
+### 前一批下载状态、布局与触摸边界补证
 
 本批沿既有DEBUG入口增加9种下载状态输入，包含读取中、空书架、读取失败、保留内容失败、原操作待核对、核对读取中、筛选为空、章节投影读取中及章节投影失败。实际SharedDownloadPage消费正常公共props及initialViewState，管理、选择和弹层继续由页面拥有。有限内存owner按正常Host的loading/error、恢复generation和按书籍合并读取规则发布事实。9项准确选择用例通过，原菜单属性及测试提取器的两次失败按原日志保留。[代码与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/download-state-code-o.json)
 

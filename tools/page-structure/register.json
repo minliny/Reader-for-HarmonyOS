@@ -3458,7 +3458,14 @@
                   "placementCondition": "mangaFlowFooter()=false；mangaFixedFooter只渲染scaffold footer，mangaToolbar不渲染当前章footer"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=false固定dock。安全区、末项、极短窗口、真实2×未原生验收；inflow分支独立登记。"
               },
               "overlay": {
@@ -3626,9 +3633,21 @@
                     "path": "tools/test-reader-global-host-contracts.mjs",
                     "symbol": "manga-retry",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has scoped native production directory query/IME and measured header observations under their recorded component/host inputs. Complete native target/focus/reader and this exact registered context remain open. Approved compact layout constraints stay recorded per actual branch. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -4049,7 +4068,7 @@
               }
             },
             "exceptions": [],
-            "revision": 40,
+            "revision": 41,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -6611,7 +6630,14 @@
                   "placementCondition": "mangaFlowFooter()=false；mangaFixedFooter只渲染scaffold footer，mangaToolbar不渲染当前章footer"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=false固定dock。安全区、末项、极短窗口、真实2×未原生验收；inflow分支独立登记。"
               },
               "overlay": {
@@ -6785,9 +6811,21 @@
                     "path": "tools/test-reader-global-host-contracts.mjs",
                     "symbol": "manga-retry",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has normal manga→Quick directory→full catalog→download popup with actual loading node and0 custom-animation samples under reduceMotiontrue. Existing historical manga manifests are evicted and provide no current offline-readable head. Healthy body and complete native target/state/reader coverage remain open."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation has normal manga→Quick directory→full catalog→download popup with actual loading node and0 custom-animation samples under reduceMotiontrue. Existing historical manga manifests are evicted and provide no current offline-readable head. Healthy body and complete native target/state/reader coverage remain open. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -7226,7 +7264,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9758,7 +9796,14 @@
                   "placementCondition": "mangaFlowFooter()=false；mangaFixedFooter只渲染scaffold footer，mangaToolbar不渲染当前章footer"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=false固定dock。安全区、末项、极短窗口、真实2×未原生验收；inflow分支独立登记。"
               },
               "overlay": {
@@ -9890,6 +9935,16 @@
                       "controlRef": "directory-catalog-retry",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-navigation-row",
+                      "busyBound": true,
+                      "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-manga-entry",
+                      "busyBound": true,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -9918,9 +9973,21 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -10285,7 +10352,7 @@
               }
             },
             "exceptions": [],
-            "revision": 41,
+            "revision": 42,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -11090,7 +11157,14 @@
                   "placementCondition": "mangaFlowFooter()=false；mangaFixedFooter只渲染scaffold footer，mangaToolbar不渲染当前章footer"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=false固定dock。安全区、末项、极短窗口、真实2×未原生验收；inflow分支独立登记。"
               },
               "overlay": {
@@ -11222,6 +11296,16 @@
                       "controlRef": "directory-catalog-retry",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-navigation-row",
+                      "busyBound": true,
+                      "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-manga-entry",
+                      "busyBound": true,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -11250,9 +11334,21 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -11629,7 +11725,7 @@
               }
             },
             "exceptions": [],
-            "revision": 43,
+            "revision": 44,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12561,7 +12657,14 @@
                   "placementCondition": "mangaFlowFooter()=true；mangaToolbar内渲染当前章footer，mangaFixedFooter不渲染"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=true随内容状态区，scaffold fixed footer不渲染；未重复扣固定dock高度。真实系统字号/短窗口和末项安全区未原生验收。"
               },
               "overlay": {
@@ -12723,9 +12826,21 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -13140,7 +13255,7 @@
               }
             },
             "exceptions": [],
-            "revision": 40,
+            "revision": 41,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13948,7 +14063,14 @@
                   "placementCondition": "mangaFlowFooter()=true；mangaToolbar内渲染当前章footer，mangaFixedFooter不渲染"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=true随内容状态区，scaffold fixed footer不渲染；未重复扣固定dock高度。真实系统字号/短窗口和末项安全区未原生验收。"
               },
               "overlay": {
@@ -14110,9 +14232,21 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -14539,7 +14673,7 @@
               }
             },
             "exceptions": [],
-            "revision": 42,
+            "revision": 43,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15457,7 +15591,14 @@
                   "placementCondition": "mangaFlowFooter()=true；mangaToolbar内渲染当前章footer，mangaFixedFooter不渲染"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=true随内容状态区，scaffold fixed footer不渲染；未重复扣固定dock高度。真实系统字号/短窗口和末项安全区未原生验收。"
               },
               "overlay": {
@@ -15589,6 +15730,16 @@
                       "controlRef": "directory-catalog-retry",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-navigation-row",
+                      "busyBound": true,
+                      "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-manga-entry",
+                      "busyBound": true,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -15617,9 +15768,21 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -15984,7 +16147,7 @@
               }
             },
             "exceptions": [],
-            "revision": 41,
+            "revision": 42,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16789,7 +16952,14 @@
                   "placementCondition": "mangaFlowFooter()=true；mangaToolbar内渲染当前章footer，mangaFixedFooter不渲染"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-book-directory-chrome.mjs",
+                    "symbol": "adaptive-footer",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本variant只覆盖mangaFlowFooter=true随内容状态区，scaffold fixed footer不渲染；未重复扣固定dock高度。真实系统字号/短窗口和末项安全区未原生验收。"
               },
               "overlay": {
@@ -16921,6 +17091,16 @@
                       "controlRef": "directory-catalog-retry",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-navigation-row",
+                      "busyBound": true,
+                      "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-manga-entry",
+                      "busyBound": true,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -16949,9 +17129,21 @@
                     "path": "tools/test-reader-directory-retained-surface.mjs",
                     "symbol": "retained-surface",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-manga-target-catalog-admission.mjs",
+                    "symbol": "short-fallback-insets,short-grid-prefix",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "device",
+                    "path": ".reader-artifacts/app-ui-framework-audit-20261114/native-source-switch-p.json",
+                    "symbol": "Current finite source-switch native component inputs at366x168vp/font1, whole first target, same native actor busy and duplicate0-1-1, headerBack. Registered normal-route/business/readout scope remains open.",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery. Current continuation reconciliation20261115. Current continuation does not inherit another host native result for this exact variant. Current source/SDK allocation and stale-owner admission retain their scoped evidence. Complete native target/focus/reader/state coverage for this registered context remains open, with compact layout exceptions preserved where applicable. UIF-40/41 current continuation records explicit source-switch busy projection and current SDK short Grid/List prefix, canonical index/span/actual-height placement and independent native measurement owners. Currente204 finite component first-target/native busy/headerBack passes semantic andflat168parent. Full/page-state/reader/normal-business E2 obligations retain their recorded scopes."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -17328,7 +17520,7 @@
               }
             },
             "exceptions": [],
-            "revision": 43,
+            "revision": 44,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
