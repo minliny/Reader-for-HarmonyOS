@@ -1594,7 +1594,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-        "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93"
+        "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73"
       },
       "layers": {
         "route": {
@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 58,
+      "revision": 59,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2702,7 +2702,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-          "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+          "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
           "symbol": "build"
         },
         {
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 56,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4220,7 +4220,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -4801,7 +4801,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-              "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93"
+              "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73"
             },
             "layers": {
               "route": {
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5855,7 +5855,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7496,7 +7496,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9152,7 +9152,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 56,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10677,7 +10677,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12093,7 +12093,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 56,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13666,7 +13666,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15127,7 +15127,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 56,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16644,7 +16644,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18060,7 +18060,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19707,7 +19707,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21353,7 +21353,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "402f8035a7d9a8dacf331f65417aa8c0b95ad84915eca329d0b9746e5aa7be93",
+                "sha256": "4ebdd73da33838f4bc279ea2ee2443deda3e6efbc0fbe08898c17b1ae316df73",
                 "symbol": "build"
               },
               {

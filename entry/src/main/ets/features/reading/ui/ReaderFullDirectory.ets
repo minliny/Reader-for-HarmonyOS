@@ -544,6 +544,7 @@ export struct ReaderFullDirectory {
   }
 
   private toggleTopBarMore(identity: string, bookId: string): void {
+    if (!this.directoryInputCurrent(identity, bookId)) return;
     if (this.directoryRulesAvailable()) {
       if (!this.directoryRulesCurrent(identity, bookId)) return;
       if (this.directoryRulesVisible) this.consumeBack(identity);
@@ -602,8 +603,9 @@ export struct ReaderFullDirectory {
   }
 
   private offlineBookAction(generation: number, action: () => void): () => void {
+    const identity = this.temporaryBackIdentity, bookId = this.bookId;
     return (): void => {
-      if (!this.mounted || this.exitRequested || !this.offlineMenuVisible || generation !== this.offlineMenuGeneration) return;
+      if (!this.directoryInputCurrent(identity, bookId) || !this.offlineMenuVisible || generation !== this.offlineMenuGeneration) return;
       this.offlineMenuVisible = false;
       if (!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true) action();
     };

@@ -1,5 +1,11 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 第十五轮目录菜单修复
+
+UIF-87 将完整目录远程书籍 More 和离线菜单动作的首次状态修改接回原 directoryInputCurrent，动作捕获原临时身份与 bookId，实时失效时保留原菜单及代次，同一 owner 恢复后可继续。原生关闭及已接纳业务回执继续按原生命周期收口。一个准确用例覆盖手机／展开与前景／覆盖四种场景，并拒绝两个旧行为负例；13 项登记绑定已更新，原 37 诊断保留，漂移和引用错误均为 0。
+
+第十五轮确认实质问题后按失败收口，不完整的语义覆盖继续明示，连续通过计数保持 0。下一轮在修复后的冻结输入上重新开始。最终完整编译尚未执行，VM 继续禁用。原稿一致性与性能两项专项子 agent 核对安排在全量实施完成后，当前尚未启动。[UIF-87 修复记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round15-repair-summary.json)
+
 ## 2026-11-16 第十四轮修复后继续完整审计
 
 第十四轮以 FAIL、覆盖 INCOMPLETE 收口，完整语义审查 121／472，另有部分 25 和未完成 326。UIF-85 沿 Panel 现有临时编辑准入递送到 TTS 管理器，在保存、删除及草稿首次修改前拒绝失效输入，保留已接纳操作和 Host ACK。UIF-86 为 SourceTools 原生属性补齐本地前景 StorageLink，继续以 AppStorage 拒绝尚未传递到本地字段的失效输入，Host 后台合法回执保持原生命周期。

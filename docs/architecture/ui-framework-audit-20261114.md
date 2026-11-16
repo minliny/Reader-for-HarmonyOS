@@ -1,5 +1,11 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-16 第十五轮 UIF-87 修复
+
+第十五轮确认完整目录远程书籍的“更多”入口在原实时目录资格失效后仍能首次打开离线菜单并推进代次，同一 opening 恢复后状态继续保留；菜单原动作也会在业务层拒绝前先消费本地菜单。两处属于同一首次输入因果，合并为 UIF-87。证据来自实际 SDK 回调及生产 Root／Journey／Scene／Destination 链，不代表设备事件投递已复现。
+
+当前两入口先检查既有 directoryInputCurrent，菜单动作捕获原临时身份及 bookId，保持原生关闭和已接纳业务回执的清理。手机／展开布局与前景／覆盖四类场景通过，同一 owner 恢复、旧书籍和旧 opening 拒绝均检查实际状态。两个旧行为负例分别由菜单首开和原动作消费断言拒绝。13 项目录登记同步当前源码，37 项原诊断、0 漂移与 0 引用错误保持。第十五轮为失败，连续通过仍为 0，完整语义覆盖按其准确报告保留，下一轮重新审计，VM 禁令有效。[修复与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round15-repair-summary.json)
+
 ## 2026-11-16 第十四轮失败与两项追加修复
 
 第十四轮确认 UIF-85 和 UIF-86，结论 FAIL，覆盖 INCOMPLETE。472 个必审文件中，121 个完成当前 UI 合同审查，25 个部分审查，326 个尚未完成语义审查，合计 351 个未完成。确认实质缺陷后停止无关广域消耗，保留逐文件清单，连续通过仍为 0。读过索引、文件哈希和导入关系均未计作完整语义通过。[第十四轮报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-14.json)
