@@ -238,6 +238,7 @@ for(const stage of ['catalog','transaction'])for(const kind of ['chapter','bookm
 }
 
 async function case_failure_actions_input() {
+const { sourceSwitchTriggerFocusId } = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
 const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts');
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
@@ -262,12 +263,12 @@ const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingEx
 // SDK-transformed production Builder: render actual actions and invoke their captured callbacks.
 for(const local of [false,true])for(const switchFailure of [false,true]) {
   const actions=[];
-  const p=boundedSurfaceSdk(),owner=p.consumer(readReaderExperienceFixture(source,'utf8'),['readingFailureContent'],{
-    LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle:()=>({ink:'#123456',paperStart:'#eeeeee'})});
+  const p=boundedSurfaceSdk(),owner=p.consumer(readReaderExperienceFixture(source,'utf8'),['readingFailureContent','readingFailureActions'],{
+    LOCAL_READING_SOURCE_ID:'local',sourceSwitchTriggerFocusId,readerAppearanceThemeStyle:()=>({ink:'#123456',paperStart:'#eeeeee'})});
   Object.assign(owner,{sourceId:local?'local':'remote',sourceSwitchFailureMessage:switchFailure?'目标源目录失败':'',
     failureCode:'private raw error /path?token=secret',failureHint:readingFailureHint('private raw error /path?token=secret'),appearanceSnapshot:{activeTheme:'day'},
     readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:50}),
-    retryReading:()=>actions.push('retry'),onRetryFailedSourceSwitch:()=>actions.push('switch-retry'),
+    readerInputIsCurrent:()=>true,retryReading:()=>actions.push('retry'),onRetryFailedSourceSwitch:()=>actions.push('switch-retry'),
     openReaderControl:()=>actions.push('settings'),onSwitchSource:()=>actions.push('switch'),onDismissSourceSwitchFailure:()=>actions.push('continue')});
   owner.readingFailureContent();const nodes=p.nodes(owner);
   assert.equal(JSON.stringify(nodes.filter(node=>node.type==='Text')).includes('token=secret'),false,'actual failure Builder never renders raw diagnostics');
@@ -757,7 +758,7 @@ function fixture(options={}) {
     Object.assign(failure,{sourceId:'target',sourceSwitchFailureMessage:'',failureCode:'章节加载失败',appearanceSnapshot:{activeTheme:'day'},
       readerRecoveryView:{visible:false},
       readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:30}),
-      retryReading:()=>r.retryReading(),openReaderControl(){},onSwitchSource(){}});
+      readerInputIsCurrent:()=>true,retryReading:()=>r.retryReading(),openReaderControl(){},onSwitchSource(){}});
     failure.readingFailureContent();
     const retryActor=failureSdk.walk(failure).find(actor=>actor instanceof failureSdk.deps.ReaderRecoveryAction&&actor.label==='重试');
     const retry=retryActor&&[...retryActor.nodes.values()].find(node=>typeof node.onClick==='function');

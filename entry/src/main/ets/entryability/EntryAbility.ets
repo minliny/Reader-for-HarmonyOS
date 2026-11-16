@@ -94,10 +94,10 @@ export default class EntryAbility extends UIAbility {
           AppStorage.setOrCreate('readerBookshelfViewMode', mode);
         }
       }).catch((): void => {});
-    this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts())
-      .catch((error: Error): void => {
-        hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
-      });
+    this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts());
+    void this.shelfFontsReady.catch((error: Error): void => {
+      hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
+    });
     // Selection diagnostics have no inferred identity. Conflicting diagnostic
     // flags reject both selection modes; exact Want scope semantics stay intact.
     const mangaSelectFlag = want.parameters?.readerMangaOfflineProbeSelectManga === true ||

@@ -1096,7 +1096,7 @@
         }
       },
       "exceptions": [],
-      "revision": 57,
+      "revision": 58,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1130,7 +1130,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+          "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
         },
         {
           "path": "AppScope/app.json5",
@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 59,
+      "revision": 60,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2717,7 +2717,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+          "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
           "symbol": "requestCatalogForTurn"
         },
         {
@@ -2930,7 +2930,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+          "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
         },
         {
           "path": "AppScope/app.json5",
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 56,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4235,7 +4235,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -4448,7 +4448,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5870,7 +5870,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -6083,7 +6083,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -6295,7 +6295,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7511,7 +7511,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -7724,7 +7724,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -7928,7 +7928,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9167,7 +9167,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -9380,7 +9380,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -9572,7 +9572,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10692,7 +10692,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -10905,7 +10905,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12108,7 +12108,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12321,7 +12321,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -12525,7 +12525,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 56,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13681,7 +13681,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -13894,7 +13894,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15142,7 +15142,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15355,7 +15355,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -15559,7 +15559,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16659,7 +16659,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -16872,7 +16872,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18075,7 +18075,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18288,7 +18288,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -18492,7 +18492,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19722,7 +19722,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -19935,7 +19935,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -20127,7 +20127,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21368,7 +21368,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "01c89e567a12c7af3af36f8ee1abff520d616972f28bca00174ff13d2ae50ef0",
+                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -21581,7 +21581,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -21773,7 +21773,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "ffcd7d6b9b68bd73477ebffbdf39a5c9cc1b6853a8037261b4162e1c32903c72"
+                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -22056,12 +22056,12 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-        "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+        "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
       },
       "sourceInputs": [
         {
           "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-          "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+          "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -22181,7 +22181,7 @@
         },
         {
           "path": "tools/test-shared-download-visual-contract.mjs",
-          "sha256": "6e5f3cc08949f98aceddc4f16f8482c6cfe0f35f35fd6eb990924fe58896980f"
+          "sha256": "11525fdbb361a85e553bf9207908da393405a9823a2d502a7ac94ae46db3a8d3"
         },
         {
           "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -22199,7 +22199,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+          "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
         },
         {
           "path": "AppScope/app.json5",
@@ -23420,7 +23420,7 @@
         }
       },
       "exceptions": [],
-      "revision": 35,
+      "revision": 36,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -23491,12 +23491,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+              "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+                "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -23616,7 +23616,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "6e5f3cc08949f98aceddc4f16f8482c6cfe0f35f35fd6eb990924fe58896980f"
+                "sha256": "11525fdbb361a85e553bf9207908da393405a9823a2d502a7ac94ae46db3a8d3"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -23634,7 +23634,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -24843,7 +24843,7 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 33,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -24915,12 +24915,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+              "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+                "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -25040,7 +25040,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "6e5f3cc08949f98aceddc4f16f8482c6cfe0f35f35fd6eb990924fe58896980f"
+                "sha256": "11525fdbb361a85e553bf9207908da393405a9823a2d502a7ac94ae46db3a8d3"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -25058,7 +25058,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -26267,7 +26267,7 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 33,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -26339,12 +26339,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+              "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+                "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -26464,7 +26464,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "6e5f3cc08949f98aceddc4f16f8482c6cfe0f35f35fd6eb990924fe58896980f"
+                "sha256": "11525fdbb361a85e553bf9207908da393405a9823a2d502a7ac94ae46db3a8d3"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -26482,7 +26482,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -27647,7 +27647,7 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 33,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -27719,12 +27719,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+              "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+                "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -27844,7 +27844,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "6e5f3cc08949f98aceddc4f16f8482c6cfe0f35f35fd6eb990924fe58896980f"
+                "sha256": "11525fdbb361a85e553bf9207908da393405a9823a2d502a7ac94ae46db3a8d3"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -27862,7 +27862,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -29027,7 +29027,7 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 33,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -29099,12 +29099,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+              "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "0b8d40319816ae421f99338692a234432a942ad525b35029feb5370a855450e8"
+                "sha256": "41b2b175279c525f2324f538ac875c09d466af0ba8351e230b959d8561545dfa"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -29224,7 +29224,7 @@
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
-                "sha256": "6e5f3cc08949f98aceddc4f16f8482c6cfe0f35f35fd6eb990924fe58896980f"
+                "sha256": "11525fdbb361a85e553bf9207908da393405a9823a2d502a7ac94ae46db3a8d3"
               },
               {
                 "path": "tools/test-shared-download-ui-sdk.mjs",
@@ -29242,7 +29242,7 @@
               {
                 "path": "entry/src/main/ets/entryability/EntryAbility.ets",
                 "symbol": "onConfigurationUpdate",
-                "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+                "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
               },
               {
                 "path": "AppScope/app.json5",
@@ -30407,7 +30407,7 @@
               }
             },
             "exceptions": [],
-            "revision": 32,
+            "revision": 33,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -31597,7 +31597,7 @@
         }
       },
       "exceptions": [],
-      "revision": 47,
+      "revision": 48,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -31730,7 +31730,7 @@
         {
           "path": "entry/src/main/ets/entryability/EntryAbility.ets",
           "symbol": "onConfigurationUpdate",
-          "sha256": "066e5e368b41e83e9d3c77f73d9ee8d5ca02f08d44b20ceeae026052dacd7481"
+          "sha256": "10bf2b3ef56ea4b3770d871c3ef73c0dd2e15d406e91741ea4ee55661b6c0d11"
         },
         {
           "path": "AppScope/app.json5",

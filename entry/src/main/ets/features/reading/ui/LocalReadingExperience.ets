@@ -14998,10 +14998,14 @@ export struct ReadingExperience {
         if (this.readerRecoveryView.visible && this.readerRecoveryView.canRetry) {
           ForEach([this.readerRecoveryView.generation], (generation: number): void => {
             ReaderRecoveryAction({ label: this.readerRecoveryActionLabel,
-              onReconcile: (): void => this.reconcileReaderRecovery(generation) });
+              onReconcile: (): void => {
+                if (this.readerInputIsCurrent()) this.reconcileReaderRecovery(generation);
+              } });
           }, (generation: number): string => `${generation}`);
         } else {
-          ReaderRecoveryAction({ label: '重试', onReconcile: (): void => this.retryReading() });
+          ReaderRecoveryAction({ label: '重试', onReconcile: (): void => {
+            if (this.readerInputIsCurrent()) this.retryReading();
+          } });
         }
       }
       ReaderRecoveryAction({ label: '阅读设置', onReconcile: (): void => this.openReaderControl() });

@@ -3,6 +3,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 const definitions={"book-row-input-owners":{"description":"Installed SDK click API and default child-first assembly, scoped intent callbacks and44vp lanes including old kind-less data","resources":[]},"definition": {"description": "demo/storage输入SHA→当前generated字段/provenance一致性，不代表设计用户批准/设备接受", "resources": []}, "native-bindings": {"description": "实际SDK header测量delta/长书名信息不固定高/cover同步/语义色/Normal Button", "resources": []}, "inline-filter": {"description": "实际InlineSelect→ReaderSelect→真实popup Panel→ChoiceRow→两filter及清selection", "resources": []}, "inline-settings": {"description": "实际shared select popup即时发送空间上限或天数意图并保持存储面板", "resources": []}, "inline-quick": {"description": "实际shared quick popup choice经真实page handler", "resources": []}, "inline-range": {"description": "实际shared range book popup保选中复合书identity", "resources": []}, "select-measurement": {"description": "当前shared face与实际measureText px→vp恰一次/最长option/cap/currentchrome", "resources": []}, "area-receipts": {"description": "实际10类Area numeric/vp接纳与每源点Number退化反例、保留List/Scroll", "resources": []}, "font-receipts": {"description": "实际字体pending/ready/retired/remount callbacks与scroll排队归属", "resources": []}, "short-layout": {"description": "实际窄短/大字体sheet/dialog完整document单Scroll且预算内", "resources": []}, "reactive-metrics": {"description": "实际StorageLink订阅驱动保留header safe边和input scale更新", "resources": []}, "storage-publication": {"description": "实际数值slot未知/零/已知保留身份与打开确认的最新candidate禁用", "resources": []}, "retained-dto": {"description": "实际book/chapter同key DTO更新/row与scroll保留/移除退役callback及frozen getter反例", "resources": []}, "management-scroll": {"description": "实际管理模式双frame/dock顺序、用户/过滤/字体/窗口/书identity取消及unbound offset", "resources": []}, "overlay-chrome": {"description": "实际Watch微任务归并overlay→dialog/double→App、scheme/retire/presentation fencing", "resources": []}};
 const confluenceCases = new Set(['book-row-input-owners','list-layout','list-restore','chapter-locate-restore','private-tool-budget','touch-targets','filter-reset','book-row-density']);
 Object.assign(definitions, {
+  'row-geometry-receipts': { description: 'Actual same-owner book row Area callbacks update cover and spacer during modal/background coverage while fresh business input stays rejected. Retired geometry and former eventBook predicate negatives reject.', resources: [] },
   'book-row-density': { description: '批准demo常态24/18/28/80与实际SDK行/More/状态绘制响应、状态/管理/摘要、自然增长和当前行入口', resources: [] },
   'list-layout': { description: '实际新宿主 SDK 常态单List/管理footer/短高预算与RaiseShape身份；含旧fixed header结构负例', resources: [] },
   'list-restore': { description: '实际普通List一次性epoch恢复，touch/filter/geometry/opening/font/retire取消并保留阅读返回焦点；反例移除epoch会重复恢复', resources: [] },
@@ -73,14 +74,14 @@ methods.push('searchInputRevision','appForeground','covered','focusGeneration','
 // admission. Retain them rather than replacing them with fixture defaults.
 methods.push('measurements', 'measurementRevision', 'reduceMotion', 'sheetWasVisible',
   'sheetMaskReady', 'sheetExitPending',
-  ...(selectedCase === 'native-bindings' ? ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors'] : ['sheetAnimationGeneration']),
+  ...(['native-bindings', 'row-geometry-receipts'].includes(selectedCase) ? ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors'] : ['sheetAnimationGeneration']),
   'transientFeedback', 'managementGeneration', 'takeReadingFocus',
   'storageDockShape', 'selectionDockShape');
 // This selected renderer leaf must construct the same initialized production
 // state as the methods it executes. Follow actual this.member references and
 // their real Watch callbacks instead of patching undefined fields with fixture
 // defaults. Other selected leaves keep their separately reviewed extraction.
-if (['native-bindings', 'chapter-selection-actions'].includes(selectedCase)) {
+if (['native-bindings', 'row-geometry-receipts', 'chapter-selection-actions'].includes(selectedCase)) {
   const declared = new Map(page.members.filter(node=>node.name).map(node=>[node.name.getText(tree),node]));
   const pending = selectedCase === 'chapter-selection-actions' ? ['selectionDock', 'books', 'aboutToDisappear'] : ['topBar','contentTop','searchField','storageDock','selectionDock','sheetOverlay','bookRow','statusButton',
     'currentRaisedDockShape','onSheetActorAppeared','onSheetActorTransitionFinished','onSheetExitFinished',
@@ -860,6 +861,58 @@ if (selectedCase === 'book-row-density') {
   return;
 }
 
+if (selectedCase === 'row-geometry-receipts') {
+  function checkRowGeometry(Component = probe.Component) {
+    const samples = [];
+    const initialFailure = { ...book, stateLabel: '下载失败', downloadError: '短错误' };
+    for (const boundary of ['book-actions', 'storage', 'background', 'covered']) {
+      const page = owner('day', {
+        books: [initialFailure, another],
+        sheet: boundary === 'book-actions' || boundary === 'storage' ? boundary : '',
+        appForeground: boundary !== 'background', covered: boundary === 'covered',
+        bookCopyHeights: new Map([[book.key, 80]]), bookContentHeights: new Map([[book.key, 50]]),
+      }, Component);
+      page.bookRow(page.bookGetter(initialFailure), false, page.presentationGeneration);
+      const copy = find(page, node => node.type === 'Column' && node.layoutWeight === 1 && node.onAreaChange, 'actual copy Area callback');
+      const content = find(page, node => node.type === 'Column' && node.layoutWeight === undefined && node.onAreaChange, 'actual text Area callback');
+      const cover = find(page, node => node.type === 'Image' && node.create === book.coverUrl, 'actual cover native image');
+      assert.equal(cover.height, 80);
+      assert.equal(page.eventBook(page.bookGetter(book)), undefined, 'fresh book action remains unavailable');
+      page.books = [{ ...book, stateLabel: '下载失败', downloadError: 'a current same-owner error with additional lines' }, another];
+      copy.onAreaChange({}, { height: 137 });
+      content.onAreaChange({}, { height: 124 });
+      propertyRuntime.flush();
+      assert.equal(page.bookCopyHeights.get(book.key), 137, `${boundary} retains the same-owner copy geometry`);
+      assert.equal(page.bookContentHeights.get(book.key), 124);
+      assert.equal(cover.height, 137, `${boundary} updates the same cover actor`);
+      assert.equal(page.bookProgressSpacer(book.key), 0);
+      const retained = [...page.nodes.values()];
+      page.presentationGeneration += 1;
+      copy.onAreaChange({}, { height: 300 });
+      content.onAreaChange({}, { height: 280 });
+      assert.equal(page.bookHeight(book.key), 137, 'old presentation geometry stays retired');
+      page.presentationGeneration -= 1;
+      page.books = [another];
+      copy.onAreaChange({}, { height: 310 });
+      assert.equal(page.bookHeight(book.key), 137, 'removed book geometry stays retired');
+      page.books = [initialFailure, another];
+      page.mounted = false;
+      content.onAreaChange({}, { height: 320 });
+      assert.equal(page.bookContentHeights.get(book.key), 124, 'unmounted geometry stays retired');
+      assert.deepEqual([...page.nodes.values()], retained, 'geometry updates preserve the row actors');
+      samples.push(boundary);
+    }
+    return { samples, currentHeight: 137, currentSpacer: 0 };
+  }
+  const result = checkRowGeometry();
+  const old = source.replace(/if \(!this\.presentationIsCurrent\(ownerGeneration\)\) return;\s*const current = this\.findCurrentBook\(book\(\)\);/g,
+    'const current = this.eventBook(book, ownerGeneration);');
+  assert.notEqual(old, source);
+  const OldComponent = createReaderBuilderProbe(old, methods, probeDependencies, probeHooks).Component;
+  assert.throws(() => checkRowGeometry(OldComponent), /retains the same-owner copy geometry/);
+  console.log(JSON.stringify({ case: selectedCase, result, oldGeometryGateRejected: true,
+    boundary: 'Actual SDK Area callbacks, maps and native cover height. Platform Area values are finite receipts. No layout or device pixels.' }));
+}
 if(selectedCase==='native-bindings'){
 for(const scheme of ['day','night']){
  const header=owner(scheme);header.topBar();const heading=text(header,'下载管理');assert.ok(heading.fontSize>0&&heading.lineHeight>0);const headerBox=find(header,n=>n.constraintSize?.minHeight===DOWNLOAD_HEADER_HEIGHT&&n.onAreaChange,'actual header');const before=header.contentTop();headerBox.onAreaChange({}, {height:DOWNLOAD_HEADER_HEIGHT+18});assert.equal(header.contentTop(),before+18);

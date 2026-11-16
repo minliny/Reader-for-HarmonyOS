@@ -37,7 +37,7 @@ for(const [switchFailure,local,inline]of [[true,false,false],[false,true,false],
   appearanceSnapshot:{activeTheme:'paper'},readerRecoveryView:{visible:inline,canRetry:inline,generation:9},readerRecoveryActionLabel:'核对原事项',
   readerRecoveryAction:()=>events.push('inline'),readingLayout:()=>({bodyWidth:()=>350,bodyHeight:()=>600,contentLeft:0,contentTop:0}),
   onRetryFailedSourceSwitch:scope=>events.push(['retry',scope]),onDismissSourceSwitchFailure:scope=>events.push(['continue',scope]),
-  retryReading:()=>events.push('retry'),openReaderControl:()=>events.push('settings'),onSwitchSource:()=>events.push('source')});
+  readerInputIsCurrent:()=>true,retryReading:()=>events.push('retry'),openReaderControl:()=>events.push('settings'),onSwitchSource:()=>events.push('source')});
  owner.readingFailureContent();const actors=p.walk(owner).filter(c=>c instanceof p.deps.ReaderRecoveryAction);
  assert.deepEqual(actors.map(c=>c.label),[inline?'核对原事项':'重试','阅读设置',...(switchFailure?['继续当前书源']:[]),...(!local?['切换书源']:[])]);
  for(const actor of actors){const label=p.nodes(actor).find(n=>n.type==='Text'),hit=p.nodes(actor).find(n=>n.onClick);

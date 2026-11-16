@@ -2143,7 +2143,9 @@ export struct MangaReadingSurface {
         title: this.error.length === 0 || this.openingRetry ? '' :
           (this.openFailureStage === 'source' ? '书源加载失败' : '章节加载失败'),
         message: this.error.length === 0 || this.openingRetry ? '正在载入章节…' : this.displayError(this.error),
-        actionLabel: this.offline ? '' : '重试', onAction: (): void => { void this.retryOpen(); },
+        actionLabel: this.offline ? '' : '重试', onAction: (): void => {
+          if (this.readerPanelForeground()) void this.retryOpen();
+        },
         secondaryActionLabel: '切换书源', onSecondaryAction: (): void => { void this.openSourceSwitch(); } });
     }.width('100%').height('100%').justifyContent(FlexAlign.Center)
       .padding(this.interactiveInsets(this.windowMetricsRevision));

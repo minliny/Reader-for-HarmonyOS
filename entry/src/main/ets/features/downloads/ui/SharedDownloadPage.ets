@@ -708,7 +708,8 @@ export struct SharedDownloadPage {
         }
         }.width('100%').alignItems(HorizontalAlign.Start)
           .onAreaChange((_old: Area, area: Area): void => {
-            const current = this.eventBook(book, ownerGeneration);
+            if (!this.presentationIsCurrent(ownerGeneration)) return;
+            const current = this.findCurrentBook(book());
             if (current !== undefined) this.recordBookContentHeight(current.key, readerPageAreaLength(area.height));
           });
         Blank().height(this.bookProgressSpacer(book().key));
@@ -718,7 +719,8 @@ export struct SharedDownloadPage {
           .style({ strokeWidth: DOWNLOAD_VISUAL.progressHeight, enableSmoothEffect: false }).visibility(book().progressPercent === undefined ? Visibility.Hidden : Visibility.Visible);
       }.layoutWeight(1).constraintSize({ minHeight: DOWNLOAD_VISUAL.bookMinHeight }).alignItems(HorizontalAlign.Start)
         .onAreaChange((_old: Area, area: Area): void => {
-          const current = this.eventBook(book, ownerGeneration);
+          if (!this.presentationIsCurrent(ownerGeneration)) return;
+          const current = this.findCurrentBook(book());
           if (current !== undefined) this.recordBookHeight(current.key, readerPageAreaLength(area.height));
         });
     }.width('100%').alignItems(VerticalAlign.Top).padding({ top: DOWNLOAD_VISUAL.bookPaddingY, bottom: DOWNLOAD_VISUAL.bookPaddingY })
