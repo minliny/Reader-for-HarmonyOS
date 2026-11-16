@@ -1513,6 +1513,8 @@ export class ReaderTtsSessionCoordinator {
     if (active === undefined || active.plan === undefined) return Promise.resolve();
     const index = this.state.sliceIndex ?? this.coreSnapshot?.currentSliceIndex;
     if (index === undefined) return Promise.resolve();
+    const target = direction === 'next' ? index + 1 : index - 1;
+    if (target < 0) return Promise.reject(new Error('Reader TTS previous rejected: already at first slice'));
     const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
     const controlGeneration = this.retireControlIntent();
     const positionGeneration = this.nextGeneration(this.state.positionGeneration ?? 0);
@@ -1528,8 +1530,6 @@ export class ReaderTtsSessionCoordinator {
       const current = (): boolean => this.isSessionCurrent(identity) && this.controlGeneration === controlGeneration &&
         this.state.positionGeneration === positionGeneration;
       if (!current()) return;
-      const target = direction === 'next' ? index + 1 : index - 1;
-      if (target < 0) throw new Error('Reader TTS previous rejected: already at first slice');
       let snapshot: ReaderTtsQueueSnapshot | undefined;
       if (target >= active.plan!.slices.length && this.coreSnapshot?.state === 'completed') {
         snapshot = this.coreSnapshot;

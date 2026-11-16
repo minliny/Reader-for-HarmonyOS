@@ -1,5 +1,19 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-16 第28轮完整审计及 TTS 边界修复
+
+当前以本节及原账本 `implementation.currentState` 为准。VM 继续禁用，连续完整全局审计 PASS 为 **0/3**，最终 Figma／性能专项审计尚未启动；下方各节保留形成时的历史状态。
+
+第28轮在 `3458300f` 全文审阅642个生产文件、184299行，105个历史问题、原5项及2条件、既有8项修复、R27首次播放续接、20路由／4根、49个owner引用及21项登记336层完成对账；1841个唯一冻结输入末尾核验漂移0。结果为 **FAIL：1项行为缺陷、1项SDK约束违例**，原A／B和FAIL保持原字节。[完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-28-summary.json) [问题与证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-28-final-findings.json)
+
+集中修复两处生产代码：首句“上一句”在退休请求、状态发布、watchdog清理和Host停音之前返回原越界拒绝，原播放／暂停及回调继续有效；凭据存储按实际UTF-8字节将单SECRET限制为1024，保留已有别名和精确清理。两条旧测试错误地从第一句触发“上一句”却要求停音，现改为合法第二句且保留立即停音断言；另补首句原请求／回调／进度／watchdog连续性与ASCII、多字节容量边界。[TTS独立复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round28-repair-tts-review-01.json) [凭据独立复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round28-repair-credential-review-01.json)
+
+7个选定本地case一次PASS，进程合计0.481秒。测试运行实际Coordinator和实际转译Store；Core／Host／AssetStore及timer是明确的有限端口，不构成原生或Core二进制验收。凭据结果编排初次误用旧文本回执格式，原CHECK_RAW_RECEIPTS保留，按既有JSON回执离线核定2项PASS，没有重跑。14个旧索引叶子的定义指纹在本批前已经过期，本批没有自行刷新，不将手动准确回归写成索引门禁通过。[TTS准确结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round28-repair-tts-regression-results.json) [凭据准确结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round28-repair-credential-regression-adjudication.json)
+
+一次规范隔离非增量编译及指定minliny_HarmonyOS签名PASS，候选 **0.2.0.DEV.a5eaa36a2504**，构建区间25.830秒；642个生产输入／184302行与不可变快照匹配。contracts=none，全量NOT_RUN，未安装。manifest如实保留3458300f的dirty构建身份，后续提交单独绑定。[不可变候选](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261116T140744Z-3458300f-6f03081a/manifest.json) [生产绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round28-repair-production-build-binding.json)
+
+两处生产路径及改动测试均没有登记SHA引用，register字节不变，复用原检查；19 PASS／27 FAIL／290 NOT_RUN、整页原生0／21与37个原诊断保留。原四个待证分支、旧Surface生命周期次序，以及焦点、读屏、容量、整页原稿、G05连续绘制、G10同期证据，仍按原条件开放。修后须另行取得固定输入连续三轮完整全局PASS；本批定向结果不计入。VM／HDC／设备／CUA动作均为0。[修复及剩余工作](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round28-repair-summary.json) [登记和索引边界](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round28-repair-registration-and-test-admission-boundary.json)
+
 ## 2026-11-16 第27轮完整审计及首次启动集中修复
 
 当前以本节及原账本 `implementation.currentState` 为准；下方说明保留各批次形成时的状态。VM继续禁用，连续完整全局PASS为0，最终Figma／性能专项审计尚未启动。

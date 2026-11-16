@@ -3,6 +3,9 @@ import { util } from '@kit.ArkTS';
 import type { BusinessError } from '@kit.BasicServicesKit';
 import { isReaderTtsCredentialAliasForConfig } from '../../features/reading/application/ReaderOnlineTtsProfile.ts';
 
+// AssetStore add/addSync accepts 1–1024 UTF-8 bytes in a single SECRET.
+const MAX_CREDENTIAL_BYTES = 1024;
+
 /** Platform AssetStore owns secret bytes. Core receives an immutable alias only. */
 export class ReaderTtsCredentialStore {
   static readonly instance: ReaderTtsCredentialStore = new ReaderTtsCredentialStore();
@@ -19,7 +22,7 @@ export class ReaderTtsCredentialStore {
       const value = records[0].get(asset.Tag.SECRET);
       if (!(value instanceof Uint8Array)) throw new Error('在线语音密钥无法读取');
       const decoded = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(value);
-      if (decoded.length === 0 || decoded.length > 8192 || value.length > 8192 ||
+      if (decoded.length === 0 || value.length > MAX_CREDENTIAL_BYTES ||
         /[\u0000-\u001f\u007f]/.test(decoded)) {
         throw new Error('在线语音密钥格式无效');
       }
@@ -28,11 +31,11 @@ export class ReaderTtsCredentialStore {
   }
   async create(id: number, value: string): Promise<string> {
     if (!Number.isSafeInteger(id) || id < 0 || typeof value !== 'string' || value.length === 0 ||
-      value.length > 8192 || /[\u0000-\u001f\u007f]/.test(value)) {
+      value.length > MAX_CREDENTIAL_BYTES || /[\u0000-\u001f\u007f]/.test(value)) {
       throw new Error('在线语音密钥格式无效');
     }
     const secretBytes = this.bytes(value);
-    if (secretBytes.length > 8192) throw new Error('在线语音密钥格式无效');
+    if (secretBytes.length > MAX_CREDENTIAL_BYTES) throw new Error('在线语音密钥格式无效');
     const alias = `reader.tts.${id}.${util.generateRandomUUID(true)}`;
     const attributes = new Map<asset.Tag, asset.Value>();
     attributes.set(asset.Tag.ALIAS, this.bytes(alias)); attributes.set(asset.Tag.SECRET, secretBytes);

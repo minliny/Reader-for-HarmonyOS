@@ -5,7 +5,7 @@ const owned=[];const createCoordinator=(...args)=>{const c=new ReaderTtsSessionC
 const { readFile }=await import("node:fs/promises");
 const { ReaderTtsSessionCoordinator }=await import("../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts");
 const { chapter, canonicalRemoteContent, plan, FakeGateway, FakeHost }=await import("./lib/reader-tts-fixtures.mjs");
-async function startBlockedSession(contentVersion) {
+async function startBlockedSession(contentVersion, scalarPosition = 0) {
   const blockedGateway = new FakeGateway();
   const blockedHost = new FakeHost();
   const blockedCoordinator = createCoordinator(
@@ -18,7 +18,7 @@ async function startBlockedSession(contentVersion) {
     chapter,
     content: canonicalRemoteContent,
     contentVersion,
-    scalarPosition: 0,
+    scalarPosition,
   });
   await speak.entered;
   return { coordinator: blockedCoordinator, gateway: blockedGateway, host: blockedHost, speak, startTask };
@@ -147,7 +147,8 @@ const immediateTransportIntents = [
 ];
 
 for (const scenario of immediateTransportIntents) {
-  const blocked = await startBlockedSession(blockedContentVersion);
+  const blocked = await startBlockedSession(blockedContentVersion,
+    scenario.name === 'previous' ? plan.slices[1].charStart : 0);
   blockedContentVersion += 1;
   const intentTask = scenario.invoke(blocked.coordinator);
   assert.equal(
@@ -231,7 +232,8 @@ const immediateHostEvents = [
   { name: 'device stop', event: { type: 'deviceChange', action: 'stop' } },
 ];
 for (const scenario of immediateHostEvents) {
-  const blocked = await startBlockedSession(blockedContentVersion);
+  const blocked = await startBlockedSession(blockedContentVersion,
+    scenario.name === 'media previous' ? plan.slices[1].charStart : 0);
   blockedContentVersion += 1;
   blocked.host.emit(scenario.event);
   assert.equal(
