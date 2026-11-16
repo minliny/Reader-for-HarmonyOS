@@ -233,6 +233,7 @@ export struct LocalImportDialog {
   }
 
   private selectionPanelHeight(): number {
+    this.readerWindowMetricsRevision;
     const scale = Math.max(1, ReaderWindowCoordinator.metrics().systemFontScale);
     return Math.min(this.availableHeight(), 399.75 * scale);
   }
@@ -551,6 +552,7 @@ export struct LocalImportDialog {
   }
 
   private availableHeight(): number {
+    this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     const height = this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height;
     return readerSurfaceMaxHeight(height,

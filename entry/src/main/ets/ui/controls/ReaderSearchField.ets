@@ -592,7 +592,7 @@ export struct ReaderSearchField {
     if (this.variant === 'bookPanel') return readerSearchControlHeight(this.bookFontScale());
     if (this.variant === 'rssPassive') {
       return readerScaledControlHeight(44, TYPE_SEARCH_RSS_HINT.lineHeightFp ?? TYPE_SEARCH_RSS_HINT.fontSizeFp * 1.5,
-        readerReadableFontScale(readerWindowMetrics().systemFontScale));
+        this.directoryFontScale());
     }
     if (this.variant === 'sourceManagement') {
       return readerScaledControlHeight(44, TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ??

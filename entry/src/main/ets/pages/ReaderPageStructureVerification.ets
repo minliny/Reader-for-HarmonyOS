@@ -406,6 +406,11 @@ struct ReaderPageStructureVerification {
     }, (attempt: number): string => attempt.toString());
   }
 
+  private systemFontScale(): number {
+    this.windowMetricsRevision;
+    return readerWindowMetrics().systemFontScale;
+  }
+
   @Builder
   private menu() {
     ForEach([this.presentation], (menuPresentation: number): void => {
@@ -413,7 +418,7 @@ struct ReaderPageStructureVerification {
     Column({ space: 12 }) {
       Text('页面结构 · 原生组件夹具').fontSize(20).fontWeight(FontWeight.Bold);
       Text('仅内存样本；所有操作只记录意图。字号跟随系统，不替换生产字体。').fontSize(14);
-      Text(`外层请求 ${this.requestedWidth}vp；上次实测 ${this.actualWidth}×${this.actualHeight}vp；系统字号 ${readerWindowMetrics().systemFontScale}`)
+      Text(`外层请求 ${this.requestedWidth}vp；上次实测 ${this.actualWidth}×${this.actualHeight}vp；系统字号 ${this.systemFontScale()}`)
         .fontSize(12).id('reader-page-structure-metrics');
       Row({ space: 12 }) {
         Button('宽度 320').id('reader-page-structure-width-320').onClick((): void => this.selectWidth(320, menuPresentation));

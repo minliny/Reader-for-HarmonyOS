@@ -1636,6 +1636,7 @@ struct Index {
   }
 
   private messageSafeTop(): number {
+    this.readerWindowMetricsRevision;
     // Ordinary App pages already inherit Index's safe-top padding.
     return this.readerOwnsWindowEdges() ? readerContentSafeTop(ReaderWindowCoordinator.metrics()) : 0;
   }

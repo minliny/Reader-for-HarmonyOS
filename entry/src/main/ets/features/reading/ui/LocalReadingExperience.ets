@@ -7668,6 +7668,7 @@ export struct ReadingExperience {
   private readingLayoutCachePaged: boolean = false;
 
   private readingLayout(): ReaderReadingLayoutSnapshot {
+    this.readerWindowMetricsRevision;
     if (this.pageTurnSettlementLayout !== undefined) {
       return this.pageTurnSettlementLayout;
     }
@@ -7999,18 +8000,21 @@ export struct ReadingExperience {
   }
 
   private readerSystemGestureLeftInset(): number {
+    this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(16, this.finiteWindowInset(metrics.gestureInsets.left),
       this.finiteWindowInset(metrics.navigationInsets.left));
   }
 
   private readerSystemGestureRightInset(): number {
+    this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(16, this.finiteWindowInset(metrics.gestureInsets.right),
       this.finiteWindowInset(metrics.navigationInsets.right));
   }
 
   private readerSystemGestureBottomInset(): number {
+    this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(24, this.finiteWindowInset(metrics.gestureInsets.bottom),
       this.finiteWindowInset(metrics.navigationInsets.bottom));
@@ -10411,6 +10415,7 @@ export struct ReadingExperience {
   }
 
   private sessionCapsuleMetrics(type: ReaderSessionCapsuleType = 'autoPage'): ReaderSessionCapsuleMetrics {
+    this.readerWindowMetricsRevision;
     return measureReaderSessionCapsule(this.getUIContext(), type, ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
@@ -10484,6 +10489,7 @@ export struct ReadingExperience {
   }
 
   private sessionLaunchLayoutKey(): string {
+    this.readerWindowMetricsRevision;
     return `${this.lifecycleToken}|${this.sourceId}|${this.bookId}|${this.viewportWidth}|${this.viewportHeight}|` +
       `${this.paginationLayoutSignature()}|${this.readerAppScheme}|${this.appearanceSnapshot.activeTheme}|` +
       `${ReaderWindowCoordinator.metrics().revision}`;

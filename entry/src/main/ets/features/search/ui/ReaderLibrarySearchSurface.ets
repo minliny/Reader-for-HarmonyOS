@@ -447,6 +447,7 @@ export struct ReaderLibrarySearchSurface {
     return readerSearchControlHeight(Number.isFinite(scale) && scale > 0 ? scale : 1);
   }
   private fontScale(): number {
+    this.metricsRevision;
     const scale = ReaderWindowCoordinator.metrics().systemFontScale;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
@@ -463,6 +464,7 @@ export struct ReaderLibrarySearchSurface {
       readerSearchActionWidth(this.expandedLayout, this.fontScale()), this.surfaceValue());
   }
   private horizontalInset(left: boolean): number {
+    this.metricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     const safe = left ? readerInteractiveSafeLeft(metrics) : readerInteractiveSafeRight(metrics);
     return Math.max(this.spec.outerInset(this.expandedLayout), safe);
@@ -551,6 +553,7 @@ export struct ReaderLibrarySearchSurface {
     return Math.max(0, this.surfaceHeight() - this.headerBottom);
   }
   private surfaceHeight(): number {
+    this.metricsRevision;
     return Math.max(0, ReaderWindowCoordinator.metrics().windowRect.height - this.surfaceWindowY);
   }
   private availableBottom(): number {
@@ -814,8 +817,13 @@ export struct ReaderLibrarySearchSurface {
         .shadow(readerSurfaceElevation(this.headerVeil() ? 'raised' : 'fixed', this.scheme))
         .onAreaChange(this.headerSurfaceAreaChange());
     }.width('100%').clip(false)
-      .shadow(readerSurfaceElevation(this.headerVeil() ? 'fixed' : this.historyProgress() > .01 ? 'popover' : 'fixed', this.scheme));
+      .shadow(this.headerStackShadow());
   }
+  private headerStackShadow(): ShadowOptions {
+    this.metricsRevision;
+    return readerSurfaceElevation(this.headerVeil() ? 'fixed' : this.historyProgress() > .01 ? 'popover' : 'fixed', this.scheme);
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {

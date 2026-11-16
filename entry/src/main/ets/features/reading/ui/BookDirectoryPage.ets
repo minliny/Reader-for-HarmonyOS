@@ -859,6 +859,7 @@ export struct BookDirectoryPage {
   }
 
   private contentFrame(): SurfaceHorizontalFrame {
+    this.readerWindowMetricsRevision;
     const metrics = readerWindowMetrics();
     const width = this.viewportWidth > 0 ? this.viewportWidth :
       (this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width);

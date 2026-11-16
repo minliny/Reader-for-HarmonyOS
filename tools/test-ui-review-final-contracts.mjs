@@ -14,7 +14,7 @@ const cases = selectContractCases({
   'startup-font-admission': 'Exact Ability checked-font promise and actual startup owner preserve rejection before/during stage creation and admit a successful checked load.',
   'settings-foreground-recovery': 'Actual Settings switch, theme and cache controls recover their retained action bindings after a background receipt and still reject live input loss before local delivery.',
   'multi-select-foreground-recovery': 'Actual multi-select header/footer and row accessibility recover after the original selection owner publishes readiness in background.',
-  'slider-terminals': 'Actual automatic-page speed and manga page Slider Click and End terminals reach their original business owners, with Moving preview and retired input checks.',
+  'slider-terminals': 'Actual automatic-page and manga Sliders commit once for complete SDK click/drag sequences, preserve Moving preview and reject retired input.',
 });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const file = path => new URL(path, root);
@@ -374,6 +374,7 @@ async function sliderTerminals(autoSource = read('features/reading/ui/ReaderCont
   const coordinator = new ReaderAutoPageCoordinator({ now: () => 0, schedule: () => 1, cancel() {},
     active: () => true, ready: () => true, canResumeTurn: () => true, turn: () => ({ kind: 'started' }), changed() {} });
   const reading = Object.assign(new speedOwner(), { autoPageCoordinator: coordinator });
+  const speedCommits = [];
   const sdk = boundedSurfaceSdk();
   const methods = ['p', 'frame', 'effectiveSpeedSeconds', 'speedRow', 'speedControlsWidth', 'speedControlsHeight',
     'speedControlsX', 'speedControlsY', 'speedSliderWidth', 'speedSliderX', 'speedMinusX', 'speedMaxLabelX',
@@ -386,23 +387,34 @@ async function sliderTerminals(autoSource = read('features/reading/ui/ReaderCont
     appScheme: 'day', sourceOnly: 'none', sharedInput: () => input, fullInput: () => input,
     presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), sharedScrollTranslation: () => 0,
     sharedClip: () => ({}), onSpeedChange: value => {
+      speedCommits.push(value);
       reading.setAutoPageSpeed(value);
       auto.updateStateVars({ speedSeconds: coordinator.snapshot().speedSeconds });
     } });
   auto.speedRow();
   const speed = sdk.nodes(auto).find(node => node.type === 'Slider');
-  speed.onChange(13, 'SliderChangeMode.Moving');
-  sdk.properties.flush();
-  assert.equal(auto.effectiveSpeedSeconds(), 13); assert.equal(coordinator.snapshot().speedSeconds, 8);
-  assert.equal(speed.create.value, 13, 'native Slider displays the current Moving preview');
+  // The installed SDK onChange contract includes Begin and End for gesture
+  // clicks. A Click-only injection cannot establish a missing click commit.
+  speed.onChange(8, 'SliderChangeMode.Begin');
   speed.onChange(13, 'SliderChangeMode.Click');
   sdk.properties.flush();
-  assert.equal(coordinator.snapshot().speedSeconds, 13, 'automatic-page Click commits original coordinator speed');
+  assert.equal(auto.effectiveSpeedSeconds(), 13); assert.equal(coordinator.snapshot().speedSeconds, 8);
+  assert.equal(speed.create.value, 13, 'native Slider displays the current click preview');
+  speed.onChange(13, 'SliderChangeMode.End');
+  sdk.properties.flush();
+  assert.equal(coordinator.snapshot().speedSeconds, 13, 'complete click commits original coordinator speed');
+  assert.deepEqual(speedCommits, [13], 'automatic-page complete click submits once');
   assert.equal(auto.speedPreviewSeconds, -1);
   assert.equal(speed.create.value, 13, 'native Slider consumes the accepted speed Prop after preview clears');
+  speed.onChange(13, 'SliderChangeMode.Begin');
+  speed.onChange(15, 'SliderChangeMode.Moving'); sdk.properties.flush();
+  assert.deepEqual(speedCommits, [13], 'drag preview keeps business speed');
   speed.onChange(15, 'SliderChangeMode.End'); sdk.properties.flush(); assert.equal(coordinator.snapshot().speedSeconds, 15);
+  assert.deepEqual(speedCommits, [13, 15]);
   assert.equal(speed.create.value, 15);
-  input = false; speed.onChange(17, 'SliderChangeMode.Click'); assert.equal(coordinator.snapshot().speedSeconds, 15);
+  input = false;
+  for (const mode of ['Begin', 'Click', 'End']) speed.onChange(17, `SliderChangeMode.${mode}`);
+  assert.deepEqual(speedCommits, [13, 15]);
 
   const seeks = [], restored = [];
   const manga = sdk.consumer(mangaSource, ['bottomControls', 'seekPage', 'readerPanelForeground'], {
@@ -421,16 +433,22 @@ async function sliderTerminals(autoSource = read('features/reading/ui/ReaderCont
   });
   manga.bottomControls();
   const page = sdk.nodes(manga).find(node => node.type === 'Slider');
-  page.onChange(3, 'SliderChangeMode.Moving'); await settle(); assert.deepEqual(seeks, []);
+  page.onChange(1, 'SliderChangeMode.Begin');
   page.onChange(3, 'SliderChangeMode.Click'); await settle();
-  assert.deepEqual(seeks, [2], 'manga Click reaches original seek controller');
+  assert.deepEqual(seeks, [], 'manga click preview waits for completion');
+  page.onChange(3, 'SliderChangeMode.End'); await settle();
+  assert.deepEqual(seeks, [2], 'manga complete click reaches original seek controller once');
   assert.deepEqual(restored, [[2, 0, 0]]);
+  page.onChange(3, 'SliderChangeMode.Begin');
+  page.onChange(4, 'SliderChangeMode.Moving'); await settle(); assert.deepEqual(seeks, [2]);
   page.onChange(4, 'SliderChangeMode.End'); await settle(); assert.deepEqual(seeks, [2, 3]);
-  manga.appForeground = false; page.onChange(5, 'SliderChangeMode.Click'); await settle();
+  manga.appForeground = false;
+  for (const mode of ['Begin', 'Click', 'End']) page.onChange(5, `SliderChangeMode.${mode}`);
+  await settle();
   assert.deepEqual(seeks, [2, 3], 'original manga current-input seek fence remains active');
   coordinator.dispose();
-  return { nativeSliders: 2, clickAndDragCommit: true, movingDoesNotCommit: true,
-    boundary: 'Actual SDK onChange declarations, real AutoPage coordinator and manga seek receiver. Native input delivery, service timers and image layout are finite ports.' };
+  return { nativeSliders: 2, completeClickAndDragCommitOnce: true, movingDoesNotCommit: true,
+    boundary: 'Actual SDK onChange callbacks with explicit complete SDK-documented event sequences, real AutoPage coordinator and manga seek receiver. Event injection is finite and does not establish native event delivery.' };
 }
 
 for (const id of cases) {
@@ -469,11 +487,11 @@ for (const id of cases) {
   } else {
     const auto = read('features/reading/ui/ReaderControlAutoPageContent.ets'), manga = read(mangaPath);
     result = await sliderTerminals(auto, manga);
-    const oldAuto = auto.replace('if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click)', 'if (mode === SliderChangeMode.End)');
-    const oldManga = manga.replace('if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) void this.seekPage', 'if (mode === SliderChangeMode.End) void this.seekPage');
-    assert.notEqual(oldAuto, auto); assert.notEqual(oldManga, manga);
-    await assert.rejects(() => sliderTerminals(oldAuto, manga), /automatic-page Click commits original coordinator speed/);
-    await assert.rejects(() => sliderTerminals(auto, oldManga), /manga Click reaches original seek controller/);
+    const extraAuto = auto.replace('if (mode === SliderChangeMode.End)', 'if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click)');
+    const extraManga = manga.replace('if (mode === SliderChangeMode.End) void this.seekPage', 'if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) void this.seekPage');
+    assert.notEqual(extraAuto, auto); assert.notEqual(extraManga, manga);
+    await assert.rejects(() => sliderTerminals(extraAuto, manga));
+    await assert.rejects(() => sliderTerminals(auto, extraManga), /manga click preview waits for completion/);
   }
   console.log(JSON.stringify({ case: id, result, oldBehaviorRejected: true,
     boundary: 'Current production methods and actual SDK native action callbacks. Acquisition, native layout and platform IO are finite ports. No device action.' }));

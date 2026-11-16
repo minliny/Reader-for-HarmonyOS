@@ -359,6 +359,7 @@ export struct ReaderDirectoryStructureFixture {
   }
 
   private controlLayout(): ReaderControlLayoutSnapshot {
+    this.windowMetricsRevision;
     const metrics = readerWindowMetrics();
     return resolveReaderControlLayout(this.actualWidth, this.actualHeight, false, metrics);
   }

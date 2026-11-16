@@ -1,12 +1,22 @@
 # Reader HarmonyOS UI 框架实施方案
 
-## 2026-11-16 第十八轮发现与修复批次复核
+## 2026-11-16 第十九轮同因缺口修复与错误判据撤回
+
+第十九轮完成 472／472 当前 UI 合同、95 个历史问题、20 个路由、4 个 manifest 页面根及 21 项登记的独立审阅。全局结论 FAIL，连续通过为 0。全量追到 80 个相关生产文件、242 处全局窗口指标读取，确认 UIF-96 的 15 个源文件、20 组原生消费者缺少有效本地 revision 依赖。15 个文件已集中修复，覆盖公共 Select／RSS 输入、书架、导入、搜索、换源、阅读正文与胶囊、目录、启动恢复及诊断夹具。[完整审查与问题记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-19-findings.json)
+
+UIF-94 原判据已撤回。第十八轮只读 Slider enum 说明，以单独 Click 注入推导普通点击漏提交，遗漏同一本机 SDK slider.d.ts 1010–1015 的完整 onChange 说明。手势点击包含 Begin 与 End，因此该注入不能成立原问题。两个新增的 End／Click 条件已恢复为 End，准确测试改为完整点击和拖动序列，并分别计数派发及原 coordinator／seek 提交。原第十八轮失败、通过和构建记录保留历史归属。[判据纠正及回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round19-slider-terminals-01.log)
+
+42 个准确 SDK observer 场景通过，逐项检查同节点的最终尺寸、安全区、阴影或同 child-id 的 Prop 回执，包含去除新增依赖的负对照。LRE 场景接入真实 StorageLink／Watch，覆盖 body key 相同的前后指标、保留的 frozen／settlement 布局和原输入代次。其余场景使用明确的本地 SDK property 投递边界。原生渲染、平台输入生成、完整 settlement join 与用户验收继续沿原证据层记录。17 个生产源的独立定向复核通过，当前完整 ArkTS 编译待本批固定输入后执行。[定向源码复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round19-repair-source-review.json) [本批修复记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round19-repair-summary.json)
+
+登记保留 19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环为 0／21。受影响当前源码指纹已同步，检查仍为 37 项原诊断、0 源码漂移、0 引用错误。VM 禁令有效，当前连续完整全局通过为 0。
+
+## 2026-11-16 第十八轮发现与修复批次复核历史记录
 
 第十八轮冻结 66217fe2，完成 472 个当前 UI 合同、92 个历史问题、20 个路由、4 个 manifest 页面根及 21 项登记复核。起止 1,770 项审阅输入、642 项生产输入与另 16 项登记引用均无漂移，结论 FAIL，确认 UIF-93、UIF-94、UIF-95，连续通过为 0。[完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-18.json)
 
-三项当前已修复并通过六个准确 case。书架多选的原生操作和行无障碍谓词先读取本地前景，原后台 ready 回执继续由原 owner 接纳。自动翻页速度和漫画页码的两个 Slider 同时处理 End／Click 终态，前者清理预览并提交实际 coordinator，后者进入原 seek／restore 归属。阅读内目录先求既有 currentInputEnabled，登记本地 interactionEnabled 依赖后沿原显式临时编辑判据返回，稳定 Full 父容器能恢复 enabled、AX 和 hitTest，已接纳编辑跨 minimum reflow 的合同通过准确回归。[修复及回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round18-repair-summary.json)
+第十八轮当时记录三项修复与六个准确 case，其中 UIF-94 已在第十九轮撤回并纠正。书架多选的原生操作和行无障碍谓词先读取本地前景，原后台 ready 回执继续由原 owner 接纳。该批当时增加的两个 Slider Click 提交条件已撤销，完整点击与拖动序列现在由 End 向原 coordinator／seek 归属提交。阅读内目录先求既有 currentInputEnabled，登记本地 interactionEnabled 依赖后沿原显式临时编辑判据返回，稳定 Full 父容器能恢复 enabled、AX 和 hitTest，已接纳编辑跨 minimum reflow 的合同通过准确回归。[修复及回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round18-repair-summary.json)
 
-前几轮的问题在于文件审读覆盖没有充分落实到同类状态转换，首次拒绝检查遗漏同一控件恢复，Slider 检查遗漏平台 Click 终态，过早的独立轮次增加了重复成本。第十四、十五轮还曾在首次发现后结束不完整审查，原记录保留。本批在开始新的三轮独立审计前，复用第十八轮已读合同，对 21 个输入 port 和全部 6 个原生 Slider 按实际入口、状态转换、最终属性、业务回调与回执归属集中核对。该批次复核的全局连续通过增量为 0。
+前几轮的问题在于文件审读覆盖没有充分落实到同类状态转换，首次拒绝检查遗漏同一控件恢复，Slider 检查采用了遗漏完整平台序列的单事件判据，过早的独立轮次增加了重复成本。第十四、十五轮还曾在首次发现后结束不完整审查，原记录保留。本批在开始新的三轮独立审计前，复用第十八轮已读合同，对 21 个输入 port 和全部 6 个原生 Slider 按实际入口、状态转换、最终属性、业务回调与回执归属集中核对。该批次复核的全局连续通过增量为 0。
 
 本批 21 个输入入口及全部 6 个原生 Slider 已完成接线核对，部分与未审均为 0，新增同因发现为 0。本批次核对的全局连续通过增量为 0。规范完整 ArkTS 编译及指定证书签名一次通过，候选为 0.2.0.DEV.49dd940b7673，run 为 20261116T031524Z-55bf1497-c041f0cd，642 个生产 ETS／TS 字节与不可变产物清单一致。[27 项接线核对](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round18-repair-contract-matrix.json)五个修改脚本语法通过，13 项目录登记指纹已同步，当前仍为 37 项原诊断、0 源码漂移、0 引用错误。原生登记为 19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环为 0／21，VM 禁令有效。
 

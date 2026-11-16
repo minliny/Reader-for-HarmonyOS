@@ -191,6 +191,7 @@ export struct BookshelfShell {
   private moreSheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }
 
   private moreSheetWidth(): number {
+    this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
       new SurfaceWidthSpec(this.moreSheetSpec().maxWidth)).width;

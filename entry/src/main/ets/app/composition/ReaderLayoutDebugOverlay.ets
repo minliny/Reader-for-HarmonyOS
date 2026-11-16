@@ -191,10 +191,12 @@ export struct ReaderLayoutDebugOverlay {
   }
 
   private statusTop(): number {
+    this.metricsRevision;
     return Math.max(0, ReaderWindowCoordinator.metrics().statusBarRect.top);
   }
 
   private statusHeight(): number {
+    this.metricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(0, metrics.statusBarRect.height, metrics.statusBarHeight);
   }

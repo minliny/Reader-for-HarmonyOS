@@ -632,7 +632,10 @@ export struct SourceSwitchWindow {
   private novelSafeRight(): number { return Math.max(0, this.safeRight() - Math.max(0, this.frameWidth() - this.drawerWidth()) / 2); }
   private narrowWindow(): boolean { return this.drawerWidth() - this.novelSafeLeft() - this.novelSafeRight() < SOURCE_SWITCH_VISUAL.narrowWidthThreshold; }
   private sideInset(): number { return this.narrowWindow() ? SOURCE_SWITCH_VISUAL.narrowSideInset : SOURCE_SWITCH_VISUAL.normalSideInset; }
-  private novelFontScale(): number { return sourceSwitchNovelScale(ReaderWindowCoordinator.metrics().systemFontScale); }
+  private novelFontScale(): number {
+    this.readerWindowMetricsRevision;
+    return sourceSwitchNovelScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
   private compactWindow(): boolean { return sourceSwitchNovelCompact(this.frameHeight()); }
   private scrollBook(): boolean { return this.flowChrome() || this.compactWindow() || this.novelFontScale() !== 1; }
   private flowChrome(): boolean {

@@ -249,6 +249,7 @@ export struct ReaderSelect {
   // Native fp measurement already includes system text scaling. Do not
   // multiply it by systemFontScale a second time.
   private resolvedWidth(): number {
+    this.readerWindowMetricsRevision;
     if (this.variant === 'default') {
       const context = this.getUIContext();
       const style = TYPE_SELECT_DEFAULT_VALUE;
@@ -309,6 +310,7 @@ export struct ReaderSelect {
   }
 
   private measuredValueHeight(fontSize: number, fontFamily: string, fontWeight: number, lineHeight: number | undefined): number {
+    this.readerWindowMetricsRevision;
     const options: MeasureOptions = { textContent: this.value || '字', fontSize, fontFamily, fontWeight };
     if (lineHeight !== undefined) options.lineHeight = `${lineHeight}fp`;
     const context = this.getUIContext();

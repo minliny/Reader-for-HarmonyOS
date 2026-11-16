@@ -9,6 +9,7 @@ import { readerAppColor } from '../ui/foundation/ReaderThemeRegistry';
 @Component
 struct ReaderStartupRecovery {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @State private state: ReaderStartupContentState = { phase: 'recovery-loading', reason: 'admission-pending', canRetry: false };
   @State private publication: number = 0;
   private owner: ReaderStartupContentOwner | undefined = undefined;
@@ -61,6 +62,7 @@ struct ReaderStartupRecovery {
   }
 
   private availableHeight(): number {
+    this.windowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(0, metrics.windowRect.height - metrics.systemInsets.top - metrics.systemInsets.bottom);
   }

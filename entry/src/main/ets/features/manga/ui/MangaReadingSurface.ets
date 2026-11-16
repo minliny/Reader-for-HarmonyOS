@@ -2492,7 +2492,7 @@ export struct MangaReadingSurface {
             .blockColor(this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor()).trackColor(this.lineColor())
             .enabled(this.opened && this.horizontalPageCount > 1)
             .onChange((value: number, mode: SliderChangeMode): void => {
-              if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) void this.seekPage(Math.round(value) - 1);
+              if (mode === SliderChangeMode.End) void this.seekPage(Math.round(value) - 1);
             });
           Row() {
             Text(this.opened ? `${this.pageOrdinal() + 1} / ${this.horizontalPageCount}` : '—')

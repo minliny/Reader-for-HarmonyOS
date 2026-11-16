@@ -601,6 +601,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private bottomInset(): number {
+    this.readerWindowMetricsRevision;
     return Math.max(12, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
   }
 }

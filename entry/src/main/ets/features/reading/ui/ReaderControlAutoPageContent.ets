@@ -897,7 +897,7 @@ export struct ReaderControlAutoPageContent {
           .onChange((value: number, mode: SliderChangeMode): void => {
             if (!this.fullInput()) { this.speedPreviewSeconds = -1; return; }
             this.speedPreviewSeconds = Math.round(value);
-            if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
+            if (mode === SliderChangeMode.End) {
               const committed = this.speedPreviewSeconds;
               this.speedPreviewSeconds = -1;
               this.onSpeedChange(committed);

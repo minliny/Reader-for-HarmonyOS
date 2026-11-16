@@ -70,6 +70,7 @@ export struct ReaderSearchFilterPanel {
   }
   private sheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('search-result-filter'); }
   private sheetWidth(): number {
+    this.metricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
       new SurfaceWidthSpec(this.sheetSpec().maxWidth)).width;
