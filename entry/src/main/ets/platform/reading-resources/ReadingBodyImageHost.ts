@@ -178,10 +178,12 @@ export class ReadingBodyImageHost {
     mangaPosition: number = 0, mangaPreview: boolean = false,
     priority: 'foreground' | 'chapter' | 'background' | 'download' = 'foreground'): Promise<ReadingBodyImagePayload> {
     const generation = this.resourceGeneration;
-    const current = (): boolean => generation === this.resourceGeneration && isCurrent?.() !== false;
+    const retention = this.mangaDisplay;
+    const reserve = this.mangaDisplayReserve;
+    const current = (): boolean => generation === this.resourceGeneration &&
+      retention === this.mangaDisplay && reserve === this.mangaDisplayReserve && isCurrent?.() !== false;
     this.assertCurrent(current);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
-    const retention = this.mangaDisplay;
     if (retention === undefined) throw new Error('MANGA_DISPLAY_UNAVAILABLE');
     const key = await retention.key(chapter, await this.sha256(bytes), mangaPosition, mangaPreview);
     const cached = await retention.lookup(key, chapter, current, (payload: ReadingBodyImagePayload): void => {
@@ -194,9 +196,12 @@ export class ReadingBodyImageHost {
       catch (error) { this.release(cached.fileUri); throw error; }
       return cached;
     }
+    // A cache miss can return after its Runtime has begun closing and the
+    // singleton has been rebound. Never enter the successor's reserve lane.
+    this.assertCurrent(current);
     // An unscaled small image reuses its bounded encoded original; a tile
     // packs at most the existing 1Mi-pixel output plus metadata overhead.
-    const reservation = await this.mangaDisplayReserve?.(chapter,
+    const reservation = await reserve?.(chapter,
       Math.max(MAX_READING_IMAGE_BYTES, MAX_MANGA_OUTPUT_BYTES) + 65536, priority);
     let payload: ReadingBodyImagePayload | undefined;
     try {

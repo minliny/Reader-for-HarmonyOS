@@ -76,7 +76,9 @@ export class ReaderAutoPageCoordinator {
   }
   pause(reason: ReaderAutoPagePauseReason): void {
     if (this.state.status !== 'running') return;
-    this.turnPending = false;
+    // A busy/preparing result has no page transaction to acknowledge yet.
+    // Keep its due intent across pause; an admitted transaction still keeps
+    // only its existing ACK, because it has no pending retry flag.
     this.capturePageRemaining(); this.captureSessionRemaining();
     if (this.sessionDuration() > 0 && this.remainingSessionSeconds <= 0) {
       this.stop(); return;
@@ -115,11 +117,14 @@ export class ReaderAutoPageCoordinator {
   }
   retryTurn(generation: number): void { this.publish(retryReaderAutoPageTurn(this.state, generation)); }
   pageCommitted(): void {
+    this.turnPending = false;
     if (this.state.awaitingPageCommit) this.publish(commitReaderAutoPageTurn(this.state, this.state.generation));
     if (this.state.status === 'running') this.armPageTimer(true);
   }
   resumePendingTurn(): void {
     if (!this.turnPending) return;
+    if (this.state.status === 'paused') return;
+    if (!this.host.active() || !this.host.ready()) return;
     if (!isReaderAutoPageTurnDue(this.state)) { this.turnPending = false; return; }
     if (!this.host.canResumeTurn()) return;
     this.requestTurn(this.state.generation);
@@ -135,7 +140,15 @@ export class ReaderAutoPageCoordinator {
   }
   armPageTimer(resetDeadline: boolean): void {
     this.clearPageTimer(false);
-    if (!this.host.active() || !this.host.ready() || this.state.status !== 'running' || this.state.awaitingPageCommit) return;
+    if (!this.host.active() || !this.host.ready() || this.state.status !== 'running') return;
+    if (this.turnPending) {
+      const beforeResume = this.pageTimerGeneration;
+      this.resumePendingTurn();
+      // No-animation prepared turns may commit synchronously and arm the
+      // next interval inside pageCommitted. That inner owner keeps its timer.
+      if (beforeResume !== this.pageTimerGeneration) return;
+    }
+    if (this.state.awaitingPageCommit) return;
     const now = this.host.now();
     if (resetDeadline || this.pageDeadline <= now) this.pageDeadline = now + this.state.remainingSeconds * 1000;
     const timerGeneration = this.pageTimerGeneration;

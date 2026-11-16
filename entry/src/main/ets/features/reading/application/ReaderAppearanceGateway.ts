@@ -1,10 +1,12 @@
 import { Font } from '@ohos.arkui.UIContext';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import { ReaderCustomFontHost } from '../../../app/ReaderCustomFontHost';
 import {
   type ReaderCustomFontDescriptor,
   type ReaderAppearanceSnapshot,
+  setReaderAppearanceCustomFont,
 } from './ReaderAppearanceState';
 import {
   ReaderAppearanceStore,
@@ -22,14 +24,24 @@ import {
 export class ReaderAppearanceGateway {
   private readonly store: ReaderAppearanceStore;
   private readonly customFontHost: ReaderCustomFontHost;
+  private readonly runtimeOwner: ReaderRuntimeOwner;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+    this.runtimeOwner = runtimeOwner;
     this.store = runtimeOwner.getAppearanceStore();
     this.customFontHost = new ReaderCustomFontHost(runtimeOwner.getUIAbilityContext());
   }
 
-  async importCustomFont(font: Font): Promise<ReaderCustomFontDescriptor | undefined> {
-    return this.customFontHost.selectAndRegister(font);
+  async importCustomFont(font: Font, guard?: ReaderAppearanceChangeGuard): Promise<ReaderAppearanceCommit | undefined> {
+    let commit: ReaderAppearanceCommit | undefined;
+    await this.customFontHost.selectAndRegister(font, async (descriptor: ReaderCustomFontDescriptor): Promise<void> => {
+      await ReaderThemeHost.prepareUserChange();
+      commit = await this.update((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
+        setReaderAppearanceCustomFont(current, descriptor), guard);
+    });
+    // A rejected import is not a durable replacement. Only update's saved
+    // replacement path can retire a previously persisted private font.
+    return commit;
   }
 
   async registerCustomFont(font: Font, snapshot: ReaderAppearanceSnapshot): Promise<boolean> {
@@ -68,12 +80,13 @@ export class ReaderAppearanceGateway {
     if (commit !== undefined && retired !== undefined) {
       const oldFont = retired;
       // Never delete a previously saved face before its replacement is durable.
-      // A later change can select it again while the write is queued, so read
-      // the shared store once all pending appearance writes have settled.
+      // A later change can select it again while the write is queued. The
+      // file owner rechecks the live shared choice inside its mutation lane.
       void commit.saved.then(async (): Promise<void> => {
         try {
           await this.store.flush();
-          await this.customFontHost.retireUnusedFont(oldFont, this.store.current().customFont);
+          await this.customFontHost.retireUnusedFont(oldFont, (): boolean =>
+            ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && this.store.current().customFont?.filePath !== oldFont.filePath);
         } catch (error) {
           hilog.warn(0x5244, 'Reader', 'Unused font cleanup deferred: %{private}s', `${error}`);
         }

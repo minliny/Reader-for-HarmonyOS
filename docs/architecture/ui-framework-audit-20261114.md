@@ -1,5 +1,32 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-16 三轮只审计后的八项集中修复
+
+用户已明确恢复代码修复，VM 继续禁用。第24／25／26轮原始审计与三轮对比保持原样，本批集中修复其中7项行为缺陷和1项SDK约束违例，修改12个生产文件。当前结论为“本批定向代码、测试及编译通过”；修后完整全局审计尚未启动，连续全局PASS仍为0。[post-audit-repair-summary.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/post-audit-repair-summary.json)
+
+| 问题 | 当前代码处理 | 准确回归 |
+| --- | --- | --- |
+| 漫画 Runtime 换代等待环 | At load admission capture retention and reserve, include both in current predicate and recheck actual cache miss before reserve. | `runtime-retirement-reserve` PASS |
+| 字体 A/B/A 文件清理竞争 | Static file lane covers final file/native check/admission and retirement; cleanup after durable replacement rechecks live Store+Runtime and preserves rejected import assets. | `font-handoff` PASS |
+| 书架分组动作捕获旧 DTO | Retained Grid/List action resolves current compound-key DTO before sheet admission, preserving render density/key. | `bookshelf-current-group` PASS |
+| 漫画原图清理漏传保存的 TTL | One saved-policy cutoff reaches candidates and claims; unclaimed old TTL rejected, policy/scope changes cannot be swallowed by old coalesced task. | `configured-expiry-policy` PASS |
+| 自动翻页待派发意图在暂停后失联 | Keep pending intent until actual dispatch; pause/active/ready guards, actual ACK isolation, control-close and own Window lock release wake current intent. | `autopage-paused-pending` PASS |
+| JSON 弹层取消后书源控件未恢复 | Propagate scalar inputEnabled from normal root through Surface to Page native eligibility, retaining live callback rejection. | `source-modal-observer` PASS |
+| 下载同 Host 换代丢进度续行 | Old inflight completion releases lane and schedules only currently bound continuation; retired generation result still rejected. | `download-progress-handoff` PASS |
+| LazyForEach 同实例混用通知 API | Arbitrary reorder/key changes use onDatasetChange RELOAD, matching existing ADD/DELETE batch API; legacy fixtures adapted. | `bookshelf-batch-notify` PASS |
+
+12个选定本地case均PASS，包括窗口设置成功／失败／后继generation与偏好回执、控制层关闭、真实分页ACK，以及字体大小／失败清理边界和保留书架行的批通知。Source运行实际SDK属性链，Root／Surface表达式经明确的Prop投递接入；Download运行完整Host，书架运行Page／Sheet／DataSource，资源运行真实Runtime公有生命周期／start／requestDirect和Body／Retention／Disk。Core响应、native open、解码与显示文件创建等有限端口的覆盖边界逐项写在执行前清单；这些结果没有建立原生渲染或实际Core二进制验收。[post-audit-repair-regression-results.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/post-audit-repair-regression-results.json) [post-audit-repair-regression-plan.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/post-audit-repair-regression-plan.json)
+
+三组生产源码与三组测试定义的独立定向review通过。修复草稿中曾出现的字体过早清理分支已移除，Window解除等待后缺少唤醒的分支已补齐；两份源码FAIL与一份测试定义FAIL原件保留。测试初次顺序断言、清除字体入口、owner名称、资源扫描次数及前置batch端口错误的失败日志均保留；后续只修正相应fixture／断言并点名必要case，不改写失败记录。[post-audit-repair-font-auto-source-review-03.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/post-audit-repair-font-auto-source-review-03.json) [test-review-font-auto-02.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/test-review-font-auto-02.json) [test-review-resources-01.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/test-review-resources-01.json) [test-review-surfaces-compatibility-02.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/test-review-surfaces-compatibility-02.json)
+
+本地候选为 **0.2.0.DEV.1731de8c7730**，run `20261116T121335Z-64e0272c-659f5212`。完整非增量ArkTS编译、HAP配套输入和指定minliny_HarmonyOS签名校验PASS，642个生产ETS／TS与不可变快照匹配，漂移0。构建基于64e0272c的dirty快照，Core仍为c0781263且clean；后续文档及登记更新不改变生产包字节。首次沙箱降优先级限制在编译前失败，保留回执后沿同一资源规则执行成功；构建contracts为none，全量NOT_RUN，未安装。[post-audit-repair-production-build-binding.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/post-audit-repair-production-build-binding.json)
+
+正式登记仅更新50个SHA字段、涉及6个当前生产路径。21项登记的全部layers／invariants事实逐项不变，仍为19 PASS／27 FAIL／290 NOT_RUN，整页原生0／21；37项原诊断保持、引用错误0、源码漂移0。[post-audit-repair-registration-checks.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/post-audit-repair-registration-checks.json)
+
+保留的四个候选仍未达到确认缺陷的证据条件：①换源普通行只有在真实系统字号低于0.88时才出现源码算术小于44vp，需要真实正常输入与有效原生命中；②More下载的正常ready页面缺远端session已有源码链，剩余为退休边界上的原生首次回调与首次实际效果；③下载范围输入仍缺原生post-change、资格变化和保留buffer的准确先后；④TTS同值语速与旧回滚只剩尚未建立的正常predispatch失败链，已dispatch失败的pendingReconciliation分支会跳过回滚。这四项不计已确认缺陷，也不需要用户替代码作决定。原独立整页视觉、连续绘制G05、历史Tab同期证据G10与当前原生层条件继续保留。[round-26-final-findings.json](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-26-final-findings.json)
+
+本批VM／HDC／设备／CUA动作均为0。定向review不计第27轮或连续全局PASS。原全应用目标与最终Figma／性能专项审计的完成前提仍未满足。
+
 ## 2026-11-16 第二十三轮完整审计与本批集中修复
 
 第23轮在47d8b98f完成全部642个生产ETS／TS文件、183884行的当前全文语义审阅，partial／unreviewed／遗漏／重复均为0；1776个审阅输入、16个额外登记引用和49个嵌套owner引用起止同字节。105个历史canonical ID、原5项＋2项条件风险、20路由、4页面根和21项登记336层完成对账。冻结结果仍为FAIL，重开UIF-70／72／105，未新增ID。该完整阅读属于修复前输入，不冒称本批新代码已经通过新的全局审查。[完整R23结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-23-summary.json) [正式释放](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-23-release.json)

@@ -270,7 +270,7 @@ if (selected.length) {
     const bookshelfViewCoverDelayMs = new Function('BOOKSHELF_VIEW_MOTION',
       stripTypeScriptTypes(delay.getText(tree)).replace(/^export /, '') + ';return bookshelfViewCoverDelayMs;')(BOOKSHELF_VIEW_MOTION);
     const { BookshelfRowDataSource } = selectedProductionClasses(new URL(shelfPath, root), ['BookshelfRowDataSource'],
-      { DataOperationType: { ADD: 'ADD', DELETE: 'DELETE' } });
+      { DataOperationType: { ADD: 'ADD', DELETE: 'DELETE', RELOAD: 'RELOAD' } });
     const methods = ['bookshelfList', 'projectionRow', 'projectionBookCard', 'projectionBookCover', 'projectionBookCoverLayer',
       'projectionListProgress', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
       'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
@@ -303,7 +303,7 @@ if (selected.length) {
     const cover = controls.nodes(owner).find(node => node.id === 'cover:current');
     assert.ok(card && cover); const before = card.width, ids = [...owner.nodes.keys()];
     let notifiedPosition;
-    data.registerDataChangeListener({ onDataReloaded() { notifiedPosition = currentPosition?.(); } });
+    data.registerDataChangeListener({ onDataReloaded() { assert.fail('mixed legacy reload'); }, onDatasetChange(ops) { assert.deepEqual(ops,[{type:'RELOAD'}]); notifiedPosition = currentPosition?.(); } });
     data.replace([other, row]); owner.replay(); controls.properties.flush();
     assert.equal(owner.bookRowRenderKey(row, 1), initialKey, 'current row key intentionally excludes its moved position');
     const expected = owner.projectionBookWidth(false, 3);

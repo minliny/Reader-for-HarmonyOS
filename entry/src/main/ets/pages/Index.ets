@@ -1258,6 +1258,8 @@ struct Index {
     SourceJourneySurface({
       presentation: this.sourceJourney, identity, showingTools, expandedLayout: this.expandedLayout(),
       reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+      inputEnabled: this.searchAppForeground && !this.arkWebCapturesInput &&
+        this.jsonImportPresentation.opening === undefined,
       isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
         this.jsonImportPresentation.opening === undefined,
       onBack: (): void => { this.onBackPress(); },

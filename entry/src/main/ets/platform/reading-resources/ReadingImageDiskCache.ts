@@ -60,7 +60,7 @@ export interface MangaStorageAuthority {
   policy?(chapter: MangaStorageChapter): Promise<MangaStoragePolicy>;
   /** Optional ordered policy snapshot for expiry/maintenance passes. */
   policyBatch?(chapters: MangaStorageChapter[]): Promise<MangaStoragePolicy[]>;
-  candidates(reason: MangaStorageReason, scope?: MangaStorageScope): Promise<MangaStorageChapter[]>;
+  candidates(reason: MangaStorageReason, scope?: MangaStorageScope, expiry?: MangaExpiryGuard): Promise<MangaStorageChapter[]>;
   claim(chapter: MangaStorageChapter, expiry?: MangaExpiryGuard): Promise<MangaStorageGrant | undefined>;
   complete(grant: MangaStorageGrant, removed: boolean): Promise<void>;
   pending(): Promise<MangaStorageGrant[]>;
@@ -197,6 +197,8 @@ export class ReadingImageDiskCache {
   private mangaExternal: MangaExternalStorage | undefined;
   private mangaPolicyTail: Promise<void> = Promise.resolve();
   private mangaExpiryTask: Promise<void> | undefined;
+  private mangaExpiryTaskTtlSeconds: number | undefined;
+  private mangaExpiryTaskScope: string = '';
   /** User-selected limits are bounded by the volume-aware safety budget. */
   private configuredCacheLimitBytes: number | undefined;
   private configuredCleanupTtlSeconds: number | undefined;
@@ -337,7 +339,7 @@ export class ReadingImageDiskCache {
     } };
   }
 
-  /** Core owns the seven-day read clock and the LRU candidate order. */
+  /** Core owns the read clock and LRU order; the saved policy supplies TTL. */
   async maintainMangaStorage(reason: MangaStorageReason = 'expiry', scope?: MangaStorageScope): Promise<void> {
     if (reason === 'expiry') { await this.maintainMangaExpiry(scope); return; }
     await this.enqueueMangaPolicy(async (): Promise<void> => {
@@ -356,20 +358,43 @@ export class ReadingImageDiskCache {
    * foreground budget lane across that wait or a whole historical cleanup.
    * One chapter transaction at a time retains the original exact grant fences. */
   private async maintainMangaExpiry(scope?: MangaStorageScope): Promise<void> {
-    if (this.mangaExpiryTask !== undefined) { await this.mangaExpiryTask; return; }
-    const task = this.runMangaExpiry(scope);
-    this.mangaExpiryTask = task;
-    const finish = (): void => { if (this.mangaExpiryTask === task) this.mangaExpiryTask = undefined; };
-    void task.then(finish, finish);
-    await task;
+    await this.loadStoragePolicy();
+    const requestedScope = scope === undefined ? '' : JSON.stringify([scope.sourceId, scope.bookId]);
+    while (!this.closed) {
+      const ttlSeconds = this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS;
+      const previous = this.mangaExpiryTask;
+      if (previous !== undefined) {
+        const previousTtl = this.mangaExpiryTaskTtlSeconds;
+        const previousScope = this.mangaExpiryTaskScope;
+        await previous;
+        // A pass for an old policy or one book cannot satisfy a newly saved
+        // global policy. Coalesce only work that actually covers this request.
+        if (previousTtl === (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS) &&
+          (previousScope.length === 0 || previousScope === requestedScope)) return;
+        continue;
+      }
+      const task = this.runMangaExpiry(scope, ttlSeconds);
+      this.mangaExpiryTask = task;
+      this.mangaExpiryTaskTtlSeconds = ttlSeconds;
+      this.mangaExpiryTaskScope = requestedScope;
+      const finish = (): void => {
+        if (this.mangaExpiryTask !== task) return;
+        this.mangaExpiryTask = undefined;
+        this.mangaExpiryTaskTtlSeconds = undefined;
+        this.mangaExpiryTaskScope = '';
+      };
+      void task.then(finish, finish);
+      await task;
+      if (ttlSeconds === (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS)) return;
+    }
   }
 
-  private async runMangaExpiry(scope?: MangaStorageScope): Promise<void> {
-    await this.loadStoragePolicy();
+  private async runMangaExpiry(scope: MangaStorageScope | undefined, ttlSeconds: number): Promise<void> {
     await this.mangaAuthorityReady;
     const epoch = this.mangaStorageEpoch;
     const ready = await this.enqueueMangaPolicy(async (): Promise<boolean> => {
-      if (this.closed || this.mangaRestoreRequests > 0 || epoch !== this.mangaStorageEpoch) return false;
+      if (this.closed || this.mangaRestoreRequests > 0 || epoch !== this.mangaStorageEpoch ||
+        ttlSeconds !== (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS)) return false;
       if (this.mangaRestoreBlocked) {
         const pending = await this.mangaAuthority?.pending() ?? [];
         this.mangaEvicting.clear();
@@ -379,9 +404,10 @@ export class ReadingImageDiskCache {
       const elapsed = Date.now() - this.mangaLastForegroundCheck;
       return this.mangaLastForegroundCheck === 0 || elapsed < 0 || elapsed >= MANGA_FOREGROUND_CHECK_MS;
     });
-    if (!ready) return;
+    if (!ready || ttlSeconds !== (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS)) return;
     await this.evictMangaCandidates('expiry', scope, undefined, true);
-    if (!this.closed && epoch === this.mangaStorageEpoch && this.mangaRestoreRequests === 0)
+    if (scope === undefined && !this.closed && epoch === this.mangaStorageEpoch && this.mangaRestoreRequests === 0 &&
+      ttlSeconds === (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS))
       this.mangaLastForegroundCheck = Date.now();
   }
 
@@ -1049,7 +1075,13 @@ export class ReadingImageDiskCache {
     const hasCapacity = enough ?? (reason === 'capacity' ?
       (): Promise<boolean> => this.mangaMaintenanceHasCapacity() : undefined);
     const epoch = this.mangaStorageEpoch;
-    const current = (): boolean => !this.closed && epoch === this.mangaStorageEpoch && this.mangaRestoreRequests === 0 && !this.mangaRestoreBlocked;
+    const expiry: MangaExpiryGuard | undefined = reason === 'expiry' ? {
+      nowSeconds: Math.floor(Date.now() / 1000),
+      ttlSeconds: this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS,
+    } : undefined;
+    const current = (): boolean => !this.closed && epoch === this.mangaStorageEpoch &&
+      this.mangaRestoreRequests === 0 && !this.mangaRestoreBlocked &&
+      (expiry === undefined || expiry.ttlSeconds === (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS));
     const pending = await authority.pending();
     for (const grant of pending) {
       if (!current()) return;
@@ -1063,7 +1095,7 @@ export class ReadingImageDiskCache {
       if (batched) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
     }
     if (hasCapacity !== undefined && await hasCapacity()) return;
-    const candidates = await authority.candidates(reason, scope);
+    const candidates = await authority.candidates(reason, scope, expiry);
     const classSnapshot = new Map(candidates.map((candidate, index) => [this.mangaChapterKey(candidate), index]));
     const policySnapshot = candidates.length > 0 && reason === 'expiry' && authority.policyBatch !== undefined ?
       await this.mangaAuthorityPolicySnapshot(candidates) : undefined;
@@ -1080,8 +1112,6 @@ export class ReadingImageDiskCache {
         const index = classSnapshot?.get(key);
         const classification = classes === undefined || index === undefined ? await authority.classify(candidate) : classes[index];
         if (classification !== 'cache') return;
-        const expiry: MangaExpiryGuard | undefined = reason === 'expiry' ?
-          { nowSeconds: Math.floor(Date.now() / 1000), ttlSeconds: MANGA_READ_TTL_SECONDS } : undefined;
         if (expiry !== undefined && (policySnapshot !== undefined || authority.policy !== undefined)) {
           const policy = policySnapshot === undefined || index === undefined ? await authority.policy!(candidate) : policySnapshot[index];
           if (policy.status !== 'cache' || policy.inUse !== false || (policy.lastReadAt !== null &&

@@ -44,7 +44,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "sha256": "2155ad97cf112432b25b2e04c6971ee274b6f177c4a1538508cc4f0a3765c49a"
+        "sha256": "1428a52ec7ea80aef9dd4f4f20574cddfbba8b2e1b4b143349ddfa5773e6f1ea"
       },
       "layers": {
         "route": {
@@ -1106,7 +1106,7 @@
       "sourceInputs": [
         {
           "path": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
-          "sha256": "b6c2b1ca020be18b019219366df942597f69093e1f19cfd237f9dace3417d445",
+          "sha256": "c11396ba4010c5b9f38aa310276bdcc494aa228d9d70cefdc302a5f5d9d3de9f",
           "symbol": "managementPage"
         },
         {
@@ -1146,7 +1146,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "2155ad97cf112432b25b2e04c6971ee274b6f177c4a1538508cc4f0a3765c49a"
+          "sha256": "1428a52ec7ea80aef9dd4f4f20574cddfbba8b2e1b4b143349ddfa5773e6f1ea"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
@@ -2692,7 +2692,7 @@
       "sourceInputs": [
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+          "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
           "symbol": "externalDirectory"
         },
         {
@@ -2717,7 +2717,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+          "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
           "symbol": "requestCatalogForTurn"
         },
         {
@@ -4218,7 +4218,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -4243,7 +4243,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -5861,7 +5861,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -5886,7 +5886,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -7510,7 +7510,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -7535,7 +7535,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -9174,7 +9174,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -9199,7 +9199,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -10707,7 +10707,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -10732,7 +10732,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12131,7 +12131,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -12156,7 +12156,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -13712,7 +13712,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -13737,7 +13737,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15181,7 +15181,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -15206,7 +15206,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -16706,7 +16706,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -16731,7 +16731,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18130,7 +18130,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -18155,7 +18155,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -19785,7 +19785,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -19810,7 +19810,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -21439,7 +21439,7 @@
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896",
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333",
                 "symbol": "externalDirectory"
               },
               {
@@ -21464,7 +21464,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "43982119425adfbe16bbe64c3a2fed3a681765e3163d32d50e655a5a5f9f3eca",
+                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -22169,7 +22169,7 @@
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
-          "sha256": "d936c589678256f58ebe7f0d125b5e1e0ff5cedc3346bc1ef7601a3c7e0e58a0"
+          "sha256": "606cd4cc9e2ae5ed9c1403ddaa1503f3737c48365b26325d327795758ec2b153"
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadCoordinator.ts",
@@ -22193,11 +22193,11 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896"
+          "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333"
         },
         {
           "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
-          "sha256": "f1986bb25ed804b5806482137f30ad1c12d5f7cda641c4e02bd97e89b27f01fd"
+          "sha256": "ce418f01c5e1cd817f289ab902d6c35c56fb6486dcfaa141bb1212e210fdc8fb"
         },
         {
           "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts",
@@ -23604,7 +23604,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
-                "sha256": "d936c589678256f58ebe7f0d125b5e1e0ff5cedc3346bc1ef7601a3c7e0e58a0"
+                "sha256": "606cd4cc9e2ae5ed9c1403ddaa1503f3737c48365b26325d327795758ec2b153"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadCoordinator.ts",
@@ -23628,11 +23628,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896"
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
-                "sha256": "f1986bb25ed804b5806482137f30ad1c12d5f7cda641c4e02bd97e89b27f01fd"
+                "sha256": "ce418f01c5e1cd817f289ab902d6c35c56fb6486dcfaa141bb1212e210fdc8fb"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts",
@@ -25028,7 +25028,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
-                "sha256": "d936c589678256f58ebe7f0d125b5e1e0ff5cedc3346bc1ef7601a3c7e0e58a0"
+                "sha256": "606cd4cc9e2ae5ed9c1403ddaa1503f3737c48365b26325d327795758ec2b153"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadCoordinator.ts",
@@ -25052,11 +25052,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896"
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
-                "sha256": "f1986bb25ed804b5806482137f30ad1c12d5f7cda641c4e02bd97e89b27f01fd"
+                "sha256": "ce418f01c5e1cd817f289ab902d6c35c56fb6486dcfaa141bb1212e210fdc8fb"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts",
@@ -26452,7 +26452,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
-                "sha256": "d936c589678256f58ebe7f0d125b5e1e0ff5cedc3346bc1ef7601a3c7e0e58a0"
+                "sha256": "606cd4cc9e2ae5ed9c1403ddaa1503f3737c48365b26325d327795758ec2b153"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadCoordinator.ts",
@@ -26476,11 +26476,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896"
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
-                "sha256": "f1986bb25ed804b5806482137f30ad1c12d5f7cda641c4e02bd97e89b27f01fd"
+                "sha256": "ce418f01c5e1cd817f289ab902d6c35c56fb6486dcfaa141bb1212e210fdc8fb"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts",
@@ -27832,7 +27832,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
-                "sha256": "d936c589678256f58ebe7f0d125b5e1e0ff5cedc3346bc1ef7601a3c7e0e58a0"
+                "sha256": "606cd4cc9e2ae5ed9c1403ddaa1503f3737c48365b26325d327795758ec2b153"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadCoordinator.ts",
@@ -27856,11 +27856,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896"
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
-                "sha256": "f1986bb25ed804b5806482137f30ad1c12d5f7cda641c4e02bd97e89b27f01fd"
+                "sha256": "ce418f01c5e1cd817f289ab902d6c35c56fb6486dcfaa141bb1212e210fdc8fb"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts",
@@ -29212,7 +29212,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
-                "sha256": "d936c589678256f58ebe7f0d125b5e1e0ff5cedc3346bc1ef7601a3c7e0e58a0"
+                "sha256": "606cd4cc9e2ae5ed9c1403ddaa1503f3737c48365b26325d327795758ec2b153"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadCoordinator.ts",
@@ -29236,11 +29236,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/Index.ets",
-                "sha256": "28b5b3e092278581e722f7030275f082dabf773818c0dacf9d6c73d4a4cc4896"
+                "sha256": "8fb18669e47eae7414f0dea412503525ed5058ffc49ad753367af013cfa2d333"
               },
               {
                 "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
-                "sha256": "f1986bb25ed804b5806482137f30ad1c12d5f7cda641c4e02bd97e89b27f01fd"
+                "sha256": "ce418f01c5e1cd817f289ab902d6c35c56fb6486dcfaa141bb1212e210fdc8fb"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts",
@@ -31722,7 +31722,7 @@
         {
           "path": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
           "symbol": "toolsPage",
-          "sha256": "b6c2b1ca020be18b019219366df942597f69093e1f19cfd237f9dace3417d445"
+          "sha256": "c11396ba4010c5b9f38aa310276bdcc494aa228d9d70cefdc302a5f5d9d3de9f"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceGateway.ts",
@@ -31732,7 +31732,7 @@
         {
           "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
           "symbol": "saveBookSourceJson",
-          "sha256": "f1986bb25ed804b5806482137f30ad1c12d5f7cda641c4e02bd97e89b27f01fd"
+          "sha256": "ce418f01c5e1cd817f289ab902d6c35c56fb6486dcfaa141bb1212e210fdc8fb"
         },
         {
           "path": "entry/src/main/ets/app/ReaderHostRegistry.ts",
@@ -31874,7 +31874,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "2155ad97cf112432b25b2e04c6971ee274b6f177c4a1538508cc4f0a3765c49a"
+          "sha256": "1428a52ec7ea80aef9dd4f4f20574cddfbba8b2e1b4b143349ddfa5773e6f1ea"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",

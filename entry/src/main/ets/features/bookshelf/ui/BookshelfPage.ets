@@ -174,7 +174,7 @@ class BookshelfRowDataSource implements IDataSource {
       else if (samePrefix && keys.length < previous.length) listener.onDatasetChange([{
         type: DataOperationType.DELETE, index: keys.length, count: previous.length - keys.length,
       }]);
-      else listener.onDataReloaded();
+      else listener.onDatasetChange([{ type: DataOperationType.RELOAD }]);
     }
   }
 }
@@ -1700,8 +1700,17 @@ export struct BookshelfPage {
 
   private bookActionPresentationHandler(book: ShelfBook, listMore: boolean): () => void {
     const navigation = this.navigationGeneration;
+    const sourceId = book.sourceId;
+    const bookId = book.bookId;
     const focusTarget = this.bookActionFocusKey(book, listMore);
-    return (): void => { if (this.isShelfPresentationCurrent(navigation)) this.presentBookActionSheet(book, focusTarget); };
+    return (): void => {
+      if (!this.isShelfPresentationCurrent(navigation)) return;
+      // Retained cards keep their visual identity across group-only refreshes.
+      // Resolve the action's current DTO instead of retaining its old group.
+      const current = this.books.find((candidate: ShelfBook): boolean =>
+        candidate.sourceId === sourceId && candidate.bookId === bookId);
+      if (current !== undefined) this.presentBookActionSheet(current, focusTarget);
+    };
   }
 
   private shelfPageHandler(previous: boolean): () => void {

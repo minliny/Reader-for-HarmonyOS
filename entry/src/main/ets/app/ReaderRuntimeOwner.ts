@@ -292,9 +292,10 @@ export class ReaderRuntimeOwner {
             inUse: data['inUse'] as boolean, lastReadAt: lastReadAt as number | null };
         });
       },
-      candidates: async (reason, scope) => {
-        const data = (await this.request('manga.cache.evict', { nowSeconds: Math.floor(Date.now() / 1000),
-          ttlSeconds: reason === 'expiry' ? 7 * 24 * 60 * 60 : 0 })).data;
+      candidates: async (reason, scope, expiry) => {
+        if (reason === 'expiry' && expiry === undefined) throw new Error('MANGA_CACHE_EXPIRY_POLICY_REQUIRED');
+        const data = (await this.request('manga.cache.evict', { nowSeconds: expiry?.nowSeconds ?? Math.floor(Date.now() / 1000),
+          ttlSeconds: reason === 'expiry' ? expiry!.ttlSeconds : 0 })).data;
         return (data['candidates'] as JsonObject[]).map(value => {
           const chapter = value['chapter'] as JsonObject;
           return { sourceId: chapter['sourceId'] as string, bookId: chapter['bookId'] as string,

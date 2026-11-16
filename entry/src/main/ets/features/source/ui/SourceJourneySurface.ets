@@ -11,6 +11,7 @@ export struct SourceJourneySurface {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @Prop expandedLayout: boolean = false;
   @Prop reduceMotion: boolean = false;
+  @Prop inputEnabled: boolean = true;
   presentation: SourceJourneyPresentation = new SourceJourneyPresentation();
   /** Captured by the opening's keyed root builder. Stale nodes keep the old lease. */
   identity: string = '';
@@ -39,7 +40,7 @@ export struct SourceJourneySurface {
   aboutToDisappear(): void { this.mounted = false; this.unsubscribe?.(); this.unsubscribe = undefined; }
 
   private managementInputIsCurrent(): boolean {
-    return this.mounted && (this.isInputAllowed?.() ?? true) && this.presentation.isManagementCurrent(this.identity);
+    return this.mounted && this.inputEnabled && (this.isInputAllowed?.() ?? true) && this.presentation.isManagementCurrent(this.identity);
   }
 
   private toolsInputIsCurrent(): boolean {
@@ -57,6 +58,7 @@ export struct SourceJourneySurface {
   @Builder
   private managementPage() {
     SourceManagementPage({
+      inputEnabled: this.inputEnabled,
       isOpeningCurrent: (): boolean => this.presentation.isManagementCurrent(this.identity),
       isInputAllowed: (): boolean => this.managementInputIsCurrent(),
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => {

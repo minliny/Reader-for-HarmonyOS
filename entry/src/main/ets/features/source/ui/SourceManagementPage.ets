@@ -117,6 +117,7 @@ export struct SourceManagementPage {
   @Prop initialViewState: SourceManagementViewState | undefined = undefined;
   @Prop expandedLayout: boolean;
   @Prop reduceMotion: boolean = false;
+  @Prop inputEnabled: boolean = true;
   @Prop @Watch('onMessageChanged') operation: SourceManagementProjection = { action: 'load', sourceId: '' };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
@@ -260,7 +261,7 @@ export struct SourceManagementPage {
   }
 
   private managementInputIsCurrent(): boolean {
-    return this.managementOpeningIsCurrent() && this.appForeground && this.isInputAllowed?.() !== false;
+    return this.inputEnabled && this.managementOpeningIsCurrent() && this.appForeground && this.isInputAllowed?.() !== false;
   }
 
   private toggleGroupSelection(): void {
@@ -1179,7 +1180,7 @@ export struct SourceManagementPage {
   }
 
   private sourceActionEnabled(): boolean {
-    return this.managementBackIsCurrent(this.temporaryBackIdentity) && this.isInputAllowed?.() !== false &&
+    return this.inputEnabled && this.managementBackIsCurrent(this.temporaryBackIdentity) && this.isInputAllowed?.() !== false &&
       !this.groupOpen && this.operation.original?.blocked !== true && this.operation.receipt?.receipt.confirmation !== 'unknown';
   }
 
@@ -1189,7 +1190,7 @@ export struct SourceManagementPage {
   }
 
   private sourceDetectEnabled(sourceId: string): boolean {
-    if (!this.managementBackIsCurrent(this.temporaryBackIdentity) || this.isInputAllowed?.() === false || this.groupOpen) return false;
+    if (!this.inputEnabled || !this.managementBackIsCurrent(this.temporaryBackIdentity) || this.isInputAllowed?.() === false || this.groupOpen) return false;
     const current = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === sourceId);
     // Diagnostic intent neither confirms nor replays an unresolved source write.
     return current !== undefined && current.checkState !== 'checking';

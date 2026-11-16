@@ -60,6 +60,7 @@ export class SharedDownloadHost {
   private progressTimer: ReturnType<typeof setTimeout> | undefined;
   private pendingBookKeys: Set<string> = new Set();
   private progressInFlight: boolean = false;
+  private progressCurrent: (() => boolean) | undefined;
   private readonly rowPositions: Map<string, number> = new Map();
   private readonly intentSignatures: Map<string, string> = new Map();
   private readonly statusIndex: Map<string, IndexedDownloadBook> | undefined;
@@ -80,6 +81,7 @@ export class SharedDownloadHost {
   }
 
   private stopProgress(): void {
+    this.progressCurrent = undefined;
     this.unsubscribeDownloadStatus?.(); this.unsubscribeDownloadStatus = undefined;
     this.unsubscribeDownloadIntents?.(); this.unsubscribeDownloadIntents = undefined;
     this.intentSignatures.clear();
@@ -436,6 +438,7 @@ export class SharedDownloadHost {
   }
 
   private bindProgress(current: () => boolean): void {
+    this.progressCurrent = current;
     this.unsubscribeDownloadStatus = this.owner.bookAcquisitions?.().subscribeDownloadStatus?.((change: BookAcquisitionChange): void => {
       if (!current()) return;
       if (change.reset) for (const book of this.snapshot.books) this.pendingBookKeys.add(book.key);
@@ -482,7 +485,11 @@ export class SharedDownloadHost {
         if (books !== undefined) this.update({ ...this.snapshot, books }, current);
       }).finally((): void => {
         this.progressInFlight = false;
-        if (current()) this.scheduleProgress(current);
+        // A same-Host reload may already own pending work. The retired read
+        // still releases its lane, but only the currently bound generation
+        // can schedule the successor projection.
+        const continuation = this.progressCurrent;
+        if (continuation !== undefined) this.scheduleProgress(continuation);
       });
     }, 100);
   }

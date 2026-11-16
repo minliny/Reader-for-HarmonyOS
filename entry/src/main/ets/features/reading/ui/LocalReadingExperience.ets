@@ -340,7 +340,6 @@ import {
   createDefaultReaderAppearanceSnapshot,
   readerAppearanceMetricRange,
   setReaderAppearanceAlignment,
-  setReaderAppearanceCustomFont,
   setReaderAppearanceDayTheme,
   setReaderAppearanceFont,
   setReaderAppearanceFontOrder,
@@ -9931,6 +9930,7 @@ export struct ReadingExperience {
           this.pageTurnRenderRevision += 1;
         }
         this.readerWindowPolicyPending = false;
+        this.resumePendingAutoPageTurn();
         // The native policy succeeded. Its durable snapshot is a separate
         // operation: missing Preferences ACK must not undo the actual policy.
         return this.persistReaderSettingsSnapshot(snapshot, current)
@@ -9957,7 +9957,10 @@ export struct ReadingExperience {
       }).finally((): void => {
         // Another preference can retire the settings admission while this
         // native request is pending. Only a newer window request owns the lock.
-        if (this.readerWindowPolicyGeneration === generation) this.readerWindowPolicyPending = false;
+        if (this.readerWindowPolicyGeneration === generation) {
+          this.readerWindowPolicyPending = false;
+          if (this.isSessionActive(lifecycleToken)) this.resumePendingAutoPageTurn();
+        }
       });
   }
 
@@ -10204,13 +10207,17 @@ export struct ReadingExperience {
     const generation = this.appearanceMutationGeneration >= Number.MAX_SAFE_INTEGER ?
       1 : this.appearanceMutationGeneration + 1;
     this.appearanceMutationGeneration = generation;
-    void this.appearanceGateway.importCustomFont(this.getUIContext().getFont())
-      .then((descriptor): void => {
-        if (!this.isSessionActive(lifecycleToken) || generation !== this.appearanceMutationGeneration ||
-          descriptor === undefined) {
-          return;
+    void this.appearanceGateway.importCustomFont(this.getUIContext().getFont(), (): boolean =>
+      this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration)
+      .then(async (commit: ReaderAppearanceCommit | undefined): Promise<void> => {
+        if (commit === undefined) return;
+        this.observeAppearanceSave(commit.saved, lifecycleToken);
+        const snapshot = this.appearanceGateway.current();
+        await prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot));
+        if (this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration) {
+          const latest = this.appearanceGateway.current();
+          if (this.sameAppearanceFont(snapshot, latest)) this.admitAppearanceSnapshot(latest);
         }
-        this.commitAppearanceChange((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot => setReaderAppearanceCustomFont(current, descriptor));
       })
       .catch((error: Error): void => {
         if (this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration) {
@@ -11216,7 +11223,10 @@ export struct ReadingExperience {
     this.quickSearchQuery = '';
     this.publishQuickSearchState({ kind: 'idle' });
     // Reading/TTS/auto-page/selection ownership is not reset by closing UI.
-    if (this.mounted && !this.exitRequested) this.drainPageTurnPreparationQueue();
+    if (this.mounted && !this.exitRequested) {
+      this.drainPageTurnPreparationQueue();
+      this.resumePendingAutoPageTurn();
+    }
   }
 
   private admitSessionControlClosing(closing: boolean): void {
