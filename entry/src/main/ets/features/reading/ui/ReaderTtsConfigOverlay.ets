@@ -48,6 +48,7 @@ export struct ReaderTtsConfigOverlay {
   @Prop engines: ReaderHttpTtsConfig[] = [];
   @Prop engine: string = 'system';
   @Prop @Watch('onIdentityChanged') selectionId: string = '';
+  inputCurrent?: () => boolean;
   onPreview: (id: string, identity: string) => Promise<void> = (): Promise<void> => Promise.resolve();
   onPreviewStop: (identity: string) => void = (_identity: string): void => {};
   @State private previewId: string = '';
@@ -452,21 +453,21 @@ export struct ReaderTtsConfigOverlay {
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         ReaderFormField({ specId: 'tts-manager-name', scheme: this.appThemeScheme, text: this.draftName, placeholder: '例如 Azure 语音',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 配置名称',
-          onTextChange: (value: string): void => { this.draftName = value; } });
+          onTextChange: (value: string): void => this.changeDraftText('name', value) });
       }.width('100%');
       Column({ space: 6 }) {
         Text('接口地址').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftUrl, placeholder: 'https://api.example.com/tts',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 请求 URL',
-          onTextChange: (value: string): void => { this.draftUrl = value; } });
+          onTextChange: (value: string): void => this.changeDraftText('url', value) });
       }.width('100%');
       Column({ space: 6 }) {
         Text('API 密钥').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftApiKey, placeholder: '填入访问密钥',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 访问密钥，不会显示或写入 Core', password: true,
-          onTextChange: (value: string): void => { this.draftApiKey = value; if (value.length > 0) this.draftClearApiKey = false; } });
+          onTextChange: (value: string): void => this.changeDraftText('apiKey', value) });
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text(this.draftClearApiKey ? '将清除已保存密钥' : '清除已保存密钥')
             .width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontWeight)
@@ -475,6 +476,7 @@ export struct ReaderTtsConfigOverlay {
         }.width('100%').constraintSize({ minHeight: 44 }).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
           .accessibilityText(this.draftClearApiKey ? '已选择清除已保存密钥' : '清除已保存密钥')
           .enabled(!this.busy).onClick((): void => {
+            if (!this.acceptsInput() || this.busy) return;
             this.draftClearApiKey = !this.draftClearApiKey;
             if (this.draftClearApiKey) this.draftApiKey = '';
           });
@@ -484,7 +486,7 @@ export struct ReaderTtsConfigOverlay {
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftVoice, placeholder: '例如 xiaoxiao',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 音色',
-          onTextChange: (value: string): void => { this.draftVoice = value; } });
+          onTextChange: (value: string): void => this.changeDraftText('voice', value) });
       }.width('100%');
       Column({ space: 6 }) {
         Text('音频格式').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
@@ -512,7 +514,19 @@ export struct ReaderTtsConfigOverlay {
   }
 
   private current(generation: number): boolean { return this.mounted && generation === this.generation; }
+  private acceptsInput(): boolean { return this.mounted && (this.inputCurrent?.() ?? true); }
   private setBusy(busy: boolean): void { this.busy = busy; this.onBusyChange(busy); }
+
+  private changeDraftText(field: 'name' | 'url' | 'apiKey' | 'voice', value: string): void {
+    if (!this.acceptsInput() || this.busy) return;
+    if (field === 'name') this.draftName = value;
+    else if (field === 'url') this.draftUrl = value;
+    else if (field === 'voice') this.draftVoice = value;
+    else {
+      this.draftApiKey = value;
+      if (value.length > 0) this.draftClearApiKey = false;
+    }
+  }
 
   private isSelected(engine: ReaderHttpTtsConfig): boolean {
     return this.engine === `http-tts:${engine.id}`;
@@ -544,7 +558,7 @@ export struct ReaderTtsConfigOverlay {
   }
 
   private submit(): void {
-    if (!this.mounted || !this.canSubmit() || this.busy) return;
+    if (!this.acceptsInput() || !this.canSubmit() || this.busy) return;
     const now = Date.now();
     const config: ReaderTtsConfigurationDraft = {
       id: this.draftId >= 0 ? this.draftId : now,
@@ -572,7 +586,7 @@ export struct ReaderTtsConfigOverlay {
   }
 
   private selectEngine(engine: string): void {
-    if (!this.mounted || this.busy) return;
+    if (!this.acceptsInput() || this.busy) return;
     const generation = ++this.generation;
     this.setBusy(true);
     this.errorText = '';
@@ -586,7 +600,7 @@ export struct ReaderTtsConfigOverlay {
   }
 
   private deleteEngine(id: number): void {
-    if (!this.mounted || this.busy) return;
+    if (!this.acceptsInput() || this.busy) return;
     const generation = ++this.generation;
     this.setBusy(true);
     this.errorText = '';
@@ -601,7 +615,7 @@ export struct ReaderTtsConfigOverlay {
   }
 
   private clearDraft(): void {
-    if (!this.mounted || this.busy) return;
+    if (!this.acceptsInput() || this.busy) return;
     this.resetDraft();
   }
 
@@ -627,6 +641,6 @@ export struct ReaderTtsConfigOverlay {
       .backgroundColor(this.draftFormat === format ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.control.paint.1A2F6373', this.appThemeScheme))
       .border({ width: .5, color: readerAppColor('app.border.readerConfig', this.appThemeScheme) }).borderRadius(9)
       .enabled(!this.busy).accessibilityText(`${label}${this.draftFormat === format ? '，已选择' : ''}`)
-      .onClick((): void => { this.draftFormat = format; });
+      .onClick((): void => { if (this.acceptsInput() && !this.busy) this.draftFormat = format; });
   }
 }

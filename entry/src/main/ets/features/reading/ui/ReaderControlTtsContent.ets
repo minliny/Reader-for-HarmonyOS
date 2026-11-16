@@ -196,6 +196,7 @@ export struct ReaderControlTtsContent {
   @Prop expandedLayout: boolean = false;
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
   inputCurrent?: () => boolean;
+  editorInputCurrent?: () => boolean;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
   @Prop @Watch('onMinimumIdentityChanged') minimumIdentity: string = '';
   @Prop @Watch('onPreparedMinimumChanged') minimumKey: string = '';
@@ -797,6 +798,10 @@ export struct ReaderControlTtsContent {
     return this.configField === 'manage' && identity === this.configIdentity;
   }
 
+  private managerInputEnabled(identity: string): boolean {
+    return this.managerCurrent(identity) && (this.editorInputCurrent?.() ?? this.currentInputEnabled());
+  }
+
   private scheduleConfigurationFocus(identity: string, generation: number, origin?: ReaderTtsConfigField | 'manage'): void {
     if (!this.configMounted || identity.length === 0) return;
     this.getUIContext().postFrameCallback(new ReaderTtsConfigurationFocusFrame((): void => {
@@ -851,11 +856,12 @@ export struct ReaderControlTtsContent {
       closeFocusId: `${this.configFocusId}:close`,
       recoveryView: this.configurationRecovery,
       listLoading: this.configurationLoading, listLoadFailed: this.configurationLoadFailed,
+      inputCurrent: (): boolean => this.managerInputEnabled(identity),
       onChoose: (id: string, selectedIdentity: string): Promise<void> => this.commitConfiguration(id, selectedIdentity),
       onPut: (config: ReaderTtsConfigurationDraft): Promise<void> =>
-        this.managerCurrent(identity) ? this.onHttpEnginePut(config) : Promise.resolve(),
+        this.managerInputEnabled(identity) ? this.onHttpEnginePut(config) : Promise.resolve(),
       onDelete: (id: number): Promise<void> =>
-        this.managerCurrent(identity) ? this.onHttpEngineDelete(id) : Promise.resolve(),
+        this.managerInputEnabled(identity) ? this.onHttpEngineDelete(id) : Promise.resolve(),
       onBusyChange: (busy: boolean): void => { if (this.managerCurrent(identity)) this.managerBusy = busy; },
       onClose: (selectedIdentity: string): void => {
         if (this.managerCurrent(selectedIdentity)) this.dismissConfiguration();

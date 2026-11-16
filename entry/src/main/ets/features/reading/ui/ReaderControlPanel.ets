@@ -1346,7 +1346,7 @@ export struct ReaderControlPanel {
     };
   }
 
-  private moduleEditorInputEnabled(module: 'search' | 'directory'): boolean {
+  private moduleEditorInputEnabled(module: 'search' | 'directory' | 'tts'): boolean {
     return this.contentLocation().module === module && this.contentInputEnabled() &&
       (this.minimumInputReady() || this.hasCurrentTemporaryInput());
   }
@@ -2260,6 +2260,7 @@ export struct ReaderControlPanel {
       availableHeight: this.contentMotionHeight,
       interactionEnabled: this.secondaryModuleInputEnabled('tts'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('tts'),
+      editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('tts'),
       state: this.ttsState,
       timerMode: this.ttsTimerMode,
       timerMinutes: this.ttsTimerMinutes,

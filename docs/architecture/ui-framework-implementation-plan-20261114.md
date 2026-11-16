@@ -1,5 +1,11 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 第十四轮修复后继续完整审计
+
+第十四轮以 FAIL、覆盖 INCOMPLETE 收口，完整语义审查 121／472，另有部分 25 和未完成 326。UIF-85 沿 Panel 现有临时编辑准入递送到 TTS 管理器，在保存、删除及草稿首次修改前拒绝失效输入，保留已接纳操作和 Host ACK。UIF-86 为 SourceTools 原生属性补齐本地前景 StorageLink，继续以 AppStorage 拒绝尚未传递到本地字段的失效输入，Host 后台合法回执保持原生命周期。
+
+四个准确用例通过，旧行为负例按真实首次写入与最终原生属性失败。TTS 保存在前景丢失前已经接纳的两类场景，分别在丢失前、丢失后派发，最终均得到 confirmedCurrent 并释放 busy。首次夹具把该事实写成 confirmed 的失败已保留并纠正。原登记结果保留，代码审计连续通过仍为 0；接下来冻结修改后的代码，重新进行完整全局审计，未审文件不能计作通过，VM 继续禁用。[修复与回归记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round14-repair-summary.json)
+
 ## 2026-11-16 UIF-84 代码修复与新一轮审计
 
 正常开书的已保存证据中，正文已经显示，但原生正文输入宿主保持禁用。实际 SDK 依赖见证确认 ReaderShell 的实时回调先返回 false，跳过本地 inputAllowed 读取，导致开书完成后的 Prop 更新不能唤醒原生属性。当前调整为先读取本地响应式边界，再检查实时输入，保留原有前景、身份、覆盖和业务回执归属。

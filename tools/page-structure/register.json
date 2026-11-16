@@ -1096,7 +1096,7 @@
         }
       },
       "exceptions": [],
-      "revision": 55,
+      "revision": 57,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -1190,7 +1190,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+          "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -1362,7 +1362,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-          "sha256": "3b06994359c0707fa069458322be1e636bd09427e3e2ed5302f10e61edf2b193"
+          "sha256": "59f2c03b153112879537b91cd7dc095bad716d80518b84b8b747638b42cbfc53"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 56,
+      "revision": 58,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2722,7 +2722,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-          "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+          "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
           "symbol": "controlContent"
         },
         {
@@ -3046,7 +3046,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+          "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4240,7 +4240,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -4564,7 +4564,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5875,7 +5875,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -6199,7 +6199,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -6367,7 +6367,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -6375,7 +6375,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7516,7 +7516,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -7840,7 +7840,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -8000,7 +8000,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -8008,7 +8008,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9172,7 +9172,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -9496,7 +9496,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -9644,7 +9644,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -9652,7 +9652,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 56,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10697,7 +10697,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -11021,7 +11021,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 56,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12113,7 +12113,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -12437,7 +12437,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -12597,7 +12597,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -12605,7 +12605,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13686,7 +13686,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -14010,7 +14010,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15147,7 +15147,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -15471,7 +15471,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -15631,7 +15631,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -15639,7 +15639,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 56,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16664,7 +16664,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -16988,7 +16988,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 56,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18080,7 +18080,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -18404,7 +18404,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -18564,7 +18564,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -18572,7 +18572,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19727,7 +19727,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -20051,7 +20051,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -20199,7 +20199,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -20207,7 +20207,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 57,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21373,7 +21373,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-                "sha256": "78dec50fb8c23f7d95f6193de6a92f2ab48186d3d0bd71121d2711677f80965f",
+                "sha256": "4fa2665c648c491a6fbf202501943151584d319765dcb0c62264b6ef9a4a6b90",
                 "symbol": "controlContent"
               },
               {
@@ -21697,7 +21697,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -21845,7 +21845,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "1402c07e0eb03dd73d8db2ecf42b427951cc73664e59dc63d2bab09fe8eb9dd4"
+                "sha256": "aa29e0baa559db35e63083cf3e908673172afec2274bf17cf69a7575db8f5efb"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
@@ -21853,7 +21853,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
-                "sha256": "4cac7a59dddc13936b99df128a5bf6dfe88398006be45aa8e8e6027be7ddb349"
+                "sha256": "a1e96c0622e1e1c166ba9a34c7e10994f5487a455b0d4c95d4a6feb24a2292e2"
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -22331,7 +22331,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+          "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -23420,7 +23420,7 @@
         }
       },
       "exceptions": [],
-      "revision": 34,
+      "revision": 35,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -23766,7 +23766,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -24843,7 +24843,7 @@
               }
             },
             "exceptions": [],
-            "revision": 31,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -25190,7 +25190,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -26267,7 +26267,7 @@
               }
             },
             "exceptions": [],
-            "revision": 31,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -26614,7 +26614,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -27647,7 +27647,7 @@
               }
             },
             "exceptions": [],
-            "revision": 31,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -27994,7 +27994,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -29027,7 +29027,7 @@
               }
             },
             "exceptions": [],
-            "revision": 31,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -29374,7 +29374,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+                "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -30407,7 +30407,7 @@
               }
             },
             "exceptions": [],
-            "revision": 31,
+            "revision": 32,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -30461,7 +30461,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-        "sha256": "3b06994359c0707fa069458322be1e636bd09427e3e2ed5302f10e61edf2b193"
+        "sha256": "59f2c03b153112879537b91cd7dc095bad716d80518b84b8b747638b42cbfc53"
       },
       "layers": {
         "route": {
@@ -31597,7 +31597,7 @@
         }
       },
       "exceptions": [],
-      "revision": 45,
+      "revision": 47,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -31608,7 +31608,7 @@
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
           "symbol": "build",
-          "sha256": "3b06994359c0707fa069458322be1e636bd09427e3e2ed5302f10e61edf2b193"
+          "sha256": "59f2c03b153112879537b91cd7dc095bad716d80518b84b8b747638b42cbfc53"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
@@ -31906,7 +31906,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "0babe96a16b5c40f0fb43478d6c08d45f3e7264fb2cc2369f930cd475eb3084c"
+          "sha256": "dbfdb357a6121f0ad9323d6734010f688b21d05ca4b26848a8727a7736808470"
         },
         {
           "path": "tools/lib/selected-production-methods.mjs",

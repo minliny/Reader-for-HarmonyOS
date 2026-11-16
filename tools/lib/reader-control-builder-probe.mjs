@@ -209,6 +209,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   }
   for (const name of ['managementInputIsCurrent', 'managementOpeningIsCurrent', 'panelInputCurrent',
     'currentInputEnabled', 'directoryInputCurrent', 'currentInputOwnerKey', 'directoryContentInputCurrent']) chromeMembers.add(name);
+  // SourceTools native eligibility now subscribes to its actual foreground
+  // StorageLink. Older finite Builders must retain that declaration too.
+  if (struct.name.getText(original) === 'SourceToolsPage') chromeMembers.add('appForeground');
   let addedChrome;
   do {
     addedChrome = false;

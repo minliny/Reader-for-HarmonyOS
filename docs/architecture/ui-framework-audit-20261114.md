@@ -1,5 +1,11 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-16 第十四轮失败与两项追加修复
+
+第十四轮确认 UIF-85 和 UIF-86，结论 FAIL，覆盖 INCOMPLETE。472 个必审文件中，121 个完成当前 UI 合同审查，25 个部分审查，326 个尚未完成语义审查，合计 351 个未完成。确认实质缺陷后停止无关广域消耗，保留逐文件清单，连续通过仍为 0。读过索引、文件哈希和导入关系均未计作完整语义通过。[第十四轮报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-14.json)
+
+UIF-85 修复 TTS 管理器在实时输入失效后仍可首次保存的问题。复用原临时编辑输入范围，首次状态修改前校验原管理器和实时输入，已经接纳的保存及其 ACK、busy 和关闭清理仍由原 owner 完成。UIF-86 为 SourceTools 增加本地前景响应式依赖，保留即时 AppStorage 拒绝和后台合法回执。四个准确用例通过，含六类 TTS 首次准入、四个实际表单字段及两个格式／密钥动作、派发前后两类已接纳保存、SourceTools 同一按钮和编辑框恢复，以及既有 busy／unknown 准入。原生修复结果尚未验证，下一轮继续完整代码审计，VM 禁令有效。[修复及准确证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round14-repair-summary.json)
+
 ## 2026-11-16 UIF-84 重新打开代码收口
 
 正常书架开书的已保存证据显示正文可见，但正文原生输入宿主仍为 enabled=false、HitTestMode.None。代码侧以实际 SDK 属性运行时复现了原因。ReaderShell 先计算实时回调，初次开书返回 false 后跳过本地 inputAllowed 属性，原生属性没有登记恢复所需的依赖。此前实时输入修复在这条正常入口上存在遗漏。

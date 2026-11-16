@@ -190,6 +190,7 @@ export struct SourceToolsPage {
   @Prop reduceMotion: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private sourceListWidth: number = 0;
   @State private overlayHostWidth: number = 0;
@@ -263,7 +264,7 @@ export struct SourceToolsPage {
   }
 
   private toolsOpeningIsCurrent(identity: string): boolean {
-    return this.mounted && identity.length > 0 && identity === this.temporaryBackIdentity &&
+    return this.appForeground && this.mounted && identity.length > 0 && identity === this.temporaryBackIdentity &&
       (this.isOpeningCurrent?.() ?? true) && AppStorage.get<boolean>('readerAppForeground') !== false;
   }
 
