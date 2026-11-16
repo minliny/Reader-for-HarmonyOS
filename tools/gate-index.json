@@ -57984,7 +57984,7 @@
       ],
       "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
       "repairAction": null,
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "estimatedCostType": "plain-js",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -58006,11 +58006,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -175944,7 +175944,7 @@
       "mechanism": "callback-controls actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -175964,11 +175964,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -175980,7 +175980,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176017,7 +176017,7 @@
       "mechanism": "immediate-stop actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176037,11 +176037,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176053,7 +176053,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176090,7 +176090,7 @@
       "mechanism": "transport-intents actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176110,11 +176110,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176126,7 +176126,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176163,7 +176163,7 @@
       "mechanism": "host-events actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176183,11 +176183,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176199,7 +176199,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176236,7 +176236,7 @@
       "mechanism": "replacement actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176256,11 +176256,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176272,7 +176272,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176309,7 +176309,7 @@
       "mechanism": "interruption-stop actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176329,11 +176329,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176345,7 +176345,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176382,7 +176382,7 @@
       "mechanism": "retention actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176402,11 +176402,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176418,7 +176418,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176455,7 +176455,7 @@
       "mechanism": "same-value-policy actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176475,11 +176475,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176491,7 +176491,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176528,7 +176528,7 @@
       "mechanism": "probe-engine-race actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176548,11 +176548,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176564,7 +176564,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176601,7 +176601,7 @@
       "mechanism": "probe-stop-race actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176621,11 +176621,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176637,7 +176637,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176674,7 +176674,7 @@
       "mechanism": "slow-progress actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176694,11 +176694,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176710,7 +176710,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176747,7 +176747,7 @@
       "mechanism": "chapter-boundary actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176767,11 +176767,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176783,7 +176783,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176820,7 +176820,7 @@
       "mechanism": "chapter-stop actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176840,11 +176840,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176856,7 +176856,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -176893,7 +176893,7 @@
       "mechanism": "chapter-replacement actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303",
+      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176913,11 +176913,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "201892dc28e68cf3967f535dd2df26adc64abcbb5e3f6746bf22cf59ab947303"
+          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
         }
       ],
       "definitionInputProblems": [],
@@ -176929,7 +176929,7 @@
       "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "628c0541466fe0b9326b1b81065fe5d18a5b7ad3f66b6bc3f5c16445a2d4c0b2"
+      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
       "file": "tools/test-reader-tts-state-machine.mjs",

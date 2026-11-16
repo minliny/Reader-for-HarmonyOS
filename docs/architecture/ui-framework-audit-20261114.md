@@ -1,5 +1,21 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-16 第29轮最终裁决及接口、测试准入修正
+
+当前以本节及原账本 `implementation.currentState` 为准。VM继续禁用，连续完整全局PASS仍为 **0/3**，最终Figma／性能专项尚未启动。
+
+第29轮完成642个生产ETS／TS、184302行的独立全文审阅，并由已知历史的root另补Native源码、声明及构建支持13文件、4684行；后者不冒充盲审，也不追溯增加旧轮覆盖。105历史ID、原5+2、既有8项修复、R27及R28、20路由／4根、49owner和21登记336层完成对账。1869个唯一冻结输入末尾实际校验漂移0，原A／B及其初始计数保持原字节。[完整R29](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-29-summary.json) [冻结释放](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-29-release.json)
+
+两项Slider指控最终撤回。完整已安装SDK、华为API及OpenHarmony参考实现表明，普通轨道点击含Begin、Click、End；TTS缓存在新Begin重置，End-only业务会收到End。此前把五处位置报作新增缺陷是审计误判：根据枚举标签推断完整事件序列，且root在反证完成前过早确认。五处Slider与既有正常手势测试没有因此改动，不用直接注入一个不成立的普通事件序列证明缺陷。[独立记录与官方反证](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-29-slider-contract-adjudication.json)
+
+R29最终确认行为缺陷0、SDK约束违例0，另有P3原生接口注释1项，因此原冻结结论为FAIL，不累计全局PASS。释放后已按独立review把“confirmed composited”改为同generation的逻辑hold被处理释放，并明确物理呈现需另行证明。注释之外的声明字节完全相同，API／ABI、CPP和运行时逻辑不变；G05仍开放。[注释review](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round29-native-comment-proposal-review.json) [精确修改证明](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round29-native-comment-repair-proof.json)
+
+另将此前记录的14个TTS索引入口指纹漂移集中闭环。完整定向复审当前测试定义、runner及控制入口后，仅修改3个受控JSON中的61个标量：当前测试SHA、runner SHA及资源声明摘要，并保留历史计划基线。14个ID、选择器、资源、QUALIFIED、默认OFF与NOT_RUN均不变。只通过真实索引运行transport-intents一个case，唯一PASS、106ms，runner110ms且进程树已结束；其余13项未运行。原外层记录器误从gate stdout寻找子用例JSON，初始判读失败保留，按runner原始结构化回执离线裁定PASS，没有重跑。[独立方案review](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round29-tts-index-patch-review-01.json) [61字段证明](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round29-tts-index-patch-proof.json) [真实准入结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round29-tts-index-admission-adjudication.json)
+
+本批未重新构建、安装或操作VM／HDC／设备／CUA。已有候选a5eaa36a2504的原运行时代码和签名证据复用，manifest保持原样；当前声明注释和工具元数据已不同于其完整输入快照，所以不把它声称为当前全部源码的精确新候选。需要实际交付时再生成一次当前输入候选。19 PASS／27 FAIL／290 NOT_RUN、整页0／21及原37诊断保持。原四项候选、Surface生命周期，以及Toggle焦点、移除纯高度、E2／E3、独立整页视觉、G05连续像素、G10同期证据继续按原条件保留；本轮import／TTS顺序疑点尚无正常链证实，不新增用户决断或VM前置。
+
+下一步以本批固定代码、测试与契约输入开展三轮完整全局审计。定向review、准确case与既有构建均不替代该条件。
+
 ## 2026-11-16 第28轮完整审计及 TTS 边界修复
 
 当前以本节及原账本 `implementation.currentState` 为准。VM 继续禁用，连续完整全局审计 PASS 为 **0/3**，最终 Figma／性能专项审计尚未启动；下方各节保留形成时的历史状态。
