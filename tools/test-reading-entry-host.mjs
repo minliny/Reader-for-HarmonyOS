@@ -74,7 +74,7 @@ if(id==='late-download-display'){
  async function verifyCollection(Host=ProductionHost){
   const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
   for(const shape of ['cold-empty-growth','growth','removal','replacement-empty','remote-bootstrap']){
-   const f=fixture(Host),gate=deferred(),remote=shape==='remote-bootstrap';
+   const f=fixture(Host),gate=deferred(),remote=shape==='remote-bootstrap'||shape==='replacement-empty';
    const initialSession=remote?session():undefined;
    const selectedBook=remote?book():book('local-book','local');
    const request=f.runtime.request;
@@ -91,11 +91,12 @@ if(id==='late-download-display'){
    if(shape==='growth')f.host.replaceDirectory(scope,toc.slice(0,1));
    if(shape==='removal')f.host.replaceDirectory(scope,toc);
    const work=f.host.projectDirectory(scope);await until(()=>f.calls.some(call=>call.method==='cache.book.status'));
-   if(!remote)f.host.replaceDirectory(scope,shape==='removal'?toc.slice(1):shape==='replacement-empty'?[]:toc);
+   if(shape==='replacement-empty')f.host.replaceDirectory(scope,[]);
+   else if(!remote)f.host.replaceDirectory(scope,shape==='removal'?toc.slice(1):toc);
    const current=f.host.snapshot().toc,before=f.changes.length;gate.resolve();await work;
    const committed=f.changes.slice(before).find(snapshot=>snapshot.scopeId===scope);
    assert.ok(committed,'current download completion publishes');
-   if(remote){assert.deepEqual(committed.toc.map(entry=>entry.index),[0,1,2],'unchanged empty remote opening retains initial full projection');}
+   if(shape==='remote-bootstrap'){assert.deepEqual(committed.toc.map(entry=>entry.index),[0,1,2],'unchanged empty remote opening retains initial full projection');}
    else{
     assert.deepEqual(committed.toc.map(entry=>entry.index),current.map(entry=>entry.index),'late download completion preserves latest catalog collection');
     for(const entry of committed.toc){
@@ -115,6 +116,8 @@ if(id==='late-download-display'){
  await assert.rejects(()=>verify(compileHost(old)),/download completion preserves latest/);
  const oldCollection=original.replace('const directory = initiallyEmpty && latest === initialDirectory && latest.length === 0 ? entries : latest;','const directory = entries;');
  assert.notEqual(oldCollection,original);await assert.rejects(()=>verifyCollection(compileHost(oldCollection)),/late download completion preserves latest catalog collection/);
+ const missingPublicationFence=original.replace('initiallyEmpty && latest === initialDirectory && latest.length === 0','initiallyEmpty && latest.length === 0');
+ assert.notEqual(missingPublicationFence,original);await assert.rejects(()=>verifyCollection(compileHost(missingPublicationFence)),/late download completion preserves latest catalog collection/);
  checkpoints.push('actual-full-EntryHost-same-proof-manga-display-refresh-during-offline-read-and-original-retirement-fences');
 }
 if(id==='cold-bookmarks'){
