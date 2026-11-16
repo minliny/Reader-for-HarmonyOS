@@ -4,7 +4,7 @@
 
 第十六轮在冻结提交 32bc3939 上完成全部 472 个当前 UI 合同审查，部分和未审均为 0。87 个历史问题、20 个路由、4 个 manifest 页面根及 21 项登记均完成当前代码对账。1,769 项审阅输入、642 项生产输入及另 16 项登记引用在结束时无漂移。本轮结论 FAIL，确认 UIF-88、UIF-89、UIF-90 三项，连续通过为 0。[完整审计报告](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-16.json)
 
-三项已集中修复。文字正文、缓存刷新及漫画章节失败的三个 UI 重试入口先检查原实时资格，已接纳转换／替换回执继续使用原业务重试入口。启动字体原 Promise 保留失败，日志使用独立观察，失败进入既有启动恢复宿主。下载行两处几何回执按原呈现代次及当前书籍身份接纳，弹层期间能更新封面高度与进度占位，业务动作仍使用原输入资格。四个准确用例通过，覆盖六类首次重试、三个字体启动时点、四类下载几何状态及原失败页装配，旧行为负例均被拒绝。五个修改脚本语法通过，登记继续为 37 项原诊断、源码漂移 0、引用错误 0。当前规范完整编译待执行，VM 禁令有效。[修复与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round16-repair-summary.json)
+三项已集中修复。文字正文、缓存刷新及漫画章节失败的三个 UI 重试入口先检查原实时资格，已接纳转换／替换回执继续使用原业务重试入口。启动字体原 Promise 保留失败，日志使用独立观察，失败进入既有启动恢复宿主。下载行两处几何回执按原呈现代次及当前书籍身份接纳，弹层期间能更新封面高度与进度占位，业务动作仍使用原输入资格。四个准确用例通过，覆盖六类首次重试、三个字体启动时点、四类下载几何状态及原失败页装配，旧行为负例均被拒绝。五个修改脚本语法通过，登记继续为 37 项原诊断、源码漂移 0、引用错误 0。规范完整 ArkTS 编译及指定证书签名通过，候选为 0.2.0.DEV.ac04cdb32a64，run 为 20261116T020859Z-ab9ff545-f10be5cf。VM 禁令有效。[修复与准确回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round16-repair-summary.json)
 
 前两轮发现问题即结束不完整审查，导致未审范围反复后移，这是本次编排中的效率问题。第十六轮已改为冻结完整范围、集中发现、批量修复。后续在完成编译的同一候选上重新进行三轮完整独立审计。当前原生登记仍为 19 PASS／27 FAIL／290 NOT_RUN，整页闭环为 0／21。
 

@@ -4,7 +4,7 @@
 
 第十六轮完成 472／472 当前 UI 合同及 87 个历史问题的当前代码对账，结论 FAIL，确认三项代码问题。UIF-88 已将文字正文、缓存刷新和漫画章节失败的 UI 重试接回原实时输入资格。UIF-89 保留字体失败 Promise，日志独立观察，既有启动恢复宿主接收失败。UIF-90 将两处下载行 Area 回执接回原呈现代次和当前书籍身份，覆盖期间更新实际高度映射。三个问题在本批集中修复。
 
-四个准确用例及五个修改脚本语法通过，两个夹具遗漏和一次不支持分支移除的失败记录已保留。21 项登记同步受影响输入，37 项原诊断、0 漂移和 0 引用错误保持。本批接下来执行一次规范完整 ArkTS 编译及指定证书签名，再冻结实际候选，重新累计三轮完整全局通过。当前连续通过为 0，VM 禁令有效。后续整页原生、独立原稿、G05／G10 与全量完成后的外观／性能专项核对继续按原目标推进。[本批完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-16.json) [本批修复记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round16-repair-summary.json)
+四个准确用例及五个修改脚本语法通过，两个夹具遗漏和一次不支持分支移除的失败记录已保留。21 项登记同步受影响输入，37 项原诊断、0 漂移和 0 引用错误保持。本批一次规范完整 ArkTS 编译和指定证书签名通过，候选 0.2.0.DEV.ac04cdb32a64 对应修复提交 ab9ff545，HAP SHA-256 为 bf2be0ff6a5b583ea4ca70f878b0115bf4939edac6856465deb856a2d2cad732。全量测试为 NOT_RUN。接下来冻结实际候选，重新累计三轮完整全局通过。当前连续通过为 0，VM 禁令有效。后续整页原生、独立原稿、G05／G10 与全量完成后的外观／性能专项核对继续按原目标推进。[本批完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-16.json) [本批修复记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round16-repair-summary.json)
 
 ## 2026-11-16 第十五轮目录菜单修复
 
