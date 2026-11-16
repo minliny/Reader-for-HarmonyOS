@@ -429,6 +429,11 @@ interface ReaderPreparedMeasurementProjection {
   ranges: ParagraphRange[];
 }
 
+interface ReaderTtsPreferenceSave {
+  generation: number;
+  current: () => boolean;
+}
+
 type ReadingPhase = 'loading' | 'measuring' | 'ready' | 'failed';
 type ReaderPageTurnInputPhase = 'idle' | 'tracking' | 'dragging' | 'settling';
 /** Unified visual presentation phase shared by gesture, settle and promotion. */
@@ -879,7 +884,7 @@ export struct ReadingExperience {
   private ttsPreferenceSavedGeneration: number = 0;
   private ttsPreferenceOverrides: ReaderTtsPreferencesPatch = {};
   private ttsPreferenceBase: ReaderTtsPreferencesSnapshot | undefined = undefined;
-  private ttsPreferenceSave: { generation: number; current: () => boolean } | undefined = undefined;
+  private ttsPreferenceSave: ReaderTtsPreferenceSave | undefined = undefined;
   private ttsVoicePreferenceGeneration: number = 0;
   private ttsMixingPreferenceGeneration: number = 0;
   private ttsVoicePreferencePending: boolean = false;
@@ -8597,7 +8602,7 @@ export struct ReadingExperience {
     isAdmitted?: () => boolean): Promise<void> {
     if (isAdmitted?.() === false) return;
     const generation = this.ttsPreferenceMutationGeneration;
-    const save = { generation, current: isAdmitted ?? this.captureTtsPreferenceAdmission(generation) };
+    const save: ReaderTtsPreferenceSave = { generation, current: isAdmitted ?? this.captureTtsPreferenceAdmission(generation) };
     this.ttsPreferenceSave = save;
     try {
       await this.ttsPreferencesGateway.patch(patch, save.current);
