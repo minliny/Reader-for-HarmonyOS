@@ -492,7 +492,8 @@ struct Index {
   private settingsNavigationPorts(): ReaderSettingsJourneyPorts {
     return {
       scope: (): ReaderSettingsJourneyScope => ({ owner: this.mountedRuntimeOwner, instance: this.rssInstanceIdentity,
-        mounting: this.detailShelfAdmissionMount, retired: this.shelfReceiptRetired }),
+        mounting: this.detailShelfAdmissionMount, retired: this.shelfReceiptRetired,
+        inputAllowed: this.rulesManagementInputAllowed() }),
       ownsRuntime: (owner: ReaderRuntimeOwner): boolean => this.isCurrentRuntime(owner),
       settings: (): SettingsPresentation => this.settingsPresentation,
       rules: (): RulesManagementPresentation => this.rulesPresentation,
@@ -1209,10 +1210,15 @@ struct Index {
   @Builder
   private rulesManagementSurface(identity: string) {
     RulesManagementSurface({ presentation: this.rulesPresentation, identity,
+      inputEnabled: this.rulesManagementInputAllowed(),
       onBack: (): void => this.settingsNavigation.returnFromRulesManagement(),
       onImport: (): void => this.jsonImportPresentation.openRuleBundle(this.rulesPresentation, identity),
     }).enabled(this.jsonImportPresentation.opening === undefined)
       .accessibilityLevel(this.jsonImportPresentation.opening === undefined ? 'auto' : 'no-hide-descendants');
+  }
+
+  private rulesManagementInputAllowed(): boolean {
+    return this.searchAppForeground && !this.arkWebCapturesInput && this.jsonImportPresentation.opening === undefined;
   }
 
   private registerTemporaryBackBridge(

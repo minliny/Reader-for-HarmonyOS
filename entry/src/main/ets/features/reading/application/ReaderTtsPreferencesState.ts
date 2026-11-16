@@ -20,6 +20,35 @@ export type ReaderTtsPreferencesSnapshot = {
   keepScreenOn: boolean;
 };
 
+/** Ordinary choices own only their field. A voice is one atomic pair. */
+export type ReaderTtsPreferencesPatch = {
+  voice?: { language: string; person: number };
+  pauseOnInterruption?: boolean;
+  allowMixing?: boolean;
+  failurePolicy?: ReaderTtsFailurePolicy;
+  followHighlight?: boolean;
+  backgroundPlayback?: boolean;
+  keepScreenOn?: boolean;
+};
+
+export function copyReaderTtsPreferencesPatch(value: ReaderTtsPreferencesPatch): ReaderTtsPreferencesPatch {
+  return { voice: value.voice === undefined ? undefined : { ...value.voice },
+    pauseOnInterruption: value.pauseOnInterruption, allowMixing: value.allowMixing,
+    failurePolicy: value.failurePolicy, followHighlight: value.followHighlight,
+    backgroundPlayback: value.backgroundPlayback, keepScreenOn: value.keepScreenOn };
+}
+
+export function mergeReaderTtsPreferencesPatch(base: ReaderTtsPreferencesSnapshot,
+  patch: ReaderTtsPreferencesPatch): ReaderTtsPreferencesSnapshot {
+  return normalizeReaderTtsPreferencesSnapshot({ version: 1,
+    language: patch.voice?.language ?? base.language, person: patch.voice?.person ?? base.person,
+    pauseOnInterruption: patch.pauseOnInterruption ?? base.pauseOnInterruption,
+    allowMixing: patch.allowMixing ?? base.allowMixing, failurePolicy: patch.failurePolicy ?? base.failurePolicy,
+    followHighlight: patch.followHighlight ?? base.followHighlight,
+    backgroundPlayback: patch.backgroundPlayback ?? base.backgroundPlayback,
+    keepScreenOn: patch.keepScreenOn ?? base.keepScreenOn });
+}
+
 /**
  * Newer system images report downloadable catalogue entries alongside voices
  * that can be created immediately. Only the latter may enter persisted Reader

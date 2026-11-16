@@ -73,6 +73,7 @@ export class RulesManagementOrchestrator {
   private readonly owner: ReaderRuntimeOwner;
   private emit: (snapshot: RulesManagementSnapshot) => void;
   private isCurrent: () => boolean;
+  private inputCurrent: () => boolean;
   private snapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   private operationTail: Promise<void> = Promise.resolve();
   private session: number = 0;
@@ -91,6 +92,7 @@ export class RulesManagementOrchestrator {
     this.rssGateway = new RssGateway(owner);
     this.emit = emit;
     this.isCurrent = isCurrent;
+    this.inputCurrent = isCurrent;
   }
 
   static forRuntime(owner: ReaderRuntimeOwner): RulesManagementOrchestrator | undefined {
@@ -100,10 +102,11 @@ export class RulesManagementOrchestrator {
     const next=new RulesManagementOrchestrator((_snapshot: RulesManagementSnapshot): void => {}, (): boolean => false, owner);
     RulesManagementOrchestrator.shared=next; return next;
   }
-  attachPresentation(identity: string, emit: (snapshot: RulesManagementSnapshot) => void, current: () => boolean): boolean {
+  attachPresentation(identity: string, emit: (snapshot: RulesManagementSnapshot) => void, current: () => boolean,
+    inputCurrent: () => boolean = current): boolean {
     if (identity.length===0 || !ReaderRuntimeOwner.isCurrent(this.owner)) return false;
     try { if (!current()) return false; } catch (_) { return false; }
-    this.session+=1; this.presentationIdentity=identity; this.emit=emit; this.isCurrent=current;
+    this.session+=1; this.presentationIdentity=identity; this.emit=emit; this.isCurrent=current; this.inputCurrent=inputCurrent;
     this.publish({}); return true;
   }
   detachPresentation(identity: string): void {
@@ -115,6 +118,12 @@ export class RulesManagementOrchestrator {
   /** Physical page callbacks carry the immutable original attachment. */
   isPresentationCurrent(identity: string): boolean {
     return identity.length > 0 && identity === this.presentationIdentity && this.isCurrentSession(this.session);
+  }
+  isPresentationInputCurrent(identity: string): boolean {
+    return this.isPresentationCurrent(identity) && this.inputCurrent();
+  }
+  private isCurrentInputSession(session: number): boolean {
+    return this.isCurrentSession(session) && this.inputCurrent();
   }
   private admitPresentation(identity?: string): boolean {
     if (identity!==this.presentationIdentity) return false;
@@ -211,12 +220,12 @@ export class RulesManagementOrchestrator {
         busy: true,
         statusMessage: `正在拉取${typeLabel}订阅：${subscription.name}…`,
       });
-      await this.performWrite(session, `${typeLabel}订阅更新`, async (_evidence: ReaderWriteEvidence): Promise<string> => {
+      await this.performWrite(session, `${typeLabel}订阅更新`, async (evidence: ReaderWriteEvidence): Promise<string> => {
         const document = await this.owner.loadOnlineJsonDocument(subscription.url);
         if (!this.isCurrentSession(session)) throw new Error('订阅更新已关闭，未接受');
         const sourcePlan = subscription.type === 0 ? this.sourceGateway.prepareSubscriptionDocument(document.text) : undefined;
         return await this.gateway.refreshSubscription(subscription,document.text,sourcePlan,
-          (): boolean => this.isCurrentSession(session));
+          (): boolean => this.writeAdmissionCurrent(session, evidence));
       });
     });
   }
@@ -270,8 +279,9 @@ export class RulesManagementOrchestrator {
 
   private mutate(label: string, operation: () => Promise<void>): void {
     const session = this.session;
-    if (!this.isCurrentSession(session)) return;
+    if (!this.isCurrentInputSession(session)) return;
     this.enqueue(async (): Promise<void> => {
+      if (!this.isCurrentInputSession(session)) return;
       this.publishIfCurrent(session, { busy: true, statusMessage: `正在${label}…` });
       await this.performWrite(session, label, async (): Promise<string> => {
         await operation(); return `${label}已由 Core 确认`;
@@ -280,7 +290,7 @@ export class RulesManagementOrchestrator {
   }
 
   private async performWrite(session: number, label: string, operation: (evidence: ReaderWriteEvidence) => Promise<string>): Promise<void> {
-    if (!this.isCurrentSession(session)) return;
+    if (!this.isCurrentInputSession(session)) return;
     const prior = this.gateway.mutationSnapshot();
     if (prior.confirmation === 'unknown') {
       this.receiptLabel = prior.label;
@@ -288,7 +298,9 @@ export class RulesManagementOrchestrator {
       return;
     }
     const evidence = new ReaderWriteEvidence();
-    this.gateway.observeWrites(evidence, (): boolean => this.isCurrentSession(session));
+    // New acceptance needs live input. Once the original write dispatched,
+    // its ACK and the already fixed subscription plan keep their owner lease.
+    this.gateway.observeWrites(evidence, (): boolean => this.writeAdmissionCurrent(session, evidence));
     this.sourceGateway.observeWrites(evidence);
     this.rssGateway.observeWrites(evidence);
     this.receiptLabel = label;
@@ -309,6 +321,10 @@ export class RulesManagementOrchestrator {
     }
     this.publishReceipt(session, evidence.confirmation(), 'reading', undefined, evidence.confirmedCount);
     await this.reload(session, status);
+  }
+
+  private writeAdmissionCurrent(session: number, evidence: ReaderWriteEvidence): boolean {
+    return this.isCurrentSession(session) && (evidence.hasDispatched() || this.inputCurrent());
   }
 
   private async recoverOriginal(session: number, retryOriginal: boolean): Promise<void> {

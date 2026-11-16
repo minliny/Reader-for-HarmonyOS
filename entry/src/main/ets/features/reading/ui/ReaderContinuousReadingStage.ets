@@ -127,6 +127,7 @@ export struct ReaderContinuousReadingStage {
   @Prop autoPageHighlightStart: number | undefined = undefined;
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
+  selectionInputCurrent: (() => boolean) | undefined = undefined;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop @Watch('onInputRevisionChanged') inputRevision: number = 0;
   inputCurrent: ((revision: number) => boolean) | undefined = undefined;
@@ -268,6 +269,7 @@ export struct ReaderContinuousReadingStage {
                       fragment.nativeParagraph?.key === this.initialParagraphKey ? this.initialParagraph?.resource : undefined,
                     inkColor: readerAppearanceThemeStyle(this.appearance.activeTheme).ink,
                     selectionEnabled: this.longPressSelectText,
+                    selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
                     selectionColor: readerThemeDefinition(this.appearance.activeTheme).selection,
                     highlightStart: this.ttsHighlightStart ?? this.autoPageHighlightStart,
                     highlightEnd: this.ttsHighlightEnd ?? this.autoPageHighlightEnd,

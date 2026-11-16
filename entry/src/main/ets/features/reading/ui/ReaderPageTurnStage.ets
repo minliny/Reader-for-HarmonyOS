@@ -145,6 +145,7 @@ struct ReaderPageTurnSurface {
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop bottomJustifyGap: number = 0;
   @Prop longPressSelectText: boolean = false;
+  selectionInputCurrent: (() => boolean) | undefined = undefined;
   @Prop chromeTopStartText: string = '';
   @Prop chromeTopEndText: string = '';
   @Prop chromeTopTranslateY: number = 0;
@@ -211,6 +212,7 @@ struct ReaderPageTurnSurface {
           autoPageHighlightEnd: this.autoPageHighlightEnd,
           bottomJustifyGap: this.bottomJustifyGap,
           longPressSelectText: this.longPressSelectText,
+          selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
           chromeTopStartText: this.chromeTopStartText,
           chromeTopEndText: this.chromeTopEndText,
           chromeTopTranslateY: this.chromeTopTranslateY,
@@ -290,6 +292,7 @@ export struct ReaderPageTurnStage {
   @Prop autoPageHighlightStart: number | undefined = undefined;
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
+  selectionInputCurrent: (() => boolean) | undefined = undefined;
   onCurrentPageContentReady: (revision: number) => void = (_revision: number): void => {};
   /** Optional scheduling acknowledgement, not a compositor/display fence. */
   onCurrentPagePresented: (revision: number) => void = (_revision: number): void => {};
@@ -335,6 +338,7 @@ export struct ReaderPageTurnStage {
         bookmarkMode: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
         longPressSelectText: this.currentPageSlot === 'a' && this.longPressSelectText,
+        selectionInputCurrent: (): boolean => this.currentPageSlot === 'a' && this.selectionInputCurrent?.() !== false,
         translateX: this.slotX('a'),
         pageVisible: this.slotVisible('a'),
         layerOrder: this.slotLayer('a'),
@@ -374,6 +378,7 @@ export struct ReaderPageTurnStage {
         bookmarkMode: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
         longPressSelectText: this.currentPageSlot === 'b' && this.longPressSelectText,
+        selectionInputCurrent: (): boolean => this.currentPageSlot === 'b' && this.selectionInputCurrent?.() !== false,
         translateX: this.slotX('b'),
         pageVisible: this.slotVisible('b'),
         layerOrder: this.slotLayer('b'),

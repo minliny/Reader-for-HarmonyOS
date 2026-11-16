@@ -3,9 +3,12 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import {
   copyReaderTtsPreferencesSnapshot,
+  copyReaderTtsPreferencesPatch,
+  mergeReaderTtsPreferencesPatch,
   createDefaultReaderTtsPreferencesSnapshot,
   normalizeReaderTtsPreferencesSnapshot,
   type ReaderTtsPreferencesSnapshot,
+  type ReaderTtsPreferencesPatch,
 } from './ReaderTtsPreferencesState';
 
 const READER_TTS_PREFERENCES_NAME = 'reader_tts_preferences_v1';
@@ -47,46 +50,76 @@ export class ReaderTtsPreferencesGateway {
     // unreturned flush. This is current presentation, never a saved receipt.
     if (ReaderTtsPreferencesGateway.accepted !== undefined)
       return copyReaderTtsPreferencesSnapshot(ReaderTtsPreferencesGateway.accepted);
-    await ReaderTtsPreferencesGateway.writeTail;
-    if (ReaderTtsPreferencesGateway.accepted !== undefined)
-      return copyReaderTtsPreferencesSnapshot(ReaderTtsPreferencesGateway.accepted);
-    const store = await this.ensureStore();
-    const raw = (await store.get(READER_TTS_SNAPSHOT_KEY, '')) as string;
-    const fallback = createDefaultReaderTtsPreferencesSnapshot();
-    if (raw.length === 0) return fallback;
-    try { return normalizeReaderTtsPreferencesSnapshot(JSON.parse(raw) as ReaderTtsPreferencesSnapshot); }
-    catch (_) { return fallback; }
+    return this.withFileAccess(async (): Promise<ReaderTtsPreferencesSnapshot> => {
+      if (ReaderTtsPreferencesGateway.accepted !== undefined)
+        return copyReaderTtsPreferencesSnapshot(ReaderTtsPreferencesGateway.accepted);
+      return this.readSnapshot(await this.ensureStore());
+    });
   }
 
   async update(snapshot: ReaderTtsPreferencesSnapshot, resetOwned: boolean = false,
     isAdmitted?: () => boolean): Promise<ReaderTtsPreferencesSnapshot> {
     const requested = normalizeReaderTtsPreferencesSnapshot(snapshot);
     if (!resetOwned) await ReaderThemeHost.prepareUserChange();
+    return this.withFileAccess(async (): Promise<ReaderTtsPreferencesSnapshot> => {
+      const store = await this.ensureStore();
+      await store.get(READER_TTS_SNAPSHOT_KEY, '');
+      this.assertAdmitted(isAdmitted);
+      return this.writeSnapshot(store, requested);
+    });
+  }
+
+  /** Merge accepted fields against the actual full base inside this file's
+   * existing lane. An unread or failed base is never replaced by UI defaults. */
+  async patch(patch: ReaderTtsPreferencesPatch,
+    isAdmitted?: () => boolean): Promise<ReaderTtsPreferencesSnapshot> {
+    const requested = copyReaderTtsPreferencesPatch(patch);
+    // Reset recovery can itself need this file lane, so wait outside it.
+    await ReaderThemeHost.prepareUserChange();
+    return this.withFileAccess(async (): Promise<ReaderTtsPreferencesSnapshot> => {
+      const store = await this.ensureStore();
+      const read = await this.readSnapshot(store);
+      this.assertAdmitted(isAdmitted);
+      const base = ReaderTtsPreferencesGateway.accepted ?? read;
+      return this.writeSnapshot(store, mergeReaderTtsPreferencesPatch(base, requested));
+    });
+  }
+
+  private async withFileAccess<T>(operation: () => Promise<T>): Promise<T> {
     const prior = ReaderTtsPreferencesGateway.writeTail;
     let release: (() => void) | undefined = undefined;
     const tail = new Promise<void>((resolve: () => void): void => { release = resolve; });
     ReaderTtsPreferencesGateway.writeTail = tail;
     await prior;
     try {
-      const store = await this.ensureStore();
-      // Keep the real read boundary before first dispatch. It does not prove
-      // an unknown flush durable and its cached value is never compensation.
-      await store.get(READER_TTS_SNAPSHOT_KEY, '');
-      if (isAdmitted?.() === false || !ReaderRuntimeOwner.isCurrent(this.runtimeOwner))
-        throw new Error('TTS_PREFERENCE_OWNER_SUPERSEDED');
-      if (ReaderTtsPreferencesGateway.acceptedRevision >= Number.MAX_SAFE_INTEGER)
-        throw new Error('TTS_PREFERENCE_REVISION_EXHAUSTED');
-      ReaderTtsPreferencesGateway.acceptedRevision += 1;
-      const revision = ReaderTtsPreferencesGateway.acceptedRevision;
-      ReaderTtsPreferencesGateway.accepted = copyReaderTtsPreferencesSnapshot(requested);
-      // Once put has dispatched, UI retirement must not cancel its flush or
-      // allow a new Runtime to write the same file concurrently.
-      await store.put(READER_TTS_SNAPSHOT_KEY, JSON.stringify(requested));
-      await store.flush();
-      ReaderTtsPreferencesGateway.saved = copyReaderTtsPreferencesSnapshot(requested);
-      ReaderTtsPreferencesGateway.savedRevision = revision;
-      return copyReaderTtsPreferencesSnapshot(requested);
+      return await operation();
     } finally { release?.(); }
+  }
+
+  private assertAdmitted(isAdmitted?: () => boolean): void {
+    if (isAdmitted?.() === false || !ReaderRuntimeOwner.isCurrent(this.runtimeOwner))
+      throw new Error('TTS_PREFERENCE_OWNER_SUPERSEDED');
+  }
+
+  private async readSnapshot(store: preferences.Preferences): Promise<ReaderTtsPreferencesSnapshot> {
+    const raw = (await store.get(READER_TTS_SNAPSHOT_KEY, '')) as string;
+    if (raw.length === 0) return createDefaultReaderTtsPreferencesSnapshot();
+    try { return normalizeReaderTtsPreferencesSnapshot(JSON.parse(raw) as ReaderTtsPreferencesSnapshot); }
+    catch (_) { return createDefaultReaderTtsPreferencesSnapshot(); }
+  }
+
+  private async writeSnapshot(store: preferences.Preferences,
+    requested: ReaderTtsPreferencesSnapshot): Promise<ReaderTtsPreferencesSnapshot> {
+    if (ReaderTtsPreferencesGateway.acceptedRevision >= Number.MAX_SAFE_INTEGER)
+      throw new Error('TTS_PREFERENCE_REVISION_EXHAUSTED');
+    const revision = ++ReaderTtsPreferencesGateway.acceptedRevision;
+    ReaderTtsPreferencesGateway.accepted = copyReaderTtsPreferencesSnapshot(requested);
+    // A dispatched put/flush settles independently of presentation retirement.
+    await store.put(READER_TTS_SNAPSHOT_KEY, JSON.stringify(requested));
+    await store.flush();
+    ReaderTtsPreferencesGateway.saved = copyReaderTtsPreferencesSnapshot(requested);
+    ReaderTtsPreferencesGateway.savedRevision = revision;
+    return copyReaderTtsPreferencesSnapshot(requested);
   }
 
   /** A finite retry of the same accepted whole snapshot; no cached-get match

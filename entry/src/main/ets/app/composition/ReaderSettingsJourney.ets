@@ -10,6 +10,7 @@ export interface ReaderSettingsJourneyScope {
   instance: number;
   mounting: number;
   retired: boolean;
+  inputAllowed: boolean;
 }
 
 export interface ReaderSettingsJourneyPorts {
@@ -99,7 +100,7 @@ export class ReaderSettingsJourney {
       const scope = this.ports.scope(), current = this.navigation.snapshot();
       return !scope.retired && generation === current.generation && current.route === 'rulesManagement' &&
         owner === scope.owner && bound.mounting === scope.mounting && this.ports.ownsRuntime(owner);
-    });
+    }, (): boolean => this.ports.scope().inputAllowed);
   }
 
   returnFromRulesManagement(): void {

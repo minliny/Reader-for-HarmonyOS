@@ -178,6 +178,14 @@ export class ReaderTtsSessionCoordinator {
   private disposed: boolean = false;
   private desiredPlaying: boolean = true;
   private controlGeneration: number = 0;
+  private voicePreferenceGeneration: number = 0;
+  private pendingVoicePreference: number | undefined = undefined;
+  private mixingPreferenceGeneration: number = 0;
+  private pendingMixingPreference: number | undefined = undefined;
+  private mixingNeedsReconciliation: boolean = false;
+  private pendingVoiceChoice: { active: ActiveSession; control: number; language: string; person: number;
+    result: Promise<boolean> } | undefined = undefined;
+  private pendingMixingChoice: { active: ActiveSession; value: boolean; result: Promise<boolean> } | undefined = undefined;
   private audition: ReaderTtsAuditionSession | undefined = undefined;
   private auditionSequence: number = 0;
   private timerHandle: number = -1;
@@ -708,23 +716,42 @@ export class ReaderTtsSessionCoordinator {
     this.configureTimer(durationMs);
   }
 
-  setAllowMixing(allowMixing: boolean): Promise<void> {
+  setAllowMixing(allowMixing: boolean): Promise<boolean> {
     const active = this.active;
-    if (active === undefined) return Promise.resolve();
-    const priorAllowMixing = active.input.allowMixing;
+    if (active === undefined) return Promise.resolve(true);
+    if (this.pendingMixingChoice?.active === active && this.pendingMixingChoice.value === allowMixing)
+      return this.pendingMixingChoice.result;
+    if (this.pendingMixingPreference === undefined && !this.mixingNeedsReconciliation &&
+      (active.input.allowMixing ?? false) === allowMixing) return Promise.resolve(true);
+    const request = this.nextGeneration(this.mixingPreferenceGeneration);
+    this.mixingPreferenceGeneration = request;
+    this.pendingMixingPreference = request;
     const generation = active.identity.sessionGeneration;
     const current = (): boolean => this.active === active && this.transport.sessionGeneration === generation &&
-      this.isSessionCurrent(active.identity);
-    return this.enqueue(async (): Promise<void> => {
+      this.isSessionCurrent(active.identity) && request === this.mixingPreferenceGeneration;
+    let accepted = false;
+    const result = this.enqueue(async (): Promise<void> => {
       if (!current()) return;
       if (this.transport.audioSession === 'active') {
+        this.mixingNeedsReconciliation = true;
         await this.host.activateAudioSession(allowMixing);
       }
-      if (current()) active.input = { ...active.input, allowMixing };
-    }).catch((error: Error): never => {
-      if (current()) active.input = { ...active.input, allowMixing: priorAllowMixing };
+      if (current()) {
+        active.input = { ...active.input, allowMixing };
+        this.mixingNeedsReconciliation = false;
+        accepted = true;
+      }
+    }).then((): boolean => accepted).catch((error: Error): boolean => {
+      if (!current()) return false;
       throw error;
+    }).finally((): void => {
+      if (this.pendingMixingPreference === request) {
+        this.pendingMixingPreference = undefined;
+        this.pendingMixingChoice = undefined;
+      }
     });
+    this.pendingMixingChoice = { active, value: allowMixing, result };
+    return result;
   }
 
   setFailurePolicy(failurePolicy: 'skip' | 'stop'): void {
@@ -740,14 +767,32 @@ export class ReaderTtsSessionCoordinator {
     this.host.setBackgroundPlaybackEnabled?.(backgroundPlayback);
   }
 
-  setVoice(language: string, person: number): Promise<void> {
-    this.voidLogged(this.stopAudition(), 'audition.voice-change');
+  /** Saved metadata can arrive after first play. Reconcile its desired voice
+   * at the next speech boundary without stealing an accepted seek or pause. */
+  setVoiceForNextSpeech(language: string, person: number): void {
+    const normalizedLanguage = language.trim();
+    if (normalizedLanguage.length === 0 || !Number.isSafeInteger(person) || person < 0)
+      throw new Error('Reader TTS voice requires a language and non-negative person');
+    if (this.active !== undefined)
+      this.active.input = { ...this.active.input, language: normalizedLanguage, person };
+  }
+
+  setVoice(language: string, person: number): Promise<boolean> {
     const normalizedLanguage = language.trim();
     if (normalizedLanguage.length === 0 || !Number.isSafeInteger(person) || person < 0) {
       return Promise.reject(new Error('Reader TTS voice requires a language and non-negative person'));
     }
     const active = this.active;
-    if (active === undefined) return Promise.resolve();
+    if (active === undefined) return Promise.resolve(true);
+    if (this.pendingVoiceChoice?.active === active && this.pendingVoiceChoice.control === this.controlGeneration &&
+      this.pendingVoiceChoice.language === normalizedLanguage && this.pendingVoiceChoice.person === person)
+      return this.pendingVoiceChoice.result;
+    if (this.pendingVoicePreference === undefined &&
+      (active.input.language ?? 'zh-CN') === normalizedLanguage && (active.input.person ?? 0) === person)
+      return Promise.resolve(true);
+    this.voidLogged(this.stopAudition(), 'audition.voice-change');
+    const request = this.nextGeneration(this.voicePreferenceGeneration);
+    this.voicePreferenceGeneration = request;
     const priorLanguage = active.input.language;
     const priorPerson = active.input.person;
     const priorState = { ...this.state };
@@ -756,28 +801,36 @@ export class ReaderTtsSessionCoordinator {
       // No transport transaction is needed. Merge only these live settings
       // now so preparation/automatic handoff can read them before speaking.
       active.input = { ...active.input, language: normalizedLanguage, person };
-      return Promise.resolve();
+      this.pendingVoicePreference = undefined;
+      this.pendingVoiceChoice = undefined;
+      return Promise.resolve(true);
     }
     const identity = active.identity;
     const index = this.state.sliceIndex;
     const controlGeneration = this.retireControlIntent();
-    const current = (): boolean => this.isSessionCurrent(identity) && this.controlGeneration === controlGeneration;
+    this.pendingVoicePreference = request;
+    const current = (): boolean => this.isSessionCurrent(identity) && this.controlGeneration === controlGeneration &&
+      request === this.voicePreferenceGeneration;
     this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined });
     const hostStopTask = this.stopHostTransportImmediately();
-    return this.enqueue(async (): Promise<void> => {
+    let accepted = false;
+    const result = this.enqueue(async (): Promise<void> => {
       try {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
         if (!current()) return;
-        // The new voice becomes visible only when the replacement utterance
-        // has been admitted to the same session transaction.
-        active.input = { ...active.input, language: normalizedLanguage, person };
         const snapshot = await this.prepareIntentQueue(active, index, false, current);
         if (snapshot === undefined || !current()) return;
         this.applyCoreSnapshot(snapshot);
-        await this.speakSlice(active, index, 'preparing');
+        // Do not expose a tentative voice as the accepted consumer value:
+        // a newer intent may retire this native request while it awaits ACK.
+        const spoken = await this.speakSlice(active, index, 'preparing', { language: normalizedLanguage, person });
+        if (!current()) return;
+        if (!spoken) throw new Error('Reader TTS replacement voice was not admitted');
+        active.input = { ...active.input, language: normalizedLanguage, person };
+        accepted = true;
       } catch (error) {
-        if (!current()) throw error;
+        if (!current()) return;
         active.input = { ...active.input, language: priorLanguage, person: priorPerson };
         this.setState({ ...this.state, status: priorState.status, errorMessage: `音色切换失败：${errorMessageOf(error)}` });
         try {
@@ -793,7 +846,14 @@ export class ReaderTtsSessionCoordinator {
         }
         throw error;
       }
+    }).then((): boolean => accepted).finally((): void => {
+      if (this.pendingVoicePreference === request) {
+        this.pendingVoicePreference = undefined;
+        this.pendingVoiceChoice = undefined;
+      }
     });
+    this.pendingVoiceChoice = { active, control: controlGeneration, language: normalizedLanguage, person, result };
+    return result;
   }
 
   stop(reason: 'user' | 'timer' | 'lifecycle' | 'contentChanged' | 'screenOff' |
@@ -1061,13 +1121,14 @@ export class ReaderTtsSessionCoordinator {
     return false;
   }
 
-  private async speakSlice(active: ActiveSession, index: number, status: 'preparing'): Promise<void> {
-    if (await this.parkPreparedSession(active)) return;
+  private async speakSlice(active: ActiveSession, index: number, status: 'preparing',
+    voice?: { language: string; person: number }): Promise<boolean> {
+    if (await this.parkPreparedSession(active)) return false;
     const plan = active.plan;
     if (plan === undefined) throw new Error('Reader TTS has no active slice plan');
     const slice = plan.slices[index];
     if (slice === undefined) throw new Error('Reader TTS Core cursor is outside the slice plan');
-    if (!this.isSessionCurrent(active.identity)) return;
+    if (!this.isSessionCurrent(active.identity)) return false;
     const utteranceGeneration = this.nextGeneration(this.transport.utteranceGeneration);
     const requestId = `${this.ownerToken}-tts-s${this.transport.sessionGeneration}-u${utteranceGeneration}` +
       `-c${active.input.chapter.chapterIndex}-i${slice.index}`;
@@ -1109,15 +1170,15 @@ export class ReaderTtsSessionCoordinator {
     } catch (error) {
       await this.handleSessionUtteranceFailure(active, token,
         `音频会话启动失败：${errorMessageOf(error)}`);
-      return;
+      return false;
     }
     this.transport = { ...this.transport, audioSession: 'active', focus: 'held' };
-    if (!this.isUtteranceCurrent(token)) return;
+    if (!this.isUtteranceCurrent(token)) return false;
     if (!this.desiredPlaying) {
       if (!await this.parkPreparedSession(active) && this.isSessionCurrent(active.identity)) {
-        await this.speakSlice(active, index, status);
+        return this.speakSlice(active, index, status, voice);
       }
-      return;
+      return false;
     }
     try {
       await this.host.speak({
@@ -1126,17 +1187,18 @@ export class ReaderTtsSessionCoordinator {
         text: slice.text,
         rate: active.input.rate ?? 1,
         pitch: active.input.pitch ?? 1,
-        language: active.input.language ?? 'zh-CN',
-        person: active.input.person ?? 0,
+        language: voice?.language ?? active.input.language ?? 'zh-CN',
+        person: voice?.person ?? active.input.person ?? 0,
         engine: active.config?.engine,
       });
     } catch (error) {
       await this.handleSessionUtteranceFailure(active, token, errorMessageOf(error));
-      return;
+      return false;
     }
-    if (!this.isUtteranceCurrent(token)) return;
+    if (!this.isUtteranceCurrent(token)) return false;
     this.awaitingStartToken = token;
     this.armStartWatchdog(token);
+    return true;
   }
 
   /**

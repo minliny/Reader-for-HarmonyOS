@@ -1078,6 +1078,7 @@ export struct MangaReadingSurface {
   }
   private async handleBack(intent?: 'navigation'): Promise<void> {
     if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
+    if (intent !== 'navigation' && !this.readerPanelForeground()) return;
     if (intent === 'navigation') this.navigationExitRequested = true;
     if (this.exiting) return;
     if (intent !== 'navigation') {

@@ -8,6 +8,7 @@ import { readerAppColor } from '../ui/foundation/ReaderThemeRegistry';
 @Entry
 @Component
 struct ReaderStartupRecovery {
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @State private state: ReaderStartupContentState = { phase: 'recovery-loading', reason: 'admission-pending', canRetry: false };
@@ -33,7 +34,7 @@ struct ReaderStartupRecovery {
   }
   onBackPress(): boolean {
     const owner = this.owner;
-    if (owner !== undefined && owner === ReaderStartupContentOwner.current()) void owner.exit();
+    if (this.appForeground && owner !== undefined && owner === ReaderStartupContentOwner.current()) void owner.exit();
     return true;
   }
   build() {
@@ -47,14 +48,14 @@ struct ReaderStartupRecovery {
         }, (publication: number): string => publication.toString());
       }.width('100%').constraintSize({ minHeight: this.availableHeight() })
         .justifyContent(FlexAlign.Center).padding(24);
-    }.width('100%').height('100%').scrollBar(BarState.Off)
+    }.width('100%').height('100%').scrollBar(BarState.Off).enabled(this.appForeground)
       .backgroundColor(readerAppColor('app.window.background', this.scheme));
   }
 
   private recoveryAction(publication: number, exit: boolean): () => void {
     const owner = this.owner;
     return (): void => {
-      if (!this.state.canRetry || publication !== this.publication || owner === undefined || owner !== this.owner ||
+      if (!this.appForeground || !this.state.canRetry || publication !== this.publication || owner === undefined || owner !== this.owner ||
         owner !== ReaderStartupContentOwner.current()) return;
       if (exit) void owner.exit();
       else owner.retry();

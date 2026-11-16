@@ -2406,7 +2406,7 @@ export struct ReaderControlPanel {
   }
 
   private topBarInputEnabled(): boolean {
-    return this.runtimeMounted && this.inputEnabled && !this.controlObscured &&
+    return this.runtimeMounted && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
       this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0;
   }
 

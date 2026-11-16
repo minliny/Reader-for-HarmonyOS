@@ -19,6 +19,7 @@ import { readerMotionValueDurationMs } from '../entry/src/main/ets/ui/foundation
 import { sourceSwitchTriggerFocusId } from '../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 
 const cases = {
+  'live-topbar-input': { description: 'Actual SDK Back/source/More callbacks consume a live root input change before any retained Prop delivery, and recover in the same opening', resources: [] },
   'input-admission': { description: 'Actual shared control SDK callbacks reject hidden, retired, temporary and successor module inputs while preserving current actions', resources: [] },
   'header-roles-sdk': { description: 'Original per-module header paint, actual measured labels, separate dock action carriers and exact cap difference in the SDK builders', resources: [] },
   'approved-elements': { description: 'Actual shared Home/nav/brightness/header paint and hit roles against frozen Make V17 and explicit accessible carrier successors', resources: [] },
@@ -600,7 +601,26 @@ async function runHeaderRoles() {
 }
 
 for (const id of selectContractCases(cases)) {
-  if (id === 'header-roles-sdk') await runHeaderRoles();
+  if (id === 'live-topbar-input') {
+    const verify = (text = source) => {
+      const f = fixture(text); let live = true; f.owner.inputCurrent = () => live;
+      f.owner.topBarBack(); f.owner.topBarActions();
+      const callbacks = ['退出阅读，返回上一页', '换源', '更多'].map(label => f.button(label).onClick);
+      live = false; callbacks.forEach(callback => callback());
+      assert.deepEqual(f.events, [], 'live root retires every first topbar action before retained Props update');
+      live = true; callbacks.forEach(callback => callback());
+      assert.deepEqual(f.events, ['exit', ['source', sourceSwitchTriggerFocusId('source', 'book', 'reader-control')], ['more', true]],
+        'the same opening recovers without remounting or accepting a successor owner');
+      f.owner.controlOpenRevision = 99; callbacks.forEach(callback => callback());
+      assert.equal(f.events.length, 3, 'old opening remains retired');
+    };
+    verify();
+    const before = 'return this.runtimeMounted && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&';
+    const start = source.indexOf('  private topBarInputEnabled()');
+    const old = source.slice(0, start) + source.slice(start).replace(before, 'return this.runtimeMounted && this.inputEnabled && !this.controlObscured &&');
+    assert.notEqual(old, source); assert.throws(() => verify(old), /live root retires/);
+  }
+  else if (id === 'header-roles-sdk') await runHeaderRoles();
   else if (id === 'input-admission') {
     const count = runInput();
     const oldHome = source.replace('if (!this.progressInputEnabled()) return;', 'if (!this.runtimeMounted || !this.contentInputEnabled()) return;');

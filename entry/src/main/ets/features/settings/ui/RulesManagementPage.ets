@@ -47,6 +47,9 @@ let nextRulesDraftOpening: number = 0;
 @Component
 export struct RulesManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @Prop inputEnabled: boolean = true;
+  inputCurrent: (() => boolean) | undefined = undefined;
   private mounted: boolean = false;
   @State private draftOpening: number = 0;
   @State private replaceDraftRevision: number = 0;
@@ -121,8 +124,22 @@ export struct RulesManagementPage {
   }
 
   private draftIsCurrent(key: string): boolean {
+    return this.inputAllowed() && this.ownsDraftKey(key);
+  }
+
+  private ownsDraftKey(key: string): boolean {
     return this.mounted && [this.draftKey('replace'), this.draftKey('txt'),
       this.draftKey('dict'), this.draftKey('subscription')].includes(key);
+  }
+
+  private restoreNativeDraft(key: string): void {
+    if (!this.ownsDraftKey(key)) return;
+    // A queued TextInput edit may have already changed its native buffer.
+    // Retire only this original editor and remount its accepted draft values.
+    if (key === this.draftKey('replace')) this.replaceDraftRevision += 1;
+    else if (key === this.draftKey('txt')) this.txtDraftRevision += 1;
+    else if (key === this.draftKey('dict')) this.dictDraftRevision += 1;
+    else if (key === this.draftKey('subscription')) this.subscriptionDraftRevision += 1;
   }
 
   build() {
@@ -130,12 +147,12 @@ export struct RulesManagementPage {
       variant: 'management',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
-    });
+    }).enabled(this.inputAllowed());
   }
 
   @Builder
   private pageHeader() {
-    PageBackBar({ title: '规则实体管理', onBack: (): void => this.onBack() });
+    PageBackBar({ title: '规则实体管理', onBack: (): void => { if (this.inputAllowed()) this.onBack(); } });
   }
 
   @Builder
@@ -153,7 +170,7 @@ export struct RulesManagementPage {
   @Builder
   private recoveryAction() {
     if (this.recovery().canRetry) {
-      ReaderRecoveryAction({ label: this.snapshot.ruleMutation?.canRetryOriginal === true ? '重试原规则操作' : this.snapshot.ruleMutation?.blocked === true ? '核对原规则操作' : '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
+      ReaderRecoveryAction({ label: this.snapshot.ruleMutation?.canRetryOriginal === true ? '重试原规则操作' : this.snapshot.ruleMutation?.blocked === true ? '核对原规则操作' : '刷新列表', generation: this.recovery().generation, onReconcile: (expected: number): void => { if (this.inputAllowed()) this.onReconcile(expected); } });
     }
   }
 
@@ -347,8 +364,11 @@ export struct RulesManagementPage {
   @Builder
   private input(value: () => string, placeholder: string, changed: (value: string) => void, draftKey: string) {
     ReaderFormField({ scheme: this.appThemeScheme, specId: 'rules-input', text: value(), placeholder,
-      inputIdentity: `${draftKey}:${placeholder}`,
-      onTextChange: (next: string): void => { if (this.draftIsCurrent(draftKey)) changed(next); } });
+      inputIdentity: `${draftKey}:${placeholder}`, isEditable: this.inputAllowed(),
+      onTextChange: (next: string): void => {
+        if (this.draftIsCurrent(draftKey)) changed(next);
+        else if (next !== value()) this.restoreNativeDraft(draftKey);
+      } });
   }
 
   @Builder
@@ -357,7 +377,7 @@ export struct RulesManagementPage {
       Text(label).layoutWeight(1).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       ReaderToggle({ value: value(), specId: 'standard-toggle', accessibilityLabel: label,
         inputIdentity: `${draftKey}:${label}`,
-        actionEnabled: true,
+        actionEnabled: this.inputAllowed(),
         onToggle: (next: boolean): void => { if (this.draftIsCurrent(draftKey)) action(next); } });
     }.layoutWeight(1).constraintSize({ minHeight: 44 });
   }
@@ -370,8 +390,12 @@ export struct RulesManagementPage {
       onAction: (): void => { if (this.actionAllowed(mutation, draftKey)) action(); } }).layoutWeight(shareRow ? 1 : undefined);
   }
 
+  private inputAllowed(): boolean {
+    return this.mounted && this.appForeground && this.inputEnabled && this.inputCurrent?.() !== false;
+  }
+
   private actionAllowed(mutation: boolean, draftKey: string = ''): boolean {
-    return this.mounted && (draftKey.length === 0 || this.draftIsCurrent(draftKey)) && !this.snapshot.busy &&
+    return this.inputAllowed() && (draftKey.length === 0 || this.draftIsCurrent(draftKey)) && !this.snapshot.busy &&
       (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown'));
   }
 

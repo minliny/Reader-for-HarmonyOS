@@ -115,6 +115,7 @@ export struct ReaderReadingTextFragment {
   @Prop @Watch('scheduleHighlightGeometry') autoPageHighlightStart: number | undefined = undefined;
   @Prop @Watch('scheduleHighlightGeometry') autoPageHighlightEnd: number | undefined = undefined;
   @Prop @Watch('onTextSelectionEnabledChanged') longPressSelectText: boolean = false;
+  selectionInputCurrent: (() => boolean) | undefined = undefined;
   @Prop @Watch('scheduleHighlightGeometry') separateHighlight: boolean = false;
   onHighlightGeometry: (key: number, rects: ReaderDynamicHighlightRect[]) => void =
     (_key: number, _rects: ReaderDynamicHighlightRect[]): void => {};
@@ -232,7 +233,7 @@ export struct ReaderReadingTextFragment {
     if (!item.id.equals(TextMenuItemId.COPY)) return false;
     // Consume stale copy actions too, so a dismissed selection cannot copy
     // a newly rendered fragment or fall through to the synthetic display text.
-    if (!this.longPressSelectText) return true;
+    if (!this.highlightMounted || !this.longPressSelectText || this.selectionInputCurrent?.() === false) return true;
     const selected = readerSelectedOriginalText(this.text, this.indentPrefix().length, range.start, range.end);
     if (selected === undefined || selected.length === 0) return true;
     try {
@@ -326,6 +327,7 @@ export struct ReadingSurface {
   /** Per-gap full-page adjustment; zero for short/image-ending pages. */
   @Prop bottomJustifyGap: number = 0;
   @Prop longPressSelectText: boolean = false;
+  selectionInputCurrent: (() => boolean) | undefined = undefined;
   @Prop chromeTopStartText: string = '';
   @Prop chromeTopEndText: string = '';
   @Prop chromeTopTranslateY: number = 0;
@@ -420,6 +422,7 @@ export struct ReadingSurface {
                   inkColor: this.themeStyle().ink,
                   gapVp: this.bottomJustifyGap,
                   selectionEnabled: this.longPressSelectText,
+                  selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
                   selectionColor: readerThemeDefinition(this.appearance.activeTheme).selection,
                   highlightStart: this.ttsHighlightStart ?? this.autoPageHighlightStart,
                   highlightEnd: this.ttsHighlightEnd ?? this.autoPageHighlightEnd,
@@ -442,6 +445,7 @@ export struct ReadingSurface {
                   autoPageHighlightStart: this.autoPageHighlightStart,
                   autoPageHighlightEnd: this.autoPageHighlightEnd,
                   longPressSelectText: this.longPressSelectText,
+                  selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
                   separateHighlight: this.staticSnapshotId.length > 0,
                   queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
                   onHighlightGeometry: (key: number, rects: ReaderDynamicHighlightRect[]): void => {
@@ -469,6 +473,7 @@ export struct ReadingSurface {
                 autoPageHighlightStart: this.autoPageHighlightStart,
                 autoPageHighlightEnd: this.autoPageHighlightEnd,
                 longPressSelectText: this.longPressSelectText,
+                  selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
               });
             }, (paragraph: string, index: number): string => `${index}:${paragraph}`);
           }

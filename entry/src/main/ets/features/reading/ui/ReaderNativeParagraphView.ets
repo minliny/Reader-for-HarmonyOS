@@ -15,6 +15,7 @@ export struct ReaderNativeParagraphView {
   @Prop @Watch('prepare') gapVp: number = 0;
   @Prop @Watch('updateInk') inkColor: ResourceColor = '#222222';
   @Prop @Watch('updateSelection') selectionEnabled: boolean = false;
+  selectionInputCurrent: (() => boolean) | undefined = undefined;
   @Prop @Watch('updateSelection') selectionColor: ResourceColor = '#80667788';
   @Prop @Watch('updateHighlight') highlightStart: number | undefined = undefined;
   @Prop @Watch('updateHighlight') highlightEnd: number | undefined = undefined;
@@ -88,7 +89,7 @@ export struct ReaderNativeParagraphView {
     if (!this.mounted) return;
     const epoch = this.epoch;
     this.controller.selection(this.selectionEnabled, this.selectionColor, (range: TextRange): void => {
-      if (!this.mounted || !this.selectionEnabled || epoch !== this.epoch) return;
+      if (!this.mounted || !this.selectionEnabled || this.selectionInputCurrent?.() === false || epoch !== this.epoch) return;
       const original = readerSelectedOriginalText(this.recipe.text, 0, range.start, range.end,
         this.controller.visibleStartUtf16(), this.controller.visibleEndUtf16());
       if (original === undefined || original.length === 0) return;

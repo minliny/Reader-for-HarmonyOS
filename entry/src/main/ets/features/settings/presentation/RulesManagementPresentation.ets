@@ -7,7 +7,7 @@ export class RulesManagementPresentation {
   identity: string = '';
   private host: RulesManagementOrchestrator | undefined;
 
-  open(owner: ReaderRuntimeOwner, identity: string, current: () => boolean): void {
+  open(owner: ReaderRuntimeOwner, identity: string, current: () => boolean, inputCurrent: () => boolean = current): void {
     if (!current() || identity === this.identity) return;
     const host = RulesManagementOrchestrator.forRuntime(owner);
     if (host === undefined) return;
@@ -17,7 +17,7 @@ export class RulesManagementPresentation {
     const attached = (): boolean => this.host === host && this.identity === identity && current();
     if (!host.attachPresentation(identity, (snapshot: RulesManagementSnapshot): void => {
       if (attached()) this.snapshot = snapshot;
-    }, attached)) {
+    }, attached, (): boolean => attached() && inputCurrent())) {
       this.retire();
       return;
     }
@@ -27,6 +27,14 @@ export class RulesManagementPresentation {
   operations(identity: string): RulesManagementOrchestrator | undefined {
     const host = this.host;
     return this.identity === identity && host?.isPresentationCurrent(identity) === true ? host : undefined;
+  }
+
+  inputAllowed(identity: string): boolean {
+    return this.identity === identity && this.host?.isPresentationInputCurrent(identity) === true;
+  }
+
+  inputOperations(identity: string): RulesManagementOrchestrator | undefined {
+    return this.inputAllowed(identity) ? this.operations(identity) : undefined;
   }
 
   retire(): void {

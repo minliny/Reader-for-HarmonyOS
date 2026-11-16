@@ -489,14 +489,16 @@ export struct ReaderControlTtsContent {
     if (field === 'engine' || field === 'manage') {
       if (id !== this.engine) await this.onEngineChange(id);
     } else if (field === 'session') {
-      if ((id === 'mix') !== this.allowMixing) this.onAllowMixingChange(id === 'mix');
+      // The displayed accepted value may precede an in-flight native choice.
+      // Its owner decides whether this selection supersedes or is a no-op.
+      this.onAllowMixingChange(id === 'mix');
     } else if (field === 'failure') {
       if (id !== this.failurePolicy) this.onFailurePolicyChange(id === 'skip' ? 'skip' : 'stop');
     } else {
       const voice = field === 'voice' ? this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => readerTtsVoiceId(item) === id) :
         this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id && item.person === this.person) ??
         this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id);
-      if (voice !== undefined && (voice.language !== this.language || voice.person !== this.person))
+      if (voice !== undefined)
         this.onVoiceChange(voice.language, voice.person);
     }
   }

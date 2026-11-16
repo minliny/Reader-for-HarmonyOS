@@ -137,13 +137,10 @@ async function backgroundPreference(){
   async function verify(methodFile=file){
     for(const initial of [false,true]){
       const f=await fixture(undefined,{index:0,backgroundPlayback:initial}),writes=[];
-      const Type=selectedProductionMethods(methodFile,'ReadingExperience',['nextTtsPreferenceMutationGeneration','captureTtsPreferenceAdmission','isSessionActive','isMountedToken',
-        'ttsPreferencesSnapshot','copyTtsPreferencesSnapshot','changeTtsBackgroundPlayback'],{ReaderRuntimeOwner:{current:()=>({getTtsHost:()=>f.h})}});
-      const owner=Object.assign(new Type(),{mounted:true,lifecycleToken:1,exitRequested:false,sourceId:chapter.sourceId,bookId:chapter.bookId,
-        ttsPreferenceMutationGeneration:0,ttsCoordinator:f.c,ttsLanguage:'zh-CN',ttsPerson:0,ttsPauseOnInterruption:true,ttsAllowMixing:false,
-        ttsFailurePolicy:'stop',ttsFollowHighlight:true,ttsBackgroundPlayback:initial,ttsKeepScreenOn:false,
-        persistTtsPreferencesSnapshot:async(snapshot,current)=>{assert.equal(current(),true);writes.push(snapshot);},
-        notifyTtsPreferencePending:()=>assert.fail('finite preference write succeeded')});
+      const {preferenceReader}=await import('./lib/reader-tts-preference-probe.mjs');
+      const ui=preferenceReader({patch:async(patch,current)=>{assert.equal(current(),true);writes.push(patch);},
+        writeFacts:()=>({pendingReconciliation:false})},{coordinator:f.c,nativeHost:f.h,file:methodFile});
+      const owner=ui.owner;owner.ttsBackgroundPlayback=initial;
       const callback=selectedProductionComponentCallback(file,'ReaderControlPanel','onTtsBackgroundPlaybackChange',owner);
       callback(!initial);await settle(f);assert.equal(writes.length,1);assert.equal(writes[0].backgroundPlayback,!initial);
       emit(f);await settle(f);
