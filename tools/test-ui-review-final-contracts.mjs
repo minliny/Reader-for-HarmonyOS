@@ -13,6 +13,8 @@ const cases = selectContractCases({
   'failure-first-input': 'Actual text/cache/manga failure native callbacks reject a new retry after live Root input loss, recover on the same owner and retain accepted business retries.',
   'startup-font-admission': 'Exact Ability checked-font promise and actual startup owner preserve rejection before/during stage creation and admit a successful checked load.',
   'settings-foreground-recovery': 'Actual Settings switch, theme and cache controls recover their retained action bindings after a background receipt and still reject live input loss before local delivery.',
+  'multi-select-foreground-recovery': 'Actual multi-select header/footer and row accessibility recover after the original selection owner publishes readiness in background.',
+  'slider-terminals': 'Actual automatic-page speed and manga page Slider Click and End terminals reach their original business owners, with Moving preview and retired input checks.',
 });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const file = path => new URL(path, root);
@@ -280,6 +282,157 @@ async function settingsForegroundRecovery(source = read('features/settings/ui/Se
   return { samples, boundary: 'Actual SDK V1 property runtime and official V2 parameter/event port, finite platform write endpoints.' };
 }
 
+async function multiSelectForegroundRecovery(source = read('features/bookshelf/ui/BookshelfMultiSelectPage.ets')) {
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
+  const action = pureModuleProbe(read('ui/controls/ReaderActionAccessibility.ets'), 'ReaderActionAccessibility.ets',
+    { AccessibilityRoleType: { BUTTON: 'button' } }, ['ReaderActionAccessibility', 'READER_ACTION_MIN_TARGET']);
+  const Mutation = selectedProductionMethods(file('features/bookshelf/presentation/BookshelfMutationPresentation.ets'),
+    'BookshelfMutationPresentation', ['openSelection', 'selectionBookKey']);
+  const samples = [];
+  for (const inline of [true, false]) {
+    const book = { sourceId: 'local', bookId: 'selected', title: '原选中书籍', contentKind: 'text' };
+    const runtime = {};
+    const root = { searchAppForeground: true, arkWebCapturesInput: false, route: 'bookshelfMultiSelect' };
+    let resolveSelection;
+    const pending = new Promise(resolve => { resolveSelection = resolve; });
+    const mutation = Object.assign(new Mutation(), { selectionIdentity: 0, scope: {
+      owner: () => runtime, generation: () => 1, mounting: () => 1, retired: () => false,
+      route: () => root.route, isCurrentOwner: owner => owner === runtime, readSelection: () => pending,
+    } });
+    mutation.openSelection(book, [book]);
+    root.shelfMutations = mutation;
+    const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+    const page = sdk.consumer(source, ['appForeground', 'appReduceMotion', 'appThemeScheme', 'books', 'ready', 'busy',
+      'selectedKeys', 'selectionTopBar', 'selectionHeading', 'selectionAction', 'removeBar', 'selectionInputEnabled',
+      'selectionRowAction', 'currentBook', 'toggleAll', 'allSelected', 'canRemoveSelection', 'removeVisibleSelection',
+      'reconcileSelection', 'canRetainSelectedKey', 'hasBookKey', 'bookKey', 'isSelected', 'visibleBooks'], {
+      ...action, ShelfBookPresentation, APP_HEADER_BAR_HEIGHT: 52,
+    });
+    const calls = [];
+    Object.assign(page, { mounted: true, appForeground: true, ready: false, busy: false, books: [book],
+      selectedKeys: [mutation.selection.initialKey], storedSelectedGroup: '', readingFilter: 'all', sourceFilter: 'all',
+      mangaRevision: 0, appThemeScheme: 'day', selectionHeaderInline: () => inline,
+      bottomInset: () => 0, onCancel: () => calls.push(['cancel']), onRemoveSelected: keys => calls.push(['remove', keys]),
+      isInputAllowed: selectedProductionComponentCallback(file('pages/Index.ets'), 'BookshelfMultiSelectPage',
+        'isInputAllowed', root, { identity: mutation.selection.identity }),
+    });
+    page.selectionTopBar();
+    root.searchAppForeground = false;
+    page.appForeground = false;
+    resolveSelection({ books: [book] });
+    await settle();
+    assert.equal(mutation.selection.ready, true, 'original owner accepts its background read receipt');
+    page.updateStateVars({ ready: mutation.selection.ready, books: mutation.selection.books });
+    sdk.properties.flush();
+    // The SDK adapter does not model removal of the spinner subtree. Mount
+    // the ready footer declaration after its original background receipt.
+    page.removeBar();
+    const buttons = sdk.nodes(page).filter(node => node.type === 'Button' && node.onClick);
+    assert.equal(buttons.length, 3);
+    assert.ok(buttons.every(button => button.enabled === false));
+    const rowAttributes = () => {
+      const values = {};
+      const native = new Proxy({}, { get: (_target, key) => value => { values[key] = value; return native; } });
+      page.selectionRowAction(book).applyNormalAttribute(native);
+      return values;
+    };
+    assert.equal(rowAttributes().enabled, false);
+    root.searchAppForeground = true;
+    page.appForeground = true;
+    sdk.properties.flush();
+    assert.ok(buttons.every(button => button.enabled === true), 'same multi-select native actions recover on foreground');
+    assert.equal(rowAttributes().enabled, true); assert.equal(rowAttributes().focusable, true);
+    assert.ok(buttons.every(button => sdk.nodes(page).includes(button)));
+    const cancel = buttons.find(button => button.accessibilityText === '取消');
+    const remove = buttons.find(button => button.accessibilityText === '移除书架');
+    const all = buttons.find(button => button !== cancel && button !== remove);
+    root.searchAppForeground = false;
+    cancel.onClick(); remove.onClick(); all.onClick();
+    assert.deepEqual(calls, []); assert.deepEqual([...page.selectedKeys], [mutation.selection.initialKey]);
+    root.searchAppForeground = true;
+    remove.onClick();
+    assert.deepEqual(calls, [['remove', [mutation.selection.initialKey]]]);
+    all.onClick(); assert.deepEqual([...page.selectedKeys], []);
+    all.onClick(); assert.deepEqual([...page.selectedKeys], [mutation.selection.initialKey]);
+    cancel.onClick(); assert.equal(calls.at(-1)[0], 'cancel');
+    page.mounted = false;
+    const accepted = calls.length;
+    cancel.onClick(); remove.onClick(); all.onClick();
+    assert.equal(calls.length, accepted);
+    samples.push({ inline, sameNativeActions: 3, acceptedBackgroundReady: true, restoredRowAttributes: true });
+  }
+  return { samples, boundary: 'Actual SDK buttons and production row modifier attributes, original selection read owner and Root input callback. Removal/navigation endpoints and geometry are finite.' };
+}
+
+async function sliderTerminals(autoSource = read('features/reading/ui/ReaderControlAutoPageContent.ets'), mangaSource = read(mangaPath)) {
+  const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+  const actors = await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+  const policy = await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageFullState.ts');
+  const { ReaderAutoPageCoordinator } = await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageCoordinator.ts');
+  const speedOwner = selectedProductionMethods(file(localPath), 'ReadingExperience', ['setAutoPageSpeed']);
+  const coordinator = new ReaderAutoPageCoordinator({ now: () => 0, schedule: () => 1, cancel() {},
+    active: () => true, ready: () => true, canResumeTurn: () => true, turn: () => ({ kind: 'started' }), changed() {} });
+  const reading = Object.assign(new speedOwner(), { autoPageCoordinator: coordinator });
+  const sdk = boundedSurfaceSdk();
+  const methods = ['p', 'frame', 'effectiveSpeedSeconds', 'speedRow', 'speedControlsWidth', 'speedControlsHeight',
+    'speedControlsX', 'speedControlsY', 'speedSliderWidth', 'speedSliderX', 'speedMinusX', 'speedMaxLabelX',
+    'speedPlusX', 'speedLabelY', 'speedActor', 'speedActorId', 'speedStepButton', 'changeSpeedStep', 'textMetric']
+    .filter(name => autoSource.includes(`private ${name}(`));
+  const auto = sdk.consumer(autoSource, [...methods, 'speedSeconds', 'speedPreviewSeconds'], { ...geometry, ...actors, ...policy });
+  let input = true;
+  Object.assign(auto, { motionProgress: 1, availableWidth: 338, speedSeconds: 8, speedPreviewSeconds: -1,
+    minimumProfile: () => undefined, preparedMinimumRequired: false, minimumKey: '',
+    appScheme: 'day', sourceOnly: 'none', sharedInput: () => input, fullInput: () => input,
+    presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), sharedScrollTranslation: () => 0,
+    sharedClip: () => ({}), onSpeedChange: value => {
+      reading.setAutoPageSpeed(value);
+      auto.updateStateVars({ speedSeconds: coordinator.snapshot().speedSeconds });
+    } });
+  auto.speedRow();
+  const speed = sdk.nodes(auto).find(node => node.type === 'Slider');
+  speed.onChange(13, 'SliderChangeMode.Moving');
+  sdk.properties.flush();
+  assert.equal(auto.effectiveSpeedSeconds(), 13); assert.equal(coordinator.snapshot().speedSeconds, 8);
+  assert.equal(speed.create.value, 13, 'native Slider displays the current Moving preview');
+  speed.onChange(13, 'SliderChangeMode.Click');
+  sdk.properties.flush();
+  assert.equal(coordinator.snapshot().speedSeconds, 13, 'automatic-page Click commits original coordinator speed');
+  assert.equal(auto.speedPreviewSeconds, -1);
+  assert.equal(speed.create.value, 13, 'native Slider consumes the accepted speed Prop after preview clears');
+  speed.onChange(15, 'SliderChangeMode.End'); sdk.properties.flush(); assert.equal(coordinator.snapshot().speedSeconds, 15);
+  assert.equal(speed.create.value, 15);
+  input = false; speed.onChange(17, 'SliderChangeMode.Click'); assert.equal(coordinator.snapshot().speedSeconds, 15);
+
+  const seeks = [], restored = [];
+  const manga = sdk.consumer(mangaSource, ['bottomControls', 'seekPage', 'readerPanelForeground'], {
+    ReaderPanelFrame: class { applyNormalAttribute() {} },
+  });
+  Object.assign(manga, { mounted: true, exiting: false, appForeground: true, windowChromeActive: true,
+    windowChromeOverlayActive: false, interactionBlocked: false, isReaderIdentityCurrent: () => true,
+    inputCurrent: () => true, opened: true, horizontal: false, horizontalPageCount: 5,
+    presentationGeneration: 0, pageTurnInputRevision: 1, layoutGeneration: 1,
+    controller: { chapter: {}, totalPages: 5, setVisible: async ordinal => { seeks.push(ordinal); } },
+    data: { projection: { index: ordinal => ordinal } }, saveVisible: async () => {}, notifyPublishedRows() {},
+    restore: (...args) => restored.push(args), pageOrdinal: () => 0, viewportWidth: 366, backgroundPreference: 'paper',
+    mutedColor: () => '#666666', greenColor: () => '#008800', lineColor: () => '#eeeeee',
+    controlFontScale: () => 1, dockPageRowHeight: () => 63, dockActionHeight: () => 58,
+    interactiveInsets: () => ({ left: 0, right: 0 }), chromeScheme: () => 'day', footerAction() {},
+  });
+  manga.bottomControls();
+  const page = sdk.nodes(manga).find(node => node.type === 'Slider');
+  page.onChange(3, 'SliderChangeMode.Moving'); await settle(); assert.deepEqual(seeks, []);
+  page.onChange(3, 'SliderChangeMode.Click'); await settle();
+  assert.deepEqual(seeks, [2], 'manga Click reaches original seek controller');
+  assert.deepEqual(restored, [[2, 0, 0]]);
+  page.onChange(4, 'SliderChangeMode.End'); await settle(); assert.deepEqual(seeks, [2, 3]);
+  manga.appForeground = false; page.onChange(5, 'SliderChangeMode.Click'); await settle();
+  assert.deepEqual(seeks, [2, 3], 'original manga current-input seek fence remains active');
+  coordinator.dispose();
+  return { nativeSliders: 2, clickAndDragCommit: true, movingDoesNotCommit: true,
+    boundary: 'Actual SDK onChange declarations, real AutoPage coordinator and manga seek receiver. Native input delivery, service timers and image layout are finite ports.' };
+}
+
 for (const id of cases) {
   let result;
   if (id === 'failure-first-input') {
@@ -298,7 +451,7 @@ for (const id of cases) {
       "this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts()).catch");
     assert.notEqual(old, source);
     await assert.rejects(() => startupFontAdmission(old), /uses the checked-font admission result/);
-  } else {
+  } else if (id === 'settings-foreground-recovery') {
     const source = read('features/settings/ui/SettingsPage.ets');
     result = await settingsForegroundRecovery(source);
     const old = source.replace('return this.appForeground && this.mounted && identity === this.temporaryBackIdentity',
@@ -307,6 +460,20 @@ for (const id of cases) {
     for (const kind of ['toggle', 'theme', 'cache']) {
       await assert.rejects(() => settingsForegroundRecovery(old, [kind]), /foreground delivery restores the retained action/);
     }
+  } else if (id === 'multi-select-foreground-recovery') {
+    const source = read('features/bookshelf/ui/BookshelfMultiSelectPage.ets');
+    result = await multiSelectForegroundRecovery(source);
+    const old = source.replace('return this.appForeground && this.mounted && this.ready', 'return this.mounted && this.ready');
+    assert.notEqual(old, source);
+    await assert.rejects(() => multiSelectForegroundRecovery(old), /same multi-select native actions recover on foreground/);
+  } else {
+    const auto = read('features/reading/ui/ReaderControlAutoPageContent.ets'), manga = read(mangaPath);
+    result = await sliderTerminals(auto, manga);
+    const oldAuto = auto.replace('if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click)', 'if (mode === SliderChangeMode.End)');
+    const oldManga = manga.replace('if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) void this.seekPage', 'if (mode === SliderChangeMode.End) void this.seekPage');
+    assert.notEqual(oldAuto, auto); assert.notEqual(oldManga, manga);
+    await assert.rejects(() => sliderTerminals(oldAuto, manga), /automatic-page Click commits original coordinator speed/);
+    await assert.rejects(() => sliderTerminals(auto, oldManga), /manga Click reaches original seek controller/);
   }
   console.log(JSON.stringify({ case: id, result, oldBehaviorRejected: true,
     boundary: 'Current production methods and actual SDK native action callbacks. Acquisition, native layout and platform IO are finite ports. No device action.' }));

@@ -11,6 +11,7 @@ const selected=selectContractCases({
  'keyboard-ack-delay':'Actual SDK before-source delayed Native focus ACK loses one-shot keyboard restore, while current pending request schedules once only after acknowledged focus; finite current/retired/repeated ACK ports.',
  'keyboard-transfer':'Actual shipping Content/Field/Toolbar callbacks preserve visible editing through a retiring input inset0, admit explicit editing after Back through both current input hosts, request public showTextInput once after Native focus ACK, and reject Back/stale/disabled/failed work. Finite Native API ports only.',
  'keyboard-observation':'Actual SDK Content and Field modifier distinguish fresh unknown keyboard inset0 from observed-visible then hidden, retain policy across same-instance layout migration and retire old opening callbacks/frames. No Native keyboard service or IME claim.',
+ 'foreground-recovery':'Actual stable Full toolbar ancestor retains its enabled, accessibility and hit-test dependency through a background-created actor and foreground delivery, with original temporary-editor admission.',
 });
 if(selected.length){
  registerHooks({resolve(s,c,n){if(s.startsWith('.')&&!/\.[a-z]+$/i.test(s)){const u=new URL(s+'.ts',c.parentURL);if(existsSync(fileURLToPath(u)))return n(u.href,c);}return n(s,c);}});
@@ -333,6 +334,51 @@ if(selected.length){
    currentDismissAndBack:true,successorRejected:true,
    boundary:'Actual current Panel/Directory methods and SDK child/toolbar bindings with finite readiness and geometry ports. Native focus/keyboard reflow remains separately verified.'}));
  }
+ async function foregroundRecovery(){
+  const {selectedProductionMethods,selectedProductionComponentCallback}=await import('./lib/selected-production-methods.mjs');
+  const panelFile=new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url);
+  const Panel=selectedProductionMethods(panelFile,'ReaderControlPanel',
+   ['contentInputEnabled','moduleEditorInputEnabled','secondaryModuleInputEnabled']);
+  function exercise(source){
+   const view=actor({height:646,width:338,scale:1,source});
+   let foreground=true;
+   const panel=Object.assign(new Panel(),{runtimeMounted:true,preparedMinimumRequired:false,inputEnabled:true,
+    controlObscured:false,visualVisibilityProgress:1,visualTransitionKind:'',visualHeldPointerId:-1,moreMenuVisible:false,
+    inputCurrent:()=>foreground,contentLocation:()=>({level:'secondary',module:'directory'}),
+    minimumInputReady:()=>true,hasCurrentTemporaryInput:()=>false});
+   view.owner.editorInputCurrent=selectedProductionComponentCallback(panelFile,'ReaderControlDirectoryContent','editorInputCurrent',panel);
+   view.owner.inputCurrent=selectedProductionComponentCallback(panelFile,'ReaderControlDirectoryContent','inputCurrent',panel);
+   const layoutKey=view.owner.layoutKey;
+   assert.ok(layoutKey,'the retained owner has already established its stable Full layout');
+   foreground=false;panel.inputEnabled=false;view.owner.interactionEnabled=false;
+   view.sdk.properties.flush();view.render();
+   const targets=view.sdk.nodes(view.owner).filter(node=>node.type==='Stack'&&node.position?.x===1&&
+    typeof node.enabled==='boolean'&&node.accessibilityLevel!==undefined);
+   assert.equal(targets.length,1,'one actual Full toolbar ancestor native declaration');
+   const target=targets[0];assert.equal(target.enabled,false);
+   foreground=true;panel.inputEnabled=true;view.owner.interactionEnabled=true;
+   view.sdk.properties.flush();
+   assert.equal(view.owner.layoutKey,layoutKey,'foreground recovery does not require a new layout');
+   assert.equal(view.owner.queryInteractive(),true);
+   assert.equal(target.enabled,true,'same native toolbar ancestor recovers enabled on foreground delivery');
+   assert.equal(target.accessibilityLevel,'auto');
+   assert.equal(target.hitTestBehavior,'HitTestMode.Default');
+   assert.equal(view.sdk.nodes(view.owner).find(node=>node.id===target.id),target);
+   foreground=false;
+   assert.equal(view.owner.queryInteractive(),false,'original live callback still rejects before local Prop delivery');
+   foreground=true;
+   view.owner.aboutToDisappear();
+   assert.equal(view.owner.queryInteractive(),false,'retired owner cannot reacquire query input');
+  }
+  exercise(content);
+  const old=content.replace('    const inputEnabled = this.currentInputEnabled();\n','')
+   .replace('(this.editorInputCurrent?.() ?? inputEnabled)','(this.editorInputCurrent?.() ?? this.currentInputEnabled())');
+  assert.notEqual(old,content);
+  assert.throws(()=>exercise(old),/same native toolbar ancestor recovers enabled/);
+  console.log(JSON.stringify({kind:'directory-native-ancestor-foreground-recovery',sameActor:true,stableLayout:true,
+   finalEnabled:true,finalAccessibility:true,finalHitTest:true,oldPredicateRejected:true,
+   boundary:'Actual SDK native ancestor and current Panel callback assembly. Finite geometry and Root foreground port; no native event delivery.'}));
+ }
  async function keyboardTransfer(){
   await directoryEditorReflow();
   const beforeContent=readFileSync(new URL('./fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt',import.meta.url),'utf8');
@@ -517,5 +563,5 @@ if(selected.length){
   }
   console.log(JSON.stringify({kind:'directory-current-minimum-profile-bridge',profiles,boundary:'Production measurer/SDK owner with finite native text metrics; no glyph, focus or physical layout engine claim.'}));
  }
- for(const id of selected){await ({'short-sdk':shortSdk,'prefix-anchors':prefixAnchors,'directory-focus':directoryFocus,'keyboard-observation':keyboardObservation,'keyboard-transfer':keyboardTransfer,'keyboard-ack-delay':keyboardAckDelay,'measured-profile':measuredProfile})[id]();recordContractCasePass(id);}
+ for(const id of selected){await ({'short-sdk':shortSdk,'prefix-anchors':prefixAnchors,'directory-focus':directoryFocus,'keyboard-observation':keyboardObservation,'keyboard-transfer':keyboardTransfer,'keyboard-ack-delay':keyboardAckDelay,'measured-profile':measuredProfile,'foreground-recovery':foregroundRecovery})[id]();recordContractCasePass(id);}
 }

@@ -246,8 +246,11 @@ export struct ReaderControlDirectoryContent {
       this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
   private currentEditorInputEnabled(): boolean {
+    // Subscribe the native ancestor to the local interaction Prop while the
+    // temporary editor keeps its existing live input scope during reflow.
+    const inputEnabled = this.currentInputEnabled();
     return this.mounted && (!this.preparedMinimumRequired || this.presentationPrepared()?.ownerCurrent?.() === true) &&
-      (this.editorInputCurrent?.() ?? this.currentInputEnabled());
+      (this.editorInputCurrent?.() ?? inputEnabled);
   }
 
   private minimumFacts(): ReaderDirectoryMinimumFacts {

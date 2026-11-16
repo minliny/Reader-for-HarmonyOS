@@ -1,5 +1,15 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 第十八轮发现与修复批次复核
+
+第十八轮冻结 66217fe2，完成 472 个当前 UI 合同、92 个历史问题、20 个路由、4 个 manifest 页面根及 21 项登记复核。起止 1,770 项审阅输入、642 项生产输入与另 16 项登记引用均无漂移，结论 FAIL，确认 UIF-93、UIF-94、UIF-95，连续通过为 0。[完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-18.json)
+
+三项当前已修复并通过六个准确 case。书架多选的原生操作和行无障碍谓词先读取本地前景，原后台 ready 回执继续由原 owner 接纳。自动翻页速度和漫画页码的两个 Slider 同时处理 End／Click 终态，前者清理预览并提交实际 coordinator，后者进入原 seek／restore 归属。阅读内目录先求既有 currentInputEnabled，登记本地 interactionEnabled 依赖后沿原显式临时编辑判据返回，稳定 Full 父容器能恢复 enabled、AX 和 hitTest，已接纳编辑跨 minimum reflow 的合同通过准确回归。[修复及回归](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round18-repair-summary.json)
+
+前几轮的问题在于文件审读覆盖没有充分落实到同类状态转换，首次拒绝检查遗漏同一控件恢复，Slider 检查遗漏平台 Click 终态，过早的独立轮次增加了重复成本。第十四、十五轮还曾在首次发现后结束不完整审查，原记录保留。本批在开始新的三轮独立审计前，复用第十八轮已读合同，对 21 个输入 port 和全部 6 个原生 Slider 按实际入口、状态转换、最终属性、业务回调与回执归属集中核对。该批次复核的全局连续通过增量为 0。
+
+本批 21 个输入入口及全部 6 个原生 Slider 已完成接线核对，部分与未审均为 0，新增同因发现为 0。本批次核对的全局连续通过增量为 0，规范编译待执行。[27 项接线核对](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round18-repair-contract-matrix.json)五个修改脚本语法通过，13 项目录登记指纹已同步，当前仍为 37 项原诊断、0 源码漂移、0 引用错误。原生登记为 19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环为 0／21，VM 禁令有效。
+
 ## 2026-11-16 第十七轮完整接线复核与两项修复
 
 第十七轮冻结 d89861c6，完成 472 个当前 UI 合同、90 个历史问题、20 个路由、4 个 manifest 页面根与 21 项正式登记复核。1,770 项审阅输入及另 16 项登记引用在结束时无漂移。结论 FAIL，确认 UIF-91 和 UIF-92，连续通过仍为 0。此前的通过记录遗漏了这两条首次输入和前景恢复路径。[本轮完整审查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-17.json)

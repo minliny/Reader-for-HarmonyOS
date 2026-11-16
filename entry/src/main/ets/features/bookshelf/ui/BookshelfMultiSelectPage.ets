@@ -440,7 +440,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private selectionInputEnabled(): boolean {
-    return this.mounted && this.ready && !this.busy && (this.isInputAllowed?.() ?? true);
+    return this.appForeground && this.mounted && this.ready && !this.busy && (this.isInputAllowed?.() ?? true);
   }
 
   private selectionRowAction(book: ShelfBook): ReaderActionAccessibility {

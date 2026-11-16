@@ -92,7 +92,7 @@ assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow(navigation:'
 const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection',
   'toggleBook','hasBookKey','toggleAll','allSelected','selectionInputEnabled','canRemoveSelection'],{ShelfBookPresentation});
 let removed=[];
-const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,ready:true,mounted:true,onRemoveSelected:k=>removed.push(k)});
+const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,ready:true,mounted:true,appForeground:true,onRemoveSelected:k=>removed.push(k)});
 assert.equal(ids(batch.visibleBooks()),'bd');batch.toggleAll();assert.equal(batch.selectedKeys.length,2);
 batch.books=books.map(b=>b.bookId==='b'?{...b,readProgress:10000}:b);
 batch.removeVisibleSelection();assert.deepEqual(removed,[['online\u0000d']],'a selected book hidden by a new progress value is never removed');

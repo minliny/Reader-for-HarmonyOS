@@ -387,7 +387,7 @@ function multiSelectCurrent(source) {
     const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources,
       ShelfBookListDetails: details, NoCoverCover: read('ui/patterns/NoCoverCover.ets') } };
     dependencies.ShelfBookListDetails = createReaderBuilderProbe(details, boundedMembers(details), dependencies, hooks).Component;
-    const members = ['books', 'ready', 'busy', 'selectedKeys', 'selectionList', 'selectionCard', 'selectionListCard',
+    const members = ['books', 'ready', 'busy', 'appForeground', 'selectedKeys', 'selectionList', 'selectionCard', 'selectionListCard',
       'selectionBadge', 'selectionRowAction', 'currentBook', 'hasCover', 'bookKey', 'isSelected', 'hasBookKey',
       'toggleBook', 'visibleBooks', 'bookRows', 'isListMode', 'selectionInputEnabled', 'reconcileSelection', 'canRetainSelectedKey'];
     const { owner } = createReaderBuilderProbe(source, members, dependencies, hooks);

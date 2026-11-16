@@ -57,7 +57,7 @@ if (selected.length) {
   function selectionScenario(source = read(shelfPath)) {
     for (const inline of [true, false]) {
       const controls = foundationControls();
-      const methods = ['selectedKeys', 'busy', 'ready', 'selectionTopBar', 'selectionHeading', 'selectionAction',
+      const methods = ['selectedKeys', 'busy', 'ready', 'appForeground', 'selectionTopBar', 'selectionHeading', 'selectionAction',
         'toggleAll', 'allSelected', 'selectionInputEnabled', 'hasBookKey', 'bookKey'];
       const owner = createReaderBuilderProbe(source, methods, { ...controls.dependencies, ...targetConstants }, controls.hooks).owner;
       const books = [{ sourceId: 'local', bookId: 'a' }, { sourceId: 'local', bookId: 'b' }];

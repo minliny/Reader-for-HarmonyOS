@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 61,
+      "revision": 62,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2727,7 +2727,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+          "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
           "symbol": "build"
         },
         {
@@ -2916,7 +2916,7 @@
         },
         {
           "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+          "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
         },
         {
           "path": "tools/test-directory-native-row-target.mjs",
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4245,7 +4245,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -4434,7 +4434,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5880,7 +5880,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -6069,7 +6069,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -6295,7 +6295,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -6311,7 +6311,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7521,7 +7521,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -7710,7 +7710,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -7928,7 +7928,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -7944,7 +7944,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
@@ -8197,7 +8197,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea"
+              "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff"
             },
             "layers": {
               "route": {
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9177,7 +9177,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -9366,7 +9366,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -9572,7 +9572,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -9588,7 +9588,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10702,7 +10702,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -10891,7 +10891,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 61,
+            "revision": 62,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12118,7 +12118,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -12307,7 +12307,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -12525,7 +12525,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -12541,7 +12541,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13691,7 +13691,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -13880,7 +13880,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15152,7 +15152,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -15341,7 +15341,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -15559,7 +15559,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -15575,7 +15575,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16669,7 +16669,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -16858,7 +16858,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 61,
+            "revision": 62,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18085,7 +18085,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -18274,7 +18274,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -18492,7 +18492,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -18508,7 +18508,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
@@ -18772,7 +18772,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea"
+              "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff"
             },
             "layers": {
               "route": {
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19732,7 +19732,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -19921,7 +19921,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -20127,7 +20127,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -20143,7 +20143,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
@@ -20423,7 +20423,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea"
+              "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff"
             },
             "layers": {
               "route": {
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21378,7 +21378,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "f531b931c0070da785d3e1c8f5d2707a48929951300f1c2035cab55bd7e9f2ea",
+                "sha256": "b399cc82d1a029a76ebecaa788132346e155c9b37a662124eebe06360ac9c2ff",
                 "symbol": "build"
               },
               {
@@ -21567,7 +21567,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d"
+                "sha256": "18c6d607185e58071bb37ab5f73c75d2776f53ef4f3c3447a8c569d2cc50509c"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -21773,7 +21773,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "36068efaf75cfdafb3b314ada065f6afc4637e79408ba3eaff8f6b6b026d8b01"
+                "sha256": "9c11095af0e98c96811e698bc4c802c918e8a88d321913789445eecfacfc3b95"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -21789,7 +21789,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets",
-                "sha256": "101c7004cc3306dc21e39f36c46ffe104c55e7cb7c6adc57698c277c4d654ff5"
+                "sha256": "baeb1ccb3b7a63290d8afebdb53653e07514dbb1a78291cc15b7a99dfe87774a"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
