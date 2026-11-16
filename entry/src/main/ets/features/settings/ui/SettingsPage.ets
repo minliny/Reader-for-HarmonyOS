@@ -13,6 +13,7 @@ import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor, type ReaderAppThemeMode } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { ReaderAppearanceSaveUnconfirmedError, type ReaderAppearanceSaveState } from '../../reading/application/ReaderAppearanceStore';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { SettingsShell } from './SettingsShell';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
@@ -66,7 +67,7 @@ export struct SettingsPage {
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
 
   @Prop @Watch('onActiveSectionChanged') activeSection: 'home' | 'general' = 'home';
-  @Prop navigationGeneration: number = 0;
+  @Prop @Watch('onAppearanceSaveHostChanged') navigationGeneration: number = 0;
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
   isOpeningCurrent: () => boolean = (): boolean => false;
   isInputAllowed: (() => boolean) | undefined = undefined;
@@ -95,6 +96,11 @@ export struct SettingsPage {
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
+  @State private appearanceSaveRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private appearanceSaveRecoveryBusy: boolean = false;
+  private appearanceSaveRevision: number = 0;
+  private appearanceSaveRecoveryIdentity: string = '';
+  private appearanceSaveUnsubscribe: (() => void) | undefined = undefined;
   @State private temporaryBackIdentity: string = '';
   @State private appThemeControlGeneration: number = 0;
   @State private aboutPageId: string = '';
@@ -143,10 +149,20 @@ export struct SettingsPage {
     const identity = `settings-back:${++settingsSelectionGeneration}`;
     this.temporaryBackIdentity = identity;
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
+    const owner = this.themeOwner;
+    this.appearanceSaveUnsubscribe?.();
+    if (owner !== undefined) this.appearanceSaveUnsubscribe = owner.getAppearanceStore().subscribeSaveState(
+      (state: ReaderAppearanceSaveState): void => this.updateAppearanceSaveRecovery(owner, state));
   }
 
   aboutToDisappear(): void {
     this.transientFeedback.reset();
+    this.appearanceSaveUnsubscribe?.();
+    this.appearanceSaveUnsubscribe = undefined;
+    this.appearanceSaveRecoveryIdentity = '';
+    this.appearanceSaveRecovery = { message: '', visible: false, canRetry: false,
+      generation: this.appearanceSaveRecovery.generation + 1 };
+    this.appearanceSaveRecoveryBusy = false;
     this.aboutPageId = '';
     this.retireDeveloperPages();
     const identity = this.temporaryBackIdentity;
@@ -350,6 +366,7 @@ export struct SettingsPage {
   }
 
   private onActiveSectionChanged(): void {
+    this.onAppearanceSaveHostChanged();
     this.appThemeControlGeneration += 1;
     this.resetSectionRevision += 1;
     this.resetMessage = '';
@@ -510,9 +527,42 @@ export struct SettingsPage {
     return (JSON.parse(identity) as string[])[index];
   }
 
+  private onAppearanceSaveHostChanged(): void {
+    const owner = this.themeOwner;
+    if (this.mounted && owner !== undefined && ReaderRuntimeOwner.isCurrent(owner))
+      this.updateAppearanceSaveRecovery(owner, owner.getAppearanceStore().saveState());
+  }
+
+  private updateAppearanceSaveRecovery(owner: ReaderRuntimeOwner, state: ReaderAppearanceSaveState): void {
+    if (!this.mounted || owner !== this.themeOwner || !ReaderRuntimeOwner.isCurrent(owner)) return;
+    const identity = JSON.stringify([this.temporaryBackIdentity, this.navigationGeneration, this.activeSection, state.revision]);
+    const generation = identity === this.appearanceSaveRecoveryIdentity ? this.appearanceSaveRecovery.generation :
+      this.appearanceSaveRecovery.generation + 1;
+    this.appearanceSaveRecoveryIdentity = identity;
+    this.appearanceSaveRevision = state.revision;
+    this.appearanceSaveRecoveryBusy = state.retrying;
+    this.appearanceSaveRecovery = { visible: state.unconfirmed,
+      message: state.unconfirmed ? '外观设置保存尚未确认，当前选择已保留。' : '',
+      canRetry: state.canRetry, generation };
+  }
+
+  private hasPendingAppearanceSave(): boolean { return this.appearanceSaveRecovery.visible; }
+
+  private retryAppearanceSave(identity: string, generation: number): void {
+    if (!this.settingsInputIsCurrent() || this.openSelect !== '' || this.resetInFlight ||
+      identity !== this.appearanceSaveRecoveryIdentity || generation !== this.appearanceSaveRecovery.generation ||
+      identity !== JSON.stringify([this.temporaryBackIdentity, this.navigationGeneration, this.activeSection, this.appearanceSaveRevision])) return;
+    const owner = this.themeOwner;
+    if (owner === undefined || !ReaderRuntimeOwner.isCurrent(owner)) return;
+    const store = owner.getAppearanceStore();
+    const state = store.saveState();
+    if (!state.canRetry || state.revision !== this.appearanceSaveRevision) return;
+    void store.retrySave(state.revision).catch((_error: Error): void => { /* The original Store retains and republishes recovery. */ });
+  }
+
   private pendingFeedbackVisible(): boolean {
     return this.settingsInputIsCurrent() && !this.resetInFlight && this.openSelect === '' &&
-      (this.hasPendingSettings() || this.hasPendingCleanup());
+      (this.hasPendingSettings() || this.hasPendingCleanup() || this.hasPendingAppearanceSave());
   }
 
   @Builder
@@ -533,10 +583,19 @@ export struct SettingsPage {
             onSecondaryAction: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 1)) });
         }, (key: string): string => key);
       }
+      if (this.hasPendingAppearanceSave()) {
+        ForEach([JSON.stringify([this.appearanceSaveRecoveryIdentity, `${this.appearanceSaveRecovery.generation}`])], (identity: string): void => {
+          ReaderRecoveryNotice({ grouped: true, follows: this.hasPendingSettings(), view: this.appearanceSaveRecovery,
+            tag: '外观设置', actionLabel: '重试保存', actionEnabled: this.appearanceSaveRecovery.canRetry,
+            retainPrimaryAction: true, busy: this.appearanceSaveRecoveryBusy,
+            onReconcile: (): void => this.retryAppearanceSave(this.capturedPendingAction(identity, 0),
+              Number(this.capturedPendingAction(identity, 1))) });
+        }, (identity: string): string => `appearance:${identity}`);
+      }
       if (this.hasPendingCleanup()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('cache-read'), this.recoveryIdentityFor('cache-continue'),
           this.temporaryBackIdentity, `${this.cacheCleanup?.operation.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ grouped: true, follows: this.hasPendingSettings(), view: { visible: true,
+          ReaderRecoveryNotice({ grouped: true, follows: this.hasPendingSettings() || this.hasPendingAppearanceSave(), view: { visible: true,
             message: this.cacheCleanup?.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用',
             canRetry: true, generation: this.cacheCleanup?.operation.generation ?? 0 },
             actionLabel: '核对', busy: this.cacheCleanup?.busy === true,
@@ -778,11 +837,11 @@ export struct SettingsPage {
     const current = (): boolean => this.appThemeControlIsCurrent(identity);
     if (!this.settingsInputIsCurrent() || !current() || (index !== 0 && index !== 1 && index !== 2)) return;
     void this.onSelectAppTheme(index === 0 ? 'system' : index === 1 ? 'day' : 'night')
-      .catch((): void => {
-        if (!current()) return;
+      .catch((error: Error): void => {
+        if (!current() || error instanceof ReaderAppearanceSaveUnconfirmedError) return;
         try { this.transientFeedback.show(() => this.getUIContext(), {
-          message: '主题保存尚未确认，当前选择已保留，请稍后重试',
-        }, (): boolean => current()); } catch (_notice) { /* Native feedback cannot rewrite the accepted choice. */ }
+          message: '主题暂时无法修改，请重试',
+        }, (): boolean => current()); } catch (_notice) { /* Feedback cannot rewrite the accepted choice. */ }
       });
   }
 

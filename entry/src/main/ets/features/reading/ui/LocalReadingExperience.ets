@@ -330,7 +330,7 @@ import {
   type ReaderTtsVoiceOption,
 } from '../application/ReaderTtsPreferencesState';
 import { ReaderAppearanceGateway } from '../application/ReaderAppearanceGateway';
-import { ReaderAppearanceCommit, type ReaderAppearanceChange } from '../application/ReaderAppearanceStore';
+import { ReaderAppearanceCommit, type ReaderAppearanceChange, type ReaderAppearanceSaveState } from '../application/ReaderAppearanceStore';
 import {
   ReaderChineseConversionGateway,
   type ReaderChineseConversionMode,
@@ -845,6 +845,11 @@ export struct ReadingExperience {
   @State private readerSettingsRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @State private ttsPreferencesRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @State private readerSettingsRecoveryBusy: boolean = false;
+  @State private appearanceSaveRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private appearanceSaveRecoveryBusy: boolean = false;
+  private appearanceSaveRecoveryIdentity: string = '';
+  private appearanceSaveRevision: number = 0;
+  private appearanceSaveUnsubscribe: (() => void) | undefined = undefined;
   @State private ttsPreferencesRecoveryBusy: boolean = false;
   @State private ttsConfigurationLoading: boolean = false;
   @State private ttsConfigurationLoadFailed: boolean = false;
@@ -1303,6 +1308,7 @@ export struct ReadingExperience {
     // admitted, so Detail keeps the authored app status bar during warm-up.
     this.applyWindowPolicyForChromeOwner();
     this.exitRequested = false;
+    this.bindAppearanceSaveRecovery(lifecycleToken);
     this.exitDelivered = false;
     this.readingRecordHost.retire();
     this.commitInFlight = false;
@@ -1677,6 +1683,12 @@ export struct ReadingExperience {
 
   aboutToDisappear(): void {
     this.retireReaderRecovery();
+    this.appearanceSaveUnsubscribe?.();
+    this.appearanceSaveUnsubscribe = undefined;
+    this.appearanceSaveRecoveryIdentity = '';
+    this.appearanceSaveRecovery = { message: '', visible: false, canRetry: false,
+      generation: this.appearanceSaveRecovery.generation + 1 };
+    this.appearanceSaveRecoveryBusy = false;
     this.controlMinimumGeneration += 1;
     this.controlMinimumProvider = undefined;
     this.controlMinimumProfileReader = undefined;
@@ -2312,6 +2324,44 @@ export struct ReadingExperience {
     this.showReaderRecovery('');
   }
 
+  private bindAppearanceSaveRecovery(lifecycleToken: number): void {
+    this.appearanceSaveUnsubscribe?.();
+    this.appearanceSaveRecoveryIdentity = '';
+    this.appearanceSaveUnsubscribe = this.appearanceGateway.subscribeSaveState((state: ReaderAppearanceSaveState): void => {
+      this.updateAppearanceSaveRecovery(state, lifecycleToken);
+    });
+  }
+
+  private refreshAppearanceSaveRecovery(lifecycleToken: number): void {
+    if (!this.isSessionActive(lifecycleToken)) return;
+    this.updateAppearanceSaveRecovery(this.appearanceGateway.saveState(), lifecycleToken);
+  }
+
+  private updateAppearanceSaveRecovery(state: ReaderAppearanceSaveState, lifecycleToken: number): void {
+    if (!this.isSessionActive(lifecycleToken) || !ReaderRuntimeOwner.isCurrent(this.replaceRuntime)) return;
+    const identity = JSON.stringify([lifecycleToken, this.sourceId, this.bookId, this.chapterSelectionToken, state.revision]);
+    const generation = this.appearanceSaveRecoveryIdentity === identity ? this.appearanceSaveRecovery.generation :
+      this.appearanceSaveRecovery.generation + 1;
+    this.appearanceSaveRecoveryIdentity = identity;
+    this.appearanceSaveRevision = state.revision;
+    this.appearanceSaveRecoveryBusy = state.retrying;
+    this.appearanceSaveRecovery = { visible: state.unconfirmed,
+      message: state.unconfirmed ? '外观设置保存尚未确认，当前选择已保留。' : '',
+      canRetry: state.canRetry, generation };
+    if (!this.hasReaderRecoveryContent()) this.retireReaderRecovery();
+  }
+
+  private retryAppearanceSaveRecovery(generation: number): void {
+    if (!this.readerRecoveryInputCurrent() || generation !== this.appearanceSaveRecovery.generation ||
+      !this.appearanceSaveRecovery.visible) return;
+    const state = this.appearanceGateway.saveState();
+    if (!state.canRetry || state.revision !== this.appearanceSaveRevision || this.appearanceSaveRecoveryIdentity !==
+      JSON.stringify([this.lifecycleToken, this.sourceId, this.bookId, this.chapterSelectionToken, state.revision])) return;
+    void this.appearanceGateway.retrySave(state.revision).catch((error: Error): void => {
+      hilog.warn(0x5244, 'Reader', '%{private}s', `Appearance save retry pending: ${this.errorMessage(error)}`);
+    });
+  }
+
   private setReaderPreferenceNotice(domain: 'settings' | 'tts', message: string, canRetry: boolean, busy: boolean = false): void {
     const previous = domain === 'settings' ? this.readerSettingsRecovery : this.ttsPreferencesRecovery;
     const view: ReaderRecoveryView = { message, visible: message.length > 0, canRetry,
@@ -2385,7 +2435,7 @@ export struct ReadingExperience {
   }
 
   private hasReaderRecoveryContent(): boolean {
-    return this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible ||
+    return this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.appearanceSaveRecovery.visible || this.ttsPreferencesRecovery.visible ||
       this.ttsConfigurationRecovery.visible || (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace') ||
       this.bookmarkRecovery.bookmarks.visible || this.bookmarkRecovery.originalBookmarks !== undefined ||
       this.readerOfflineRecoveryVisible();
@@ -2410,6 +2460,7 @@ export struct ReadingExperience {
   }
 
   private openReaderRecovery(identity: string): void {
+    this.refreshAppearanceSaveRecovery(this.lifecycleToken);
     if (!this.mounted || this.exitRequested || identity !== this.readerRecoveryOverlayId() ||
       !this.hasReaderRecoveryContent() || !this.isControlInputEnabled()) return;
     this.hideControl();
@@ -2506,7 +2557,7 @@ export struct ReadingExperience {
   }
 
   private hasReaderPendingGroup(): boolean {
-    return this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible ||
+    return this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.appearanceSaveRecovery.visible ||
       this.ttsPreferencesRecovery.visible || this.ttsConfigurationRecovery.visible ||
       (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace');
   }
@@ -2566,19 +2617,28 @@ export struct ReadingExperience {
           onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.retryReaderPreferenceNotice('settings', generation); } });
       }, (generation: number): string => `settings:${generation}`);
     }
+    if (this.appearanceSaveRecovery.visible) {
+      ForEach([this.appearanceSaveRecovery.generation], (generation: number): void => {
+        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth,
+          follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible,
+          view: this.appearanceSaveRecovery, tag: '外观设置', actionLabel: '重试保存',
+          actionEnabled: this.appearanceSaveRecovery.canRetry, retainPrimaryAction: true, busy: this.appearanceSaveRecoveryBusy,
+          onReconcile: (): void => this.retryAppearanceSaveRecovery(generation) });
+      }, (generation: number): string => `appearance:${generation}`);
+    }
     if (this.ttsPreferencesRecovery.visible) {
       ForEach([this.ttsPreferencesRecovery.generation], (generation: number): void => {
-        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible, view: this.ttsPreferencesRecovery, tag: '朗读设置',
+        ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.appearanceSaveRecovery.visible, view: this.ttsPreferencesRecovery, tag: '朗读设置',
           busy: this.ttsPreferencesRecoveryBusy, actionLabel: '重试保存',
           onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.retryReaderPreferenceNotice('tts', generation); } });
       }, (generation: number): string => `tts:${generation}`);
     }
     if (this.ttsConfigurationRecovery.visible) {
-      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible, view: this.ttsConfigurationRecovery, tag: '朗读配置', actionLabel: '查看设置',
+      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.appearanceSaveRecovery.visible || this.ttsPreferencesRecovery.visible, view: this.ttsConfigurationRecovery, tag: '朗读配置', actionLabel: '查看设置',
         onReconcile: (generation: number): void => { if (this.readerRecoveryInputCurrent()) this.openTtsConfigurationRecovery(generation); } });
     }
     if (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace') {
-      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible || this.ttsConfigurationRecovery.visible, view: this.replaceRecovery, tag: '替换规则', actionLabel: '查看规则',
+      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, follows: this.readerBookmarkPending() || this.readerOfflinePending() || this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.appearanceSaveRecovery.visible || this.ttsPreferencesRecovery.visible || this.ttsConfigurationRecovery.visible, view: this.replaceRecovery, tag: '替换规则', actionLabel: '查看规则',
         onReconcile: (generation: number): void => { if (this.readerRecoveryInputCurrent()) this.openReplaceRecovery(generation); } });
     }
   }
@@ -9691,6 +9751,7 @@ export struct ReadingExperience {
     const mutationGeneration = this.appearanceMutationGeneration;
     try {
       await this.appearanceGateway.load();
+      this.refreshAppearanceSaveRecovery(lifecycleToken);
       while (this.isSessionActive(lifecycleToken) && mutationGeneration === this.appearanceMutationGeneration) {
         const snapshot = this.appearanceGateway.current();
         await prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot));
@@ -10345,9 +10406,9 @@ export struct ReadingExperience {
 
   private observeAppearanceSave(saved: Promise<void>, lifecycleToken: number): void {
     void saved.catch((error: Error): void => {
-      if (this.isSessionActive(lifecycleToken) && this.appearanceGateway.hasUnsavedChanges()) {
-        this.showAppearanceFailure('外观设置保存尚未确认，当前效果已保留，请稍后重试', error);
-      }
+      // The original Store publishes persistent recovery facts, including when this view retires.
+      this.refreshAppearanceSaveRecovery(lifecycleToken);
+      hilog.warn(0x5244, 'Reader', '%{private}s', `Appearance save pending: ${this.errorMessage(error)}`);
     });
   }
 
@@ -11184,6 +11245,7 @@ export struct ReadingExperience {
   }
 
   private onControlInputBoundaryChanged(): void {
+    this.refreshAppearanceSaveRecovery(this.lifecycleToken);
     if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive) this.retirePendingPlaybackStarts();
     if (!this.isControlInputEnabled()) this.retirePagePointer();
     this.controlMinimumGeneration += 1;

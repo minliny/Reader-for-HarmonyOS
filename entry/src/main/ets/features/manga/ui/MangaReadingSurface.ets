@@ -223,7 +223,11 @@ export struct MangaReadingSurface {
   private panelCloseTask: Promise<boolean> | undefined;
   private panelCloseResolve: ((closed: boolean) => void) | undefined;
   @State private panelFontsReady: boolean = false;
+  @State private panelFontsLoading: boolean = false;
+  @State private panelFontsFailed: boolean = false;
   private panelFontGeneration: number = 0;
+  private panelFontTask: Promise<boolean> | undefined;
+  private panelFontTaskIdentity: string = '';
   @State private refreshing: boolean = false;
   @State @Watch('onWindowChromeChanged') private chapterEnd: boolean = false;
   @State private displayedPage: number = 0;
@@ -305,7 +309,10 @@ export struct MangaReadingSurface {
     this.invalidatePanelMotion();
     this.panel = ''; this.panelPhase = 'closed'; this.panelOffset = 0; this.panelScrimOpacity = 0;
     this.panelReturnFocusTarget = '';
-    this.panelFontGeneration++; this.panelFontsReady = false; this.refreshing = false;
+    this.panelFontGeneration++; this.panelFontsReady = false;
+    this.panelFontsLoading = false; this.panelFontsFailed = false;
+    this.panelFontTask = undefined; this.panelFontTaskIdentity = '';
+    this.refreshing = false;
     const brightnessOwner = this.brightnessOwner; this.brightnessOwner = 0; this.brightnessGeneration++;
     if (brightnessOwner > 0) void ReaderWindowCoordinator.brightness().release(brightnessOwner).catch((): void => {});
     this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++; this.presentationGeneration++;
@@ -1719,6 +1726,7 @@ export struct MangaReadingSurface {
   }
   private async openPanel(panel: string, returnFocusTarget: string = ''): Promise<void> {
     if (!this.readerPanelForeground()) return;
+    const sourceId = this.sourceId, bookId = this.bookId;
     const focusTarget = returnFocusTarget || (this.panel.length > 0 ? this.panelReturnFocusTarget : '') ||
       this.panelTriggerFocusId(panel === 'downloads' ? 'directory' : panel);
     this.invalidatePanelMotion();
@@ -1732,8 +1740,25 @@ export struct MangaReadingSurface {
     void this.saveVisible();
     await this.dismissPanelKeyboard();
     if (!this.panelOpeningCurrent(generation)) return;
-    if (!await this.preparePanelFonts()) {
-      if (this.panelOpeningCurrent(generation)) this.cancelPanelOpening();
+    const fontTask = this.preparePanelFonts();
+    const fontGeneration = this.panelFontGeneration;
+    const fontsReady = await fontTask;
+    if (this.sourceId !== sourceId || this.bookId !== bookId) return;
+    if (!fontsReady) {
+      if (this.panelOpeningCurrent(generation)) {
+        const failed = this.panelFontsFailed && !this.panelFontsLoading &&
+          fontGeneration === this.panelFontGeneration;
+        this.cancelPanelOpening();
+        if (failed) {
+          const cancelledGeneration = this.panelGeneration;
+          this.transientFeedback.show(() => this.getUIContext(), {
+            message: '暂时无法打开面板，请重试', duration: READER_FEEDBACK_BRIEF_MS,
+            key: JSON.stringify(['manga-panel-font', sourceId, bookId, fontGeneration]),
+          }, (): boolean => this.readerPanelForeground() && this.sourceId === sourceId && this.bookId === bookId &&
+            this.panelGeneration === cancelledGeneration && this.panelPhase === 'closed' && this.panel.length === 0 &&
+            fontGeneration === this.panelFontGeneration && this.panelFontsFailed && !this.panelFontsLoading);
+        }
+      }
       return;
     }
     if (!this.panelOpeningCurrent(generation)) return;
@@ -1803,21 +1828,47 @@ export struct MangaReadingSurface {
     }
   }
   private async preparePanelFonts(): Promise<boolean> {
-    if (!this.mounted) return false;
+    if (!this.mounted || this.exiting || !this.isReaderIdentityCurrent()) return false;
     if (this.panelFontsReady) return true;
+    const sourceId = this.sourceId, bookId = this.bookId;
+    const identity = JSON.stringify([sourceId, bookId]);
+    if (this.panelFontTask !== undefined && this.panelFontTaskIdentity === identity) return this.panelFontTask;
     const generation = ++this.panelFontGeneration;
+    this.panelFontsLoading = true; this.panelFontsFailed = false;
+    const task = this.loadPanelFonts(generation, sourceId, bookId);
+    this.panelFontTask = task; this.panelFontTaskIdentity = identity;
+    try { return await task; }
+    finally {
+      if (this.panelFontTask === task) {
+        this.panelFontTask = undefined; this.panelFontTaskIdentity = '';
+      }
+    }
+  }
+  private async loadPanelFonts(generation: number, sourceId: string, bookId: string): Promise<boolean> {
+    const current = (): boolean => this.mounted && !this.exiting && generation === this.panelFontGeneration &&
+      this.sourceId === sourceId && this.bookId === bookId && this.isReaderIdentityCurrent();
     try {
       await prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_BOLD);
+      if (!current()) return false;
       const ready = await prepareMangaSheetFonts();
-      if (!this.mounted || generation !== this.panelFontGeneration) return false;
-      this.panelFontsReady = ready;
+      if (!current()) return false;
+      this.panelFontsReady = ready; this.panelFontsFailed = !ready;
       if (!ready) hilog.warn(0x5244, 'Reader', 'Manga sheet static font receipt unavailable');
       return ready;
     } catch (error) {
-      if (this.mounted && generation === this.panelFontGeneration)
+      if (current()) {
+        this.panelFontsFailed = true;
         hilog.warn(0x5244, 'Reader', 'Manga sheet font preparation: %{private}s', error instanceof Error ? error.message : 'unavailable');
+      }
       return false;
+    } finally {
+      if (this.mounted && generation === this.panelFontGeneration) this.panelFontsLoading = false;
     }
+  }
+  private retryPanelFonts(generation: number): void {
+    if (!this.readerPanelForeground() || !this.persistentDirectory() || generation !== this.panelFontGeneration ||
+      this.panelFontsReady || this.panelFontsLoading) return;
+    void this.preparePanelFonts();
   }
   private panelTravel(): number {
     return (this.widePanel() ? Number(this.panelWidth()) : this.panelHeight()) + 36;
@@ -2232,6 +2283,18 @@ export struct MangaReadingSurface {
             right: this.stageWidth <= 700 ? visual.sidebarNarrowPaddingX : visual.sidebarPaddingX, bottom: visual.sidebarPaddingBottom })
           .border({ width: { bottom: 1 }, color: this.lineColor() });
         this.directoryBody(true);
+      } else {
+        Column() {
+          ReaderPageState({ loading: this.panelFontsLoading,
+            loadingActive: this.readerPanelForeground() && !this.reduceMotion,
+            title: this.panelFontsFailed ? '目录暂时无法显示' : '',
+            message: this.panelFontsLoading ? '正在准备目录…' :
+              (this.panelFontsFailed ? '目录字体暂时无法载入，请重试' : '目录尚未就绪，请重试'),
+            actionLabel: this.panelFontsLoading ? '' : '重试', actionGeneration: this.panelFontGeneration,
+            actionEnabled: !this.panelFontsLoading && this.readerPanelForeground(),
+            inkColor: this.inkColor(), mutedColor: this.mutedColor(),
+            onAction: (generation: number): void => this.retryPanelFonts(generation) });
+        }.width('100%').height('100%').justifyContent(FlexAlign.Center);
       }
     }.width(this.directoryColumnWidth()).height('100%')
       .padding({ left: this.windowInteractiveInsets(this.windowMetricsRevision).left,

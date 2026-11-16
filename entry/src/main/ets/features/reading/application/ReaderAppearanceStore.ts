@@ -24,6 +24,35 @@ export class ReaderAppearanceCommit {
   }
 }
 
+/** Read-only facts from the original accepted appearance/write owner. */
+export class ReaderAppearanceSaveState {
+  readonly revision: number;
+  readonly unconfirmed: boolean;
+  readonly saving: boolean;
+  readonly retrying: boolean;
+  readonly canRetry: boolean;
+
+  constructor(revision: number = 0, unconfirmed: boolean = false, saving: boolean = false,
+    retrying: boolean = false, canRetry: boolean = false) {
+    this.revision = revision;
+    this.unconfirmed = unconfirmed;
+    this.saving = saving;
+    this.retrying = retrying;
+    this.canRetry = canRetry;
+  }
+}
+
+/** Distinguishes accepted-but-incomplete saves from a rejected new selection. */
+export class ReaderAppearanceSaveUnconfirmedError extends Error {
+  readonly originalError: Error;
+
+  constructor(originalError: Error) {
+    super(originalError.message);
+    this.name = 'ReaderAppearanceSaveUnconfirmedError';
+    this.originalError = originalError;
+  }
+}
+
 /** One application-lifetime owner for accepted appearance and ordered durable writes. */
 export class ReaderAppearanceStore {
   private readonly persistence: ReaderAppearancePersistence;
@@ -36,6 +65,10 @@ export class ReaderAppearanceStore {
   private writeTail: Promise<void> = Promise.resolve();
   private changeTail: Promise<void> = Promise.resolve();
   private latestSave: Promise<void> = Promise.resolve();
+  private saveFailed: boolean = false;
+  private retryInFlight: boolean = false;
+  private retryRevision: number = 0;
+  private readonly saveListeners: Set<(state: ReaderAppearanceSaveState) => void> = new Set();
 
   constructor(persistence: ReaderAppearancePersistence) {
     this.persistence = persistence;
@@ -55,13 +88,15 @@ export class ReaderAppearanceStore {
 
   subscribe(listener: (snapshot: ReaderAppearanceSnapshot, revision: number) => void): () => void {
     this.listeners.add(listener);
-    if (this.snapshot !== undefined) listener(this.current(), this.revision);
+    if (this.snapshot !== undefined) {
+      try { listener(this.current(), this.revision); } catch (_) { /* A view cannot reject an accepted preference. */ }
+    }
     return (): void => { this.listeners.delete(listener); };
   }
 
   private publish(): void {
     this.listeners.forEach((listener: (snapshot: ReaderAppearanceSnapshot, revision: number) => void): void => {
-      listener(this.current(), this.revision);
+      try { listener(this.current(), this.revision); } catch (_) { /* Continue the original save and later observers. */ }
     });
   }
 
@@ -71,6 +106,47 @@ export class ReaderAppearanceStore {
 
   hasUnsavedChanges(): boolean {
     return this.savedRevision < this.revision;
+  }
+
+  saveState(): ReaderAppearanceSaveState {
+    const unconfirmed = this.saveFailed && this.hasUnsavedChanges();
+    return new ReaderAppearanceSaveState(this.revision, unconfirmed, this.pendingWrites > 0,
+      this.retryInFlight && this.retryRevision === this.revision,
+      unconfirmed && this.pendingWrites === 0 && !this.retryInFlight);
+  }
+
+  subscribeSaveState(listener: (state: ReaderAppearanceSaveState) => void): () => void {
+    this.saveListeners.add(listener);
+    this.deliverSaveState(listener, this.saveState());
+    return (): void => { this.saveListeners.delete(listener); };
+  }
+
+  /** Continue the same accepted full-snapshot setter; never restore an old value. */
+  async retrySave(expectedRevision: number): Promise<void> {
+    const state = this.saveState();
+    if (expectedRevision !== this.revision || !state.canRetry) return;
+    this.retryInFlight = true;
+    this.retryRevision = expectedRevision;
+    this.publishSaveState();
+    try {
+      await this.flush();
+    } finally {
+      this.retryInFlight = false;
+      this.retryRevision = 0;
+      this.publishSaveState();
+    }
+  }
+
+  private publishSaveState(): void {
+    const state = this.saveState();
+    this.saveListeners.forEach((listener: (state: ReaderAppearanceSaveState) => void): void => {
+      this.deliverSaveState(listener, state);
+    });
+  }
+
+  private deliverSaveState(listener: (state: ReaderAppearanceSaveState) => void,
+    state: ReaderAppearanceSaveState): void {
+    try { listener(state); } catch (_) { /* Presentation cannot change a durable write receipt. */ }
   }
 
   async change(change: ReaderAppearanceChange, guard?: ReaderAppearanceChangeGuard):
@@ -114,8 +190,12 @@ export class ReaderAppearanceStore {
     if (this.loading === undefined) {
       this.loading = this.persistence.load().then((snapshot: ReaderAppearanceSnapshot): void => {
         this.snapshot = normalizeReaderAppearanceSnapshot(snapshot);
-        if (this.persistence.hasUnconfirmedSave?.() === true) this.revision = 1;
+        if (this.persistence.hasUnconfirmedSave?.() === true) {
+          this.revision = 1;
+          this.saveFailed = true;
+        }
         this.publish();
+        this.publishSaveState();
       });
     }
     const loading = this.loading;
@@ -130,11 +210,20 @@ export class ReaderAppearanceStore {
     const snapshot = this.current();
     const revision = this.revision;
     this.pendingWrites += 1;
+    this.publishSaveState();
     const save = this.writeTail.then((): Promise<void> => this.persistence.save(snapshot))
       .then((): void => {
         this.savedRevision = revision;
+        if (!this.hasUnsavedChanges()) this.saveFailed = false;
       })
-      .finally((): void => { this.pendingWrites -= 1; });
+      .catch((error: Error): void => {
+        this.saveFailed = true;
+        throw error;
+      })
+      .finally((): void => {
+        this.pendingWrites -= 1;
+        this.publishSaveState();
+      });
     // A rejected native put/flush may have persisted. Retain accepted intent;
     // no compensation or cached read may manufacture a durable receipt.
     // A later lifecycle flush/new choice writes the latest complete snapshot

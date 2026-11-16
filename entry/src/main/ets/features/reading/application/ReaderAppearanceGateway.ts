@@ -11,6 +11,7 @@ import {
 import {
   ReaderAppearanceStore,
   ReaderAppearanceCommit,
+  type ReaderAppearanceSaveState,
   type ReaderAppearanceChange,
   type ReaderAppearanceChangeGuard,
 } from './ReaderAppearanceStore';
@@ -94,6 +95,14 @@ export class ReaderAppearanceGateway {
     }
     return commit;
   }
+
+  saveState(): ReaderAppearanceSaveState { return this.store.saveState(); }
+
+  subscribeSaveState(listener: (state: ReaderAppearanceSaveState) => void): () => void {
+    return this.store.subscribeSaveState(listener);
+  }
+
+  async retrySave(expectedRevision: number): Promise<void> { await this.store.retrySave(expectedRevision); }
 
   async flush(): Promise<void> {
     await this.store.flush();

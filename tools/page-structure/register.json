@@ -2717,7 +2717,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+          "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
           "symbol": "requestCatalogForTurn"
         },
         {
@@ -4243,7 +4243,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -5886,7 +5886,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -6311,7 +6311,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -7535,7 +7535,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -7952,7 +7952,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -9199,7 +9199,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -9604,7 +9604,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -10732,7 +10732,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12156,7 +12156,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12573,7 +12573,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -13737,7 +13737,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15206,7 +15206,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15623,7 +15623,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -16731,7 +16731,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18155,7 +18155,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18572,7 +18572,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -19810,7 +19810,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -20215,7 +20215,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -21464,7 +21464,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
+                "sha256": "1123bce7c8eb79c6e42414c4c5c5cb86fcaacecc6913d90c20cf0303efa6d9ef",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -21869,7 +21869,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "89dcae6f13059585cdc4da7e0a34662712389249e9754dd5598429c7d24d9d75"
+                "sha256": "df30731cea364d6955a34bc96c959b2c26405f4c876e139c88cdd6a8caa54444"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -22281,7 +22281,7 @@
         },
         {
           "path": "tools/message-entrypoints.json",
-          "sha256": "942f49e4400f1e4844a0571349cb0a9c0ded17cb032306b882f6706e07c76b3a"
+          "sha256": "0fb275abb22b607ea05ff268be02f084938fb0844bf9d0c99ca1429c0fcdeae4"
         },
         {
           "path": "tools/test-shared-download-visual-contract.mjs",
@@ -23716,7 +23716,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "942f49e4400f1e4844a0571349cb0a9c0ded17cb032306b882f6706e07c76b3a"
+                "sha256": "0fb275abb22b607ea05ff268be02f084938fb0844bf9d0c99ca1429c0fcdeae4"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -25140,7 +25140,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "942f49e4400f1e4844a0571349cb0a9c0ded17cb032306b882f6706e07c76b3a"
+                "sha256": "0fb275abb22b607ea05ff268be02f084938fb0844bf9d0c99ca1429c0fcdeae4"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -26564,7 +26564,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "942f49e4400f1e4844a0571349cb0a9c0ded17cb032306b882f6706e07c76b3a"
+                "sha256": "0fb275abb22b607ea05ff268be02f084938fb0844bf9d0c99ca1429c0fcdeae4"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -27944,7 +27944,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "942f49e4400f1e4844a0571349cb0a9c0ded17cb032306b882f6706e07c76b3a"
+                "sha256": "0fb275abb22b607ea05ff268be02f084938fb0844bf9d0c99ca1429c0fcdeae4"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -29324,7 +29324,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "942f49e4400f1e4844a0571349cb0a9c0ded17cb032306b882f6706e07c76b3a"
+                "sha256": "0fb275abb22b607ea05ff268be02f084938fb0844bf9d0c99ca1429c0fcdeae4"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",

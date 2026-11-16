@@ -769,8 +769,8 @@
       "member": "readerRecoveryItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。",
-      "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent. Back、正文操作或开控制只收起展示，原回执保持。",
+      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。 Appearance保存事实从同一Runtime共享ReaderAppearanceStore订阅；生命周期/source/book/chapter与原revision共同交接展示代次，busy/ready保持同一代。经更多→待处理事项进入既有有界RecoveryGroup，不增加正文inset。",
+      "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent. Back、正文操作或开控制只收起展示，原回执保持。 Appearance订阅退场只退投影，原saved回执与accepted snapshot继续由Store保留；当前前景/显示代次和源revision匹配才允许原Store.retrySave；只有实际最新revision保存ACK清除，warm读回不作ACK；busy仅由该原retry事实提供。",
       "status": "registered-source-entry"
     },
     {
@@ -823,7 +823,7 @@
       "owner": "ReadingExperience",
       "member": "showAppearanceFailure",
       "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
+      "category": "外观读取或新修改准入明确失败的普通短反馈；已接受保存未确认由原Store恢复宿主呈现",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
       "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
@@ -1374,8 +1374,8 @@
       "member": "pendingFeedbackItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前已挂载且允许输入、无 reset/select 前景的设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。pendingFeedback 只提供自然内容，由 SettingsShell 转交 ReaderStandardPage 无参 boundedOverlayContent 消费实测几何。",
-      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "effectiveHost": "当前已挂载且允许输入、无 reset/select 前景的设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。pendingFeedback 只提供自然内容，由 SettingsShell 转交 ReaderStandardPage 无参 boundedOverlayContent 消费实测几何。 同Runtime共享AppearanceStore的未确认保存也在既有有界group投影；当前temporaryBackIdentity/navigationGeneration/section及原revision绑定动作，真实retry提供busy。",
+      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。 Appearance observer卸载仅退役UI，不取消写入；当前host/前景/选择器/重置/原revision资格再校验后重试原Store完整快照，后继选择及原ACK保持原owner；读取与过期反馈均不能伪造保存确认。",
       "status": "registered-source-entry"
     },
     {
@@ -1430,7 +1430,7 @@
       "owner": "SettingsPage",
       "member": "selectAppTheme",
       "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
+      "category": "主题新选择准入明确拒绝的普通短反馈；accepted commit.saved拒绝归共享Store持续恢复",
       "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。",
       "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
@@ -1864,6 +1864,28 @@
       "category": "当前下载操作列表的局部加载或无可用内容失败",
       "effectiveHost": "BookDirectoryPage当前目录身份及downloadMenuGeneration，或MangaReadingSurface当前downloads面板与downloadActionsGeneration。正文加载状态独立，菜单只读取原owner提供的操作。",
       "retireRule": "loading/failure/actions随原owner发布。ReaderPageState只呈现局部状态。loadingActive由当前readerAppForeground及reduceMotion约束，重试继续经过原popup/sheet的当前身份、代次、前景与失败守卫。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.openPanel::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
+      "owner": "MangaReadingSurface",
+      "member": "openPanel",
+      "family": "shared.transient",
+      "category": "当前手机面板打开明确失败，原漫画内容仍可用的短反馈",
+      "effectiveHost": "当前mounted漫画source/book/Root身份、panel opening及font generation，真实font失败且非loading；原cancel之后按关闭代和前景再次检查。",
+      "retireRule": "只通知当前真实打开失败；退休/旧font请求false不报失败，后继panel或页面退场使旧反馈无效；保留原图片、位置保存、panel焦点/动画及原按钮重试。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.tabletDirectory::shared.page-state",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
+      "owner": "MangaReadingSurface",
+      "member": "tabletDirectory",
+      "family": "shared.page-state",
+      "category": "常驻目录局部内容的加载与无可用目录内容失败",
+      "effectiveHost": "当前漫画常驻目录的原内容盒，真实panelFontTask/failed/ready及source/book/font generation；原成功标题/目录布局保持。",
+      "retireRule": "busy由原字体任务提供；首重试检查实时前景、实体、常驻目录、generation和非忙态；同实体合并原task，旧回执与卸载只退原投影，成功checked receipt后由原目录内容接续。",
       "status": "registered-source-entry"
     }
   ],

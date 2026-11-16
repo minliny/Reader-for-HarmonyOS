@@ -1,5 +1,28 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-17 第30轮收尾：已确认代码问题闭环，取消后续全局轮
+
+当前状态以本节及原账本 `implementation.currentState` 为准。用户明确要求停止新增全局审计；第31／32轮及后续重读全树均已取消。第30轮原FAIL、A／B及末验保持原样，历史连续全局PASS仍为0／3，没有改写为通过。**本次两个已确认family的代码修复、定向review、9个准确case及一次规范编译签名已完成；VM继续禁用，未安装或启动。** 下文旧节均保留形成时状态。[收尾提交与当前源码绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-repair-commit-binding.json)。全目标的原生验收及最终Figma／性能专项仍未完成，专项未启动。
+
+| 已确认问题 | 本次实际修改及原业务边界 |
+| --- | --- |
+| 外观保存未确认后缺少恢复入口 | 原共享ReaderAppearanceStore发布只读保存事实、保留accepted快照及原ACK，按原revision重试同一个完整snapshot setter；原snapshot及新SaveState观察者异常均不阻断业务保存。LRE接入既有“更多→待处理事项”和有界RecoveryGroup，Settings接入既有bounded overlay。两端只退役订阅和投影，旧host／chapter／section／revision拒绝新派发，真实retry提供busy，最新保存ACK才清除。ThemeHost只包装已接受commit.saved的拒绝；前置拒绝仍普通短反馈。 |
+| 漫画字体准备拒绝后静默／空栏 | 手机保留原取消面板流程，对当前真实失败补普通短反馈，原图片及触发按钮保留；宽屏原目录内容盒增加局部ReaderPageState加载、失败及显式重试。同实体复用在途字体任务，旧代／实体／卸载回执不得污染后继。正常成功标题、目录、焦点及动画分支保持原代码。NavSurface自身Blank的普通可达指控被父字体准入反证排除；BookDirectory及LocalBookDetail已有错误态和重试，没有修改它们。 |
+
+[本批闭环汇总](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-repair-summary.json) [Appearance源码review](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-appearance-ui-source-review.json) [Store源码review](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-appearance-store-final-source-review-01.json) [Manga源码review](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-manga-font-source-review-01.json)
+
+准确回归共9个case：Store4个、Appearance UI4个、Manga font-admission1个全部有通过回执。Store一次0.268秒；UI首批reading已PASS，Settings因测试probe缺少现有Preview组件声明而停止，补准确声明后仅运行其余3项，一次1.924秒；原PASS未重跑，首败原件保留。字体定义在执行前修正既有probe不支持非空分支移除的能力边界，只以同一原业务owner的真实方法和fresh实际Builder快照核分支，保留旧Native Button回调核首次派发，单case一次4.379秒通过。四次进程合计7.517秒，包含首个UI harness失败耗时；这不是全部人工编排耗时。[Store结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-appearance-store-attempt01.json) [UI首批](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-appearance-ui-attempt01.json) [UI余3项](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-appearance-ui-attempt02.json) [字体结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-manga-font-attempt01.json)
+
+测试运行实际Store／State、Gateway／ThemeHost及选定正常LRE／Settings／Scene方法，公共Notice／Action和Builder／property采用已安装SDK降级。Persistence／字体ACK、Runtime及前景资格、几何和输入交付是明确有限端口；没有证明实际Preferences文件持久化、原生事件、非空branch原生移除或像素。字体准确手动入口按GATE_INDEX单项定义复审执行；原6条未审索引及其expected SHA、REVIEW_NEEDED／OFF／NOT_RUN保留，没有批量重拍127项或宣称indexed PASS。其他兄弟、未登记deferred-reduced及全量未执行。
+
+一次规范隔离非增量ArkTS编译、Native配对、资源字节和指定minliny_HarmonyOS签名PASS，构建区间**26.483秒**。当前签名候选 **0.2.0.DEV.7b0f6137368c**，run `20261116T163010Z-3e492cf7-349fc2b4`，signed SHA `750a2333e941625e80c6a5b6d52cacb0dcb5bb3c81be759aab96cd9dc17a2a8a`。642个当前ETS／TS、184584行及13个Native支持源、4684行均与不可变快照匹配，漂移0。产品版本0.2.0／versionCode1000000／io.reader.minliny保持。contracts=none，全量NOT_RUN；manifest如实保留3e492cf7 dirty构建快照，后续提交另绑定，不改manifest。[不可变候选](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261116T163010Z-3e492cf7-349fc2b4/manifest.json) [源码与包绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-repair-production-build-binding.json)
+
+三个改动UI文件的消息登记检查均PASS；仅增加漫画两处出口并补充已有外观Recovery类别和生命周期，无新增专用例外。正式登记只更新27个SHA字段、涉及LRE／Manga／消息登记3源，所有其他事实逐项相同，原37诊断复用；登记层结果仍19 PASS／27 FAIL／290 NOT_RUN，整页Native 0／21。该结果分别记录源码、方法、编译和原生证据。[三文件登记检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-message-registration-check-results.json) [正式登记精确更新](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-register-source-update-proof.json)
+
+未决内容按原关闭条件保留：Toggle替换原生实例后的焦点／读屏连续性；移除确认的纯高度／字体／IME变化容量；完整页面的原生命中、字形、裁切与E2／E3；独立整页视觉依据、G05连续物理绘制及G10历史同期录像／trace。已批准紧凑Directory工具／行和TTS Quick布局保持，容量冲突照实登记，没有自行扩为44vp。此前四个未确认候选及旧Surface时序只保留准确重开条件，不计已确认待修代码、不新增VM前置、不要求用户替代码作决断。此前R29两项Slider指控与本轮NavSurface指控的反证均保留；没有据其误改正常分支。
+
+本批VM／HDC／设备／CUA／远程操作全部0。**代码层已确认修复队列为空，后续只保留上述原验收证据边界，不再启动下一轮全局审计。**
+
 ## 2026-11-16 第29轮最终裁决及接口、测试准入修正
 
 当前以本节及原账本 `implementation.currentState` 为准。VM继续禁用，连续完整全局PASS仍为 **0/3**，最终Figma／性能专项尚未启动。

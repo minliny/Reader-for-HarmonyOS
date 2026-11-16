@@ -1,6 +1,6 @@
 import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from './ReaderWindowCoordinator';
-import { ReaderAppearanceStore } from '../features/reading/application/ReaderAppearanceStore';
+import { ReaderAppearanceStore, ReaderAppearanceSaveUnconfirmedError } from '../features/reading/application/ReaderAppearanceStore';
 import {
   appearanceThemeSelection, applyAppearanceThemeSelection, changeAppearanceThemeSelection,
   createDefaultReaderAppearanceSnapshot,
@@ -94,7 +94,7 @@ export class ReaderThemeHost {
       changeAppearanceThemeSelection(current, 'app', mode, ReaderThemeHost.systemScheme),
       (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store && isInputCurrent());
     if (commit === undefined) throw new Error('THEME_OWNER_CHANGED');
-    await commit.saved;
+    await commit.saved.catch((error: Error): void => { throw new ReaderAppearanceSaveUnconfirmedError(error); });
   }
 
   static async durableBackup(): Promise<ReaderThemeSelectionBackup> {
