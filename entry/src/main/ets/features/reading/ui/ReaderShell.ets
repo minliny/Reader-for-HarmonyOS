@@ -188,8 +188,12 @@ export struct ReaderShell {
   }
 
   private readingContentIsForeground(): boolean {
-    return (this.inputCurrent?.(this.readingIdentityKey()) ?? true) && this.inputAllowed && this.visible && this.route === 'reading' &&
-      !this.sourceSwitchPresented && !this.sourceSwitchCovered;
+    // Native attributes must read their local reactive boundary before a live
+    // ancestor callback can short-circuit. Otherwise an opening render never
+    // subscribes to inputAllowed and cannot recover when that Prop arrives.
+    return this.inputAllowed && this.visible && this.route === 'reading' &&
+      !this.sourceSwitchPresented && !this.sourceSwitchCovered &&
+      (this.inputCurrent?.(this.readingIdentityKey()) ?? true);
   }
 
   private acceptsTextInput(identity: string): boolean {

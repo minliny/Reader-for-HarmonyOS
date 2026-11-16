@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 55,
+      "revision": 56,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2697,7 +2697,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-          "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+          "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
           "symbol": "readingOverlay"
         },
         {
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 52,
+            "revision": 53,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4215,7 +4215,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5850,7 +5850,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7491,7 +7491,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9147,7 +9147,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10672,7 +10672,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 56,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12088,7 +12088,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 52,
+            "revision": 53,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13661,7 +13661,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15122,7 +15122,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 53,
+            "revision": 54,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16639,7 +16639,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 55,
+            "revision": 56,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18055,7 +18055,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19702,7 +19702,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 54,
+            "revision": 55,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21348,7 +21348,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderShell.ets",
-                "sha256": "987da51269bfa5a6a7dc0c5be71a0285cd4d73f9f57db015b77264d9954a5800",
+                "sha256": "8e8a7ab9d263a5a3923d1003acbffbec6fcf6fbdd07cd3dc21c9785d9c2690d4",
                 "symbol": "readingOverlay"
               },
               {

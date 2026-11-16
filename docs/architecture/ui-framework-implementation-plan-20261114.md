@@ -1,5 +1,13 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 UIF-84 代码修复与新一轮审计
+
+正常开书的已保存证据中，正文已经显示，但原生正文输入宿主保持禁用。实际 SDK 依赖见证确认 ReaderShell 的实时回调先返回 false，跳过本地 inputAllowed 读取，导致开书完成后的 Prop 更新不能唤醒原生属性。当前调整为先读取本地响应式边界，再检查实时输入，保留原有前景、身份、覆盖和业务回执归属。
+
+新增准确回归覆盖开书、隐藏、目录、文字换源覆盖和漫画换源覆盖五类恢复，逐项检查同一原生节点的 enabled、focusable、hitTestBehavior 和 accessibilityLevel，旧谓词按最终属性被拒绝。原 reader-live-input 准确用例通过，生产变化仅一个谓词；目录登记同步当前源码指纹，原原生结果保留。该修复使连续全局审计通过计数重新归零，VM 保持禁用，后续先完成三轮新的完整 review agent 审计。[准确回归计划](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/reader-input-recovery-plan.json)
+
+此前三轮的漏审原因是回归和审阅覆盖了“已有可用节点失去实时输入后的拒绝”，没有覆盖“初始不可用节点在恢复后的原生属性依赖”。本批补齐这一判据，并要求全局审计同时检查拒绝与恢复。规范完整编译安排在代码修复和审计收敛后执行一次，避免对每个中间修复重复构建。
+
 ## 2026-11-16 三轮审计后原生续接
 
 当前候选 0.2.0.DEV.d33f5b7933c2 已通过规范保数据覆盖与启动，原 Native／Core 配套输入复用。实际停止态数据与旧快照有变化，一项既有准确 FFI 用例在本地一次性副本运行通过，两项未变的合成 Core 用例复用。当前启动日志记录 runtime-published 与 shelf.model-ready，正常书架显示原有书籍。[本次原生续接记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/post-global-native-summary-20261116.json)

@@ -1,5 +1,11 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-16 UIF-84 重新打开代码收口
+
+正常书架开书的已保存证据显示正文可见，但正文原生输入宿主仍为 enabled=false、HitTestMode.None。代码侧以实际 SDK 属性运行时复现了原因。ReaderShell 先计算实时回调，初次开书返回 false 后跳过本地 inputAllowed 属性，原生属性没有登记恢复所需的依赖。此前实时输入修复在这条正常入口上存在遗漏。
+
+当前改为先读取本地响应式输入、可见、路由和覆盖事实，再检查实时回调。五类恢复场景的同一原生节点属性更新通过，恢复旧谓词的负例按最终 enabled 属性失败，原实时输入准入准确回归通过。该结果属于代码与 SDK 层，当前修复尚未进行 VM 验证。第 11／12／13 轮保留为历史通过，本次实质代码修改使连续通过计数归零，待新的 review agent 连续三轮完整审计通过后才满足解除条件。[UIF-84 调查与回归计划](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/reader-input-recovery-plan.json)
+
 ## 2026-11-16 三轮审计后原生续接
 
 当前候选 0.2.0.DEV.d33f5b7933c2 已通过规范保数据覆盖与启动，原 Native／Core 配套输入复用。实际停止态数据与旧快照有变化，一项既有准确 FFI 用例在本地一次性副本运行通过，两项未变的合成 Core 用例复用。当前启动日志记录 runtime-published 与 shelf.model-ready，正常书架显示原有书籍。[本次原生续接记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/post-global-native-summary-20261116.json)
