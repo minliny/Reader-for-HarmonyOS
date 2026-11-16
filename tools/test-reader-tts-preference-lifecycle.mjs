@@ -69,7 +69,7 @@ const mutations = [
 function readerFixture(file = lreFile) {
   const events = [], writes = [], nativeGate = deferred(), writeGate = deferred();
   let pendingPreferences = false;
-  const coordinator = { setAllowMixing: async value => { events.push(['mixing', value]); await nativeGate.promise; },
+  const coordinator = { setBackgroundPlayback: value => events.push(['background', value]), setAllowMixing: async value => { events.push(['mixing', value]); await nativeGate.promise; },
     setVoice: async (language, person) => { events.push(['voice', language, person]); await nativeGate.promise; },
     setFailurePolicy: value => events.push(['policy',value]), setPauseOnInterruption: value => events.push(['pause',value]) };
   const Reader = productionMotionMethods(file, ['nextTtsPreferenceMutationGeneration', 'captureTtsPreferenceAdmission',

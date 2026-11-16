@@ -124,6 +124,10 @@ type ActiveSession = {
 
 type CorrelatedUtterance = {
   identity: ReaderTtsSessionIdentity;
+  positionGeneration: number;
+  controlGeneration: number;
+  utteranceGeneration: number;
+  requestId: string;
   chapter: ReaderTtsChapterRef;
   sliceIndex: number;
   charEnd: number;
@@ -173,6 +177,7 @@ export class ReaderTtsSessionCoordinator {
   private active: ActiveSession | undefined = undefined;
   private disposed: boolean = false;
   private desiredPlaying: boolean = true;
+  private controlGeneration: number = 0;
   private audition: ReaderTtsAuditionSession | undefined = undefined;
   private auditionSequence: number = 0;
   private timerHandle: number = -1;
@@ -533,12 +538,15 @@ export class ReaderTtsSessionCoordinator {
     const active = this.active;
     if (active === undefined || !this.canPause()) return Promise.resolve();
     const systemPause = reason === 'systemInterruption' || reason === 'deviceChange';
-    this.invalidateUtterance(reason === 'user' ? undefined : reason);
+    const index = this.state.sliceIndex;
+    const controlGeneration = this.retireControlIntent(reason === 'user' ? undefined : reason);
     const utteranceGeneration = this.transport.utteranceGeneration;
     const positionGeneration = this.state.positionGeneration;
-    const currentPause = (): boolean => this.isSessionCurrent(active.identity) &&
+    const ownsPause = (): boolean => this.isSessionCurrent(active.identity) &&
+      this.controlGeneration === controlGeneration &&
       this.transport.utteranceGeneration === utteranceGeneration &&
-      this.state.positionGeneration === positionGeneration && !this.desiredPlaying;
+      this.state.positionGeneration === positionGeneration;
+    const currentPause = (): boolean => ownsPause() && !this.desiredPlaying;
     this.setState({
       ...this.state,
       status: reason === 'user' ? 'paused' : 'interrupted',
@@ -551,8 +559,10 @@ export class ReaderTtsSessionCoordinator {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
         if (this.isSessionCurrent(active.identity) && (!systemPause || active.plan !== undefined)) {
-          const snapshot = await this.gateway.pause(active.input.chapter);
-          if (currentPause()) this.applyCoreSnapshot(snapshot, undefined, reason);
+          const target = index ?? this.coreSnapshot?.currentSliceIndex;
+          if (target === undefined || active.plan === undefined) return;
+          const snapshot = await this.prepareIntentQueue(active, target, true, ownsPause);
+          if (snapshot !== undefined && currentPause()) this.applyCoreSnapshot(snapshot, undefined, reason);
         }
       } catch (error) {
         if (currentPause()) this.host.publishPlaybackState('error');
@@ -574,10 +584,12 @@ export class ReaderTtsSessionCoordinator {
       this.state.sliceIndex === undefined) return Promise.resolve();
     this.setState({ ...this.state, status: 'preparing', pauseReason: undefined, requestId: undefined });
     const identity = active.identity;
+    const controlGeneration = this.controlGeneration;
     return this.enqueue(async (): Promise<void> => {
       if (!this.isSessionCurrent(identity)) return;
       const snapshot = await this.gateway.resume(active.input.chapter);
-      if (!this.isSessionCurrent(identity)) return;
+      this.rememberCoreSnapshot(active, snapshot);
+      if (!this.isSessionCurrent(identity) || this.controlGeneration !== controlGeneration) return;
       this.applyCoreSnapshot(snapshot);
       const index = this.requireSnapshotIndex(snapshot, 'tts.queue.resume');
       await this.speakSlice(active, index, 'preparing');
@@ -599,7 +611,7 @@ export class ReaderTtsSessionCoordinator {
     const active = this.active;
     if (active === undefined || active.plan === undefined) return Promise.resolve();
     const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
-    this.invalidateUtterance();
+    const controlGeneration = this.retireControlIntent();
     const positionGeneration = this.nextGeneration(this.state.positionGeneration ?? 0);
     this.setState({ ...this.state, positionGeneration,
       charStart: undefined, charEnd: undefined, requestId: undefined });
@@ -609,8 +621,10 @@ export class ReaderTtsSessionCoordinator {
       const hostStopError = await hostStopTask;
       if (hostStopError !== undefined) throw hostStopError;
       if (!this.isSessionCurrent(identity)) return;
-      const snapshot = await this.gateway.seek(active.input.chapter, sliceIndex);
-      if (!this.isSessionCurrent(identity) || this.state.positionGeneration !== positionGeneration) return;
+      const current = (): boolean => this.isSessionCurrent(identity) && this.controlGeneration === controlGeneration &&
+        this.state.positionGeneration === positionGeneration;
+      const snapshot = await this.prepareIntentQueue(active, sliceIndex, wasPaused, current, true);
+      if (snapshot === undefined || !current()) return;
       this.applyCoreSnapshot(snapshot);
       if (wasPaused || snapshot.state === 'paused') return;
       await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.seek'), 'preparing');
@@ -630,11 +644,12 @@ export class ReaderTtsSessionCoordinator {
       this.setState({ ...this.state, rate });
       return Promise.resolve();
     }
-    const priorInput = { ...active.input };
+    const priorInputRate = active.input.rate;
     const priorState = { ...this.state };
     const identity = active.identity;
     const index = this.state.sliceIndex;
-    this.invalidateUtterance();
+    const controlGeneration = this.retireControlIntent();
+    const current = (): boolean => this.isSessionCurrent(identity) && this.controlGeneration === controlGeneration;
     this.setState({ ...this.state, status: 'preparing', rate: priorRate, requestId: undefined,
       errorMessage: undefined });
     const hostStopTask = this.stopHostTransportImmediately();
@@ -642,39 +657,47 @@ export class ReaderTtsSessionCoordinator {
       try {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
-        if (!this.isSessionCurrent(identity)) return;
-        const snapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
-        if (!this.isSessionCurrent(identity)) return;
+        if (!current()) return;
+        const accepted = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
+        this.rememberCoreSnapshot(active, accepted);
+        if (!current()) return;
         const paused = priorState.status === 'paused' || priorState.status === 'interrupted';
         // Commit the candidate only after Core accepted the precise rate.
         active.input = { ...active.input, rate };
         this.setState({ ...this.state, rate });
+        const snapshot = await this.prepareIntentQueue(active, index, paused, current);
+        if (snapshot === undefined || !current()) return;
         this.applyCoreSnapshot(snapshot);
         if (paused || snapshot.state === 'paused') return;
         await this.speakSlice(active, index, 'preparing');
       } catch (error) {
-        if (!this.isSessionCurrent(identity)) throw error;
-        active.input = priorInput;
+        if (!current()) throw error;
+        active.input = { ...active.input, rate: priorInputRate };
         let restored = true;
         // Core may have accepted the mutation before the transport reported
         // an error. Restore the old value before exposing the failure.
         try {
-          await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(priorRate));
+          const restoredSnapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(priorRate));
+          this.rememberCoreSnapshot(active, restoredSnapshot);
         } catch (_) {
           restored = false;
         }
+        if (!current()) throw error;
         if (!restored) {
           await this.terminateToError(`语速切换失败：${errorMessageOf(error)}`, 'utteranceFailed');
         } else if (priorState.status === 'playing' || priorState.status === 'preparing' ||
           priorState.status === 'resuming') {
-          this.setState({ ...priorState, errorMessage: `语速切换失败：${errorMessageOf(error)}` });
+          const snapshot = await this.prepareIntentQueue(active, index, false, current);
+          if (snapshot === undefined || !current()) throw error;
+          this.setState({ ...this.state, rate: priorRate, status: priorState.status, errorMessage: `语速切换失败：${errorMessageOf(error)}` });
           try {
             await this.speakSlice(active, index, 'preparing');
           } catch (recoveryError) {
+            if (!current()) throw error;
             await this.terminateToError(`语速切换失败：${errorMessageOf(recoveryError)}`, 'utteranceFailed');
           }
         } else {
-          this.setState({ ...priorState, errorMessage: `语速切换失败：${errorMessageOf(error)}` });
+          this.setState({ ...this.state, rate: priorRate, status: priorState.status, errorMessage: `语速切换失败：${errorMessageOf(error)}` });
         }
         throw error;
       }
@@ -688,17 +711,18 @@ export class ReaderTtsSessionCoordinator {
   setAllowMixing(allowMixing: boolean): Promise<void> {
     const active = this.active;
     if (active === undefined) return Promise.resolve();
-    const priorInput = { ...active.input };
-    const identity = active.identity;
-    const candidate = { ...active.input, allowMixing };
+    const priorAllowMixing = active.input.allowMixing;
+    const generation = active.identity.sessionGeneration;
+    const current = (): boolean => this.active === active && this.transport.sessionGeneration === generation &&
+      this.isSessionCurrent(active.identity);
     return this.enqueue(async (): Promise<void> => {
-      if (!this.isSessionCurrent(identity)) return;
+      if (!current()) return;
       if (this.transport.audioSession === 'active') {
-        await this.host.activateAudioSession(candidate.allowMixing ?? false);
+        await this.host.activateAudioSession(allowMixing);
       }
-      if (this.isSessionCurrent(identity)) active.input = candidate;
+      if (current()) active.input = { ...active.input, allowMixing };
     }).catch((error: Error): never => {
-      if (this.isSessionCurrent(identity)) active.input = priorInput;
+      if (current()) active.input = { ...active.input, allowMixing: priorAllowMixing };
       throw error;
     });
   }
@@ -711,6 +735,11 @@ export class ReaderTtsSessionCoordinator {
     if (this.active !== undefined) this.active.input = { ...this.active.input, pauseOnInterruption };
   }
 
+  setBackgroundPlayback(backgroundPlayback: boolean): void {
+    if (this.active !== undefined) this.active.input = { ...this.active.input, backgroundPlayback };
+    this.host.setBackgroundPlaybackEnabled?.(backgroundPlayback);
+  }
+
   setVoice(language: string, person: number): Promise<void> {
     this.voidLogged(this.stopAudition(), 'audition.voice-change');
     const normalizedLanguage = language.trim();
@@ -719,39 +748,47 @@ export class ReaderTtsSessionCoordinator {
     }
     const active = this.active;
     if (active === undefined) return Promise.resolve();
-    const priorInput = { ...active.input };
+    const priorLanguage = active.input.language;
+    const priorPerson = active.input.person;
     const priorState = { ...this.state };
-    const candidate = { ...active.input, language: normalizedLanguage, person };
     if (active.plan === undefined || this.state.sliceIndex === undefined ||
       this.state.status === 'paused' || this.state.status === 'interrupted') {
-      return this.enqueue(async (): Promise<void> => {
-        if (this.isSessionCurrent(active.identity)) active.input = candidate;
-      });
+      // No transport transaction is needed. Merge only these live settings
+      // now so preparation/automatic handoff can read them before speaking.
+      active.input = { ...active.input, language: normalizedLanguage, person };
+      return Promise.resolve();
     }
     const identity = active.identity;
     const index = this.state.sliceIndex;
-    this.invalidateUtterance();
+    const controlGeneration = this.retireControlIntent();
+    const current = (): boolean => this.isSessionCurrent(identity) && this.controlGeneration === controlGeneration;
     this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined });
     const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
       try {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
-        if (!this.isSessionCurrent(identity)) return;
+        if (!current()) return;
         // The new voice becomes visible only when the replacement utterance
         // has been admitted to the same session transaction.
-        active.input = candidate;
+        active.input = { ...active.input, language: normalizedLanguage, person };
+        const snapshot = await this.prepareIntentQueue(active, index, false, current);
+        if (snapshot === undefined || !current()) return;
+        this.applyCoreSnapshot(snapshot);
         await this.speakSlice(active, index, 'preparing');
       } catch (error) {
-        if (!this.isSessionCurrent(identity)) throw error;
-        active.input = priorInput;
-        this.setState({ ...priorState, errorMessage: `音色切换失败：${errorMessageOf(error)}` });
+        if (!current()) throw error;
+        active.input = { ...active.input, language: priorLanguage, person: priorPerson };
+        this.setState({ ...this.state, status: priorState.status, errorMessage: `音色切换失败：${errorMessageOf(error)}` });
         try {
           if (priorState.status === 'playing' || priorState.status === 'preparing' ||
             priorState.status === 'resuming') {
+            const snapshot = await this.prepareIntentQueue(active, index, false, current);
+            if (snapshot === undefined || !current()) throw error;
             await this.speakSlice(active, index, 'preparing');
           }
         } catch (recoveryError) {
+          if (!current()) throw error;
           await this.terminateToError(`音色切换失败：${errorMessageOf(recoveryError)}`, 'utteranceFailed');
         }
         throw error;
@@ -1057,6 +1094,10 @@ export class ReaderTtsSessionCoordinator {
     const token = this.utteranceToken(active.identity, active.input.chapter, slice.index, requestId);
     this.utterances.set(token.requestId, {
       identity: active.identity,
+      positionGeneration: this.state.positionGeneration ?? 0,
+      controlGeneration: this.controlGeneration,
+      utteranceGeneration: token.utteranceGeneration,
+      requestId: token.requestId,
       chapter: active.input.chapter,
       sliceIndex: token.sliceIndex,
       charEnd: slice.charEnd,
@@ -1139,10 +1180,12 @@ export class ReaderTtsSessionCoordinator {
     this.logTtsEvent('startCallbackTimeout', `requestId=${token.requestId}`);
     this.awaitingStartToken = undefined;
     const correlated = this.utterances.get(token.requestId);
+    const active = this.active;
     if (correlated !== undefined) {
       this.removeUtteranceCorrelation(token.requestId);
       try {
-        await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
+        const result = await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
+        if (active !== undefined && result.callbackDisposition === 'applied') this.rememberCoreSnapshot(active, result.snapshot);
       } catch (error) {
         this.logTtsEvent('startCallbackTimeout.report', errorMessageOf(error));
       }
@@ -1205,16 +1248,20 @@ export class ReaderTtsSessionCoordinator {
         // still present while its progress/next-slice work runs, so a
         // duplicate event queued by the Host can reach Core exactly as before.
         this.retainUtteranceCorrelation(event.requestId);
+        this.rememberCoreSnapshot(active, result.snapshot);
+        // Core accepted a real, already heard slice. Keep that fact even if
+        // pause/rate/seek retired its transport while the ACK was in flight.
+        this.queueProgressCommit({ chapter: correlated.chapter, charEnd: correlated.charEnd });
+        if (!this.isUtteranceContinuationCurrent(correlated)) return;
         if (result.snapshot.state === 'completed') this.prepareChapterAdvance(result.snapshot);
         else this.applyCoreSnapshot(result.snapshot);
-        this.queueProgressCommit({ chapter: correlated.chapter, charEnd: correlated.charEnd });
         // The old chapter must be durable before the next chapter becomes the
         // visible progress owner. Ordinary adjacent slices can speak while the
         // same ordered commit tail writes the preceding scalar position.
         if (result.snapshot.state === 'completed') await this.progressCommitTail;
-        if (!this.isCorrelatedSessionCurrent(correlated)) return;
+        if (!this.isCorrelatedSessionCurrent(correlated) || !this.isUtteranceContinuationCurrent(correlated)) return;
         if (result.snapshot.state === 'completed') {
-          await this.advanceOrComplete(active, result.snapshot);
+          await this.advanceOrComplete(active, result.snapshot, (): boolean => this.isUtteranceContinuationCurrent(correlated));
           return;
         }
         await this.speakSlice(
@@ -1237,7 +1284,7 @@ export class ReaderTtsSessionCoordinator {
       if (event.type === 'stop') return;
       // A failed callback must never leave a ghost `playing`/`preparing` state:
       // stop the current utterance and land in a retryable error.
-      if (this.active !== undefined && this.utterances.has(event.requestId)) {
+      if (this.isCorrelatedSessionCurrent(correlated) && this.isUtteranceContinuationCurrent(correlated)) {
         await this.terminateToError(
           `朗读回调处理失败：${detail}`,
           this.state.audioStarted ? 'utteranceFailed' : 'startFailed',
@@ -1257,8 +1304,12 @@ export class ReaderTtsSessionCoordinator {
     const correlated = this.utterances.get(token.requestId);
     if (correlated === undefined) return;
     const result = await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
-    if (result.callbackDisposition === 'applied') this.removeUtteranceCorrelation(token.requestId);
-    if (result.callbackDisposition !== 'applied' || !this.isCorrelatedSessionCurrent(correlated)) return;
+    if (result.callbackDisposition === 'applied') {
+      this.removeUtteranceCorrelation(token.requestId);
+      this.rememberCoreSnapshot(active, result.snapshot);
+    }
+    if (result.callbackDisposition !== 'applied' || !this.isCorrelatedSessionCurrent(correlated) ||
+      !this.isUtteranceContinuationCurrent(correlated)) return;
     if (result.snapshot.state === 'completed') this.prepareChapterAdvance(result.snapshot);
     else this.applyCoreSnapshot(result.snapshot, message);
     if (result.failureAction === 'stop' || result.snapshot.state === 'stopped') {
@@ -1266,7 +1317,7 @@ export class ReaderTtsSessionCoordinator {
       return;
     }
     if (result.snapshot.state === 'completed') {
-      await this.advanceOrComplete(active, result.snapshot);
+      await this.advanceOrComplete(active, result.snapshot, (): boolean => this.isUtteranceContinuationCurrent(correlated));
       return;
     }
     await this.speakSlice(
@@ -1276,27 +1327,34 @@ export class ReaderTtsSessionCoordinator {
     );
   }
 
-  private async advanceOrComplete(active: ActiveSession, snapshot: ReaderTtsQueueSnapshot): Promise<void> {
+  private async advanceOrComplete(active: ActiveSession, snapshot: ReaderTtsQueueSnapshot,
+    continuationCurrent: () => boolean): Promise<void> {
+    // The chapter identity changes during our own admitted handoff. The
+    // initiating position/transport ticket must stay fixed across that change.
+    const current = (): boolean => this.active === active && this.isSessionCurrent(active.identity) && continuationCurrent();
+    if (!current()) return;
     const loader = this.chapterAdvance;
     if (loader === undefined) {
       await this.completeSession();
       return;
     }
-    const generation = active.identity.sessionGeneration;
     try {
       const next = await loader(active.input.chapter);
-      if (!this.isSessionCurrent(active.identity)) return;
+      if (!current()) return;
       const transition = await this.gateway.chapterPlan(
         active.input.chapter,
         next?.chapter,
         snapshot.drainBehavior,
       );
-      if (!this.isSessionCurrent(active.identity)) return;
+      if (!current()) return;
       if (next === undefined || transition.next === undefined || transition.drainBehavior !== 'advance-to-next') {
         await this.completeSession();
         return;
       }
+      const nextPlan = await this.gateway.slice(next.chapter, next.content, 'paragraph-then-sentence');
+      if (!current()) return;
       next.onAdmitted?.();
+      if (!current()) return;
       const nextChapterKey = this.chapterKey(next.chapter);
       this.setState({
         ...this.state,
@@ -1304,8 +1362,8 @@ export class ReaderTtsSessionCoordinator {
         contentVersion: next.contentVersion,
         chapterKey: nextChapterKey,
         chapterIndex: next.chapter.chapterIndex,
-        sliceIndex: undefined,
-        totalSlices: 0,
+        sliceIndex: 0,
+        totalSlices: nextPlan.slices.length,
         charStart: undefined,
         charEnd: undefined,
         requestId: undefined,
@@ -1322,15 +1380,17 @@ export class ReaderTtsSessionCoordinator {
         scalarPosition: 0,
       };
       active.identity = this.sessionIdentity(next.contentVersion, nextChapterKey);
-      active.plan = await this.gateway.slice(next.chapter, next.content, 'paragraph-then-sentence');
-      if (!this.isSessionCurrent(active.identity)) return;
-      const nextSnapshot = await this.gateway.play(active.plan, 0);
-      if (!this.isSessionCurrent(active.identity)) return;
+      active.plan = nextPlan;
+      this.coreSnapshot = undefined;
+      const nextSnapshot = await this.gateway.play(nextPlan, 0);
+      this.rememberCoreSnapshot(active, nextSnapshot);
+      if (!current()) return;
       const ratedSnapshot = await this.gateway.setRate(
         next.chapter,
         this.coreRateForMultiplier(active.input.rate ?? 1),
       );
-      if (!this.isSessionCurrent(active.identity)) return;
+      this.rememberCoreSnapshot(active, ratedSnapshot);
+      if (!current()) return;
       this.applyCoreSnapshot(ratedSnapshot);
       await this.speakSlice(active, this.requireSnapshotIndex(nextSnapshot, 'tts.queue.play'), 'preparing');
     } catch (error) {
@@ -1338,7 +1398,7 @@ export class ReaderTtsSessionCoordinator {
       this.logTtsEvent('chapter.advance', detail);
       // A new start or stop can replace ownership while the old chapter is
       // still loading. Its failure must not stop the replacement session.
-      if (generation !== this.transport.sessionGeneration) return;
+      if (!current()) return;
       await this.terminateToError(`章节推进失败：${detail}`, 'utteranceFailed');
     }
   }
@@ -1389,7 +1449,10 @@ export class ReaderTtsSessionCoordinator {
   private skipToAdjacent(direction: 'next' | 'previous'): Promise<void> {
     const active = this.active;
     if (active === undefined || active.plan === undefined) return Promise.resolve();
-    this.invalidateUtterance();
+    const index = this.state.sliceIndex ?? this.coreSnapshot?.currentSliceIndex;
+    if (index === undefined) return Promise.resolve();
+    const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
+    const controlGeneration = this.retireControlIntent();
     const positionGeneration = this.nextGeneration(this.state.positionGeneration ?? 0);
     this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined,
       positionGeneration,
@@ -1400,16 +1463,36 @@ export class ReaderTtsSessionCoordinator {
       const hostStopError = await hostStopTask;
       if (hostStopError !== undefined) throw hostStopError;
       if (!this.isSessionCurrent(identity)) return;
-      const snapshot = direction === 'next'
-        ? await this.gateway.skip(active.input.chapter)
-        : await this.gateway.previous(active.input.chapter);
-      if (!this.isSessionCurrent(identity) || this.state.positionGeneration !== positionGeneration) return;
+      const current = (): boolean => this.isSessionCurrent(identity) && this.controlGeneration === controlGeneration &&
+        this.state.positionGeneration === positionGeneration;
+      if (!current()) return;
+      const target = direction === 'next' ? index + 1 : index - 1;
+      if (target < 0) throw new Error('Reader TTS previous rejected: already at first slice');
+      let snapshot: ReaderTtsQueueSnapshot | undefined;
+      if (target >= active.plan!.slices.length && this.coreSnapshot?.state === 'completed') {
+        snapshot = this.coreSnapshot;
+      } else if (this.coreSnapshot?.currentSliceIndex === index &&
+        (this.coreSnapshot.state === 'playing' || this.coreSnapshot.state === 'paused')) {
+        snapshot = direction === 'next'
+          ? await this.gateway.skip(active.input.chapter)
+          : await this.gateway.previous(active.input.chapter);
+        this.rememberCoreSnapshot(active, snapshot);
+      } else {
+        snapshot = await this.prepareIntentQueue(active, Math.min(target, active.plan!.slices.length - 1), wasPaused, current, true);
+        if (snapshot !== undefined && target >= active.plan!.slices.length && current()) {
+          snapshot = await this.gateway.skip(active.input.chapter);
+          this.rememberCoreSnapshot(active, snapshot);
+        }
+      }
+      if (snapshot === undefined || !current()) return;
       if (snapshot.state === 'completed') this.prepareChapterAdvance(snapshot);
       else this.applyCoreSnapshot(snapshot);
       if (snapshot.state === 'completed') {
-        await this.advanceOrComplete(active, snapshot);
+        await this.advanceOrComplete(active, snapshot,
+          (): boolean => this.controlGeneration === controlGeneration && this.state.positionGeneration === positionGeneration);
         return;
       }
+      if (wasPaused || snapshot.state === 'paused') return;
       await this.speakSlice(active, this.requireSnapshotIndex(snapshot, `tts.queue.${direction}`), 'preparing');
     });
   }
@@ -1471,8 +1554,63 @@ export class ReaderTtsSessionCoordinator {
     );
   }
 
+  /** Core ACKs are facts even when a later control owns publication. */
+  private rememberCoreSnapshot(active: ActiveSession, snapshot: ReaderTtsQueueSnapshot): void {
+    if (this.active === active && this.isSessionCurrent(active.identity) &&
+      this.chapterKey(snapshot.chapter) === active.identity.chapterKey) this.coreSnapshot = snapshot;
+  }
+
+  /** Position controls can arrive while a prior callback drains/stops Core.
+   * Restart only a terminal queue; otherwise use Core's normal seek transition.
+   * A new play resets Core callback IDs, so retired Host correlations must not
+   * be submitted against that new queue. Already accepted heard commits stay. */
+  private async prepareIntentQueue(active: ActiveSession, index: number, paused: boolean,
+    current: () => boolean, forceSeek: boolean = false): Promise<ReaderTtsQueueSnapshot | undefined> {
+    if (!current()) return undefined;
+    const plan = active.plan;
+    let snapshot = this.coreSnapshot;
+    if (plan === undefined || snapshot === undefined || plan.slices[index] === undefined ||
+      this.chapterKey(snapshot.chapter) !== active.identity.chapterKey ||
+      this.chapterKey(plan.chapter) !== active.identity.chapterKey) {
+      throw new Error('Reader TTS control has no admitted target slice');
+    }
+    if (snapshot.state === 'completed' || snapshot.state === 'stopped') {
+      this.clearUtteranceCorrelations();
+      snapshot = await this.gateway.play(plan, index);
+      this.rememberCoreSnapshot(active, snapshot);
+      if (!current()) return undefined;
+      snapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(active.input.rate ?? 1));
+      this.rememberCoreSnapshot(active, snapshot);
+    } else if (forceSeek || snapshot.currentSliceIndex !== index) {
+      snapshot = await this.gateway.seek(active.input.chapter, index);
+      this.rememberCoreSnapshot(active, snapshot);
+    }
+    if (!current()) return undefined;
+    if (paused && snapshot.state === 'playing') {
+      snapshot = await this.gateway.pause(active.input.chapter);
+      this.rememberCoreSnapshot(active, snapshot);
+    } else if (!paused && snapshot.state === 'paused') {
+      snapshot = await this.gateway.resume(active.input.chapter);
+      this.rememberCoreSnapshot(active, snapshot);
+    }
+    return current() ? snapshot : undefined;
+  }
+
+  private retireControlIntent(interruption?: 'systemInterruption' | 'routeBackground' | 'deviceChange'): number {
+    this.controlGeneration = this.nextGeneration(this.controlGeneration);
+    this.invalidateUtterance(interruption);
+    return this.controlGeneration;
+  }
+
   private isCorrelatedSessionCurrent(correlated: CorrelatedUtterance): boolean {
     return this.active !== undefined && this.isSessionCurrent(correlated.identity);
+  }
+
+  private isUtteranceContinuationCurrent(correlated: CorrelatedUtterance): boolean {
+    return this.controlGeneration === correlated.controlGeneration &&
+      (this.state.positionGeneration ?? 0) === correlated.positionGeneration &&
+      this.transport.utteranceGeneration === correlated.utteranceGeneration &&
+      this.transport.currentRequestId === correlated.requestId;
   }
 
   private applyCoreSnapshot(

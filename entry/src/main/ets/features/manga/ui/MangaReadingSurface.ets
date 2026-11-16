@@ -1480,7 +1480,8 @@ export struct MangaReadingSurface {
     const current = (): boolean => this.mounted && generation === this.boundaryGeneration && !this.exiting && !this.interactionBlocked &&
       this.isReaderIdentityCurrent?.() !== false && !this.windowChromeOverlayActive && this.windowChromeActive &&
       this.viewportWidth === width && this.viewportHeight === height &&
-      this.remoteSession?.sourceVersion === sourceVersion && this.remoteSession?.requiresContextRefresh !== true &&
+      this.remoteSession?.sourceVersion === sourceVersion &&
+      (this.remoteSession?.requiresContextRefresh !== true || this.remoteSession?.acquisitionMode === 'offline') &&
       (this.controller === origin || this.controller === candidate?.controller) && origin.chapter?.manifest === originManifest;
     try {
       // Use the untouched pre-pull coordinate and allow save failure to abort

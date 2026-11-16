@@ -1474,7 +1474,8 @@ export class SourceSwitchGateway {
       sourceId: this.requiredString(book, 'sourceId'),
       bookId: this.requiredString(book, 'bookId'),
       title: this.requiredString(book, 'title'),
-      author: this.requiredString(book, 'author'),
+      // BookshelfEntryData requires a string, but an unknown author is empty.
+      author: this.requiredString(book, 'author', true),
       addedAt: this.requiredNumber(book, 'addedAt'),
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
@@ -1496,9 +1497,9 @@ export class SourceSwitchGateway {
     return decoded;
   }
 
-  private requiredString(value: JsonObject, key: string): string {
+  private requiredString(value: JsonObject, key: string, allowEmpty: boolean = false): string {
     const candidate = value[key];
-    if (typeof candidate !== 'string' || candidate.length === 0) {
+    if (typeof candidate !== 'string' || (!allowEmpty && candidate.length === 0)) {
       throw new Error(`source.switch protocol returned invalid ${key}`);
     }
     return candidate;

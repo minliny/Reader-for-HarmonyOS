@@ -79,7 +79,7 @@ const mutations=[['changeTtsAllowMixing',[true],'ttsAllowMixing',true],['changeT
   ['changeTtsVoice',['en-US',7],'ttsLanguage','en-US']];
 function reader(f,file=new URL('LocalReadingExperience.ets',dir)) {
   const events=[];
-  const coordinator={setAllowMixing:async value=>events.push(['mixing',value]),setVoice:async(...value)=>events.push(['voice',...value]),
+  const coordinator={ setBackgroundPlayback: value => events.push(['background', value]),setAllowMixing:async value=>events.push(['mixing',value]),setVoice:async(...value)=>events.push(['voice',...value]),
     setFailurePolicy:value=>events.push(['failure',value]),setPauseOnInterruption:value=>events.push(['pause',value])};
   const Reader=productionMotionMethods(file,['nextTtsPreferenceMutationGeneration','captureTtsPreferenceAdmission','isSessionActive',
     'ttsPreferencesSnapshot','copyTtsPreferencesSnapshot','persistTtsPreferencesSnapshot','persistTtsPreferences','notifyTtsPreferencePending',

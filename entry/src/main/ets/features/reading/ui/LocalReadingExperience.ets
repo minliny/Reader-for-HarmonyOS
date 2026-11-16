@@ -8843,8 +8843,7 @@ export struct ReadingExperience {
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.backgroundPlayback = enabled;
     this.ttsBackgroundPlayback = enabled;
-    const host = this.ttsCoordinator === undefined ? undefined : ReaderRuntimeOwner.current().getTtsHost();
-    host?.setBackgroundPlaybackEnabled?.(enabled);
+    this.ttsCoordinator?.setBackgroundPlayback(enabled);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
       this.notifyTtsPreferencePending(error, current);
     });
