@@ -8,7 +8,7 @@
 
 前几轮的问题在于文件审读覆盖没有充分落实到同类状态转换，首次拒绝检查遗漏同一控件恢复，Slider 检查遗漏平台 Click 终态，过早的独立轮次增加了重复成本。第十四、十五轮还曾在首次发现后结束不完整审查，原记录保留。本批在开始新的三轮独立审计前，复用第十八轮已读合同，对 21 个输入 port 和全部 6 个原生 Slider 按实际入口、状态转换、最终属性、业务回调与回执归属集中核对。该批次复核的全局连续通过增量为 0。
 
-本批 21 个输入入口及全部 6 个原生 Slider 已完成接线核对，部分与未审均为 0，新增同因发现为 0。本批次核对的全局连续通过增量为 0，规范编译待执行。[27 项接线核对](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round18-repair-contract-matrix.json)五个修改脚本语法通过，13 项目录登记指纹已同步，当前仍为 37 项原诊断、0 源码漂移、0 引用错误。原生登记为 19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环为 0／21，VM 禁令有效。
+本批 21 个输入入口及全部 6 个原生 Slider 已完成接线核对，部分与未审均为 0，新增同因发现为 0。本批次核对的全局连续通过增量为 0。规范完整 ArkTS 编译及指定证书签名一次通过，候选为 0.2.0.DEV.49dd940b7673，run 为 20261116T031524Z-55bf1497-c041f0cd，642 个生产 ETS／TS 字节与不可变产物清单一致。[27 项接线核对](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round18-repair-contract-matrix.json)五个修改脚本语法通过，13 项目录登记指纹已同步，当前仍为 37 项原诊断、0 源码漂移、0 引用错误。原生登记为 19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环为 0／21，VM 禁令有效。
 
 ## 2026-11-16 第十七轮完整接线复核与两项修复
 
