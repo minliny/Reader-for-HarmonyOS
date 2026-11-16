@@ -1,5 +1,23 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 三轮审计后原生续接
+
+当前候选 0.2.0.DEV.d33f5b7933c2 已通过规范保数据覆盖与启动，原 Native／Core 配套输入复用。实际停止态数据与旧快照有变化，一项既有准确 FFI 用例在本地一次性副本运行通过，两项未变的合成 Core 用例复用。当前启动日志记录 runtime-published 与 shelf.model-ready，正常书架显示原有书籍。[本次原生续接记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/post-global-native-summary-20261116.json)
+
+系统字号恢复为原第 2 档，实际三滑块为 2／1／1。当前 Reader 的 UIContext 实测字号为 1.0，显示密度与分辨率密度均为 3.5。最终页面为正常书架，所有本次原生会话已结束并释放租约。
+
+当前 Source 内存夹具的真实 IME 使宿主底边从 2832px 缩到 1733px，再恢复 2832px，标题和 TextInput 的位置保持一致。分组选中纪实样本后菜单关闭，列表投影更新，原触发器重新取得焦点。当前场景覆盖默认字号的这些具体端点，高于 58vp 的页头、中间连续绘制和完整适配仍待原条件取证。[Source 场景记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/post-global-source-native.json)
+
+Figma 官方接口当前读取通过，已核对页面目录、书架／搜索分组、上轮整理说明及目录同步前备份截图。整理说明 4976:1346 标注源码来源 HEAD d6c3213，多个状态画板明确标为当前源码控件，独立整页批准来源继续沿原条件核对。原 token-expired 结果保留其历史时点。[Figma 当前读取与来源](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/figma-post-global-review.json)
+
+当前 VM 的 MediaKit 录制对象创建与 startRecording 返回，30 秒内未收到 STARTED 状态或授权界面，应用按既定 deadline 收口，实际缓存文件为 0 字节。G05 连续帧未取得，平台未进入录制的底层原因仍待定位。当前 uitest 不支持 uiWindow 命令，准确纯高度原生场景继续开放。正式 21 项、336 层的 19 PASS／27 FAIL／290 NOT_RUN 按原关闭条件记账。[连续录制能力记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/post-global-capture-capability.json)
+
+书架设置和开发者设置两个正常宿主新增纯读屏序列通过。书架开关按开／关／开更新，开发者组件边界按关／开／关更新，六个原生实例检查均保持键盘焦点关闭，并以实际绿色焦点框证明读屏焦点连续。重开页面核对书架原值为开、开发者原值为关，系统读屏恢复关闭。[两个纯读屏宿主记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/post-global-toggle-reader.json)
+
+当前系统最大第 5 档实测 1.45 倍，Source 标题、输入与首行在真实 IME／Back 三个端点的位置一致。该场景页头仍为名义 58vp，标题行高 33fp × 1.45 为 47.85vp，小于基础高度，本次不能关闭高于 58vp 的原生条件。最初对此场景的预期已纠正。系统第 2 档和 Reader 实测 1.0 已恢复，最终为正常书架、两项密度 3.5。[最大字号与恢复记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/post-global-maxfont-native.json)
+
+本次工具修正包含读屏导航与首触摸改用原始 uinput 序列、实际最大字号 1.45 的准确断言，以及录制缓存查询改用 shell 命名空间下的精确应用路径。各次未进入目标或未满足断言的原始记录已保留，具体生产行为和工具前提分别记账。
+
 ## 2026-11-16 代码收口与连续三轮全局审计
 
 第十一、十二、十三轮在同一代码候选 62c55a41 上连续完整通过，代码侧修复队列为 0，VM 禁令的三轮通过条件已满足。本代码收口与审计阶段的 VM、HDC、设备、远程和 CUA 操作均为 0。
