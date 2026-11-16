@@ -2717,7 +2717,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+          "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
           "symbol": "requestCatalogForTurn"
         },
         {
@@ -4243,7 +4243,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -5886,7 +5886,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -7535,7 +7535,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -9199,7 +9199,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -10732,7 +10732,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12156,7 +12156,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -13737,7 +13737,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15206,7 +15206,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -16731,7 +16731,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18155,7 +18155,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -19810,7 +19810,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -21464,7 +21464,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "5e49f95bc1de88dfa6cb102e43101cc370f2e348195ac2db7d601fbd3aeb4386",
+                "sha256": "dd6457ef95238253e73333cad400941bd0f09202d0591627300c5583bcfee86c",
                 "symbol": "requestCatalogForTurn"
               },
               {

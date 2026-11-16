@@ -1198,6 +1198,7 @@ export struct ReadingExperience {
   private readerSettingsMutationGeneration: number = 0;
   /** Invalidates unresolved availability/audible callbacks on newer play intent. */
   private ttsPlayIntentGeneration: number = 0;
+  private ttsPlayStartPending: boolean = false;
   /** The selection token that owns `chapter` and its layout map. */
   private materializedChapterSelectionToken: number = -1;
   /** The selection token that owns the currently mounted hidden measurement tree. */
@@ -8613,8 +8614,24 @@ export struct ReadingExperience {
   }
 
   private cancelPendingTtsPlay(): void {
+    this.ttsPlayStartPending = false;
     this.ttsPlayIntentGeneration = this.ttsPlayIntentGeneration >= Number.MAX_SAFE_INTEGER ?
       1 : this.ttsPlayIntentGeneration + 1;
+  }
+
+  /** Retire only starts that have not crossed the coordinator dispatch boundary.
+   * An accepted stop/start ACK and intentional background playback keep their owner. */
+  private retirePendingPlaybackStarts(): void {
+    const ttsPending = this.ttsPlayStartPending;
+    const autoPagePending = this.autoPageCoordinator.pendingStart();
+    if (ttsPending) this.cancelPendingTtsPlay();
+    if (autoPagePending) this.cancelPendingAutoPageStart();
+    const launch = this.sessionLaunch;
+    if (launch?.ownership === 'stage' && launch.businessStatus === 'preparing' &&
+      ((launch.geometry.type === 'tts' && ttsPending) || (launch.geometry.type === 'autoPage' && autoPagePending))) {
+      // The input owner has left; it cannot receive a failed-start handoff.
+      this.cancelSessionLaunch('leave');
+    }
   }
 
   private captureControlPlaybackPresentation(): ReaderControlPlaybackPresentation {
@@ -8652,6 +8669,11 @@ export struct ReadingExperience {
   }
 
   private toggleTts(pendingIntent?: ReaderTtsPlayIntent): void {
+    if (pendingIntent !== undefined && !this.isTtsPlayIntentCurrent(pendingIntent)) return;
+    if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive) {
+      this.retirePendingPlaybackStarts();
+      return;
+    }
     const intent = pendingIntent ?? this.createTtsPlayIntent();
     if (!this.isTtsPlayIntentCurrent(intent)) return;
     // A user choosing TTS cancels any auto-page start that is waiting for the
@@ -8660,6 +8682,7 @@ export struct ReadingExperience {
     this.cancelPendingAutoPageStart();
     const startingNew = this.ttsState.status !== 'playing' && this.ttsState.status !== 'preparing' &&
       this.ttsState.status !== 'paused' && this.ttsState.status !== 'interrupted' && this.ttsState.status !== 'stopping';
+    this.ttsPlayStartPending = startingNew;
     if (pendingIntent === undefined && startingNew && this.phase === 'ready' && this.chapter !== undefined && this.visiblePage !== undefined) {
       this.beginSessionCapsuleMorph('tts');
     }
@@ -8669,12 +8692,21 @@ export struct ReadingExperience {
       void this.initializeTtsSession(lifecycleToken, retryAvailability).then((available: boolean): void => {
         if (available && this.isTtsPlayIntentCurrent(intent)) {
           this.toggleTts(intent);
-        } else if (this.isTtsPlayIntentCurrent(intent)) this.cancelSessionLaunch('failure');
-      }).catch((error: Error): void => { this.logTtsFailure('initialize', error); this.cancelSessionLaunch('failure'); });
+        } else if (this.isTtsPlayIntentCurrent(intent)) {
+          this.cancelPendingTtsPlay();
+          this.cancelSessionLaunch('failure');
+        }
+      }).catch((error: Error): void => {
+        if (!this.isTtsPlayIntentCurrent(intent)) return;
+        this.cancelPendingTtsPlay();
+        this.logTtsFailure('initialize', error); this.cancelSessionLaunch('failure');
+      });
       return;
     }
     const coordinator = this.ttsCoordinator;
-    if (coordinator === undefined || this.ttsState.status === 'unavailable') { this.cancelSessionLaunch('failure'); return; }
+    if (coordinator === undefined || this.ttsState.status === 'unavailable') {
+      this.cancelPendingTtsPlay(); this.cancelSessionLaunch('failure'); return;
+    }
     // `resuming` is kept in the state union for compatibility but is no
     // longer emitted by the coordinator, so the pause branch excludes it.
     if (this.ttsState.status === 'playing' || this.ttsState.status === 'preparing') {
@@ -8690,17 +8722,23 @@ export struct ReadingExperience {
     const chapter = this.chapter;
     const page = this.visiblePage;
     if (!this.mounted || this.phase !== 'ready' || chapter === undefined || page === undefined ||
-      this.materializedContentVersion.length === 0) return;
+      this.materializedContentVersion.length === 0) { this.retirePendingPlaybackStarts(); return; }
     if (chapter.documentRange !== undefined) {
       void this.hydrateEntryWindow().then((): void => {
         if (this.isTtsPlayIntentCurrent(intent)) this.toggleTts(intent);
       }).catch((error: Error): void => {
-        if (this.isTtsPlayIntentCurrent(intent)) { this.logTtsFailure('entry expansion', error); this.cancelSessionLaunch('failure'); }
+        if (this.isTtsPlayIntentCurrent(intent)) {
+          this.cancelPendingTtsPlay(); this.logTtsFailure('entry expansion', error); this.cancelSessionLaunch('failure');
+        }
       });
       return;
     }
+    if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive) {
+      this.retirePendingPlaybackStarts(); return;
+    }
     this.stopAutoPage();
     coordinator.setDesiredPlaying(this.sessionLaunch?.geometry.type === 'tts' ? this.sessionLaunch.desiredPlaying : true);
+    this.ttsPlayStartPending = false;
     void coordinator.start({
       chapter: this.ttsChapterRef(chapter),
       content: chapter.content,
@@ -9204,6 +9242,9 @@ export struct ReadingExperience {
   }
 
   private toggleAutoPage(): void {
+    if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive) {
+      this.retirePendingPlaybackStarts(); return;
+    }
     this.cancelPendingTtsPlay();
     const presentation = this.captureControlPlaybackPresentation();
     if (this.automaticReadingState().status === 'running') {
@@ -9231,6 +9272,11 @@ export struct ReadingExperience {
             this.automaticReadingState().status !== 'stopped') {
             return;
           }
+          // Keep the pending token until the last first-start admission check.
+          // A rejected start must still be able to retire its preparing proxy.
+          if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive || this.phase !== 'ready') {
+            this.retirePendingPlaybackStarts(); return;
+          }
           if (this.autoPageCoordinator.admitStart(generation)) this.startAutoPageSession(presentation);
         })
         .catch((error: Error): void => {
@@ -9245,7 +9291,7 @@ export struct ReadingExperience {
   }
 
   private startAutoPageSession(presentation: ReaderControlPlaybackPresentation): void {
-    if (!this.mounted || this.exitRequested || this.phase !== 'ready' ||
+    if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive || this.phase !== 'ready' ||
       this.automaticReadingState().status !== 'stopped') {
       return;
     }
@@ -9290,6 +9336,7 @@ export struct ReadingExperience {
   }
 
   private onReaderManualInteraction(): void {
+    this.retirePendingPlaybackStarts();
     this.retireReaderRecovery();
     this.invalidateTtsPageFollow?.();
     this.screenAwakeLease?.rearm();
@@ -11137,6 +11184,7 @@ export struct ReadingExperience {
   }
 
   private onControlInputBoundaryChanged(): void {
+    if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive) this.retirePendingPlaybackStarts();
     if (!this.isControlInputEnabled()) this.retirePagePointer();
     this.controlMinimumGeneration += 1;
     this.scheduleControlMinimum();
@@ -12036,6 +12084,7 @@ export struct ReadingExperience {
     if (ttsOwner !== undefined && !this.isTtsFollowLeaseCurrent(ttsOwner)) return;
     if (ttsOwner === undefined) this.invalidateTtsPageFollow?.();
     if (!this.mounted || !Number.isSafeInteger(chapterIndex) || chapterIndex < 0) return;
+    if (stopTts) this.retirePendingPlaybackStarts();
     if (!this.isKnownControlChapter(chapterIndex)) {
       if (this.entryCatalogPending) {
         const revision = ++this.entryCatalogSeekRevision;
