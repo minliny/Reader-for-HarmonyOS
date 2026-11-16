@@ -10374,7 +10374,7 @@ export struct ReadingExperience {
   }
 
   private toggleSessionCapsule(): void {
-    if (this.pageTurnInputPhase() !== 'idle') return;
+    if (!this.readerInputIsCurrent() || this.pageTurnInputPhase() !== 'idle') return;
     const launch = this.sessionLaunch;
     if (launch !== undefined) {
       if (launch.ownership !== 'stage') return;

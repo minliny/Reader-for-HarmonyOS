@@ -106,6 +106,7 @@ function fixture(type, status) {
     freezePageTurnProjection() {}, clearPageTurnProjection() {}, usesBookTurnSimulation: () => false,
     pageTurnOffsetX: 0, drainPageTurnPreparationQueue() {},
     admitPageChromeClock() {}, admitSessionCapsuleMeasurement() {},
+    sessionCapsuleMeasurementIdentity: () => 'pointer-fixture-measurement',
   });
   p.automaticReadingState = () => p.autoPageState;
   return installReaderMeasurementOwner(p);
@@ -223,6 +224,8 @@ check('first load, real failure, controls, obstruction and exit still hide the c
 });
 }
 if (scope === 'pointer-routing') {
+const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const { selectedProductionComponentCallback } = await import('./lib/selected-production-methods.mjs');
 // The actual parent __Common__ and raw Row are siblings in LRE. A zIndex on
 // the Stage inside Panel cannot repair a lower/equal parent. This controlled
 // pointer seam verifies emitted attributes/callback dispatch, not native hit
@@ -313,7 +316,19 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     assert.equal(pointer.raw.activePointerId, -1);
   }
   const Toggle = productionMotionMethods(file, ['toggleSessionCapsule', 'sessionLaunchBusinessStatus', 'pageTurnInputPhase',
-    'toggleTts', 'toggleAutoPage']);
+    'readerInputIsCurrent', 'toggleTts', 'toggleAutoPage'], { readerControlHostInputEnabled });
+  const oldSource = source.replace('if (!this.readerInputIsCurrent() || this.pageTurnInputPhase()',
+    'if (this.pageTurnInputPhase()');
+  assert.notEqual(oldSource, source);
+  const mutantDirectory = mkdtempSync(join(tmpdir(), 'reader-capsule-live-input-'));
+  let OldToggle;
+  try {
+    const mutantFile = join(mutantDirectory, 'LocalReadingExperience.ets');
+    writeFileSync(mutantFile, oldSource);
+    OldToggle = productionMotionMethods(mutantFile, ['toggleSessionCapsule']);
+  } finally {
+    rmSync(mutantDirectory, { recursive: true, force: true });
+  }
   const raw = new Raw(undefined, {}); let rawHits = 0;
   Object.assign(raw, { interactionEnabled: true, allowTextSelection: false, handleTouch: () => rawHits++ }); raw.initialRender();
   const rawActor = [...raw.nodes.values()].find(node => node.onTouch);
@@ -331,9 +346,13 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       targetLeft: 270, targetTop: 780, topBarExitDistance: 100, dockExitDistance: d.dockExitDistance });
     assert.ok(geometry);
     for (const time of [1500, 2300, 3500]) for (const status of ['playing', 'paused', 'preparing']) {
+      let liveInput = true;
       const calls = [], launch = { geometry, generation: 1, ownership: 'stage', businessStatus: status,
         desiredPlaying: status !== 'paused', sample: sampleReaderSessionLaunch(time, geometry, curves) };
       const host = Object.assign(new Toggle(), { sessionLaunch: launch, pageTurnGestureState: { phase: 'idle' },
+        mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true,
+        interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
+        inputCurrent: () => liveInput,
         ttsState: { status: geometry.type === 'tts' ? status : 'idle' }, ttsAvailabilityResolved: true,
         automaticReadingState: () => ({ status: geometry.type === 'autoPage' ? status === 'playing' ? 'running' : status : 'stopped' }),
         sessionLaunchController: { setDesiredPlaying(_generation, value) { launch.desiredPlaying = value; }, snapshot: () => launch },
@@ -354,7 +373,12 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
         sourceSurfaceTopInset: 0, sourceHighlightColor: '#00000000', sourceGradientStart: '', sourceGradientEnd: '',
         sourceBorderWidth: 1, sourceShadowColor: '#00000000', sourceShadowRadius: 0, sourceShadowOffsetY: 0,
         textColor: '', primaryColor: '', onPrimaryColor: '', themeScheme: 'day', shadowColor: '#00000000',
-        sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {}, onToggle: () => host.toggleSessionCapsule() });
+        sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {},
+        onToggle: selectedProductionComponentCallback(
+          new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url),
+          'ReaderSessionLaunchStage', 'onToggle', {
+            onLaunchToggle: selectedProductionComponentCallback(file, 'ReaderControlPanel', 'onLaunchToggle', host),
+          }) });
       stage.initialRender();
       const actor = [...stage.nodes.values()].find(node => node.onClick);
       assert.equal(actor.type, 'Button', 'the launch proxy has one native action actor');
@@ -362,6 +386,20 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       assert.equal(actor.height, Math.max(44, launch.sample.proxyHeight));
       assert.equal(actor.position.x, launch.sample.proxyLeft - Math.max(0, 44 - launch.sample.proxyWidth) / 2);
       assert.equal(actor.position.y, launch.sample.proxyTop - Math.max(0, 44 - launch.sample.proxyHeight) / 2);
+      const originalDesired = launch.desiredPlaying;
+      liveInput = false;
+      actor.onClick();
+      assert.equal(calls.length, 0, 'lost original live input cannot first dispatch playback');
+      assert.equal(launch.desiredPlaying, originalDesired, 'lost original live input cannot change preparing intent');
+      if (combinations === 0) {
+        assert.throws(() => {
+          OldToggle.prototype.toggleSessionCapsule.call(host);
+          assert.equal(launch.desiredPlaying, originalDesired, 'old capsule guard changes retired intent');
+        }, /old capsule guard changes retired intent/);
+        calls.length = 0;
+        launch.desiredPlaying = originalDesired;
+      }
+      liveInput = true;
       // One admitted pointer at this actual actor dispatches its actual click.
       exclusiveTap(actor, 'launch Stage');
       assert.equal(launch.desiredPlaying, status === 'paused', 'one actual click records the new desired state, including auto preparing');
@@ -386,8 +424,12 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   // Both roots keep an admitted stream exclusive after leaving their bounds
   // or becoming disabled; CANCEL and UP must not leak to the page layer.
   for (const [label, Actor] of [['launch Stage', Stage], ['static capsule', Static]]) {
+    let liveInput = true;
     const actorOwner = new Actor(undefined, {}), calls = [];
     const host = Object.assign(new Toggle(), { sessionLaunch: undefined, pageTurnGestureState: { phase: 'idle' },
+      mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true,
+      interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
+      inputCurrent: () => liveInput,
       ttsState: { status: 'playing' }, ttsAvailabilityResolved: true, sessionCapsuleSnapshot: () => ({ type: 'tts' }),
       createTtsPlayIntent: () => ({}), isTtsPlayIntentCurrent: () => true, cancelPendingAutoPageStart() {},
       cancelPendingTtsPlay() {}, captureControlPlaybackPresentation() {},
@@ -401,10 +443,21 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       textColor: '#000000', primaryColor: '#000000', onPrimaryColor: '#ffffff', themeScheme: 'day', shadowColor: '#00000000',
       sourceSurfaceTopInset: 0, sourceHighlightColor: '#00000000', sourceGradientStart: '', sourceGradientEnd: '',
       sourceBorderWidth: 1, sourceShadowColor: '#00000000', sourceShadowRadius: 0, sourceShadowOffsetY: 0,
-      sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {}, onMeasured() {}, onToggle: () => host.toggleSessionCapsule() });
+      sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {}, onMeasured() {},
+      onToggle: label === 'static capsule'
+        ? selectedProductionComponentCallback(file, 'ReaderSessionCapsule', 'onToggle', host)
+        : selectedProductionComponentCallback(
+          new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url),
+          'ReaderSessionLaunchStage', 'onToggle', {
+            onLaunchToggle: selectedProductionComponentCallback(file, 'ReaderControlPanel', 'onLaunchToggle', host),
+          }) });
     actorOwner.initialRender();
     const actor = [...actorOwner.nodes.values()].find(node => node.onClick);
     assert.equal(actor.type, 'Button', `${label}: pointer barrier and click share the native actor`);
+    liveInput = false;
+    actor.onClick();
+    assert.deepEqual(calls, [], `${label}: lost original live input cannot pause`);
+    liveInput = true;
     exclusiveTap(actor, label); assert.deepEqual(calls, ['pause'], `${label}: recognizer callback reaches real Host once`);
     for (const terminal of [TouchType.Up, TouchType.Cancel]) {
       const pointer = rawPointer();

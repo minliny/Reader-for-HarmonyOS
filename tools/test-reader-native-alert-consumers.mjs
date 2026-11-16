@@ -86,7 +86,7 @@ for (const stale of ['none', 'revision', 'route']) {
   let shown, resets = 0;
   let routeCurrent = true;
   const settings = Object.assign(new Settings(), { nativeAlertOwner: new ReaderNativeAlertOwner(), mounted: true,
-    activeSection: 'general', temporaryBackIdentity: 'settings:1', developerPageId: '', themeOwner: runtime,
+    activeSection: 'general', appForeground: true, temporaryBackIdentity: 'settings:1', developerPageId: '', themeOwner: runtime,
     isOpeningCurrent: () => routeCurrent,
     resetRevision: 1, resetInFlight: false, appThemeScheme: 'day', performRestoreDefaults() { resets++; },
     getUIContext: () => ({ showAlertDialog(o) { shown = o; o.onWillAppear(); o.onDidAppear(); } }) });

@@ -6,11 +6,13 @@ import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
 import { readerControlHostInputEnabled } from '../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts';
 import { retainedReaderRoute } from '../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { ReaderStartupContentOwner } from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
+import { switchControls } from './lib/reader-switch-control-probe.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const cases = selectContractCases({
   'failure-first-input': 'Actual text/cache/manga failure native callbacks reject a new retry after live Root input loss, recover on the same owner and retain accepted business retries.',
   'startup-font-admission': 'Exact Ability checked-font promise and actual startup owner preserve rejection before/during stage creation and admit a successful checked load.',
+  'settings-foreground-recovery': 'Actual Settings switch, theme and cache controls recover their retained action bindings after a background receipt and still reject live input loss before local delivery.',
 });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const file = path => new URL(path, root);
@@ -170,6 +172,114 @@ async function startupFontAdmission(source = read(abilityPath)) {
   return { samples };
 }
 
+async function settingsForegroundRecovery(source = read('features/settings/ui/SettingsPage.ets'), kinds = ['toggle', 'theme', 'cache']) {
+  const samples = [];
+  for (const kind of kinds) {
+    const controls = switchControls();
+    const runtime = {};
+    const calls = [];
+    const root = {
+      searchAppForeground: true, arkWebCapturesInput: false, mountedRuntimeOwner: runtime,
+      isCurrentRoute: (generation, route) => generation === 1 && route === 'settings',
+      isCurrentRuntime: owner => owner === runtime,
+    };
+    const Scenes = selectedProductionMethods(file('app/composition/SettingsScenes.ets'), 'SettingsScenes', ['inputIsCurrent']);
+    const scene = Object.assign(new Scenes(), {
+      route: 'settings', section: 'general',
+      presentation: {
+        isCurrent: identity => identity === 'settings-A',
+        toggle: (identity, key, value) => calls.push(['toggle', identity, key, value]),
+        clearCache: async identity => { calls.push(['cache', identity]); },
+      },
+      isInputAllowed: selectedProductionComponentCallback(file('pages/Index.ets'), 'SettingsScenes', 'isInputAllowed', root,
+        { generation: 1, route: 'settings', owner: runtime }),
+    });
+    const defaults = { autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false,
+      crashLog: true, developerMode: false, wideNavigationRail: false };
+    const members = ['appForeground', 'appThemeScheme', 'appThemeMode', 'appThemeControlGeneration',
+      'snapshot', 'operation', 'cacheCleanup', 'temporaryBackIdentity', 'onSnapshotChanged', 'syncSnapshotValues',
+      'autoCheckUpdateValue', 'tapBottomScrollTopValue', 'reduceMotionValue', 'crashLogValue',
+      'developerModeValue', 'wideNavigationRailValue', 'settingsInputIsCurrent', 'settingsNavigationCurrent',
+      'generalConfirmationCurrent', 'settingToggleBusy', 'settingCanToggle', 'switchRow', 'settingValue', 'toggleSetting',
+      'appThemeControl', 'appThemeControlIdentity', 'appThemeControlIsCurrent', 'themeIndex', 'selectAppTheme',
+      'cacheActionRow', 'cacheActionLabel', 'canClearTextCache', 'hasPendingCleanup', 'requestClearTextCache', 'clearTextCache'];
+    const page = controls.consumer(source, members, {
+      ReaderRuntimeOwner: { isCurrent: owner => owner === runtime },
+      createDefaultSettingsSnapshot: () => ({ ...defaults }), SEG_OPTIONS: ['跟随', '浅色', '深色'],
+    });
+    // Toast projection is an independent finite port. Original snapshot value
+    // synchronization and the selected native property bindings execute here.
+    page.watches.set('operation', () => {});
+    page.watches.set('cacheCleanup', () => {});
+    const binding = property => selectedProductionComponentCallback(file('app/composition/SettingsScenes.ets'),
+      'SettingsPage', property, scene, { identity: 'settings-A' });
+    Object.assign(page, {
+      mounted: true, themeOwner: runtime, activeSection: 'general', resetInFlight: false, developerPageId: '',
+      temporaryBackIdentity: 'settings-A', appForeground: true, appThemeScheme: 'day', appThemeMode: 'system',
+      operation: { action: 'load' }, snapshot: defaults, cacheCleanup: undefined,
+      isOpeningCurrent: binding('isOpeningCurrent'), isInputAllowed: binding('isInputAllowed'),
+      onToggle: binding('onToggle'), onClearCache: binding('onClearCache'),
+      onSelectAppTheme: selectedProductionComponentCallback(file('app/composition/SettingsScenes.ets'),
+        'SettingsPage', 'onSelectAppTheme', scene, { identity: 'settings-A', ReaderThemeHost: {
+          selectApp: async (mode, current) => { if (current()) calls.push(['theme', mode]); },
+        } }),
+      nativeAlertOwner: { present: (_show, _spec, options, current) => {
+        if (current()) options.secondaryButton.action();
+      } },
+      getUIContext: () => ({ showAlertDialog() {} }),
+    });
+    page.syncSnapshotValues();
+    if (kind === 'toggle') page.switchRow('减少动态效果', () => ({ id: 1 }), 'reduceMotion');
+    if (kind === 'theme') page.appThemeControl();
+    if (kind === 'cache') page.cacheActionRow();
+    const componentType = kind === 'toggle' ? controls.dependencies.ReaderToggle
+      : kind === 'theme' ? controls.dependencies.ReaderSegmentedControl : controls.dependencies.ReaderFormRow;
+    const actor = [...page.children.values()].find(child => child instanceof componentType);
+    assert.ok(actor, `${kind} mounts the actual shared control`);
+    root.searchAppForeground = false;
+    page.appForeground = false;
+    if (kind === 'toggle') page.snapshot = { ...defaults, reduceMotion: true };
+    if (kind === 'theme') page.appThemeMode = 'night';
+    if (kind === 'cache') page.cacheCleanup = {
+      busy: false, confirmation: 'confirmed', canContinueOriginal: false,
+      operation: { generation: 1, canRetry: false, value: { scope: 'text', removedContentBytes: 0, deletedFiles: 0 } },
+    };
+    controls.properties.flush();
+    assert.equal(actor.actionEnabled, false, `${kind} background receipt disables the retained action`);
+    const native = kind === 'toggle' ? controls.nodes(actor).findLast(node => node.type === 'Toggle' && node.onChange)
+      : kind === 'cache' ? controls.nodes(actor).find(node => node.type === 'Button' && node.onClick)
+      : controls.capsules(actor)[0];
+    assert.ok(native, `${kind} retains an actual native declaration or official V2 event port`);
+    root.searchAppForeground = true;
+    page.appForeground = true;
+    controls.properties.flush();
+    assert.equal(actor.actionEnabled, true, `${kind} foreground delivery restores the retained action`);
+    if (kind !== 'theme') assert.equal(native.enabled, true, `${kind} final native enabled restores`);
+    assert.equal([...page.children.values()].find(child => child instanceof componentType), actor);
+    const restoredNative = kind === 'toggle' ? controls.nodes(actor).findLast(node => node.type === 'Toggle' && node.onChange)
+      : kind === 'cache' ? controls.nodes(actor).find(node => node.type === 'Button' && node.onClick)
+      : controls.capsules(actor)[0];
+    assert.equal(restoredNative, native, `${kind} foreground recovery retains its original native actor`);
+    const click = kind === 'toggle' ? () => controls.nodes(actor).findLast(node => node.type === 'Toggle' && node.onChange).onChange(false)
+      : kind === 'cache' ? native.onClick : controls.choices(actor)[0].onClick;
+    root.searchAppForeground = false;
+    click();
+    controls.properties.flush();
+    await settle();
+    assert.equal(calls.length, 0, `${kind} live Root loss rejects before local foreground delivery`);
+    root.searchAppForeground = true;
+    click();
+    await settle();
+    assert.equal(calls.length, 1, `${kind} same actor dispatches after current foreground restoration`);
+    page.mounted = false;
+    click();
+    await settle();
+    assert.equal(calls.length, 1, `${kind} retired page cannot dispatch`);
+    samples.push({ kind, sameActor: true, restoredActionEnabled: true, liveBeforeLocalRejected: true });
+  }
+  return { samples, boundary: 'Actual SDK V1 property runtime and official V2 parameter/event port, finite platform write endpoints.' };
+}
+
 for (const id of cases) {
   let result;
   if (id === 'failure-first-input') {
@@ -181,13 +291,22 @@ for (const id of cases) {
     const oldManga = manga.replace('if (this.readerPanelForeground()) void this.retryOpen();', 'void this.retryOpen();');
     await assert.rejects(() => failureFirstInput(oldLocal, manga), /cannot first retry after live loss/);
     await assert.rejects(() => failureFirstInput(local, oldManga), /cannot first retry after live loss/);
-  } else {
+  } else if (id === 'startup-font-admission') {
     const source = read(abilityPath);
     result = await startupFontAdmission(source);
     const old = source.replace("this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts());\n    void this.shelfFontsReady.catch",
       "this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts()).catch");
     assert.notEqual(old, source);
     await assert.rejects(() => startupFontAdmission(old), /uses the checked-font admission result/);
+  } else {
+    const source = read('features/settings/ui/SettingsPage.ets');
+    result = await settingsForegroundRecovery(source);
+    const old = source.replace('return this.appForeground && this.mounted && identity === this.temporaryBackIdentity',
+      'return this.mounted && identity === this.temporaryBackIdentity');
+    assert.notEqual(old, source);
+    for (const kind of ['toggle', 'theme', 'cache']) {
+      await assert.rejects(() => settingsForegroundRecovery(old, [kind]), /foreground delivery restores the retained action/);
+    }
   }
   console.log(JSON.stringify({ case: id, result, oldBehaviorRejected: true,
     boundary: 'Current production methods and actual SDK native action callbacks. Acquisition, native layout and platform IO are finite ports. No device action.' }));

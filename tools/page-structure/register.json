@@ -2682,7 +2682,7 @@
         }
       },
       "exceptions": [],
-      "revision": 60,
+      "revision": 61,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
@@ -2717,7 +2717,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+          "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
           "symbol": "requestCatalogForTurn"
         },
         {
@@ -4200,7 +4200,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -4235,7 +4235,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -5835,7 +5835,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -5870,7 +5870,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -7476,7 +7476,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -7511,7 +7511,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -9132,7 +9132,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -9167,7 +9167,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -10657,7 +10657,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -10692,7 +10692,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12073,7 +12073,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -12108,7 +12108,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -13646,7 +13646,7 @@
               }
             },
             "exceptions": [],
-            "revision": 57,
+            "revision": 58,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -13681,7 +13681,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15107,7 +15107,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -15142,7 +15142,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -16624,7 +16624,7 @@
               }
             },
             "exceptions": [],
-            "revision": 58,
+            "revision": 59,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -16659,7 +16659,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18040,7 +18040,7 @@
               }
             },
             "exceptions": [],
-            "revision": 60,
+            "revision": 61,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -18075,7 +18075,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -19687,7 +19687,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -19722,7 +19722,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -21333,7 +21333,7 @@
               }
             },
             "exceptions": [],
-            "revision": 59,
+            "revision": 60,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
@@ -21368,7 +21368,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "b04355d1414e01f8c388f45aff5d58156d5c9c7a3d2f48c96e466cf5afb63e7a",
+                "sha256": "2a2e70122ee8f539caf4d06bf91c3bbeb037bc8399442834a5b467ad57b72e49",
                 "symbol": "requestCatalogForTurn"
               },
               {

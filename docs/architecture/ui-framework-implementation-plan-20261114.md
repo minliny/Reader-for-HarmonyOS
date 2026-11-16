@@ -1,5 +1,15 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 第十七轮完整接线复核与两项修复
+
+第十七轮冻结 d89861c6，完成 472 个当前 UI 合同、90 个历史问题、20 个路由、4 个 manifest 页面根与 21 项正式登记复核。1,770 项审阅输入及另 16 项登记引用在结束时无漂移。结论 FAIL，确认 UIF-91 和 UIF-92，连续通过仍为 0。此前的通过记录遗漏了这两条首次输入和前景恢复路径。[本轮完整审查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-17.json)
+
+UIF-91 已在静态胶囊和 launch 胶囊共用的 toggleSessionCapsule 入口增加既有 readerInputIsCurrent，先核当前输入归属再改变播放意图。UIF-92 已使 SettingsPage 的输入判据先读取现有本地 appForeground，后台合法回执更新后，同一控件能随前景送达恢复准入。当前设置页同 opening 的 ArkWeb 覆盖恢复链未建立，问题与修复采用已确认的前后台触发范围。[两项修复及准确证据](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round17-repair-summary.json)
+
+六个准确 case 及主题写回专项通过。证据包括 36 组胶囊时期和业务状态组合、真实 Static／Stage 回调转发、原已接纳播放屏障、设置开关／主题／缓存三个保留控件的恢复、原生确认租约、未决恢复动作和主题写入丢失 ACK。胶囊旧准入负例及三个设置旧谓词负例均被拒绝。首轮暴露的四项测试装配失配已修正，失败日志保留。七个修改脚本语法通过，13 项目录登记指纹同步，原诊断仍为 37 项，源码漂移与引用错误均为 0。
+
+本批规范编译待执行。修复后仍需在同一冻结输入上重新完成三轮完整 review agent 审计，当前 VM 禁令有效。原生登记保持 19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环仍为 0／21。
+
 ## 2026-11-16 第十六轮完整批次收口
 
 第十六轮完成 472／472 当前 UI 合同及 87 个历史问题的当前代码对账，结论 FAIL，确认三项代码问题。UIF-88 已将文字正文、缓存刷新和漫画章节失败的 UI 重试接回原实时输入资格。UIF-89 保留字体失败 Promise，日志独立观察，既有启动恢复宿主接收失败。UIF-90 将两处下载行 Area 回执接回原呈现代次和当前书籍身份，覆盖期间更新实际高度映射。三个问题在本批集中修复。

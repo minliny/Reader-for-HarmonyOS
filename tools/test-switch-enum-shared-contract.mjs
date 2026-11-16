@@ -579,7 +579,7 @@ if(selectedCase==='source'){
 }
 if(selectedCase==='settings'){
  const {defaults}=await import('./lib/general-settings-persistence-probe.mjs');
- const calls=[],Runtime={isCurrent:owner=>owner===Runtime},members=['snapshot','operation','appThemeScheme','autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','temporaryBackIdentity','onSnapshotChanged','syncSnapshotValues','switchRow','toggleSetting','settingValue','settingToggleBusy','settingCanToggle','settingsInputIsCurrent','operationFeedbackIdentity'];
+ const calls=[],Runtime={isCurrent:owner=>owner===Runtime},members=['snapshot','operation','appForeground','appThemeScheme','autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','temporaryBackIdentity','onSnapshotChanged','syncSnapshotValues','switchRow','toggleSetting','settingValue','settingToggleBusy','settingCanToggle','settingsInputIsCurrent','operationFeedbackIdentity'];
  const {p,o}=consumer('settings/SettingsPage',members,{}, {ReaderRuntimeOwner:Runtime,createDefaultSettingsSnapshot:()=>({...defaults})});Object.assign(o,{mounted:true,isOpeningCurrent:()=>true,lastOperationFeedback:'0:0',themeOwner:Runtime,resetInFlight:false,onToggle:(key,next)=>calls.push([key,next])});o.temporaryBackIdentity='visit-A';o.syncSnapshotValues();o.switchRow('减少动态效果',()=>({id:1}),'reduceMotion');
  const row=[...o.children.values()].find(c=>c instanceof p.dependencies.ReaderFormRow);
  const actor=[...o.children.values()].find(c=>c instanceof p.dependencies.ReaderToggle);
@@ -628,7 +628,7 @@ if(selectedCase==='rss-editor'){
  p.update(o,{presentationIdentity:'editor-B'});physical.forEach(({node,next})=>node.onChange(next));assert.equal(calls.length,4,'old physical editor action cannot borrow replacement presentation');
  actors.forEach(a=>a.aboutToDisappear());physical.forEach(({node,next})=>node.onChange(next));assert.equal(calls.length,4);cases+=2;
 }
-const appThemeMembers = ['appThemeMode', 'temporaryBackIdentity', 'appThemeControlGeneration', 'appThemeControl',
+const appThemeMembers = ['appThemeMode', 'appForeground', 'temporaryBackIdentity', 'appThemeControlGeneration', 'appThemeControl',
  'settingsInputIsCurrent', 'themeIndex', 'appThemeControlIdentity', 'appThemeControlIsCurrent', 'settingsNavigationCurrent', 'selectAppTheme'];
 if(selectedCase==='theme'){
  const p=switchControls(),runtime={},calls=[];

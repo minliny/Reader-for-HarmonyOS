@@ -19,12 +19,19 @@ if (selected.length > 0) {
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { actualReaderPostLayoutFrame } = await import('./lib/reader-post-layout-frame-probe.mjs');
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
   const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
   const { projectPersistedReceipt } = await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
   const { readerRecoveryView } = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
   const safe = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
   const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
+  const surfaceRect = await import('../entry/src/main/ets/ui/layout/ReaderSurfaceRect.ts');
+  const nativeRectMeasurement = pureModuleProbe(read('ui/layout/ReaderSurfaceRectMeasurement.ets'),
+    'ReaderSurfaceRectMeasurement.ets', surfaceRect, ['readerMeasureSurfaceRect']);
+  const nativeSlotMeasurement = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
+    'ReaderNativeSlotMeasurement.ets', { ...nativeRectMeasurement, ReaderPostLayoutFrame: actualReaderPostLayoutFrame() },
+    ['ReaderNativeSlotMeasurement']);
   const paths = {
     page: 'features/settings/ui/SettingsPage.ets', shell: 'features/settings/ui/SettingsShell.ets',
     main: 'features/shell/MainTabShell.ets', preview: 'features/settings/ui/ReaderMessagePreviewPage.ets',
@@ -64,7 +71,7 @@ if (selected.length > 0) {
     const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true, windowMetrics: () => metrics });
     const runtime = {};
     const timers = [];
-    const deps = { ...actualReaderPageLayout(), ...safe, readerRecoveryView, createDefaultSettingsSnapshot,
+    const deps = { ...actualReaderPageLayout(), ...nativeSlotMeasurement, ...safe, readerRecoveryView, createDefaultSettingsSnapshot,
       emptyReaderAppBuildInfo, ReaderTransientFeedback: FeedbackPort, ReaderNativeAlertOwner: AlertPort,
       ReaderRuntimeOwner: { current: () => runtime, isCurrent: token => token === runtime },
       ReaderWindowCoordinator: { metrics: () => metrics }, readerWindowMetrics: () => metrics,
@@ -93,7 +100,7 @@ if (selected.length > 0) {
     return { sdk, deps, metrics, runtime, timers };
   }
 
-  const pageMethods = ['build', 'pageSurface', 'aboutPage', 'developerPage', 'settingsInputIsCurrent', 'settingsNavigationCurrent',
+  const pageMethods = ['build', 'pageSurface', 'aboutPage', 'developerPage', 'appForeground', 'settingsInputIsCurrent', 'settingsNavigationCurrent',
     'aboutPageCurrent', 'developerPageCurrent', 'messagePreviewCurrent', 'pendingFeedbackVisible', 'pendingFeedback',
     'pendingFeedbackItems', 'hasPendingSettings', 'hasPendingCleanup', 'recovery', 'recoveryActionIdentities', 'recoveryIdentityFor', 'capturedPendingAction',
     'recoveryActionKind', 'recoveryActionGeneration', 'recoveryActionCurrent', 'dispatchRecoveryAction', 'buildOverlay',

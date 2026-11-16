@@ -44,6 +44,8 @@ function owner(){
   armAutoPageTimer:()=>calls.push('autoTimer'),armAutoPageSessionTimer:()=>{},clearAutoPageTimer:()=>{},clearAutoPageSessionTimer:()=>{},resetAutoPageSessionDuration:()=>{},
   pauseAutoPage(reason){this.autoPageCoordinator.pause(reason);},
   pageTurnInputPhase:()=> 'idle',sessionCapsuleSnapshot:()=>undefined,
+  readerInputIsCurrent:()=>true,
+  transientFeedback:{show:(_context,options)=>calls.push(`feedback:${options.message}`)},
   getUIContext:()=>({getPromptAction:()=>({showToast:()=>{}})}),
  });
  host.autoPageCoordinator = new ReaderAutoPageCoordinator({ now:()=>10000,

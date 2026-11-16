@@ -307,7 +307,7 @@ export struct SettingsPage {
   }
 
   private settingsInputIsCurrent(identity: string = this.temporaryBackIdentity): boolean {
-    return this.mounted && identity === this.temporaryBackIdentity && this.isOpeningCurrent() &&
+    return this.appForeground && this.mounted && identity === this.temporaryBackIdentity && this.isOpeningCurrent() &&
       (this.isInputAllowed?.() ?? true);
   }
 

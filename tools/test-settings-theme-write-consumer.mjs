@@ -43,7 +43,7 @@ function page(f,runtime,identity='settings-back:first'){
   {...switchSpecs(),ReaderSegmentedControl:Child,ReaderRuntimeOwner:authority,SEG_OPTIONS:['跟随','浅色','深色'],TOK_SPACE_SM:12,TOK_BORDER_W:1,SELECT_ROW_H:58},
   {allowEmptyBranchAdmission:true,childSources:{ReaderSegmentedControl:source('ui/controls/ReaderSegmentedControl.ets')}});
  const methods=Object.assign(result.owner,{mounted:true,themeOwner:runtime,activeSection:'general',developerPageId:'',
-  appThemeScheme:'day',temporaryBackIdentity:identity,appThemeControlGeneration:0,
+  appThemeScheme:'day',appForeground:true,temporaryBackIdentity:identity,appThemeControlGeneration:0,
   isOpeningCurrent:binding.isOpeningCurrent,onSelectAppTheme:binding.onSelectAppTheme,
   transientFeedback:{show:(_context,options,current)=>{if(current())notices.push(options.message);}}});
  const render=()=>{methods.appThemeMode=f.storage.get('readerAppThemeMode');methods.segmentRow('App主题',()=>({}));return [...methods.children.values()].at(-1).params;};
