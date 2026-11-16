@@ -1,32 +1,39 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { readFileSync, existsSync } from 'node:fs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
-import { readerSurfaceSpecsForProbe } from './lib/bounded-surface-sdk-probe.mjs';
-import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
-import * as headerMetrics from '../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import * as metricsPolicy from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
-import * as surfaceGeometry from '../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
-import * as selectGeometry from '../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
-import * as novel from '../entry/src/main/ets/features/source/ui/SourceSwitchNovelPresentation.ts';
-import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts';
-import { SEARCH_RESULT_GEOMETRY } from '../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts';
-import * as importLayout from '../entry/src/main/ets/features/bookshelf/ui/LocalImportLayout.ts';
-import * as chromeGeometry from '../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts';
-import * as controlMotion from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
-import { ReaderControlGeometry } from '../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts';
-import * as readingGeometry from '../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
-import * as directoryVisual from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 
 const selected = selectContractCases({
+  'rss-header-width': 'Actual retained RSS PageBackBar parameter observer updates measured width for metrics and UI configuration delivery; original42 metrics cases are separate.',
   'retained-native-consumers': 'Exact installed-SDK native observer closures consume current metrics on the same retained node. Includes removed-dependency controls for the R19 family.',
 });
-const { ts, options } = installedEtsCompiler();
+if (selected.length === 0) process.exit(0);
+
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
+const headerMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const metricsPolicy = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const surfaceGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+const selectGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts');
+const novel = await import('../entry/src/main/ets/features/source/ui/SourceSwitchNovelPresentation.ts');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
+const { SEARCH_RESULT_GEOMETRY } = await import('../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts');
+const importLayout = await import('../entry/src/main/ets/features/bookshelf/ui/LocalImportLayout.ts');
+const chromeGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
+const controlMotion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const { ReaderControlGeometry } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
+const readingGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const directoryVisual = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+
+const { root: sdkRoot, ts, options } = installedEtsCompiler();
+const require = createRequire(import.meta.url);
+const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
 const surfaceResolvers = pureModuleProbe(read('ui/foundation/ReaderSurfaceResolvers.ts'),
@@ -117,6 +124,10 @@ function nativeWitness(spec, source, metrics) {
       if (!childTree.statements.some(node => node.members && node.name?.text === name &&
         node.members.some(member => member.name?.getText(childTree) === 'build'))) continue;
       childSources[name] = definition;
+      const childDeclaration = childTree.statements.find(node => node.members && node.name?.text === name);
+      const slots = childDeclaration.members.filter(member => ts.getAllDecorators(member).some(d =>
+        d.getText(childTree) === '@BuilderParam')).map(member => member.name.getText(childTree));
+      if (slots.length) syntax.builderParamObjectCollection.set(name, new Set(slots));
       dependencies[name] = ChildPort;
     }
   }
@@ -468,6 +479,16 @@ function assertFinite(value) {
   if (value !== null && typeof value === 'object') for (const child of Object.values(value)) assertFinite(child);
 }
 
+
+const rssHeaderConsumers = ['readerWindowMetricsRevision', 'uiConfigurationRevision'].map(revision => ({
+  path: 'features/rss/ui/RssSubscriptionManagementPage.ets', builder: 'backBar',
+  marker: 'trailingWidthVp: this.addActionWidth()', methods: ['addActionWidth'], revision,
+  params: { readerWindowMetricsRevision: 0, uiConfigurationRevision: 0, appThemeScheme: 'day' },
+  change: metrics => { metrics.systemFontScale = 2; },
+  value: owner => owner.children.get(0).lastDelivery.trailingWidthVp,
+  expected: () => 153,
+}));
+
 async function run(spec, source) {
   const metrics = metricsPolicy.createDefaultReaderWindowMetrics();
   Object.assign(metrics, { ready: true, densityPixels: 1, systemFontScale: 1, revision: 1 });
@@ -508,7 +529,8 @@ async function run(spec, source) {
 
 for (const id of selected) {
   const results = [], failures = [];
-  for (const spec of consumers) {
+  const currentConsumers = id === 'rss-header-width' ? rssHeaderConsumers : consumers;
+  for (const spec of currentConsumers) {
     const source = read(spec.path);
     try {
     results.push(await run(spec, source));
@@ -523,7 +545,7 @@ for (const id of selected) {
     } catch (error) { failures.push(new Error(spec.path + ': ' + error.message, { cause: error })); }
   }
   if (failures.length) throw new AggregateError(failures, 'Current scoped observer checks failed');
-  console.log(JSON.stringify({ case: id, owningFiles: new Set(consumers.map(spec => spec.path)).size, nativeObserverScenarios: consumers.length, results,
+  console.log(JSON.stringify({ case: id, owningFiles: new Set(currentConsumers.map(spec => spec.path)).size, nativeObserverScenarios: currentConsumers.length, results,
     boundary: 'Unchanged installed-SDK native observer closures, original production getters and SDK value dependency classes. Only dirty-id delivery. Native attributes are snapshotted finite calls. Parent assembly, child rendering, platform measurement and layout require separate evidence.' }));
   recordContractCasePass(id);
 }

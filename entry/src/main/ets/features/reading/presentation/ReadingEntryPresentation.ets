@@ -886,6 +886,7 @@ export class ReadingEntryPresentation {
       next.push({
         index: entry.index,
         title: titleProjection.title,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         level: entry.level,
         navigable: entry.navigable,
         downloadState: entry.downloadState,

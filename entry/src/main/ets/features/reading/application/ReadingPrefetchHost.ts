@@ -193,11 +193,7 @@ export class ReadingPrefetchHost {
       const position = directory.findIndex((item): boolean => item.index === entry.index);
       if (position < 0 || directory[position].downloadState === entry.downloadState) continue;
       if (next === undefined) next = directory.slice();
-      const prior = directory[position], updated: LocalReadingTocEntry = { index: prior.index, title: prior.title,
-        downloadState: entry.downloadState };
-      if (prior.level !== undefined) updated.level = prior.level;
-      if (prior.navigable !== undefined) updated.navigable = prior.navigable;
-      if (prior.bookmarks !== undefined) updated.bookmarks = prior.bookmarks;
+      const prior = directory[position], updated: LocalReadingTocEntry = { ...prior, downloadState: entry.downloadState };
       next[position] = updated;
     }
     if (next !== undefined && current()) { try { lease.projected(next); } catch (_) {} }

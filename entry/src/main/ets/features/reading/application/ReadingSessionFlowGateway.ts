@@ -528,6 +528,7 @@ export class ReadingSessionFlowGateway {
       entries: entries.map((entry) => ({
         index: entry.index,
         title: entry.title,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         ...(entry.level === undefined ? {} : { level: entry.level }),
         ...(entry.navigable === undefined && entry.url.trim().length > 0 ? {} : { navigable: entry.navigable !== false && entry.url.trim().length > 0 }),
         downloadState: 'unknown',

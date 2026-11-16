@@ -168,6 +168,8 @@ export struct RssSubscriptionManagementPage {
   }
 
   private addActionWidth(): number {
+    this.readerWindowMetricsRevision;
+    this.uiConfigurationRevision;
     const context = this.getUIContext();
     return Math.max(60, Math.ceil(context.px2vp(context.getMeasureUtils().measureText({
       textContent: '添加', fontFamily: TYPE_FORM_COMPACT_ACTION.fontFamily,

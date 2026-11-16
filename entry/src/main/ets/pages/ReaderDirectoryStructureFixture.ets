@@ -98,10 +98,12 @@ export struct ReaderDirectoryStructureFixture {
     this.localControlViewportHeight = this.initialRequestedControlHeight();
     this.entries = this.admitted() ? readerDirectoryFixtureEntries(this.mode === 'manga') : [];
     if (this.sourceSwitchCandidate) {
-      this.entries = this.entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-        index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable,
-        downloadState: 'unknown',
-      }));
+      this.entries = this.entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
+        const candidate = readerDirectoryFixtureCopyEntry(entry);
+        candidate.downloadState = 'unknown';
+        candidate.bookmarks = undefined;
+        return candidate;
+      });
     }
     this.currentChapterIndex = this.sourceSwitchCandidate ? -1 : 21;
     this.targetSelectionBusy = false;

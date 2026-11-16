@@ -1616,6 +1616,7 @@ export struct ReadingExperience {
     // the content/position lease used to keep this real page alive.
     const retainedToc = this.tocEntries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
       index: entry.index, title: entry.title, downloadState: entry.downloadState, navigable: entry.navigable,
+      displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
       level: entry.level,
     }));
     let retainedGateway = this.sessionGateway;
@@ -4327,7 +4328,9 @@ export struct ReadingExperience {
     this.entryCatalogNavigation = undefined;
     this.entryCatalogPending = false;
     this.admitTocEntries(session.entries.map((item): LocalReadingTocEntry => ({ index: item.index,
-      title: item.title, navigable: item.url.trim().length > 0, downloadState: 'unknown' })));
+      title: item.title, displayTitle: item.displayTitle, isVip: item.isVip, isPay: item.isPay,
+      contextTitle: item.contextTitle, level: item.level,
+      navigable: item.navigable !== false && item.url.trim().length > 0, downloadState: 'unknown' })));
     this.chapterWindow.configure(this.sourceId, this.bookId, this.readingTocEntries().map((item): number => item.index));
     this.chapterWindow.setCurrent(current);
     for (const chapter of retained) {
@@ -8222,6 +8225,7 @@ export struct ReadingExperience {
     });
     if (!changed) return entries;
     const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title, level: entry.level,
+      displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
       downloadState: entry.downloadState, navigable: entry.navigable, bookmarks };
     this.bookmarkExcerptProjection = entries.map((candidate: LocalReadingTocEntry): LocalReadingTocEntry =>
       candidate === entry ? hydrated : candidate);
@@ -8273,6 +8277,7 @@ export struct ReadingExperience {
       return projected === undefined ? entry : {
         index: entry.index,
         title: projected.title,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         level: projected.level ?? entry.level,
         downloadState: entry.downloadState,
         navigable: entry.navigable,
@@ -9143,6 +9148,8 @@ export struct ReadingExperience {
       status: current.status,
       sessionGeneration: current.sessionGeneration,
       utteranceGeneration: current.utteranceGeneration,
+      positionGeneration: current.positionGeneration,
+      audioStarted: current.audioStarted,
       contentVersion: current.contentVersion,
       chapterKey: current.chapterKey,
       chapterIndex: current.chapterIndex,

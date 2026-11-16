@@ -1,5 +1,15 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 第二十轮完整审计与数据投影修复
+
+第二十轮完成全部 472 个当前 UI 合同、96 个历史问题、20 个路由、4 个 manifest 页面根及 21 项登记的当前代码复核，结论 FAIL，连续完整通过为 0。确认目录显示字段丢失 UIF-97、规则刷新失败后重试自锁 UIF-98、TTS 错误消息投影丢位置代次 UIF-99，并补出 UIF-96 在保留 RSS 管理页的隐式原生文字测量入口。[完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-20.json)
+
+UIF-97 集中核查了 49 个同类型引用源文件、38 组复制／转换／有意窄投影，追到 10 个生产投影点及 1 个 DEBUG 候选投影点。书签、下载状态和标题投影按原事实归属保留当前目录的独立显示字段，远端目录和漫画换源继续传递已确认标题、付费事实、层级和可导航性。原内容／位置快照的书签排除边界保留。规则恢复入口按当前 opening、generation、query、sort、chapter、Runtime 和实时输入资格重读，原失效目录行继续由 awaiting 标记拦截。TTS 日志更新 errorMessage 时保留 positionGeneration 和 audioStarted，原异步续章不会被独立偏好失败误判退休。[完整复制点复核](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round20-toc-copy-family-review.json)
+
+当前 10 个生产源已修复，独立定向源码复核通过。8 个准确 case 通过，覆盖正常书签 Host／Gateway／Entry 提交、目录各投影点、真实规则刷新与恢复按钮、TTS 续章等待期间的错误投影、RSS 页头两个本地订阅、换源直接目录装配及既有受影响恢复／observer 场景。各 case 保留必要旧行为负对照与装配失败历史。当前测试证据复核及本批规范完整编译待完成。[本批修复及准确结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round20-repair-summary.json)
+
+登记仍为 19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环为 0／21。原层事实与验收结果逐项相同，当前引用检查为 37 项原诊断、0 源码漂移、0 引用错误。VM 禁令有效。
+
 ## 2026-11-16 第十九轮同因缺口修复与错误判据撤回
 
 第十九轮完成 472／472 当前 UI 合同、95 个历史问题、20 个路由、4 个 manifest 页面根及 21 项登记的独立审阅。全局结论 FAIL，连续通过为 0。全量追到 80 个相关生产文件、242 处全局窗口指标读取，确认 UIF-96 的 15 个源文件、20 组原生消费者缺少有效本地 revision 依赖。15 个文件已集中修复，覆盖公共 Select／RSS 输入、书架、导入、搜索、换源、阅读正文与胶囊、目录、启动恢复及诊断夹具。[完整审查与问题记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-19-findings.json)

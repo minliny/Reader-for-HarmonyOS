@@ -212,6 +212,7 @@ export class MangaSourceSwitchPresentation {
       },
       entries: target.entries.map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => ({
         index: entry.index, title: entry.title, level: entry.level,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown',
       })),
       current, assertQualified, commitStarted: false,

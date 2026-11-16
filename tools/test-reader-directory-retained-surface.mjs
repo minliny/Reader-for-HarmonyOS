@@ -7,6 +7,10 @@ import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/ui/
 import { ReaderScrollLayout, readerScrollStartOffset, readerScrollEndOffset } from '../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts';
 
 const definitions = {
+  'rules-refresh-retry': {
+    description: 'Actual rules refresh Prop Watch keeps stale rows blocked while same-opening native recovery retries unavailable/rejected reads and retains input/generation fences.',
+    resources: [],
+  },
   'short-query-scroll': { description: 'Actual Book applySearch preserves its inline query viewport and cancels pending old scroll work. Full overlay retains existing scroll-to-top entry.', resources: [] },
   'empty-prefix-transition': {
     description: 'Actual manga Surface keeps the existing prefix consumer through confirmed-empty to current pending/failed query input. Finite public child renderer and font/navigation ports, no native Grid or Core filter simulation.',
@@ -62,9 +66,9 @@ function fixture({ retained = true, prefix = false, query = '', render = 'build'
     readerDirectoryViewportAnchor: () => undefined,
     projectReaderDirectoryEntries: data => data,
     openReaderDirectoryNavigation(_gateway, input, current) {
-      let resolve;
-      const promise = new Promise(done => { resolve = done; });
-      requests.push({ input, current, resolve });
+      let resolve, reject;
+      const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
+      requests.push({ input, current, resolve, reject });
       return promise;
     },
     setTimeout(action) { const timer = { action }; timers.push(timer); return timer; },
@@ -293,7 +297,62 @@ function consumerAssembly() {
   assert.equal(wrapper.child.params.panelHeightOverride, 500);
 }
 
+async function rulesRefreshRetry(implementation = source) {
+  const results = [];
+  for (const failure of ['unavailable', 'rejected']) {
+    const f = fixture({ retained: true, render: 'defer', implementation });
+    let input = true;
+    f.owner.inputCurrent = () => input;
+    const ready = viewId => ({ viewId, navigationRevision: 'nav', visibleTotal: 0, nodes: [],
+      identity: { sourceId: 'local', bookId: 'book-a', catalogRevision: 'catalog', structureRevision: 'structure' } });
+    f.requests[0].resolve(ready('original-view'));
+    await settle();
+    assert.equal(f.owner.view.viewId, 'original-view');
+    f.setProps({ refreshRevision: 1 });
+    assert.equal(f.owner.awaitingRulesRefresh, true);
+    assert.equal(f.owner.directoryInputCurrent(), false, 'previous tree rows are blocked during rules refresh');
+    assert.equal(f.requests.length, 2, 'actual refreshRevision Watch starts original read');
+    if (failure === 'unavailable') f.requests[1].resolve(undefined);
+    else f.requests[1].reject(new Error('directory transport failed'));
+    await settle();
+    assert.equal(f.owner.loadFailed, true); assert.equal(f.owner.loadPending, false);
+    assert.equal(f.owner.awaitingRulesRefresh, true, 'failed refresh still owns stale-tree protection');
+    assert.equal(f.owner.retryInputCurrent(), true, 'same-opening rules failure exposes retry');
+    assert.equal(f.owner.directoryInputCurrent(), false);
+    f.owner.treePrefixEmptyState();
+    const action = actualAction(f);
+    assert.equal(action.button.enabled, true, 'actual recovery native Button is enabled');
+    const count = f.requests.length;
+    input = false; action.callback();
+    assert.equal(f.requests.length, count, 'instantaneous input loss rejects native recovery');
+    input = true; action.callback();
+    assert.equal(f.requests.length, count + 1, 'native retry reaches same opening original read');
+    action.callback(); assert.equal(f.requests.length, count + 1, 'pending and retired generation reject duplicate retry');
+    assert.equal(f.owner.directoryInputCurrent(), false, 'retry keeps old-tree rejection until current ready');
+    f.requests.at(-1).resolve(ready('replacement-view'));
+    await settle();
+    assert.equal(f.owner.awaitingRulesRefresh, false);
+    assert.equal(f.owner.directoryInputCurrent(), true);
+    assert.equal(f.owner.view.viewId, 'replacement-view');
+    f.owner.aboutToDisappear(); action.callback();
+    assert.equal(f.requests.length, count + 1, 'retired native action cannot restart a successor');
+    results.push(failure);
+  }
+  return results;
+}
+
 for (const id of selectContractCases(definitions)) {
+  if (id === 'rules-refresh-retry') {
+    const result = await rulesRefreshRetry();
+    const old = source.replace('return this.openingInputCurrent() && expected === this.generation',
+      'return this.directoryInputCurrent() && expected === this.generation');
+    assert.notEqual(old, source);
+    await assert.rejects(() => rulesRefreshRetry(old), /same-opening rules failure exposes retry/);
+    console.log(JSON.stringify({ case: id, result, negativeControlRejected: true,
+      boundary: 'Actual Surface Prop Watch/openTree and SDK RecoveryAction native callback. Navigation RPC and native layout are finite ports.' }));
+    recordContractCasePass(id);
+    continue;
+  }
   if (id === 'short-query-scroll') {
     const pageSource = read('BookDirectoryPage');
     const run = (short, implementation = pageSource) => {

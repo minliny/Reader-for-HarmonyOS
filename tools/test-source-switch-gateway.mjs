@@ -37,9 +37,12 @@ const providerFamilyModule = stripTypeScriptTypes(
 
 const executable = stripTypeScriptTypes(
   (authorMetadataModule + '\n' + searchTimingModule + '\n' + sharedSearchDecoderModule + '\n' + gateway
+    .replace(/^import \{ decodeReaderDirectoryDisplayMetadata \} from .*;$/m, () =>
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/reading/application/ReaderDirectoryDisplayMetadata.ts'), 'utf8')
+        .replace(/^import type .*;$/m, '').replace(/^export /gm, ''))
     .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/app/BookRequestScheduler.ts'), 'utf8'))
-    .replace(/^import \{[^}]+\} from ['"]\.\.\/\.\.\/app\/library\/BookAcquisitionPresentation['"];$/m,
+    .replace(/^import \{[^}]+\} from ['"][^'\"]*app\/library\/BookAcquisitionPresentation['"];$/m,
       () => factModule.replace(/^export /gm, ''))
     .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/app/library/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
@@ -48,7 +51,7 @@ const executable = stripTypeScriptTypes(
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ isReaderCoreTransactionPendingError \} from ['"]@reader\/core-harmony['"];$/m,
       `import { isReaderCoreTransactionPendingError } from '${coreSdkUrl}';`)
-    .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
+    .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'\"]*app\/ReaderRuntimeOwner['"];$/m, '')
     .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, '')
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\/ReaderSourceCategory['"];$/m,
       () => sourceCategoryModule)
@@ -56,7 +59,7 @@ const executable = stripTypeScriptTypes(
       () => providerFamilyModule))
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookSearchTiming(?:\.ts)?['"];?\n/gm, '')
-    .replace(/^import \{[^\n]+\} from ['"]\.\.\/search\/SearchGateway['"];?\n/gm, ''),
+    .replace(/^import \{[^\n]+\} from ['"][^'\"]*search\/(?:application\/)?SearchGateway['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
 const { SourceSwitchGateway, sourceSwitchCandidateKey, buildSourceSwitchCommitParams, readBookSearchTiming } = await import(moduleUrl);
@@ -1061,7 +1064,8 @@ if(id==='direct-target-session'){
     assert.equal(method, 'book.toc'); assert.deepEqual(params.variables, { token: 'detail token' });
     return { data: { sourceId: 'target', bookId: '/book', sourceVersion: 'rule-v2', catalogAt: 43,
       catalogVersion: 'catalog-proof', contextVersion: 'context-proof',
-      toc: [{ index: 0, title: '第一章', url: '/chapter', variables: { chapterToken: 'chapter token' } }] } };
+      toc: [{ index: 0, title: '第一章', displayTitle: '确认展示标题', isVip: true, isPay: false, contextTitle: '第一卷',
+        level: 2, navigable: false, url: '/chapter', variables: { chapterToken: 'chapter token' } }] } };
   } };
   const toc = await new SourceSwitchGateway(owner).fetchTargetToc('target', '/book');
   assert.deepEqual(calls, ['book.detail', 'book.toc']);
@@ -1070,6 +1074,10 @@ if(id==='direct-target-session'){
   assert.equal(toc.readingSession.book.title, '详情书名');
   assert.deepEqual(toc.readingSession.continuationVariables, [{ name: 'token', value: 'detail token' }]);
   assert.deepEqual(toc.readingSession.entries[0].variables, [{ name: 'chapterToken', value: 'chapter token' }]);
+  assert.deepEqual(toc.readingSession.entries[0], { index: 0, title: '第一章', displayTitle: '确认展示标题',
+    isVip: true, isPay: false, contextTitle: '第一卷', level: 2, navigable: false, url: '/chapter',
+    variables: [{ name: 'chapterToken', value: 'chapter token' }] });
+  assert.deepEqual(Object.keys(toc.entries[0]).sort(), ['index', 'title', 'url', 'variables']);
 }
 }
 if(id==='live-candidate'){

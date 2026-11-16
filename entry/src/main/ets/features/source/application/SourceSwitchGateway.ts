@@ -1,3 +1,4 @@
+import { decodeReaderDirectoryDisplayMetadata } from '../../reading/application/ReaderDirectoryDisplayMetadata';
 import { bookAuthorIdentity, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../../../app/library/BookAuthorMetadata';
 import { readBookSearchTiming } from '../../../app/library/BookSearchTiming';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
@@ -1151,6 +1152,7 @@ export class SourceSwitchGateway {
       throw new Error('book.toc returned invalid data');
     }
     const entries: SourceSwitchTargetTocEntry[] = [];
+    const readingEntries: RemoteReadingTocEntry[] = [];
     for (const raw of rawToc) {
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
         throw new Error('book.toc returned a non-object entry');
@@ -1164,6 +1166,16 @@ export class SourceSwitchGateway {
         ? {}
         : this.requireStringMap(rawEntryVariables, 'variables', 'book.toc');
       entries.push({ index, title, url, variables: entryVariables });
+      const level = this.optionalNumber(entry, 'level');
+      if (level !== undefined && (!Number.isSafeInteger(level) || level < 1 || level > 32))
+        throw new Error('invalid directory level');
+      const readingVariables: RemoteReadingVariable[] = Object.keys(entryVariables)
+        .map((name): RemoteReadingVariable => ({ name, value: entryVariables[name] as string }));
+      readingEntries.push({ index, title, url, variables: readingVariables,
+        ...decodeReaderDirectoryDisplayMetadata(entry), ...(level === undefined ? {} : { level }),
+        ...(typeof entry['navigable'] === 'boolean' ? { navigable: entry['navigable'] as boolean } : {}),
+        ...(typeof entry['proofState'] === 'string' ? { proofState: entry['proofState'] as string } : {}),
+        ...(typeof entry['resumeOnly'] === 'boolean' ? { resumeOnly: entry['resumeOnly'] as boolean } : {}) });
     }
     const continuationVariables: RemoteReadingVariable[] = [];
     for (const name of Object.keys(variables)) {
@@ -1180,13 +1192,7 @@ export class SourceSwitchGateway {
       contextVersion: this.optionalString(result.data, 'contextVersion'),
       book: { title: bookName, author, coverUrl, lastChapter: latestChapterTitle, intro, kind },
       continuationVariables, hostRequirements: ['httpExecute'],
-      entries: entries.map((entry): RemoteReadingTocEntry => {
-        const entryVariables: RemoteReadingVariable[] = [];
-        for (const name of Object.keys(entry.variables)) {
-          entryVariables.push({ name, value: entry.variables[name] as string });
-        }
-        return { index: entry.index, title: entry.title, url: entry.url, variables: entryVariables };
-      }),
+      entries: readingEntries,
     };
     const target: SourceSwitchTargetToc = {
       readingSession,

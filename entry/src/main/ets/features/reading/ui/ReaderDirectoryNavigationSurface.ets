@@ -527,7 +527,7 @@ export struct ReaderDirectoryNavigationSurface {
   }
 
   private retryOpen(): void {
-    if (!this.directoryInputCurrent() || this.loadPending) return;
+    if (!this.recoveryInputCurrent(this.generation) || this.loadPending) return;
     this.cancelQueryTimer();
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
@@ -568,13 +568,17 @@ export struct ReaderDirectoryNavigationSurface {
     return JSON.stringify([this.currentInputOwnerKey(), this.query, this.ascending, this.currentChapterIndex]);
   }
 
-  private directoryInputCurrent(): boolean {
-    return this.mounted && this.interactionEnabled && !this.awaitingRulesRefresh &&
+  private openingInputCurrent(): boolean {
+    return this.mounted && this.interactionEnabled &&
       this.inputOwnerKey === this.currentInputOwnerKey() && (this.inputCurrent?.() ?? true);
   }
 
+  private directoryInputCurrent(): boolean {
+    return !this.awaitingRulesRefresh && this.openingInputCurrent();
+  }
+
   private recoveryInputCurrent(expected: number): boolean {
-    return this.directoryInputCurrent() && expected === this.generation && this.lastQuery === this.query &&
+    return this.openingInputCurrent() && expected === this.generation && this.lastQuery === this.query &&
       this.lastAscending === this.ascending && this.lastChapterIndex === this.currentChapterIndex &&
       (this.navigationPortFactory !== undefined ||
         (this.runtimeOwner !== undefined && ReaderRuntimeOwner.isCurrent(this.runtimeOwner)));
