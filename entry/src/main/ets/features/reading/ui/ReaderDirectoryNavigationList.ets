@@ -4,7 +4,7 @@ import { mangaDirectoryDisplay } from '../../manga/ui/MangaDirectoryDisplay';
 import { mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } from '../../manga/ui/MangaDirectoryState';
 import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_DISCLOSURE, TYPE_READER_DIRECTORY_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
@@ -241,6 +241,7 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
 /** Virtual, Core-paged display rows. Its placeholders never claim a chapter identity. */
 @Component
 export struct ReaderDirectoryNavigationList {
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @Prop @Watch('onViewChanged') view: ReaderDirectoryNavigationReady;
@@ -675,7 +676,7 @@ export struct ReaderDirectoryNavigationList {
             Math.max(0, this.mangaViewportHeight - visibleTop - this.positionRowHeight(plan.index))) : plan.currentInset;
         // Official START aligns the item to contentStartOffset. Translate only
         // viewport geometry; canonical Core ranks and target proofs stay intact.
-        this.scroller.scrollToIndex(displayIndex, plan.smooth === true, ScrollAlign.START,
+        this.scroller.scrollToIndex(displayIndex, plan.smooth === true && !this.reduceMotion, ScrollAlign.START,
           { extraOffset: LengthMetrics.vp(currentInset === undefined ?
             startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : this.rowHeight) :
             startOffset - visibleTop - currentInset) });
@@ -1271,7 +1272,7 @@ export struct ReaderDirectoryNavigationList {
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
             .width(MANGA_DIRECTORY_VISUAL.groupIconSize).height(MANGA_DIRECTORY_VISUAL.groupIconSize)
             .rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
-            .animation(motionAnimateParam('manga.directory.fold')).accessibilityLevel('no');
+            .animation(readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)).accessibilityLevel('no');
         }.width(44).height(44).padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8, right: 8 })
           .enabled(this.interactionEnabled && !this.mangaSearchActive)
           .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled && !this.mangaSearchActive, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme, 'nativeButton'))
@@ -1361,7 +1362,7 @@ export struct ReaderDirectoryNavigationList {
           Image((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ?
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
             .width(16).height(16).rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
-            .animation(motionAnimateParam('manga.directory.fold')).accessibilityLevel('no');
+            .animation(readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)).accessibilityLevel('no');
           }.width(44).height(44).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`)
             .responseRegion(readerActionTouchRegion(44, 44))

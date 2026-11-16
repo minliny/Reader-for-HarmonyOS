@@ -1751,8 +1751,9 @@ export struct MangaReadingSurface {
     // endpoint before either animation changes the observed values.
     this.getUIContext().postFrameCallback(new MangaSheetFrame(this.getUIContext(), (): void => {
       if (this.panelPhase !== 'opening' || !this.panelOpeningCurrent(generation)) return;
-      this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
-        (): void => { this.panelScrimOpacity = 1; });
+      if (this.reduceMotion) this.panelScrimOpacity = 1;
+      else this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
+          (): void => { this.panelScrimOpacity = 1; });
       this.settlePanel(generation, true);
     }));
   }
@@ -1820,13 +1821,16 @@ export struct MangaReadingSurface {
     return (this.widePanel() ? Number(this.panelWidth()) : this.panelHeight()) + 36;
   }
   private settlePanel(generation: number, focusOnOpen: boolean = false): void {
-    this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 0.9, 500, 43), onFinish: (): void => {
+    const finish = (): void => {
       if (this.panelPhase === 'opening' && this.panelOpeningCurrent(generation)) {
         this.panelPhase = 'open';
         this.scheduleDirectoryOuterPosition(this.directoryOuterIdentity());
         if (focusOnOpen) this.requestPanelFocus(this.panelCloseFocusId(this.actionPanelPresentationGeneration), generation, true);
       }
-    } }, (): void => { this.panelOffset = 0; });
+    };
+    if (this.reduceMotion) { this.panelOffset = 0; finish(); return; }
+    this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 0.9, 500, 43), onFinish: finish },
+      (): void => { this.panelOffset = 0; });
   }
   private closePanel(restoreFocus: boolean = true): Promise<boolean> {
     if (!this.mounted) return Promise.resolve(false);

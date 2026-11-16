@@ -17,6 +17,7 @@ export struct SettingsShell {
   @Prop activeSection: 'home' | 'general' = 'home';
   @Prop navigationGeneration: number = 0;
   @Prop tapBottomScrollTop: boolean = true;
+  @Prop reduceMotion: boolean = false;
   @Prop showOverlay: boolean = false;
   @Prop boundedOverlayVisible: boolean = false;
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
@@ -93,7 +94,7 @@ export struct SettingsShell {
 
   private scrollHomeToTop(): void {
     if (!this.tapBottomScrollTop || this.activeSection !== 'home') return;
-    this.homeScroller.scrollTo({ xOffset: 0, yOffset: 0, animation: true });
+    this.homeScroller.scrollTo({ xOffset: 0, yOffset: 0, animation: !this.reduceMotion });
   }
 
 }

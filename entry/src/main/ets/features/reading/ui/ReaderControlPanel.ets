@@ -2724,7 +2724,7 @@ export struct ReaderControlPanel {
     return (value: number, mode: SliderChangeMode): void => {
       if (presentedRevision !== this.progressInputRevision || !this.progressInputEnabled() || !Number.isFinite(value)) return;
       this.progressPreviewPercent = this.clampPercent(value);
-      if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
+      if (mode === SliderChangeMode.End) {
         const committed = this.progressPreviewPercent;
         this.progressPreviewPercent = -1;
         this.onProgressChange(committed);

@@ -203,6 +203,7 @@ export struct SettingsPage {
       activeSection: this.activeSection,
       navigationGeneration: this.navigationGeneration,
       tapBottomScrollTop: this.tapBottomScrollTopValue,
+      reduceMotion: this.appReduceMotion,
       onSectionChange: (section: 'home' | 'general'): void => {
         if (!this.settingsInputIsCurrent()) return;
         if (section === 'home' && this.consumeTemporaryBack(this.temporaryBackIdentity)) return;

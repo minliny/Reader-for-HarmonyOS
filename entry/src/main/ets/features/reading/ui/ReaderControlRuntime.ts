@@ -91,6 +91,11 @@ export class ReaderControlRuntime {
     if (!rebased.accepted) return this.snapshot();
     this.session = rebased.session;
     this.gesture = rebased.gesture;
+    // A held pointer keeps its captured physical context. Any new release
+    // transition uses the current motion policy rather than the DOWN clock.
+    this.gesture.config = { ...this.gesture.config, settleDurationMs: config.settleDurationMs,
+      showDurationMs: config.showDurationMs, dismissDurationMs: config.dismissDurationMs,
+      coordinatedMotion: config.coordinatedMotion };
     this.compensation = rebased.compensation;
     if (config.settleDurationMs === 0 && this.session.heldPointerId < 0) {
       this.session = advanceReaderControlSession(this.session, Number.MAX_SAFE_INTEGER, this.session.epoch, (p: number): number => p);

@@ -1,5 +1,17 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-16 第二十一轮完整审计与同因补修
+
+第21轮在 c34c6c99 完成472个必审文件和26个范围外正常owner的当前全文语义，共498个唯一文件，partial／unreviewed均为0。99个历史问题、20个路由、4个manifest页面根、21项登记336层及16个额外引用完成对账，结果FAIL，连续通过为0。最终49引用源对账补出10个此前缺少本轮语义记录的application helper，补读6194行后，确认ReadingEntryHost仍有同因晚回执，UIF-97重新打开；本轮同时新增UIF-100和UIF-101。原472／498的真实覆盖保留。下一轮将全部642个生产ETS／TS设为必审全文，明确每个正常接线或纯数据／平台边界。[完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-21.json) [问题与反证](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-21-findings.json)
+
+当前10个生产源已集中修改。目录的三个fold Image直接订阅既有canonical减少动态效果投影，使用公共motion policy；树目录保留原定位意图，在真正滚动派发时读取当前偏好。设置当前Tab回顶、下载定位当前及开发者消息页的程序定位补齐相同策略。漫画面板在排帧后和新settle入口重新读取偏好，保留generation及原焦点续接；控制栏更新已持有手势的新UP时钟，保留原pointer和物理判据。Home进度Slider按完整Begin／Click／End仅在End进入原LRE seek。EntryHost下载回执只更新downloadState，保留同proof期间已更新的标题、四项独立显示字段、层级、可导航性和书签。定向复核另确认正常冷启动empty→full的集合覆盖，当前按最新目录集合迭代；仅未发布过的同一初始空集合可接纳首次完整投影，后续新增、删除和替换空集合都保留最新owner事实。
+
+8个准确case已通过，覆盖三个保留Image的最终animation参数、四类程序滚动、七个模块持有手势的当前时钟、漫画排帧前偏好变化及既有生命周期／拖动、真实SDK Slider回调→正常LRE装配→实际seek／selection／reset，以及完整EntryHost的同proof显示刷新与旧下载回执并发。旧行为负对照按行为拒绝。首次装配失败日志保留，焦点排帧仍按原owner执行。10个生产源及8项测试结果的独立定向复核通过；本批规范编译待完成，旧候选cc0d2df2430c与当前生产修改不再同字节。[修复与准确结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round21-repair-summary.json) [执行前范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round21-repair-plan.json)
+
+UIF-94原Click-only错误判据保持撤回。第18批“全部六个Slider接线核对无新增”的历史矩阵遗漏Home真实接收者在首次提交后仍保持准入，不能用来证明当前全部接线正确。文件覆盖、方法回归、编译、VM行为和用户验收分别记账。
+
+当前登记仍为19 PASS／27 FAIL／290 NOT_RUN，整页原生闭环0／21。原登记层事实与结果逐项相同，37项原诊断、源码漂移0、引用错误0。VM／HDC／设备动作0，VM禁令有效，当前连续完整全局通过0。[指纹与引用检查](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round21-registration-checks.json) [效率与遗漏复盘](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/audit-efficiency-20261116.md)
+
 ## 2026-11-16 第二十轮完整审计与数据投影修复
 
 第二十轮完成全部 472 个当前 UI 合同、96 个历史问题、20 个路由、4 个 manifest 页面根及 21 项登记的当前代码复核，结论 FAIL，连续完整通过为 0。确认目录显示字段丢失 UIF-97、规则刷新失败后重试自锁 UIF-98、TTS 错误消息投影丢位置代次 UIF-99，并补出 UIF-96 在保留 RSS 管理页的隐式原生文字测量入口。[完整审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round-20.json)

@@ -481,15 +481,23 @@ export class ReadingEntryHost {
     // network-capable session. Only offline projection needs that session;
     // the shared canonical bookmark list is source-independent.
     if (book.sourceId === LOCAL_SOURCE_ID || session !== undefined) try {
+      const initialDirectory = lease.currentDirectory();
+      const initiallyEmpty = initialDirectory.length === 0;
       let entries = session === undefined ? await new LocalReadingFlowGateway(this.runtime).loadDownloadProjection(
-        book.bookId, lease.currentDirectory(), current) :
+        book.bookId, initialDirectory, current) :
         await new ReadingOfflineGateway(this.runtime).loadDirectoryProjection(session, current);
       if (!current()) return;
-      // Offline facts must not overwrite a newer bookmark mutation. Markers
-      // are subsequently read by the existing shared Directory owner/mutex.
+      // This read owns download facts. A same-session display refresh or
+      // bookmark mutation may publish while it waits; keep those current facts.
       const latest = lease.currentDirectory();
-      entries = entries.map(entry => ({ ...entry,
-        bookmarks: latest.find(prior => prior.index === entry.index)?.bookmarks }));
+      const downloads = new Map(entries.map(entry => [entry.index, entry.downloadState]));
+      // Seed an unchanged empty opening once. A later catalog publication owns
+      // its whole collection, including additions, removals and an empty result.
+      const directory = initiallyEmpty && latest === initialDirectory && latest.length === 0 ? entries : latest;
+      entries = directory.map(entry => {
+        const downloadState = downloads.get(entry.index);
+        return downloadState === undefined ? entry : { ...entry, downloadState };
+      });
       this.state = { ...this.state, toc: entries }; this.publish(scope, lease);
     } catch (error) { if (current()) this.diagnostic(lease, 'directory-download', error); }
     if (!current()) return;

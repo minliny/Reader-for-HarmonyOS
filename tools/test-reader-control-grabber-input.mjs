@@ -1,7 +1,7 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
  'grabber-ownership':{description:'Actual root SDK painted/input gates, held hidden terminal, captured reversal and two negative controls',resources:[]},
- 'progress-slider':{description:'Actual native Slider preview versus committed End/Click callbacks',resources:[]},
+ 'progress-slider':{description:'Actual complete SDK Slider gestures dispatch exactly one real LRE chapter selection',resources:[]},
  'cold-lifecycle':{description:'Actual SDK cold omitted subtree, first command admission and retained close',resources:[]}
 };
 const selected=selectContractCases(definitions);
@@ -210,29 +210,76 @@ for (const terminal of ['tap', 'cancel']) {
 
 }
 if(selectedCase==='progress-slider'){
-// The actual native Slider observer owns continuous pointer previews and emits
-// only committed End/Click values; a second interaction needs no module reopen.
-const { owner: slider } = createReaderBuilderProbe(source,
-  ['progressRow', 'effectiveProgressPercent', 'contentInputEnabled', 'contentLocation', ...progressMembers], metrics);
-const progressSession = session.openReaderControlSession(session.createReaderControlSessionState(), 0);
-const progressRuntime = new ReaderControlRuntime({
-  axis: motion.readerControlMotionAxis(motion.readerControlMotionBounds(364, 736, 19, 330), 89),
-  tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 100, showDurationMs: 100, dismissDurationMs: 100,
-});
-progressRuntime.start(progressSession);
-const values = [];
-Object.assign(slider, { appScheme: 'day', progressPreviewPercent: -1, progressPercent: 10,
-  runtime: progressRuntime, runtimeMounted: true, runtimeLifecycle: 1, controlOpenRevision: 1,
-  progressInputRevision: 0, progressInputScope: '', inputEnabled: true, controlObscured: false,
-  temporaryLayerActive: false, moreMenuVisible: false, lastVisibleContentLocation: progressSession.location,
-  visualVisibilityProgress: 1, visualTransitionKind: '', visualHeldPointerId: -1,
-  totalChapters: 30, onProgressChange: p => values.push(p) });
-slider.syncProgressInput();
-slider.progressRow(); const track = [...slider.nodes.values()].find(n => n.accessibilityText === '阅读进度');
-track.onChange(25, 'SliderChangeMode.Moving'); assert.deepEqual(values, []);
-track.onChange(25, 'SliderChangeMode.End'); track.onChange(75, 'SliderChangeMode.End');
-track.onChange(40, 'SliderChangeMode.Click');
-assert.deepEqual(values, [25, 75, 40]);
+// Complete installed-SDK gesture: Begin, optional Moving/Click, terminal End.
+// Execute the normal assembly callback and actual seek/select/reset receiver;
+// only content IO, timers and unrelated resource resets have finite ports.
+const {selectedProductionMethods,selectedProductionClasses,selectedProductionComponentCallback}=await import('./lib/selected-production-methods.mjs');
+const {wholeBookAnchorForPercent}=await import('../entry/src/main/ets/features/reading/application/LocalReadingWholeBookProgress.ts');
+const hostFile=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
+const {ReaderDeferredChapterSelection}=selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/presentation/ReaderPagePresentationModels.ets',import.meta.url),['ReaderDeferredChapterSelection']);
+const Receiver=selectedProductionMethods(hostFile,'ReadingExperience',
+ ['seekControlProgress','selectChapterAnchor','resetForChapterSelection','readingTocEntries',
+  'canDispatchControlChapterIntent','isControlInputEnabled','readerInputIsCurrent','controlVisible','controlShellExitArmed'],
+ {...hostPolicy,wholeBookAnchorForPercent,ReaderDeferredChapterSelection});
+function verifyProgress(text=source){
+ const {owner:slider}=createReaderBuilderProbe(text,
+  ['progressRow','effectiveProgressPercent','contentInputEnabled','contentLocation','minimumInputReady','minimumPresentationAvailable','currentMinimumIdentity','committedMinimumIdentity','currentLayout','hasCurrentTemporaryInput','currentTemporaryInputScope','homeMetric','homeProfileMetric','selectedMinimumProfile','presentedHomeTotalChapters',...progressMembers],metrics);
+ const progressSession=session.openReaderControlSession(session.createReaderControlSessionState(),0);
+ const progressRuntime=new ReaderControlRuntime({
+  axis:motion.readerControlMotionAxis(motion.readerControlMotionBounds(364,736,19,330),89),
+  tapMaxDurationMs:500,directionSlopVp:8,settleDurationMs:100,showDurationMs:100,dismissDurationMs:100});
+ progressRuntime.start(progressSession);
+ const homeProfile={percentWidth:26.23,countWidth:39,progressHeight:50};
+ const receipt={ownerKey:'owner',identity:'home-identity',key:'home-identity|key',environmentKey:'environment',
+  layout:{minimumKey:'home-identity|key',contentBudget:{quickContentHeightVp:190,fullContentHeightVp:190}},
+  profile:{module:'home',identity:'home-identity',quick:homeProfile,full:homeProfile},facts:{home:{totalChapters:3}}};
+ const opens=[];
+ const receiver=Object.assign(new Receiver(),{mounted:true,exitRequested:false,appForeground:true,
+  windowChromeActive:true,interactionBlocked:false,controlObscured:false,controlSession:progressSession,
+  controlOpenRevision:41,lifecycleToken:1,chapterSelectionToken:10,entryCatalogSeekRevision:0,
+  entryCatalogPending:false,tocEntries:[{index:2},{index:3},{index:4}],contentMetrics:undefined,
+  isKnownControlChapter:index=>[2,3,4].includes(index),chapterWindow:{get:()=>undefined},
+  pageTurnSettlementActive:false,captureControlSelectionOrigin:()=>undefined,
+  clearTtsChapterEndTimer(){},armFirstPageReadyDeadline(){},
+  openChapter:async(...args)=>{opens.push(args);},hideControl:()=>assert.fail('continuous seek keeps control open'),
+  transientFeedback:{reset(){}},showReaderRecovery(){},invalidatePageTurnRuntime(){},
+  physicalPagination:{index:{invalidateMeasurement(){}}},nativeTextMeasurement:{clear(){}},
+  paragraphLayout:{batch:[],ranges:[]},clearContinuousRenderProjection(){},
+  continuousImageResolutions:new Map(),chapterImageByStartScalar:new Map(),chapterImagePositionByKey:new Map(),
+  resetPendingPage(){},resetPaginationDraft(){},cancelMeasurementDeadline(){},cancelFirstPageReadyDeadline(){},
+  cancelFirstPageCompletionDeadline(){},cancelPageTurnPreparationRetry(){}});
+ Object.assign(slider,{appScheme:'day',progressPreviewPercent:-1,progressPercent:10,
+  runtime:progressRuntime,runtimeMounted:true,runtimeLifecycle:1,controlOpenRevision:41,
+  progressInputRevision:0,progressInputScope:'',inputEnabled:true,controlObscured:false,
+  temporaryLayerActive:false,moreMenuVisible:false,lastVisibleContentLocation:progressSession.location,
+  visualVisibilityProgress:1,visualTransitionKind:'',visualHeldPointerId:-1,totalChapters:3,
+  preparedMinimumRequired:true,presentationReceipt:receipt,minimumOwnerKey:'owner',minimumCommittedIdentity:'home-identity',minimumIdentity:'home-identity',
+  minimumEnvironmentKey:'environment',contentMotionProgress:0,minimumReceiptCurrent:key=>key===receipt.key,frame:()=>({progress:0}),
+  onProgressChange:selectedProductionComponentCallback(hostFile,'ReaderControlPanel','onProgressChange',receiver)});
+ slider.syncProgressInput();slider.progressRow();
+ const track=[...slider.nodes.values()].find(n=>n.accessibilityText==='阅读进度');assert.ok(track);
+ const send=(value,mode)=>track.onChange(value,'SliderChangeMode.'+mode);
+ for(const [value,modes]of [[25,['Begin','Click','End']],[75,['Begin','Moving','Moving','End']],[40,['Begin','Click','End']]]){
+  const before=opens.length,token=receiver.chapterSelectionToken,ticket=progressRuntime.ticket();
+  for(const mode of modes){send(value,mode);assert.equal(opens.length,before+(mode==='End'?1:0),'one real selection only at complete gesture End');}
+  assert.equal(receiver.chapterSelectionToken,token+1);assert.equal(receiver.phase,'loading');
+  assert.equal(receiver.materializedChapterSelectionToken,-1,'actual selection reset retires prior page');
+  assert.equal(receiver.pendingControlSelection.closeOnCommit,false);
+  assert.equal(receiver.pendingControlSelection.controlOpenRevision,41);
+  assert.equal(receiver.controlSession,progressSession);assert.equal(receiver.isControlInputEnabled(),true);
+  assert.equal(slider.progressInputEnabled(),true);assert.equal(progressRuntime.ticket(),ticket,'first commit leaves the same native callback admitted');
+ }
+ assert.deepEqual(opens.map(args=>args[0]),[2,4,3]);
+ const before=opens.length;send(NaN,'End');slider.inputEnabled=false;send(60,'Begin');send(60,'Click');send(60,'End');
+ assert.equal(opens.length,before,'invalid or inactive inputs cannot select');
+ slider.inputEnabled=true;slider.invalidateProgressInput();send(60,'End');assert.equal(opens.length,before,'retired presented revision cannot select');
+ return opens.length;
+}
+assert.equal(verifyProgress(),3);
+const duplicate=source.replace('if (mode === SliderChangeMode.End) {','if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {');
+assert.notEqual(duplicate,source);
+assert.throws(()=>verifyProgress(duplicate),/one real selection only at complete gesture End/,'old Click plus End callback duplicates the real operation');
+
 }
 console.log(`PASS selected control scope ${selectedCase}; actual SDK authored attributes/callbacks, native compositor and touch remain separate`);
 

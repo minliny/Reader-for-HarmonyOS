@@ -100,7 +100,10 @@ export struct ReaderMessagePreviewPage {
   private select(scene: MessagePreviewScene): void {
     if (!this.begin(scene)) return;
     if (scene === 'task-success' || scene === 'task-partial') this.batch = previewImportBatch(scene === 'task-partial');
-    if (this.pageActive()) this.scroller.scrollEdge(Edge.Top);
+    if (this.pageActive()) {
+      if (this.reduceMotion) this.scroller.scrollTo({ xOffset: 0, yOffset: 0, animation: false });
+      else this.scroller.scrollEdge(Edge.Top);
+    }
   }
 
   private previewToast(tone: MessagePreviewTone, longText: boolean = false, message: string = ''): void {

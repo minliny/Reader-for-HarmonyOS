@@ -1,6 +1,6 @@
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
-import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
 import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
 import type { MangaDirectoryRowPresentation } from '../presentation/MangaDirectoryPresentation';
@@ -18,6 +18,7 @@ export struct MangaDirectoryEntryRow {
   @Prop presentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();
   @Prop scheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop currentChapterIndex: number = -1;
   @Prop collapsedBranches: number[] = [];
   @Prop query: string = '';
@@ -183,7 +184,7 @@ export struct MangaDirectoryEntryRow {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image(this.scheme === 'night' ? $r('app.media.manga_sheet_chevron_down_theme_night') :
           $r('app.media.manga_sheet_chevron_down')).width(16).height(16)
-          .rotate({ angle: this.expanded(entry) ? 0 : -90 }).animation(motionAnimateParam('manga.directory.fold')).accessibilityLevel('no');
+          .rotate({ angle: this.expanded(entry) ? 0 : -90 }).animation(readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)).accessibilityLevel('no');
       }.width(44).height(44)
         .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
         .margin({ left: this.facts(entry)?.group === true ? 0 : 8, right: this.facts(entry)?.group === true ? 0 : 8 })

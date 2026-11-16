@@ -1,7 +1,10 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions=Object.fromEntries([['runtime-protocol','Production Runtime ticket/regrab/endpoint/background lifecycle'],['panel-terminal','Actual Panel reset/missing timestamp terminal admission'],['panel-projection','Actual Panel scalar projection and retained route identity'],['source-boundary','Explicit historical implementation-shape diagnostic; not behavioral release prerequisite']].map(([id,description])=>[id,{description,resources:[]}]));
+const definitions=Object.fromEntries([['runtime-protocol','Production Runtime ticket/regrab/endpoint/background lifecycle'],['held-motion-policy','Actual held pointer preserves physical context and uses latest release timing'],['panel-terminal','Actual Panel reset/missing timestamp terminal admission'],['panel-projection','Actual Panel scalar projection and retained route identity'],['source-boundary','Explicit historical implementation-shape diagnostic; not behavioral release prerequisite']].map(([id,description])=>[id,{description,resources:[]}]));
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
+const {registerHooks}=await import('node:module');
+const resolution=registerHooks({resolve(specifier,context,next){if(specifier.endsWith('/ReaderMotionDurationPolicy'))return next(specifier+'.ts',context);return next(specifier,context);}});
+try {
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const sessionPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
@@ -17,6 +20,44 @@ const config = { axis: { quickGrabberScreenY: 415, fullGrabberScreenY: 9, hidden
 const linear = x => x;
 const home = openReaderControlSession(createReaderControlSessionState(), 0);
 const modules = ['directory', 'search', 'settings', 'appearance', 'tts', 'autoPage', 'replace'];
+if(selectedCase==='held-motion-policy'){
+  function verify(Runtime = ReaderControlRuntime) {
+    for (const module of modules) for (const reduced of [true, false]) {
+      const initial = {...config, coordinatedMotion:true}, runtime = new Runtime(initial);
+      runtime.start(enterReaderControlModule(home,module,0));
+      runtime.down(7,415,0); const moved=runtime.move(7,300,20);
+      const sample=sampleReaderControlSession(moved.session), ticket=runtime.ticket();
+      const updated=runtime.configure({...initial, settleDurationMs:reduced?0:160,
+        showDurationMs:reduced?0:120,dismissDurationMs:reduced?0:140,
+        tapMaxDurationMs:0,directionSlopVp:1000});
+      assert.equal(runtime.owner(),7,'preference delivery keeps the accepted pointer');
+      assert.deepEqual(sampleReaderControlSession(updated.session),sample,'held physical sample does not jump');
+      assert.equal(runtime.ticket(),ticket,'timing alone does not revoke a held actor');
+      const released=runtime.up(7,300,30);
+      assert.equal(released.session.heldPointerId,-1);
+      if(reduced){
+        assert.equal(released.session.transition,undefined,'new UP settlement uses latest zero clock');
+        assert.equal(released.session.location.form,'full');assert.equal(runtime.needsFrame(),false);
+      }else{
+        assert.ok(released.session.transition.durationMs>0,'ordinary UP retains animation');
+        runtime.frame(100,runtime.ticket(),linear);
+        assert.equal(runtime.frame(10000,runtime.ticket(),linear).session.location.form,'full');
+      }
+    }
+    const runtime=new Runtime(config);runtime.start(enterReaderControlModule(home,'settings',0));
+    runtime.down(9,415,0);runtime.configure({...config,tapMaxDurationMs:0,settleDurationMs:0,showDurationMs:0,dismissDurationMs:0});
+    assert.equal(runtime.up(9,415,50).session.location.form,'full','latest timing preserves original tap classification');
+  }
+  verify();
+  const {selectedProductionClasses}=await import('./lib/selected-production-methods.mjs');
+  const gesture=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts');
+  const layout=await import('../entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts');
+  const motion=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts');
+  const {ReaderControlRuntime:OldTiming}=selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts',import.meta.url),['ReaderControlRuntime'],{...sessionPolicy,...gesture,...layout,...motion});
+  const configure=OldTiming.prototype.configure;
+  OldTiming.prototype.configure=function(next){const captured={...this.gesture.config};const result=configure.call(this,next);Object.assign(this.gesture.config,{settleDurationMs:captured.settleDurationMs,showDurationMs:captured.showDurationMs,dismissDurationMs:captured.dismissDurationMs,coordinatedMotion:captured.coordinatedMotion});return result;};
+  assert.throws(()=>verify(OldTiming),/new UP settlement uses latest zero clock/,'old DOWN timing fails actual release behavior');
+}
 if(selectedCase==='runtime-protocol'){
 for (const module of modules) {
   const runtime = new ReaderControlRuntime(config);
@@ -187,5 +228,6 @@ console.log('Production Panel scalar projection: seven modules x 101 frames reta
 
 }
 
+} finally { resolution.deregister(); }
 }
 for(const id of selected){await runCase(id);recordContractCasePass(id);}

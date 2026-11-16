@@ -1,6 +1,6 @@
 import { drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"lifecycle": {"description": "实际two-frame enter/retained exit/current generation/cancel-reopen", "resources": []}, "font-admission": {"description": "实际所有panel与persistent标题checked receipts/迟到拒绝", "resources": []}, "directory-selection": {"description": "实际tablet right panel/left catalog canonical proof与close-save归属", "resources": []}, "download-navigation": {"description": "实际book/chapter0标题与download manager portal一次导航", "resources": []}, "preferences-reset": {"description": "实际reset保现背景/手动brightness/持久偏好回调", "resources": []}, "drag-reduced": {"description": "实际反向drag clamp/超额drag退出/reduce无帧与cancel token", "resources": []}};
+const definitions={"deferred-reduced":{"description":"Actual queued opening reads latest motion policy; no new scrim/spring clocks, focus and generation retained","resources":[]},"lifecycle": {"description": "实际two-frame enter/retained exit/current generation/cancel-reopen", "resources": []}, "font-admission": {"description": "实际所有panel与persistent标题checked receipts/迟到拒绝", "resources": []}, "directory-selection": {"description": "实际tablet right panel/left catalog canonical proof与close-save归属", "resources": []}, "download-navigation": {"description": "实际book/chapter0标题与download manager portal一次导航", "resources": []}, "preferences-reset": {"description": "实际reset保现背景/手动brightness/持久偏好回调", "resources": []}, "drag-reduced": {"description": "实际反向drag clamp/超额drag退出/reduce无帧与cancel token", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -202,6 +202,25 @@ async function verifyRaces(text = source) {
   assert.equal(pendingFrame.events.filter(event => event === 'save').length, beforeSave, 'late action does not enter an unmounted save owner');
 }
 if(selectedCase==='lifecycle'){await verifyMotion();await verifyRaces();}
+async function verifyDeferredReduced(text = source) {
+  const f=fixture(text);await f.owner.openPanel('settings');
+  assert.equal(f.owner.panelPhase,'opening');assert.equal(f.animations.length,0);
+  f.owner.reduceMotion=true;f.enterFrames();
+  assert.equal(f.animations.length,0,'queued reduced opening creates no native animation');
+  assert.equal(f.owner.panelOffset,0);assert.equal(f.owner.panelScrimOpacity,1);
+  assert.equal(f.owner.panelPhase,'open');
+  for(const frame of f.frames.splice(0)){frame.onFrame(16);frame.onIdle(0);drainReaderPostLayoutFallbacks(f.frames);}
+  assert.ok(f.events.some(event=>Array.isArray(event)&&event[0]==='focus'),'same opening retains focus scheduling');
+  const stale=fixture(text);await stale.owner.openPanel('settings');
+  stale.owner.reduceMotion=true;stale.owner.invalidatePanelMotion();stale.enterFrames();
+  assert.equal(stale.animations.length,0);assert.equal(stale.owner.panelPhase,'opening','retired queued opening cannot publish');
+  const direct=fixture(text);direct.owner.reduceMotion=true;direct.owner.panelPhase='opening';
+  direct.owner.panelOffset=80;direct.owner.settlePanel(direct.owner.panelGeneration);
+  assert.equal(direct.animations.length,0,'settle entry independently checks current policy');
+  assert.equal(direct.owner.panelOffset,0);assert.equal(direct.owner.panelPhase,'open');
+}
+if(selectedCase==='deferred-reduced') await verifyDeferredReduced();
+
 if(selectedCase==='drag-reduced') {
   const f = fixture(); f.owner.reduceMotion = true; f.owner.isReaderIdentityCurrent = () => true;
   Object.assign(f.owner, { appForeground: true, windowChromeActive: true,
@@ -372,7 +391,11 @@ if(selectedCase==='directory-selection') await verifyReachableWideDirectory();
 
 if(selectedCase==='drag-reduced') {
  const drag=fixture();await drag.owner.openPanel('mode');drag.enterFrames();drag.finish(1);drag.owner.beginPanelDrag();drag.owner.updatePanelDrag(-20);assert.equal(drag.owner.panelOffset,0);const distance=drag.owner.panelTravel()*2;drag.owner.updatePanelDrag(distance);drag.owner.finishPanelDrag(distance,0);assert.equal(drag.owner.panelPhase,'closing');drag.finish(drag.animations.length-1);
- const reduced=fixture();reduced.owner.reduceMotion=true;await reduced.owner.openPanel('settings');assert.equal(reduced.owner.panelPhase,'open');assert.equal(reduced.owner.panelOffset,0);assert.equal(reduced.owner.panelScrimOpacity,1);await reduced.owner.closePanel();assert.equal(reduced.owner.panel,'');assert.equal(reduced.frames.length,0);assert.equal(reduced.animations.length,0);
+ const reduced=fixture();reduced.owner.reduceMotion=true;await reduced.owner.openPanel('settings');assert.equal(reduced.owner.panelPhase,'open');assert.equal(reduced.owner.panelOffset,0);assert.equal(reduced.owner.panelScrimOpacity,1);await reduced.owner.closePanel();assert.equal(reduced.owner.panel,'');assert.equal(reduced.animations.length,0);
+ // Reduced motion still schedules owned focus; these are not motion clocks.
+ for(const frame of reduced.frames.splice(0)){frame.onFrame(16);frame.onIdle(0);drainReaderPostLayoutFallbacks(reduced.frames);}
+ assert.equal(reduced.frames.length,0);assert.equal(reduced.animations.length,0);
+ assert.equal(reduced.events.filter(event=>Array.isArray(event)&&event[0]==='focus').length,1,'only current close focus survives generation replacement');
 }
 // Narrow production-method regressions must fail the same lifecycle behavior;
 // neither the expected result nor the native I/O boundary is rewritten.
@@ -386,6 +409,10 @@ function mutate(name, transform) {
   const before = member.getText(tree), after = transform(before); assert.notEqual(before, after);
   return source.slice(0, member.getStart(tree)) + after + source.slice(member.end);
 }
+if(selectedCase==='deferred-reduced') await assert.rejects(()=>verifyDeferredReduced(mutate('openPanel',text=>
+  text.replace('if (this.reduceMotion) this.panelScrimOpacity = 1;','if (false) this.panelScrimOpacity = 1;'))),/queued reduced opening creates no native animation/);
+if(selectedCase==='deferred-reduced') await assert.rejects(()=>verifyDeferredReduced(mutate('settlePanel',text=>
+  text.replace('if (this.reduceMotion) { this.panelOffset = 0; finish(); return; }',''))),/queued reduced opening creates no native animation|settle entry independently checks/);
 if(selectedCase==='lifecycle') await assert.rejects(() => verifyMotion(mutate('closePanel', text =>
   text.replace("this.panelPhase = 'closing';", "this.panelPhase = 'closing'; this.panel = '';"))), /same content is retained/);
 if(selectedCase==='lifecycle') await assert.rejects(() => verifyRaces(mutate('closePanel', text =>

@@ -2269,7 +2269,7 @@ export struct SharedDownloadPage {
     const chapter = this.currentChapter(); const book = this.detail(); if (chapter === undefined || book === undefined) return;
     this.cancelChapterScrollRestore();
     this.cancelManagingScroll();
-    this.chapterScroller.scrollToIndex(3 + book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key), true, ScrollAlign.CENTER);
+    this.chapterScroller.scrollToIndex(3 + book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key), !this.reduceMotion, ScrollAlign.CENTER);
   }
   private allSelected(): boolean {
     const book = this.detail();
