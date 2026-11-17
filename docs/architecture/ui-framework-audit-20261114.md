@@ -1,5 +1,29 @@
 # Reader HarmonyOS 全应用 UI 框架审计报告
 
+## 2026-11-17 键盘引起外框变化：用户指出后的全应用范围核对
+
+当前问题是应用选择的键盘几何策略。普通手机文字阅读以 `local／KeyboardAvoidMode.NONE` 保持阅读根视口，再在 `resolveReaderControlLayout` 内将键盘遮挡加入 `safeBottom→dockBottomGap→availablePanelHeight`，由 Full／Quick 求解器重算整个控制外框。目录并非只缩列表可见区。实际生产纯方法按已有原生输入复算，与原图一致：窗口仍2832px，外框顶边388px、宽1195px保持，键盘前高2346px／底2734px，键盘后高1345px／底1733px。可见键盘约1099px，原先已有98px底部避让，故外框少1001px；此前将1001px直接称为键盘高度不准确。[实际布局方法复算](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ime-control-layout-real-method-20261117.json)
+
+范围以642个当前应用ETS／TS、额外1个Native类型声明、20个路由值及4个manifest页面根为发现基线。54个键盘／安全区候选的相关用法、相邻helper和正常父宿主已逐项归因；24个直接字面命中包括基础设施、诊断、输入／Back及注释，不能当作24个受影响页面。15个正式文件直接参与纵向容量或位置计算，具体路径及每个候选的结论在清单中。这是当前问题的专项追踪，没有新增全树全局审计轮。[完整执行链与范围](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ime-geometry-impact-20261117.json)
+
+| 宿主／机制 | 当前影响 |
+| --- | --- |
+| 文字阅读控制栏 | 7个二级模块：目录、朗读、界面、设置、全文搜索、自动翻页、替换；主菜单也共用。Quick／Full均受同一外框预算约束。不是每个模块都自己拥有输入框，也不冒称7项全有本次原生复现 |
+| 第三方TTS配置管理 | 唯一正常 `windowModal=true` 入口临时取得系统RESIZE，按原生Area收缩管理视口，退出按相同window／owner释放；普通选择弹层不是这个覆盖入口 |
+| 正常搜书／换源／书源管理 | 分别限制搜索历史、换源内部列表与恢复区、书源分组选择及恢复槽；没有统一把全部页面外框扣键盘的实现 |
+| 设置选择、JSON导入、Web | 分别调整选项视口、表单Scroll视口及Web内容可视区；不等同于全部主页面改变作者定义的外框 |
+| 公共下拉 | 下载6处、书源工具2处、目录规则1处，共9个构造点；键盘限制弹出面板上限，非触发字段边框 |
+| 书架、分组、本地导入、旅程恢复 | 约束Notice／Action可用容量；不是书架或分组卡片统一缩高 |
+| 全应用短反馈 | 只把反馈位置移到键盘上方，不直接改变自然卡片高度 |
+| 普通页面与漫画 | PageScaffold／StandardPage无公共纵向键盘减高；独立目录／详情／下载等可能跟随原生实测父视口。漫画使用独立system／viewport策略，不走文字控制栏求解器。L0保留入口与诊断宿主另列 |
+
+`ReaderWindowCoordinator` 是唯一原生模式设置边界。手机文字阅读使用NONE加应用自身避让；平板文字阅读、漫画及App页面沿捕获的系统模式，不能由代码假定所有设备都为RESIZE。公共 `readerInteractiveSafe*` helper默认不包含键盘；只有显式true、实际父视口变化或本次控制栏算式才进入对应容量。Dialog规格的 `usesKeyboardSafeArea` 在公共Surface中当前只接左右宽度，不是一个统一纵向缩框开关。
+
+现有 `test-reader-control-host-keyboard.mjs:130` 明确期待有键盘时Full高414vp，并检查关闭后恢复。它证明既有实现的缩框／恢复、状态保持，未证明“外框应保持稳定”的产品要求。该策略是历史沿用，R30没有改动对应行；后续修复须分开作者外框、键盘遮挡和内部可见区，并修正准确判据，不能全局删掉表单／下拉／恢复提示的容量保障。
+
+同时撤销本次“列表空白”误判：用户附图和三张不可变原PNG中，四个章节文字区域深色像素数均为1025／4641／4599／4664，目录并未消失。错误原登记保留且标明RETRACTED，不计生产缺陷。[误判更正](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-directory-native-raster-issue-20261117.json)。本次源码范围核对未修改生产代码、未新增VM操作／构建，当前外框策略修正仍待实施。
+
+
 ## 2026-11-17 VM续接：保数据安装、正常启动与主题保存已通过
 
 用户“代码侧审核问题已解决且无新增问题，可解除”的条件已按干净代码提交`8da2c02d`、关闭队列、定向review及回归绑定核实，本次VM验收禁令已解除。第31轮及后续全局审计仍取消；历史0／3及第30轮FAIL原件保留。当前签名候选 **0.2.0.DEV.7b0f6137368c** 已通过规范入口保数据覆盖安装并启动；安装前真实DB／WAL已备份，因快照变化实际只补跑1个准确兼容用例，另2项REUSED，整批数据证明与安装用时52.286秒。实际Core身份与候选匹配，当前PID发布Runtime；正常书架4个source／book身份与安装前副本逐项相等，画面保留文字27%及漫画100%／第2页。

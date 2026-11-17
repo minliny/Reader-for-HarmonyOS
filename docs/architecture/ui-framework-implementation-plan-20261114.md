@@ -1,5 +1,16 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-17 键盘外框策略专项：范围已查清，修正待实施
+
+用户指出目录唤起IME后外框整体缩短。本次先扩大到642个当前应用ETS／TS、20路由及4个manifest页面根，追踪54个相关候选用法及父宿主，正式纵向容量／定位消费为15文件；完整分类、来源行、保留与诊断边界见[范围结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ime-geometry-impact-20261117.json)。当前生产与安装候选仍为8da2c02d／0.2.0.DEV.7b0f6137368c，未为此修改或重建。
+
+原因已定位到普通手机文字阅读local／NONE策略下的 `ReaderLayoutGeometry`：键盘遮挡进入整个控制栏的bottom gap和可用外框高度，随后分配各模块内容。相同求解作用于目录、朗读、界面、设置、全文搜索、自动翻页、替换及主菜单的Quick／Full。已有原图输入的实际生产方法复算精确得到外框2346→1345px、顶边388px保持、底边2734→1733px；这是应用外框政策，不是VM分辨率或密度变更。[方法结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ime-control-layout-real-method-20261117.json)
+
+后续代码处理先在共享控制栏边界分开作者外框与IME内容遮挡；保留实际焦点、Back、语义列表锚点及真正窗口变化。原 `test-reader-control-host-keyboard` 的414vp期待把缩框本身当正确结果，须随新契约修正，准确覆盖键盘开／关、Full／Quick、普通／短窗口和输入状态保持。必要的正常原生复验只在代码与准确本地证据完成后选择。单独TTS管理的RESIZE覆盖、9处公共下拉、表单／Web／恢复区容量和短反馈位置应按各自宿主评估，不能用全局关闭键盘避让代替。
+
+此前“列表像素空白”是assistant误读，现已按用户附图与原PNG像素核对撤销；三张图的四个文字区计数完全相同。目录输入、查询、清空及Back行为可分别记准确原生结果，外框策略不能由这些PASS自动关闭。本次仅做代码范围与既有证据归因，生产修正尚未实施，VM操作暂不继续。
+
+
 ## 2026-11-17 VM续接：保数据安装、正常启动与主题保存已通过
 
 用户“代码侧审核问题已解决且无新增问题，可解除”的条件已按干净代码提交`8da2c02d`、关闭队列、定向review及回归绑定核实，本次VM验收禁令已解除。第31轮及后续全局审计仍取消；历史0／3及第30轮FAIL原件保留。当前签名候选 **0.2.0.DEV.7b0f6137368c** 已通过规范入口保数据覆盖安装并启动；安装前真实DB／WAL已备份，因快照变化实际只补跑1个准确兼容用例，另2项REUSED，整批数据证明与安装用时52.286秒。实际Core身份与候选匹配，当前PID发布Runtime；正常书架4个source／book身份与安装前副本逐项相等，画面保留文字27%及漫画100%／第2页。
