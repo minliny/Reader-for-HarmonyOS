@@ -10,6 +10,8 @@
 
 [本批VM汇总](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-summary-20261117.json) [正常启动与书架](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-normal-post-install-result.json) [主题保存及恢复](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-settings-theme-result.json) [8小时等待失败记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-cua-wait-incident-20261117.json)
 
+本次另对G05做了1次准确有界续证：请求前当前Reader PID5976／窗口96与WMS焦点96一致、正常书架可见；既有应用内录屏仍只到平台RequestUserPrivacyAuthority，未出现可见授权界面或STARTED，30.012秒后既有截止释放，准确新文件0字节。该尝试记FAIL，排除“缺少前景证明即可解释当前失败”的单一归因；当前平台权限阶段完成原因仍未建立，不能推广为所有VM录屏路径均不可用，也没有继续引入UU或权限绕过。[G05准确结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-g05-foreground-capture-result.json)。
+
 ## 2026-11-17 第30轮收尾：已确认代码问题闭环，取消后续全局轮
 
 当前状态以本节及原账本 `implementation.currentState` 为准。用户明确要求停止新增全局审计；第31／32轮及后续重读全树均已取消。第30轮原FAIL、A／B及末验保持原样，历史连续全局PASS仍为0／3，没有改写为通过。**本次两个已确认family的代码修复、定向review、9个准确case及一次规范编译签名已完成；VM继续禁用，未安装或启动。** 下文旧节均保留形成时状态。[收尾提交与当前源码绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-repair-commit-binding.json)。全目标的原生验收及最终Figma／性能专项仍未完成，专项未启动。
