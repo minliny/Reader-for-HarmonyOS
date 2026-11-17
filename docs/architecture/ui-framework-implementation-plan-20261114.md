@@ -12,6 +12,14 @@
 
 本次另对G05做了1次准确有界续证：请求前当前Reader PID5976／窗口96与WMS焦点96一致、正常书架可见；既有应用内录屏仍只到平台RequestUserPrivacyAuthority，未出现可见授权界面或STARTED，30.012秒后既有截止释放，准确新文件0字节。该尝试记FAIL，排除“缺少前景证明即可解释当前失败”的单一归因；当前平台权限阶段完成原因仍未建立，不能推广为所有VM录屏路径均不可用，也没有继续引入UU或权限绕过。[G05准确结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-g05-foreground-capture-result.json)。
 
+## 2026-11-17 正常书源弹层及漫画目录续证
+
+当前候选从正常设置进入书源管理，原有838个书源／120个启用保持。新增书源JSON弹层打开时6个可见原生Toggle全部禁用，Back取消后同ID及勾选值保持、全部恢复可用，焦点回到原页脚入口。实际查询输入得到0／838的无匹配状态，清除筛选后恢复838／120；关闭IME并返回书架后原4本及进度不变。没有提交导入、检测、登录、启停或删除。[书源弹层正常原生结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-source-modal-native-result-20261117.json)
+
+原临时漫画源进入失败，同书换源实际查找结束0项。按用户“切换书源／真不行就换书”，沿正常搜索另开包子漫画来源《一人之下》：第1章返回17页清单；正常目录按钮经过当前字体准备成功展开6个可见章节，原生焦点到关闭按钮；Back移除面板，焦点回到原目录按钮，章节与1／17页保持。该当前成功路径已通过，不重跑；图片仍出现不可用图标，不能计作健康正文，现有日志只建立request.dispatch内部错误2300999的端点事实。该书自身另一次换源结束0项，已关闭，没有替换原书。[漫画字体及目录原生结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-manga-font-native-result-20261117.json)
+
+随后通过独立正常搜书另开腾讯漫画《非人哉》（`https://ac.qq.com/Comic/comicInfo/id/545320`），当前实屏已显示实际漫画正文、1／4页，经正常“加入书架”后确认书架5本：原4个source／book身份和文字27%／原漫画100%第2页均保留。新增健康漫画与此前目录PASS分别记账；原临时源及包子图失败均保留。[正常换书及健康图片结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-manga-real-book-substitution-result-20261117.json)。以上未新增App构建、全局审计、显示修改或UU窗口访问；正式整页计数及G05／G10的原关闭条件保持。
+
 ## 2026-11-17 第30轮收尾：已确认代码问题闭环，取消后续全局轮
 
 当前状态以本节及原账本 `implementation.currentState` 为准。用户明确要求停止新增全局审计；第31／32轮及后续重读全树均已取消。第30轮原FAIL、A／B及末验保持原样，历史连续全局PASS仍为0／3，没有改写为通过。**本次两个已确认family的代码修复、定向review、9个准确case及一次规范编译签名已完成；VM继续禁用，未安装或启动。** 下文旧节均保留形成时状态。[收尾提交与当前源码绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-repair-commit-binding.json)。全目标的原生验收及最终Figma／性能专项仍未完成，专项未启动。
