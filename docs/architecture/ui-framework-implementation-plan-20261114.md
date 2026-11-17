@@ -1,5 +1,15 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-17 VM续接：保数据安装、正常启动与主题保存已通过
+
+用户“代码侧审核问题已解决且无新增问题，可解除”的条件已按干净代码提交`8da2c02d`、关闭队列、定向review及回归绑定核实，本次VM验收禁令已解除。第31轮及后续全局审计仍取消；历史0／3及第30轮FAIL原件保留。当前签名候选 **0.2.0.DEV.7b0f6137368c** 已通过规范入口保数据覆盖安装并启动；安装前真实DB／WAL已备份，因快照变化实际只补跑1个准确兼容用例，另2项REUSED，整批数据证明与安装用时52.286秒。实际Core身份与候选匹配，当前PID发布Runtime；正常书架4个source／book身份与安装前副本逐项相等，画面保留文字27%及漫画100%／第2页。
+
+正常设置入口已完成真实主题“跟随→深色”、原生选中与像素变化、冷重开后深色仍选中，再恢复原“跟随”并返回书架。实际显示1280×2832，两项密度均3.5；系统字体、密度、分辨率及VM生命周期未改。首个通用文字定位器因Tab子Text主动合并语义而拒绝派发，原FAIL保留；随后依据当前原生Button边界与两Tab正常配置完成同一场景。未强造持久化失败，错误／重试／旧host路径仍保留9项本地准确方法与SDK证据边界。
+
+此前可选UU窗口访问未核实与VM的对应关系，单次工具授权等待29890.3455秒后未获准；该8小时18分记FAIL及无验收产出，不计有效验证。窗口路径已结束。本节只关闭当前候选的安装、实际Native／Runtime、正常书架初始显示和主题成功保存冷读回；正式21变体／336层仍19 PASS／27 FAIL／290 NOT_RUN、整页0／21，剩余原生命中、焦点／读屏、支持的几何输入、独立整页视觉及G05／G10按原条件逐项处理。最终Figma／性能专项尚未启动，完整目标未完成。
+
+[本批VM汇总](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-summary-20261117.json) [正常启动与书架](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-normal-post-install-result.json) [主题保存及恢复](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-settings-theme-result.json) [8小时等待失败记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/vm-resume-cua-wait-incident-20261117.json)
+
 ## 2026-11-17 第30轮收尾：已确认代码问题闭环，取消后续全局轮
 
 当前状态以本节及原账本 `implementation.currentState` 为准。用户明确要求停止新增全局审计；第31／32轮及后续重读全树均已取消。第30轮原FAIL、A／B及末验保持原样，历史连续全局PASS仍为0／3，没有改写为通过。**本次两个已确认family的代码修复、定向review、9个准确case及一次规范编译签名已完成；VM继续禁用，未安装或启动。** 下文旧节均保留形成时状态。[收尾提交与当前源码绑定](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/code-global-review/round30-repair-commit-binding.json)。全目标的原生验收及最终Figma／性能专项仍未完成，专项未启动。
