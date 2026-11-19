@@ -99,6 +99,9 @@ export function normalizeHarmonyLayout({
       !positive(report.vpPixels) || Math.abs(report.vpPixels - density) > .01) {
     throw new Error('Window metrics are unavailable, stale, or use conflicting units');
   }
+  const horizontalInsets = [metrics.systemInsets?.left, metrics.systemInsets?.right,
+    metrics.cutoutInsets?.left, metrics.cutoutInsets?.right];
+  const contentSafeHorizontalVp = horizontalInsets.every(nonNegative) ? Math.max(...horizontalInsets) : null;
   const wantedId = windowId ?? report.windowId ?? metrics.windowId;
   if ((windowId !== undefined && report.windowId !== undefined && String(windowId) !== String(report.windowId)) ||
       (wantedId !== undefined && metrics.windowId !== undefined && String(wantedId) !== String(metrics.windowId))) {
@@ -169,6 +172,7 @@ export function normalizeHarmonyLayout({
     })),
     window: {
       id, rectPx, visibleRectPx, displayRectPx, density, revision,
+      contentSafeHorizontalVp,
       orientation: rectPx.width > rectPx.height ? 'landscape' : 'portrait',
       keyboard: normalizeKeyboard(metrics, revision),
       source: WINDOW_SOURCE,

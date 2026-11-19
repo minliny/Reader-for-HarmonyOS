@@ -13,6 +13,13 @@ const fixtureTitle = contract.fixture.bookTitle;
 const matrixIdentity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const boxPx = { left: 0, top: 0, width: 600, height: 900 };
 const measuredSizeVp = { x: 0, y: 0, width: 100, height: 50 };
+const density = 3.5;
+const windowRectPx = { left: 0, top: 0, width: 1050, height: 1400 };
+const shellId = 'reader-control-motion-shell';
+const grabberId = 'reader-control-motion-grabber';
+const dockId = 'reader-control-motion-dock';
+const contentId = 'reader-control-content-host';
+const contentClipId = 'reader-control-motion-content-clip';
 
 const payloadBefore = { epoch: 0, openRevision: 0, closeRevision: 0, level: 'hidden',
   targetLevel: 'hidden', transition: '', heldPointerId: -1 };
@@ -22,9 +29,14 @@ function node(id, extras = {}) {
     clickable: true, rectPx: boxPx, visibleRectPx: boxPx, ...extras };
 }
 
+function readingStageNode() {
+  return node(readingStage, { rectPx: { ...windowRectPx }, visibleRectPx: { ...windowRectPx } });
+}
+
 function sample(sampleId, seq, time, nodes) {
   return { sampleId, instanceId, beforeSeq: seq, afterSeq: seq + 1, hostBeginMs: time, hostEndMs: time + 5,
-    nodes, window: { id: 'reader-window', revision: 17, keyboard: { visible: false, revision: 17 } } };
+    nodes, window: { id: 'reader-window', revision: 17, density, rectPx: { ...windowRectPx },
+      keyboard: { visible: false, revision: 17 } } };
 }
 
 function action(actionId, op, beforeSeq, afterSeq, time, targetId) {
@@ -46,16 +58,17 @@ function frame(direction, index, epoch, startMs) {
   const dock = { uniqueId: 110, parentUniqueId: 100, clipToFrame: false, zIndex: 0 };
   const clip = { uniqueId: 120, parentUniqueId: 110, clipToFrame: true, zIndex: 0,
     borderRadiusVp: 8, measuredSizeVp };
+  const contentWrapper = { uniqueId: 125, parentUniqueId: clip.uniqueId, clipToFrame: false };
   const actors = [
-    ['reader-control-motion-shell', 130, 0, [dock, root], 100, 50, 0, 1],
-    ['reader-control-motion-grabber', 140, 3, [dock, root], 72, 28, 0, 1],
-    ['reader-control-motion-dock', 110, 0, [root], 100, 70, dockY, v],
-    ['reader-control-content-host', 150, 0, [clip, dock, root], 100, 50, 0, 1],
-  ].map(([id, uniqueId, zIndex, ancestors, width, height, translateY, opacity]) => ({
+    [shellId, 130, 0, [dock, root], 100, 50, 100, 500, 0, 1],
+    [grabberId, 140, 3, [dock, root], 72, 28, 114, 500, 0, 1],
+    [dockId, 110, 0, [root], 100, 70, 100, 500, dockY, v],
+    [contentId, 150, 0, [contentWrapper, clip, dock, root], 22, 50, 113, 529, 0, 1],
+  ].map(([id, uniqueId, zIndex, ancestors, width, height, x, y, translateY, opacity]) => ({
     id, uniqueId, mounted: true, opacity, zIndex, ancestors, ancestorChainComplete: true,
     parentUniqueId: ancestors[0].uniqueId, inspectorSource: 'FrameNode.getInspectorInfo', clipToFrame: false,
-    layoutRectVp: { x: 100, y: 500, width, height },
-    windowOriginVp: { x: 100, y: 500 + dockY },
+    layoutRectVp: { x, y, width, height },
+    windowOriginVp: { x, y: y + dockY },
     translateVp: { x: 0, y: translateY, z: 0 },
     scale: { x: 1, y: 1, z: 1, centerX: width / 2, centerY: height / 2 },
     rotation: { x: 0, y: 0, z: 0, angle: 0, centerX: width / 2, centerY: height / 2 },
@@ -71,9 +84,9 @@ function frame(direction, index, epoch, startMs) {
     runtimeTickMs: startMs + durationMs * Math.min(index, 1) / 2,
     runtimeElapsedSource: index === 2 ? 'runtime-tick-delta' : 'runtime-transition',
     runtimeEpoch: epoch, runtimeTicket: epoch,
-    visibilityProgress: v, expansionProgress: 0, runtimeLayoutOffsetVp: 0, density: 3.5,
+    visibilityProgress: v, expansionProgress: 0, runtimeLayoutOffsetVp: 0, density,
     content: { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' },
-    actors, contentClip: { id: 'reader-control-motion-content-clip', uniqueId: clip.uniqueId },
+    actors, contentClip: { ...structuredClone(actors.at(-1)), ...clip, id: contentClipId, ancestors: [dock, root] },
   };
 }
 
@@ -111,9 +124,9 @@ function fixture() {
     samples: {
       'reading-book-entry': { ...sample('reading-book-entry', 1, 2,
         [node(null, { localBookAction: true, fixtureCard: true })]), publicBookTitle: fixtureTitle },
-      'reading-before': sample('reading-before', 7, 120, [node(readingStage), node(readyHost)]),
-      'control-open': sample('control-open', 18, 243, [node(readingStage), node('reader-control-motion-dock')]),
-      'control-closed': sample('control-closed', 28, 370, [node(readingStage), node(readyHost)]),
+      'reading-before': sample('reading-before', 7, 120, [readingStageNode(), node(readyHost)]),
+      'control-open': sample('control-open', 18, 243, [readingStageNode(), node(dockId)]),
+      'control-closed': sample('control-closed', 28, 370, [readingStageNode(), node(readyHost)]),
     },
     actions: {
       'enter-reading': action('enter-reading', 'click', 3, 6, 8),
@@ -131,16 +144,24 @@ const evaluate = (kind, data) => evaluateMotion(byKind.get(kind), data);
 const openFrames = data => data.events.filter(event => event.kind === 'reading.control-motion' && event.payload.direction === 'open');
 const part = (data, index, role) => openFrames(data)[index].payload.frames[0].actors.find(actor => actor.id === role);
 
+function shiftActors(frame, axis, offsetVp, ids) {
+  for (const actor of [...frame.actors, frame.contentClip]) {
+    if (ids && !ids.includes(actor.id)) continue;
+    actor.layoutRectVp[axis] += offsetVp;
+    actor.windowOriginVp[axis] += offsetVp;
+  }
+}
+
 function setNativePosition(frame, axis) {
   const translation = 18 * (1 - frame.visibilityProgress);
-  for (const actor of frame.actors) {
-    if (actor.id === 'reader-control-motion-dock') {
+  for (const actor of [...frame.actors, frame.contentClip]) {
+    if (actor.id === dockId) {
       actor.layoutRectVp.y = axis.fullGrabberScreenY - 9;
       actor.translateVp.y = translation;
       actor.opacity = frame.visibilityProgress;
     } else {
       actor.layoutRectVp.y = axis.quickGrabberScreenY - 9 + frame.runtimeLayoutOffsetVp +
-        (actor.id === 'reader-control-content-host' ? 29 : 0);
+        ([contentId, contentClipId].includes(actor.id) ? 29 : 0);
     }
     actor.windowOriginVp.y = actor.layoutRectVp.y + translation;
   }
@@ -165,8 +186,8 @@ function rebaseFixture(withCauses = false) {
     // Compensation within a ticket is applied to children of the fixed dock.
     const compensation = !withCauses && index === 3 ? 2 : 0;
     const childLayoutOffset = (index >= 2 ? -4.5 : 0) + compensation;
-    for (const actor of sample.actors) {
-      const isDock = actor.id === 'reader-control-motion-dock';
+    for (const actor of [...sample.actors, sample.contentClip]) {
+      const isDock = actor.id === dockId;
       const travel = 18 * (1 - visibility);
       if (isDock) {
         actor.translateVp.y = travel;
@@ -176,7 +197,10 @@ function rebaseFixture(withCauses = false) {
       }
       actor.windowOriginVp.y = actor.layoutRectVp.y + travel;
     }
-    if (index === 0) sample.actors = sample.actors.map(actor => ({ id: actor.id, mounted: false }));
+    if (index === 0) {
+      sample.actors = sample.actors.map(actor => ({ id: actor.id, mounted: false }));
+      sample.contentClip = { id: contentClipId, mounted: false };
+    }
     return { ...sample, index, frameTimeNs: clock * 1e6, captureStartMs: clock, captureEndMs: clock + 1,
       runtimeTicket: ticket, runtimeDurationMs: duration, runtimeElapsedMs: elapsed,
       runtimeTickMs: endpoint ? clock - 60 : clock, visibilityProgress: visibility,
@@ -282,23 +306,109 @@ test('replays measured projections, ticket clocks and actor continuity with comp
   assert.equal(result.observationsComplete, true);
   assert.equal(result.actual.checks['runtime.rebaseProjection'].observed, 2);
   assert.equal(result.actual.checks['runtime.rebaseClock'].observed, 2);
-  assert.equal(result.actual.checks['dock.rebaseWindowAnchorVp'].observed, 3);
-  assert.equal(result.actual.checks['grabber.rebaseWindowAnchorVp'].observed, 3);
+  for (const role of ['dock', 'grabber', 'shell', 'content', 'contentClip']) {
+    for (const field of ['rebaseWindowAnchorVp', 'rebaseWindowAnchorXVp']) {
+      assert.equal(result.actual.checks[`${role}.${field}`].observed, 3);
+    }
+  }
   assert.deepEqual(result.actual.ticketBoundaries.map(boundary => boundary.rebaseEventSeqs), [[12], [13]]);
 });
 
 test('rejects a common native shift at a one-frame ticket on either readback side', () => {
   for (const index of [1, 2]) {
     const { data, frames } = rebaseFixture(true);
-    for (const actor of frames[index].actors) {
-      actor.layoutRectVp.y += 64;
-      actor.windowOriginVp.y += 64;
-    }
+    shiftActors(frames[index], 'y', 64);
     const result = evaluate('motion-open', data);
     assert.equal(result.verdict, 'FAIL');
     assert.ok(result.actual.deviations.some(item => item.actor === 'dock' && item.field === 'rebaseWindowAnchorVp' && item.frame === index));
     assert.ok(result.actual.deviations.some(item => item.actor === 'grabber' && item.field === 'rebaseWindowAnchorVp' && item.frame === index));
   }
+});
+
+test('rejects horizontal group displacement and independent child displacement on a one-frame ticket', () => {
+  const shifts = [
+    { axis: 'x', ids: null, roles: ['dock', 'grabber', 'shell', 'content', 'contentClip'] },
+    { axis: 'y', ids: [shellId], roles: ['shell'] },
+    { axis: 'y', ids: [contentId], roles: ['content'] },
+    { axis: 'y', ids: [shellId, contentId, contentClipId], roles: ['shell', 'content', 'contentClip'] },
+    { axis: 'x', ids: [contentId, contentClipId], roles: ['content', 'contentClip'] },
+  ];
+  for (const { axis, ids, roles } of shifts) {
+    const { data, frames } = rebaseFixture(true);
+    shiftActors(frames[1], axis, 64, ids);
+    const result = evaluate('motion-open', data);
+    const field = axis === 'x' ? 'rebaseWindowAnchorXVp' : 'rebaseWindowAnchorVp';
+    assert.equal(result.verdict, 'FAIL', `${axis}: ${ids?.join(', ') ?? 'whole group'}`);
+    assert.equal(result.observationsComplete, true);
+    for (const role of roles) {
+      assert.ok(result.actual.deviations.some(item => item.actor === role && item.field === field && item.frame === 1));
+    }
+  }
+});
+
+test('uses the existing layout tolerance for a rebased horizontal readback', () => {
+  const toleranceVp = byKind.get('motion-open').expected.layoutToleranceVp;
+  for (const [offset, verdict] of [[toleranceVp, 'PASS'], [toleranceVp + 1 / density, 'FAIL']]) {
+    const { data, frames } = rebaseFixture(true);
+    shiftActors(frames[1], 'x', offset);
+    assert.equal(evaluate('motion-open', data).verdict, verdict);
+  }
+});
+
+test('locates an expanded dock at the right safe gap of an offset reading stage', () => {
+  const { data, frames } = rebaseFixture(true);
+  for (const sampleId of ['reading-before', 'control-open']) {
+    const { nodes, window } = data.samples[sampleId];
+    const stage = nodes.find(node => node.id === readingStage);
+    window.rectPx = { ...windowRectPx, left: 70, width: 2520 };
+    window.contentSafeHorizontalVp = 20;
+    stage.rectPx = { ...windowRectPx, left: 105, width: 2450 };
+    stage.visibleRectPx = stage.rectPx;
+  }
+  // Window-local stage x is 10 vp. The 700 vp stage places a 500 vp dock
+  // 20 vp from the right. The quick grabber and content remain dock-local.
+  const geometry = {
+    [dockId]: [190, 500], [shellId]: [190, 500], [grabberId]: [404, 72],
+    [contentId]: [203, 422], [contentClipId]: [203, 422],
+  };
+  for (const frame of frames.slice(1)) {
+    for (const actor of [...frame.actors, frame.contentClip]) {
+      const [x, width] = geometry[actor.id];
+      Object.assign(actor.layoutRectVp, { x, width });
+      actor.windowOriginVp.x = x;
+    }
+  }
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'PASS', result.reason);
+  assert.equal(result.actual.checks['dock.rebaseWindowAnchorXVp'].observed, 3);
+});
+
+test('keeps a proved vertical deviation when stage geometry is missing', () => {
+  const { data, frames } = rebaseFixture(true);
+  const stage = data.samples['control-open'].nodes.find(node => node.id === readingStage);
+  delete stage.rectPx.width;
+  const withoutStage = evaluate('motion-open', data);
+  assert.equal(withoutStage.verdict, 'NOT_RUN');
+  assert.ok(withoutStage.actual.missing.some(item => item.actor === 'dock' && item.field === 'rebaseWindowAnchorXVp'));
+
+  shiftActors(frames[1], 'y', 64, [shellId]);
+  const withDeviation = evaluate('motion-open', data);
+  assert.equal(withDeviation.verdict, 'FAIL');
+  assert.equal(withDeviation.observationsComplete, false);
+  assert.ok(withDeviation.actual.deviations.some(item => item.actor === 'shell' && item.field === 'rebaseWindowAnchorVp'));
+});
+
+test('keeps a proved layout deviation when the matching window coordinate is missing', () => {
+  const { data, frames } = rebaseFixture(true);
+  const dock = frames[1].actors.find(actor => actor.id === dockId);
+  dock.layoutRectVp.x += 64;
+  delete dock.windowOriginVp.x;
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'FAIL');
+  assert.equal(result.observationsComplete, false);
+  const affected = item => item.actor === 'dock' && item.field === 'rebaseWindowAnchorXVp' && item.frame === 1;
+  assert.ok(result.actual.deviations.some(affected));
+  assert.ok(result.actual.missing.some(affected));
 });
 
 test('reports a missing native boundary anchor independently of the owner projection', () => {

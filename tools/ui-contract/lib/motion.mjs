@@ -12,16 +12,18 @@ const OWNER_INPUTS = {
 };
 const MOTION_INPUTS = {
   ...OWNER_INPUTS,
+  [OWNER + 'LocalReadingExperience.ets']: [...OWNER_INPUTS[OWNER + 'LocalReadingExperience.ets'], 'build', 'controlLayout'],
   [OWNER + 'ReaderControlSessionState.ts']: [...OWNER_INPUTS[OWNER + 'ReaderControlSessionState.ts'],
     'advanceReaderControlSession', 'rebaseReaderControlTransitionProgress'],
   [OWNER + 'ReaderControlPanel.ets']: ['configureRuntime', 'runtimeConfig', 'presentedDockTop', 'scheduleRuntimeFrame',
-    'clockSample', 'controlContent'],
+    'clockSample', 'dockLeft', 'build', 'controlContent'],
   [OWNER + 'ReaderControlRuntime.ts']: ['configure', 'frame', 'invalidate', 'rebaseSample'],
   [OWNER + 'ReaderControlGestureDriver.ts']: ['readerControlGrabberScreenY'],
   [OWNER + 'ReaderControlLayoutRebase.ts']: ['rebaseReaderControlLayout', 'advanceReaderControlLayoutCompensation'],
   [OWNER + 'ReaderControlSpatialPath.ts']: ['readerControlSpatialY', 'projectReaderControlSpatialPath'],
   [OWNER + 'ReaderControlMotionGeometry.ts']: ['sampleReaderControlWholeVisibility', 'sampleReaderControlMotionComposition',
-    'readerControlMotionAxis', 'ReaderControlMotionFrameCache', 'READER_CONTROL_MOTION_GRABBER_TOP'],
+    'readerControlMotionAxis', 'ReaderControlMotionFrameCache', 'READER_CONTROL_MOTION_GRABBER_TOP',
+    'READER_CONTROL_MOTION_CONTENT_TOP_QUICK', 'READER_CONTROL_MOTION_CONTENT_INSET_MAX'],
   [OWNER + 'ReaderControlMotionPolicy.ts']: ['readerControlMotionCommandTiming'],
   [OWNER + 'ReaderControlVerificationMotion.ets']: ['recordActor', 'ReaderControlVerificationMotion'],
   [OWNER + 'ReaderControlVerificationSession.ts']: [...OWNER_INPUTS[OWNER + 'ReaderControlVerificationSession.ts'],
@@ -35,9 +37,16 @@ const ACTORS = {
   content: 'reader-control-content-host',
 };
 const CONTENT_CLIP = 'reader-control-motion-content-clip';
+const READING_STAGE = 'reader-reading-stage';
 // ReaderControlMotionGeometry positions the painted bar below the native
 // grabber carrier's top. The runtime axis describes the painted bar.
 const GRABBER_TOP_VP = 9;
+const GRABBER_CARRIER_WIDTH_VP = 72;
+const CONTENT_QUICK_TOP_VP = 29;
+const CONTENT_MAX_INSET_VP = 13;
+// ReaderLayoutGeometry selects the viewport width class and expanded right gap.
+const EXPANDED_VIEWPORT_MIN_VP = 600;
+const EXPANDED_RIGHT_GAP_VP = 14;
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const levels = {
   open: { from: 'hidden', to: 'home', first: 'reading-before', last: 'control-open', op: 'click' },
@@ -448,38 +457,82 @@ function boundaryCompensationVp(snapshot, frame, side) {
   return comp.startOffsetY * (1 - motionFraction(sampleElapsedMs, comp.durationMs));
 }
 
-function checkBoundaryActors(check, frame, actors, snapshot, side, event, expected, direction) {
+function boundaryViewport(data) {
+  const measure = sample => {
+    const { rectPx: window, density, contentSafeHorizontalVp } = sample.window;
+    let stage;
+    try {
+      stage = selectLayoutNode(sample, READING_STAGE).rectPx;
+    } catch {
+      return null;
+    }
+    if (!present(window, ['left', 'width']) || !present(stage, ['left', 'width']) ||
+      !finite(density) || density <= 0 || stage.width <= 0 || stage.left < window.left ||
+      stage.left + stage.width > window.left + window.width) return null;
+    return { originXVp: (stage.left - window.left) / density, widthVp: stage.width / density, density,
+      windowLeftPx: window.left, windowWidthPx: window.width, contentSafeHorizontalVp };
+  };
+  const first = measure(data.first);
+  const last = measure(data.last);
+  if (!first || !last || !sameFields(first, last, ['originXVp', 'widthVp', 'density', 'windowLeftPx', 'windowWidthPx'])) return null;
+  if (first.widthVp < EXPANDED_VIEWPORT_MIN_VP) return { ...first, branch: 'compact' };
+  if (!finite(first.contentSafeHorizontalVp) || first.contentSafeHorizontalVp < 0 ||
+    first.contentSafeHorizontalVp !== last.contentSafeHorizontalVp) return null;
+  return { ...first, branch: 'expanded', rightGapVp: Math.max(EXPANDED_RIGHT_GAP_VP, first.contentSafeHorizontalVp) };
+}
+
+function checkBoundaryActors(check, frame, actors, viewport, snapshot, side, event, expected, direction) {
   if (!frame) return;
-  let anchors;
+  const width = actors.dock?.layoutRectVp?.width;
+  const xOffsets = { dock: 0, shell: 0, grabber: (width - GRABBER_CARRIER_WIDTH_VP) / 2,
+    content: Math.min(CONTENT_MAX_INSET_VP, width / 4), contentClip: Math.min(CONTENT_MAX_INSET_VP, width / 4) };
+  let dockX = null;
+  if (viewport && frame.density === viewport.density && finite(width) && width > 0 && width <= viewport.widthVp) {
+    const remainingWidth = viewport.widthVp - width;
+    dockX = viewport.originXVp + (viewport.branch === 'compact' ? remainingWidth / 2 : remainingWidth - viewport.rightGapVp);
+  }
+  let dockY = null;
+  let shellY = null;
+  let travelVp = null;
   if (snapshot) {
     const transition = snapshot.transition;
     const layoutOffsetVp = boundaryCompensationVp(snapshot, frame, side);
     const visual = visualAt(transition, progressAt(transition, frame.runtimeElapsedMs));
-    const travelVp = expected.dockTravelVp * (1 - visual.visibilityProgress);
+    travelVp = expected.dockTravelVp * (1 - visual.visibilityProgress);
     // ArkUI Area.globalPosition (used by runtimeConfig) and both FrameNode/
     // ComponentUtils reads use the current window's coordinate system.
-    const dockLayoutYVp = snapshot.axis.fullGrabberScreenY - GRABBER_TOP_VP;
-    const grabberYVp = layoutOffsetVp === null ? null :
-      grabberY(snapshot.axis, visual) - GRABBER_TOP_VP + layoutOffsetVp;
-    anchors = {
-      dock: { layoutYVp: dockLayoutYVp, windowYVp: dockLayoutYVp + travelVp },
-      grabber: { layoutYVp: grabberYVp === null ? null : grabberYVp - travelVp, windowYVp: grabberYVp },
-    };
+    dockY = snapshot.axis.fullGrabberScreenY - GRABBER_TOP_VP;
+    if (layoutOffsetVp !== null) shellY = grabberY(snapshot.axis, visual) - GRABBER_TOP_VP + layoutOffsetVp - travelVp;
   }
-  for (const role of ['dock', 'grabber']) {
-    const anchor = anchors?.[role];
-    const actor = actors[role];
+  const contentY = shellY === null ? null : shellY + CONTENT_QUICK_TOP_VP;
+  const yPositions = { dock: dockY, shell: shellY, grabber: shellY, content: contentY, contentClip: contentY };
+  const clip = frame.contentClip?.id === CONTENT_CLIP ? frame.contentClip : null;
+  const dockId = actors.dock?.mounted === true && sequence(actors.dock.uniqueId) ? actors.dock.uniqueId : null;
+  const clipInDock = dockId !== null && clip?.mounted === true && sequence(clip.uniqueId) && clip.parentUniqueId === dockId;
+  for (const [role, actor] of Object.entries({ ...actors, contentClip: clip })) {
     if (direction === 'open' && frame.index === 0 && frame.visibilityProgress === 0 && actor?.mounted === false) continue;
-    const measured = { layoutYVp: actor?.layoutRectVp?.y ?? null, windowYVp: actor?.windowOriginVp?.y ?? null };
-    const related = role === 'dock' || (actors.dock?.mounted === true && sequence(actors.dock.uniqueId) &&
-      actor?.parentUniqueId === actors.dock.uniqueId);
-    const usable = actor?.mounted === true && sequence(actor.uniqueId) && actor.ancestorChainComplete === true &&
-      box(actor.layoutRectVp) && related && finite(measured.windowYVp) && finite(anchor?.layoutYVp);
-    check(role, 'rebaseWindowAnchorVp', frame.index, measured,
-      { ...anchor, side, runtimeTicket: frame.runtimeTicket, runtimeElapsedMs: frame.runtimeElapsedMs,
-        rebaseEventSeq: event?.eventSeq ?? null },
-      usable ? comparable([measured.layoutYVp, measured.windowYVp], expected.layoutToleranceVp,
-        [anchor.layoutYVp, anchor.windowYVp]) : null);
+    // ArkUI may expose an intermediate Stack between the content host and the clip.
+    const ancestors = Array.isArray(actor?.ancestors) ? actor.ancestors : [];
+    const related = role === 'dock' ||
+      (role === 'content' ? clipInDock && ancestors.some(node => node.uniqueId === clip.uniqueId && node.parentUniqueId === dockId) :
+        dockId !== null && actor?.parentUniqueId === dockId);
+    const usable = related && actor?.mounted === true && sequence(actor.uniqueId) && actor.ancestorChainComplete === true;
+    const x = dockX === null ? null : dockX + xOffsets[role];
+    const y = yPositions[role];
+    const metadata = { side, runtimeTicket: frame.runtimeTicket, runtimeElapsedMs: frame.runtimeElapsedMs,
+      rebaseEventSeq: event?.eventSeq ?? null };
+    for (const [axis, field, layoutVp, windowVp] of [
+      ['x', 'rebaseWindowAnchorXVp', x, x],
+      ['y', 'rebaseWindowAnchorVp', y, y === null ? null : y + travelVp],
+    ]) {
+      const measured = { layoutVp: actor?.layoutRectVp?.[axis] ?? null, windowVp: actor?.windowOriginVp?.[axis] ?? null };
+      const target = { layoutVp, windowVp, ...metadata, ...(axis === 'x' ? { viewport, dockWidthVp: width ?? null } : {}) };
+      const readings = usable && finite(layoutVp) ?
+        [[measured.layoutVp, layoutVp], [measured.windowVp, windowVp]].filter(([value]) => finite(value)) : [];
+      const failed = readings.some(([value, targetVp]) => !near(value, targetVp, expected.layoutToleranceVp));
+      if (readings.length < 2) check(role, field, frame.index, measured, target, null);
+      if (failed || readings.length === 2) check(role, field, frame.index, measured, target, !failed);
+    }
   }
 }
 
@@ -566,6 +619,7 @@ function motionResult(evidence, direction, data) {
   'The versioned motion expectation lacks a sourced duration, tolerance, or cadence rule');
   const sourceRefs = evidence.ownerSources(MOTION_INPUTS);
   const { frames, events, segments, rebases } = evidence.trace(data);
+  const viewport = boundaryViewport(data);
   const p = data.request.payload;
   const failures = new Map(), missing = new Map();
   const checks = {};
@@ -677,8 +731,8 @@ function motionResult(evidence, direction, data) {
       }
       activeRebase = verified ? chain.at(-1) : undefined;
       const prior = verified ? chain[0] : undefined;
-      checkBoundaryActors(check, previous, previousSelected, prior?.payload.before, 'before', prior, expected, direction);
-      checkBoundaryActors(check, frame, selected, activeRebase?.payload.after, 'after', activeRebase, expected, direction);
+      checkBoundaryActors(check, previous, previousSelected, viewport, prior?.payload.before, 'before', prior, expected, direction);
+      checkBoundaryActors(check, frame, selected, viewport, activeRebase?.payload.after, 'after', activeRebase, expected, direction);
       if (activeRebase) {
         const t = activeRebase.payload.after.transition;
         const visual = visualAt(t, t.progress);
@@ -722,7 +776,7 @@ function motionResult(evidence, direction, data) {
       const baselineRect = baseline.actor.layoutRectVp;
       const position = actor.windowOriginVp;
       const output = [rect.width, rect.height];
-      const stableSize = role === 'grabber' ? [72, 28] : [baselineRect.width, baselineRect.height];
+      const stableSize = role === 'grabber' ? [GRABBER_CARRIER_WIDTH_VP, 28] : [baselineRect.width, baselineRect.height];
       check(role, 'layoutSizeVp', i, output, stableSize, comparable(output, expected.layoutToleranceVp, stableSize));
       const dockBox = ancestors.dock?.layoutRectVp;
       const initialDockBox = baselineActors.get('dock')?.actor.layoutRectVp ?? dockBox;
