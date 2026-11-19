@@ -1,3 +1,6 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
+import { ReaderEditableTarget, ReaderEditableInputModifier } from '../../../ui/layout/ReaderEditableTarget';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
@@ -82,6 +85,17 @@ class SharedDownloadIdleFrame extends ReaderPostLayoutFrame {}
 /** Native implementation of the user-approved shared-download-demo.html layout. */
 @Component
 export struct SharedDownloadPage {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly rangeEditingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
+  private readonly rangeScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
+  private readonly rangeScroller: Scroller = new Scroller();
+  private readonly queryController: TextInputController = new TextInputController();
+  private readonly rangeStartController: TextInputController = new TextInputController();
+  private readonly rangeEndController: TextInputController = new TextInputController();
+  private readonly queryTarget: ReaderEditableTarget = new ReaderEditableTarget();
+  private readonly rangeStartTarget: ReaderEditableTarget = new ReaderEditableTarget();
+  private readonly rangeEndTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') @Watch('onInputEligibilityChanged') private appForeground: boolean = true;
@@ -168,6 +182,7 @@ export struct SharedDownloadPage {
   private chapterScrollRestoreScheduled: boolean = false;
   private managingScrollRestore: SharedDownloadScrollAnchor | undefined;
   private managingScrollAnchor: SharedDownloadScrollAnchor | undefined;
+  private browseScrollBeforeManaging: SharedDownloadScrollAnchor | undefined;
   private managingDockMeasured: boolean = false;
   private mountedIdentity: string = '';
   private mounted: boolean = false;
@@ -376,7 +391,8 @@ export struct SharedDownloadPage {
     }.id(this.focusKey('manage')).width(DOWNLOAD_HEADER_ACTION_WIDTH)
       .constraintSize({ minHeight: DOWNLOAD_HEADER_ACTION_HEIGHT }).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
       .responseRegion(readerActionTouchRegion(DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT))
-      .enabled(this.books.length > 0).opacity(this.books.length > 0 ? 1 : DOWNLOAD_VISUAL.disabledOpacity).onClick((): void => {
+      .enabled(this.managing || this.canEnterManaging())
+      .opacity(this.managing || this.canEnterManaging() ? 1 : DOWNLOAD_VISUAL.disabledOpacity).onClick((): void => {
         if (this.uiInputIsCurrent()) this.setManaging(!this.managing);
       });
   }
@@ -421,7 +437,14 @@ export struct SharedDownloadPage {
       }, (book: DownloadBookView): string => book.key);
       if (!this.fixedSelectionDockVisible()) { ListItem() { this.compactDock(); } }
     }.width('100%').height('100%').scrollBar(BarState.Auto).onScrollStop((): void => this.publishViewState())
+      .id(this.editingScroll.id)
+      .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.listScroller,
+        (): number => readerScrollStartOffset(this.scrollLayout())))
+      .onDisAppear((): void => this.editingScroll.unmount())
+      .onAreaChange((): void => this.editingHost.refresh())
       .onTouch((event: TouchEvent): void => this.onListTouch(event))
+      .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): void =>
+        this.onListWillScroll(offset, source, ownerGeneration, ''))
       .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
       .contentEndOffset(readerScrollEndOffset(this.scrollLayout()));
   }
@@ -549,7 +572,11 @@ export struct SharedDownloadPage {
   private searchField(identity: string = this.searchInputIdentity()) {
     Row({ space: DOWNLOAD_VISUAL.searchGap }) {
       Image(this.visualIcon('search')).width(DOWNLOAD_VISUAL.searchIconSize).height(DOWNLOAD_VISUAL.searchIconSize);
-      TextInput({ text: this.query, placeholder: '搜索书名、作者、书源' }).layoutWeight(1)
+      TextInput({ text: this.query, placeholder: '搜索书名、作者、书源', controller: this.queryController }).layoutWeight(1)
+        .attributeModifier(new ReaderEditableInputModifier(this.queryTarget, `${this.queryTarget.id}:${identity}`,
+          (editing: boolean): void => this.queryTarget.edit(editing)))
+        .onAppear((): void => this.mountQueryEditing(identity))
+        .onDisAppear((): void => this.queryTarget.unmount(`${this.queryTarget.id}:${identity}`))
         .fontFamily(TYPE_DOWNLOAD_SEARCH.fontFamily).fontWeight(TYPE_DOWNLOAD_SEARCH.fontWeight)
         .fontSize(TYPE_DOWNLOAD_SEARCH.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SEARCH.lineHeightFp as number)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme)).placeholderColor(downloadVisualColor('muted', this.appThemeScheme))
@@ -658,6 +685,7 @@ export struct SharedDownloadPage {
             if (this.managing) {
               Stack({ alignContent: Alignment.Center }) {
               Checkbox().select(this.selectedBookKeys.includes(book().key)).width(DOWNLOAD_VISUAL.chapterCheckSize).height(DOWNLOAD_VISUAL.chapterCheckSize)
+                .accessibilityText(`选择书籍：${book().title}，${this.authorSource(book())}`)
                 .responseRegion(readerActionTouchRegion(DOWNLOAD_VISUAL.chapterCheckSize, DOWNLOAD_VISUAL.chapterCheckSize))
                 .selectedColor(downloadVisualColor('green', this.appThemeScheme))
                 .unselectedColor(downloadVisualColor('muted', this.appThemeScheme))
@@ -808,7 +836,17 @@ export struct SharedDownloadPage {
         ListItem() { Column() { ReaderPageState({ title: '正在读取章节下载情况…', loading: true }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
       } else if (book().projectionStatus === 'unavailable' && book().chapters.length === 0) {
         ListItem() { Column() { ReaderPageState({ title: '章节下载情况暂不可用', message: book().projectionError ?? '', actionLabel: '重试',
-          onAction: (): void => { if (this.uiInputIsCurrent(ownerGeneration)) this.onOpenBook(book()); } }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
+          onAction: (): void => {
+            const current = this.eventBook(book, ownerGeneration);
+            if (current !== undefined && current.key === this.detailKey &&
+              current.projectionStatus === 'unavailable' && current.chapters.length === 0) this.onOpenBook(current);
+          } }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
+      } else if (book().projectionStatus === 'ready' && (book().chapters.length === 0 || book().totalChapters === 0)) {
+        ListItem() {
+          Column() {
+            ReaderPageState({ title: book().totalChapters === 0 ? '暂无可下载章节' : '暂无章节下载信息' });
+          }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
+        }
       }
       ForEach(book().chapters, (chapter: DownloadChapterView) => {
         ListItem() {
@@ -822,6 +860,8 @@ export struct SharedDownloadPage {
     }.width('100%').height('100%').scrollBar(BarState.Auto)
       .onScrollStop((): void => { this.captureChapterOffset(); this.publishViewState(); })
       .onTouch((event: TouchEvent): void => this.onListTouch(event))
+      .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): void =>
+        this.onListWillScroll(offset, source, ownerGeneration, book().key))
       .onKeyEvent((): void => { this.readingReturnFocus = undefined; })
       .onAreaChange((_old: Area, area: Area): void => {
         const height = readerPageAreaLength(area.height);
@@ -855,19 +895,38 @@ export struct SharedDownloadPage {
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.chapterGroupHeight }).padding(DOWNLOAD_VISUAL.chapterGroupPadding).margin({ top: DOWNLOAD_VISUAL.chapterGroupTop }).backgroundColor(downloadVisualColor('soft', this.appThemeScheme));
   }
 
-  private chapterTextMinimum(): number {
-    const width = Math.max(0, this.pageViewportWidth() - this.contentLeftInset() - this.contentRightInset() -
+  private chapterTextAvailableWidth(): number {
+    return Math.max(0, this.pageViewportWidth() - this.contentLeftInset() - this.contentRightInset() -
       DOWNLOAD_VISUAL.chapterPaddingX * 2 - (this.managing ? DOWNLOAD_VISUAL.touchTarget + DOWNLOAD_VISUAL.chapterGap : 0));
-    return Math.min(width, 120 * this.fontScale());
+  }
+
+  private chapterTextMinimum(): number {
+    return Math.min(this.chapterTextAvailableWidth(), 120 * this.fontScale());
+  }
+
+  private chapterRowWrap(): FlexWrap {
+    const scale = this.fontScale();
+    const copyWidth = 120 * scale;
+    if (this.managing) {
+      // The available width already excludes the checkbox and its gap.
+      return this.chapterTextAvailableWidth() >= copyWidth ? FlexWrap.NoWrap : FlexWrap.Wrap;
+    }
+    // Every visible primary chapter action has two full-width glyphs.
+    const primaryWidth = Math.max(DOWNLOAD_VISUAL.touchTarget,
+      Math.ceil(2 * TYPE_DOWNLOAD_META.fontSizeFp * scale) + DOWNLOAD_VISUAL.chapterActionPaddingX * 2);
+    const actionsWidth = primaryWidth + DOWNLOAD_VISUAL.chapterTailGap + DOWNLOAD_VISUAL.touchTarget;
+    return this.chapterTextAvailableWidth() >= copyWidth + DOWNLOAD_VISUAL.chapterGap + actionsWidth ?
+      FlexWrap.NoWrap : FlexWrap.Wrap;
   }
 
   @Builder
   private chapterRow(book: () => DownloadBookView, chapter: () => DownloadChapterView, ownerGeneration: number = this.presentationGeneration) {
-    Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Start,
+    Flex({ wrap: this.chapterRowWrap(), alignItems: ItemAlign.Start,
       space: { main: LengthMetrics.vp(DOWNLOAD_VISUAL.chapterGap), cross: LengthMetrics.vp(DOWNLOAD_VISUAL.chapterGap) } }) {
       if (this.managing) {
         Stack({ alignContent: Alignment.Center }) {
         Checkbox().select(this.chapterSelected(chapter())).width(DOWNLOAD_VISUAL.chapterCheckSize).height(DOWNLOAD_VISUAL.chapterCheckSize)
+          .accessibilityText(`选择章节：${chapter().title}，${book().title}`)
           .responseRegion(readerActionTouchRegion(DOWNLOAD_VISUAL.chapterCheckSize, DOWNLOAD_VISUAL.chapterCheckSize))
           .enabled(chapter().chapterId.length > 0)
           .selectedColor(downloadVisualColor('green', this.appThemeScheme))
@@ -886,6 +945,9 @@ export struct SharedDownloadPage {
             .fontSize(TYPE_DOWNLOAD_CHAPTER_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CHAPTER_TITLE.lineHeightFp as number).halfLeading(true)
             .fontColor(downloadVisualColor(!chapter().localComplete && chapter().queueState === 'inProgress' ? 'green' : 'ink', this.appThemeScheme)).flexGrow(1).flexShrink(0).flexBasis(this.chapterTextMinimum())
             .id(this.focusKey(this.chapterReadingFocusKey(chapter(), 'title'))).focusable(!this.managing)
+            .accessibilityRole(AccessibilityRoleType.BUTTON)
+            .accessibilityText(`打开章节：${chapter().title}，${book().title}`)
+            .accessibilityLevel(this.managing ? 'no' : 'yes')
             .constraintSize({ minWidth: this.chapterTextMinimum(), maxWidth: '100%', minHeight: DOWNLOAD_VISUAL.touchTarget })
             .onClick((): void => { if (!this.managing) this.showReadTarget(book(), chapter(), ownerGeneration); });
           if (this.currentChapterForBook(book())?.key === chapter().key) {
@@ -899,7 +961,8 @@ export struct SharedDownloadPage {
         Text(downloadChapterDetailLabel(book().contentKind, chapter())).fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
           .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
           .fontColor(downloadVisualColor('muted', this.appThemeScheme)).width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight });
-      }.flexGrow(1).flexShrink(0).flexBasis(this.chapterTextMinimum())
+      }.flexGrow(1).flexShrink(this.managing || this.chapterRowWrap() === FlexWrap.NoWrap ? 1 : 0)
+        .flexBasis(this.chapterTextMinimum())
         .constraintSize({ minWidth: this.chapterTextMinimum() }).alignItems(HorizontalAlign.Start);
       if (!this.managing) {
         Row({ space: DOWNLOAD_VISUAL.chapterTailGap }) {
@@ -929,7 +992,7 @@ export struct SharedDownloadPage {
           this.actionBookKeys = [currentBook.key]; this.actionChapters = [this.chapterProof(currentChapter)];
           this.openSheet('chapter-actions', this.chapterMenuFocusKey(currentChapter));
         }, true, (): string => this.chapterMenuFocusKey(chapter()));
-        }
+        }.flexShrink(0);
       }
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.chapterHeight }).padding({ left: DOWNLOAD_VISUAL.chapterPaddingX, right: DOWNLOAD_VISUAL.chapterPaddingX, top: DOWNLOAD_VISUAL.chapterPaddingY, bottom: DOWNLOAD_VISUAL.chapterPaddingY })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
@@ -1026,7 +1089,7 @@ export struct SharedDownloadPage {
         if (this.detail() !== undefined && !this.managing) {
           ForEach([this.detailKey], (bookKey: string): void => {
             this.actionButton((): string => '选择章节', true,
-              (): boolean => this.detailKey === bookKey && this.detail() !== undefined && !this.managing,
+              (): boolean => this.detailKey === bookKey && this.canEnterManaging() && !this.managing,
               (): void => this.setManaging(true, 'select-chapters:' + bookKey), 'select-chapters:' + bookKey);
           }, (bookKey: string): string => bookKey);
           this.actionButton((): string => '定位当前', false, (): boolean => this.currentChapter() !== undefined, (): void => this.locateCurrent());
@@ -1154,12 +1217,7 @@ export struct SharedDownloadPage {
   @Builder
   private sheetSurface(opening: number, attachment: number, ownerGeneration: number) {
     Column({ space: 0 }) {
-      if (this.sheetChromeOverflow()) {
-        Scroll() { Column({ space: 0 }) { this.sheetContent(true); }.width('100%'); }
-          .width('100%').constraintSize({ maxHeight: this.sheetMaxHeight() }).scrollBar(BarState.Auto);
-      } else {
-        this.sheetContent(false);
-      }
+      this.sheetContent(false, opening);
     }.width('100%').constraintSize({ maxHeight: this.sheetMaxHeight() })
       .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
       .borderRadius({ topLeft: DOWNLOAD_VISUAL.sheetRadius, topRight: DOWNLOAD_VISUAL.sheetRadius }).clip(true)
@@ -1239,7 +1297,26 @@ export struct SharedDownloadPage {
   }
 
   @Builder
-  private sheetContent(wholeDocument: boolean, opening: number = this.sheetOpeningGeneration) {
+  private sheetContent(_wholeDocument: boolean, opening: number = this.sheetOpeningGeneration) {
+    if (!this.sheetChromeOverflow()) this.editingSheetHeader(opening);
+    Scroll(this.rangeScroller) {
+      Column({ space: 0 }) {
+        if (this.sheetChromeOverflow()) this.editingSheetHeader(opening);
+        this.sheetBody(opening);
+        if (this.sheetChromeOverflow()) this.editingSheetFooter(opening);
+      }.width('100%');
+    }.width('100%').constraintSize({ maxHeight: this.sheetChromeOverflow() ? this.sheetMaxHeight() : this.sheetBodyMaxHeight() })
+      .id(this.rangeScroll.idFor(`${opening}`)).scrollBar(BarState.Auto)
+      .onAppear((): void => {
+        if (this.mounted && opening === this.sheetOpeningGeneration)
+          this.rangeScroll.mount(this.getUIContext(), this.rangeEditingHost, this.rangeScroller, (): number => 0, `${opening}`);
+      })
+      .onDisAppear((): void => this.rangeScroll.unmount(`${opening}`))
+      .onAreaChange((): void => this.rangeEditingHost.refresh());
+    if (!this.sheetChromeOverflow()) this.editingSheetFooter(opening);
+  }
+  @Builder
+  private editingSheetHeader(opening: number) {
     Rect().width(DOWNLOAD_VISUAL.gripWidth).height(DOWNLOAD_VISUAL.gripHeight)
       .fill(downloadVisualColor('line', this.appThemeScheme)).radius(DOWNLOAD_VISUAL.gripRadius)
       .margin({ top: DOWNLOAD_VISUAL.gripTop, bottom: DOWNLOAD_VISUAL.gripBottom });
@@ -1255,11 +1332,9 @@ export struct SharedDownloadPage {
     }.constraintSize({ minHeight: DOWNLOAD_VISUAL.sheetTitleHeight }).width('100%')
       .padding({ left: DOWNLOAD_VISUAL.sheetTitleLeft, right: DOWNLOAD_VISUAL.sheetTitleRight })
       .onAreaChange(this.sheetAreaHandler('title', opening));
-    if (wholeDocument) {
-      this.sheetBody(opening);
-    } else {
-      Scroll() { this.sheetBody(opening); }.width('100%').constraintSize({ maxHeight: this.sheetBodyMaxHeight() }).scrollBar(BarState.Auto);
-    }
+  }
+  @Builder
+  private editingSheetFooter(opening: number) {
     if (this.sheetHasFooter()) {
       if (this.sheet === 'settings') {
         Row() { this.clearStorageButton(); }
@@ -1570,9 +1645,34 @@ export struct SharedDownloadPage {
     }.width('100%').margin({ top: DOWNLOAD_VISUAL.rangeSelectionTop });
   }
 
+  private mountQueryEditing(identity: string): void {
+    if (!this.mounted || identity !== this.searchInputIdentity()) return;
+    this.queryTarget.mount(this.getUIContext(), this.editingHost, this.queryController,
+      (): boolean => this.searchInputIsCurrent(identity), (): number => DOWNLOAD_VISUAL.searchLineHeight * this.fontScale(),
+      `${this.queryTarget.id}:${identity}`);
+  }
+  private mountRangeEditing(start: boolean, opening: number, revision: number): void {
+    if (!this.mounted || opening !== this.sheetOpeningGeneration || revision !== this.rangeDraftRevision || this.sheet !== 'range') return;
+    const target = start ? this.rangeStartTarget : this.rangeEndTarget;
+    target.mount(this.getUIContext(), this.rangeEditingHost, start ? this.rangeStartController : this.rangeEndController,
+      (): boolean => this.sheetOpeningIsCurrent(opening) && revision === this.rangeDraftRevision &&
+        this.rangeCatalog !== undefined && !this.rangeCatalogChanged,
+      (): number => DOWNLOAD_VISUAL.controlLineHeight * this.fontScale(), this.rangeInputId(start, opening, revision));
+  }
+
+  private rangeInputId(start: boolean, opening: number, revision: number): string {
+    return `${start ? this.rangeStartTarget.id : this.rangeEndTarget.id}:${opening}:${revision}`;
+  }
+
   @Builder
   private rangeBoundInput(start: boolean, opening: number, revision: number) {
-    TextInput({ text: start ? this.rangeStart : this.rangeEnd, placeholder: start ? '起始序号' : '结束序号' })
+    TextInput({ text: start ? this.rangeStart : this.rangeEnd, placeholder: start ? '起始序号' : '结束序号',
+      controller: start ? this.rangeStartController : this.rangeEndController })
+      .attributeModifier(new ReaderEditableInputModifier(start ? this.rangeStartTarget : this.rangeEndTarget,
+        this.rangeInputId(start, opening, revision),
+        (editing: boolean): void => (start ? this.rangeStartTarget : this.rangeEndTarget).edit(editing)))
+      .onAppear((): void => this.mountRangeEditing(start, opening, revision))
+      .onDisAppear((): void => (start ? this.rangeStartTarget : this.rangeEndTarget).unmount(this.rangeInputId(start, opening, revision)))
       .layoutWeight(1).type(InputType.Number)
       .enabled(this.rangeCatalog !== undefined && !this.rangeCatalogChanged)
       .height(this.textControlHeight(DOWNLOAD_VISUAL.searchHeight, DOWNLOAD_VISUAL.controlLineHeight, DOWNLOAD_VISUAL.searchPaddingY * 2))
@@ -2129,11 +2229,18 @@ export struct SharedDownloadPage {
     this.selectedBookKeys = selected ? this.selectedBookKeys.concat([key]).filter((value: string, index: number, all: string[]): boolean => all.indexOf(value) === index)
       : this.selectedBookKeys.filter((value: string): boolean => value !== key);
   }
+  private canEnterManaging(): boolean {
+    const book = this.detail();
+    return book === undefined ? this.books.length > 0 :
+      book.projectionStatus === 'ready' && book.chapters.some((chapter: DownloadChapterView): boolean =>
+        chapter.navigable && chapter.chapterId.length > 0);
+  }
   private setManaging(managing: boolean, triggerKey: string = 'manage'): void {
-    if (this.managing === managing || !this.presentationIsCurrent() || !this.fontsReady || this.modalBlocking()) return;
+    if (this.managing === managing || !this.presentationIsCurrent() || !this.fontsReady || this.modalBlocking() ||
+      (managing && !this.canEnterManaging())) return;
     this.cancelListScrollRestore();
     this.cancelChapterScrollRestore();
-    const retained = this.managingScrollAnchor;
+    const retained = this.managingScrollAnchor ?? this.browseScrollBeforeManaging;
     const offset = retained !== undefined && this.managingScrollIsCurrent(retained) ? retained.offset :
       this.detailKey.length > 0 ? this.captureChapterOffset() : this.captureListOffset();
     this.cancelManagingScroll();
@@ -2155,6 +2262,9 @@ export struct SharedDownloadPage {
         identity: this.mountedIdentity, presentation: this.presentationGeneration,
         fonts: this.fontPreparationGeneration, windowRevision: this.readerWindowMetricsRevision,
         viewportWidth: this.pageViewportWidth(), viewportHeight: this.availableHeight() };
+      // The management List can be shorter and clamp this offset. Keep the
+      // browsing position until real scrolling or a new view invalidates it.
+      if (managing) this.browseScrollBeforeManaging = anchor;
       this.managingScrollAnchor = anchor;
       this.managingScrollRestore = anchor;
       this.managingDockMeasured = false;
@@ -2194,15 +2304,23 @@ export struct SharedDownloadPage {
     }));
   }
 
-  private cancelManagingScroll(): void {
+  private cancelManagingScroll(retireBrowseAnchor: boolean = true): void {
     this.managingScrollRestore = undefined;
     this.managingScrollAnchor = undefined;
+    if (retireBrowseAnchor) this.browseScrollBeforeManaging = undefined;
+  }
+
+  private onListWillScroll(offset: number, source: ScrollSource, presentation: number, detailKey: string): void {
+    if (!Number.isFinite(offset) || offset === 0 || !this.presentationIsCurrent(presentation) ||
+      this.detailKey !== detailKey) return;
+    if (source === ScrollSource.DRAG || source === ScrollSource.FLING || source === ScrollSource.OTHER_USER_INPUT ||
+      source === ScrollSource.SCROLL_BAR || source === ScrollSource.SCROLL_BAR_FLING) this.cancelManagingScroll();
   }
 
   private onListTouch(event: TouchEvent): void {
     if (event.type === TouchType.Down) {
       this.cancelListScrollRestore();
-      this.cancelManagingScroll();
+      this.cancelManagingScroll(false);
       this.cancelChapterScrollRestore();
       this.readingReturnFocus = undefined;
     }

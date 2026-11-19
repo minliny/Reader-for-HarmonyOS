@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { readJSON, schemaValidator } from './lib.mjs';
+import { loadInputs, readJSON, schemaValidator } from './lib.mjs';
 import { deriveStructure } from './derive-structure.mjs';
 import { checkRegister } from './check-register.mjs';
 import { selectContractCases, recordContractCasePass } from '../lib/contract-case-selection.mjs';
 
-for (const id of selectContractCases({ 'query-height': 'Primary query uses the single scroll owner only when actual fixed chrome plus a minimum unit cannot fit; no priority downgrade or inferred geometry.' })) {
+for (const id of selectContractCases({ 'query-height': 'Actual capacity derives Inline; embedded stable editors keep one primary results owner and a measured result budget.' })) {
   const model = readJSON('tools/page-structure/model.json');
   // Isolate a current real control registration. No ignored artifact or local
   // historical snapshot is a required input of this reusable framework test.
@@ -72,6 +72,33 @@ for (const id of selectContractCases({ 'query-height': 'Primary query uses the s
   registered.brief.queryViewport = short;
   registered.layers.scroll.facts.primaryCount = 2;
   assert(report().some(item => item.ruleId === 'G-09' && item.result === 'FAIL'), 'The fallback cannot add an outer vertical scroll owner');
+  const live = loadInputs();
+  const directory = live.register.pages.find(page => page.pageId === 'directory');
+  const shortVariants = directory.variants.filter(variant => variant.variantId.startsWith('control-text-short-'));
+  assert.equal(shortVariants.length, 2);
+  const scoped = { ...live, register: { ...live.register, pages: [{ ...directory, variants: shortVariants }] } };
+  const registeredSchema = ajv.compile(schema);
+  assert(registeredSchema(scoped.register), JSON.stringify(registeredSchema.errors));
+  for (const variant of shortVariants) {
+    const page = variant.registration;
+    assert.equal(page.layers.query.facts.inlineComposition, 'boundedEditor');
+    const compositions = () => checkRegister(scoped, { bindSource: false }).diagnostics.filter(item =>
+      item.pageId === page.pageId && ['QUERY_VIEWPORT', 'QUERY_COMPOSITION'].includes(item.ruleId));
+    assert.deepEqual(compositions(), []);
+    const originalKind = variant.host.kind;
+    variant.host.kind = 'route';
+    assert(compositions().some(item => item.ruleId === 'QUERY_COMPOSITION'));
+    variant.host.kind = originalKind;
+    const budget = page.layers.informationArchitecture.facts.firstScreenBudget;
+    const originalHeight = budget.filterStackHeight;
+    budget.filterStackHeight = budget.viewportHeight;
+    assert(compositions().some(item => item.ruleId === 'QUERY_COMPOSITION'), 'A visible editor cannot claim a result budget of zero');
+    budget.filterStackHeight = originalHeight;
+    page.layers.scroll.facts.primaryCount = 2;
+    assert(compositions().some(item => item.ruleId === 'QUERY_COMPOSITION'), 'The editor cannot become another primary scroll owner');
+    page.layers.scroll.facts.primaryCount = 1;
+    assert.deepEqual(compositions(), []);
+  }
   assert.deepEqual(brief, before);
   recordContractCasePass(id);
 }

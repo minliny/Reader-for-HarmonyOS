@@ -1,3 +1,6 @@
+import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
+import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
+import { readerControlStructureKey } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { drainReaderPagePreparation, type ReaderPagePreparationAttempt } from './ReaderPagePreparationCoordinator';
 import { measureReaderControlMinimumCandidates } from './ReaderControlMinimumReceipt';
 import { admitReaderControlVisualSnapshot } from './ReaderControlVisualHostPort';
@@ -796,8 +799,8 @@ export struct ReadingExperience {
    */
   private latestControlVisualSession: ReaderControlSessionState = createReaderControlSessionState();
   @State private controlOpenRevision: number = 0;
-  private controlTemporaryLayer: boolean = false;
-  @State private controlTemporaryLayerPresented: boolean = false;
+  private controlTemporaryLayer: ReaderControlTemporaryInputKind = '';
+  @State private controlTemporaryLayerPresented: ReaderControlTemporaryInputKind = '';
   @State private dismissControlTemporaryRevision: number = 0;
   @State private retireControlTemporaryRevision: number = 0;
   @State private quickSearchQuery: string = '';
@@ -1237,6 +1240,7 @@ export struct ReadingExperience {
    * only: it never keeps the control visible or changes routing.
    */
   private controlDirectoryDataRetained: boolean = false;
+  private readonly controlDirectoryPublication: ReaderDirectoryDataPublication = new ReaderDirectoryDataPublication();
   private lastCommittedProgress: ReadingCommit | undefined = undefined;
   /** A retained receipt supplies the page, but only this actual foreground
    * visit can admit one same-position renewal through the existing writer. */
@@ -2005,7 +2009,7 @@ export struct ReadingExperience {
         controlOpenRevision: this.controlOpenRevision,
         dismissTemporaryRevision: this.dismissControlTemporaryRevision,
         retireTemporaryRevision: this.retireControlTemporaryRevision,
-        temporaryLayerActive: this.controlTemporaryLayerPresented,
+        temporaryLayerKind: this.controlTemporaryLayerPresented,
         onVisualSessionChange: (state: ReaderControlSessionState): void => {
           // This assignment is deliberately non-reactive.  It is a decision
           // snapshot for Back/close only; the Panel owns the visual @State.
@@ -2016,7 +2020,7 @@ export struct ReadingExperience {
             chromeOwnerChanged: (): void => this.applyWindowPolicyForChromeOwner(),
           });
         },
-        onTemporaryLayerChange: (active: boolean): void => this.onControlTemporaryLayerChanged(active),
+        onTemporaryLayerChange: (active: boolean, kind?: ReaderControlTemporaryInputKind): void => this.onControlTemporaryLayerChanged(active, kind),
         onTtsConfigurationOpen: (): void => this.retryTtsConfigurationMetadataOnOpen(),
         onInputActivity: (): void => this.onControlInputActivity(),
         onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean): void => {
@@ -2028,8 +2032,9 @@ export struct ReadingExperience {
         // shell; after the first open, retain the exact same array identity
         // through dismiss so Repeat/List never receives an empty replacement
         // during the compositor's closing frames.
-        tocEntries: readerControlHostVisible(this.controlSession) || this.controlDirectoryDataRetained ?
-          this.controlDirectoryEntries() : EMPTY_CONTROL_DIRECTORY_ENTRIES,
+        directoryPublication: this.controlDirectoryPublication,
+        directoryEntriesRevision: this.controlDirectoryPublication.publish(readerControlHostVisible(this.controlSession) || this.controlDirectoryDataRetained ?
+          this.controlDirectoryEntries() : EMPTY_CONTROL_DIRECTORY_ENTRIES),
         catalogComplete: !this.entryCatalogPending,
         catalogLoading: this.entryCatalogLoading,
         catalogLoadFailed: this.entryCatalogLoadFailed,
@@ -2117,6 +2122,7 @@ export struct ReadingExperience {
         onSearchQueryChange: (query: string): void => this.updateQuickSearchQuery(query),
         onSearch: (): void => this.runQuickSearch(),
         onSearchLoadMore: (): void => this.loadMoreQuickSearch(),
+        onSearchNeedMore: (): void => this.loadMoreQuickSearch(true),
         onSearchResultSelect: (result: ReadingContentSearchResult): void => this.selectSearchResult(result),
         onAutoPageToggle: (): void => this.toggleAutoPage(),
         onAutoPageStop: (): void => this.stopAutoPage(),
@@ -4537,12 +4543,50 @@ export struct ReadingExperience {
     this.applyWindowPolicyForChromeOwner();
   }
 
+  private lastControlStructureKey: string = '';
+  private currentControlStructureKey(): string {
+    return readerControlStructureKey(ReaderWindowCoordinator.metrics(), this.effectiveViewportWidth(),
+      this.effectiveViewportHeight(), this.expandedLayout);
+  }
+  private refreshControlEditingEnvironment(): boolean {
+    const previous = this.controlPresentationReceipt;
+    const key = this.currentControlStructureKey();
+    const facts = this.controlMinimumProviderFacts;
+    if (previous === undefined || key !== this.lastControlStructureKey ||
+      previous.identity !== this.controlMinimumCommittedIdentity() || this.activeControlNavigationIntent() !== undefined ||
+      previous.ownerKey !== this.controlMinimumOwnerKey() || !this.controlMinimumCurrent(previous.identity) ||
+      facts === undefined || !readerControlModuleFactsMatch(facts, previous.profile.module) ||
+      this.controlMinimumProviderFactsKey !== this.controlMinimumCommittedFactsKey) return false;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const environment = this.controlMinimumEnvironmentKey();
+    this.controlMinimumGeneration += 1;
+    this.controlMinimumProviderEnvironment = environment;
+    // Revalidate synchronous measured facts under the current owner and exact
+    // structural inputs; retain their original measurement provenance.
+    const profile = previous.profile;
+    this.controlPresentationReceipt = { identity: previous.identity, ownerKey: previous.ownerKey,
+      environmentKey: environment, key: previous.key, location: previous.location, layout: previous.layout,
+      facts: previous.facts, prepared: previous.prepared,
+      profile: { module: profile.module, moduleData: profile.moduleData, moduleFacts: profile.moduleFacts,
+        headerPaint: profile.headerPaint, identity: profile.identity, metricsRevision: metrics.revision,
+        measurementMetricsRevision: profile.measurementMetricsRevision ?? profile.metricsRevision,
+        widths: profile.widths, playbackData: profile.playbackData, quick: profile.quick, full: profile.full,
+        topBarVisible: profile.topBarVisible, navigationLabelHeight: profile.navigationLabelHeight,
+        navigationHeight: profile.navigationHeight, titleHeight: profile.titleHeight,
+        collapseLabelHeight: profile.collapseLabelHeight, collapseWidth: profile.collapseWidth, headerHeight: profile.headerHeight } };
+    this.controlMinimumCandidateMetrics = metrics.revision;
+    this.controlLayoutCacheRevision = -1;
+    return true;
+  }
+
   private onWindowMetricsRevisionChanged(): void {
     if (!this.mounted) {
       return;
     }
-    this.controlMinimumGeneration += 1;
-    this.scheduleControlMinimum();
+    if (!this.refreshControlEditingEnvironment()) {
+      this.controlMinimumGeneration += 1;
+      this.scheduleControlMinimum();
+    }
     this.reflowAfterWindowGeometryChange();
   }
 
@@ -6748,7 +6792,7 @@ export struct ReadingExperience {
     // after hiding the IME must not trap subsequent Back events at this layer.
     if (this.isControlInputEnabled() && consumeReaderControlKeyboardBack(
       ReaderWindowCoordinator.metrics(), this.controlKeyboardHost())) return;
-    if (this.controlTemporaryLayer && this.controlMotionVisible()) {
+    if (this.controlTemporaryLayer.length > 0 && this.controlMotionVisible()) {
       // A temporary child retains Back until its own dismissal callback.
       // In particular an animated selector can still be foreground here.
       this.dismissControlTemporaryRevision += 1;
@@ -7868,7 +7912,7 @@ export struct ReadingExperience {
     return JSON.stringify([this.effectiveViewportWidth(), this.effectiveViewportHeight(), this.expandedLayout,
       metrics.densityPixels, metrics.systemFontScale, metrics.windowRect,
       metrics.systemInsets, metrics.cutoutInsets, metrics.gestureInsets, metrics.navigationInsets,
-      metrics.keyboardInsets, metrics.statusBarRect, metrics.statusBarHeight, metrics.statusBarCutoutRect]);
+      metrics.keyboardInsets, metrics.keyboardArea, metrics.statusBarRect, metrics.statusBarHeight, metrics.statusBarCutoutRect]);
   }
 
   private controlLayoutGeometryKey(layout: ReaderControlLayoutSnapshot): string {
@@ -8050,6 +8094,7 @@ export struct ReadingExperience {
       this.controlPresentationReceipt = next;
       this.controlMinimumCommittedFactsKey = this.controlMinimumProviderFactsKey;
     }
+    this.lastControlStructureKey = this.currentControlStructureKey();
     this.controlMinimumCandidates = candidates;
     this.controlMinimumCandidateSource = this.sourceId;
     this.controlMinimumCandidateBook = this.bookId;
@@ -10181,7 +10226,7 @@ export struct ReadingExperience {
       snapshot.hideStatusBar === true && !forceStatusBarVisible,
       snapshot.hideNavigationBar,
       snapshot.extendIntoCutout,
-      // Phone controls already pay the keyboard inset in ReaderLayoutGeometry;
+      // Phone controls own an independent editing viewport;
       // keep the reading viewport stable instead of offsetting/resizing the root.
       !this.expandedLayout && !ReaderWindowCoordinator.isTabletDevice() ? 'local' : 'system',
     );
@@ -11275,13 +11320,14 @@ export struct ReadingExperience {
   private dismissControlTemporaryLayers(): void {
     this.retireControlTemporaryRevision += 1;
     this.dismissControlTemporaryRevision += 1;
-    this.controlTemporaryLayer = false;
-    this.controlTemporaryLayerPresented = false;
+    this.controlTemporaryLayer = '';
+    this.controlTemporaryLayerPresented = '';
   }
 
-  private onControlTemporaryLayerChanged(active: boolean): void {
-    if (this.controlTemporaryLayer === active) return;
-    this.controlTemporaryLayer = active;
+  private onControlTemporaryLayerChanged(active: boolean, kind: ReaderControlTemporaryInputKind = 'modal'): void {
+    const next = active ? kind : '';
+    if (this.controlTemporaryLayer === next) return;
+    this.controlTemporaryLayer = next;
     const lifecycle = this.lifecycleToken;
     this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
       if (!this.isSessionActive(lifecycle)) return;
@@ -11964,17 +12010,21 @@ export struct ReadingExperience {
       return;
     }
     const lifecycleToken = this.lifecycleToken;
-    const active = (): boolean => this.isSessionActive(lifecycleToken) && this.controlVisible() &&
+    const book = this.bookId, source = this.sourceId;
+    const active = (): boolean => this.isSessionActive(lifecycleToken) && book === this.bookId && source === this.sourceId && this.controlVisible() &&
       (this.controlPage() === 'quickSearch' || this.controlPage() === 'fullSearch');
     this.quickSearchPublication.run(this.activeGateway(), this.bookId, keyword, READER_CONTENT_SEARCH_PAGE_SIZE,
       active, (): void => { this.quickSearchRevision += 1; });
   }
 
-  private loadMoreQuickSearch(): void {
+  private loadMoreQuickSearch(automatic: boolean = false): void {
     const lifecycleToken = this.lifecycleToken;
-    const active = (): boolean => this.isSessionActive(lifecycleToken) && this.controlVisible() &&
+    const book = this.bookId, source = this.sourceId;
+    const active = (): boolean => this.isSessionActive(lifecycleToken) && book === this.bookId && source === this.sourceId && this.controlVisible() &&
       (this.controlPage() === 'quickSearch' || this.controlPage() === 'fullSearch');
-    this.quickSearchPublication.more(this.bookId, READER_CONTENT_SEARCH_PAGE_SIZE,
+    if (automatic) this.quickSearchPublication.needMore(this.bookId, READER_CONTENT_SEARCH_PAGE_SIZE,
+      active, (): void => { this.quickSearchRevision += 1; });
+    else this.quickSearchPublication.more(this.bookId, READER_CONTENT_SEARCH_PAGE_SIZE,
       active, (): void => { this.quickSearchRevision += 1; });
   }
 

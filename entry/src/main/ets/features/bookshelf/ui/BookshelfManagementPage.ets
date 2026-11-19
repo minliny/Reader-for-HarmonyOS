@@ -1,3 +1,4 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -45,6 +46,7 @@ import {
 
 @Component
 export struct BookshelfManagementPage {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private feedbackMounted: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -75,7 +77,7 @@ export struct BookshelfManagementPage {
   }
 
   build() {
-    ReaderStandardPage({
+    ReaderStandardPage({ editingHost: this.editingHost,
       variant: 'management',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
@@ -190,8 +192,8 @@ export struct BookshelfManagementPage {
   private groupEditorCard() {
     Column({ space: TOK_SPACE_SM }) {
       this.heading((): string => this.snapshot.selectedGroupId === 0 ? '新建分组' : '编辑分组');
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.groupNameDraft, placeholder: '分组名', onTextChange: this.onGroupNameChanged });
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-order', text: this.snapshot.groupOrderDraft, placeholder: '顺序整数', onTextChange: this.onGroupOrderChanged });
+      ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.groupNameDraft, inputIdentity: `shelf-group:${this.snapshot.selectedGroupId}:groupNameDraft`, placeholder: '分组名', onTextChange: this.onGroupNameChanged });
+      ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'shelf-order', text: this.snapshot.groupOrderDraft, inputIdentity: `shelf-group:${this.snapshot.selectedGroupId}:groupOrderDraft`, placeholder: '顺序整数', onTextChange: this.onGroupOrderChanged });
       Row({ space: TOK_SPACE_SM }) {
         Column() {
           this.actionButton((): string => this.snapshot.selectedGroupId === 0 ? '创建' : '保存', true,
@@ -273,7 +275,7 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
   private assignmentCard() {
     Column({ space: TOK_SPACE_SM }) {
       this.heading((): string => '书籍分组');
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.assignmentGroupDraft, placeholder: '分组名；留空清除', onTextChange: this.onAssignmentGroupChanged });
+      ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.assignmentGroupDraft, placeholder: '分组名；留空清除', onTextChange: this.onAssignmentGroupChanged });
       Scroll() {
         Row({ space: TOK_SPACE_XS }) {
           ForEach(this.snapshot.data.groups, (group: BookGroup) => {

@@ -222,7 +222,7 @@ async function standardPageSameArea() {
       { ...safe, ReaderWindowCoordinator: { metrics: () => metrics } });
     const direct = Object.assign(new DirectOwner(), { mounted: true, measurementKey: 0, footerMeasurementKey: 0, headerInputs: '', footerInputs: '',
       viewportWidth: 320, liveWidth: () => 320, bottomInset: () => 16, footerFallbackHeight: () => 80,
-      refreshGeometry() {}, measurements: new layout.ReaderMeasurementStore() });
+      geometry: new layout.ReaderPageGeometry(), refreshGeometry() {}, measurements: new layout.ReaderMeasurementStore() });
     direct.onGeometryInputsChanged();
     direct.recordMeasurement(`${prefix}:header`, 93, direct.measurementKey);
     direct.recordMeasurement(`${prefix}:footer`, 80, direct.footerMeasurementKey);
@@ -329,7 +329,7 @@ async function directPageSameArea() {
   const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
   const directorySource = read('features/reading/ui/BookDirectoryPage.ets');
   class ChildPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-  const nativeOwner = createReaderBuilderProbe(directorySource, ['mangaToolbar', 'mangaCurrentFooter',
+  const nativeOwner = createReaderBuilderProbe(directorySource, ['mangaToolbar', 'mangaToolbarHeight', 'mangaCurrentFooter',
     'mangaHeightHandler', 'recordMangaHeight', 'toolsMeasurement', 'flowToolsMeasurement', 'treeToolsMeasurement',
     'footerMeasurement', 'flowFooterMeasurement', 'treeFooterMeasurement', 'mangaMeasurementKey'],
     { ...properties.sdk, ...fonts, ReaderNativeSlotMeasurement, ReaderDirectoryToolbar: ChildPort, MangaDirectoryCurrentFooter: ChildPort,

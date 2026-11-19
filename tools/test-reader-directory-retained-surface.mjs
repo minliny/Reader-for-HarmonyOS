@@ -104,7 +104,7 @@ function fixture({ retained = true, prefix = false, query = '', render = 'build'
   owner.aboutToAppear();
   if (tree) owner.view = { viewId: 'retained-view', navigationRevision: 'nav', visibleTotal: 1, nodes: [] };
   if (render === 'build') { owner.initialRender(); materializeItems(owner); }
-  else if (render === 'empty') owner.treePrefixEmptyState();
+  else if (render === 'empty') owner.treeEmptyState();
   const setProps = updates => { for (const [name, value] of Object.entries(updates)) owner[name] = value; };
   return { sdk, owner, requests, feedback, timers, clears: () => clears,
     setProps,
@@ -208,7 +208,7 @@ async function clearDuringDebounce(implementation = source) {
   f.requests[0].resolve({ viewId: 'confirmed-empty', navigationRevision: 'nav', visibleTotal: 0, nodes: [],
     identity: { sourceId: 'local', bookId: 'book-a', catalogRevision: 'catalog', structureRevision: 'structure' } });
   await settle();
-  f.owner.treePrefixEmptyState();
+  f.owner.treeEmptyState();
   const first = actualAction(f), receiver = first.child.onReconcile;
   first.callback(); assert.equal(f.clears(), 1);
   f.nextQuery('successor');
@@ -319,7 +319,7 @@ async function rulesRefreshRetry(implementation = source) {
     assert.equal(f.owner.awaitingRulesRefresh, true, 'failed refresh still owns stale-tree protection');
     assert.equal(f.owner.retryInputCurrent(), true, 'same-opening rules failure exposes retry');
     assert.equal(f.owner.directoryInputCurrent(), false);
-    f.owner.treePrefixEmptyState();
+    f.owner.treeEmptyState();
     const action = actualAction(f);
     assert.equal(action.button.enabled, true, 'actual recovery native Button is enabled');
     const count = f.requests.length;
@@ -400,7 +400,7 @@ for (const id of selectContractCases(definitions)) {
       const childSources = { ReaderDirectoryNavigationList: read('ReaderDirectoryNavigationList'),
         ReaderPageState: readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderPageState.ets', import.meta.url), 'utf8'),
         ReaderRecoveryAction: readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets', import.meta.url), 'utf8') };
-      const owner = createReaderBuilderProbe(implementation, ['build', 'hasPrefix', 'hasRetainedContent', 'treePrefixEmptyState'], {
+      const owner = createReaderBuilderProbe(implementation, ['build', 'hasPrefix', 'hasRetainedContent', 'treeEmptyState'], {
         ...sdk.deps, ReaderDirectoryNavigationList: ChildPort, ReaderPageState: ChildPort, ReaderRecoveryAction: ChildPort,
       }, { ...sdk.hooks, childSources }).owner;
       Object.assign(owner, { mangaDisplay: true, mangaFontsReady: true, headerCount: 1, showLoadStatus: true,

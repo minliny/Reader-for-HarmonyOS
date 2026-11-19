@@ -557,6 +557,12 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       activeOwner.attributeCalls.push({ id: activeId, property, args });
       if (property === 'attributeModifier') { args[0].applyNormalAttribute(instance); return instance; }
       if (property === 'create') record.type = name;
+      if (name === 'Text' && property === 'create' && args.length === 2) {
+        // Text's optional controller is separate from the content argument.
+        record.create = args[0];
+        record.textOptions = args[1];
+        return instance;
+      }
       // ArkUI TextInput.type() is an input attribute, not the native node kind.
       // Keep the actual call in attributeCalls and preserve both identities.
       record[property === 'type' ? 'nativeInputType' : property] = args.length === 1 ? args[0] : args;

@@ -1,3 +1,6 @@
+import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerControlSearchResultTitle, readerControlSearchStatusText, readerControlSearchMinimumFacts, measureReaderSearchMinimum, type ReaderSearchMinimumFacts, type ReaderSearchMinimumProfile } from './ReaderControlSearchMinimum';
 
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, readerControlModuleFactsGeometryKey, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
@@ -8,14 +11,14 @@ import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderControlQuickBack } from './ReaderControlQuickBack';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { MESSAGE_BODY, MESSAGE_ACTION } from '../../../ui/foundation/ReaderMessageStyle';
+import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../../../ui/foundation/ReaderTypography';
 
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
   readerControlMotionVisibleRect, type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
-import { readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,
+import { sampleReaderControlMorphScrollPath,
   type ReaderControlMorphScrollPath } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,
@@ -53,6 +56,7 @@ class ReaderSearchMeasuredMessageFrame implements AttributeModifier<TextAttribut
  * actor retains the authored24->32 outer geometry and one input controller. */
 @Component
 export struct ReaderControlSearchContent {
+  editingHost: ReaderEditingVisibility | undefined = undefined;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('publishMinimumMeasurer') private minimumMetricsRevision: number = 0;
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
@@ -119,11 +123,14 @@ export struct ReaderControlSearchContent {
   }
   private acceptedSearchState: ReaderQuickSearchState | undefined = undefined;
   private acceptedResultScrollScope: number = 0;
-  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
+  onTemporaryLayerChange: (active: boolean, kind?: ReaderControlTemporaryInputKind, endEditing?: () => void | Promise<void>) => void =
+    (_active: boolean, _kind?: ReaderControlTemporaryInputKind, _endEditing?: () => void | Promise<void>): void => {};
   onBack: () => void = (): void => {};
   onQueryChange: (query: string) => void = (_query: string): void => {};
   onSearch: () => void = (): void => {};
   onLoadMore: () => void = (): void => {};
+  onNeedMore: () => void = (): void => {};
+  private continuationQueued: boolean = false;
   onSelectResult: (result: ReadingContentSearchResult) => void =
     (_result: ReadingContentSearchResult): void => {};
   private inputController: TextInputController = new TextInputController();
@@ -146,6 +153,7 @@ export struct ReaderControlSearchContent {
   private resultUserScrolling: boolean = false;
   private resultScrollSource: ReaderControlSearchScrollSource = 'unknown';
   private indexedResultRows: ReadingContentSearchResult[] | undefined = undefined;
+  private indexedResultCount: number = 0;
   private resultRowIndexes: Map<string, number> = new Map<string, number>();
   private resultMotionPath: ReaderControlMorphScrollPath | undefined = undefined;
   private resultRestingProgress: number = 0;
@@ -238,7 +246,7 @@ export struct ReaderControlSearchContent {
     }
     if (editing === this.queryEditing) return;
     this.queryEditing = editing;
-    this.onTemporaryLayerChange(editing);
+    this.onTemporaryLayerChange(editing, 'inlineEditor', (): void => this.dismissTemporaryLayer());
   }
 
   private focusQueryField(): void {
@@ -257,6 +265,24 @@ export struct ReaderControlSearchContent {
 
   private frame(): ReaderControlSearchFrame {
     return sampleReaderControlSearch(this.motionProgress, this.availableWidth, this.availableHeight, this.naturalSize(this.motionProgress));
+  }
+
+  private queryEditingContext(field: ReaderRectVp): ReaderRectVp | undefined {
+    const profile = this.currentMinimumProfile();
+    if (profile === undefined || (this.motionProgress !== 0 && this.motionProgress !== 1)) return undefined;
+    const minimum = this.motionProgress === 1 ? profile.full.minimum : profile.quick.minimum;
+    if (!minimum.fits || !Number.isFinite(minimum.heightVp) || minimum.heightVp <= 0) return undefined;
+    const frame = this.frame();
+    // Anchor the semantic minimum to the current native field, including the
+    // authored Row's 9vp horizontal padding and centered native input. The
+    // minimum producer already measures one whole result plus paging/recovery,
+    // or the current idle/loading/empty/error state. Never substitute the
+    // currently clipped result viewport: zero visible results is the defect.
+    const originX = field.left - 9 - frame.field.x;
+    const originY = field.top - Math.max(0, (frame.field.height - field.height) / 2) - frame.field.y;
+    const top = Math.min(frame.field.y, frame.action.y, this.motionProgress === 0 ? frame.back.y : frame.field.y);
+    const bottom = Math.max(minimum.heightVp, frame.field.y + frame.field.height, frame.action.y + frame.action.height);
+    return new ReaderRectVp(originX, originY + top, this.availableWidth, bottom - top);
   }
 
   private publishMinimumMeasurer(): void {
@@ -313,10 +339,14 @@ export struct ReaderControlSearchContent {
   }
 
   private resultLayout(): ReaderControlSearchScrollLayout {
+    return this.resultLayoutAt(this.frame());
+  }
+
+  private resultLayoutAt(frame: ReaderControlSearchFrame): ReaderControlSearchScrollLayout {
     const displayState = this.displayState();
-    return { rowHeightVp: this.frame().rowHeight, viewportHeightVp: Math.max(0, this.frame().results.height - this.frame().loadMoreHeightVp -
-      (this.frame().loadMoreHeightVp > 0 ? 4 : 0)),
-      contentOriginVp: this.frame().firstResult.y, contentEndPaddingVp: this.frame().resultEndPadding,
+    return { rowHeightVp: frame.rowHeight, viewportHeightVp: Math.max(0, frame.results.height - frame.loadMoreHeightVp -
+      (frame.loadMoreHeightVp > 0 ? 4 : 0)),
+      contentOriginVp: frame.firstResult.y, contentEndPaddingVp: frame.resultEndPadding,
       resultCount: displayState.kind === 'results' ? displayState.results.length : 0 };
   }
 
@@ -339,15 +369,21 @@ export struct ReaderControlSearchContent {
     const f = sampleReaderControlSearch(1, this.availableWidth, this.fullContentHeight, this.naturalSize(1));
     const q = sampleReaderControlSearch(0, this.availableWidth, this.quickContentHeight, this.naturalSize(0));
     const b = this.frame();
-    const fullOffset = this.resultMotionPath?.fullOffset ?? (this.motionProgress === 1 ? this.resultScrollPosition.anchorRows : 0);
-    const quickOffset = this.resultMotionPath?.quickOffset ?? (this.motionProgress === 0 ? this.resultScrollPosition.anchorRows : 0);
-    const full: ReaderControlMotionClipRect = { x: f.firstResult.x, y: f.firstResult.y + (index - fullOffset) * f.rowHeight,
+    const fullOffset = this.resultMotionPath?.fullOffset ?? this.resultScrollPosition.anchorRows;
+    const quickOffset = this.resultMotionPath?.quickOffset ?? this.resultScrollPosition.anchorRows;
+    const fullScroll = sampleReaderControlSearchScroll({ anchorRows: fullOffset,
+      nativeOffsetVp: this.resultScrollPosition.nativeOffsetVp, revision: this.resultScrollPosition.revision }, this.resultLayoutAt(f));
+    const quickScroll = sampleReaderControlSearchScroll({ anchorRows: quickOffset,
+      nativeOffsetVp: this.resultScrollPosition.nativeOffsetVp, revision: this.resultScrollPosition.revision }, this.resultLayoutAt(q));
+    // At the result tail, the larger viewport can show earlier rows. Clip
+    // against the same clamped projection that actually paints those rows.
+    const full: ReaderControlMotionClipRect = { x: f.firstResult.x, y: f.firstResult.y + index * f.rowHeight - fullScroll.offsetVp,
       width: f.firstResult.width, height: f.rowHeight };
     const current: ReaderControlMotionClipRect = { x: b.firstResult.x,
       y: b.firstResult.y + index * b.rowHeight - this.resultScrollFrame().offsetVp,
       width: b.firstResult.width, height: b.rowHeight };
     const quick = readerControlMotionVisibleRect({ x: q.firstResult.x,
-      y: q.firstResult.y + (index - quickOffset) * q.rowHeight,
+      y: q.firstResult.y + index * q.rowHeight - quickScroll.offsetVp,
       width: q.firstResult.width, height: q.rowHeight }, q.results.height);
     return new PathShape().commands(readerControlMotionClipPath(readerControlMotionClipRects(this.motionProgress,
       full, current, quick, f.results.height, 0), this.getUIContext().vp2px(1)));
@@ -371,8 +407,12 @@ export struct ReaderControlSearchContent {
   private onResultDataChanged(): void {
     const displayState = this.displayState();
     this.publishMinimumMeasurer();
+    this.editingHost?.refresh();
+    this.scheduleResultContinuation();
     const state = displayState;
-    const change = this.resultDataSource.publish(state.kind === 'results' ? state.keyword : state.kind,
+    // A fast same-keyword requery can coalesce away the loading render. Its
+    // new owner scope must still reset; only the same scope may append.
+    const change = this.resultDataSource.publish(state.kind === 'results' ? `${this.displayedResultScope()}:${state.keyword}` : state.kind,
       state.kind === 'results' ? state.results : []);
     if (change !== 'replace') {
       if (change === 'append') this.scheduleResultNativeFollow();
@@ -396,6 +436,7 @@ export struct ReaderControlSearchContent {
   }
 
   private onResultLayoutChanged(): void {
+    this.editingHost?.refresh();
     const settled = this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1);
     if (this.resultMotionPath === undefined &&
       (!settled || this.motionProgress !== this.resultRestingProgress)) {
@@ -409,8 +450,11 @@ export struct ReaderControlSearchContent {
         this.rememberResultScroll(position.anchorRows);
         this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.resultNativeRawOffset(), animation: false });
       }
-      this.resultMotionPath = readerControlMorphScrollPath(this.resultRestingProgress,
-        this.resultScrollPosition.anchorRows);
+      // Search keeps one query-owned result position in both forms. The
+      // generic form-scroll path converges to the opposite form's top,
+      // which would rewind a long result list when collapsing or expanding.
+      const anchor = this.resultScrollPosition.anchorRows;
+      this.resultMotionPath = { quickOffset: anchor, fullOffset: anchor };
     }
     if (this.resultMotionPath !== undefined) {
       this.resultScrollPosition = { anchorRows: sampleReaderControlMorphScrollPath(this.resultMotionPath, this.motionProgress),
@@ -465,6 +509,7 @@ export struct ReaderControlSearchContent {
     const height = Number(area.height);
     if (!Number.isFinite(height) || height <= 0) return;
     this.resultViewportHeight = height;
+    this.scheduleResultContinuation();
     this.syncResultNativeOffset('layout');
     this.scheduleResultNativeFollow();
   }
@@ -500,6 +545,7 @@ export struct ReaderControlSearchContent {
         this.resultScrollPosition, pending, this.resultNativeOffset());
     }
     this.scheduleResultNativeFollow();
+    this.scheduleResultContinuation();
   }
 
   private onResultTouch(event: TouchEvent): void {
@@ -547,6 +593,26 @@ export struct ReaderControlSearchContent {
       this.resultScrollPosition, next.command, this.resultNativeOffset());
   }
 
+  private scheduleResultContinuation(): void {
+    if (this.continuationQueued || !this.resultScrollMounted) return;
+    const visit = this.resultScrollVisit;
+    const scope = this.acceptedResultScrollScope;
+    this.continuationQueued = true;
+    void Promise.resolve().then((): void => {
+      this.continuationQueued = false;
+      const state = this.currentSearchState();
+      if (visit !== this.resultScrollVisit || scope !== this.acceptedResultScrollScope || !this.resultScrollMounted ||
+        !this.resultActionCurrent(this.displayState(), scope, state) || state.kind !== 'results' ||
+        state.hasMore !== true || state.loadMoreError !== undefined || state.paginationRetired === true) return;
+      const layout = this.resultLayout();
+      if (layout.viewportHeightVp <= 0 || this.resultViewportHeight <= 0 ||
+        Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
+      const visibleRows = Math.max(1, Math.ceil(layout.viewportHeightVp / layout.rowHeightVp));
+      const visibleEnd = Math.ceil((this.resultScrollFrame().offsetVp + layout.viewportHeightVp - (layout.contentOriginVp ?? 0)) / layout.rowHeightVp);
+      if (visibleEnd + Math.max(visibleRows, READER_SEARCH_LIST_CACHE_COUNT) >= state.results.length) this.onNeedMore();
+    });
+  }
+
   private cancelResultNativeFollow(): void {
     this.resultNativeFollowLifecycle += 1;
     if (this.resultNativeFollowTimer >= 0) clearTimeout(this.resultNativeFollowTimer);
@@ -565,7 +631,7 @@ export struct ReaderControlSearchContent {
       if (displayState.kind !== 'results' || this.resultPointers.length > 0 || this.resultUserScrolling ||
         this.resultListFrame().viewportHeightVp <= 0 || Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
       const endpoint = this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1);
-      if (endpoint) { this.tryResultScrollRebase(); return; }
+      if (endpoint) { this.tryResultScrollRebase(); this.scheduleResultContinuation(); return; }
       const target = this.resultListFrame().targetOffsetVp;
       if (Math.abs(this.resultNativeRawOffset() - target) <= 0.5) return;
       // Native virtualization must follow the visual row range during morphs.
@@ -598,7 +664,8 @@ export struct ReaderControlSearchContent {
   @Builder
   private searchField() {
     Row({ space: 5 }) {
-      ReaderFormField({ specId: 'reader-content-search', scheme: this.appThemeScheme,
+      ReaderFormField({ editingHost: this.editingHost, specId: 'reader-content-search', scheme: this.appThemeScheme,
+        editingContext: (field: ReaderRectVp): ReaderRectVp | undefined => this.queryEditingContext(field),
         naturalInputHeightVp: this.frame().inputHeightVp,
         text: this.query, placeholder: '搜索正文内容', inputController: this.inputController, inputIdentity: this.queryInputId,
         fieldAccessibilityLabel: '搜索正文内容', onTextChange: (value: string): void => {
@@ -648,6 +715,7 @@ export struct ReaderControlSearchContent {
   private resultsBody() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.displayState().kind === 'results') {
+        Stack({ alignContent: Alignment.TopStart }) {
         List({ space: 0, scroller: this.resultScroller, initialIndex: this.resultInitialNativeIndex }) {
           LazyForEach(this.resultDataSource, (result: ReadingContentSearchResult, index: number) => {
             ListItem() {
@@ -658,7 +726,7 @@ export struct ReaderControlSearchContent {
           }, (result: ReadingContentSearchResult): string => readerContentSearchResultKey(result));
         }
         .width(this.frame().firstResult.width).height(this.resultListFrame().viewportHeightVp)
-        .position({ x: this.frame().firstResult.x, y: 0 })
+        .position({ x: 0, y: 0 })
         .childrenMainSize(this.resultItemSizes).cachedCount(READER_SEARCH_LIST_CACHE_COUNT, true)
         // Feature scroll exception: contentEndOffsetVp is a normalized native
         // List coordinate (visualToNativeRatio), not page geometry.
@@ -677,6 +745,11 @@ export struct ReaderControlSearchContent {
           ({ offsetRemain: this.onResultWillScroll(offset, source).yOffset }))
         .onDidScroll((_offset: number, _state: ScrollState): void => this.onResultDidScroll())
         .onScrollStop((): void => this.onResultScrollStop());
+        // Native item coordinates are normalized across the morph and their
+        // List intentionally permits overflow. Clip that paint at the real
+        // visual list lane, inside the actual result lane.
+        }.width(this.frame().firstResult.width).height(this.resultLayout().viewportHeightVp)
+          .position({ x: this.frame().firstResult.x, y: 0 }).clip(true);
         this.loadMoreAction();
       } else {
         Stack({ alignContent: Alignment.Center }) {
@@ -718,7 +791,7 @@ export struct ReaderControlSearchContent {
     if (this.displayedResultScope() !== expectedScope ||
       state.kind !== 'results' || !this.resultActionCurrent(displayed, expectedScope, state)) return;
     if (recovery && state.loadMoreError === undefined && state.paginationRetired !== true) return;
-    if (state.hasMore === true) this.onLoadMore();
+    if (state.continuationRetryable === true) this.onLoadMore();
     else if (recovery) this.submit();
   }
   private resultActionCurrent(displayed: ReaderQuickSearchState, scope: number,
@@ -735,7 +808,7 @@ export struct ReaderControlSearchContent {
 
   @Builder
   private loadMoreAction() {
-    if (this.displayState().kind === 'results' && (this.displayResults()?.hasMore === true || this.displayResults()?.loadMoreError !== undefined ||
+    if (this.displayState().kind === 'results' && (this.displayResults()?.loadMoreError !== undefined ||
       this.displayResults()?.paginationRetired === true)) {
       if (this.displayedLoadMoreFailure()) {
         Row({ space: 10 }) {
@@ -744,31 +817,14 @@ export struct ReaderControlSearchContent {
             .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
             .lineHeight(MESSAGE_BODY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-          ReaderRecoveryAction({ label: this.displayResults()?.hasMore === true ? '重试' : '重新搜索', variant: 'text', isBusy: this.displayResults()?.loadingMore === true,
+          ReaderRecoveryAction({ label: this.displayResults()?.continuationRetryable === true ? '重试' : '重新搜索', variant: 'text', isBusy: this.displayResults()?.loadingMore === true,
             generation: this.displayedResultScope(),
             actionEnabled: this.loadMoreActionEnabled(true),
             onReconcile: (expected: number): void => this.performLoadMore(true, expected) });
         }.width(this.frame().results.width).height(Math.max(44, this.frame().loadMoreHeightVp)).justifyContent(FlexAlign.Center)
           .position({ x: 0, y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp)) })
           .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
-      } else {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Text(this.displayResults()?.loadingMore === true ? '正在加载…' :
-          (this.displayResults()?.loadMoreError === undefined ? '加载更多结果' : '加载失败，重试'))
-          .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight)
-          .fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .width(Math.min(this.frame().results.width, this.frame().loadMoreWidthVp)).height(Math.max(44, this.frame().loadMoreHeightVp)).padding(0)
-      .position({ x: Math.max(0, this.frame().results.width - this.frame().loadMoreWidthVp - 8),
-        y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp) - 4) })
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
-      .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
-      .enabled(this.loadMoreActionEnabled(false))
-      .accessibilityText(this.displayResults()?.loadingMore === true ? '正在加载更多搜索结果' :
-        (this.displayResults()?.loadMoreError === undefined ? '加载更多搜索结果' : '重试加载更多搜索结果'))
-      .onClick(this.loadMoreActionHandler(false));
+
       }
     }
   }
@@ -826,11 +882,12 @@ export struct ReaderControlSearchContent {
     const displayState = this.displayState();
     if (displayState.kind !== 'results') {
       this.indexedResultRows = undefined;
+      this.indexedResultCount = 0;
       this.resultRowIndexes.clear();
       return -1;
     }
     const rows = displayState.results;
-    if (this.indexedResultRows !== rows) {
+    if (this.indexedResultRows !== rows || this.indexedResultCount > rows.length) {
       // A result publication may replace the array. Index it once instead of scanning
       // all rows for every title, snippet span, clip and accessibility label.
       // Keys only locate the current payload; they never capture an old row.
@@ -841,6 +898,14 @@ export struct ReaderControlSearchContent {
       });
       this.resultRowIndexes = indexes;
       this.indexedResultRows = rows;
+      this.indexedResultCount = rows.length;
+    } else {
+      for (let index = this.indexedResultCount; index < rows.length; index += 1) {
+        const result = rows[index];
+        const key = `${result.chapterIndex}:${result.chapterOffset}`;
+        if (!this.resultRowIndexes.has(key)) this.resultRowIndexes.set(key, index);
+      }
+      this.indexedResultCount = rows.length;
     }
     return this.resultRowIndexes.get(`${chapterIndex}:${chapterOffset}`) ?? -1;
   }

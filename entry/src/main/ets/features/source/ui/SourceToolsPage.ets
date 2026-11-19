@@ -1,11 +1,13 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
-import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { readerPageAreaLength, readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { resolveSourceToolsRowLayout, type SourceToolsRowLayout } from '../presentation/SourceToolsLayout';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
@@ -187,13 +189,18 @@ class SourceDebugLogDataSource implements IDataSource {
 
 @Component
 export struct SourceToolsPage {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly pageScroller: Scroller = new Scroller();
   @Prop reduceMotion: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private sourceListWidth: number = 0;
+  @State private batchFirstResultHeight: number = 0;
+  @State private batchFirstResultKey: string = '';
   @State private overlayHostWidth: number = 0;
+  @State private recoveryLeadingReserve: number = 0;
 
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   isOpeningCurrent: (() => boolean) | undefined = undefined;
@@ -233,6 +240,7 @@ export struct SourceToolsPage {
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
   private temporaryBackIdentity: string = '';
+  private observedEditorRevision: number = -1;
   private exportRevision: number = 0;
   private lastFeedbackIdentity: string = '';
   @State private editorInputRevision: number = 0;
@@ -260,6 +268,7 @@ export struct SourceToolsPage {
     this.syncListDataSources();
     const identity = `source-tools-back:${++nextSourceToolsBackIdentity}`;
     this.temporaryBackIdentity = identity;
+    this.observedEditorRevision = this.snapshot.editorRevision;
     this.onTemporaryBackBridge?.((): boolean => this.consumeKeyboardBack(identity), identity);
   }
 
@@ -289,12 +298,15 @@ export struct SourceToolsPage {
   }
 
   build() {
-    ReaderStandardPage({
+    ReaderStandardPage({ editingHost: this.editingHost,
+      scroller: this.pageScroller,
       variant: 'tools',
+      scrollOwner: 'native-list',
       header: (): void => { this.pageHeader(); },
-      content: (): void => { this.pageContent(); },
-      boundedOverlayVisible: this.snapshot.original?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown',
-      boundedOverlayContent: (): void => { this.pendingRecovery(); },
+      nativeListItems: (): void => { this.pageContent(); },
+      boundedOverlayVisible: this.recoveryOverlayVisible(),
+      boundedOverlayLeadingReserve: this.recoveryLeadingReserve,
+      boundedOverlayContent: (): void => { this.recoveryAction(); },
     }).onAreaChange((_old: Area, next: Area): void => {
       if (!this.mounted) return;
       this.overlayHostWidth = readerPageAreaLength(next.width);
@@ -308,33 +320,70 @@ export struct SourceToolsPage {
 
   @Builder
   private pageContent() {
-    this.statusCard();
-    if (this.snapshot.original?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown' && this.recovery().canRetry) {
-      this.recoveryAction();
-    }
-    this.exportCard();
-    // Native controls retain their actors while their observable bindings
-    // read the current snapshot inside the ReaderButton initializer.
-    this.batchCard();
-    if (this.snapshot.batchCheck.phase !== 'idle') {
-      // The progress card has the same V1 builder-capture boundary.
-      // Its compact subtree is keyed independently so every source
-      // completion updates counters/current item/results without
-      // remounting the source catalog.
-      ForEach([this.batchProgressRenderKey()], (_key: string) => {
-        this.batchCheckCard();
+    ListItem() {
+      Column({ space: readerStandardPageSpec('tools').space }) {
+        Column({ space: readerStandardPageSpec('tools').space }) {
+          this.statusCard();
+          if (this.showsInlineRecovery()) { this.recoveryAction(); }
+          this.exportCard();
+        }.width('100%').onAreaChange((_old: Area, next: Area): void => {
+          const height = readerPageAreaLength(next.height);
+          if (this.mounted && Number.isFinite(height) && height > 0 && height !== this.recoveryLeadingReserve) {
+            this.recoveryLeadingReserve = height;
+          }
+        });
+        this.batchCard();
+      }.width('100%');
+    }.padding({ bottom: readerStandardPageSpec('tools').space });
+    if (this.showsBatchProgress()) {
+      ForEach([this.batchProgressRenderKey()], (_key: string): void => {
+        ListItem() { this.batchCheckCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
       }, (key: string): string => `source-batch-progress:${key}`);
+      if (this.showsBatchResults()) {
+        ListItem() { this.batchResultsCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
+      }
     }
-    this.sourceCard();
+    ListItem() { this.sourceCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
     if (this.snapshot.editorSourceId.length > 0) {
       // Retire the old native input and capture this editor's identity in its callbacks.
-      ForEach([this.snapshot.editorRevision], (revision: number) => {
-        this.editorCard(revision);
+      ForEach([this.snapshot.editorRevision], (revision: number): void => {
+        ListItem() { this.editorCard(revision); }.padding({ bottom: readerStandardPageSpec('tools').space });
       }, (revision: number): string => `source-editor:${revision}`);
     }
-    this.debugCard();
+    ListItem() { this.debugCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
+    LazyForEach(this.debugLogDataSource, (log: SourceDebugLog, index: number) => {
+      ListItem() {
+        ReaderCard({ specId: 'task-diagnostics' }) { this.debugLogRow(log, index); }
+      }.padding({ bottom: readerStandardPageSpec('tools').space });
+    }, (log: SourceDebugLog): string =>
+      `debug-${log.sourceId ?? ''}-${log.traceId ?? ''}-${log.requestId ?? 0}-` +
+        `${log.timestampMs}-${log.state}-${log.message}`);
   }
 
+  private showsBatchProgress(): boolean {
+    return this.snapshot.batchCheck.phase !== 'idle';
+  }
+
+  private showsBatchResults(): boolean {
+    return this.showsBatchProgress() && this.snapshot.batchCheck.results.length > 0;
+  }
+
+  private revealNewEditor(): void {
+    const revision = this.snapshot.editorRevision;
+    if (this.observedEditorRevision === revision) return;
+    this.observedEditorRevision = revision;
+    if (!this.toolsInputIsCurrent() || this.snapshot.editorSourceId.length === 0) return;
+    const opening = this.temporaryBackIdentity;
+    const context = this.getUIContext();
+    context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+      if (!this.toolsInputIsCurrent(opening) || revision !== this.snapshot.editorRevision ||
+        this.snapshot.editorSourceId.length === 0) return;
+      // The main actions and source list each occupy one outer ListItem.
+      // Only mounted progress and result sections can precede the editor.
+      const index = 2 + Number(this.showsBatchProgress()) + Number(this.showsBatchResults());
+      this.pageScroller.scrollToIndex(index, false, ScrollAlign.START);
+    }));
+  }
 
   @Builder
   private batchCard() {
@@ -369,9 +418,8 @@ export struct SourceToolsPage {
   @Builder
   private batchButton(action: SourceToolsBatchAction) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action',
-      label: this.batchButtonLabel(action), actionEnabled: this.batchButtonEnabled(action), layout: 'full',
+      label: this.batchButtonLabel(action), actionEnabled: this.batchButtonEnabled(action),
       onAction: this.batchButtonAction(action) })
-      .layoutWeight(1)
       .constraintSize({ minWidth: this.actionMinimumWidth(this.batchButtonLabel(action)), maxWidth: '100%' });
   }
 
@@ -481,31 +529,55 @@ export struct SourceToolsPage {
           this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, (): string => readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
       .width('100%');
-      if (this.snapshot.batchCheck.results.length === 0) {
+      if (this.snapshot.batchCheck.phase === 'running' && this.snapshot.batchCheck.results.length === 0) {
         Text('每个书源完成后，结果会立即出现在这里。')
           .width('100%')
           .fontFamily(TYPE_SOURCE_TOOLS_HINT.fontFamily as string)
           .fontSize(TYPE_SOURCE_TOOLS_HINT.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      } else {
-        Text('实时结果（最新在前）')
-          .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
-          .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
-          .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        List() {
-          LazyForEach(this.batchResultDataSource, (result: SourceBatchCheckResult) => {
-            ListItem() {
-              this.batchResultRow(result);
-            }
-          }, (result: SourceBatchCheckResult): string =>
-            `source-check-${result.sourceId}-${result.traceId}-${result.state}`);
-        }
-        .width('100%')
-        .height(Math.min(320, Math.max(58, this.snapshot.batchCheck.results.length * 58)))
-        .scrollBar(BarState.Off);
       }
+    }
+  }
+
+  private batchResultKey(result: SourceBatchCheckResult): string {
+    return JSON.stringify([result.sourceId, result.traceId, result.state]);
+  }
+
+  private measureFirstBatchResult(result: SourceBatchCheckResult, area: Area): void {
+    const first = this.snapshot.batchCheck.results[0];
+    const height = readerPageAreaLength(area.height);
+    if (!this.mounted || first === undefined || this.batchResultKey(first) !== this.batchResultKey(result) ||
+      !Number.isFinite(height) || height <= 0) return;
+    this.batchFirstResultKey = this.batchResultKey(first);
+    this.batchFirstResultHeight = height;
+  }
+
+  private batchResultsHeight(): number {
+    const results = this.snapshot.batchCheck.results;
+    const first = results[0];
+    const viewportBudget = Math.min(320, Math.max(58, results.length * 58) * this.toolsFontScale());
+    const measured = first !== undefined && this.batchFirstResultKey === this.batchResultKey(first) ? this.batchFirstResultHeight : 0;
+    return Math.max(viewportBudget, measured);
+  }
+
+  @Builder
+  private batchResultsCard() {
+    ReaderCard({ specId: 'task-diagnostics' }) {
+      Text('实时结果（最新在前）')
+        .width('100%')
+        .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
+        .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+        .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      List() {
+        LazyForEach(this.batchResultDataSource, (result: SourceBatchCheckResult) => {
+          ListItem() {
+            this.batchResultRow(result);
+          }.onAreaChange((_old: Area, area: Area): void => this.measureFirstBatchResult(result, area));
+        }, (result: SourceBatchCheckResult): string => this.batchResultKey(result));
+      }.width('100%').height(this.batchResultsHeight())
+        .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST })
+        .scrollBar(BarState.Auto);
     }
   }
 
@@ -526,7 +598,9 @@ export struct SourceToolsPage {
 
   @Builder
   private batchResultRow(result: SourceBatchCheckResult) {
-    Row({ space: TOK_SPACE_XS }) {
+    Flex({ direction: this.toolsFontScale() > 1 ? FlexDirection.Column : FlexDirection.Row,
+      alignItems: ItemAlign.Start,
+      space: { main: LengthMetrics.vp(TOK_SPACE_XS) } }) {
       Column({ space: 3 }) {
         Text(result.sourceName)
           .width('100%')
@@ -547,7 +621,8 @@ export struct SourceToolsPage {
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
       }
-      .layoutWeight(1)
+      .width(this.toolsFontScale() > 1 ? '100%' : undefined)
+      .layoutWeight(this.toolsFontScale() > 1 ? 0 : 1)
       .alignItems(HorizontalAlign.Start);
       Text(this.batchResultLabel(result))
         .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
@@ -558,21 +633,48 @@ export struct SourceToolsPage {
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })
-    .alignItems(VerticalAlign.Top)
-    .padding({ top: 13, bottom: 13, left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-    .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
+    .padding({ top: 13, bottom: 13, left: TOK_SPACE_XS, right: TOK_SPACE_XS });
   }
 
   private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts, this.snapshot.confirmedParts ?? 0); }
+
+  private hasPendingRecovery(): boolean {
+    return this.snapshot.original?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown';
+  }
+
+  private recoveryOverlayVisible(): boolean {
+    return this.appForeground && this.snapshot.editorSourceId.length === 0 &&
+      this.toolsInputIsCurrent() && this.hasPendingRecovery();
+  }
+
+  private hasDedicatedReadFailure(): boolean {
+    const fact = this.snapshot.readFacts?.fact;
+    return this.snapshot.sources.length === 0 && (fact === 'failed' || fact === 'refreshFailed');
+  }
+
+  private showsInlineRecovery(): boolean {
+    if (this.hasPendingRecovery()) return false;
+    const recovery = this.recovery();
+    return recovery.canRetry && (!this.hasDedicatedReadFailure() || recovery.generation !== this.snapshot.readFacts?.generation);
+  }
+
+  private retryEmptyReadAction(opening: string): (generation: number) => void {
+    return (generation: number): void => {
+      const read = this.snapshot.readFacts;
+      if (this.toolsInputIsCurrent(opening) && !this.snapshot.busy && !this.hasPendingRecovery() &&
+        this.hasDedicatedReadFailure() && read?.generation === generation && read.canRetry) {
+        this.onReconcile(generation);
+      }
+    };
+  }
   private originalRecoveryIdentity(): string {
     const original = this.snapshot.original;
-    return original === undefined ? '' : `${original.generation}:${original.operationId ?? ''}:` +
-      `${original.confirmation}:${original.writeStage}:${original.blocked ? 1 : 0}:` +
-      `${original.canRetryOriginal ? 1 : 0}:${original.busy || this.snapshot.busy ? 1 : 0}`;
+    return original === undefined ? '' :
+      JSON.stringify([this.temporaryBackIdentity, original.operationId ?? '', original.generation]);
   }
   private isCurrentOriginalRecovery(identity: string, generation: number): boolean {
     const original = this.snapshot.original;
-    return this.mounted && original !== undefined && original.blocked &&
+    return this.recoveryOverlayVisible() && original !== undefined && original.blocked &&
       original.generation === generation && this.originalRecoveryIdentity() === identity &&
       !original.busy && !this.snapshot.busy;
   }
@@ -600,35 +702,45 @@ export struct SourceToolsPage {
         this.originalRecoveryActions(identity, this.snapshot.original?.generation ?? 0);
       }, (identity: string): string => `source-original-recovery:${identity}`);
     } else if (this.snapshot.receipt?.receipt.confirmation === 'unknown') {
-      ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: this.recovery(), actionLabel: '核对', busy: this.snapshot.busy, onReconcile: this.onReconcile });
+      ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: this.recovery(), actionLabel: '核对',
+        busy: this.snapshot.busy, onReconcile: this.unknownReceiptAction(this.temporaryBackIdentity) });
     } else if (this.recovery().canRetry) {
       ReaderRecoveryAction({ label: '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
     }
   }
-  @Builder
-  private pendingRecovery() {
-    if (this.snapshot.original?.blocked || this.snapshot.receipt?.receipt.confirmation === 'unknown') {
-      this.recoveryAction();
-    }
+  private unknownReceiptAction(opening: string): (generation: number) => void {
+    return (generation: number): void => {
+      const receipt = this.snapshot.receipt;
+      if (this.toolsInputIsCurrent(opening) && this.recoveryOverlayVisible() &&
+        !this.snapshot.busy && this.snapshot.original?.blocked !== true &&
+        receipt?.receipt.confirmation === 'unknown' && receipt.facts.canRetry && receipt.facts.generation === generation) {
+        this.onReconcile(generation);
+      }
+    };
   }
+
   private overlayWidth(): number {
     return Math.max(0, (this.overlayHostWidth > 0 ? this.overlayHostWidth : ReaderWindowCoordinator.metrics().windowRect.width) - 40);
   }
 
   @Builder
   private statusCard() {
-    if (this.snapshot.sources.length === 0 && this.snapshot.original?.blocked !== true) {
-      ReaderPageState({ title: this.snapshot.readFacts?.fact === 'failed' ? '书源读取失败' :
-        (this.snapshot.busy ? '正在读取书源' : '暂无书源'),
-        message: this.snapshot.readFacts?.fact === 'failed' ? '请稍后重试。' :
-          (this.snapshot.busy ? '请稍候' : '返回书源管理后，可导入书源 JSON。'),
-        loading: this.snapshot.busy,
-        loadingActive: !this.reduceMotion,
-        actionLabel: this.snapshot.readFacts?.canRetry ? '重试' : '',
-        onAction: (): void => this.onReconcile(this.snapshot.readFacts?.generation ?? 0) });
-    } else if (this.snapshot.busy && this.snapshot.batchCheck.phase !== 'running' && this.snapshot.batchCheck.phase !== 'stopping' && this.snapshot.original?.blocked !== true) {
-      ReaderPageState({ variant: 'inline', padded: false, loading: true,
-        loadingActive: !this.reduceMotion, message: this.snapshot.statusMessage }).padding(17);
+    if (!this.hasPendingRecovery()) {
+      if (this.snapshot.sources.length === 0 && (this.snapshot.busy || this.hasDedicatedReadFailure() ||
+        this.snapshot.readFacts?.fact === 'current' || this.snapshot.readFacts?.fact === 'empty')) {
+        ReaderPageState({ title: this.snapshot.busy ? '正在读取书源' :
+          (this.hasDedicatedReadFailure() ? '书源读取失败' : '暂无书源'),
+          message: this.snapshot.busy ? '请稍候' :
+            (this.hasDedicatedReadFailure() ? '请稍后重试。' : '返回书源管理后，可导入书源 JSON。'),
+          loading: this.snapshot.busy,
+          loadingActive: !this.reduceMotion,
+          actionLabel: this.hasDedicatedReadFailure() && this.snapshot.readFacts?.canRetry ? '重试' : '',
+          actionGeneration: this.snapshot.readFacts?.generation ?? 0,
+          onAction: this.retryEmptyReadAction(this.temporaryBackIdentity) });
+      } else if (this.snapshot.busy && this.snapshot.batchCheck.phase !== 'running' && this.snapshot.batchCheck.phase !== 'stopping') {
+        ReaderPageState({ variant: 'inline', padded: false, loading: true,
+          loadingActive: !this.reduceMotion, message: this.snapshot.statusMessage }).padding(17);
+      }
     }
   }
 
@@ -653,15 +765,12 @@ export struct SourceToolsPage {
       ReaderSectionHeading({ variant: 'tool-card', title: `书源编辑（${this.snapshot.sources.length}）` });
       List() {
         LazyForEach(this.sourceDataSource, (row: SourceToolListRow) => {
-          ListItem() {
-            this.sourceRow(row);
-          }
+          ListItem() { this.sourceRow(row); }
         }, (row: SourceToolListRow): string => this.sourceRowKey(row));
-      }
-      .width('100%')
-      .height(this.sourceListHeight())
-      .onAreaChange((_old: Area, next: Area): void => this.recordSourceListWidth(next))
-      .scrollBar(BarState.Off);
+      }.width('100%').height(this.sourceListHeight())
+        .onAreaChange((_old: Area, next: Area): void => this.recordSourceListWidth(next))
+        .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST })
+        .scrollBar(BarState.Auto);
     }
   }
 
@@ -698,6 +807,7 @@ export struct SourceToolsPage {
               .lineHeight(TYPE_SOURCE_TOOLS_URL.lineHeightFp ?? TYPE_SOURCE_TOOLS_URL.fontSizeFp * 1.5)
               .maxFontScale(this.toolsFontScale())
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+              .wordBreak(WordBreak.BREAK_ALL)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
             if (this.currentSourceForRow(row).lastCheckSummary !== undefined) {
@@ -832,7 +942,7 @@ export struct SourceToolsPage {
         .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       ForEach([this.editorInputRevision], (inputRevision: number): void => {
-        ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-code', text: this.snapshot.editorText,
+        ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'source-code', text: this.snapshot.editorText,
           placeholder: 'BookSource JSON', isEditable: this.editorDraftIsEditable(revision),
           onTextChange: this.editorDraftChange(revision, inputRevision) });
       }, (inputRevision: number): string => `source-editor-input:${revision}:${inputRevision}`);
@@ -882,7 +992,7 @@ export struct SourceToolsPage {
           });
         }.width('100%');
         ForEach([this.debugInputRevision], (inputRevision: number): void => {
-          ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-debug', text: this.snapshot.debugKey,
+          ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'source-debug', text: this.snapshot.debugKey,
             placeholder: '检测关键词（留空时使用 Core 默认“我的”）', isEditable: !busy,
             onTextChange: this.debugKeyChange(busy, inputRevision) });
         }, (inputRevision: number): string => `source-debug-input:${inputRevision}`);
@@ -904,18 +1014,6 @@ export struct SourceToolsPage {
           .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
           .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       }
-      List() {
-        LazyForEach(this.debugLogDataSource, (log: SourceDebugLog, index: number) => {
-          ListItem() {
-            this.debugLogRow(log, index);
-          }
-        }, (log: SourceDebugLog): string =>
-          `debug-${log.sourceId ?? ''}-${log.traceId ?? ''}-${log.requestId ?? 0}-` +
-            `${log.timestampMs}-${log.state}-${log.message}`);
-      }
-      .width('100%')
-      .height(Math.min(360, Math.max(32, this.snapshot.debugLogs.length * 32)))
-      .scrollBar(BarState.Off);
     }
   }
 
@@ -945,8 +1043,8 @@ export struct SourceToolsPage {
   private editorButton(revision: number, action: SourceToolsEditorAction) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action',
       label: this.editorButtonLabel(action), primary: action === 'save',
-      actionEnabled: this.editorButtonEnabled(revision, action), layout: 'full', onAction: this.editorAction(revision, action) })
-      .layoutWeight(action === 'reconcile' ? undefined : 1)
+      actionEnabled: this.editorButtonEnabled(revision, action), layout: action === 'reconcile' ? 'full' : 'intrinsic',
+      onAction: this.editorAction(revision, action) })
       .constraintSize({ minWidth: action === 'reconcile' ? undefined : this.actionMinimumWidth(this.editorButtonLabel(action)), maxWidth: '100%' });
   }
 
@@ -1056,6 +1154,7 @@ export struct SourceToolsPage {
 
   private onSnapshotChanged(): void {
     this.syncListDataSources();
+    this.revealNewEditor();
     this.showTransientFeedback();
   }
 

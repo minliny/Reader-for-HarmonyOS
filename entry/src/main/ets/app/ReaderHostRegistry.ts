@@ -2,7 +2,7 @@ import { MangaImageGraphicsHost } from '../platform/reading-resources/MangaImage
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import statvfs from '@ohos.file.statvfs';
-import { localImportFailure, type LocalImportFailure } from './LocalImportFailure';
+import { localImportFailure, LocalBookSelectionFailure, type LocalImportFailure } from './LocalImportFailure';
 import picker from '@ohos.file.picker';
 import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerActivity';
 import fileUri from '@ohos.file.fileuri';
@@ -289,17 +289,15 @@ export class ReaderHostRegistry {
     let uris: string[];
     try { uris = await new picker.DocumentViewPicker(this.context).select(options); }
     finally { pickerActivity.finish(); }
-    // Picker implementations normally honor maxSelectNumber, but a provider
-    // can still return an oversized/malformed result.  Bound the work before
-    // allocating the preparation array or starting staging workers.  The
-    // picker UI remains the source of the user-visible limit; this is a
-    // defensive Host boundary, not a second parser.
-    const selectedUris = uris.slice(0, ReaderHostRegistry.LocalBookSelectionLimit);
-    if (uris.length > selectedUris.length) {
-      hilog.warn(LOG_DOMAIN, 'Reader',
-        'Local picker returned %{public}d entries; truncating to %{public}d',
-        uris.length, selectedUris.length);
+    // Reject the complete provider response before parsing, allocating workers
+    // or touching staged files. A truncated batch would silently lose choices.
+    if (!Array.isArray(uris)) throw new LocalBookSelectionFailure('invalidSelection');
+    if (uris.length > ReaderHostRegistry.LocalBookSelectionLimit) throw new LocalBookSelectionFailure('selectionLimit');
+    for (const uri of uris) {
+      if (typeof uri !== 'string' || uri.length === 0) throw new LocalBookSelectionFailure('invalidSelection');
     }
+    const selectedUris = uris;
+    if (selectedUris.length === 0) return [];
     const prepared: LocalBookPreparation[] = new Array<LocalBookPreparation>(selectedUris.length);
     let nextIndex = 0;
     const workers: Promise<void>[] = [];

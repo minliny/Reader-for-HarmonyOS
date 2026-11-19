@@ -8,6 +8,8 @@ export interface ReaderDirectoryViewportAnchor {
   nodeId: string;
   visibleIndex: number;
   rowFraction: number;
+  /** Progress through the fixed manga catalog's leading inset before its first row. */
+  leadingInsetProgress?: number;
 }
 
 const scrollIntentObservers: Map<string, Set<() => void>> = new Map<string, Set<() => void>>();

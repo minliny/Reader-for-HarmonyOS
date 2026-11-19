@@ -1039,6 +1039,15 @@
           ],
           "minimum": 0
         },
+        "obscurationCompensationSource": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "symbol": { "type": "string", "minLength": 1 }
+          },
+          "required": ["path", "symbol"],
+          "additionalProperties": false
+        },
         "restore": {
           "type": "string",
           "minLength": 1
@@ -1356,6 +1365,12 @@
             "HeaderSlot",
             "Overlay",
             "None"
+          ]
+        },
+        "inlineComposition": {
+          "type": "string",
+          "enum": [
+            "boundedEditor"
           ]
         },
         "entryPlacements": {

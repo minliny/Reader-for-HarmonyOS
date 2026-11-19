@@ -10,6 +10,7 @@ import { bindReaderWindowMetricsSource } from '../ui/foundation/ReaderWindowEnvi
 import { findReaderTheme } from '../ui/foundation/ReaderThemeRegistry';
 import {
   ReaderInsetsVp,
+  ReaderKeyboardAreaVp,
   ReaderRectVp,
   ReaderDisplayCornerVp,
   ReaderWindowMetricsSnapshot,
@@ -565,7 +566,8 @@ export class ReaderWindowCoordinator {
       ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_SYSTEM_GESTURE, density);
     const navigationInsets =
       ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR, density);
-    const keyboardInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_KEYBOARD, density);
+    const keyboardArea = ReaderWindowCoordinator.keyboardAreaVp(density);
+    const keyboardInsets = ReaderWindowCoordinator.keyboardInsetsVp(keyboardArea, windowRect);
     const systemFontScale = ReaderWindowCoordinator.configurationFontScale ?? scaledDensity / density;
     const previous = ReaderWindowCoordinator.metricsSnapshot;
     // The status-bar measurement belongs to the physical display/orientation,
@@ -607,6 +609,7 @@ export class ReaderWindowCoordinator {
       ReaderWindowCoordinator.sameInsetsVp(previous.gestureInsets, gestureInsets) &&
       ReaderWindowCoordinator.sameInsetsVp(previous.navigationInsets, navigationInsets) &&
       ReaderWindowCoordinator.sameInsetsVp(previous.keyboardInsets, keyboardInsets) &&
+      ReaderWindowCoordinator.sameKeyboardAreaVp(previous.keyboardArea, keyboardArea) &&
       previous.densityPixels === density &&
       previous.systemFontScale === systemFontScale) {
       // The revision broadcast re-renders every @StorageLink consumer including
@@ -628,13 +631,46 @@ export class ReaderWindowCoordinator {
       revision,
       true,
       statusBarHeight,
-      statusBarRect, statusBarCutoutRect, corners[0], corners[1],
+      statusBarRect, statusBarCutoutRect, corners[0], corners[1], keyboardArea,
     );
     AppStorage.setOrCreate<number>('readerWindowMetricsRevision', revision);
   }
 
   private static sameRectVp(a: ReaderRectVp, b: ReaderRectVp): boolean {
     return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+  }
+
+  private static sameKeyboardAreaVp(a: ReaderKeyboardAreaVp, b: ReaderKeyboardAreaVp): boolean {
+    return a.available === b.available && a.visible === b.visible && a.rects.length === b.rects.length &&
+      a.rects.every((rect: ReaderRectVp, index: number): boolean =>
+        ReaderWindowCoordinator.sameRectVp(rect, b.rects[index]));
+  }
+
+  private static keyboardAreaVp(density: number): ReaderKeyboardAreaVp {
+    const win = ReaderWindowCoordinator.mainWindow;
+    if (win === undefined) return new ReaderKeyboardAreaVp();
+    try {
+      const area = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD);
+      const rects = [area.leftRect, area.topRect, area.rightRect, area.bottomRect]
+        .filter((rect: window.Rect): boolean => rect.width > 0 && rect.height > 0)
+        .map((rect: window.Rect): ReaderRectVp => ReaderWindowCoordinator.rectVp(rect, density));
+      return new ReaderKeyboardAreaVp(true, area.visible && rects.length > 0, rects);
+    } catch (_error) { return new ReaderKeyboardAreaVp(); }
+  }
+
+  private static keyboardInsetsVp(area: ReaderKeyboardAreaVp, viewport: ReaderRectVp): ReaderInsetsVp {
+    if (!area.available || !area.visible) return new ReaderInsetsVp();
+    const insets = new ReaderInsetsVp();
+    for (const rect of area.rects) {
+      // A floating rectangle is not a window-edge inset. Its full location
+      // remains available to editing hosts through keyboardArea.
+      if (rect.top <= 0) insets.top = Math.max(insets.top, rect.height);
+      if (rect.left <= 0 && rect.height >= viewport.height) insets.left = Math.max(insets.left, rect.width);
+      if (rect.left + rect.width >= viewport.width && rect.height >= viewport.height)
+        insets.right = Math.max(insets.right, rect.width);
+      if (rect.top + rect.height >= viewport.height) insets.bottom = Math.max(insets.bottom, rect.height);
+    }
+    return insets;
   }
 
   private static sameCornerVp(a: ReaderDisplayCornerVp, b: ReaderDisplayCornerVp): boolean {

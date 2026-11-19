@@ -9,7 +9,7 @@ export function installContentSearchOwnerProbe(owner, publications = [], gateway
   const publication = owner.quickSearchPublication instanceof ReaderContentSearchPublication
     ? owner.quickSearchPublication : new ReaderContentSearchPublication();
   if (initial !== undefined) publication.publish(initial);
-  if (gateway !== undefined) publication.gateway = gateway;
+  if (gateway !== undefined) { publication.gateway = gateway; publication.bookId = owner.bookId; }
   const publish = publication.publish.bind(publication);
   publication.publish = state => { publish(state); publications.push(state); };
   owner.quickSearchPublication = publication;

@@ -110,8 +110,21 @@ if(selectedCase==='inline-native-admission'){
 }
 
 if(selectedCase==='carrier-propagation'){
- const assertions=[['exportCard',[],'书源导出','TYPE_SOURCE_TOOLS_HEADING'],['batchCounter',['计数','#status-color'],'计数','TYPE_SOURCE_TOOLS_COMPACT_ACTION'],['sourceRow',[{source:bookSource,sourceListRevision:1,selected:true,actionsEnabled:true}],bookSource.name,'TYPE_SOURCE_TOOLS_ACTION']];
+ const assertions=[['exportCard',[],'书源导出','TYPE_SOURCE_TOOLS_HEADING'],['batchCounter',[()=> '计数',()=> '#status-color'],'计数','TYPE_SOURCE_TOOLS_COMPACT_ACTION'],['sourceRow',[{source:bookSource,sourceListRevision:1,selected:true,actionsEnabled:true}],bookSource.name,'TYPE_SOURCE_TOOLS_ACTION']];
  for(const [method,args,label,roleName]of assertions){const {owner}=make();owner[method](...args);const node=nodes(owner).find(n=>n.create===label),role=readerTypographyRoles[roleName];assert.ok(node,method);assert.equal(node.fontSize,role.fontSizeFp);assert.equal(node.fontFamily,role.fontFamily);if(role.fontWeight!==undefined)assert.equal(node.fontWeight,role.fontWeight);}
+ const {owner: rowOwner}=make();
+ rowOwner.sourceRow({source:bookSource,sourceListRevision:1,selected:true,actionsEnabled:true});
+ const rowTexts=nodes(rowOwner).filter(node=>node.type==='Text');
+ const url=rowTexts.find(node=>node.create===bookSource.baseUrl);
+ assert.ok(url);
+ assert.equal(url.maxLines,1);
+ assert.equal(url.textOverflow.overflow,'TextOverflow.Ellipsis');
+ assert.equal(url.wordBreak,'WordBreak.BREAK_ALL');
+ for(const label of [bookSource.name,bookSource.lastCheckSummary]){
+   const text=rowTexts.find(node=>node.create===label);
+   assert.ok(text);
+   assert.equal(text.wordBreak,undefined);
+ }
  const headingRole=readerTypographyRoles.TYPE_SOURCE_TOOLS_HEADING;
  const sharedHeading=make({TYPE_SOURCE_TOOLS_HEADING:{...headingRole,fontSizeFp:headingRole.fontSizeFp+2}}).owner;
  sharedHeading.exportCard();

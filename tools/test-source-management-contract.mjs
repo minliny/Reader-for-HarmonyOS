@@ -55,9 +55,12 @@ if (selected.length) {
     const sdk = boundedSurfaceSdk();
     function render({ sources = [base('a')], statusKind = 'idle', operation = {} } = {}) {
       let clears = 0;
-      const page = sdk.consumer(text, ['sourceList'], { readerScrollStartOffset, readerScrollEndOffset,
+      const page = sdk.consumer(text, ['sourceList', 'hasPendingSourceRecovery', 'sourceListLoading',
+        'sourceAnchorReadPending', 'hasEmptyListReadFailure', 'retryEmptyListAction', 'retryRetainedListAction'],
+      { readerScrollStartOffset, readerScrollEndOffset,
         ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} } });
       Object.assign(page, { sources, projectedSources: [], statusKind, statusMessage: '', operation,
+        editingScroll: { id: 'source-list-state-test' },
         sourceDataSource: { totalCount: () => 0 }, sourceRow() {}, searchField() {}, statsRow() {}, statusAction() {}, filterArea() {}, categoryFilter() {},
         contentFrame: () => ({ left: 19, right: 19, width: 328 }), scrollLayout: () => ({ startInset: 58, endInset: 91, mode: 'contentOffset' }),
         recovery: () => ({ canRetry: false }), clearFilters: () => { clears++; } });
@@ -75,7 +78,7 @@ if (selected.length) {
     assert.ok(state); state.onAction(); assert.equal(filtered.clears(), 1, 'real PageState forwards reset to the page');
     const list = filtered.nodes.find(n => n.type === 'List');
     assert.equal(list.contentStartOffset, 58); assert.equal(list.contentEndOffset, 91);
-    for (const input of [{ statusKind: 'loading' }, { operation: { original: { blocked: true } } }, { operation: { receipt: { receipt: { confirmation: 'unknown' } } } }]) {
+    for (const input of [{ statusKind: 'loading' }, { operation: { original: { blocked: true } } }, { operation: { receipt: { receipt: { confirmation: 'unknown' }, facts: { fact: 'pendingReconciliation' } } } }]) {
       const result = render(input);
       assert.ok(!result.nodes.some(n => n.type === 'Text' && n.create === '没有匹配的书源'), 'loading/recovery retain priority over filteredEmpty');
     }
@@ -87,8 +90,77 @@ if (selected.length) {
     const readFailed = render({ statusKind: 'error', operation: { readFacts: { fact: 'failed', generation: 4 } } });
     assert.ok(readFailed.nodes.some(n => n.type === 'Text' && n.create === '没有匹配的书源'), 'accepted old sources still have a valid filtered-empty projection');
     assert.ok(!readFailed.nodes.some(n => n.type === 'Text' && n.create === '书源读取失败'), 'readback failure must not replace available old content with full-page error');
+    const { projectOperationFacts } = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
+    const { projectPersistedReceipt } = await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
+    const { sourceManagementRecoveryProbe, sourceRecoveryNativeAction } =
+      await import('./lib/source-management-recovery-probe.mjs');
+    const read = (phase, generation, value, canRetry = phase === 'failed') => ({
+      action: 'load', sourceId: '', readFacts: projectOperationFacts({ phase, generation, value, canRetry }),
+    });
+    const attempts = [];
+    const mount = (operation, props = {}) => sourceManagementRecoveryProbe(text, {
+      sources: [], operation, onReconcile: expected => attempts.push(expected),
+      onRetryLoad: () => attempts.push('legacy-read'), ...props,
+    });
+    const pageState = ({ owner, sdk }) => sdk.walk(owner).find(child => child instanceof sdk.deps.ReaderPageState);
+    const unknownWrite = {
+      ...read('succeeded', 5, []), receipt: projectPersistedReceipt({
+        confirmation: 'unknown', readback: 'failed', canRetry: true, generation: 6,
+      }),
+    };
+    const unknown = mount(unknownWrite, { statusActionLabel: '检查状态', statusActionGeneration: 10 });
+    const retainedUnknown = mount(unknownWrite, { sources: [base('old')], statusKind: 'loading' });
+    const reload = mount(read('loading', 7, []));
+    const refreshFailed = mount(read('failed', 8, []));
+    const stale = mount(read('failed', 9));
+    const staleRetry = sourceRecoveryNativeAction(stale, '重试').onClick;
+    stale.owner.operation = read('failed', 10);
+    staleRetry();
+    const retired = mount(read('failed', 11));
+    retired.owner.temporaryBackIdentity = 'source-management-successor';
+    sourceRecoveryNativeAction(retired, '重试').onClick();
+    const replacedByReceipt = mount(read('failed', 12));
+    replacedByReceipt.owner.operation = unknownWrite;
+    sourceRecoveryNativeAction(replacedByReceipt, '重试').onClick();
+    const current = mount(read('failed', 13));
+    sourceRecoveryNativeAction(current, '重试').onClick();
+    const legacy = mount(read('failed', 14, undefined, false));
+    sourceRecoveryNativeAction(legacy, '重试').onClick();
+    const retained = mount(read('failed', 16, [base('old')]), { sources: [base('old')] });
+    const retainedRetry = sourceRecoveryNativeAction(retained, '刷新列表').onClick;
+    retainedRetry();
+    retained.owner.operation = { ...unknownWrite, readFacts: retained.owner.operation.readFacts };
+    retainedRetry();
+    const statusCalls = [];
+    const status = mount(read('succeeded', 17, []), { statusActionLabel: '查看结果', statusActionGeneration: 18,
+      onStatusAction: expected => statusCalls.push(expected) });
+    const statusAction = sourceRecoveryNativeAction(status, '查看结果').onClick;
+    statusAction();
+    status.owner.operation = unknownWrite;
+    statusAction();
+    const observation = {
+      unknownPageState: pageState(unknown)?.title ?? null,
+      unknownAction: unknown.sdk.walk(unknown.owner).some(actor => actor.label === '检查状态'),
+      unknownRecoveryGeneration: sourceRecoveryNativeAction(unknown, '核对').actor.generation,
+      retainedUnknownLoading: pageState(retainedUnknown)?.loading ?? false,
+      reload: pageState(reload)?.title,
+      refreshFailed: pageState(refreshFailed)?.title,
+      refreshGeneration: pageState(refreshFailed)?.actionGeneration,
+      currentGeneration: pageState(current)?.actionGeneration,
+      confirmedEmpty: pageState(mount(read('succeeded', 15, [])))?.title,
+      attempts,
+      statusCalls,
+    };
+    console.log(JSON.stringify(observation));
+    assert.deepEqual(observation, {
+      unknownPageState: null, unknownAction: false, unknownRecoveryGeneration: 6,
+      retainedUnknownLoading: false, reload: '正在读取书源', refreshFailed: '书源读取失败',
+      refreshGeneration: 8, currentGeneration: 13, confirmedEmpty: '暂无书源',
+      attempts: [13, 'legacy-read', 16], statusCalls: [18],
+    });
     const { READER_FEEDBACK_EXTENDED_MS } = await import('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts');
-    const Feedback = selectedProductionMethods(file, 'SourceManagementPage', ['onMessageChanged', 'feedbackIdentity'], { READER_FEEDBACK_EXTENDED_MS });
+    const Feedback = selectedProductionMethods(file, 'SourceManagementPage', ['onMessageChanged', 'feedbackIdentity',
+      'sourceListLoading', 'sourceAnchorReadPending', 'hasPendingSourceRecovery', 'hasEmptyListReadFailure'], { READER_FEEDBACK_EXTENDED_MS });
     const feedback = new Feedback(), messages = [];
     Object.assign(feedback, { mounted: true, sources: [base('a')], projectedSources: [], statusKind: 'error', statusMessage: '刷新失败，保留旧书源',
       operation: { readFacts: { fact: 'failed', generation: 4 } }, lastFeedbackIdentity: '', lastToastMessage: '',
@@ -96,6 +168,11 @@ if (selected.length) {
       transientFeedback: { show(_context, notice, current) { assert.equal(current(), true); messages.push(notice.message); } } });
     feedback.onMessageChanged(); feedback.onMessageChanged();
     assert.deepEqual(messages, ['刷新失败，保留旧书源'], 'available old content failure is one transient fact, independently of the local filtered-empty projection');
+    feedback.sources = [];
+    feedback.operation = read('failed', 19, []);
+    feedback.statusMessage = '刷新失败，保留上次读取结果';
+    feedback.onMessageChanged();
+    assert.deepEqual(messages, ['刷新失败，保留旧书源'], 'a failed retained empty list has one dedicated failure surface');
   }
 
   async function actionAdmission() {

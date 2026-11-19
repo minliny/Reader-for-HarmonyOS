@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 4,
+  "revision": 5,
   "routes": [
     {
       "routeId": "nav.bookshelf",
@@ -282,6 +282,7 @@
       ],
       "backPolicy": [
         "overlay-first",
+        "platform-host",
         "captured-parent"
       ],
       "retention": {
@@ -324,8 +325,8 @@
           "symbol": "toolsPage"
         }
       ],
-      "evidenceBoundary": "Current declaration/navigation owner mapping only. Same-runtime state and selected methods are separately tested; Native Back, platform order, full retention and acceptance require their own current candidate evidence.",
-      "knownGap": "Reopening an initialized same-Runtime Tools owner preserves editor draft/selection/check settings/results and only reloads source facts; retired Runtime creates a new owner. This records existing behavior, not a new cross-Runtime draft/storage policy. Native/system Back remains unknown."
+      "evidenceBoundary": "The current Source Tools callers have actual platform-first Back for export confirm, delete confirm, and DocumentSave. Back to the captured Source owner and scoped retained Runtime state are separately proved.",
+      "knownGap": "No new cross-Runtime draft policy. Current Route Tools ends after returning to the captured Source. Same-Runtime draft/selection/check settings/results retain existing owner; retired Runtime creates a new owner."
     },
     {
       "routeId": "nav.downloads",

@@ -2,6 +2,9 @@ import { ReaderFormFieldSpecId, resolveReaderFormFieldSpec } from './ReaderContr
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { ReaderEditingVisibility } from '../layout/ReaderEditingVisibility';
+import { ReaderEditableTarget, ReaderEditableInputModifier, ReaderEditableAreaModifier } from '../layout/ReaderEditableTarget';
+import { ReaderRectVp } from '../foundation/ReaderWindowMetrics';
 
 /** Controlled native field. Draft and keyboard ownership remain with its
  * caller; AUTO omissions and credential masking belong to finite variants. */
@@ -69,63 +72,102 @@ class ReaderContentSearchNaturalFrame implements AttributeModifier<TextInputAttr
 }
 @Component
 export struct ReaderFormField {
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
   @Prop scheme: string = 'day';
   @Prop specId: ReaderFormFieldSpecId = 'rules-input';
   @Prop text: string = '';
   @Prop placeholder: string = '';
   @Prop isEditable: boolean = true;
   @Prop password: boolean = false;
-  @Prop inputIdentity: string = '';
+  @Prop @Watch('bindEditingTarget') inputIdentity: string = '';
   @Prop fieldAccessibilityLabel: string = '';
   @Prop naturalInputHeightVp: number = 0;
   inputController: TextInputController | undefined = undefined;
+  editingHost: ReaderEditingVisibility | undefined = undefined;
+  editingContext: ((field: ReaderRectVp) => ReaderRectVp | undefined) | undefined = undefined;
+  private readonly nativeInputController: TextInputController = new TextInputController();
+  private readonly nativeAreaController: TextAreaController = new TextAreaController();
+  private readonly editingTarget: ReaderEditableTarget = new ReaderEditableTarget();
   onEditingChange: (editing: boolean) => void = (_editing: boolean): void => {};
   onSubmit: () => void = (): void => {};
   onTextChange: (value: string) => void = (_value: string): void => {};
   private mounted: boolean = false;
-  aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToAppear(): void { this.mounted = true; this.bindEditingTarget(); }
+  aboutToDisappear(): void { this.mounted = false; this.editingTarget.unmount(); }
+  private nativeInputId(): string {
+    // Only content search has an existing external native-focus API. Other
+    // draft identities were never native IDs and may repeat in retained pages.
+    return this.specId === 'reader-content-search' && this.inputIdentity.length > 0 ? this.inputIdentity :
+      this.inputIdentity.length > 0 ? `${this.editingTarget.id}:${this.inputIdentity}` : this.editingTarget.id;
+  }
+  private bindEditingTarget(): void {
+    if (!this.mounted) return;
+    const spec = resolveReaderFormFieldSpec(this.specId);
+    const id = this.nativeInputId();
+    this.editingTarget.mount(this.getUIContext(), this.editingHost,
+      spec.multiline ? this.nativeAreaController : this.inputController ?? this.nativeInputController,
+      (): boolean => this.mounted && this.isEditable && id === this.nativeInputId(),
+      (): number => (spec.text?.lineHeightFp ?? (spec.text?.fontSizeFp ?? 16) * 1.5) * this.fontScale(), id,
+      this.editingContext === undefined ? undefined : (field: ReaderRectVp): ReaderRectVp | undefined => this.editingContext?.(field));
+  }
+  private editingGeometryChanged(): void { this.editingTarget.changed(); }
+  private textChangeHandler(): (value: string) => void {
+    const id = this.nativeInputId();
+    return (value: string): void => { if (this.editingTarget.nativeCurrent(id)) this.change(value); };
+  }
+  private submitHandler(): () => void {
+    const id = this.nativeInputId();
+    return (): void => { if (this.editingTarget.nativeCurrent(id)) this.submit(); };
+  }
   build() {
     if (resolveReaderFormFieldSpec(this.specId).multiline) {
-      TextArea({ text: this.text, placeholder: this.placeholder })
+      TextArea({ text: this.text, placeholder: this.placeholder, controller: this.nativeAreaController })
+        .attributeModifier(new ReaderEditableAreaModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing)))
         .attributeModifier(new ReaderFormAreaModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
-        .enabled(this.isEditable).onChange((value: string): void => this.change(value));
+        .enabled(this.isEditable).onChange(this.textChangeHandler());
     } else if (this.specId === 'reader-content-search') {
-      TextInput({ text: this.text, placeholder: this.placeholder, controller: this.inputController })
-        .id(this.inputIdentity).enableKeyboardOnFocus(true).maxLines(1).enterKeyType(EnterKeyType.Search)
+      TextInput({ text: this.text, placeholder: this.placeholder, controller: this.inputController ?? this.nativeInputController })
+        .attributeModifier(new ReaderEditableInputModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing)))
+        .enableKeyboardOnFocus(true).maxLines(1).enterKeyType(EnterKeyType.Search)
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
         .attributeModifier(new ReaderContentSearchNaturalFrame(this.naturalInputHeightVp))
-        .enabled(this.isEditable).onChange((value: string): void => this.change(value))
-        .onEditChange((editing: boolean): void => this.editChanged(editing))
-        .onSubmit((_key: EnterKeyType): void => this.submit());
+        .enabled(this.isEditable).onChange(this.textChangeHandler())
+        .onSubmit(this.submitHandler());
     } else if (this.specId === 'directory-rule-level') {
-      TextInput({ text: this.text }).attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
-        .enabled(this.isEditable).onChange((value: string): void => this.change(value));
+      TextInput({ text: this.text, controller: this.inputController ?? this.nativeInputController })
+        .attributeModifier(new ReaderEditableInputModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing))).attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
+        .enabled(this.isEditable).onChange(this.textChangeHandler());
     } else if (resolveReaderFormFieldSpec(this.specId).numberInput) {
-      TextInput({ text: this.text, placeholder: this.placeholder }).type(InputType.Number)
+      TextInput({ text: this.text, placeholder: this.placeholder, controller: this.inputController ?? this.nativeInputController })
+        .attributeModifier(new ReaderEditableInputModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing))).type(InputType.Number)
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
-        .enabled(this.isEditable).onChange((value: string): void => this.change(value));
+        .enabled(this.isEditable).onChange(this.textChangeHandler());
     } else if (this.password) {
-      TextInput({ text: this.text, placeholder: this.placeholder }).type(InputType.Password)
+      TextInput({ text: this.text, placeholder: this.placeholder, controller: this.inputController ?? this.nativeInputController })
+        .attributeModifier(new ReaderEditableInputModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing))).type(InputType.Password)
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
-        .enabled(this.isEditable).onChange((value: string): void => this.change(value));
+        .enabled(this.isEditable).onChange(this.textChangeHandler());
     } else if (this.specId === 'form-url') {
-      TextInput({ text: this.text, placeholder: this.placeholder })
+      TextInput({ text: this.text, placeholder: this.placeholder, controller: this.inputController ?? this.nativeInputController })
+        .attributeModifier(new ReaderEditableInputModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing)))
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
-        .enabled(this.isEditable).onChange((value: string): void => this.change(value))
-        .onSubmit((_enterKey: EnterKeyType): void => this.submit());
+        .enabled(this.isEditable).onChange(this.textChangeHandler())
+        .onSubmit(this.submitHandler());
     } else {
-      TextInput({ text: this.text, placeholder: this.placeholder })
+      TextInput({ text: this.text, placeholder: this.placeholder, controller: this.inputController ?? this.nativeInputController })
+        .attributeModifier(new ReaderEditableInputModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing)))
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
-        .enabled(this.isEditable).onChange((value: string): void => this.change(value));
+        .enabled(this.isEditable).onChange(this.textChangeHandler());
     }
   }
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
-  private editChanged(editing: boolean): void { if (this.mounted && this.isEditable) this.onEditingChange(editing); }
+  private editChanged(editing: boolean): void {
+    this.editingTarget.edit(editing);
+    if (this.mounted && this.isEditable) this.onEditingChange(editing);
+  }
   private submit(): void { if (this.mounted && this.isEditable) this.onSubmit(); }
   private change(value: string): void { if (this.mounted && this.isEditable) this.onTextChange(value); }
 }

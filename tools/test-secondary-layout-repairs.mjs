@@ -15,6 +15,7 @@ import { foundationControls, foundationSpecs, withReaderSectionHeading, readerFo
 import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
 import { switchSpecs, toggleSource } from './lib/reader-switch-control-probe.mjs';
 import { inlineSelectSdk } from './lib/reader-inline-select-sdk-probe.mjs';
+import { readerEditingSdk } from './lib/reader-editing-sdk-probe.mjs';
 import { productionReaderPressFeedback } from './lib/reader-press-feedback-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
@@ -28,6 +29,7 @@ import * as headers from '../entry/src/main/ets/ui/foundation/ReaderHeaderMetric
 import { DOWNLOAD_VISUAL, downloadVisualColor, sharedDownloadContentInsets } from '../entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts';
 
 const selected = selectContractCases({
+  'download-accessibility': 'Actual SDK book/chapter selection names and states, chapter action role, and retired-generation callback rejection.',
   'select-host': 'Actual sourceGroup panel SDK viewport and anchor inside short/IME/zero host, old330 rejected.',
   'actions-tools-rules': 'Actual Tools/Rules/equal consumers SDK parent carriers and bundled FreeType CJK text at320/366 x1/1.45/2.',
   'recovery-overlays': 'Actual notice/action SDK bounded expanded document, zero budget and generation retirement, overlay caller bounds.',
@@ -37,6 +39,7 @@ const selected = selectContractCases({
   'download-chapter-width': 'Actual Download chapter List row title/tag/trail budget at320/366 safe0/40each scale1/2/3 with current scope and old23vp failure.',
   'retained-and-settings': 'Actual retained Discover/RSS/Sync consumers and bounded Settings phone/tablet menus. Product gate frozen.',
   'title-scale': 'Actual standard and action-sheet titles at2.5 with platformmax3 and current linebox parent.',
+  'page-back-bar-title-wrap': 'Actual PageBackBar fixed heading wraps at original font with a naturally growing Row. Floating standard heading stays single-line. Old truncation fails.',
   'select-reduce-motion': 'Nine real InlineSelect callers and both directory/source-tool propagation chains preserve true/false preferences and popup lifecycle.',
   'bookshelf-group-recovery-capacity': 'Actual group build/surface/recovery pays current safe host capacity, including expanded long text, zero, busy and retired actions.',
 });
@@ -764,6 +767,37 @@ function supplementalPreviewDocument() {
   results.push({ case: 'recovery-overlays', supplemental: 'normal MessagePreview notice uses actual StandardPage geometry, one Scroll, no-argument callback and generation Back' });
 }
 
+function pageBackBarTitleWrap() {
+  const rel = 'ui/chrome/PageBackBar.ets', source = read(rel);
+  const value = metrics(320, 770, 2), c = context(value);
+  const deps = { ...c.deps, ...headers, ...readerSurfaceSpecsForProbe(value),
+    ...pureModuleProbe(read('ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts', safe, ['readerScaledBarHeight']),
+    MangaDirectoryPressFeedback: productionMangaDirectoryPressFeedback(), resolveReaderRaisedShape };
+  function expect(candidate, floating) {
+    const { owner } = createReaderBuilderProbe(candidate, boundedMembers(candidate), deps, c.hooks);
+    Object.assign(owner, { appThemeScheme: 'day', title: '书源管理', variant: 'standard', floating,
+      readerWindowMetricsRevision: 1, trailing: () => {} });
+    owner.initialRender();
+    const nodes = c.nodes(owner);
+    const text = nodes.find(node => node.type === 'Text' && node.create === '书源管理');
+    const row = nodes.find(node => node.type === 'Row');
+    assert.ok(text && row);
+    assert.equal(text.maxLines, floating ? 1 : undefined, 'header title follows fixed or floating layout policy');
+    assert.equal(text.textOverflow.overflow, floating ? nativeEnums.TextOverflow.Ellipsis : nativeEnums.TextOverflow.Clip);
+    assert.equal(text.fontSize, floating ? 19 : readerTypographyRoles.TYPE_PAGE_TITLE.fontSizeFp);
+    assert.equal(text.maxFontScale, 2);
+    assert.equal(text.layoutWeight, 1);
+    assert.equal(row.height, undefined, 'row height follows native single or multiline text');
+    assert.ok(row.constraintSize.minHeight > 0);
+  }
+  expect(source, false);
+  expect(source, true);
+  const before = source.replace('.maxLines(this.multilineTitle() ? undefined : 1)', '.maxLines(1)');
+  assert.notEqual(before, source);
+  assert.throws(() => expect(before, false), /header title follows fixed or floating layout policy/);
+  results.push({ case: 'page-back-bar-title-wrap', fixedHeaderGrowth: true, floatingSingleLine: true });
+}
+
 function supplementalRetainedTargets() {
   for (const scale of [1, 1.45, 2]) {
     const value = metrics(320, 360, scale), c = context(value);
@@ -861,7 +895,8 @@ async function selectReduceMotion() {
     const inline = inlineSelectSdk({ properties: c.foundation.properties, uiContext: native, dependencies: { readerWindowMetrics: () => value } });
     const hooks = { ...c.hooks, childSources: { ...c.hooks.childSources, ...inline.hooks.childSources } };
     const recovery = pureModuleProbe(read('features/reading/presentation/ReadingDirectoryRecovery.ts'), 'ReadingDirectoryRecovery.ts', {}, ['EMPTY_READING_DIRECTORY_RECOVERY']);
-    const dependencies = { ...c.deps, ...inline.dependencies, ...recovery, uiContext: native, DOWNLOAD_VISUAL, downloadVisualColor };
+    const dependencies = { ...c.deps, ...inline.dependencies, ...recovery, ...readerEditingSdk(),
+      uiContext: native, Scroller: class {}, DOWNLOAD_VISUAL, downloadVisualColor };
     const mount = (rel, members, fields) => {
       const actor = createReaderBuilderProbe(read(rel), members, dependencies, hooks).owner;
       Object.assign(actor, { appThemeScheme: 'day', reduceMotion, ...fields }); return actor;
@@ -876,7 +911,8 @@ async function selectReduceMotion() {
     const tools = mount('features/source/ui/SourceToolsPage.ets', ['debugCard'], { snapshot: { busy: false, checkMode: 'search', checkDepth: 2,
       debugSourceId: '', debugKey: '', debugLogs: [] }, debugInputRevision: 0, debugKeyChange: () => () => {}, debugOptionsCurrent: () => true });
     tools.debugCard();
-    const rules = mount('features/reading/ui/ReaderDirectoryRules.ets', ['build'], { scheme: 'day', focusTargetId: '', interactionEnabled: true,
+    const rules = mount('features/reading/ui/ReaderDirectoryRules.ets',
+      ['build', 'editingHost', 'editingScroll', 'editingScroller', 'currentRule'], { scheme: 'day', focusTargetId: '', interactionEnabled: true,
       actorIdentity: () => 'rules:1', rules: [{ id: 1, pattern: '.*', level: '0', boundary: 'title' }], availableWidthVp: 280, availableHeightVp: 180,
       canEdit: () => true, previewReady: false, recoveryView: () => ({ visible: false }), loaded: true, busy: false,
       recoveryIdentity: () => 'rules:1', preview: [], message: '', operation: { generation: 1 } });
@@ -923,7 +959,8 @@ async function selectReduceMotion() {
         ports.SourceSwitchPanel = ChildPort;
         childSources.SourceSwitchPanel = read('features/source/ui/SourceSwitchPanel.ets');
       }
-      const owner = createReaderBuilderProbe(read(rel), [member], ports, { ...hooks, childSources }).owner;
+      const members = member === 'mangaDownloadMenuButton' ? [member, 'directoryInputIsCurrent'] : [member];
+      const owner = createReaderBuilderProbe(read(rel), members, ports, { ...hooks, childSources }).owner;
       Object.assign(owner, { reduceMotion, ...fields });
       if (member === 'build') owner.initialRender(); else owner[member](...args);
       const params = [...owner.children.values()].find(actor => actor instanceof ChildPort)?.params;
@@ -941,10 +978,11 @@ async function selectReduceMotion() {
     propagated('features/reading/ui/ReaderFullDirectory.ets', 'directoryRulesForm', 'ReaderDirectoryRules', { panelWidth: () => 280, panelViewportHeight: () => 180, directoryRulesFocusId: () => 'rules-focus' }, ['rules:1', 'book']);
     propagated('features/reading/ui/ReaderDirectoryDestination.ets', 'catalog', 'BookDirectoryPage', { contentKind: 'manga' }, [1]);
     propagated('features/reading/ui/BookDirectoryPage.ets', 'mangaDownloadMenuButton', 'ReaderMangaDownloadPopup', {
-      mangaDownloadEnabled: true, identity: () => 'manga:1', contentFrame: () => ({ width: 280 }) });
+      mangaDownloadEnabled: true, mounted: true, interactive: true, admittedIdentity: 'manga:1',
+      identity: () => 'manga:1', isOpeningCurrent: () => true, contentFrame: () => ({ width: 280 }) });
     propagated('app/composition/ReaderSourceSwitchSurfaces.ets', 'build', 'BookDirectoryPage', {
       manga: { selectionVisible: true, selection: { target: { identity: { sourceId: 'source', bookId: 'book' }, book: { title: '目标漫画' } }, entries: [] },
-        directoryOpening: () => () => true, directorySelection: () => () => {},
+        directorySelectionBusy: () => false, directoryOpening: () => () => true, directorySelection: () => () => {},
         directoryTemporaryBack: () => () => {}, directoryBack: () => () => {} } });
     Object.assign(c.deps, { READER_MANGA_DOWNLOAD_POPUP,
       Placement: { BottomLeft: 'Placement.BottomLeft' },
@@ -1038,12 +1076,69 @@ function supplementalRendererPilot() {
   assert.throws(() => assert.ok(c.nodes(pilot(before)).some(node => node.type === 'Scroll')), /AssertionError/, 'old diagnostic menu without Scroll rejected');
   results.push({ case: 'renderer-pilot', supplemental: 'six normal Native menu actions and specialized return actions in actual bounded Scroll, weighted Web remainder' });
 }
+function downloadAccessibility() {
+  const value = metrics(366, 600, 1), c = context(value), calls = [];
+  const rel = 'features/downloads/ui/SharedDownloadPage.ets';
+  const chapter = { key: 'c1', chapterId: 'c1', index: 1, title: '第一章', stateLabel: '已下载', localComplete: true, queueState: 'complete', navigable: true };
+  const book = { key: 'b1', title: '测试书籍', author: '作者', stateLabel: '', contentKind: 'novel', chapters: [chapter] };
+  const deps = { ...c.deps, DOWNLOAD_VISUAL, downloadVisualColor, sharedDownloadContentInsets, downloadChapterDetailLabel };
+  const coverSource = read('features/downloads/ui/SharedDownloadBookCover.ets');
+  const placeholderSource = read('ui/patterns/NoCoverCover.ets');
+  deps.NoCoverCover = createReaderBuilderProbe(placeholderSource,
+    ['appThemeScheme', 'coverWidth', 'coverHeight', 'build', 'ruleWidth', 'labelWidth'], deps, c.hooks).Component;
+  deps.SharedDownloadBookCover = createReaderBuilderProbe(coverSource,
+    ['bookKey', 'coverUrl', 'presentationGeneration', 'coverWidth', 'coverHeight', 'imageFailed', 'requestGeneration', 'mounted',
+      'build', 'requestIdentity', 'rejectImage', 'resetImage'], deps,
+    { ...c.hooks, childSources: { ...c.hooks.childSources, NoCoverCover: placeholderSource } }).Component;
+  const methods = ['bookRow', 'chapterRow', 'eventBook', 'eventChapter', 'chapterButtonLabel', 'chapterIsRunning',
+    'chapterRowWrap', 'chapterTextAvailableWidth', 'currentMetrics', 'pageViewportWidth', 'contentLeftInset', 'contentRightInset'];
+  function render(managing, method) {
+    const owner = createReaderBuilderProbe(read(rel), methods, deps,
+      { ...c.hooks, childSources: { ...c.hooks.childSources, SharedDownloadBookCover: coverSource } }).owner;
+    Object.assign(owner, { appThemeScheme: 'day', managing, selectedBookKeys: ['b1'], detailKey: 'b1', presentationGeneration: 7,
+      pageWidth: 366, readerWindowMetricsRevision: 1,
+      bookHeight: () => 160, authorSource: () => '作者，书源', downloadCount: () => '1章',
+      fontScale: () => 1, unit: () => '章', chapterMenuFocusKey: () => 'menu:c1',
+      bookProgressSpacer: () => 0, focusKey: text => text, visualIcon: () => ({}),
+      currentChapterForBook: () => undefined, chapterTextMinimum: () => 120,
+      chapterReadingFocusKey: () => 'chapter:c1', chapterSelected: () => true,
+      primaryInk: () => '#111111', uiInputIsCurrent(generation) { return generation === this.presentationGeneration; },
+      modalBlocking: () => false, findCurrentBook: () => book,
+      toggleBook: (...args) => calls.push(['book', ...args]), toggleChapter: (...args) => calls.push(['chapter', ...args]),
+      showReadTarget: (...args) => calls.push(['read', ...args]), statusButton() {}, moreButton() {},
+      recordBookHeight() {}, recordBookContentHeight() {}, openBook() {} });
+    if (method === 'bookRow') owner.bookRow(() => book, false, 7);
+    else owner.chapterRow(() => book, () => chapter, 7);
+    return { owner, nodes: c.nodes(owner) };
+  }
+  for (const method of ['bookRow', 'chapterRow']) {
+    const { owner, nodes } = render(true, method);
+    const box = nodes.find(node => node.type === 'Checkbox');
+    assert.ok(box); assert.equal(box.select, true, 'native selection state remains present');
+    assert.equal(box.accessibilityText, method === 'bookRow' ? '选择书籍：测试书籍，作者，书源' : '选择章节：第一章，测试书籍');
+    const before = calls.length; box.onChange(false); assert.equal(calls.length, before + 1);
+    assert.equal(calls.at(-1)[0], method === 'bookRow' ? 'book' : 'chapter');
+    owner.presentationGeneration += 1; box.onChange(true); assert.equal(calls.length, before + 1, 'retired carrier cannot change selection');
+    if (method === 'chapterRow') assert.equal(nodes.find(node => node.type === 'Text' && node.create === chapter.title).accessibilityLevel, 'no');
+  }
+  const { nodes } = render(false, 'chapterRow');
+  const title = nodes.find(node => node.type === 'Text' && node.create === chapter.title);
+  assert.equal(title.accessibilityRole, 'AccessibilityRoleType.BUTTON');
+  assert.equal(title.accessibilityText, '打开章节：第一章，测试书籍');
+  assert.equal(title.accessibilityLevel, 'yes');
+  const before = calls.length; title.onClick(); assert.equal(calls.length, before + 1);
+  assert.equal(calls.at(-1)[0], 'read');
+  results.push({ kind: 'download-accessibility', selectedCarriers: 2, chapterAction: true, retiredCallbacksRejected: true });
+}
+
 function supplementalChapterWidths() {
   const rel = 'features/downloads/ui/SharedDownloadPage.ets', source = read(rel);
   for (const width of [320, 366]) for (const safeInset of [0, 40]) for (const scale of [1, 2, 3]) for (const managing of [false, true]) {
     const value = metrics(width, 360, scale); value.systemInsets.left = safeInset; value.systemInsets.right = safeInset;
     const c = context(value), calls = [];
-    const methods = ['chapterRow', 'chapterTextMinimum', 'moreButton', 'chapterButtonLabel', 'chapterIsRunning', 'fontScale', 'currentMetrics', 'pageViewportWidth', 'contentLeftInset', 'contentRightInset', 'eventBook', 'eventChapter'];
+    const methods = ['chapterRow', 'chapterRowWrap', 'chapterTextAvailableWidth', 'chapterTextMinimum', 'moreButton',
+      'chapterButtonLabel', 'chapterIsRunning', 'fontScale', 'currentMetrics', 'pageViewportWidth',
+      'contentLeftInset', 'contentRightInset', 'eventBook', 'eventChapter'];
     const deps = { ...c.deps, DOWNLOAD_VISUAL, downloadVisualColor, sharedDownloadContentInsets, downloadChapterDetailLabel };
     const chapter = { key: 'c1', chapterId: 'c1', index: 1, title: '当前章节标题', stateLabel: '已下载', localComplete: true, queueState: 'complete', navigable: true };
     const book = { key: 'b1', contentKind: 'novel', chapters: [chapter] };
@@ -1057,20 +1152,41 @@ function supplementalChapterWidths() {
     const nodes = c.nodes(owner), title = nodes.find(node => node.type === 'Text' && node.create === chapter.title);
     const tag = nodes.find(node => node.type === 'Text' && node.create === '当前阅读');
     const outer = nodes.find(node => node.type === 'Flex' && node.padding?.left === DOWNLOAD_VISUAL.chapterPaddingX);
-    assert.ok(outer && outer.create.wrap === 'FlexWrap.Wrap' && outer.height === undefined);
-    assert.ok(nodes.filter(node => node.type === 'Flex').every(node => node.create.wrap === 'FlexWrap.Wrap'));
+    assert.ok(outer && outer.height === undefined);
+    assert.ok(nodes.filter(node => node.type === 'Flex' && node !== outer).every(node => node.create.wrap === 'FlexWrap.Wrap'));
     const innerWidth = width - owner.contentLeftInset() - owner.contentRightInset() - outer.padding.left - outer.padding.right;
     assert.ok(title.constraintSize.minWidth >= 44 && title.constraintSize.minHeight >= 44 && title.constraintSize.minWidth <= innerWidth);
     assert.equal(title.constraintSize.minWidth, owner.chapterTextMinimum());
     const info = nodes.find(node => node.type === 'Column' && node.flexBasis === owner.chapterTextMinimum());
     assert.ok(info && info.constraintSize.minWidth === title.constraintSize.minWidth, 'title and its physical info carrier pay the same actual minimum');
+    const action = nodes.find(node => node.type === 'Button' && node.constraintSize?.minWidth === 44);
+    const label = nodes.find(node => node.type === 'Text' && node.create === '阅读');
+    const more = nodes.find(node => node.type === 'Button' && node.width === 44 && node.height === 44);
+    const actionWidth = managing ? 0 :
+      Math.max(action.constraintSize.minWidth, Math.ceil(glyph(label.create, label.fontSize * scale, label.fontWeight).width) +
+        action.padding.left + action.padding.right);
+    const tailWidth = managing ? 0 : actionWidth + DOWNLOAD_VISUAL.chapterTailGap + more.width;
+    const sideLane = managing ? DOWNLOAD_VISUAL.touchTarget : tailWidth;
+    const keepsSideLaneInline = innerWidth >= sideLane + DOWNLOAD_VISUAL.chapterGap + 120 * scale;
+    assert.equal(outer.create.wrap, keepsSideLaneInline ? 'FlexWrap.NoWrap' : 'FlexWrap.Wrap',
+      'the checkbox or both browse actions stay beside chapter copy when their minimum widths fit');
+    assert.equal(info.flexShrink, managing || keepsSideLaneInline ? 1 : 0,
+      'chapter copy can shrink only down to its admitted inline width');
+    if (!managing) {
+      const tail = nodes.find(node => node.type === 'Row' && node !== outer && node.flexShrink === 0);
+      assert.ok(tail, 'the paired chapter actions do not surrender their width to the title');
+    }
+    if (width === 366 && safeInset === 0 && scale === 1) {
+      const prior = source.replace('wrap: this.chapterRowWrap()', 'wrap: FlexWrap.Wrap');
+      assert.notEqual(prior, source);
+      const old = createReaderBuilderProbe(prior, methods, deps, c.hooks).owner;
+      Object.assign(old, fields);
+      old.chapterRow(() => book, () => chapter, 7);
+      const oldOuter = c.nodes(old).find(node => node.type === 'Flex' && node.padding?.left === DOWNLOAD_VISUAL.chapterPaddingX);
+      assert.equal(oldOuter.create.wrap, 'FlexWrap.Wrap', 'the unchecked row can wrap even with enough width for its side lane');
+    }
     const tagWidth = glyph(tag.create, tag.fontSize * scale, tag.fontWeight).width + tag.padding.left + tag.padding.right;
     if (!managing) {
-      const action = nodes.find(node => node.type === 'Button' && node.constraintSize?.minWidth === 44);
-      const label = nodes.find(node => node.type === 'Text' && node.create === '阅读');
-      const more = nodes.find(node => node.type === 'Button' && node.width === 44 && node.height === 44);
-      const actionWidth = Math.max(action.constraintSize.minWidth, glyph(label.create, label.fontSize * scale, label.fontWeight).width + action.padding.left + action.padding.right);
-      const tailWidth = actionWidth + DOWNLOAD_VISUAL.chapterTailGap + more.width;
       if (safeInset === 40 && scale >= 2) {
         assert.ok(info.flexBasis + tailWidth + DOWNLOAD_VISUAL.chapterGap > innerWidth, 'actual minima force the trailing actions onto another natural row');
         assert.ok(title.constraintSize.minWidth + tagWidth + DOWNLOAD_VISUAL.statusGap > info.flexBasis, 'current reading tag cannot steal the minimum title lane');
@@ -1078,11 +1194,11 @@ function supplementalChapterWidths() {
       action.onClick(); assert.equal(calls.length, 1);
       owner.presentationGeneration += 1; action.onClick(); assert.equal(calls.length, 1, 'existing action callback still rejects retired presentation generation');
       if (width === 320 && safeInset === 40 && scale === 2) {
-        let prior = source.replace(/Flex\(\{ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Start,\s*space: \{ main: LengthMetrics.vp\(DOWNLOAD_VISUAL.chapterGap\), cross: LengthMetrics.vp\(DOWNLOAD_VISUAL.chapterGap\) \} \}\)/, 'Row({ space: DOWNLOAD_VISUAL.chapterGap })')
+        const prior = source.replace(/Flex\(\{ wrap: this.chapterRowWrap\(\), alignItems: ItemAlign.Start,\s*space: \{ main: LengthMetrics.vp\(DOWNLOAD_VISUAL.chapterGap\), cross: LengthMetrics.vp\(DOWNLOAD_VISUAL.chapterGap\) \} \}\)/, 'Row({ space: DOWNLOAD_VISUAL.chapterGap })')
           .replace(/Flex\(\{ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,\s*space: \{ main: LengthMetrics.vp\(DOWNLOAD_VISUAL.statusGap\), cross: LengthMetrics.vp\(DOWNLOAD_VISUAL.statusGap\) \} \}\)/, 'Row({ space: DOWNLOAD_VISUAL.statusGap })')
           .replace('.flexGrow(1).flexShrink(0).flexBasis(this.chapterTextMinimum())', '.layoutWeight(1)')
           .replace("minWidth: this.chapterTextMinimum(), maxWidth: '100%', minHeight: DOWNLOAD_VISUAL.touchTarget", 'minHeight: DOWNLOAD_VISUAL.touchTarget')
-          .replace('}.flexGrow(1).flexShrink(0).flexBasis(this.chapterTextMinimum())\n        .constraintSize({ minWidth: this.chapterTextMinimum() }).alignItems', '}.layoutWeight(1).alignItems');
+          .replace(/}\.flexGrow\(1\)\.flexShrink\([^\n]*?\)\.flexBasis\(this\.chapterTextMinimum\(\)\)\s*\.constraintSize\(\{ minWidth: this.chapterTextMinimum\(\) \}\)\.alignItems/, '}.layoutWeight(1).alignItems');
         assert.notEqual(prior, source);
         const old = createReaderBuilderProbe(prior, methods, deps, c.hooks).owner; Object.assign(old, fields); old.chapterRow(() => book, () => chapter, 7);
         const oldOuter = c.nodes(old).find(node => node.type === 'Row' && node.padding?.left === DOWNLOAD_VISUAL.chapterPaddingX);
@@ -1092,13 +1208,15 @@ function supplementalChapterWidths() {
         assert.throws(() => assert.ok(oldTitleWidth >= 44), /AssertionError/, 'actual prior fixed Row23vp title budget is rejected');
       }
     }
-    results.push({ case: 'download-chapter-width', chapter: { width, safeInset, scale, managing, innerWidth, titleMinimum: title.constraintSize.minWidth, tagWidth } });
+    results.push({ case: 'download-chapter-width', chapter: { width, safeInset, scale, managing, innerWidth, titleMinimum: title.constraintSize.minWidth, tagWidth, sideLane, keepsSideLaneInline } });
   }
 }
 const runners = { 'select-host': selectHost, 'actions-tools-rules': actionsToolsRules, 'recovery-overlays': recoveryOverlays,
   'select-reduce-motion': selectReduceMotion, 'bookshelf-group-recovery-capacity': bookshelfGroupRecoveryCapacity,
   'arkweb-host': arkwebHost, 'retained-and-settings': retainedAndSettings, 'title-scale': titleScale,
-  'download-controls': supplementalDownloadControls, 'renderer-pilot': supplementalRendererPilot, 'download-chapter-width': supplementalChapterWidths };
+  'page-back-bar-title-wrap': pageBackBarTitleWrap,
+  'download-controls': supplementalDownloadControls, 'renderer-pilot': supplementalRendererPilot, 'download-chapter-width': supplementalChapterWidths,
+  'download-accessibility': downloadAccessibility };
 const supplemental = { 'select-host': supplementalSelectTargets, 'actions-tools-rules': supplementalInputTargets,
   'recovery-overlays': supplementalPreviewDocument, 'retained-and-settings': supplementalRetainedTargets };
 for (const id of selected) { await runners[id](); await supplemental[id]?.(); recordContractCasePass(id); }

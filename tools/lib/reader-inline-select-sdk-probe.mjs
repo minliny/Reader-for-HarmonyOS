@@ -11,13 +11,18 @@ import {pureModuleProbe} from './ets-pure-module-probe.mjs';
 import {readerAppColor} from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import * as appearance from '../../entry/src/main/ets/ui/controls/ReaderSelectAppearanceStyle.ts';
 import * as geometry from '../../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { ReaderRectVp, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import * as timing from '../../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
 import { readerMotionValueDurationMs as collapseMotionDurationMs } from '../../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts';
 import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
 import { DIRECTORY_CHROME_VISUAL as MANGA_DIRECTORY_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
 const file=(name,directory='controls')=>new URL('../../entry/src/main/ets/ui/'+directory+'/'+name+'.ets',import.meta.url);
 const read=(name,directory)=>readFileSync(file(name,directory),'utf8');
+const { readerKeyboardHostBottom } = pureModuleProbe(
+ readFileSync(new URL('../../entry/src/main/ets/ui/layout/ReaderKeyboardGeometry.ts', import.meta.url), 'utf8'),
+ 'ReaderKeyboardGeometry.ts', { ReaderRectVp, readerInteractiveSafeTop, readerInteractiveSafeBottom },
+ ['readerKeyboardHostBottom'],
+);
 /** Actual finite InlineSelect -> trigger/popup -> choice rows. Platform popup
  * anchoring, text metrics, animation delivery remain explicit caller ports. */
 export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),uiContext,dependencies={}}={}){
@@ -27,7 +32,7 @@ export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),ui
  const policy=pureModuleProbe(read('ReaderMotionPolicy','foundation'),'ReaderMotionPolicy.ets',{...motion,collapseMotionDurationMs},['readerMotionAnimateParam']);
  const choice=choiceRowProbe(resolveReaderChoiceSpec,choiceSource,properties,dependencies.readerWindowMetrics);
  const hooks={...properties.hooks,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:true,childSources:{...choice.hooks.childSources}};
- const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeTop,readerInteractiveSafeBottom,...motion,...policy,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
+ const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeTop,readerInteractiveSafeBottom,readerKeyboardHostBottom,...motion,...policy,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
  for(const name of ['ReaderSelect','ReaderSelectPanel','ReaderInlineSelect']){
   const source=read(name);hooks.childSources[name]=source;
   const moduleNames=name==='ReaderSelect'?['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:name==='ReaderSelectPanel'?['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:[];

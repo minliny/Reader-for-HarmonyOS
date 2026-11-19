@@ -17,6 +17,9 @@ async function metadata() {
   for(const text of [readerSourceCategoryLabel('novel'),bookSource.baseUrl,bookSource.checkMessage]) {
    const node=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===text);assert.ok(node,text);
    assert.deepEqual([node.fontFamily,node.fontWeight,node.fontSize,node.lineHeight],[role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);assert.equal(node.fontColor,readerAppColor('TOK_CONTROL_INK',scheme));assert.equal(node.maxFontScale,2);
+   assert.equal(node.maxLines,1);
+   assert.equal(node.textOverflow.overflow,'ellipsis');
+   assert.equal(node.wordBreak,text===bookSource.baseUrl?'WordBreak.BREAK_ALL':undefined);
   }
  }
 }

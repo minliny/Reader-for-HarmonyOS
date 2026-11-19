@@ -297,8 +297,9 @@
     {
       "id": "GAP-04",
       "scope": "跨书书签禁写后的原实体与恢复路径",
-      "status": "CODE_VERIFIED_NATIVE_OPEN",
-      "reason": "现行/旧版原记录的精确身份、只读核对、合格/未派发/无可用回执分类和原书引导已独立审修与定向验证，Native/用户接受开放"
+      "status": "NATIVE_VERIFIED_ORIGINAL_SCOPE",
+      "reason": "已有正常跨书指引与当前候选的原书正常待处理入口证据。展开时提示动作完整可见，返回后保留正文与进度。旧版无书名记录沿原有有限端口和最新定向回归保存。完整视觉和实际持久化结算分项记录。",
+      "evidenceRef": ".reader-artifacts/app-ui-framework-audit-20261114/gap04-original-scope-closure-9087-20261118.json"
     }
   ]
 }

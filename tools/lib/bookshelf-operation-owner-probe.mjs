@@ -1,3 +1,4 @@
+import {LocalBookSelectionFailure} from '../../entry/src/main/ets/app/LocalImportFailure.ts';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import {BookshelfReadOwner} from '../../entry/src/main/ets/features/bookshelf/application/BookshelfReadOwner.ts';
 import {projectOperationFacts} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
@@ -10,6 +11,7 @@ import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmo
 const { ts } = installedEtsCompiler();
 export const bookshelfOperationSource=path=>readFileSync(new URL('../../entry/src/main/ets/'+path,import.meta.url),'utf8');
 export function bookshelfOperationClass(path,result,deps={}) {
+ deps={LocalBookSelectionFailure,...deps};
  const text=bookshelfOperationSource(path).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export (?:type )?\{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
  const declarations=ts.createSourceFile(path,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS).statements;
  const ownNames=new Set(declarations.flatMap(statement=>ts.isVariableStatement(statement)?

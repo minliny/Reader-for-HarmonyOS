@@ -1,5 +1,392 @@
 # Reader HarmonyOS UI 框架实施方案
 
+## 2026-11-18 撤销此前验收与测试入口纠正
+
+此前 85 项页面层 PASS 和 37 项规则级 PASS 全部撤销。当前登记为 0 PASS、27 FAIL、309 NOT_RUN，整页 0/21。已逐项复核登记和 121 张原始画面。孤立组件、裁剪宿主、内存替代页面或模拟回执的所有历史验收均作废；历史日志与原图只作为追溯。以后在应用实际正常入口进入完整页面，开启应用开发者模式读取实际窗口与已挂载组件参数。任何必需参数异常、缺失或画面被裁切都不得通过。现有开发者边界图层和窗口参数所有者优先复用。以下旧时点数字与通过描述按原形成时间保存。 [复核、模式清点与耗时归因](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md) [当前验收状态](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.json)
+
+
+## 2026-11-18 正常页面修复与复核
+
+本节候选 `0.2.0.DEV.bf872d751793` 已签名并保数据覆盖至现有 VM。已从正常入口复核漫画完整目录的首屏、下层彩色框线、键盘与查询结果，以及书源工具批量按钮的 1× 布局。共享页头、短窗书签、近底部滚动容量、书源恢复及实时结果的代码修复已纳入候选。正式登记仍为 0 PASS、27 FAIL、309 NOT_RUN。真实大字号及极矮窗、原操作回执、读屏、独立整页视觉、G05/G10 等保留原关闭条件。 [修复与实际证据](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#正常页面修复与-vm-复核)
+
+### 文字目录正常场景补证
+
+已在现有 VM 的真实阅读页运行 1025 章本地书。快捷目录切换书签并展开后保留书签空态。返回章节，搜索第 1025 章后结果和当前位置卡均位于键盘上方。无匹配时按 Back 收键盘，查询和空态保留。旧候选 `0.2.0.DEV.bf872d751793` 的普通文字树目录在筛选空态漏接「清除搜索」。代码复用公共空态、清除动作及查询代际校验，`surface-admission` 和消息入口检查通过。新候选 `0.2.0.DEV.08ec80d34773` 编译签名、保数据覆盖安装及启动通过。正常完整栏实点一次清除后输入清空，章节列表恢复，第 2／1025 章位置和输入实例均保持。本次只关闭章节清除这一行为，正式 query 层和 B3 待补非空书签筛选、容量及排序。 [两次候选的原始证据](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#正常文字目录和证据准入复核)
+
+撤销完成当时，页面层为 0 PASS、27 FAIL、309 NOT_RUN，规则层为 0 PASS、26 FAIL、436 NOT_RUN。新 PASS 要在现有登记中绑定签装版本、正常入口的完整实屏、同一窗口原生树及开发者参数。SDK 尺寸汇总只保留代码证据。 [当前登记及候选](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.json)
+
+### 开发者描边与书签操作准入
+
+正常文字目录复现完全透明的底部导航被开发者画布描边。正常阅读的「待处理事项」又复现退场控制栏剩余极低透明度时仍画出成组框线。共享扫描器现读取真实 FrameNode 透明度、跳过透明子树，并按父子继承后的透明度绘制。新候选 `0.2.0.DEV.661f134b5515` 已保数据覆盖。真实恢复覆盖层复验时，底层控制栏实测 opacity `0.000035` 仍保留原生节点，实屏不再出现其成组框线，原提示与两项动作完整显示。 [新旧样本与当前签名包](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#开发者描边与真实书签准入复核)
+
+实际测试书的书签页为空，当前章标记按钮在两个候选均禁用。Sample EPUB 的正常待处理面板实测确认，已有书签原操作仍等待核对。该业务所有者禁止继续派发新书签写入。本次未创建临时书签，未点击核对或继续，真实非空筛选与恢复保留待验。 [当前结果和数据边界](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.json)
+
+### 正常页面证据的采样时序
+
+复用原页面登记和采样工具。后续登记把完整实屏、节点树和开发者参数绑定到同一读回区间。从第一条实际原生采样命令起核对操作和时间，明确场景的安全区、状态栏及 IME 矩形，并用树根校验应用和正常页面宿主。已有真实漫画整屏的离线重放通过，11 个错配或分属不同状态的输入被拒绝。无需重新编译或签装应用。 [回放结果与原始样本](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#正常页面证据时序和安全区核对)
+
+### 开发者标记与采样日志一致性
+
+同一真实返回场景里，原生树的开发者标记已显示「IME 关 · r5」，日志仍停在「IME 开 · r4」。旧准入在期望参数与日志相符时接纳了该样本。现核对同窗原生标记与日志的宽高、密度、系统字号、IME 和 revision。原始错配回放被拒绝，九组正常稳定样本仍通过。标记被裁出原生树的帧无法进行这项交叉核对。 [回放和原始证据](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#开发者标记与采样日志一致性)
+
+### 书源工具编辑入口与输入法
+
+`SourceToolsPage` 为共用的 `ReaderStandardPage` 提供原生列表控制器，复用布局回调。只对新编辑代际定位，计算时使用实际出现的批量进度、结果区和书源列表顺序，并拒绝已离开的宿主和旧编辑器。准确的 `editor-opening-scroll` 回归通过。已完成 x86_64 签装和 VM 正常入口验证。由旧行为「点编辑，手动向下寻找」改为点一次后完整编辑器直接出现。键盘开启时两个按钮经一次正常滚动可达，返回收键盘后取消有效，未提交写入。 [原页面及开发者参数](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#书源工具正常编辑入口)
+
+编辑入口定位已关闭。其他焦点位置、字体和窗口组合仍待复验。正式层级与整页登记不改判。
+
+### 固定页头的开发者描边
+
+由共用 `ReaderPageScaffold` 把同页内容与不透明的实际页头关联。开发者画布读取原生祖先裁剪和页头位置，绘制原测量框的可见部分。透明或淡出页头以及其他宿主保留各自描边。已完成开发者扫描和页头页尾测量续接两项定向回归，并在现有 x86_64 VM 验证正常书源工具的打开编辑器及键盘状态。其余宿主及窗口组合依旧逐项按实际场景登记。 [代码与原始证据](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#固定页头开发者描边复验)
+
+### 书源删除确认的正常返回
+
+当前已安装候选复验通过单项删除确认的选择呈现、系统 Back 优先级和取消后选中项保留。仅当用户确认删除时，原有当前选择、页面和代际校验才允许消费选择。复验不触发该分支。旧 SDK 恢复探针已接入当前公共页头字体策略、标准页底部可用范围和原生布局回调，`page-eligibility` 恢复通过。删除确认的证据与下节的导出链路共用同一安装候选。 [本轮证据及回归边界](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#书源删除确认操作复验)
+
+### 书源工具的系统返回与父页恢复
+
+在 `0.2.0.DEV.b9061a3c55a5` 的正常书源工具复验。导出警告先消费 Back 并保留所选一项。再次打开并确认后，既有业务回调先消费选择，随后进入系统保存选择器。Back 关闭选择器并显示「已取消导出」。继续按 Back 返回书源管理，恢复查询 `101` 和原有两条结果。本次没有选择保存位置或执行删除。 [实屏与机器回执](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#书源工具系统返回与父页恢复)
+
+当前书源工具的三个登记系统宿主均已复验，S7 为 `PASS`。路由层仍需父页滚动、草稿、检测状态及其他应用内覆盖层的当前证据。登记 S7 时计 1 项规则 PASS、26 FAIL、435 NOT_RUN，页面层为 0 PASS、27 FAIL、309 NOT_RUN，21 项整页尚未关闭。 [当前登记](../../tools/page-structure/register.json)
+
+### 书源工具恢复进入时的父页
+
+复用同一正常会话的五组样本，核对实际入口、返回前后的同序两条书源与开关状态，以及独立重开时的空查询。当前宿主在进入工具前复制父页状态，沿用已核对字节的一次 `journey-retention`。S6 更新为 `PASS`，S8 与完整路由层等待非零滚动位置、草稿、检测和其他应用覆盖层。规则层为 2 PASS、26 FAIL、434 NOT_RUN，页面层为 0 PASS、27 FAIL、309 NOT_RUN。 [原始材料与登记](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#书源工具恢复进入时的父页)
+
+### 书源工具返回时的非零滚动复位
+
+正常 VM 复验时，输入法开关后同一书源下移 1031px，临时草稿、检测模式和选择仍保留，取证后已恢复原状态。旧滚动键把临时窗口 revision 当作布局身份。修复后按父页实际内容宽、字号、列布局、窗口高度、密度和交互安全边比较。点名回归证实同布局恢复偏移，真实纯高度变化仍回退。S8 和路由层保留实际失败直到修后原生确认，S6、S7 原签装证据保留，正式通过等待新父页字节配对。 [失败实屏、修复和剩余验证](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#书源工具返回时的非零滚动复位)
+
+### 退役局部页面的遗留跳转
+
+页面清单与冷启动已移除局部结构页和旧正文试点。源文件里仍保留从试点到结构页的跳转按钮，旧点名检查还要求结构页注册一次。现移除按钮和路由回调，调整原 `admission` 点名检查，核对应用清单和试点均无该入口，同时保留原 Core/Host 导入边界断言。该检查只读源码和 SDK AST，未装配局部页面。历史局部测试结果继续作废。 [退役入口与本地回归](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md#局部页面遗留入口清理)
+
+## 2026-11-17 P2-A / P2-B 补全回执
+
+**此前“代码侧全部闭环”的结论已撤回；原 NOT_COMPLETE 审计保留其时点。本次已补齐该审计列出的 P2-A、P2-B，并完成对应定向回归和新的配套签名候选。** 下方五项回执保留为补全前历史，不能用其旧 PASS 覆盖这两个缺口。本次结论限已列问题、准确回归和候选层，不提升为全应用或原生验收。
+
+| 缺口 | 本次修复 | 准确验证 |
+| --- | --- | --- |
+| P2-A 异常空响应被当作结束 | 复用 reader-rule 的现有模式、路径解析和选取，reader-content 将来源实际空集合证据与兼容空列表分开，Core 页回执只有经确认的空集合才 end。HTML 错误正文、空正文/undefined、缺字段/null/非数组、字段提取后无有效书籍、无法确认的 HTML 零匹配及复杂规则保持 unknown；不重复执行 JS。 | negotiated_empty_pages_require_response_extraction_evidence：实际 book.search→AnalyzeUrl→complete_remote_host HTTP200，generic 与 Legado JSON 空集合、异常正文、旧形状及过滤后空等断言 PASS；原页身份/旧 shape case PASS。两个选择器各实际执行 1 个测试。 |
+| P2-B unknown 未贯穿页面与恢复 | owner 透传来源/版本/准确未完成页及原因；零结果 unknown 使用现有 PageState 的“搜索结果未确认”，operation.fact 为 partial；已有结果保留，通过既有任务面板分类说明和原 onRetry 恢复同一页。历史/共享事实刷新不丢未确认原因，旧 query/generation/隐藏页面动作拒绝。修正同一状态颜色分支误返回中文文案。 | Host unknown-zero、unknown-retained、orchestrator 三项 PASS，包含正常 Page→ReaderSearchTaskPanel 回调、实际 task retryAction、保留列表 notice 发布、同页恢复与已结束来源不重跑。两个所变消息入口文件的显式登记检查 PASS。 |
+
+空集合证明采取保守边界：目前仅来源纯 JSON 选择能够证明存在且为空的集合可确认结束；普通 HTML 零匹配无法区分正常空页与登录/错误/模板变化，继续保持 unknown，并提供显式恢复。没有以解析数组长度、HTTP200 或规则模板本身推断结束，也没有新增结果总上限或另一套解析器。
+
+最终候选为 **0.2.0.DEV.d5e6e8223d98**，run `20261117T094702Z-6a2f03ab-c790991c`，ABI `arm64-v8a`，iteration / contracts-scope none，acceptanceEligible=false。配套新 Core/Native/NAPI、实际 ArkTS、包内容与指定 minliny_HarmonyOS 证书及 debug Profile 核验 PASS。signed HAP SHA256 为 `f39a3633aa925dcffb20501c372da46351ac821e20a56a66fd808dfdfc2597a8`，产品版 `0.2.0`、versionCode `1000000`、包名 `io.reader.minliny` 保持。
+
+[新候选不可变 manifest](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261117T094702Z-6a2f03ab-c790991c/manifest.json) · [原 NOT_COMPLETE 审计](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/pagination-completion-audit-20261117.json) · [本次修复绑定记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/pagination-completion-repair-20261117.json) · [逐次实施记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/evidence/2026-11-17-p2-completion/implementation.md) · [机器可读结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/evidence/2026-11-17-p2-completion/results.json) · [相对补全开始态的补丁与回退](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/evidence/2026-11-17-p2-completion/patches/README.md)
+
+原 IME、P1/P3/Q1/R1 的 WIP 和准确局部证据保留，未改行为按影响范围复用，不说成新运行。未提交或合并。本轮没有安装、HDC、VM 或用户应用数据操作；真实书源网络、原生滚动/预取、焦点/IME、像素/读屏、设备内存和用户验收仍 OPEN/NOT_RUN。Native host-probe/sdk-smoke 与全量门禁未运行。
+
+## 2026-11-17 P1/P2/P3/Q1/R1 实施回执（补全前历史，整体闭环结论已撤回）
+
+用户在本次会话明确要求“设定目标，按方案全量实施”。本批已完成五项生产代码、正常入口接线、所选定向回归、配套 ARM64 Native/NAPI 及实际 ArkTS 签名候选。代码交付状态为 **IMPLEMENTED**；真实滚动、原生焦点/IME、像素、读屏、设备内存及用户验收仍为 **OPEN/NOT_RUN**，不据此关闭全应用审计。工作保留在本隔离配对树，未提交或合并；开始前已有的 IME WIP 原样留存其不受本批影响的内容，共享文件按起始 WIP 增量修改。
+
+| ID | 本批已实施行为 | 本批准确证据 |
+| --- | --- | --- |
+| P1 | 当前书籍/查询/展示代次有效时，由实际列表布局、滚动及追加需求自动续取；Core 后续事实与失败重试分开。正常分页按钮、文案、44vp/footer 及测量扣款均移除；同一列表、结果身份和增量索引继续复用。 | 游标/错误边界、真实 SDK Publication/原生列表投影、自动需求/零正常占位与 1000 批次 10010 结果增量成本项 PASS；无设备滚动及时性结论。 |
+| P2 | 新增显式协商的 book.search.page-receipt.v1，绑定来源版本/查询/页号与实际请求/响应/候选指纹；旧调用保持原 shape。普通搜书按浏览需求公平续页，换源继续查找后页同书；无推进转 unknown，失败同页重试，停止保留已有结果和未完成页，续取期间原搜索按钮可停止。 | Core 实际 AnalyzeUrl→Host continuation 受控响应 case、Host receipt/gateway/orchestrator/switch/assembly/continuation-stop 及原有三个准确兼容 case PASS；没有真实书源网络验收。 |
+| P3 | 独立草稿预览快照复用 NavigationIndex/sidecar，首批 256 与全量 nodeCount、后续范围读取及 close 分开；原生懒加载列表可到末尾并返回。apply 绑定同一草稿与原书输入，原 durable mutation receipt 优先于已关闭的预览。 | Core 257/1025 完整数量/顺序/层级、只读预览、无关写入不误失效、输入变更拒绝及原 ACK 重放 PASS；Host gateway/lazy-ranges/lifecycle/sdk-list 和消息入口登记 PASS。 |
+| Q1 | inlineEditor 与 modal 分开；搜索/目录内联编辑时四个原生导航按钮保持 enabled，点击先结束当前编辑再执行一次捕获的目标。原 modal、遮挡及未决限制保留，旧 blur 不清后继状态。 | 真实 Panel 准入/异步切换及 SDK 四按钮 enabled/原 opacity 项 PASS；真实 IME 和原生焦点未验证。 |
+| R1 | provider 结果在 URI 解析/暂存/worker/导入之前校验；超过 50 或非法集合整批拒绝，由当前 opening 反馈重新选择。仅此已知派发前错误可认定未导入；其余异常仍遵守 ReaderWriteEvidence。 | provider 51/100000/非法集合解析、stage、persist 均零；0/1/50、退休 opening 与原已接纳选择释放准确项 PASS。 |
+
+最终候选为 **0.2.0.DEV.22272bd012cc**，run `20261117T091211Z-6a2f03ab-ddb9a389`，ABI `arm64-v8a`，包名 `io.reader.minliny`，产品版 `0.2.0` / versionCode `1000000`。指定证书 SHA256 `3A563778E5BF17CD3EAD0218E13B4A5030DE3F5D7D4E21E0336D8EB37B676DC4`、debug Profile 与包身份验证 PASS。signed HAP SHA256 为 `cc6ccb61a58c2c67074c4ea63bdaa11c57d6611a00a0fd19800f9fdbeb6092a1`；Native 输入及打包后裁剪字节分别由 provenance 绑定，不混用其哈希。
+
+- [最终不可变 manifest](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261117T091211Z-6a2f03ab-ddb9a389/manifest.json) 及同目录 signed HAP/provenance 是本批候选；此前 b90a 与本批第一次成功包只保留为历史/中间证据。
+- [逐次实施记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/evidence/2026-11-17-continuous-results/implementation.md)登记选定入口、必要性、嵌套范围、失败定位及最小重跑；[机器可读结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/evidence/2026-11-17-continuous-results/results.json)列准确日志。全部既往失败保留，后次通过不追溯改写。
+- [相对起始 WIP 的变更清单](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/evidence/2026-11-17-continuous-results/change-manifest.json)及[分项补丁/回退边界](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/evidence/2026-11-17-continuous-results/patches/README.md)保留 P1/P2/P3/Q1/R1 与共享接线依赖；不能整文件 reset 到 HEAD 覆盖 IME WIP。
+
+本轮仅选择必要准确 case；HAP 使用 iteration / contracts-scope none，未隐式附带全量门禁，Native host-probe / sdk-smoke 未运行。Core 固定基线 c0781263 加本批差异，Host 为 6a2f03ab 加起始 IME WIP 与本批差异；没有修改其他平台、产品中大版本或新增数据库迁移。构建中的 CMake 缓存归属漂移和首次 ArkTS 可选坐标错误均已定位并修正，原日志与缓存备份保留。方案明确不授权安装或 VM，本轮未调用 HDC、未安装、未访问或清理用户应用数据。
+
+## 2026-11-17 三个主问题及关联回归的完整修复方案（实施前基线）
+
+本节保留用户授权实施前的完整代码方案及当时事实。方案撰写本身不构成执行授权；后续本次会话的明确“按方案全量实施”已授权上方回执所列代码、测试和候选动作，安装和VM仍不在本轮授权范围。P1/P2/P3固定对应本轮三个主问题；Q1是原Quick导航回归，R1是条件风险。历史审计、候选和已运行局部证据不追溯改写。本节替代此前关于这五项的零散建议；原统一IME工作继续保留，不能整文件回退覆盖。
+
+### A. 基线、范围与统一结果
+
+- Host基线为HEAD 6a2f03abce6f92371d9139d224ddf962473a8311及其当前未提交IME工作；Core为c078126376294faa3a611690fbe48e79f0f86cc4。当前已安装b90a仅作历史证据，未来修复后不能继续视为新源码候选。
+- 本轮646个生产ETS/TS的检索定位59个候选文件，已沿18类数据链检查限量和后续入口；不等同逐文件语义、跨所有平台或原生验收。
+- 后续方案允许内部限批、懒加载和现有资源上界；技术批次不得变为结果总上限、常驻分页按钮或没有说明的截取。不能通过一次取全、取消所有容量保护或提高常数掩盖缺口。
+- 正常状态保持已有Quick/Full外框、字体、工具密度、亮度条和模块导航布局。按实际结果分配列表空间；无普通常驻“加载更多结果”按钮、加载条及永久预留高度。首次查询、真实失败及原操作未决仍按既有消息类别呈现。
+- 书架48/144、正式目录256、正文/漫画窗口及已有完整读取循环不在本次重构范围；只用它们的准确既有证据复核受影响共享边界。正式目录数据、正文、原分章、书架、书签和进度不因本批改变存储格式。
+
+| ID | 实施前代码事实 | 交付目标行为 |
+| --- | --- | --- |
+| P1 正文搜索 | 50条/批，结果区固定分页动作；hasMore还在失败状态中兼作retryable；正常分页动作参与minimum和视口扣款 | 单一连续结果列表，接近已读末尾前自动续取；无正常固定分页动作与占位；失败才出现局部恢复 |
+| P2 普通搜书/换源远程后页 | SearchGateway省略page，Core默认1；SourceSwitchGateway显式page1；BookSearchData没有后续事实；Orchestrator单次回执就标来源completed | 普通搜书按浏览需求自动续页；换源继续查找当前书的后页；终止、暂停、失败和无法确认分别记录 |
+| P3 TXT规则预览 | Core节点明细取前256，Host再slice；只有一次回执，没有草稿预览的后续读取身份 | 一个可连续滚动到末尾的完整预览；版本绑定；应用与预览相符；预览不修改正式导航 |
+| Q1 Quick导航淡化 | inline query editing以temporaryLayer=true上报，与modal共用controlActionInputEnabled，原生导航Button被禁用 | inline编辑时导航保持正常可用；点击明确结束原编辑并执行一次目标导航；真正模态/未决操作保留原阻止规则 |
+| R1 异常文件选择 | Picker声明最多50；异常provider返回更多时slice前50，超出仅日志；结果owner又限制最多50项 | 正常50限制保持；异常超限在暂存/导入前整批拒绝并明确反馈，不静默丢选择或部分导入 |
+
+### B. P1：正文搜索连续显示
+
+当前正常链：LocalReadingExperience.runQuickSearch → ReaderContentSearchPublication.run/more → ReadingSessionFlowGateway.searchContentPage → Core search.content；同一Publication通过普通引用＋searchRevision进入Panel/Content。Content现有List、DataSource、逻辑行锚点及SDK结果发布继续复用，不恢复结果数组@Prop深拷贝。
+
+拟修改：
+- entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets：增加准确的“需要后续结果”请求端口，保留book/source/lifecycle/control opening和现有请求有效性。当前50只作为内部每次读取量，不能作为查询总上限；不随启动自动发正文搜索。
+- features/reading/presentation/ReaderContentSearchPublication.ets：继续作为唯一query/generation/cursor/request owner；区分Core成功回执的后续事实和本地失败重试准入。旧hasMore/错误字段迁移时只能有一个真实状态来源，展示兼容值由该状态派生。
+- features/reading/application/ReadingSessionFlowGateway.ts：复用已协商cursor协议；不增大或绕过Core200单批上限；重放同一游标，不在失败后用offset拼接新快照。未协商cursor的旧端点只保留明确兼容行为，不声称可取得同一快照。
+- features/reading/ui/ReaderControlPanel.ets：把自动续取端口接到当前Search实例，不直接拥有请求状态。
+- features/reading/ui/ReaderControlSearchContent.ets：在原生列表布局就绪、滚动回执和结果追加后评估实际剩余可见行。预取阈值以真实视口覆盖行数及现有cache count计算，接近尾部即请求；首批不足一屏且仍有后续时自动补足。不只挂onReachEnd，避免不能滚动时没有触发来源。
+- features/reading/ui/ReaderControlSearchMinimum.ets、ReaderControlSearchGeometry.ts和ReaderControlMinimumMeasurement.ets：删除正常hasMore/loadingMore带来的action label、44vp/footer扣款及无意义几何失效；仅失败/退休恢复所需的真实消息和动作参与minimum。
+- features/reading/ui/ReaderContentSearchDataSource.ets及现有scroll/list projection：保留稳定身份、原生LazyForEach和追加通知。当前Publication每次slice/Set及DataSource全前缀扫描的成本需要在长序列追加中计量；复用既有SearchPublication增量发布模式和成员索引，不能把原生只add新行误报成全部JS工作O(新增条数)，也不能新增结果总量截断来避免增长。
+
+请求条件：当前书/来源/查询/搜索代次/展示opening仍有效，列表已挂载、交互可用且位于Quick或Full稳定端点，具有正的实际结果视口，接近已读取尾部，确有可继续游标，没有在途请求、失败待处理、退休或版本失效。连续布局/滚动回调合并成同一待派发意图；重入只允许一个实际请求。非前景/中间morph暂停，重新有效时用当前回执重评，不复用过时offset。
+
+状态处置：
+1. 新查询：取消原请求并释放旧游标，原代回执不得改新查询。
+2. 续取成功：去重后追加，保持当前行、native实例、焦点、文字与滚动锚点，不整表reload。
+3. 明确结束：停止续取，不显示“加载更多”或“已全部加载”常驻块。
+4. 可重试失败：保留关键词、已得结果和同一游标，只由用户的局部恢复动作重试；滚动/Watch不得自动重试失败请求。
+5. 快照/来源版本失效、已退休：保留仍可用的结果，只提供明确重新搜索；不能背地重启并混入另一快照。
+6. Back先按既有IME归属处理；整栏退出、换书和运行时关闭释放游标。已有query/result保留政策不随本次改变。
+
+P1关闭：超过50和200处匹配均可连续到末尾；正常footer及其扣款为0；Quick/Full/IME/morph不改变结果身份或跳锚；失败无无限重试；所有已得到的结果可选择定位。前景首次查询反馈和真实失败不被“一律去加载提示”删除。
+
+### C. P2：普通搜书与换源的来源后续页
+
+当前普通链：SearchPage → LibrarySearchPresentation/SearchOrchestrator.performSearch → SearchGateway.searchBySource → Core book.search。当前换源链：SourceSwitchGateway.refreshCandidates → discoverCandidates → discoverFromSource → Core book.search。两条链共用Core书源执行，但有各自的查询/筛选与操作owner，不能共享成一个全局可变页号。
+
+C1 Core事实契约：
+- 修改Core crates/reader-contract/src/remote.rs、lib.rs，protocol/reader-command.schema.json和reader-event.schema.json，以及remote.rs的book_search、build_search_request_from_source、book_search_from_params_checked和对应Host continuation/SourceFetchMeta事实传递。
+- 拟新增可协商能力book.search.page-receipt.v1；新Host按能力显式请求页回执。字段/能力名是本方案拟定接口，实施时加入权威contract/schema/fixture一致性校验；默认旧调用保持旧wire形状，不直接向deny_unknown_fields旧客户端强塞新字段。
+- 回执绑定sourceId、捕获sourceVersion、查询身份/关键词摘要、requestedPage和实际请求/响应指纹，说明有效空页终止、存在可请求下一页或尚不能确认。返回非空不等于已证明下一页存在；能递增page也不等于该源支持分页。
+- 复用现有Legado AnalyzeUrl、规则解析、source fetch冻结、HTTP及错误分类，不通过正则猜网页或另写分页解析器。模板不显式出现page不能认定不支持，JS同样可能生成分页请求。
+- 有效空结果按既有来源语义结束当次来源；网络/鉴权/规则失败或无法证明有效空结果保留failed/unknown。相同请求、响应循环、完整候选序列反复相同等无推进情况停止调度并保留partial/unknown，不能标成来源已穷尽。
+- 不新增“最多N页然后成功结束”的应用总上限。沿现有单请求超时、取消、worker并发和资源预算停止；停下不等于取得全集。手动prefetched response无法给出远程分页事实时如实返回unknown。
+
+C2 普通搜书：
+- 修改SearchGateway.ts：searchBySource接收当前来源页，解析页回执及该页的invalid/discarded结果，不能沿旧数组长度猜结束。
+- 修改SearchOrchestrator.ets的SearchQueryRun、performSearch/retry/stop：按来源保存next/attempted/failed page、来源版本、请求指纹与已确认数据；分开“首轮请求已完成”和“该来源已穷尽”，现有completed计数不得继续混用。
+- 修改LibrarySearchPresentation.ets及必要的SearchPresentation.ts：把当前列表尾部需求传给原owner；保留当前来源健康、冷却、启用范围和重试选择，不借续页扩大搜索范围。
+- 修改SearchPage.ets及其正常装配（ReaderLibrarySearchSurface/对应Search场景、模型只按实际端口需要修改）：从现有onResultScrollIndex、可见组及空槽/不足一屏事实发需要更多结果的意图，不在Builder直接发RPC。先完成各来源首轮；后续复用runBookSourceWorkers和BookRequestScheduler公平调度，每源最多一页在途，不让单源无限占用。
+- sourceResults从单次替换桶改成同来源的确认页集合/增量合并；去重用sourceId+bookId，保留admittedOrder、内容类别、作者证明、来源版本、已有SearchPublication差异通知和返回锚点。不能把后一页的缺席当作删除前页。
+- 搜索数量只表达已取得/已找到的结果；只有确证全部来源终止才允许最终总数语义。初轮已完成但后页可按需读取，不持续占用“首次搜索中”阻止浏览，不新增长驻加载条。停止保留结果和未执行页；明确重试只恢复失败/未完成范围。
+
+C3 换源重新搜索：
+- 修改SourceSwitchGateway.ts中的refreshCandidates/discoverCandidates/discoverFromSource/decodeDiscoveryCandidates，以及实际调用它的SourceSwitchHost.ts和SourceSwitchPresentation.ets中需要表达部分结果/继续的端口。
+- 每源从当前页按实际书名/作者/内容类别匹配，第一页没有合格同书不能宣布该源无候选；按既有查找目标继续该源后页。已找到候选可即时发布，未结束来源保留待续事实。
+- 缓存的同书关系128条循环保留，不与远程页进度混用。沿原source/book/author proof和版本核验；失败不删除原候选，后页候选通过原详情/目录准入才能成为可切换目标。
+- 页面关闭/取消/来源变更废弃当前调度，旧回执不新开页面、不替换当前书、不自动执行换源。Core原切换事务、幂等回执和正文位置CAS不改变。
+
+P2关闭：真实page2+的候选在普通搜索及换源目标查找中可取得；只返回同一页的来源停止且不假称完整；暂停/重试/返回不重跑成功页；无跨来源串页或同书误合并；未知/失败与有效空结果分开。各来源并发与请求总量按当前需求可观察，不启动时爬完全部书源。
+
+### D. P3：完整TXT目录规则预览
+
+正常入口为ReaderDirectoryDestination文本分支 → ReaderFullDirectory顶部“本书目录层级规则” → ReaderDirectoryRules.run(false) → ReaderDirectoryRulesGateway.preview → Core rules_preview/run。仅本地TXT；普通目录列表、远程书源和漫画不受256预览截取影响。
+
+拟修改：
+- Core local_navigation/rules.rs：把整份derive_txt_navigation结果与当前草稿/原书输入绑定，复用现有NavigationIndex、Views/sidecar存储及有限缓存。预览只写可丢弃索引，不写正式navigation/rule/display proof，不修改正文/分章/进度。
+- Core local_navigation.rs、local_navigation/v2.rs及sidecar.rs按最小需要抽取共用分页和释放逻辑；预览有独立种类/owner，不复用正式目录“当前已应用版本”等于草稿的假身份，也不能把未应用预览节点授予真实阅读跳转权。
+- 拟定能力reading.directory.rules.preview-view.v1；preview.v2增加显式可协商的previewView请求，返回previewId、原书inputRevision、rulesRevision、navigationRevision、总节点/章节数、首批offset/nodes/nextOffset。新增preview.page.v2及preview.close.v2（完整前缀reading.directory.rules），参数绑定book/preview/revision/offset/limit。256保留内部单批值，不能变总量。
+- apply.v2对新Host接收expectedPreview证明。新派发前在既有publication/原写入边界核验草稿和原书版本，保存与预览一致的完整结构。原书/草稿变化要求重新预览，不静默重算后应用另一结果。旧客户端默认行为不改变；更新Host必须协商能力，缺能力不能把旧前256回执当完整预览。
+- 必须保留RulesMutationOwner的原意图、operationId、ACK、unknown/readback/cleanup语义。已派发原操作的核对/幂等重放按原durable receipt判定，不因进程重启后短命previewId消失而否认已提交写入；新apply与原操作核对分开。
+- 修改ReaderDirectoryRulesGateway.ts：保存当前预览身份，提供范围读取/释放，校验准确页长、offset、总量、稳定nodeId、版本与有序范围；期望证明进入原owner意图。
+- 修改ReaderDirectoryRules.ets：删除slice，preview数组替换为已有原生List/IDataSource的分页数据源；totalCount取完整可预览总数，按可见索引提前读取，维持stable nodeId和滚动锚点；不附加手动分页按钮。保留原编辑器和预览槽布局，不能把补数据变成扩大整栏。
+- ReaderFullDirectory.ets仅补预览关闭/后台/换书/隐藏时的释放通知及必要容量回执；不得重写正式目录列表。新辅助数据源复用当前DirectoryPageWindow模式，属于本功能适配，不另写通用缓存/索引引擎。
+
+生命周期：新草稿/换书/重新预览/关闭/owner退休释放旧preview。失败保留草稿和已读取预览页，局部重试当前范围；未知数据不可冒充末尾。内存/sidecar遵守当前有限view/LRU和节点/字节上界；到界明确失败，不返回截取成功。泄漏、跨owner访问、重复close、回执迟到均有明确处理。
+
+P3关闭：257、1025节点均能看到末尾并返回首部；计数、层级、顺序与整份derive结果一致；预览不写正式数据；原书变化拒绝旧预览apply；正常应用正式导航与预览相同；未知ACK核对及回滚边界保持。
+
+### E. Q1：Quick底部导航回归
+
+现有证据：同四个Button在IME前enabled=true，图中enabled=false，Back后true；声明opacity始终1。原因链为Search.onQueryEditingChanged → onTemporaryLayerChange(true) → Panel.hasCurrentTemporaryInput → controlActionInputEnabled false → navigationInputEnabled false → ReaderActionAccessibility设置原生enabled。不是motion opacity变成低值。
+
+拟在Panel的临时输入作用域加入明确类别（inlineEditor/modal），由实际模块上报；现有bool可在边界派生，不能成为另一套真实owner。Search和Directory query上报inlineEditor；TTS configuration、Replace manager/dialog等上报modal。枚举及接口放在现有control session/host状态文件中，具体业务归属不按键盘高度或模块名字猜。
+
+修改ReaderControlPanel.ets的moduleTemporaryLayerHandler、navigationInputEnabled与模块切换处理，ReaderControlSearchContent.ets/ReaderControlDirectoryContent.ets/ReaderControlTtsContent.ets/ReaderControlReplaceContent.ets调用点，LocalReadingExperience.ets的onControlTemporaryLayerChanged及会话退休接线。ReaderActionAccessibility继续准确反映enabled，不全局取消disabled语义或覆盖其视觉。
+
+规则：只有inlineEditor时导航保持可用及正常原有颜色；点击先按当前owner结束输入/隐藏其IME，再执行一次捕获的目标导航，派发前核验原opening/source/book/session仍当前。编辑文本已由原业务owner保留，不新增隐式保存/取消。新一代页面不能被旧stopEditing/blur回调清掉临时状态。真正modal、more menu、遮挡、拖动、隐身、失效receipt或原操作未决仍按既有规则拦截。Back顺序保留IME优先。Quick/Full motion期间原导航淡出轨迹保留，与禁用样式分开验证。
+
+Q1关闭：inline query打开/收起IME均不把导航整体禁用；四个目标各仅切一次；真正modal不能穿透；迟到blur无效；非当前会话不可触发；不以更改全局Button opacity掩盖disabled。
+
+### F. R1：文件provider异常超限
+
+正常链：BookshelfOperationOwner.import → BookshelfFlowGateway → LocalBookImportGateway → ReaderRuntimeOwner → ReaderHostRegistry.selectLocalBookInputs。Host Picker上限50，Presentation.validBatch也限制50；不能只返回51个failed row来修，因为现有结果owner会拒绝该结果。
+
+方案：在Picker返回后、URI文件名解析/暂存/worker创建之前，验证数组形状、数量和URI基本类型。超过已声明50时整批拒绝，抛可分类的“文件选择超过本次上限”错误；不擅自选择前50，不读取或暂存超出项，也不做部分导入。正常Picker50限制不提高。
+
+修改ReaderHostRegistry.ts、本地导入既有typed failure边界，BookshelfOperationOwner.ts的已知“未派发选择失败”分支和原消息发布。必要UI只接已有ReaderTransientFeedback/当前选择页错误通道，说明重新选择；不能沿catch-all显示“已成功保存会保留”来暗示已发生导入。保留ReaderWriteEvidence，只有这个已知dispatch前错误可判未派发；其他异常不反推未写。LocalBookImportGateway与LocalImportPresentationOwner的正常≤50结果格式及持久恢复不扩容。
+
+R1关闭：51/超大异常集合时没有任何stage/import.persist、临时文件或数据写入，不产生被截成50的成功批；反馈属于当前opening；0/1/50正常及取消路径保持。
+
+### G. 实施依赖、文件边界和回退
+
+1. 固定当前WIP及准确相关输入，不清理工作树。P1与Q1先在当前Host分支集中修复；P2/P3先确定可协商契约，再同步Core和Host，最后做正常装配集成；R1独立小批处理。
+2. P2/P3新增协议能力的权威输入在Core contract/lib、remote类型和protocol schemas；其他平台/Reader-UI的合同副本只按规范派生同步，不未经授权扩展其界面。旧调用默认结果形状保留，新增字段只按能力显式请求。数据库、FFI二进制ABI和产品中/大版本不因新增JSON读取能力自动更改。
+3. 变更后只运行下节所选回归；需要交付候选时才通过规范Native/NAPI重建及sync-native、不可变HAP编译签名流程。新Core与Host必须匹配，不能拿b90a旧Native证明新接口；指定签名身份、保数据安装按实际动作核验。本计划不授权执行安装或VM。
+4. 按P1/P2/P3/Q1/R1拆分可审阅差异及内部记录，保留现有IME WIP。回退某项时用对应提交/补丁，不能整文件恢复到6a覆盖其它整改。P2/P3可回退Host新能力请求并配套回退Core，旧接口兼容留存；功能完整性随回退重新OPEN，不能宣称回退后问题仍关闭。
+5. 不新增数据库迁移或清数据来处理失败。预览索引为可丢弃数据；业务规则/导航/源/书架/正文/阅读位置仅由既有授权操作写入。版本、commit、buildId与候选证据分层记录，不写发布说明。
+
+### H. 最小回归和逐项关闭
+
+下表保留实施前候选验证范围，不表示各父文件全部运行；实际选择、必要性和逐次结果以顶部回执及准确日志为准。复用现有生产方法/SDK录制/有限Core端口及现有开源工具，不写只断言常数/字符串或照抄算法的测试。既有大脚本有混合顶层断言时先拆case；拟增名称不得伪装成已登记可执行ID。查询gate index无匹配不自动改跑父文件/全量。
+
+| 范围 | 现有候选入口与拟补精确case | 保护的实际风险 |
+| --- | --- | --- |
+| P1 owner | test-reader-content-search-cursor/publication/error-boundary：自动续取单飞、同cursor重放、明确结束、无推进、退休/取消/迟到、retry不被滚动自动触发 | 重复页、串查询、隐式重启快照、错误被隐藏 |
+| P1显示/预算 | test-reader-content-search-native-list/open-cost/control-host-keyboard、test-reader-editing-hosts的search-result-lane：50→51→200+追加、正常footer0、失败局部恢复、短槽首批不足、Quick/Full/IME锚点、长序列成本与无Prop复制 | 不可滚动导致永不续取、挤占结果、跳锚、重新深拷贝/OOM |
+| P2 Core | reader-runtime/tests/search_book_commands.rs + contract/schema准确测试：页号透传、page receipt能力协商、旧shape、disabled/blocked/empty/unknown、无推进指纹 | 假hasMore、假终止、旧客户端破坏 |
+| P2 Host | test-search-gateway/orchestrator、test-source-switch-gateway及实际SearchPage/SourceSwitch装配：普通page2目标、换源目标只在page2、单页源、重复页、同页重试、stop/resume、来源换代、去重顺序/锚点、失败来源不拖垮其他 | 只修某一个入口、全源无限抓取、来源/作者/内容类别误合并 |
+| P3 Core | local_navigation/rules.rs与v2.rs准确case、reader-storage/tests/directory_rules_lifecycle.rs、rules_mutation_commands.rs：256/257/1025、分页完整性、close/owner、版本改变、preview不落正式数据、原apply回执重放 | 仍只返回前缀、读错正式目录、预览即写、数据版本漂移 |
+| P3 Host | test-reader-directory-rules/ directory-rules-targets及SDK列表case：第257与末尾可见、返回首部、跨256边界位置保持、草稿/换书/关闭、失败局部重试、preview/apply同版本 | 仅改Core仍slice、前端假total、旧草稿覆盖 |
+| Q1 | test-reader-content-search-focus、目录focus、真实Panel/Host SDK：inline编辑四目标各一次，modal与unknown阻断，迟到blur、Back先IME、morph仍原导航opacity | 单改颜色、导航穿透modal、旧回调清新状态 |
+| R1 | test-document-picker-system-file-handoff、test-bookshelf-picker-caller-admission、test-bounded-local-import-composition：0/50/51/超大/非法返回，stage与persist调用0，当前owner反馈，正常50批结果恢复 | 静默丢选择、未派发被说成unknown、扩大结果格式上限 |
+
+选定检查执行前在原问题记录写入口、嵌套范围、时限及停止条件；本批不默认跑全量、类型覆盖全集、旧full、全部UI门禁或所有Core工作区测试。实际Core能力与schema测试只选本次新增/兼容字段。失败先复核本次日志与源码，形成新原因后再运行同一最小场景。
+
+代码关闭必须同时具备：契约完整、正常入口接线、结果/末页可达、身份和异步生命周期、失败恢复、最小回归、实际编译及Core/Host配套。源码/SDK不能证明原生像素、真实滚动预取及时性、焦点、IME、读屏或设备内存达标；这类后续仅按另行明确的原生范围验证。方案编排时状态为PLANNED/NOT_RUN；本次实施后的分层状态以上方回执为准，不新增全应用审计轮次通过或原生总体完成声明。
+
+---
+
+
+**2026-11-17 用户纠正：Quick 呈现重新开放。** 用户明确指出，`reader-control-framework-ime-final-many-quick-results-1794898632519.png` 中的“加载更多结果”和淡化底部导航不是正常快捷控制栏。此前根据外框高度相同、整块避让和局部结果可见而作出的“呈现正常”结论撤销，当前 b90a 候选不能据此收尾。源码历史已追到：分页覆盖动作最早于 `d6966fc9`（2026-09-12）加入，`31536cfb1`（2026-11-13）将其最小高度从26改为44vp；`0b2de1c5`（2026-11-13）将底部原生Button的无障碍适配enabled从true改接navigationInputEnabled。当前同会话树中四个导航Button在输入法前为enabled=true、图中为false、Back后恢复true；分页在Back后仍存在。历史实现不等于批准基线，位移／裁切通过不等于Quick呈现验收。此次只追溯、撤销错误验收并登记，生产修复尚未完成，没有新增VM操作。
+
+追溯补充（2026-11-17）：已从原始会话找到实际引入背景，而非只按Git日期推断。2026-09-12 01:07（北京时间）登记SEARCH-001：只请求／展示前50处正文匹配，第51处以后不可达；随后01:13“全量修复”、01:32“继续”。当时Codex于02:01:45加入固定112×26vp、9fp文字的loadMoreAction，02:02补状态与分页调用，之后分别归入Core02d0b4b0和Appd6966fc9。固定覆盖布局是实现选择；本次所查上下文没有独立确认该几何。368af7f7在10月20日又将普通加载更多文字接入MESSAGE_ACTION（当前13fp/20行高），31536cfb于11月13日将正常按钮及测量最小高度26提升44vp。10月确认C07仅覆盖后续结果失败的末尾提示／重试，不足以确认普通常驻大按钮。当前显示条件为results且hasMore／loadMoreError／paginationRetired之一成立，Quick与Full共用，不依赖IME，不要求滚到末尾。Core hasMore是同来源同书已缓存正文中的下一条匹配确实存在；每批50，并非目录章数或屏幕溢出。UI失败分支还把hasMore复用为当前游标能否重试，需区分其与Core成功回执的语义。原始节选及当前链条已写回原问题记录；历史安装可见性不由提交日期证明。
+
+### 2026-11-17 分页来源与同类数据范围追溯
+
+用户明确否认提出过正文搜索分页需求，并要求核查是否由启动优化擅自引入。当前可追溯的App4d6543a2（2026-08-10）在首次生产阅读接线中直接调用searchContent(...,50)，原调用只返回结果数组；它不属于启动调用。9月12日SEARCH-001将第51处以后不可达登记为静默截断，Codex随后选择offset/hasMore和固定手动按钮进行修补。9月15日Core801d1953才进一步优化搜索缓存扫描／共享发布，不能倒用这条性能提交解释更早的按钮。未找到将50或手动分页用于启动提速的记录；原8月会话路径虽在本机索引中，实际文件已缺失，不能补造当时选择50的理由。书架48条/144驻留及9月23日bounded projection是另一条真实首屏／内存机制。
+
+本次全树检索覆盖当前646个生产ETS/TS，59个候选文件按18类数据链追到生产消费和Core生产端；这不是646文件逐语义或原生验收。另确认普通搜书／换源远程搜索只请求书源第1页，目录层级规则预览只给前256节点且无范围说明／后续入口。异常文件provider返回超过Picker上限50时，Host slice只保留前50，超出项仅日志，是独立条件遗漏。正式书架、目录、正文/漫画窗口有自动接续，本地搜索／同书缓存候选／后台准备／存储清理有完整循环；书签、阅读记录、分组、规则正常调用未加隐式limit。所有路径、阈值、历史、结论及界限见[分页影响清单](../../.reader-artifacts/app-ui-framework-audit-20261114/pagination-impact-investigation-20261117.json)。本次只调查与记账，未修改生产实现、运行测试／构建或操作VM；以上新增问题尚未修复。
+
+## 2026-11-17 统一键盘编辑可见性修复：基于当前代码的实施方案
+
+**2026-11-17 执行回执：代码与40项定向回归已完成；366章目录、筛选／清空／结果选择和键盘场景已有当前候选原生结果。Quick整块与分页裁切的最终对账仍在收口。** 开始实施时HEAD为干净提交 `6a2f03abce6f92371d9139d224ddf962473a8311`，上一生产提交为 `8da2c02d56ed24a6a2bfe41a8fe039475966804e`。本次修改47个生产文件，其中4个为新增共享适配；Core／Reader-UI pin、产品版本、数据格式、系统显示配置保持既有输入。下列1—8节的“当前事实”列保留修复前基线；执行规则已按模块任务与整块优先补齐；当前实际结果以本段及[同一问题实施记录](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ime-unified-implementation-20261117.json)为准。
+
+| 批次 | 已实施结果 | 当前证据边界 |
+| --- | --- | --- |
+| A 窗口事实与共享几何 | 同一次TYPE_KEYBOARD采样保留available／visible／实际vp矩形；ReaderKeyboardGeometry统一宿主交集、floating矩形、已RESIZE／嵌套宿主、完整字段／caret行／零容量判定。 | 6个几何case通过；未知位置保留geometry-unknown。 |
+| B 外框、环境与编辑容量 | 外框resolver去除IME扣减；结构测量与完整环境分开；Panel使用同一展示原点，整块可容纳时优先完整避让，不可容纳时保留模块任务与独立内容高度。 | 5个Host case通过；正常Full目录外框未变，Quick完整shell、查询／结果、Back恢复已有原生分项证据。 |
+| C 公共输入及稳定编辑树 | 新增ReaderEditingVisibility／ReaderEditableTarget／ReaderEditingScrollBinding；公共有限输入分支及下载直接输入均接入。目录、Toolbar重排、替换、TTS、下载range不再因容量阈值更换编辑body；旧opening的事件、布局、卸载拒绝后继绑定。 | owner／native适配9个case、公共字段、编辑body、TTS修复及搜索结果裁切6个case、目录8个case及focus父链1个case通过；不据此声称真实组合文本、选区和原生实例已验收。 |
+| D 消费接线与容量迁移 | 原16个业务消费文件＋诊断fixture逐项接线；RssPage为passive入口，无真实输入，RSS editor／Sync仍按L0关闭记录。原15类几何消费者迁移／保留边界已落实；短反馈及搜索历史使用实际已resize宿主，避免重复扣减。 | 当前生产范围646个ETS／TS（不含Native声明）；改动47文件。未开放关闭路由。 |
+| E 定向检查及产物 | 40个唯一case分别通过；规范iteration、contracts=none构建及指定minliny_HarmonyOS证书验证通过。 | 当前候选`0.2.0.DEV.b90aaf06a33b`，[不可变manifest](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/hap/20261117T064545Z-6a2f03ab-b979fa98/manifest.json)；最终结果裁切原生回执待写入，全量测试NOT_RUN。 |
+
+旧TTS交互probe的过期路径、遗漏的真实helper／测量端口和旧直接键盘setter期待已修正；本次点名fields／manager-drafts／keyboard／overlay均通过，其他兄弟case未运行。原生中另定位并修复了TTS当前编辑器在普通最低容量准入变化时被错误关闭，以及content-cover根未随RESIZE缩小、Scroll没有实际滚动余量的问题；后者现按真实窗口矩形限制管理宿主。旧失败、输入框可见但结果被挡、结果可见但整块被截住的中间候选均保留，不计最终关闭。
+
+**规则修正：任务类型决定必须保留的内容，实际容量决定采用哪种呈现。** 自定义阅读控制栏整体能放进键盘上方时，优先保持原尺寸并完整移到键盘上方；整体确实放不下时，才保留当前模块的任务最低区域并调整内部容量。Quick／Full是当前形态，不是两套硬编码避让政策。查询框露出不能单独证明搜索可用，最低任务区域露出也不能作为可完整呈现控制栏时的停止条件。原21变体×16层登记、G05／G10和未证明的极限原生条件继续按原边界保留。
+
+本次按用户要求换用正常搜书入口中的《365天读点经典》（七猫小说），实际366个可读条目。旧候选067b在到底部后滚动发生真实ArkUI OutOfMemoryError，堆栈落在Content的entries @Prop递归拷贝，申请147,849,216字节时失败；原错误证据保留。当前复用已有目录值快照比较器和Search publication模式，将LRE→Panel→Content→NavigationSurface→NavigationList，以及完整目录／独立目录的六处正常装配改为普通publication引用＋数值revision，真实目录／书签变化才发布新快照。4096条×120次呈现保持同一快照，同数组内书签变化仍更新revision；八项目录SDK回归已改为真实publication装配并通过。b90a当前366章原生复验完成后段滚动、键盘锚点保持、论语四条筛选、清空恢复和实际章节选择，同一PID20289持续存活；不据此宣称无限目录、峰值JS堆或全应用性能验收通过。
+
+### 1. 当前真实执行链和必须共同修改的边界
+
+| 当前代码 | 当前事实 | 本次处理 |
+| --- | --- | --- |
+| [ReaderWindowCoordinator.refreshMetrics / avoidInsetsVp](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:548) | TYPE_KEYBOARD被压成四边insets，原始矩形和采样是否成功未保留；统一revision会随IME变化发布。唯一原生避让模式写边界仍是applyKeyboardAvoidance。 | 同一个owner增加键盘可见事实和实际矩形，保留现有insets与revision兼容；不增加第二个Window监听者或独立AppStorage发布者。 |
+| [ReaderLayoutGeometry.resolveReaderControlLayout](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts:561) | keyboardOcclusion进入safeBottom、dockBottomGap和availablePanelHeight；Full／Quick外框尺寸与内容容量混为一体。 | 外框只使用真实窗口及非键盘安全区域；IME另算编辑可见区域和必要位移。不能仅删除扣减后让输入区被键盘覆盖。 |
+| [LocalReadingExperience.onWindowMetricsRevisionChanged](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets:4540)、[controlLayout / controlMinimumEnvironmentKey](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets:7804) | 每次metrics变动都会换controlMinimumGeneration；原环境key含keyboardInsets；current receipt、候选和provider均有真实环境／代次校验。 | 将“尺寸测量依赖”和“完整当前环境”分开；保留完整环境拒绝迟到回执，不能只删keyboardInsets或重写旧revision冒充新测量。 |
+| [ReaderControlPanel.acceptRuntime / controlContent](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets:700) | contentMotionHeight来自运动frame；正常装配直接传给各模块availableHeight。dock.translateY、手势原点、backdrop、morph裁切分别使用dock坐标。 | 保留原运动frame及端点；增加独立编辑viewport，向内容传可见容量；必要上移统一经同一个presentedDockTop计算，所有坐标消费者同步接入。 |
+| [ReaderControlDirectoryContent.syncContentLayout](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets:554) | shortContent改变presentationKey及layoutPresentation；focusId带layoutPresentation。普通toolbar与shortHeader各建一个输入树，随后恢复焦点／键盘。 | 改为同一编辑字段、同一节点所有权和稳定挂载；容量变化不作为换字段的理由。保留正常业务换页／换tab／换owner时的失效边界。 |
+| [ReaderControlSearchContent.focusQueryField / searchField](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets:244) | Quick／Full共用一个真实输入控制器，Quick也可编辑，并非只在Full输入。 | 当前Quick整块可容纳时完整置于键盘上方；确实不能整块容纳时才用模块任务最低区域，尺寸和形态语义不变。 |
+| [ReaderControlReplaceContent.temporaryOverlay](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets:753)、[ReaderTtsConfigOverlay.boundedContent](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets:329) | 高度阈值决定完整滚动与局部滚动两套builder，包含真实表单输入。TTS manager另有windowModal RESIZE租约。 | 编辑body保持同一挂载路径；仅变可视约束／固定chrome预算，不在编辑中换树。TTS的系统RESIZE owner与退出恢复继续使用原边界。 |
+| [ReaderFormField.build](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/controls/ReaderFormField.ets:89)、[ReaderSearchField.revealBookInputCaret](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/controls/ReaderSearchField.ets:361) | 公共表单分支还没有统一父宿主纵向揭示协议；bookPanel已有控件内部caret揭示。source-code是320vp的TextArea，属于必须覆盖的超高输入。 | 公共输入只报告编辑位置，业务owner继续拥有草稿；父宿主负责纵向可见性，原生控制器负责文本内部滚动。 |
+
+对上一版口头方案作一项明确修正：**不能要求所有输入场景的外框位置绝对不动。统一保证是纯IME不改写自定义阅读控制栏外框宽高；整体放得下时优先整块避让，放不下时才按模块任务做内部滚动和必要的有界位移。** 当前正常Full目录整体高于键盘上方空间、输入已位于上部，因此只调整内部可见容量；当前Quick全文搜索整块可容纳，因此整块置于键盘上方。普通App页面继续尊重原系统模式及真实父视口，不将“保持自定义阅读外框”扩展成全应用冻结窗口。
+
+### 2. 第一步：在现有窗口边界补齐可用事实，建立共享几何解析
+
+修改 [ReaderWindowMetrics.ts](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts:43) 与 [ReaderWindowCoordinator.ts](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:548)。新增带默认值的键盘采样事实，例如 `keyboardArea.available / visible / rectsVp`，由refreshMetrics的一次TYPE_KEYBOARD采样同时生成旧insets与新矩形；不可为同一事件再次查询一套不同状态。矩形仅保存平台实际提供的非空区域；采样失败记未知，不能用零伪装“确认无键盘”。新事实参与snapshot相等判断；旧constructor调用保持兼容。已有Back判据的兼容迁移一并验证。
+
+拟新增 `entry/src/main/ets/ui/layout/ReaderKeyboardGeometry.ts`，只做Reader布局适配，复用平台编辑／滚动能力，不实现新的滚动引擎。输入为当前宿主在窗口中的rect、非键盘安全边界、平台键盘rects、当前输入／caret编辑区、允许的scroll extent及panel平移范围。输出包括可见区域、容量状态、最小揭示距离和需要的有界panel上移；先计算矩形相交，不能用“keyboardHeight减inputHeight”。
+
+坐标规则已核本机SDK：Area.globalPosition为当前窗口坐标，Area宽高为vp；CaretOffset.x／y为输入控件局部px；Window.Rect为px。所有平台px只在适配边界转为vp，caret加字段窗口原点后才与键盘相交；不得把globalRect的屏幕原点再加到已经是窗口坐标的Area上。变换中的输入位置优先复用 [readerMeasureSurfaceRect](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/layout/ReaderSurfaceRectMeasurement.ets:9)；它已有变换位置读取和owner拒绝，不能假设onAreaChange一定随translate产生。
+
+系统已RESIZE的页面以实际host rect与键盘rect求交，只扣真实剩余交集；不继续把windowHeight－viewportHeight一律解释为键盘已经消耗的高度，真实分屏／嵌套宿主也会产生差值。浮动／分离键盘只对平台提供的实际矩形处理；缺少位置时保留未知边界，不凭底部inset声称覆盖任意浮动形态。
+
+### 3. 第二步：分离控制栏外框、编辑位移和内容容量
+
+修改ReaderLayoutGeometry的resolver：从外框safeBottom去掉keyboardOcclusion；dockBottomGap、fullPanelHeight、quickPanelHeight和minimum fit只使用原窗口、非IME安全边界、当前真实最小profile。原作者宽高比例、顶部避让、字号和真实最小尺寸继续生效。纯IME关闭／打开／改变高度时，固定相同结构输入的外框宽高相等；真实旋转／窗口／字体变化仍会换代。
+
+修改LocalReadingExperience的controlLayout、onWindowMetricsRevisionChanged、scheduleControlMinimum及admitControlMinimum；在现有完整environmentKey之外增加结构测量key，包含真实viewport、window几何、density、字体、非IME安全区域及内容测量依赖。纯IME改变只更新编辑事实；相同owner、结构key、候选宽度和facts几何依赖才允许复用已经同步确认的测量结果，并在当前请求／完整环境准入下形成新的展示回执。保留provider／generation／身份／真实输入前后检查，不能直接把旧异步回调或旧metricsRevision重标。同步核对ReaderControlMinimumMeasurement的profile，以及TTS／AutoPage播放profile和session launch对原metricsRevision的消费；不得因为尺寸可复用就放宽播放或转场的所有权。
+
+修改ReaderControlPanel，增加独立 `editingViewport` 与 `editingOffsetY`，保留contentMotionHeight为原运动几何。按当前实际frame.content、原生宿主位置和键盘交集，得到各模块的可见编辑高度，传给内容布局和局部overlay；外框及运动端点不使用这个高度。拟设 `presentedDockTop()` 作为统一展示原点：build dock位置、acceptRuntime里的dockRect、controlTouchHandler手势原点、reportSessionMorphSource裁切及onSessionLaunchShellMeasured等使用同一结果，不只在外观加translate。
+
+揭示顺序：当前输入所属的完整控制栏若能放入真实键盘上方的安全区域，由Panel把完整shell作为共享revealRegion，保持原宽高和内部布局，有界整体上移。完整shell确实放不下时，退回模块给出的任务区域；先使用已有内部滚动，必要时再有限位移。目录任务包含筛选结果／空态容量，正文搜索任务由已有ReaderSearchMinimumProfile提供查询、完整结果行或当前状态以及分页／恢复动作容量；搜索任务不得退化成caret可见。多行表单才允许整框放不下时使用caret行判据。位移使用当前原生回执增量修正，同一窗口／owner／字段至多合并一个在途布局请求；用户切换模块、关闭、背景或Back使旧请求失效。
+
+### 4. 第三步：公共输入只接事实，宿主接动作
+
+拟新增 `entry/src/main/ets/ui/layout/ReaderEditingVisibility.ts`，由每个当前编辑宿主持有实例，定义字段绑定、当前generation、等待布局／已可见／待揭示／仅编辑行可见／空间不足状态。它只调宿主提供的现有Scroller／文本controller适配，不持有书籍／规则草稿，不新增全局active field store。
+
+公共ReaderSearchField、ReaderFormField新增可选的编辑可见性端口与稳定字段身份；已有正常业务调用逐项绑定。onFocus／onBlur、onEditChange、onAreaChange、onTextSelectionChange和文本内部scroll要在实际输入声明处组合现有回调，不能再加一个后置modifier覆盖原监听。ReaderFormField中所有有限分支及TextArea都要接，不能只补reader-content-search。现有reader-content-search外部controller继续复用；其他TextInput与source-code TextArea使用各自长期持有controller，不在build中new。
+
+布局读取复用 [ReaderPostLayoutFrame](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/entry/src/main/ets/ui/layout/ReaderPostLayoutFrame.ets:22)，保留其idle／下一帧一次交付与失效保护；组件盒不变但键盘／选区变化时主动请求一次当前原生位置，不能只等Area。先让原生controller.scrollToVisible处理当前caret／活动选区端，再让父宿主根据实际位置最小揭示；不把索引强制裁到已提交字符串末尾。当前build-profile的compatible／target均为6.1.0(23)，本机SDK的scrollToVisible为since23，TextArea／TextInput的选区与编辑事件已经声明；方案不需要升级SDK或兼容版本。
+
+### 5. 第四步：处理真实会换输入树的布局
+
+**目录：** 修改ReaderControlDirectoryContent、ReaderControlDirectoryGeometry、ReaderDirectoryToolbar。普通directoryToolbar与shortHeader收敛为一个持续挂载的查询区域，shortContent只决定槽位约束和辅助chrome如何分配；不能再由short标志改变focusId或把同一查询从Toolbar树搬进另一个ListItem树。输入区使用从初始就挂载的局部Scroll，正常容量时零偏移，狭小容量时可滚到输入行；原章节／书签List和NavigationSurface保留自己的Scroller及语义锚点，不在全List外再套同向Scroll。Toolbar的queryStacked也必须让同一字段保持同一父链，只重排查询／工具槽。普通紧凑布局沿原稿；短高度下工具与信息进入可滚动内容，不通过缩字、缩行或扩大32vp工具改变容量问题。
+
+目录同步修改syncContentLayout、directoryFocusId、queueLayoutRestore、queryInteractive：字段身份由session／tab／当前业务opening决定；布局／最小profile版本只更新布局ticket。输入框本身可见且当前owner可编辑时不因工具栏没有完整露出就一并禁用输入；未完整可见的动作按自己的可达区域处理。原leadingRow／fraction、prefix位置、NavigationList锚点和查询／排序保留；键盘显示意图仍以用户显式编辑和Back为依据。布局变化不再依靠先销毁输入、再showTextInput续接。
+
+**全文搜索：** 修改ReaderControlSearchContent及其geometry容量入口，保留现有同一个inputController／queryInputId／结果Publication；分离正常运动frame与编辑结果viewport。Quick不被强制切Full。结果List接受剩余容量，不能改变查询或结果锚点来补位置。
+
+**替换编辑器：** 修改ReaderControlReplaceContent的temporaryOverlay／temporaryFlow／temporaryBody。将editorFields保持在一个稳定编辑body中；普通容量下header／actions仍按既有固定视觉，容量不足时改变chrome预算和滚动范围，输入body不在两个ReaderBoundedSurface builder之间重建。其opening、mutation pending、取消和保存仍归原owner；本次不修改业务事务。
+
+**TTS管理：** 修改ReaderTtsConfigOverlay的boundedContent／compactContent及窗口可见容量接入。configurationBody及其字段保留同一挂载路径，正常固定footer继续保留；不足时允许chrome进入同一可滚动容器，保持字段节点。原acquireReaderKeyboardResize／release同window／owner／install epoch边界保持，原生实际RESIZE已处理的部分不重复扣。
+
+### 6. 第五步：模块任务、整块优先与高度不足的统一执行规则
+
+| 任务类型／实际入口 | 必须保障的内容 | 容量处理责任 |
+| --- | --- | --- |
+| 目录／书签筛选：ReaderControlDirectoryContent、FullDirectoryPanel、BookDirectoryPage | 当前输入与筛选工具可达；至少一条完整结果行，或当前空态／失败及恢复入口 | 原Directory minimum／contentGeometry保留结果容量，非编辑前缀可局部滚动；不因IME改换输入树或自动改变Quick／Full。 |
+| 正文搜索：ReaderControlSearchContent | 查询与搜索动作；至少一条章节标题＋摘要，或idle／loading／empty／error状态；当前分页／恢复动作 | 复用已有Search minimum的当前状态profile，经editingContext交给共享框架；状态或profile更新重新评估。 |
+| 普通编辑表单：替换、TTS、下载范围、分组／规则等 | 当前字段、校验与后续确认／取消动作可达；多个字段允许在现有Scroll内连续访问 | 复用原Scroll和原业务提交／取消；不要求所有字段同时出现，不自动提交或关路由。 |
+| 多行正文／JSON：SourceTools等 | 当前caret行及局部上下文；原文本内部滚动与选区控制 | 整个320vp输入盒确实放不下时才采用caret判据；维持原盒尺寸及同一native controller。 |
+| 普通列表筛选与搜书：SourceManagement／SharedDownload／ReaderLibrarySearchSurface | 当前过滤／提交状态及其列表／历史／恢复内容能够通过原页面滚动访问 | 保留原live／submit业务区别与实际父宿主容量，不把普通页面强行变成阅读控制栏；未实测的结果命中不写成原生PASS。 |
+
+| 实际容量 | 执行动作 | 结果边界 |
+| --- | --- | --- |
+| 完整控制栏能放入键盘上方 | 保持原宽高／形态，整体移入安全区域，连同底部导航和亮度栏一起呈现 | 不以最低任务刚露出为停止条件，不保留可避免的半截遮挡。 |
+| 完整控制栏放不下，但当前模块任务能放下 | 保持外框宽高，由模块约束内部结果／状态／工具容量，已有Scroll最小滚动；必要时有界位移 | 输入框可见不能替代结果可读，完整Full不因此自动折叠。 |
+| 多行字段高于可见区 | 原生文本内揭示当前caret行，再配合父Scroll | 只有多行编辑可用caret降级；搜索的任务最低区域不能降为一个光标。 |
+| 非编辑chrome挤占全部空间，但真实窗口尚能放编辑行 | header／footer／工具转为原内容流的可滚动部分，当前编辑行优先 | 不换输入实例，不夹成0后继续报告ready。 |
+| 经合法滚动／位移仍放不下当前任务或编辑行 | 明确space-insufficient；保留当前实例、草稿、组合文本及选区；停止自动纠正，系统Back收键盘 | 不自动提交／丢弃／关路由，不循环弹IME，不缩字体或改系统显示。 |
+| 原生或模块任务几何尚未就绪 | geometry-unknown，等待下一次真实事件或有界布局回执 | 不用输入框单独可见冒充结果任务可用，不定时轮询。 |
+
+Back继续复用LocalReadingExperience.requestExit和ReaderKeyboardBack的当前事实消费。无可用编辑空间时系统Back必须优先收键盘；已按Back退出的字段不因后续layout回执重新弹键盘。键盘收起后的恢复只修正本次框架引入的临时位移及越界scroll；用户已主动滚动的结果位置继续由原owner持有，不能无条件拉回旧坐标。
+
+### 7. 第六步：按实际输入消费和原15类几何消费者接入
+
+当前精确构造扫描得到**16个业务消费文件＋1个诊断fixture**；这不是16页，也不是原生已复现16项。公共原生TextInput／TextArea声明集中在ReaderSearchField、ReaderFormField和SharedDownloadPage三个生产文件。输入构造清单与原15个几何消费者是不同分母，需交叉登记。
+
+| 消费文件／正常宿主 | 实施接线 |
+| --- | --- |
+| ReaderDirectoryToolbar、ReaderControlDirectoryContent、ReaderControlSearchContent、ReaderControlReplaceContent、ReaderTtsConfigOverlay | 按上面的专用内容／稳定输入修复，复用同一共享几何和编辑端口；不能另做五份IME状态机。 |
+| ReaderDirectoryRules | 两个pattern／level字段绑定既有rule.id与原overlay Scroll；详情和阅读内两条来源都传同一个端口协议。 |
+| ReaderLibrarySearchSurface | 使用model owner＋fieldIdentity，保留现有持续挂载搜索栏；historyLimit接共享可见容量，只有真实遮挡才揭示字段。 |
+| SourceManagementPage | 搜索字段绑定当前page owner及输入身份；分组popup与恢复容量按现有独立槽位消费共享几何，不缩主页面外框。 |
+| SourceToolsPage | JSON编辑320vp TextArea与debug字段分别绑定现有inputRevision／editor revision／busy owner；接当前页面List／表单宿主，不滚另一个卡片或已退休输入。 |
+| RulesManagementPage | 每项规则的有限字段绑定原规则／草稿owner，父列表／表单接揭示动作。 |
+| BookshelfManagementPage | groupName、groupOrder及assignment字段使用原分组／操作身份；输入区接可见性，原分组列表滚动继续独立。 |
+| JsonImportDialog | 复用当前outer Scroll、urlInputRevision和弹层焦点scope；availableHeight使用共享宿主交集，保留自然Dialog及取消逻辑。 |
+| SharedDownloadPage | searchField、rangeBoundInput两处原生声明接同一编辑适配；range start／end使用opening＋revision＋端点身份，不为保留当前下载视觉强行换成另一表单spec。 |
+| RssPage、RssSubscriptionEditorPage、SyncPage | 当前L0关闭；记录实际构造点和同一接线契约，完成可编译接入不打开产品门，不计当前正常可达原生验收。 |
+| ReaderFrameworkGeometryStructureFixture | 仅作为共享输入及几何诊断装配，不计生产页面验收。 |
+
+普通表单优先接已有ReaderPageScrollHost或页面原生List／Scroll，不能假定所有字段都在ReaderPageScrollHost内。ReaderFormRow只传字段／宿主绑定，不创建独立键盘owner。ArkWebExecutionHost复用实际Web编辑和现有Back，只统一其host safeHeight交集；不注入JS扫描网页输入。独立漫画目录经ReaderDirectoryToolbar及其宿主接入，漫画正文的system／viewport策略保持。
+
+原15个几何／位置消费者全部对账：ReaderLayoutGeometry、ReaderTtsConfigOverlay、ReaderLibrarySearchSurface、SourceSwitchWindow、SourceManagementPage、SettingsSelectOverlay、JsonImportDialog、BookshelfGroupDialog、LocalImportDialog、BookshelfShell、BookshelfPage、ReaderJourneyRecoveryNotices、ReaderInlineSelect、ArkWebExecutionHost、ReaderTransientToast。共享几何取代各处重复的host bottom／keyboard推算，但各自保留列表、恢复槽、下拉或短反馈的位置语义；不把这些15项全部登记成边框缺陷。ReaderInlineSelect仍覆盖下载6、书源工具2、目录规则1；短反馈只改定位事实，消息类别与生命周期不改变。
+
+### 8. 实施顺序、准确回归与关闭条件
+
+按依赖连续完成A（窗口事实＋共享几何）、B（外框／完整环境／内容viewport）、C（公共输入＋目录／搜索／替换／TTS稳定挂载）、D（实际消费接线＋其余容量消费者）、E（准确回归＋一次规范编译），不能每补一处都重复整包构建或再开全局审计轮。各批修改后先做本批明确需要的准确检查；方案制定时尚未执行；当前准确结果见本节顶部及实施记录。
+
+| 准确入口／拟新增case | 本次必须证明的问题 | 执行边界 |
+| --- | --- | --- |
+| 拟新增tools/test-reader-keyboard-geometry.mjs：docked、native-resize、nested-host、floating-reported、unknown、no-space | 调真实共享解析器；窗口原点非0、density3.5、已resize／部分resize、未遮挡输入、过高输入、零容量、未知位置、实际矩形交集 | 纯方法，不运行App／SDK构建／设备；case拟议，尚不存在 |
+| 修改tools/test-reader-control-host-keyboard.mjs并拆为明确选择项：outer-frame、editing-viewport、quick-reveal、back-owner | 删除414vp缩框与Quick上移数值作为产品正确性的旧判据；真实resolver／LRE／Panel绑定证明外框宽高不随IME变、Quick可编辑、Full已可见不移、旧回执拒绝和阅读不重分页 | 仅选定实际方法／共享纯几何；旧文件有顶层多领域断言，先拆可选择入口，不能直接整文件附带跑 |
+| tools/test-control-directory-short-content.mjs：short-sdk、prefix-anchors、directory-focus、keyboard-transfer、keyboard-observation及拟新增stable-input、field-below-keyboard | 调实际Content／Toolbar／Field，检查普通／狭小容量的稳定字段和真实挂载树、owner、原动作和语义锚点；补组合文本保留的状态约束 | SDK lowering／有限原生端口只证明声明与方法；不能模拟一个focus就宣称真实IME组合文本通过；旧transfer断言随节点连续性改写 |
+| tools/test-control-directory-focus-path.mjs：toolbar-focus-path | 新Scroll／编辑槽父链没有enabled／focusable／hit-test阻断，旧祖先负例仍被行为判据拒绝 | 实际SDK声明路径；不是实际触摸／焦点引擎 |
+| 拟新增tools/test-reader-editing-visibility.mjs：field-events、caret-px-vp、retired-target、back-cancel、multiline、stable-editor-hosts | 调真实输入和owner方法，证明回调组合、不覆盖原submit/change、选区／caret坐标、旧字段失效；目录／替换／TTS过阈值保持同一编辑body | 方法＋SDK持续更新probe；无真实native mount/composition则明确未证明 |
+| tools/test-reader-tts-config-interaction.mjs：fields、manager-drafts、keyboard、overlay | 修改TTS编辑body后，字段、原草稿、临时RESIZE取得／释放、取消与晚ACK仍正确 | 只列本批需审读的准确case，测试定义变化时先更新本项依据，不自动重拍索引或扩大兄弟项 |
+| tools/test-post-layout-continuations.mjs：adapter-delivery、slot-delivery（仅共享adapter实际修改时） | 几何不变／Area不来时，一次布局后读取仍会到达且旧owner／零盒拒绝 | 若仅调用既有adapter且源码未变，复用原准确证据，不为使用它重跑 |
+| HAP规范iteration build，contracts=none | ArkTS类型、组件接线及新SDK事件实际可编译；构建所需输入／Native配对／指定签名独立核验 | 代码及定向回归收口后只做一次必要构建，未授权阶段不安装，不附带全量 |
+
+验收应分别记录：外框尺寸稳定、必要位移及命中一致、完整可容纳控制栏的边界与内部任务可见像素、超高TextArea的caret行、零容量退出、原生实例／组合文本／选区连续、Back不重弹、用户滚动及业务位置保持。代码／SDK只能关闭其实际可证明层；恢复目标及设备授权满足后，原生最小场景选择当前候选的Full目录、Quick全文搜索、超高JSON编辑、替换及TTS过阈值和实际高度不足。每项先列唯一待答问题，已有未受影响的输入／查询／返回证据记REUSED；不重跑无关主题、源导入、TTS播放或整页验收。
+
+任何一项仍以不可编辑、输入节点重建、负容量、无限纠正或按Back再弹键盘结束，本family不得关闭。方案不要求修改数据schema、产品版本、Core／Reader-UI pin、分辨率、密度或系统字体。实施时按上述依赖提交原子变更；回退使用该批明确diff／提交，保留并行WIP及数据，不能reset工作树或卸载清数据。
+
+
 ## 2026-11-17 键盘外框策略专项：范围已查清，修正待实施
 
 用户指出目录唤起IME后外框整体缩短。本次先扩大到642个当前应用ETS／TS、20路由及4个manifest页面根，追踪54个相关候选用法及父宿主，正式纵向容量／定位消费为15文件；完整分类、来源行、保留与诊断边界见[范围结果](/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/.reader-artifacts/app-ui-framework-audit-20261114/ime-geometry-impact-20261117.json)。当前生产与安装候选仍为8da2c02d／0.2.0.DEV.7b0f6137368c，未为此修改或重建。
@@ -1118,3 +1505,295 @@ ReaderSourceJourney 等业务导航类继续只处理原导航职责。偏好的
 按问题保存小型提交及其对应回归。回退时核对当前差异和后续依赖，只恢复本问题实际修改。安装候选及用户数据按既有保数据流程处理，源码回退与设备结果分别记录。
 
 最后交付包括实际源码差异、准确测试结果、更新后的原问题账本及页面登记、发生过的构建签装 manifest、原生证据和仍开放的视觉或历史归因项。当前这两份文档及覆盖快照构成实施输入。
+
+
+## 2026-11-17 全应用目标续接与当前状态对账
+
+当前安装候选为 `0.2.0.DEV.e6736ba4966d`（x86_64，run `20261117T135651Z-6a2f03ab-f6d2355a`），HAP SHA-256 `27594dc5f52406ae3aa008081c720d395677e7bfdbf9f94fdbca851d1871d0ed`。Host `6a2f03ab` / Core `c0781263` 加保留的 dirty WIP，共648个生产ETS/TS输入。指定证书签名、Core/Native同字节复用、ArkTS/包身份、停止态数据兼容验证、保数据安装与启动通过。用户已明确解除VM禁令；本次 agent 操作保持现有1280×2832、density3.5与应用数据，未执行重启、重置、卸载、清数据或显示配置写入。用户另行反馈的重启见下文，具体范围未说明。全量合同未运行，不能由开发包及局部原生结果推导完整验收通过。
+
+此前补修下载书/章选择框实体标签和章节标题动作语义；规则编辑器与漫画恢复提示两处展示代次改为受观察状态，避免启用按钮仍使用旧回调。准确失败、通过及同原因15处身份构造点核对见 [回调代次修复](../../../evidence/2026-11-17-framework-native-closeout/callback-generation-repairs.json)。本次没有开启新的全局审计轮。
+
+本次原生执行又定位并修复正文搜索的四个相关行为：Full/Quick切换把另一端锚点设为0；末尾视口变大后按未约束位置裁掉可见行；同词新查询被当作原列表的相同前缀而保留旧位置；旧查询尚未归一的原生偏移提前触发新查询续取。修复仅在搜索组件中绑定当前查询代次、保留语义锚点，并复用实际滚动投影计算端点遮罩与当前可见范围。公共表单滚动策略保持原有适用范围。`scroll-receipts` 与 `geometry-policy` 点名回归通过，包含50/2000/10000条、反向拖动、末尾双向遮罩、新查询归零、旧偏移不续取及当前近末尾仍续取。[修复与证据边界](../../.reader-artifacts/app-ui-framework-audit-20261114/search-morph-query-repair-20261117.json)
+
+原生数据证据分开记录：正常《365天读点经典》（366条目录）的Quick搜索51条及IME中四项导航沿未变更路径复用。自有1025章固定语料中，第二次长扫描实际观察295处匹配并到达第1025章稳定末尾；前后两次取证合计覆盖全部309处匹配、279个章节。原生输入和List节点相同不能单独证明重新搜索前后的业务代次相同，因此没有把跨会话309覆盖写成单一查询的309条连续遍历。[长结果与代次边界](../../.reader-artifacts/app-ui-framework-audit-20261114/native-search-309-and-morph-1423-20261117.json)
+
+e281候选上，Full末尾首个完整可见结果为1020，收回Quick后仍为1020；Quick滚到1025再展开，实际截图确认1020至1025的标题与摘要可见，两条1022分别高亮不同匹配。点击末项后已进入1025正文。4042只再修新查询归属和续取判据，上述未变更方法范围按证据复用。[切换、末尾绘制及实际定位](../../.reader-artifacts/app-ui-framework-audit-20261114/native-search-morph-e281-20261117.json)
+
+4042上，同词“2”搜索从首项2滚到24，再次搜索回到2，输入框保持。当前系统键盘窗口实际显示时，Full结果List仍是同一个原生实例，首项及多行结果可见；Back恢复原List高度、查询和首项。这些是当前准确场景通过，不扩写为全部Quick/IME/字体及失败分支通过。[新查询与Full结果输入法回执](../../.reader-artifacts/app-ui-framework-audit-20261114/native-search-query-scope-4042-20261117.json)
+
+e673已补齐快捷正文搜索的当前原生场景：正常书架续读进入自有1025章书，搜索“2”，实际输入法出现后Quick外框整体上移1029px，高度仍为1147px，内容宿主仍为657px。输入框260:14953与结果List260:15019在输入法前、显示时及Back后保持同一实例；Back保留查询、首项及位置。实际截图已检查，前两条标题与摘要完整可读，四个底部入口未被淡化，无加载更多覆盖。再次聚焦输入法后，对完整可见的第一条结果点击一次，已进入第0002章实际正文。该结果只关闭当前默认字号Quick/IME/Back/点击场景，不提升为全部错误/空态/字号及E2/E3通过。[快捷结果输入法与实际定位证据](../../.reader-artifacts/app-ui-framework-audit-20261114/native-quick-ime-completion-e673-20261117.json)
+
+同一e673包另已补齐Quick/Full空结果分支。实际基线查询为“zzz”，两种形态在真实输入法下均完整显示未找到提示；输入框260:15378与提示260:15384贯穿Quick、Full、两次Back及收回Quick。Full原始外框仍为2346px高，输入法只把可见范围截到1733px，空态正文在当前容量内上移并保持完整；不把该结果写成整个Full外框已容纳于键盘之上。两张实际截图已检查。驱动原请求zzzz，但首个有效原生基线已是zzz，故只证明已观察查询的空态保留，不推断未观察的字符丢失。[Quick/Full空态与输入法证据](../../.reader-artifacts/app-ui-framework-audit-20261114/native-search-empty-ime-completion-e673-20261117.json)
+
+P3在4042候选上已补齐自有TXT1025正常链路，本轮未变更该生产路径：预览1025节点/1025可读/0无法映射，同一预览List先到1025，再返回1，末项实际截图可读。随后只应用一次当前预览证明，收到规则已应用结果；正式目录仍显示末项1025及1025/1025，原阅读位置保持。返回详情后新开full-directory:2实例，经Core重新载入已保存的第.*、层级0、已有标题规则，最后返回原详情。测试书保留这条明确规则，其他书籍和系统设置未修改。[当前预览、应用及重读证据](../../.reader-artifacts/app-ui-framework-audit-20261114/native-preview-apply-completion-4042-20261117.json)
+
+早期1423末尾screenCap失败保留为历史FAIL；当前另一次实际P3截图成功，不追溯改写旧结果。本次文字选择器失败和完成返回扫描后的空闲会话释放亦有原记录；未派发的动作没有计为成功。同页关闭/展开保留的字段未当作持久读取，持久读取只采用新目录实例的Core get。未知ACK、输入变化拒绝及回滚边界复用未变更Core/Host准确测试，没有制造真实故障来取证。
+
+G05系统控制中心录屏文字入口及独立图标载体各点击一次，后者有SYS_UI实际onIconClick回执，但未进入录制或产生视频。这里只证明点击已派发，后续无响应原因未定位；不推断整个平台不支持录屏。单张搜索截图成功也不是连续绘制通过。[系统录屏入口记录](../../.reader-artifacts/app-ui-framework-audit-20261114/g05-system-recording-result-1423-20261117.json)
+
+本轮继续P2真实入口前，发现并修复搜索到换源的错误排除链：SearchOrchestrator在请求派发前记入书源，Journey将集合传给换源，Gateway却把这些书源当成已完成而跳过。现已删除跨查询集合及排除参数；仅有合格缓存候选时复用候选，其余按当前书名、作者、书源版本独立取得后续页。旧生产方法在首屏后转入换源会错误显示空态，修复后的真实Host回归可在第二页命中；渐进、缓存、取消及漫画准入等9个准确case通过，实际ArkTS、签名和保数据安装通过。原1ceb“天道”首轮107/107书源、608结果只能证明首轮，后续页数字日志为空，不据此关闭P2。e673“天道”首轮708结果，259.631秒有界采样记录342个分组，未取得后续页；“天道酬勤”首轮446结果的遍历也已停止。随后按实际工具帮助，以同一查询完成4次原生fling，25.017秒内仍无后续页回执。这些尝试均不计P2通过，也不构成书源已穷尽或应用续取正确的证据。已停止宽泛查询和逐屏遍历，P2原生项保持开放。[接线修复、选定回归及原生计划](../../.reader-artifacts/app-ui-framework-audit-20261114/p2-search-switch-handoff-repair-20261117.json)
+
+当前e673已从正常设置进入真实书源登记页，核对默认页头的全部7项事实：返回角色、固定呈现、返回/标题/工具组成、不透明表面、58vp名义高度、安全区归属及工具action owner。实际槽盒202px高（density3.5下保留1px取整边界），与内容根同起于y137px，标题和两个154×154px按钮完整可见。真实输入法与Back前后保持同一个260:18525页头及原范围。已逐项审阅登记以来7个源码/夹具输入差异并更新该页绑定，新增编辑框架输入；只把Source默认header从NOT_RUN改为PASS，revision58→59。[正常页头与绑定对账](../../.reader-artifacts/app-ui-framework-audit-20261114/source-header-layer-native-e673-20261117.json)
+
+继续复用同一正常书源页快照，信息架构已补齐实测预算：可见主列表770vp、筛选prefix244.2857vp、首行相对起点302vp，页脚槽前完整容纳5个内容单元；实际输入法覆盖时仍有2个完整单元。区块清单补登记分组筛选，保留有条件的status-action槽。页脚同时核对唯一动作owner、两项controlRef、主次/快捷入口关系及默认安全区，Back后恢复原生按钮身份与范围。按原契约附录A第3/8层关闭这两项结构事实；完整页面、E2原生命中/焦点/读屏及其他字号方向不作为它们的附加前置，也没有被一并改判。Source revision59→60。[首屏与页脚结构证据](../../.reader-artifacts/app-ui-framework-audit-20261114/source-structure-layers-native-e673-20261117.json)
+
+当前正式登记为21项336层：26 PASS、27 FAIL、283 NOT_RUN，整页原生关闭0/21。当前已确认的代码修复队列为0，完整原生验收继续开放；普通搜书/换源后续来源页、其余P1变体和原方案页头条件、不同宿主动效/焦点、可听宣告、真实长未决恢复、纯高度窗口及正式E2/E3仍各有未闭环条件。漫画新代恢复动作目前只有真实SDK层关闭。独立批准整页资料和历史G10同期原始trace沿既定缺口保留。当前见 [全应用续接记录](../../.reader-artifacts/app-ui-framework-audit-20261114/framework-current-continuation-20261117.json)、[当前逐层缺口](../../.reader-artifacts/app-ui-framework-audit-20261114/requirement-native-gap-index-e673-20261117.json) 和 [原账本](../../.reader-artifacts/app-ui-framework-audit-20261114/ledger.json)。外观、性能两项子agent仍按全量实施完成后启动；历史R30 FAIL及0/3保留，已取消的全局轮不再作为VM前置。
+
+用户随后反馈“重启没有了”：VM 中此前报告的加载按钮在用户重启后不再出现，具体重启范围未说明。当前 e673 候选的只读抓取帧没有该按钮，已安装候选对应 HAP 的 `ets/modules.abc` 中“加载更多结果”精确字符串为0。重启前的按钮身份、所在状态及消失原因未取到证据，不能据此归因于旧包或缓存，也不将重启本身记作代码修复验证。该现象停止重复复测，原始未决边界保留。见 [加载按钮反馈记录](../../.reader-artifacts/app-ui-framework-audit-20261114/vm-visible-loading-button-20261117.json)。
+
+当前 e673 正常书源页底部进入工具页，打开已有书源的真实 JSON 草稿，完成320vp多行框的键盘、Back、一次外层滚动后取消及返回。原生输入 `reader-editable-target:13` / `260:20174` 和外层Scroll身份保留，898字符文本SHA保持；框高1121px，IME时整体上移443px，底边1705px，键盘顶1733px。取消按钮在键盘显示时完整位于1558–1712px，实际点击后输入框与键盘节点退场，随后Back返回书源页；没有保存或书源写入。图片已复核。该正常场景关闭书源工具的骨架、页头、无目录查询、无业务页脚四项结构事实，登记修订49；原 `contentEndInset=none` 更正为 StandardPage 的 `max(16, interactiveSafeBottom)`，不是生产改动。交互/适配完整层仍FAIL，整页0/21。极端高框、浮动键盘、组合输入及完整读屏不由本场景推导。见 [正常多行编辑原生证据](../../.reader-artifacts/app-ui-framework-audit-20261114/native-source-code-ime-e673-20261118.json)。
+
+正常详情目录的 TXT 规则边界下拉已补原生证据：当前 e673 从正常设置将减少动态效果false切为true，进入已有1025章测试书的详情目录规则。四个边界选项完整绘制；Back与外点均只关闭菜单，原`第.* / 0 / 已有标题`保持。键盘路径从规则标题经3次Tab进入同一原生触发器260:23432，Enter打开，Back后同按钮focused=true。8秒trace共3267/3267条，ReaderSelectPanel建立与销毁均在区间内，6个RunningCustomAnimation样本均为0，单次动画回调生命周期1.677ms；这些不是连续像素或全局性能通过。原动效偏好已从真实设置开关读回false，规则未应用/保存，会话释放。已有下载和书源工具证据按各自原范围复用。正式26 PASS、27 FAIL、283 NOT_RUN及整页0/21不变，G05连续像素/G10同期证据继续保留。见 [正常目录下拉原生证据](../../.reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-rules-e673-20261118.json)。
+
+UIF-05当前组件容量已补证：e673中的真实BookshelfGroupDialog/ReaderRecoveryNotice由既有内存回执样本装配，180vp宿主展开后Scroll为156vp；5次有界手势滚到“分组长文案末尾”，双动作原生盒均完整且实际各记一次当前opening意图。320vp时Scroll为296vp，回180vp恢复156vp，同一原生Scroll260:231和opening1保持；再次滚到末尾后图片复核通过，Back返回样本按钮且focused=true，最后已恢复正常书架。当前容量、滚动及样本焦点可按这一范围关闭；真实持久化分组结果未执行，也不作为证明组件高度/滚动事实的新增前置。当时尚未验证当前候选的大字号末尾动作及正常书架父入口焦点。另有旧候选的实际 1.45 倍字体完整动作回执，后文核对了该证据与当前源码的差异。首次500ms过早查菜单及遗漏开源审计页→页面结构菜单步骤的私有入口失败保留，续接同一现有进程后完成，未重复启动样本。正式26 PASS、27 FAIL、283 NOT_RUN和整页0/21不变。见 [当前分组容量原生证据](../../.reader-artifacts/app-ui-framework-audit-20261114/native-group-capacity-e673-20261118.json)。
+
+UIF-05另补正常父入口：e673正常书架中，已有1025章测试书的更多按钮→编辑分组使用真实BookshelfGroupPresentation.open与BookshelfHost读取装配，随后实际Back。原书籍更多原生按钮260:271保持，返回后focused=true，分组覆盖层退场；未选择默认分组，也未派发assign/reconcile/continue。8个动作、62.921秒，会话释放，正常书架保持。由此补齐当前正常父入口返回焦点；初始默认分组子按钮focused=false、对话框focusScope=true按原观察保存，不宣称子按钮初始焦点通过。当前容量原生组合仍缺实际大字号展开长提示的末尾动作，业务持久化结果继续独立记账。见 [正常分组返回焦点](../../.reader-artifacts/app-ui-framework-audit-20261114/native-group-normal-focus-e673-20261118.json)。
+
+原条件风险RISK-TOGGLE-FOCUS已按批次4的原关闭标准收口。原要求是“对当前可达设置开关做一次键盘或读屏激活，观察焦点能否继续同一操作”，现有正常书架设置及开发者设置已实际各完成两次受焦点/值守卫的Enter：原生实例0→1→2分别换代，接受值往返变化，每次新实例均enabled=true、focused=true，随后正常重开确认原偏好。此次重读实际布局文件及SHA、原始派发回执确认上述事实；共享Toggle与旧原生候选及当前e673不可变快照均为相同4d5ff91d字节。SDK AST另证书架设置Toggle装配、值、资格、身份、回调和生命周期全部未变，唯一变更成员是无关的显示方式保存。完整读屏名称/角色/音频、所有保留调用方及正式E2/E3继续开放，但不再作为这个原“键盘或读屏”焦点续接风险的新前置。原失败候选保留，未重跑VM、构建或签名，正式26 PASS、27 FAIL、283 NOT_RUN及整页0/21不变。见 [原Toggle条件风险关闭依据](../../.reader-artifacts/app-ui-framework-audit-20261114/toggle-original-risk-closure-e673-20261118.json)。
+
+
+2026-11-18补齐P2普通搜书的真实后续页：当前已安装e673，正常书架搜索“365天读点经典”，首轮107/107、366条。原生列表向尾部16次有界fling后，当前Reader进程实际取得page2成功回执，回到页头计数为526。查询输入260:1746、List260:1616及owner2:2保持；所有采样布局与日志SHA已复核，页头图片已查看。查询、追加和回看共167.445秒，没有重提查询或重建列表。保存的四条数字回执各为page2/decoded10/matched10，不据此把完整160条增量逐项归到四个书源。旧失败扫描保留，不因换源仍OPEN重跑本场景。见 [普通搜书page2原生结果](../../.reader-artifacts/app-ui-framework-audit-20261114/native-p2-normal-search-pages-e673-20261118.json)。
+
+独立换源入口仍OPEN：从该正常结果进入真实详情和换源，原有5个候选可见，仅点击一次“重新查找”；观察119.938秒后仍为“正在查找”，采样日志没有合格route=switch后续页目标。实际Back关闭覆盖层，原详情来源和原生触发器保持；没有点击候选、提交换源或写书架。不能由此认定没有请求后页、来源无后页或取得有效空结果；不追加书名或查询循环。见 [换源单轮有界结果](../../.reader-artifacts/app-ui-framework-audit-20261114/native-p2-switch-target-e673-20261118.json)。本次8分10.335秒会话已释放，没有生产改动、构建/签装、钥匙串访问或VM显示/系统设置变更。私有采样首次误传label而非name，在采样前失败，已独立保留。正式26 PASS、27 FAIL、283 NOT_RUN、整页0/21及全框架OPEN不变；账本原CURRENT_CANDIDATE_NOT_RUN已保留为历史，当前改指向分项原生证据。
+
+
+2026-11-18目录默认登记按原附录A完成四项结构收口：复用当前e673正常“详情→完整目录→规则→返回”的真实原生快照，102个登记生产输入均与已安装包的不可变输入快照一致；骨架、信息架构、页头、页脚由NOT_RUN转为PASS。首屏预算为770vp视口、133.142857vp模块标题/页签/查询前缀、首行距应用视口顶233.714286vp、440.285714vp列表视口与10条完整40vp行。页头配方基准54vp与原生193px/3.5=55.142857vp分别记录，控件当前下限44vp；TXT的上下文入口是目录规则，远程分支才是离线菜单。页脚在内容内支付standaloneFooterHeight()，当前168px=48vp，但随字体计算，不能登记为全局固定48。见 [目录默认四层证据](../../.reader-artifacts/app-ui-framework-audit-20261114/directory-structural-native-reuse-e673-20261118.json)。
+
+本次修正登记元数据，没有生产改动或新VM动作。现有引用检查发现旧directoryBody方法已删除：重试控件改指当前standaloneCatalogState，13处目录装配输入改指build；同一上下文控件的名称来源补齐TXT规则分支，控件登记29→30，21项消费修订同步更新，其他层的事实和结果不变。仅编辑默认目录及两项控件的schema与默认目录引用检查通过，原引用失败独立保留。目录默认修订63；当前正式合计30 PASS、27 FAIL、279 NOT_RUN，整页仍0/21。查询、完整命中/焦点/读屏、各变体、2倍字号、完整测量及业务生命周期没有由结构结果升级。当前汇总见 [逐页剩余要求](../../.reader-artifacts/app-ui-framework-audit-20261114/requirement-native-gap-index-e673-20261117.json)；选定检查见 [结构登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/directory-structural-selected-checks-e673-20261118.json)。
+
+
+### 漫画完整目录回顶实施结果（2026-11-18）
+
+固定页脚漫画目录在筛选或排序改变后，由 `ReaderDirectoryNavigationSurface` 按已接纳查询判断是否回顶，并把定位意图附在当前结果。新的 `ReaderDirectoryNavigationList` 先装入数据，等布局后按内容起点对齐首项。回执使用现有数据与前缀世代拒绝迟到定位。短视口的内容内前缀、同一查询重试、首次进入和显式“定位当前条目”沿各自原有分支执行。平面回退目录由 `BookDirectoryPage` 处理首项对齐。[两次修复及原始回执](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-top-repair-e673-20261118.json)
+
+`projection`、`catalog-filter-admission`、`catalog-result-position` 三个准确用例通过，分别检查父层交接、异步接纳、等待布局与拒绝旧帧。广义 Surface 和 Grid 历史夹具失败按原回执保留。当前 `9087635e27b6` 已按原签名和保数据流程安装，VM 密度与分辨率密度读数为 3.5。同一本漫画一次输入、退键盘、清除和返回的原生场景用时 33.192 秒，首章和输入框回到原位，阅读仍在第 1/4 页。第一次 `beac03c7666f` 修复与其原生失败保留。正式验收维持开放。[VM 场景回执](../../.reader-artifacts/app-ui-framework-audit-20261114/native/1794940557986/manga-directory-verification.json)
+
+
+### 阅读内漫画目录的测试与结构登记（2026-11-18）
+
+修复两个旧测试夹具。Surface 用例执行真实请求身份门与重试回调，断言保留章节时继续显示旧内容、无可用章节时显示加载、旧重试回执被拒绝。Grid 用例改用当前窗口读数、共享滚动布局与消息宿主，检查 44vp 按钮、实际清除回调、原生属性、锚点及滚动坐标。两项原失败用例和两项回顶定向用例通过。此次变更限于测试夹具和登记。[四个定向用例及失败记录](../../.reader-artifacts/app-ui-framework-audit-20261114/directory-sdk-fixtures-scope-20261118.json)
+
+复用已安装 `9087635e27b6` 的正常场景，对照附录 A 更新阅读内固定页脚漫画目录五层。校验通过所选页登记 schema、引用和 Brief 推导。默认目录仅更新六处指纹。整页登记仍开放，正式 336 层为 35 PASS、27 FAIL、274 NOT_RUN。[阅读内漫画目录登记依据](../../.reader-artifacts/app-ui-framework-audit-20261114/reading-manga-structure-9087-20261118.json) [登记校验](../../.reader-artifacts/app-ui-framework-audit-20261114/reading-manga-structure-9087-20261118.checks-final.json)
+
+
+### GAP-04 原范围完成回执（2026-11-18）
+
+先对比已安装候选与旧原生证据，发现共享恢复提示的命中与文案载体经历过修改，因此只复验当前包的原书入口、展开位置及 Back。沿正常书架进入现有 Sample EPUB，完成“更多 → 待处理事项 → Back”。一次 18.126 秒会话得到当前场景的树和截图。两枚按钮完整，正文保持 Chapter One、0%。跨书引导沿已有实际记录复用。[当前场景与原生截图](../../.reader-artifacts/app-ui-framework-audit-20261114/native/1794941591841/gap04-current-normal-entry.json) [原验收回执](../../.reader-artifacts/app-ui-framework-audit-20261114/gap04-original-scope-closure-9087-20261118.json)
+
+本地 `reading-request-policy`、`foreign-book-guidance`、旧版 `native-fixture` 共三项通过。第一次旧夹具缺少外观状态读取和当前菜单归属的方法，已补当前调用与旧菜单身份拒绝断言并保留失败日志。设计依据登记的 GAP-04 改为 `NATIVE_VERIFIED_ORIGINAL_SCOPE`，G05 与 G10 各自的原关闭条件保留。[原验收回执](../../.reader-artifacts/app-ui-framework-audit-20261114/gap04-original-scope-closure-9087-20261118.json)
+
+
+### 下载正常结构验收与章节同行修复（2026-11-18）
+
+从正常设置入口实测四种下载布局，登记新增 11 PASS，合计 46 PASS、27 FAIL、263 NOT_RUN、整页 0/21。采样曾期待混合夹具的“已选 0个条目”，原生小说正常显示“已选 0章”。保持原页面，在同一候选上仅补摘要与 Back 的验证，恢复设置页。书籍、章节、下载状态和用户偏好保留。[正常下载结构登记](../../.reader-artifacts/app-ui-framework-audit-20261114/download-normal-structure-9087-20261118.json) [VM 场景回执](../../.reader-artifacts/app-ui-framework-audit-20261114/native/1794942115118/download-normal-structure.json)
+
+章管理同行修复基于实际内容宽度减去 44vp 复选框载体和间距，再按当前字号判断文字列最小宽度。正常有余量时，复选框与文字共用一条外层布局，文字列可收缩到其最小宽度，标题和当前阅读标记继续在列内换行。无法容纳时可外层换行。两个准确 SDK 用例通过，包含窄宽、安全区、字号、原复选框回调、读章及拒绝已退休回执。[章节管理行的原稿、实测和修复](../../.reader-artifacts/app-ui-framework-audit-20261114/download-chapter-manage-alignment-9087-20261118.json)
+
+
+`8a5ada358af9` 的不可变快照相对 `9087635e27b6` 只变更 SharedDownloadPage 一个生产文件，Core 输入和包内 Native 相同。保数据安装并启动后，VM 实测管理复选框与同一标题 ID 同行，行高 468px → 282px，正文下载状态保持，逐级 Back 返回设置页。首次标题选择器和原摘要选择器的失败分别留档。[签装、原生回执与同章前后尺寸](../../.reader-artifacts/app-ui-framework-audit-20261114/download-chapter-inline-native-8a5a-20261118.json)
+
+章固定管理首屏预算以实际 770vp 视口、57.714286vp 章节工具项和距视口顶 246vp 的首章为依据。四个正常下载登记通过 schema、引用与 Brief 检查。新增 12 个结构结果在原账本同步，当前合计 47 PASS、27 FAIL、262 NOT_RUN。[四项正常登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/download-structure-8a5a-20261118.checks.json)
+
+### 下载短窗两个管理分支
+
+已安装 `8a5ada358af9` 复用一次应用内短窗入口，两次会话分别记录书籍、章节管理及同一个 168vp List 的末尾选择区。只操作全选和 Back。五个批量动作的完整原生按钮均可滚达。首次脚本的 Back 断言误要求返回页头，后续沿原书籍 List 续验；试点返回按钮直接承载文本，现已通过原生按钮实际返回书架。两次脚本失败及原始证据保留。[短窗原始回执与范围](../../.reader-artifacts/app-ui-framework-audit-20261114/download-short-structure-8a5a-20261118.json)
+
+更新两个变体的 A4 页头和 A8 页脚。登记引用、候选源码指纹及 Brief 推导通过。当前 336 层为 **51 PASS、27 FAIL、258 NOT_RUN**。A3 已记录实测 168vp 视口和首帧 0 个完整条目，首项起点和其余层级仍待原条件。[两项登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/download-short-structure-8a5a-20261118.checks.json)
+
+### 短窗首屏预算与旧大字号回执
+
+两个 168vp 短窗首屏均由同一主列表的前缀占满。页头首项 78vp；书籍筛选前缀 163.71vp，章节的书籍上下文前缀 154.57vp，其后才是章节工具与章节行。滚动采样中实际数据项进入视口，列表末尾的选择区仍由同一主列表承载。附录 A3 要求首屏预算有依据，允许在短窗内滚动访问内容；场外首项精确起点保留空值。两个 A3 记 PASS，当前 336 层为 **53 PASS、27 FAIL、256 NOT_RUN**，整页验收 0/21。[原生首屏预算](../../.reader-artifacts/app-ui-framework-audit-20261114/download-short-first-screen-8a5a-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/download-short-first-screen-8a5a-20261118.checks.json)
+
+旧候选 `3c5e34ef0c10` 在实际 1.45 倍字体、180vp 宿主中展开了长分组提示，两个动作均有同一打开代次的原生回执，Back 恢复焦点。此前对旧截图范围的描述遗漏了这些回执。分组覆盖层、恢复提示、动作和夹具输入随后改变，当前候选的大字号动作仍待验证。[旧证据与当前源码差异](../../.reader-artifacts/app-ui-framework-audit-20261114/group-large-font-evidence-correction-8a5a-20261118.json)
+
+### 下载页减少动态效果补验
+
+在同一已安装 `8a5ada358af9` 的正常设置入口打开下载管理，应用的减少动态效果实测为开启。书源、空间上限、过期清理、章节快速选择和多书范围的五个原生弹层均完整显示选项。书源以外点关闭，其余用 Back，各自保留同一触发器和原值。书源的 8 秒 trace 记录 4179 条数据，9 个动画计数样本均为 0。达到 60 步驱动上限后，仅续接恢复应用偏好，实际读回原关闭状态并回到设置。储存策略、清理和下载均未提交。原阶段的驱动失败回执保留。 [原生和恢复回执](../../.reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-download-extra-8a5a-20261118.json)
+
+当前 SDK 的九处 true/false 接线、两条目录来源、零时长属性、偏好更新、迟到与卸载回调均已通过。测试适配补齐生产字段编辑目标、弹层键盘协调和现有目录 owner，保持原业务和判据。基础 Rules 与 Sync 原生 SDK 受控输入回归通过。五处原生行为仍按命中、焦点和连续像素的既有证据条件记录，正式 336 层保持 **53 PASS、27 FAIL、256 NOT_RUN**。 [测试与登记输入](../../.reader-artifacts/app-ui-framework-audit-20261114/native-reduce-motion-download-extra-8a5a-20261118.checks.json)
+
+### 页头测量续接原生验证
+
+同一已安装候选 `8a5ada358af9` 的正常书架搜索，展开历史后复合页头实测 **274vp**。输入法显示、Back 收起、重新点输入三次采样，页头和输入框均保持同一原生节点与边界。此前所查 normal Source/Tools 的 58vp 不再是唯一可用样本。当前 `ReaderStandardPage` 实际几何夹具使用 102vp 页头，输入法避让量 0→314→0vp，三个采样端点的正文起点均距页头底 8vp。两次键盘 metrics 更新期间页头没有新增 Area 回执。结束已回书架。[正常入口与正文回执](../../.reader-artifacts/app-ui-framework-audit-20261114/native-uif01-current-8a5a-20261118.json)
+
+三项点名方法回归通过，覆盖同盒、真实失配、迟到/卸载拒绝及直接 owner。初次原生脚本误把 ZOrd = −1 的已隐藏键盘当成可见，沿原输入继续后按 WindowManager 的实际顺序判断。冷挂载还取得正文 startInset **66→110vp** 的两条原生布局回执，发生在 IME trace 之前。该回执不能判定当前屏幕出现过初始重叠。G05 连续像素和真实系统窗口纯高度变化仍沿原条件。正式 336 层或整页结果未改判。
+
+### 书源工具首屏、滚动与下拉末项
+
+当前 `8a5ada358af9` 从正常书源页底部进入批量管理与书源工具。实际主体高 770vp，首屏完整呈现导出和批量管理区。首个书源距视口顶 748.57vp，第一行部分可见；滚动后，838 项书源的内部容器实测高 420vp，可见 6 个完整条目，外层主 Scroll 继续承载调试区。在同一个列表向下滚动进入调试区，Back 后重开可见主 Scroll 重建并回到首屏原位。两项结构登记 A3、A5 已通过，69 项生产输入匹配安装快照。[原生与源码回执](../../.reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-depth-8a5a-20261118.json)
+
+开启应用内减少动态效果时，列表、详情、目录和正文四个原生选项全部可见。点击末项载体底边内侧 6px 后深度从“列表”变为“正文”，搜索模式保持。系统 Back 把焦点交还重建后的底部工具按钮。重开后深度仍为“正文”，随后已恢复“列表”和原动效偏好，实际返回正常设置。未触发检测、导出或删除。原生确认、系统文件选择器、读屏和适配仍按原层验收。正式 336 层更新为 **55 PASS、27 FAIL、254 NOT_RUN**，整页 0/21。[登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/native-source-tools-depth-8a5a-20261118.checks.json)
+
+### 短反馈焦点与系统窗口能力
+
+复用 `8a5ada358af9`，从正常设置进入消息样式预览。Tab、Enter 分别激活普通和成功短反馈。反馈文字完整可见，出现、定时收起前后均保持各自原生按钮与键盘焦点。首次脚本直接查 text，漏读了按钮装饰子节点的 originalText，纠正后沿同一页面完成；已返回正常设置。当前无障碍服务只读结果为 enabled 0、client num 0，未取得平台语音回执。SDK 已验证当前前景一代一宣告，以及替代、后台、卸载和拒绝处理。可听宣告维持原验收条件。[当前原生、SDK 与能力证据](../../.reader-artifacts/app-ui-framework-audit-20261114/native-feedback-removal-capability-8a5a-20261118.json)
+
+移除确认的当前真实 SDK 接线通过纯高度 600→320→700vp 更新，Scroll 高度 400→120→500vp，无需等待 Text Area。旧 140c 同样式确认原生长文证据仍保留；窗口协调和夹具输入随后改变。本次直接读到当前 VM 的 uitest 拒绝 `uiWindow`；本机 SDK 声明 `UiWindow.resize` 只作用于可调整的窗口。系统真实等宽纯高度变化仍未发生。没有改动系统设置、应用数据或正式层结果。
+
+### 漫画目录页脚独立测量
+
+实际 `BookDirectoryPage` 装配复现了短窗只收到页脚 Area 时正文起点沿用旧高度。已把摘要和搜索的测量移到自身节点。流内页脚继续沿原编辑宿主挂载，正文前缀由摘要和搜索高度、页脚间距、当前页脚高度共同计算。固定页脚继续使用原底部预算。通过 `adaptive-footer`、`direct-page-same-area` 和 `current-grid-geometry` 三项回归，覆盖回执重放、首项位置和保留节点。[执行方案](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-toolbar-measurement-plan-20261118.md) [回归及部署账本](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-toolbar-measurement-20261118.json)
+
+签装 `96499ffb06e4` 后，在原 VM 的详情换源夹具验证全高与 168vp 两个生产装配。固定页脚在靠底槽位，流内页脚位于首章之前。两场景首章各触发一次，Back 各回到诊断菜单，最后恢复正常书架。两项 A15 更新为 PASS。正式合计 **57 PASS、27 FAIL、252 NOT_RUN**，整页 0/21。已同步 29 个文件的当前指纹，目录父登记及 12 个变体的引用核验通过。其他目录挂载、真实系统缩放、连续绘制、读屏及视觉原稿仍按各自的证据条件。[登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-toolbar-measurement-20261118.current-refs.json)
+
+### 书源筛选原生边缘命中
+
+在同一签名候选的 320vp、原生字号 1.0 倍内存夹具内，完成 11 项可用筛选器的实际边缘命中，以及“自定义”禁用触摸。七种类型覆盖可见胶囊外与原生按钮内之间的透明响应带。点击各项后核对选中状态与相邻筛选组，底部工具回执再核对当前筛选值，并走 Back 返回正常书架。首轮在实际状态条横向滚动后误按固定五节点找目标，已修探针并沿同一 PID、同一页面代次续接，不重复前三项。[执行范围](../../.reader-artifacts/app-ui-framework-audit-20261114/source-native-filter-edge-plan-9649-20261118.md) [当前验收](../../.reader-artifacts/app-ui-framework-audit-20261114/source-native-filter-edges-9649-20261118.json)
+
+Source 交互登记 revision63 已收录，源码、注册引用和实际签名输入已核对。其余控件的边缘、焦点和读屏、整页 E2 与 E3 继续使用原验收判据。正式 336 层保持 **57 PASS、27 FAIL、252 NOT_RUN**。
+
+### 应用级大字号与固定页头续接
+
+复用 DEBUG 页面结构入口，通过应用级字号 API 请求倍率，并从新挂载的 ArkUI Area 和像素转换读取实际结果。三项夹具回归已通过。原 VM 的 180vp 分组在实际 1.45 倍字号中可滚到正文原生末尾及两个完整响应框，实际动作计数依次为核对、继续、关闭，Back 恢复同一打开按钮。该次未采末尾文本截图，后文记录了补采结果。系统设置传播和完整 E3 范围继续独立计证。[原生字号计划](../../.reader-artifacts/app-ui-framework-audit-20261114/native-app-font-preview-plan-20261118.md) [分组动作与倍率回执](../../.reader-artifacts/app-ui-framework-audit-20261114/native-app-font-preview-20261118.evidence.json)
+
+书源 320vp、2 倍显示暴露固定页头标题单行截断。已让标准固定页头依实际文字自然换行，继续使用原字号。初次换行后，真实 List 首项仍在旧边界；向下回顶后使用新回执。补齐书源首项的同一位置续接，只有首项仍处原顶部且无当前用户滚动或恢复锚点时同步。标题约束、同盒回执、顶部合并及回跳保护四项点名回归通过。[共享页头实施与复验范围](../../.reader-artifacts/app-ui-framework-audit-20261114/page-back-bar-title-growth-plan-20261118.md)
+
+最终签装 `da463784257c`，原 VM 上同一 320vp 场景首开读得完整标题，首项与页头底对齐，搜索框保留 32px 间距。之后实测恢复 1 倍并回到书架。受影响的 21 份登记引用检查通过，Source 局部 2 倍回执已收录，正式 336 层保持 **57 PASS、27 FAIL、252 NOT_RUN**。其他固定页头、其余字体宽度矩阵、读屏及绘制连续性按原范围关闭。[签装、起点与恢复回执](../../.reader-artifacts/app-ui-framework-audit-20261114/page-back-bar-title-growth-and-source-top-20261118.json)
+
+### 书源及书源工具大字号实测
+
+复用已安装 `da463784257c`。书源默认态覆盖 320/366vp 与实际应用原生字号 1/1.3/1.6/2 共八组，其中两组复用同候选的既有证据。八组首项贴合当前页头底，搜索框留 32px，首行关键动作、状态和底栏标签可见。书源工具在 320/366vp 与 1/2 倍的四组均显示完整标题、导出说明和首个动作，首卡距页头 73px。完成后恢复 1 倍及正常书架。 [书源八组原生证据](../../.reader-artifacts/app-ui-framework-audit-20261114/source-app-font-native-matrix-20261118.json) [书源工具四组原生证据](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-app-font-native-20261118.json)
+
+这两页已更新正式证据及 E3 原因，结论仍由原 row/chip/footer 所需尺寸回执、完整相应状态、系统字号来源和其他真实交互条件决定。本轮正式层统计维持 **57 PASS、27 FAIL、252 NOT_RUN**。 [登记校验](../../.reader-artifacts/app-ui-framework-audit-20261114/source-app-font-native-matrix-20261118.checks.json)
+
+另补书源工具 320vp、实际 2 倍的首行。外层滚动后，选择、编辑、调试的原生响应框均为 **88×61.14vp**。首行标题和 URL 按原规则省略，三个动作文字完整。点选择框左边缘内 6px，夹具同代选中数由 3 变为 2，恢复后为 3，首行位置全程一致。首次探针误把检测进度里的同名行当作定位点，已改用可编辑行独有的 URL。再次运行的首行动作取得完整回执，末尾菜单仍读到旧 fp/vp 日志，脚本保留 FAIL。正常重开 Reader 后返回书架，六组稳定文字的位置与已验证的 1 倍书架对照一致，显示密度仍为 3.5。 [书源工具首行尺寸与边缘动作回执](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-row-320-2x-20261118.json)
+
+旧 SDK 报告与当前代码指纹失配，已仅重跑书源 `matrix`。当前 120 个输入指纹复核通过，获得 32 个行形态、40 个目标尺寸及 24 组 SDK 预算。正式 E3 继续要求当前原生文字所需尺寸和状态证据。 [当前 SDK 行形态与预算](../../.reader-artifacts/app-ui-framework-audit-20261114/source-current-sdk-layout-matrix-20261118.json)
+
+### 书源默认页原生行度量
+
+已在 DEBUG 书源夹具给生产组件的原有 Text 节点接入可选控制器，读取排版后的行范围、宽和高。普通入口沿用原布局。夹具代次与退场拒绝回执的回归通过，32 个 SDK 行形态、40 个目标尺寸和 24 个预算通过。首轮测试记录端把 Text 内容与可选控制器合并，已修正记录并复测。默认沙箱首次拒绝流水线降低进程优先级，随后沿同一规范入口得到 x86_64 签名候选 `03bfea14a669`。 [签包、保数据部署与原生证据](../../.reader-artifacts/app-ui-framework-audit-20261114/source-native-line-evidence-20261118.json)
+
+原 VM 保数据覆盖安装并启动。320/366vp × 1/1.3/1.6/2 倍实际应用字号共八组，采到 96 项同节点行度量。关键动作、状态和分类标签的文字范围完整，采到的可见 Text 框均容纳当前行。长书源名和 URL 沿现行规则省略。八组的首行、标题、元数据、状态与底栏文字布局高度与此前逐项相同。实测恢复应用 1 倍后返回正常书架，VM 显示密度为 3.5。 [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/source-native-line-evidence-20261118.checks.json)
+
+正式 E3 继续覆盖筛选滚出视口后的父槽、其余书源和恢复状态。系统设置来源的 1.6/2 倍沿原证据条件单列。正式 336 层仍为 57 PASS、27 FAIL、252 NOT_RUN，整页为 0/21。
+
+同候选还复验了 320vp、366vp 下 2 倍字号的状态筛选。实际横向滚动后，五个状态标签均可完整进入视口。每个文字框都位于对应原生按钮内，原生行宽和行高均能容纳，「自定义」保持禁用。两次宽度均取证，最后以新挂载确认恢复 1 倍并返回正常书架。该证据补齐最大字号的右侧筛选去向，Source 登记 revision 67。 [横向滚动与原生标签回执](../../.reader-artifacts/app-ui-framework-audit-20261114/source-status-native-tail-20261118.json)
+
+### 当前 Figma 原稿来源
+
+官方接口本轮返回 41 个画布。搜索原始母版 `2635:59600` 下有手机、平板各五种完整设计画面，分别是初始、加载、结果、空和失败。主流程的搜索历史、来源部分状态，以及书架、书源和工具若干画板明确标记当前源码。整页参考另保留书架、详情和书源的手机与平板装配。具体属性继续沿 10 月 8 日的搜索后继裁决和原设计账本。历史 403 保留时点，当前缺口为尚未取得剩余现版本组合的独立整页批准及其像素验收。 [Figma 来源核对](../../.reader-artifacts/app-ui-framework-audit-20261114/figma-original-authority-current-20261118.json)
+
+### 下载页离开管理后的滚动位置
+
+旧候选 `03bfea14a669` 在常规高度复现。管理态的章节行变短后，原生 List 将当前偏移限制在更小的范围。旧 Back 逻辑把这个偏移当作普通态位置，导致原本可见的第 18 章与「选择章节」退出视口。点名回归观察到旧路径恢复 80vp，进入管理前为 143vp。现实现保留原浏览位置。实际用户滚动或当前页面、字号、窗口几何失效时，才废弃原位置。
+
+远程 VM 保数据覆盖安装签名候选 `cca8fe05bc6f`。常规窗口的第 18 章与「选择章节」回到相同坐标。168vp 短窗的「选择章节」完整可达，距原位置差 3px。短窗书籍管理也复验了两条路径，未滚动时 Back 恢复同一入口，实际滚到流内选择区后 Back 保留书籍列表当前位置。三次会话最终都返回书架，显示密度 3.5。下载六个登记的 A5 滚动层更新为 PASS。全应用登记为 **63 PASS、27 FAIL、246 NOT_RUN**，整页验收仍为 **0/21**。[签装、原生对照和点名回归](../../.reader-artifacts/app-ui-framework-audit-20261114/download-scroll-transition-repair-20261118.json) [六项登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/download-scroll-transition-repair-20261118.checks.json)
+
+### 分组恢复大字号末行
+
+在同一 `cca8fe05bc6f` 上复用 180vp 分组夹具，原生字体换算读到 1.45 倍，Notice 内实际 Scroll 为 156vp。展开并滚到底后，同一 Text 节点的截图清楚显示「分组长文案末尾。」及「核对分组」「继续原分组操作」。系统 Back 让原打开按钮恢复焦点。前次两项点击回执沿核过字节的九个相关输入复用，本轮未执行分组数据写入。应用预览已由新挂载实测还原至 1 倍，返回正常书架，显示密度为 3.5。UIF-05 此组件场景的末行画面缺口已关闭，业务持久化和系统字体传播仍按原条件取证。[原生画面与回执](../../.reader-artifacts/app-ui-framework-audit-20261114/group-tail-raster-current-20261118.json)
+
+### 书源工具的系统返回与删除确认
+
+沿正常设置、书源管理、批量管理与书源工具入口验证三条系统宿主。导出确认按 Back 关闭并回到同一原生触发器。确认继续导出后，实际系统保存页显示生成的文件名，按 Back 回到同一触发器并显示「已取消导出」。首次探针按 uitest 的 bundle 树识别选择器失败。以保存画面及文件名的相同像素核对当前打开实例后续接操作，无重新发起导出和保存文件。书源总数维持 838。
+
+同一次排查发现，删除确认弹出时原 `requestDelete` 已经清空选择，Back 回来从已选 838 变为 0。现改由实际确认时复核并消费当前选择，复用既有 Runtime、页面 lease 和列表/选择 revision，旧回调不派发。旧源码的点名方法回归失败，修后与保留测试同过。签名候选 `0105807bc5dd` 保数据覆盖后，系统 Back 与「取消」都保留原 838 项，再恢复测试选择为 0，正常回到设置页。未删除书源。安装时旧停止态快照字节与当前不符，复用条件未满足，在本地副本核验兼容后才安装。
+
+三个宿主登记为平台先处理 Back，工具路由 A1 与 S7 更新为 PASS。应用内恢复提示和其他覆盖层场景仍按 A9 原条件。正式 336 层为 **64 PASS、27 FAIL、245 NOT_RUN**，整页仍为 **0/21**。[原生回执与修复](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-native-platform-back-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-native-platform-back-20261118.checks.json)
+
+### 书源工具应用内恢复覆盖
+
+复用 VM 已安装的 `0105807bc5dd`。在真实 320vp 组件宿主和实际 2 倍应用字号下，原操作未确认与已确认待清理的两种长提示均由 StandardPage 的单个覆盖 Scroll 承载，两次滚动到达正文末行及各自的核对、继续和收起动作。截图与原生盒均验证。每个点按只返回一次当前内存意图，12 个样本和三个已选项保持，原确认事实沿各自代次不变。另在 1 倍验证回执待核对的短提示和原代次核对。
+
+补齐点名 SDK 用例的共享页头、Scroll、编辑适配和实际 Area 装配。旧本地夹具缺运行依赖，也无法模拟原生分支移除。现在以实际 mount 测忙碌和动作资格，保留旧回调用于换代和卸载拒绝，点名 case 通过。VM 记录在最后一次返回书架点击后达到 60 步上限，保留原失败回执。独立只读确认正常书架已出现，应用字号已实测恢复 1 倍，系统密度仍为 3.5。
+
+结合前次三个系统宿主 Back、正常工具返回和深度选择，书源工具 A9 标为 PASS。读屏、完整焦点、真实业务持久化和全状态矩阵仍按原各层验收。全应用 336 层为 **65 PASS、27 FAIL、244 NOT_RUN**，整页仍为 **0/21**。[原生截图、回执与点名测试](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-recovery-overlay-current-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-recovery-overlay-current-20261118.checks.json)
+
+### 阅读内短窗目录与书签
+
+`ReaderControlDirectoryContent` 按标签的布局代次装配工具栏和结果分支，当前新行使用本次结果代次。纯高度变化保留外层编辑 Scroll 和同标签结果 List。`bookmark-branch-admission` 在旧实现复现书签无回调，修后验证当前书签可选、旧回调继续拒绝。`short-sdk`、`prefix-anchors`、`keyboard-transfer` 同次通过。
+
+`0.2.0.DEV.da87ec2af295` 已在远程 VM 保数据覆盖并启动。320vp 预览以原生应用字号 2 倍测量，122vp 与 190vp 两次各确认一次书签动作，返回章节后确认一次同章动作。恢复实际 1 倍应用字号并返回正常书架。没有执行持久书签写入。旧候选的高度回执判据失败和两次真实书签点击失败均保留。
+
+两个短窗登记采用当前各自的编辑与结果边界。下一批先对账共享合同 §6.2 的短窗同列表前缀要求及当前限高同级编辑区，同时验证实际编辑滚动、锚点恢复、正常路由查询与焦点。维持已有 A3、A5 及适配结论，全应用 **65 PASS、27 FAIL、244 NOT_RUN**，整页 **0/21**。[最小场景与停止条件](../../.reader-artifacts/app-ui-framework-audit-20261114/directory-short-current-font2-20261118.plan.md) [源码、签装与原生回执](../../.reader-artifacts/app-ui-framework-audit-20261114/directory-short-bookmark-opening-current-20261118.json)
+
+### 短窗查询合同和原生输入连续性
+
+按原键盘实施第四步将持续挂载的编辑 Scroll、唯一结果 List 及其共同预算纳入 §6.2。登记使用现有查询模型的 Inline 决策，定向 `query-height` 拒绝非嵌入、零结果空间和第二个主滚动。两个短窗以当前包和实际 A3 盒关闭首屏结构。
+
+原生复用 `da87ec2af295`，仅走应用内 320vp/2 倍字号预览，滚动→触摸输入→系统键盘→录入→Back→190vp 沿同一输入和 List 保留第 22 章与草稿。首次探针在尚未点按时把部分裁切判为失败，保留原回执；续验确认聚焦后整框已露出。最后恢复 1 倍应用字号并返回正常书架。总计 **67 PASS、27 FAIL、242 NOT_RUN**，整页 **0/21**。完整 A5 坐标及恢复、原生正常路由提交、实际过滤结果和其余适配继续按原条件。
+
+书签筛选空态后续核对两个真实消费者。已提交查询但无匹配时沿既有 ReaderPageState 反馈，并由当前查询 owner 清除筛选。真正无书签、加载和失败按原状态处理。需覆盖当前和已退役动作、两条入口、短窗与正常容量。[当前回执和首屏预算](../../.reader-artifacts/app-ui-framework-audit-20261114/directory-short-inline-contract-current-20261118.json) [定向登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/directory-short-inline-contract-current-20261118.checks.json)
+
+### 书签筛选无结果及短窗首屏
+
+`6f3c3cd1f5f6` 已签名和保数据安装，现有目录控制内容和独立完整目录的两处预览均完成已提交无匹配、实际清除、同标签恢复。短窗标题被已有大留白挤出首屏，手动滚动可达。该事实保留为独立未决；当前代码已使用共享 inline PageState 及其紧凑间距显示短窗筛选空态，并用实际标题和动作测量。真实无书签及正常高度配方继续使用原布局。
+
+现有 `short-sdk` 和 `recipe` 已通过紧凑分支回归。只构建一次对应开发候选，待原生验证 168vp 首屏标题和清除、较大字号可滚达动作。非短窗控件、旧回执拒绝和清除动作沿已准确验证范围复用。[书签筛选原生与签装回执](../../.reader-artifacts/app-ui-framework-audit-20261114/bookmark-filtered-empty-current-20261118.json) [定向计划](../../.reader-artifacts/app-ui-framework-audit-20261114/bookmark-filtered-empty-20261118.plan.md)
+
+已在 `0.2.0.DEV.c411bf4af760` 完成最后一次有界确认。168vp/1 倍和 190vp/2 倍同样在首帧呈现完整标题及清除按钮，两次点击均留在同一查询框并恢复书签。保留正常高度独立目录已通过的清除证据。登记重核还确认下载六项使用的导航改动仅属 `nav.sourceTools`，其引用的 8 个消息登记一致，更新共用登记指纹。短窗书签 A7 更新为 PASS。全应用 336 层为 **68 PASS、27 FAIL、241 NOT_RUN**，整页 **0/21**。[当前截图、动作及签装回执](../../.reader-artifacts/app-ui-framework-audit-20261114/bookmark-empty-compact-current-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/bookmark-empty-compact-current-20261118.checks.json)
+
+### 漫画目录动态遮挡和滚动恢复
+
+§9.1、登记 schema 和现有 G-03 已形成同一个动态补偿声明。八个漫画目录变体消费同一实测计算，固定与入流保留各自唯一的原生消费路径。点名 `dynamic-scroll-compensation` 已通过。复用两个精确组件布局与点按的数据，滚动位置恢复继续核对实际 signed 值及对应动作。无需为静态声明构建或重装。[定向计划](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-scroll-compensation-20261118.plan.md) [计算源码与原生图树](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-scroll-compensation-20261118.json)
+
+《非人哉》实证确认正常目录从真实顶部重开会越过整个页头下的摘要和工具区。修复在已有的 Grid 位置捕获、目录会话锚点与 START 命令中续接测量，不再把首行前的留白截掉。相同 inset 保留实测位置；实际 inset 变化时按原相对进度复位。仅在固定漫画 Grid 的首个真实条目之前使用该记录，其余行仍按真实节点及行内比例恢复。
+
+准确 `current-grid-geometry` 已通过，实际 `c411bf4af760` 失败保留。继续使用同一本书的正常书架条目、真实 Grid 顶部、Back 和重开确认修复候选效果。S3 和完整 A5 的其他形态分别沿已有范围。[滚动原始失败与代码回归](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-signed-restore-current-20261118.json) [最小验证计划](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-signed-restore-20261118.plan.md)
+
+完成 `0.2.0.DEV.4f3b4acbb498` 指定签名、保数据覆盖、启动与同书正常重开。书架入口从之前普通条目自然切到同书续读卡，进入同一 reading body 和完整目录。本次 22 步实测，之前丢失的查询和第一话标题保留原盒，原书名摘要也保持位置。准确方法回归提供 signed 负/零/正证据，VM 覆盖实际顶部返回路径。跨宿主 A5 矩阵仍按原范围。全应用 **68 PASS、27 FAIL、241 NOT_RUN**，整页 **0/21**。[当前候选和原生恢复坐标](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-signed-restore-verified-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-signed-restore-verified-20261118.checks.json)
+
+在候选 `0.2.0.DEV.4f3b4acbb498` 复用同一本《非人哉》，补齐正常固定 Grid 在起始留白内及进入章节区后的重开。两处 raw 分别由原生行相对顶部的位移估算为 −789px 和 +152px，分别核对 8/11 个同一章节项，前后最大坐标差均为 0px。两次的新 Grid 均承接原位置，并保留相同页头、页脚坐标。37 步后回到正常书架。[原生回执和当前源码指纹](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-scroll-matrix-current-20261118.json)
+
+当前 `catalog-result-position` 与 `projection` 两个点名 SDK 已通过，覆盖语义 Grid 更换结果和拒绝旧视图，以及平面 fallback 空结果清除、固定 START 与入流 Top。正常固定 Grid 的顶部及两个非顶部恢复证据已登记。A5 仍待准确原生 raw 0 与固定平面装配的初始定位、清除实测，S3 继续按真实遮挡及操作条件验收。登记 revision 71 总计 **68 PASS、27 FAIL、241 NOT_RUN**，整页 **0/21**。[定向登记校验](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-directory-scroll-matrix-current-20261118.checks.json)
+
+### 移除确认的纯高度交接
+
+补验原 `removal-resize` 启动点之前的窗口链路。实际协调器收到有限 WindowPort 的 `windowSizeChange`，写入新 AppStorage 版本，由 SDK 测试端口将该版本交给现有 `@StorageLink`。在固定宽度、安全区、字体及原长文的条件下，窗口 600→320→700vp 对应同一 Scroll 的 352→72→452vp。重复通知没有再次发布。当前签名包的四份直接生产输入均与执行输入摘要相同。实际系统窗口 resize、文本末尾及动作命中仍使用原生关闭条件。[当前代码交接证据](../../.reader-artifacts/app-ui-framework-audit-20261114/removal-window-to-scroll-20261118.json)
+
+### 下载章浏览行和内容层登记
+
+以批准的下载页原稿和旧候选的正常章节列表定位同行缺口。旧码浏览行无论文字与操作能否同时容纳，外层均允许换行，原生在 365.71vp 把两项操作放到下一整行。以现有 `SharedDownloadPage.chapterRowWrap` 核算文本和尾部操作的最小预算，保持窄场景可换行、内部标题和状态按需增长。章节管理分支及既有动作身份沿原装配。三个章节内容层的槽位、密度、截断和控件引用已按章节登记，不再套用书籍卡片。
+
+点名 `download-chapter-width`、`download-accessibility`、`book-row-density` 和 `management-scroll` 通过。签名包的生产快照仅变动 SharedDownloadPage。保数据安装至已授权 VM 后，原样本的阅读、下载、暂停与更多完整同行，长标题和当前章标签均可见。夹具内动作只做读取与退出，总结复验记录还附两次收尾探针未派发的失败和最后实际回到书架的回执。前三个书籍内容层与章节浏览、固定管理记录 A6 PASS。实际原生命中、读屏、适配及原稿覆盖依旧按原层。[定向回执](../../.reader-artifacts/app-ui-framework-audit-20261114/download-chapter-browse-alignment-current-20261118.json) [登记校验](../../.reader-artifacts/app-ui-framework-audit-20261114/download-chapter-browse-alignment-current-20261118.checks.json)
+
+余下 168vp 流内章节管理复用同一签名包。一次滚动后，第 6 章原生整行高 282px，复选框、标题、状态均在该行与同一 List 视口内，原有动作车道按实测登记。按 Back 后，实际书籍行仍在此前位置，页头已滚出视口。用确切书籍节点确认返回，并完成正常书架收尾。下载六种装配的 A6 全部通过；336 层 **74 PASS、27 FAIL、235 NOT_RUN**，整页 **0/21**。[最终登记与原生范围](../../.reader-artifacts/app-ui-framework-audit-20261114/download-chapter-browse-alignment-current-20261118.json)
+
+### 区分下载章节的两个空结果
+
+按同一正常 `SharedDownloadPage` 的读取 DTO 分配状态。确认 0 个可读章节、没有目录数据、读取中和读取失败各由原事实决定，已有条目继续留在原 List。两种成功空态无重试动作，失败态重试核对当前书和失败投影后沿既有读取入口。正常页头与底部的章节管理动作都读取同一管理资格，已有管理保持完成退出的能力。消息登记继续由现有 `chapterPage` 负责。
+
+`chapter-read-states`、`chapter-selection-actions`、`management-scroll`、`state-samples`、`text-projection` 与下载页定向消息检查均已通过。真实 Gateway 用例覆盖成功返回的已知 0 与未知总数。旧代码空态断言失败及管理滚动夹具补入真实可选书章的过程已保留。
+
+候选 `0.2.0.DEV.0fa161a0cda9` 在既有 VM 保数据覆盖。两个新输入均在同一生产章节页面显示相应提示，已知 0 同时显示确切总数，未知总数保留空白。顶部和底部均实测不可启动管理，实际点按后仍保持原生实例及浏览状态，最终回到书架。现有工具白名单拦住新菜单项的回执保留；续验使用同一菜单实际条目，复用当次安装。三处章节装配更新 A10 事实和准确证据，A10 完整状态矩阵仍按原条件。总计 **74 PASS、27 FAIL、235 NOT_RUN**，整页 **0/21**。[原生、SDK 与消息入口回执](../../.reader-artifacts/app-ui-framework-audit-20261114/download-chapter-empty-current-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/download-chapter-empty-current-20261118.checks.json)
+
+### UIF-05 分组恢复容量按原条件结项
+
+既有证据核对到当前安装候选 `0.2.0.DEV.0fa161a0cda9` 的 12 个同字节输入。实际宿主由 180vp 扩至 320vp 再回到 180vp，同一 Scroll 对应 156、296、156vp。应用字体 1.45 倍下完整绘制长文末行及两个恢复动作，内存原回执各接纳一次核对和继续。正常书架的单独入口证据确认 Back 后同一书籍的更多按钮重新取得焦点。点名 SDK 证据覆盖零容量、恢复容量、忙碌与过期动作。业务持久化回执、系统字号与完整无障碍矩阵保留各自原要求。诊断菜单壳的不同哈希在证据中单列核对，本次复用未重跑 VM。[原条款与证据对账](../../.reader-artifacts/app-ui-framework-audit-20261114/group-original-capacity-closure-20261118.json)
+
+### 书源工具空列表、待核对与提前停止
+
+空列表读取失败现只提供一个“重试”按钮，动作校验发出按钮时的页面 opening 和读取代次。成功读取零条可显示“暂无书源”；有待核对回执时使用既有恢复覆盖槽。批量检测停在首条结果之前时保留“已停止”、0/3 进度和剩余项，取消将来会出现结果的提示。旧代码的 SDK 探针记录到重试派发 `[8, 8, 9]`，修复后为 `[8]`。同批装配、加载动效、原检测 owner 停止及定向消息入口均通过。
+
+候选 `0.2.0.DEV.90ef1d2193a3` 已在授权 VM 保数据覆盖。三种内存输入通过实际生产页和原生动作验证，检测停止只派发一次，最后回到正常书架。首轮把首屏外提示作为需可见项，续验从同一检测页滚动。后续日志另有输入初始化事件，按动作种类确认唯一停止回执。诊断入口的返回按钮部分被安全区裁切，最后一次在可见区点按返回。首次夹具编译的 ArkTS 对象展开错误、各原生中间回执及修正保留。A10 真实业务回执和完整状态矩阵继续按原要求。登记为 **74 PASS、27 FAIL、235 NOT_RUN**，整页 **0/21**。[源码、构建和原生证据](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-read-and-batch-state-20261118.json) [登记核对](../../.reader-artifacts/app-ui-framework-audit-20261114/source-tools-read-and-batch-state-20261118.checks.json)
+
+### UIF-02 三个正常宿主按原范围结项
+
+当前候选 `0.2.0.DEV.90ef1d2193a3` 的定向 SDK 用例验证九处偏好接线、两种偏好、打开过程中切换及旧回执拒绝。下载状态下拉通过真实 Tab、Enter、Back 和外点。同一个原生触发器在关闭后保持焦点，原筛选值保持。书源工具检测深度的四个选项完整出现，Back 与外点仅关闭下拉。由相邻已聚焦的关键词输入直接 Shift+Tab 可到达同一下拉，Enter 展开，Back 恢复原触发器焦点，关键词、检测模式和深度保持。
+
+TXT 目录规则复用正常入口的原生回执，十个当前生产输入逐字节一致。三个独立 8 秒 ArkUI trace 记录到各自 ReaderSelectPanel 创建与销毁，工具、下载、规则分别取得 3175、3156、3267 条完整记录。各现场采到的 RunningCustomAnimation 值均为 0。各次临时开启应用内减少动态效果均已读回恢复 false，最终为正常书架。书源工具首轮误将全屏遮罩边界当菜单面板边界，之后按子面板实际位置补验。两次键盘探路失败也保留，分别为默认 Tab 先移至顶部导出，以及先按 Back 收输入法后相邻 TextInput 失焦。
+
+此结项覆盖原方案指定的三个代表入口。连续像素 G05、全目标焦点与读屏、各页独立视觉与完整 E2/E3 仍按原要求。正式登记为 74 PASS、27 FAIL、235 NOT_RUN，整页 0/21。[原范围证据、原生快照和 trace](../../.reader-artifacts/app-ui-framework-audit-20261114/uif02-popup-original-scope-90ef-20261118.json)
+
+### 详情入口漫画完整目录的固定章位验收
+
+当前候选 `0.2.0.DEV.90ef1d2193a3` 沿正常书架进入《非人哉》，从该行更多操作的“书籍信息”进入详情，再打开完整目录。1286 个可读条目的实际 Grid 首屏可完整显示 5 条。770vp 应用可用高度内，页头实测 52vp，章位框 48vp，工具组 180.86vp，首行距应用视口顶部 260.57vp。实际滚动时，页头和底部章位框坐标保持。骨架、信息架构、页头、页脚四项由 NOT_RUN 改为 PASS。
+
+在同一目录验证无匹配搜索。Back 收起键盘后草稿保持，清除恢复 1286 条、同一输入实例、首行和页头原位置。再次 Back 返回同一详情入口，原生按钮实例、坐标与焦点均核验通过，最后回到正常书架。首次取证把共享文字与原生 Button 同时计为目标，按唯一可见 Button 续验后通过。正常交互回执只用于对应状态，全量路由、查询及其他状态仍按原判据。
+
+同批修正四个漫画流内登记的区块顺序。实际 `BookDirectoryPage.mangaToolbar` 把流内章位放在工具组末尾、目录首行之前，占位由 Grid 或 List 前缀支付。定向 `adaptive-footer` 通过，覆盖实际共享 Scaffold、固定和流内章位装配、原生 Area 更新及旧负例。流内原生行为和实际窗口适配仍待对应场景。代码与安装包继续复用现有候选。全应用 336 层累计 **78 PASS、27 FAIL、231 NOT_RUN**，整页 **0/21**。[原生与登记证据](../../.reader-artifacts/app-ui-framework-audit-20261114/detail-manga-structure-90ef-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/detail-manga-structure-90ef-20261118.checks.json)
+
+### 漫画换源目标目录首次打开与直接单选
+
+旧候选 `0.2.0.DEV.90ef1d2193a3` 的固定高度目标目录首次打开时，原生首个可选章节载体从 y254 开始，固定页头覆盖到 y346，查询输入没有出现在当前可见树。现有回归复现了无当前章、无有效锚点时，定位将当前 260vp 起始留白再传为额外偏移。修复沿用已有目录回顶分支，完整语义 Grid 的初始对齐使用 START 并等当前视图布置，保留已有锚点、当前章节、Quick 和流内前缀的既定策略。旧脚本后续目标扫描超时保留，旧截图和实际 SDK 构造共同定位原因。
+
+`catalog-result-position`、`current-grid-geometry`、`busy-catalog`、`direct-selection` 均通过。旧 `busy-catalog` 定向夹具补齐当前编辑 Scroll 和目录发布输入，继续验证真实待提交 owner 忙态、重复点击合并和 Back。当前 `0.2.0.DEV.9de0fda0e4cf` 完整编译并按既定私有身份签名，生产快照差异仅 `ReaderDirectoryNavigationList.ets`。已在原 VM 保数据覆盖，正式验证完回到书架。
+
+全高内存装配无需滚动即显示标题、工具、查询和首个可选章节。168vp 流内装配实际章位在首个可选章节之前。两个场景的 Back 均可用、每个首章只收到一次内存选择意图。详情来源固定装配的 A2/A3/A4/A8 与 168vp 流内装配的 A2/A4/A8 更新为 PASS。四个目标登记改用当前根部 `ReaderSourceSwitchSurfaces`、`MangaSourceSwitchPresentation.directoryBack` 和直接单选 Back 契约，并按真实参数移除目标页的当前阅读徽标与下载栏描述。实际书源查询、真实换源提交、正常阅读父覆盖层、完整 E2/E3 和整页视觉继续按原要求。当前 **85 PASS、27 FAIL、224 NOT_RUN**，整页 **0/21**。[源码、两份原生回执与部署](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-target-first-open-20261118.json) [登记检查](../../.reader-artifacts/app-ui-framework-audit-20261114/manga-target-first-open-20261118.checks.json)
+
+## 2026-11-18 书源管理空列表状态实施
+
+修复 `SourceManagementPage.sourceList` 在保留零条首次读值或存在待核对写入时的显示。`failed` 与 `refreshFailed` 使用同一个整页读取失败入口，加载识别实际读取和回读事实。有可用行时沿用列表与局部提示。共享重试及状态动作携带渲染代次并校验当前开页，拒绝旧回调。新增两种内存场景，经现有 DEBUG 菜单挂载实际生产页面。`list-state`、`source-states` 与书源管理文件消息接线各自通过。 [旧缺陷、修正和测试边界](../../.reader-artifacts/app-ui-framework-audit-20261114/source-management-list-state-20261118.md)
+
+一次签装后的 VM 核对验证了读取错误重试与待核对动作各产生一次当前开页回执。菜单滚动超时后的续接复用同一安装及先前两项回执。已退出到尺寸与预览前一致的书架。A10 补录新状态覆盖。A6 新增 320vp、2× 三行裁切及字形取证，三条 URL 均只画出协议前缀，域名显示和完整内容层继续验证。正式分层 **85 PASS、27 FAIL、224 NOT_RUN**，整页 **0/21**。 [定向签装与复验回执](../../.reader-artifacts/app-ui-framework-audit-20261114/source-management-list-state-20261118.json)

@@ -19,7 +19,7 @@ export interface ReaderControlBookmarkNaturalSize {
  * other source actor position/size tracks remain unchanged. No local clock.
  */
 export function sampleReaderControlBookmark(progress: number, availableWidth: number,
-  natural?: ReaderControlBookmarkNaturalSize): ReaderControlBookmarkFrame {
+  natural?: ReaderControlBookmarkNaturalSize, showExcerpt: boolean = true): ReaderControlBookmarkFrame {
   const p = unit(progress);
   const sourceWidth = lerp(254, 316, p);
   const width = Number.isFinite(availableWidth) ? Math.max(0, availableWidth) : sourceWidth;
@@ -27,8 +27,9 @@ export function sampleReaderControlBookmark(progress: number, availableWidth: nu
   const titleY = lerp(7, 9, p);
   const titleHeight = natural === undefined ? 14 : Math.max(14, natural.titleHeightVp);
   const excerptY = natural === undefined ? lerp(23, 32, p) : titleY + titleHeight + lerp(2, 9, p);
-  const excerptHeight = natural === undefined ? lerp(24, 28, p) : Math.max(lerp(24, 28, p), natural.excerptHeightVp);
-  const cardHeight = natural === undefined ? lerp(54, 74, p) :
+  const excerptHeight = !showExcerpt ? 0 : natural === undefined ? lerp(24, 28, p) :
+    Math.max(lerp(24, 28, p), natural.excerptHeightVp);
+  const cardHeight = !showExcerpt ? Math.max(44, titleY + titleHeight + 9) : natural === undefined ? lerp(54, 74, p) :
     Math.max(lerp(54, 74, p), excerptY + excerptHeight + lerp(7, 14, p));
   return {
     card: actor(0, 0, width, cardHeight),

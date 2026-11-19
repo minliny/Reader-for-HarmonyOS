@@ -2,14 +2,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { readerBookmarkEmptyCopy } from '../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts';
 
 const read = name => readFileSync(new URL('../entry/src/main/ets/features/reading/ui/' + name + '.ets', import.meta.url), 'utf8');
 for (const id of selectContractCases({ recipe: { description: 'Actual shared reading-bookmark state recipe retains approved16/9/23 spacing,92x44 actions and original callbacks', resources: [] } })) {
   for (const name of ['ReaderBookmarkEmptyState', 'ReaderBookmarkErrorState']) {
     const sdk = boundedSurfaceSdk(), calls = [];
     const source = read(name);
-    const owner = sdk.consumer(source, boundedMembers(source), {}, {
-      onReturnToDirectory: () => calls.push('directory'), onRetry: () => calls.push('retry')
+    const owner = sdk.consumer(source, boundedMembers(source), { readerBookmarkEmptyCopy }, {
+      onAction: (_generation, filtered) => calls.push(filtered ? 'clear' : 'directory'), onRetry: () => calls.push('retry')
     });
     owner.aboutToAppear?.(); owner.initialRender(); sdk.properties.flush();
     const state = sdk.walk(owner).find(actor => actor instanceof sdk.deps.ReaderPageState);
@@ -32,6 +33,28 @@ for (const id of selectContractCases({ recipe: { description: 'Actual shared rea
       assert.deepEqual(icon.margin, { bottom: 16 });
     } else assert.equal(nodes.filter(node => node.type === 'Image').length, 0);
   }
+  const filteredSdk = boundedSurfaceSdk(), filteredCalls = [];
+  const emptySource = read('ReaderBookmarkEmptyState');
+  const filtered = filteredSdk.consumer(emptySource, boundedMembers(emptySource), { readerBookmarkEmptyCopy }, {
+    filtered: true, compact: true, actionGeneration: 7, onAction: (...args) => filteredCalls.push(args),
+  });
+  filtered.aboutToAppear(); filtered.initialRender(); filteredSdk.properties.flush();
+  const nativeProps = filteredSdk.nodes(filtered);
+  assert(nativeProps.some(node => node.type === 'Text' && node.create === '没有匹配的书签'));
+  assert.equal(nativeProps.filter(node => node.type === 'Image').length, 0);
+  const compactPageState = filteredSdk.walk(filtered).find(actor => actor instanceof filteredSdk.deps.ReaderPageState);
+  assert.equal(compactPageState.variant, 'inline');
+  assert.equal(compactPageState.padded, false);
+  assert.equal(nativeProps.find(node => node.type === 'Column' && node.create?.space === 4).create.space, 4);
+  const clear = nativeProps.find(node => node.type === 'Button' && node.accessibilityText === '清除搜索');
+  assert.equal(clear.constraintSize.minHeight, 44);
+  clear.onClick();
+  assert.deepEqual(filteredCalls, [[7, true]]);
+  filtered.filtered = false;
+  filteredSdk.properties.flush();
+  clear.onClick();
+  assert.deepEqual(filteredCalls, [[7, true]], 'old filtered action cannot become return-to-directory');
+  assert.equal(compactPageState.variant, 'readingBookmark', 'genuine no-bookmark layout survives in a short host');
   const sdk = boundedSurfaceSdk();
   const normal = new sdk.deps.ReaderPageState(undefined, { title: '普通页面', message: '默认配方', actionLabel: '重试' });
   normal.initialRender();

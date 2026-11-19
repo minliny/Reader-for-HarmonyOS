@@ -1,5 +1,5 @@
 import { LengthMetrics } from '@kit.ArkUI';
-import { MESSAGE_TITLE, MESSAGE_BODY } from '../foundation/ReaderMessageStyle';
+import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_INLINE_STATE_SPACING } from '../foundation/ReaderMessageStyle';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderRecoveryAction } from './ReaderRecoveryAction';
 
@@ -47,7 +47,7 @@ export struct ReaderPageState {
       }.width('100%').padding({ left: this.padded ? 20 : 0, right: this.padded ? 20 : 0,
         top: this.padded ? 24 : 0, bottom: this.padded ? 24 : 0 });
     } else {
-      Column({ space: this.variant === 'readingBookmark' ? 0 : 12 }) {
+      Column({ space: this.variant === 'readingBookmark' ? 0 : this.variant === 'inline' ? MESSAGE_INLINE_STATE_SPACING : 12 }) {
         this.leading();
         if (this.loading) {
           LoadingProgress().width(32).height(32)

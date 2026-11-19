@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -354,8 +355,9 @@ export struct BookshelfShell {
     const metrics = ReaderWindowCoordinator.metrics();
     const windowHeight = Math.max(0, metrics.windowRect.height - this.recoveryOriginY);
     const height = Math.min(this.recoveryViewportHeight >= 0 ? this.recoveryViewportHeight : windowHeight, windowHeight);
-    const bottom = Math.max(this.measuredFooterHeight, readerInteractiveSafeBottom(metrics, true));
-    return readerSurfaceMaxHeight(height, this.headerBottom + bookshelfHeaderSpec().contentGap + bottom + 8);
+    const bottom = Math.max(this.measuredFooterHeight, readerInteractiveSafeBottom(metrics, false));
+    return readerSurfaceMaxHeight(Math.min(height - bottom,
+      readerKeyboardHostBottom(metrics, this.recoveryOriginY, height)), this.headerBottom + bookshelfHeaderSpec().contentGap + 8);
   }
 
   private onRecoveryChanged(): void {

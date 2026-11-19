@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../layout/ReaderKeyboardGeometry';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
@@ -103,8 +104,9 @@ export struct ArkWebExecutionHost {
   }
   private safeHeight(): number {
     const metrics = readerWindowMetrics();
-    return Math.max(0, Math.min(this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height,
-      metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY) - this.safeTop());
+    return Math.max(0, readerKeyboardHostBottom(metrics, this.hostY,
+      this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height, this.hostX,
+      this.hostWidth > 0 ? this.hostWidth : metrics.windowRect.width) - this.safeTop());
   }
   private toolbarHeight(): number {
     const lines = 15 * 1.5 + (this.currentUrl.length > 0 ? 11 * 1.5 + 2 : 0);

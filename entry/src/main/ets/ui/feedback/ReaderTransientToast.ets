@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { MESSAGE_BODY, MESSAGE_TITLE } from '../foundation/ReaderMessageStyle';
@@ -35,6 +36,8 @@ export struct ReaderTransientToast {
   @State private displayed: boolean = false;
   @State private toastOpacity: number = 0;
   @State private toastOffsetY: number = 12;
+  @State private editingHostHeight: number = -1;
+  @State private editingHostY: number = 0;
   private handledGeneration: number = -1;
   private dismissTimer: number = -1;
 
@@ -122,6 +125,12 @@ export struct ReaderTransientToast {
     }
     .width('100%')
     .height(this.bounded ? undefined : '100%')
+    .onAreaChange((_old: Area, next: Area): void => {
+      if (this.bounded || this.hostId < 0) return;
+      const height = Number(next.height), y = Number(next.globalPosition.y);
+      if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.editingHostHeight) > .1) this.editingHostHeight = height;
+      if (Number.isFinite(y) && Math.abs(y - this.editingHostY) > .1) this.editingHostY = y;
+    })
     .padding({ left: 15 + readerInteractiveSafeLeft(readerWindowMetrics(), true),
       right: 15 + readerInteractiveSafeRight(readerWindowMetrics(), true), bottom: this.toastBottomInset() })
     .zIndex(1000)
@@ -131,7 +140,10 @@ export struct ReaderTransientToast {
 
   private toastBottomInset(): number {
     if (this.metricsRevision < 0) return 52;
-    return Math.max(52, readerInteractiveSafeBottom(readerWindowMetrics(), true) + 16);
+    const metrics = readerWindowMetrics();
+    if (this.bounded) return Math.max(52, readerInteractiveSafeBottom(metrics, true) + 16);
+    const height = this.editingHostHeight >= 0 ? this.editingHostHeight : metrics.windowRect.height;
+    return Math.max(52, height - readerKeyboardHostBottom(metrics, this.editingHostY, height) + 16);
   }
 
   private syncToast(): void {

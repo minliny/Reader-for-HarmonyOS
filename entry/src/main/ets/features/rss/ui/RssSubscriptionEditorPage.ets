@@ -1,3 +1,4 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity } from '../application/RssMutationRecoveryContract';
@@ -29,6 +30,7 @@ import {
 
 @Component
 export struct RssSubscriptionEditorPage {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop snapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
@@ -51,7 +53,7 @@ export struct RssSubscriptionEditorPage {
   }
 
   build() {
-    ReaderStandardPage({
+    ReaderStandardPage({ editingHost: this.editingHost,
       variant: 'rssEditor',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
@@ -230,7 +232,7 @@ export struct RssSubscriptionEditorPage {
         .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
         .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'form-body', text: value(), placeholder, onTextChange: onChange });
+      ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'form-body', text: value(), placeholder, onTextChange: onChange });
     }
     .width('100%')
     .constraintSize({ minHeight: 60 });

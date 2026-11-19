@@ -1,3 +1,4 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { LengthMetrics } from '@kit.ArkUI';
@@ -16,6 +17,8 @@ type ReaderDirectoryTool = 'search' | 'top' | 'bottom' | 'sort';
 /** Shared directory tools. The owner retains query, scrolling and motion state. */
 @Component
 export struct ReaderDirectoryToolbar {
+  editingHost: ReaderEditingVisibility | undefined = undefined;
+  editingCurrent: (() => boolean) | undefined = undefined;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop text: string = '';
@@ -149,7 +152,9 @@ export struct ReaderDirectoryToolbar {
   @Builder
   private queryField(inputFocusId: string) {
       Row() {
-        ReaderSearchField({ variant: 'readerDirectory', mode: this.variant === 'manga-catalog' ? 'live' : 'submit', text: this.text,
+        ReaderSearchField({ editingHost: this.editingHost,
+          editingCurrent: (): boolean => this.currentDirectoryInput(inputFocusId) && this.actionEnabled && (this.editingCurrent?.() ?? true),
+          variant: 'readerDirectory', mode: this.variant === 'manga-catalog' ? 'live' : 'submit', text: this.text,
           naturalFieldHeightVp: this.variant === 'manga-catalog' ? this.controlFieldHeight() : this.naturalFieldHeightVp,
           naturalInputHeightVp: this.variant === 'manga-catalog' ? this.controlFieldHeight() : this.naturalInputHeightVp,
           placeholder: this.placeholder, accessibilityLabel: this.placeholder,
@@ -168,7 +173,11 @@ export struct ReaderDirectoryToolbar {
           },
           onTextChange: (value: string): void => { if (this.currentDirectoryInput(inputFocusId)) this.onTextChange(value); },
           onSubmit: (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onSearch(); } });
-      }.layoutWeight(1).height(Math.max(44, this.controlFieldHeight())).alignItems(VerticalAlign.Center);
+      }.flexGrow(this.queryStacked() ? 0 : 1).flexShrink(this.queryStacked() ? 0 : 1)
+        .flexBasis(this.queryStacked() ? 'auto' : 0).width(this.queryStacked() ? '100%' : undefined)
+        .constraintSize({ minWidth: 0 })
+        .height(this.queryStacked() ? this.controlFieldHeight() + 18 : Math.max(44, this.controlFieldHeight()))
+        .padding(this.queryStacked() ? { top: 3, bottom: 3 } : 0).alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -185,26 +194,24 @@ export struct ReaderDirectoryToolbar {
               this.tool('sort', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onToggleSort(); });
             }
           }
-        }.height(Math.max(44, this.controlFieldHeight())).flexShrink(0);
+        }.width(this.queryStacked() ? '100%' : undefined).justifyContent(FlexAlign.End)
+          .height(this.queryStacked() ? this.controlFieldHeight() + 18 : Math.max(44, this.controlFieldHeight()))
+          .padding(this.queryStacked() ? { top: 3, bottom: 3 } : 0).flexShrink(0);
       }
   }
 
   @Builder
   private searchRow(inputFocusId: string = '') {
-    if (this.queryStacked()) {
-      Column({ space: 8 }) {
-        Row() { this.queryField(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 18)
-          .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });
-        Row() { this.queryTools(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 18)
-          .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 })
-          .justifyContent(FlexAlign.End);
-      }.width('100%').height(this.controlToolbarHeight());
-    } else {
-      Row({ space: this.variant === 'standard' ? 8 : 5 }) { this.queryField(inputFocusId); this.queryTools(inputFocusId); }
-        .width('100%').height(this.controlToolbarHeight())
-        .padding(this.variant === 'manga-catalog' ? { left: 0, right: 0 } :
-          { left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });
-    }
+    // One parent chain for the native field, including width/stacked changes.
+    Flex({ direction: this.queryStacked() ? FlexDirection.Column : FlexDirection.Row,
+      wrap: FlexWrap.NoWrap, alignItems: ItemAlign.Center, justifyContent: FlexAlign.End,
+      space: { main: LengthMetrics.vp(this.queryStacked() ? 8 : this.variant === 'standard' ? 8 : 5) } }) {
+      this.queryField(inputFocusId);
+      this.queryTools(inputFocusId);
+    }.width('100%').height(this.controlToolbarHeight())
+      .padding(this.variant === 'manga-catalog' ? { left: 0, right: 0 } :
+        { left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE,
+          top: this.queryStacked() ? 0 : 3, bottom: this.queryStacked() ? 0 : 3 });
   }
 
   @Builder

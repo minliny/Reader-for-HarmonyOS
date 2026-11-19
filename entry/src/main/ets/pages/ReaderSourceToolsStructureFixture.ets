@@ -12,7 +12,7 @@ import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection
 
 export type SourceToolsFixtureScenario = 'content' | 'loading' | 'empty' | 'read-error' |
   'read-empty-error' | 'unknown' | 'original-unknown' | 'original-cleanup' | 'running' |
-  'editor-readback-failed' | 'editor-unknown';
+  'editor-readback-failed' | 'editor-unknown' | 'unknown-empty' | 'running-empty';
 
 export interface SourceToolsFixtureCase {
   value: SourceToolsFixtureScenario;
@@ -30,6 +30,8 @@ export const SOURCE_TOOLS_FIXTURE_SCENARIOS: SourceToolsFixtureCase[] = [
   { value: 'running', title: '工具 · 检测与停止' },
   { value: 'editor-readback-failed', title: '工具 · 编辑已确认回读失败' },
   { value: 'editor-unknown', title: '工具 · 编辑回执待核对' },
+  { value: 'unknown-empty', title: '工具 · 空列表待核对' },
+  { value: 'running-empty', title: '工具 · 首条结果前停止' },
 ];
 
 const emptyToolsFixtureSnapshot = (): SourceToolsSnapshot => {
@@ -119,7 +121,8 @@ export struct ReaderSourceToolsStructureFixture {
 
   private createSnapshot(): SourceToolsSnapshot {
     const sources: BookSource[] = [];
-    const count = this.scenario === 'loading' || this.scenario === 'empty' || this.scenario === 'read-empty-error' ? 0 : 12;
+    const count = this.scenario === 'loading' || this.scenario === 'empty' ||
+      this.scenario === 'read-empty-error' || this.scenario === 'unknown-empty' ? 0 : 12;
     for (let index = 0; index < count; index += 1) {
       const sourceId = `fixture-tools-${index}.example.invalid`;
       sources.push({ sourceId, name: `${index + 1} · 长名称书源与内存工具验证 / Long Fixture Source`,
@@ -157,7 +160,7 @@ export struct ReaderSourceToolsStructureFixture {
       snapshot.statusMessage = this.scenario === 'read-error' ?
         '内存夹具：书源刷新失败，已保留现有列表' : '内存夹具：书源读取失败，请稍后重试';
     }
-    if (this.scenario === 'unknown') {
+    if (this.scenario === 'unknown' || this.scenario === 'unknown-empty') {
       snapshot.receipt = projectPersistedReceipt<BookSource[]>({
         confirmation: 'unknown', readback: 'failed', value: sources, canRetry: true,
         generation: this.fixtureGeneration,
@@ -170,9 +173,9 @@ export struct ReaderSourceToolsStructureFixture {
         label: '内存原操作', method: 'fixture.memory', operationId: `tools-fixture-${this.fixtureGeneration}`,
         message: '内存夹具：原操作仍需核对，继续仅记录当前身份及代次。'.repeat(8) };
     }
-    if (this.scenario === 'running') {
+    if (this.scenario === 'running' || this.scenario === 'running-empty') {
       snapshot.busy = true;
-      snapshot.batchCheck = this.pendingProgress('running', sources.slice(0, 3));
+      snapshot.batchCheck = this.pendingProgress('running', sources.slice(0, 3), this.scenario === 'running-empty' ? 0 : 1);
     }
     if (this.scenario === 'editor-readback-failed' || this.scenario === 'editor-unknown') {
       const confirmation = this.scenario === 'editor-unknown' ? 'unknown' : 'confirmed';
@@ -213,14 +216,14 @@ export struct ReaderSourceToolsStructureFixture {
       currentIndex: results.length, currentSourceId: '', currentSourceName: '', results };
   }
 
-  private pendingProgress(phase: 'running' | 'stopping', sources: BookSource[]): SourceBatchCheckProgress {
+  private pendingProgress(phase: 'running' | 'stopping', sources: BookSource[], completed: number = 1): SourceBatchCheckProgress {
     const progress = this.sampleProgress(sources);
     progress.phase = phase;
-    progress.completed = Math.min(1, sources.length);
+    progress.completed = Math.min(completed, sources.length);
     progress.passed = progress.completed;
     progress.failed = 0;
     progress.errors = 0;
-    progress.currentIndex = Math.min(2, sources.length);
+    progress.currentIndex = Math.min(progress.completed + 1, sources.length);
     progress.currentSourceId = sources[progress.currentIndex - 1]?.sourceId ?? '';
     progress.currentSourceName = sources[progress.currentIndex - 1]?.name ?? '';
     progress.results = progress.results.slice(0, progress.completed);
@@ -230,8 +233,18 @@ export struct ReaderSourceToolsStructureFixture {
   private stopCheck(generation: number): void {
     if (!this.current(generation) || this.snapshot.batchCheck.phase !== 'running') return;
     const next = this.copySnapshot();
-    next.batchCheck = this.pendingProgress('stopping', next.sources.filter((source: BookSource): boolean =>
-      next.selectedSourceIds.includes(source.sourceId)));
+    const selected = next.sources.filter((source: BookSource): boolean => next.selectedSourceIds.includes(source.sourceId));
+    if (this.scenario === 'running-empty') {
+      const stopped = this.pendingProgress('stopping', selected, 0);
+      stopped.phase = 'stopped';
+      stopped.currentIndex = 0;
+      stopped.currentSourceId = '';
+      stopped.currentSourceName = '';
+      next.batchCheck = stopped;
+      next.busy = false;
+    } else {
+      next.batchCheck = this.pendingProgress('stopping', selected);
+    }
     this.snapshot = next;
     this.action(generation, 'stop-memory');
   }

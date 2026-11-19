@@ -42,6 +42,16 @@ export class ReaderDisplayCornerVp {
   }
 }
 
+/** One TYPE_KEYBOARD receipt. Empty-but-available differs from a failed read. */
+export class ReaderKeyboardAreaVp {
+  available: boolean;
+  visible: boolean;
+  rects: ReaderRectVp[];
+  constructor(available: boolean = false, visible: boolean = false, rects: ReaderRectVp[] = []) {
+    this.available = available; this.visible = visible; this.rects = rects;
+  }
+}
+
 export class ReaderWindowMetricsSnapshot {
   windowRect: ReaderRectVp;
   globalRect: ReaderRectVp;
@@ -50,6 +60,7 @@ export class ReaderWindowMetricsSnapshot {
   gestureInsets: ReaderInsetsVp;
   navigationInsets: ReaderInsetsVp;
   keyboardInsets: ReaderInsetsVp;
+  keyboardArea: ReaderKeyboardAreaVp;
   densityPixels: number;
   systemFontScale: number;
   revision: number;
@@ -77,6 +88,7 @@ export class ReaderWindowMetricsSnapshot {
     statusBarCutoutRect: ReaderRectVp = new ReaderRectVp(),
     topLeftCorner: ReaderDisplayCornerVp = new ReaderDisplayCornerVp(),
     topRightCorner: ReaderDisplayCornerVp = new ReaderDisplayCornerVp(),
+    keyboardArea: ReaderKeyboardAreaVp = new ReaderKeyboardAreaVp(),
   ) {
     this.windowRect = windowRect;
     this.globalRect = globalRect;
@@ -85,6 +97,7 @@ export class ReaderWindowMetricsSnapshot {
     this.gestureInsets = gestureInsets;
     this.navigationInsets = navigationInsets;
     this.keyboardInsets = keyboardInsets;
+    this.keyboardArea = keyboardArea;
     this.densityPixels = densityPixels;
     this.systemFontScale = systemFontScale;
     this.revision = revision;

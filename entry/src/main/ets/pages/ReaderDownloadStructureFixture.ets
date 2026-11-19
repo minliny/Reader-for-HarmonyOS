@@ -14,7 +14,7 @@ import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import type { ReaderRecoveryView } from '../ui/feedback/ReaderRecoveryView';
 
 export type DownloadFixtureScenario = 'content' | 'loading' | 'empty' | 'read-error' | 'retained-error' |
-  'recovery' | 'pending' | 'filtered-empty' | 'chapter-loading' | 'chapter-error';
+  'recovery' | 'pending' | 'filtered-empty' | 'chapter-loading' | 'chapter-error' | 'chapter-empty' | 'chapter-no-catalog';
 
 export interface DownloadFixtureCase {
   value: DownloadFixtureScenario;
@@ -31,6 +31,8 @@ export const DOWNLOAD_FIXTURE_SCENARIOS: DownloadFixtureCase[] = [
   { value: 'filtered-empty', title: '筛选为空' },
   { value: 'chapter-loading', title: '章节投影读取中' },
   { value: 'chapter-error', title: '章节投影失败' },
+  { value: 'chapter-empty', title: '目录已确认无章节' },
+  { value: 'chapter-no-catalog', title: '暂无目录数据' },
 ];
 
 interface DownloadFixtureObservation {
@@ -161,6 +163,10 @@ export struct ReaderDownloadStructureFixture {
         result.push(view);
         continue;
       }
+      if (bookIndex === 0 && (this.scenario === 'chapter-empty' || this.scenario === 'chapter-no-catalog')) {
+        result.push(projectDownloadBookAvailability(view, [], this.scenario === 'chapter-empty' ? 0 : undefined));
+        continue;
+      }
       const chapters: DownloadChapterView[] = [];
       for (let index = 0; index < 18; index += 1) {
         const state: LocalReadingDownloadState = bookIndex === 0 ? 'completed' :
@@ -229,7 +235,7 @@ export struct ReaderDownloadStructureFixture {
   private initialView(): SharedDownloadViewState {
     return { query: this.scenario === 'filtered-empty' ? 'fixture-no-matching-book' : '',
       type: 'all', state: 'all', sourceId: 'all', sort: 'recent', direction: 'desc',
-      detailKey: this.scenario === 'chapter-loading' || this.scenario === 'chapter-error' ? this.books[0]?.key ?? '' : '' };
+      detailKey: this.scenario.startsWith('chapter-') ? this.books[0]?.key ?? '' : '' };
   }
 
   private refresh(generation: number, kind: string = 'refresh'): void {

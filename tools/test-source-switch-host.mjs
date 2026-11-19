@@ -257,6 +257,44 @@ if(id==='author-read-error'){
   f.retire();checks.push('author-identity-read-error-remains-discovery-only-and-explicitly-recovers');
 }
 }
+if(id==='search-handoff-pages'){
+  const f=fixture({open:false}),base=f.runtime.request.bind(f.runtime),pages=[];
+  f.setRows([]);
+  // An ordinary search may have tried both sources but only read page one.
+  // This legacy publication is deliberately present at the handoff boundary:
+  // it cannot be treated as proof of exhaustion for a title-specific search.
+  f.context.searchedSourceIds=['old','new'];
+  f.runtime.supportsCoreCapability=()=>true;
+  const {createHash}=await import('node:crypto');
+  const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  f.runtime.request=async(method,params,options)=>{
+    if(method==='book.search'){
+      pages.push([params.sourceId,params.page]);
+      const books=params.sourceId==='old'?[]:params.page===1?
+        [{bookId:'other',title:'Another Book',author:'Writer'}]:
+        [{bookId:rawCandidate.bookUrl,title:'Book',author:'Writer'}];
+      if(params.sourceId==='new'&&params.page===2)f.setRows([rawCandidate]);
+      return{data:{sourceId:params.sourceId,sourceVersion:'v1',contentKind:'text',books,
+        pageReceipt:{sourceId:params.sourceId,sourceVersion:'v1',query:params.keyword,requestedPage:params.page,
+          state:books.length?'next':'end',...(books.length?{nextPage:params.page+1}:{}),
+          requestFingerprint:digest([params.sourceId,params.page]),responseFingerprint:digest(books),
+          candidateFingerprint:digest(books.map(book=>book.bookId))}}};
+    }
+    if(method==='search-book.put')return{data:{}};
+    if(method==='search-book.batch.get')return{data:{complete:true,books:pages.some(([source,page])=>source==='new'&&page===2)?[rawCandidate]:[],missing:[]}};
+    return base(method,params,options);
+  };
+  assert.equal(f.host.open(f.context,f.lease),true);
+  for(let turn=0;turn<80;turn++){
+    if(f.host.current().state.kind!=='discovering'&&f.host.current().state.refreshing!==true)break;
+    await new Promise(resolve=>setTimeout(resolve,25));
+  }
+  assert.equal(f.host.current().state.kind,'candidates','a prior first-page attempt must not suppress title discovery');
+  assert.deepEqual(pages,[['old',1],['new',1],['new',2]]);
+  assert.ok(f.host.current().state.candidates.some(candidate=>candidate.sourceId==='new'&&candidate.bookName==='Book'));
+  assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false,'discovery does not commit a source');
+  f.retire();checks.push('search-origin-attempted-sources-do-not-hide-page2-title-match');
+}
 if(id==='streaming-latency'){
 {
   const f=fixture({open:false}),baseRequest=f.runtime.request.bind(f.runtime),rows=[],started=[],progress=[];
@@ -271,7 +309,9 @@ if(id==='streaming-latency'){
       sourceVersions:registry.map(source=>({...source}))}};
     if(method==='search-book.batch.get')return{data:{complete:true,books:[],missing:params.identities}};
     if(method==='book.search'){
-      assert.equal(params.page,1);const id=params.sourceId;started.push(id);
+      assert.equal(params.page,1);const id=params.sourceId;
+      if(id==='old')return{data:{sourceId:id,sourceVersion:'v1',contentKind:'text',books:[]}};
+      started.push(id);
       if(id==='first')now=1500;if(id==='faster')now=1600;
       await gates.get(id).promise;
       rows.push({...rawCandidate,origin:id,bookUrl:`/${id}`,time:Math.floor(now/1000)});
@@ -280,10 +320,9 @@ if(id==='streaming-latency'){
     }
     return baseRequest(method,params,options);
   };
-  f.context.searchedSourceIds=['old'];
   const refresh=f.host.gateway.refreshCandidates.bind(f.host.gateway);
-  f.host.gateway.refreshCandidates=(query,current,excluded,onProgress,initial)=>{
-    progress.push(onProgress);return refresh(query,current,excluded,onProgress,initial);
+  f.host.gateway.refreshCandidates=(query,current,onProgress,initial)=>{
+    progress.push(onProgress);return refresh(query,current,onProgress,initial);
   };
   Date.now=()=>now;
   try{
@@ -305,7 +344,7 @@ if(id==='streaming-latency'){
     // Retain the real owner while the next Gateway invocation waits; direct
     // captured callbacks below exercise Host admission independently of the
     // Gateway's own cancellation, which also remains active.
-    const pending=deferred();f.host.gateway.refreshCandidates=(query,current,excluded,onProgress,initial)=>{
+    const pending=deferred();f.host.gateway.refreshCandidates=(query,current,onProgress,initial)=>{
       progress.push(onProgress);assert.deepEqual(initial,originalCandidates);
       return pending.promise;
     };
@@ -931,4 +970,5 @@ if(id==='negative-old-scope'){
 const definitions={"registry-qualification": "registry-qualification actual scoped owner/gateway/storage path; controlled Core/OS ports", "qualification-retirement": "qualification-retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "acquisition-lock": "acquisition-lock actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-retirement": "preview-retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "known-author-proof": "known-author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-resolution": "author-resolution actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-author": "late-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-author": "retired-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-read-error": "author-read-error actual scoped owner/gateway/storage path; controlled Core/OS ports", "streaming-latency": "streaming-latency actual scoped owner/gateway/storage path; controlled Core/OS ports", "failure-rebind": "failure-rebind actual scoped owner/gateway/storage path; controlled Core/OS ports", "runtime-owner": "runtime-owner actual scoped owner/gateway/storage path; controlled Core/OS ports", "commit-lineage": "commit-lineage actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-commit": "retired-commit actual scoped owner/gateway/storage path; controlled Core/OS ports", "pre-dispatch": "pre-dispatch actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-readback": "unknown-readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "partial-envelope": "partial-envelope actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-no-write": "preview-no-write actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-scope": "old-scope actual scoped owner/gateway/storage path; controlled Core/OS ports", "book-before-dispatch": "book-before-dispatch actual scoped owner/gateway/storage path; controlled Core/OS ports", "dirty-related": "dirty-related actual scoped owner/gateway/storage path; controlled Core/OS ports", "observer-failure": "observer-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "progress-lane": "progress-lane actual scoped owner/gateway/storage path; controlled Core/OS ports", "journal-before-send": "journal-before-send actual scoped owner/gateway/storage path; controlled Core/OS ports", "local-sync-ack": "local-sync-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "confirmed-read-error": "confirmed-read-error actual scoped owner/gateway/storage path; controlled Core/OS ports", "advanced-head": "advanced-head actual scoped owner/gateway/storage path; controlled Core/OS ports", "warm-handoff": "warm-handoff actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-intent": "cold-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "cross-runtime-tail": "cross-runtime-tail actual scoped owner/gateway/storage path; controlled Core/OS ports", "large-intent": "large-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "terminal-sync": "terminal-sync actual scoped owner/gateway/storage path; controlled Core/OS ports", "unreadable-intent": "unreadable-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-exact-id": "wrong-exact-id actual scoped owner/gateway/storage path; controlled Core/OS ports", "rollback-lost-ack": "rollback-lost-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-rollback": "cold-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "next-choice": "next-choice actual scoped owner/gateway/storage path; controlled Core/OS ports", "startup-rollback": "startup-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "live-picker": "live-picker actual scoped owner/gateway/storage path; controlled Core/OS ports", "recommendation-filter": "recommendation-filter actual scoped owner/gateway/storage path; controlled Core/OS ports", "polluted-alias": "polluted-alias actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-detail": "wrong-detail actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-manga": "wrong-manga actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-retire-lock": "negative-retire-lock actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-qualification-finally": "negative-qualification-finally actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-preview-finally": "negative-preview-finally actual scoped owner/gateway/storage path; controlled Core/OS ports", "public-failure": "public-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-identity-rollback": "negative-identity-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-old-scope": "negative-old-scope actual scoped owner/gateway/storage path; controlled Core/OS ports"};
 definitions['manga-cold-receipt']='Real manga Host/AtomicFile cold recovery reads missing, invalid and valid exact receipts once each; receipt-proven local cleanup retries make no Core query';
 definitions['manga-legacy-receipt']='Old Core live receipt, cold uncertainty and exact source/target replay fencing';
+definitions['search-handoff-pages']='Actual normal Host ignores prior search attempt IDs, discovers title match on page2 and does not commit';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

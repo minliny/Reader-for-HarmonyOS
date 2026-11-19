@@ -7,7 +7,7 @@ import { MESSAGE_ACTION, MESSAGE_BODY } from '../../../ui/foundation/ReaderMessa
 import type { ReaderControlCandidateWidths, ReaderControlFormMinimum } from './ReaderLayoutGeometry';
 import { type ReaderControlSearchNaturalSize, sampleReaderControlSearch } from './ReaderControlSearchGeometry';
 
-import { measureReaderControlText } from './ReaderControlTextMeasurement';
+import { measureReaderControlText, type ReaderControlTextExtent } from './ReaderControlTextMeasurement';
 
 export interface ReaderSearchMinimumFactsInput {
   query: string;
@@ -27,16 +27,14 @@ export function readerControlSearchMinimumFacts(input: ReaderSearchMinimumFactsI
   const resultScope = input.resultScope ?? 0;
   const first = state.kind === 'results' ? state.results[0] : undefined;
   const pagination = state.kind === 'results' &&
-    (state.hasMore === true || state.loadMoreError !== undefined || state.paginationRetired === true);
-  const retainedFailure = pagination && input.retainedLoadMoreFailure;
+    (state.loadMoreError !== undefined || state.paginationRetired === true);
+  const retainedFailure = pagination;
   return { readViewState: (): ReaderQuickSearchState => state,
     resultScope: state.kind === 'results' && Number.isFinite(resultScope) && resultScope > 0 ? resultScope : 0,
     query: input.query, title: readerControlSearchResultTitle(first), snippet: first?.snippet ?? '',
     message: readerControlSearchStatusText(state),
     hasResults: first !== undefined, resultsMode: state.kind === 'results', loading: state.kind === 'loading',
-    loadMoreLabel: !pagination ? '' : retainedFailure ? state.kind === 'results' && state.hasMore === true ? '重试' : '重新搜索' :
-      state.kind === 'results' && state.loadingMore === true ? '正在加载…' :
-        state.kind === 'results' && state.loadMoreError !== undefined ? '加载失败，重试' : '加载更多结果',
+    loadMoreLabel: !pagination ? '' : state.kind === 'results' && state.continuationRetryable === true ? '重试' : '重新搜索',
     loadMoreMessage: retainedFailure ? state.kind === 'results' && state.paginationRetired === true ?
       '需重新搜索才能加载更多' : '后续结果加载失败' : '' };
 }
@@ -79,15 +77,17 @@ function form(context: UIContext, width: number, full: boolean,
   const match = measureReaderControlText(context, facts.snippet, matchStyle, original.firstResult.width - 18);
   const back = measureReaderControlText(context, '返回', TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, 51);
   const glyph = measureReaderControlText(context, '字', TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, original.field.width - 22);
-  const loadAction = measureReaderControlText(context, facts.loadMoreLabel, MESSAGE_ACTION, Math.max(1, width - 36), 'wrap');
+  const noAction: ReaderControlTextExtent = { widthVp: 0, heightVp: 0, singleLineWidthVp: 0, fitsWidth: true };
+  const loadAction = facts.loadMoreLabel.length > 0 ?
+    measureReaderControlText(context, facts.loadMoreLabel, MESSAGE_ACTION, Math.max(1, width - 36), 'wrap') : noAction;
   // ReaderRecoveryAction's text variant keeps a 44vp native minimum and 2vp
   // horizontal padding on each side, beside the weighted message Text.
   const recoveryNativeMinimumWidth = 44;
   const recoveryHorizontalPadding = 2 * 2;
   const loadActionGap = 10;
-  const loadWidth = loadAction === undefined ? 0 : Math.max(facts.loadMoreMessage.length > 0 ? recoveryNativeMinimumWidth : 112,
+  const loadWidth = facts.loadMoreLabel.length === 0 || loadAction === undefined ? 0 : Math.max(facts.loadMoreMessage.length > 0 ? recoveryNativeMinimumWidth : 112,
     loadAction.singleLineWidthVp + (facts.loadMoreMessage.length > 0 ? recoveryHorizontalPadding : 16));
-  const loadMessage = measureReaderControlText(context, facts.loadMoreMessage,
+  const loadMessage = facts.loadMoreMessage.length === 0 ? noAction : measureReaderControlText(context, facts.loadMoreMessage,
     new ReaderInheritedTextStyle(MESSAGE_BODY.fontFamily, undefined, MESSAGE_BODY.fontSizeFp,
       MESSAGE_BODY.lineHeightFp, undefined, 'system', 'appBaseline'),
     Math.max(1, original.results.width - loadWidth - loadActionGap), 'wrap');

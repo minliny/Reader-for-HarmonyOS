@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 3,
+  "revision": 4,
   "hosts": [
     {
       "hostId": "loginWeb",
@@ -55,10 +55,10 @@
         "cancelled",
         "error"
       ],
-      "backPolicy": "unknown",
+      "backPolicy": "platform-first",
       "stalePolicy": "SourceJourneySurface current-input, SourceJourneyPresentation Runtime/tools lease, and Page/native-alert revision guards remain with their actual owners; dismissal does not cancel accepted business writes",
       "status": "partial",
-      "knownGap": "Real caller/adapter declarations; OS Back/IME/focus, picker cancellation and exact persistence behavior NOT_RUN."
+      "knownGap": "Normal native export Alert consumes Back; same Tools action and 838 sources remain, no picker. Explicit confirmed export reaches the real save picker. Other native focus/IME contexts remain unobserved."
     },
     {
       "refId": "platform.sourceToolsDeleteConfirm",
@@ -82,10 +82,10 @@
         "cancelled",
         "error"
       ],
-      "backPolicy": "unknown",
+      "backPolicy": "platform-first",
       "stalePolicy": "SourceJourneySurface current-input, SourceJourneyPresentation Runtime/tools lease, and Page/native-alert revision guards remain with their actual owners; dismissal does not cancel accepted business writes",
       "status": "partial",
-      "knownGap": "Real caller/adapter declarations; OS Back/IME/focus, picker cancellation and exact persistence behavior NOT_RUN."
+      "knownGap": "The normal Alert consumes Back and explicit Cancel. Current 838 selected items remain. Confirmed delete is tested at the owner intent boundary; no data deletion on VM."
     },
     {
       "refId": "platform.sourceToolsExportFile",
@@ -113,10 +113,10 @@
         "cancelled",
         "error"
       ],
-      "backPolicy": "unknown",
+      "backPolicy": "platform-first",
       "stalePolicy": "SourceJourneySurface current-input, SourceJourneyPresentation Runtime/tools lease, and Page/native-alert revision guards remain with their actual owners; dismissal does not cancel accepted business writes",
       "status": "partial",
-      "knownGap": "Real caller/adapter declarations; OS Back/IME/focus, picker cancellation and exact persistence behavior NOT_RUN."
+      "knownGap": "OS save sheet accepts Back to the current Tools presentation, emits cancelled and writes no destination. Other platform focus/IME contexts and successful save retain their separate scope."
     }
   ]
 }

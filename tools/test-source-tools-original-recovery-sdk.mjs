@@ -7,25 +7,46 @@ const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire} = await import('node:module');
 const {compile} = await import('./lib/rules-mutation-durable-probe.mjs');
-const {foundationControls} = await import('./lib/reader-foundation-control-probe.mjs');
+const {foundationControls,withReaderSectionHeading} = await import('./lib/reader-foundation-control-probe.mjs');
 const {boundedMembers,boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {readerRecoveryView} = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
+const {readerEditingSdk} = await import('./lib/reader-editing-sdk-probe.mjs');
+const {actualReaderPostLayoutFrame} = await import('./lib/reader-post-layout-frame-probe.mjs');
+const {actualReaderPageLayout} = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const {resolveSourceToolsRowLayout} = await import('../entry/src/main/ets/features/source/presentation/SourceToolsLayout.ts');
+const headerMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+const {resolveReaderRaisedShape} = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
 const {ReaderWindowMetricsSnapshot,ReaderRectVp,readerVisualSafeLeft,readerVisualSafeRight,readerInteractiveSafeLeft,readerInteractiveSafeRight} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {READER_FLOATING_TOP_BAR_HEIGHT,readerFloatingBarBottomInset} = await import('./lib/reader-floating-bar-metrics-probe.mjs');
 
 const path='features/source/ui/SourceToolsPage.ets',read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'),pageSource=read(path),recoverySource=read('ui/feedback/ReaderRecoveryAction.ets'),headerSource=read('ui/chrome/PageBackBar.ets');
 const document=JSON.stringify({bookSourceUrl:'https://tools-original.test',bookSourceName:'Original source',enabled:true});
 function sdkPage(f,host,snapshot,definition=pageSource){
- const controls=foundationControls(),messages=boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true}),metrics=new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,390,844)),geometry=compile('ui/layout/SurfaceHorizontalGeometry.ts','*',{},true);
- const prefix=pageSource.slice(0,pageSource.indexOf('@Component'))+'\nexport const pageDataSources={SourceToolListDataSource,SourceCheckResultDataSource,SourceDebugLogDataSource};';
+ const controls=withReaderSectionHeading(foundationControls()),messages=boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true}),metrics=new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,390,844)),geometry=compile('ui/layout/SurfaceHorizontalGeometry.ts','*',{},true);
+ const prefix=pageSource.slice(0,pageSource.indexOf('@Component'))+'\nexport const pageDataSources={SourceToolListDataSource,SourceToolListRow,SourceCheckResultDataSource,SourceDebugLogDataSource};';
  const classes=compile(path,'pageDataSources',{},true,prefix);
  const empty=compile('features/source/application/SourceToolsOrchestrator.ets','EMPTY_SOURCE_TOOLS_SNAPSHOT',{},true);
  const sourceEditorReadbackPending=compile('features/source/application/SourceToolsOrchestrator.ets','sourceEditorReadbackPending',{},true);
+ const frames=[];
+ const ReaderPostLayoutFrame=actualReaderPostLayoutFrame();
+ const ReaderNativeSlotMeasurement=compile('ui/layout/ReaderNativeSlotMeasurement.ets','ReaderNativeSlotMeasurement',{
+  ReaderPostLayoutFrame,readerMeasureSurfaceRect:()=>undefined,
+ });
  const deps={...messages.deps,...controls.dependencies,...classes,...geometry,EMPTY_SOURCE_TOOLS_SNAPSHOT:empty,readerRecoveryView,ReaderNativeAlertOwner,sourceEditorReadbackPending,
+  ...actualReaderPageLayout(),...readerEditingSdk(),ReaderNativeSlotMeasurement,ReaderPostLayoutFrame,TextInputController:class {},
+  TextHeightAdaptivePolicy:{ LAYOUT_CONSTRAINT_FIRST:'layout-constraint-first' },
+  nextSourceToolsBackIdentity:0,
+  AppStorage:{get:key=>key==='readerAppForeground'?true:undefined},
+  resolveSourceToolsRowLayout,resolveReaderRaisedShape,...headerMetrics,
+  readerScaledBarHeight:compile('ui/foundation/ReaderSurfaceResolvers.ts','readerScaledBarHeight',{}),
+  uiContext:{postFrameCallback:frame=>frames.push(frame),px2vp:value=>value,getMeasureUtils:()=>({
+    measureText:input=>input.textContent.length*12,
+    measureTextSize:input=>({width:input.constraintWidth,height:44}),
+  })},
   readerVisualSafeLeft,readerVisualSafeRight,readerInteractiveSafeLeft,readerInteractiveSafeRight,READER_FLOATING_TOP_BAR_HEIGHT,readerFloatingBarBottomInset,
-  ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts:()=>{},
+  ReaderWindowCoordinator:{metrics:()=>metrics},readerWindowMetrics:()=>metrics,registerReaderFonts:()=>{},
   // Native virtual-list painting only; the production data source and row
   // Builder own the data and every action. No domain algorithm is substituted.
   LazyForEach:{create(_id,_owner,data,generator){for(let i=0;i<data.totalCount();i++)generator(data.getData(i));},pop(){}}};
@@ -41,7 +62,15 @@ function sdkPage(f,host,snapshot,definition=pageSource){
   onDebugSource:id=>host.debugSource(id),onExportAll:()=>host.exportAll(),onExportSelected:ids=>host.exportSelected(ids),onCheckSelected:ids=>host.checkSelected(ids)}}).owner;
  node.aboutToAppear();node.initialRender();
  const walk=o=>[o,...[...o.children.values()].flatMap(walk)];
- return{node,controls,walk,update(s){node.updateStateVars({snapshot:s});controls.properties.flush();node.replay();controls.properties.flush();},
+ const standard=walk(node).find(owner=>typeof owner.overlayBottom==='function' && typeof owner.recordMeasurement==='function');
+ assert.ok(standard,'current SourceTools mounts its shared StandardPage');
+ const hostArea=[...standard.nodes.values()].find(actor=>actor.type==='__Common__'&&actor.onAreaChange);
+ assert.ok(hostArea,'StandardPage admission comes from its actual outer Area handler');
+ hostArea.onAreaChange({}, {width:'390vp',height:'844vp'});
+ controls.properties.flush();
+ standard.replay();
+ controls.properties.flush();
+ return{node,controls,walk,frames,update(s){node.updateStateVars({snapshot:s});controls.properties.flush();node.replay();controls.properties.flush();},
   action(label){const actors=walk(node).filter(c=>c instanceof deps.ReaderRecoveryAction&&c.label===label);const actor=actors.at(-1);assert.ok(actor,label+': actual shared recovery actor');return{actor,click:[...actor.nodes.values()].find(n=>n.onClick).onClick};},
   nodes:()=>controls.nodes(node)};
 }
@@ -109,9 +138,15 @@ if(selectedCase==='page-eligibility') {
  const original={generation:7,operationId:'source-original/7',sequence:7,method:'source.setEnabled',confirmation:'unknown',writeStage:'core',busy:false,blocked:true,canRetryOriginal:true,message:'原事项待核对'};
  const source={sourceId:'https://tools-original.test',name:'Original source',enabled:true,enabledExplore:true,bookSource:{bookSourceUrl:'https://tools-original.test',bookSourceName:'Original source'}};
  const snapshot={...empty,sources:[source],selectedSourceIds:[source.sourceId],selectedSourceCount:1,original};const page=sdkPage({},host,snapshot);assert.equal(page.node.canWriteSources(),false);
- const old=page.action('继续');page.update({...snapshot,original:{...original,generation:8,operationId:'replacement/8'}});old.click();assert.deepEqual(calls,[],'old physical actor cannot borrow current original');
- page.update({...snapshot,original:{...original,busy:true}});const busy=page.action('继续');assert.equal(busy.actor.actionEnabled,false);busy.click();assert.deepEqual(calls,[]);
- page.update({...snapshot,original});const current=page.action('继续');current.click();assert.deepEqual(calls,[['continueOriginal',7]],'actual current native actor routes exact generation');
+ const old=page.action('继续');
+ // Invoke the retained callback before layout can replace its old actor.
+ page.node.snapshot={...snapshot,original:{...original,generation:8,operationId:'replacement/8'}};
+ old.click();assert.deepEqual(calls,[],'old physical actor cannot borrow current original');
+ // The SDK probe cannot model ArkUI removing an already-populated branch.
+ const busyPage=sdkPage({},host,{...snapshot,original:{...original,busy:true}});
+ const busy=busyPage.action('继续');assert.equal(busy.actor.actionEnabled,false);busy.click();assert.deepEqual(calls,[]);
+ const currentPage=sdkPage({},host,snapshot);
+ const current=currentPage.action('继续');current.click();assert.deepEqual(calls,[['continueOriginal',7]],'actual current native actor routes exact generation');
  const editor={...snapshot,editorSourceId:source.sourceId,editorRevision:11};
  page.node.snapshot=editor;
  assert.equal(page.node.editorDraftIsEditable(11),false,'an outstanding original write also blocks the native draft');
@@ -120,8 +155,10 @@ if(selectedCase==='page-eligibility') {
  page.node.snapshot={...editor,original:undefined,busy:false};
  assert.equal(page.node.editorDraftIsEditable(11),true);
  assert.equal(page.node.editorDraftIsEditable(10),false,'a retired editor callback cannot edit the current draft');
- page.node.aboutToDisappear();current.click();assert.equal(calls.length,1,'unmounted actor cannot continue');
+ currentPage.node.aboutToDisappear();current.click();assert.equal(calls.length,1,'unmounted actor cannot continue');
+ page.node.aboutToDisappear();
  assert.equal(page.node.editorDraftIsEditable(11),false);
+ for(const frame of page.frames.splice(0)) frame.onIdle(1000000);
  page.node.snapshot=snapshot;
  const raw=page.node.batchControlsRenderKey();page.node.snapshot={...snapshot,original:{...original,busy:false,blocked:false}};assert.notEqual(page.node.batchControlsRenderKey(),raw,'only small batch key tracks actual write admission');
 }

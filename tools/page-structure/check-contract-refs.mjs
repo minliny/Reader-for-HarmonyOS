@@ -58,6 +58,14 @@ export function checkContractRefs(inputs = loadInputs()) {
       try { if (digest(ref.path) !== ref.sha256) fail(id, 'measurement', field, `Input changed: ${ref.path}`, 'SOURCE_DRIFT'); }
       catch (error) { fail(id, 'measurement', field, error.message); }
     }
+    const compensation = page.layers.scroll.facts.obscurationCompensationSource;
+    if (compensation !== undefined) {
+      const field = 'facts.obscurationCompensationSource';
+      source(compensation, id, 'scroll', field);
+      if (compensation.path !== page.source.path && !paths.has(compensation.path)) {
+        fail(id, 'scroll', field, 'Compensation source must be covered by a source fingerprint');
+      }
+    }
     const route = routes.get(page.routeContractRef);
     if (!route) fail(id, 'route', 'routeContractRef', `Unknown route ${page.routeContractRef}`);
     else {

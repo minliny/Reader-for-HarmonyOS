@@ -18,6 +18,9 @@ async function runSelectedCase(selectedCase) {
   const {resolveEtsLoaderRoot} = await import('./lib/tool-environment.mjs');
   const {boundedMembers, boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
   const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
+  const {readerEditingSdk} = await import('./lib/reader-editing-sdk-probe.mjs');
+  const {pureModuleProbe} = await import('./lib/ets-pure-module-probe.mjs');
+  const {actualReaderPostLayoutFrame} = await import('./lib/reader-post-layout-frame-probe.mjs');
   registerHooks({resolve(specifier, context, next) {
     try { return next(specifier, context); }
     catch (error) {
@@ -28,6 +31,11 @@ async function runSelectedCase(selectedCase) {
   const base = new URL('../entry/src/main/ets/', import.meta.url);
   const read = path => readFileSync(new URL(path, base), 'utf8');
   const load = path => import(new URL(path, base));
+  const surfaceResolvers = await load('ui/foundation/ReaderSurfaceResolvers.ts');
+  const fullDirectoryBudget = await load('features/reading/presentation/ReaderFullDirectoryBudget.ts');
+  const {ReaderNativeSlotMeasurement} = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
+    'ReaderNativeSlotMeasurement.ets', {FrameCallback: class {}, readerMeasureSurfaceRect: () => undefined,
+      ReaderPostLayoutFrame: actualReaderPostLayoutFrame()}, ['ReaderNativeSlotMeasurement']);
   const [positioning, markers, snapshots, hierarchy, bookmarkProjection, geometry, frame, scroll,
     measurements, metricsApi, horizontal, widthClass, directoryProjection, navigation,
     bookmarkGeometry, recovery, mangaState, mangaVisual, mangaDisplay, mangaLayout, mangaProjection] =
@@ -68,7 +76,11 @@ async function runSelectedCase(selectedCase) {
   class MangaPort extends Port {}
   class Scroller {
     constructor() { this.commands = []; }
-    scrollEdge(edge) { this.commands.push(edge); }
+    scrollEdge(edge) { this.commands.push(edge); if (edge === Edge.Top) this.firstItemTop = 0; }
+    scrollToIndex(index, smooth, align) {
+      this.commands.push({ index, smooth, align });
+      if (index === 0 && align === 'start') this.firstItemTop = this.contentStartOffset ?? 0;
+    }
     scrollTo(target) { this.commands.push(target); }
     currentOffset() { return {xOffset: 0, yOffset: 0}; }
   }
@@ -78,6 +90,7 @@ async function runSelectedCase(selectedCase) {
     ...geometry, ...frame, ...scroll, ...measurements, ...metricsApi, ...horizontal, ...widthClass,
     ...directoryProjection, ...navigation, ...bookmarkGeometry, ...recovery,
     ...mangaState, ...mangaVisual, ...mangaDisplay, ...mangaLayout, ...mangaProjection,
+    ...surfaceResolvers, ...fullDirectoryBudget, ...readerEditingSdk(), ReaderNativeSlotMeasurement, readerWindowMetrics: () => metrics,
     visual: mangaVisual.MANGA_DIRECTORY_VISUAL, Edge, Scroller,
     ReaderWindowCoordinator: {metrics: () => metrics},
     ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => testRuntime),
@@ -192,13 +205,38 @@ async function runSelectedCase(selectedCase) {
     const oldIdentity = m.identity(), [first] = snapshots.snapshotReaderDirectoryData([m.projectedEntries[0]]);
     flush();
     assert.equal(m.listScroller.commands.length, 0, 'manga timer cannot assume a native List is bound');
+    // Native Grid edge-top may put the first row at the viewport origin.
+    // START is documented to retain contentStartOffset. Check the resulting
+    // coordinate, including the actual page header, instead of API call count.
+    m.listScroller.contentStartOffset = m.mangaContentTopInset();
+    assert.ok(m.listScroller.contentStartOffset > m.geometry.header.bottom);
     m.onListFirstLayout(oldIdentity);
-    assert.equal(m.listScroller.commands.at(-1), Edge.Top);
+    assert.equal(m.listScroller.firstItemTop, m.listScroller.contentStartOffset,
+      'fixed manga first row must retain the actual header/tools clearance');
+    assert.ok(m.listScroller.firstItemTop > m.geometry.header.bottom,
+      'an edge-top request must not put manga content beneath the fixed header');
     assert.equal(m.rowIsCurrent(first, oldIdentity), true);
     m.searchDraft = 'no match'; m.applySearch();
     assert.equal(m.rowIsCurrent(first, oldIdentity), false, 'filtered-out manga row loses action admission');
     m.searchDraft = ''; m.applySearch(); flush();
     assert.equal(m.rowIsCurrent(first, oldIdentity), true);
+    assert.equal(m.listScroller.firstItemTop, m.listScroller.contentStartOffset,
+      'clearing a filter restores complete manga results below the actual chrome');
+    m.navigationActive = true;
+    const parentScrolls = m.listScroller.commands.length;
+    m.searchDraft = 'no match'; m.applySearch(); flush();
+    assert.equal(m.projectedEntries.length, 0);
+    m.searchDraft = ''; m.applySearch(); flush();
+    m.toggleSort(); flush();
+    assert.equal(m.listScroller.commands.length, parentScrolls,
+      'the current async tree owns query, clear and sort positioning');
+    m.navigationActive = false;
+    const originalViewportHeight = m.mangaViewportHeight;
+    m.mangaViewportHeight = 240;
+    assert.equal(m.mangaFlowFooter(), true, 'short host uses the real materialized-prefix branch');
+    m.scheduleTopScroll(); flush();
+    assert.equal(m.listScroller.commands.at(-1), Edge.Top, 'flow prefix itself owns the top spacer');
+    m.mangaViewportHeight = originalViewportHeight;
     m.sourceId = 'source-b'; flush();
     assert.equal(m.rowIsCurrent(first, oldIdentity), false, 'equal row index in a different source cannot borrow an old handler');
     const [current] = snapshots.snapshotReaderDirectoryData([m.projectedEntries[0]]);

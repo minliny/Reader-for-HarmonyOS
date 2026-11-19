@@ -70,14 +70,14 @@ if(selected.length){
   assert.equal(e.owner.dataIndex(0),-1);assert.equal(e.owner.dataIndex(1),-1);assert.deepEqual(e.requests,[]);assert.deepEqual(e.anchors,[],'neither prefix nor empty status becomes a Core rank');
   const emptyList=[...e.owner.nodes.values()].find(n=>n.type==='List');emptyList.onScrollIndex(0,1,0);emptyList.onScrollIndex(1,1,1);assert.equal(e.owner.firstVisibleIndex,-1);assert.deepEqual(e.requests,[]);assert.deepEqual(e.anchors,[],'actual native header/status callbacks cannot publish chapter0');
   for(const failed of[false,true]){const sdk=boundedSurfaceSdk();let prefix=0;
-   const {owner}=createReaderBuilderProbe(surface,['build','hasPrefix','emptyPrefix','prefixBuilder','fallbackBuilder','treePrefixEmptyState','prefixClearAction','prefixRetryAction','headerCount','prefixHeight','prefixIdentity','prefixRevealRevision'],{...sdk.deps,ViewStackProcessor:stackPort,ReaderDirectoryNavigationList:class{}},
+   const {owner}=createReaderBuilderProbe(surface,['build','hasPrefix','emptyPrefix','prefixBuilder','fallbackBuilder','treeEmptyState','prefixClearAction','prefixRetryAction','headerCount','prefixHeight','prefixIdentity','prefixRevealRevision'],{...sdk.deps,ViewStackProcessor:stackPort,ReaderDirectoryNavigationList:class{}},
     {...sdk.hooks,childSources:{...sdk.hooks.childSources,ReaderDirectoryNavigationList:source}});
    Object.assign(owner,{headerCount:1,prefixHeight:180,prefixIdentity:'s',mangaDisplay:false,mangaFontsReady:true,showLoadStatus:true,loadPending:!failed,loadFailed:failed,
     interactionEnabled:true,query:'query',hasRetainedContent:()=>false,prefixBuilder:()=>prefix++,onFirstLayout(){},retryOpen(){},onClearSearch(){},onTreeUserScrollIntent(){},view:undefined});
    owner.initialRender();materialize(owner);assert.equal(prefix,1);assert.equal([...owner.nodes.values()].filter(n=>n.type==='List').length,1);const items=[...owner.nodes.values()].filter(n=>n.type==='ListItem');assert.equal(items.length,2);assert.equal(items[1].constraintSize.minHeight,44);assert.equal(items[1].height,undefined,'loading/error remains natural and scrollable when prefix180 exceeds available122');
   }
-  const sdk=boundedSurfaceSdk();let clears=0;const {owner}=createReaderBuilderProbe(surface,['treePrefixEmptyState','prefixClearAction'],sdk.deps,sdk.hooks);
-  Object.assign(owner,{query:'query',interactionEnabled:true,mounted:true,generation:1,bookId:'book',sourceId:'local',view:{viewId:'empty'},onClearSearch:()=>clears++});owner.treePrefixEmptyState();
+  const sdk=boundedSurfaceSdk();let clears=0;const {owner}=createReaderBuilderProbe(surface,['treeEmptyState','prefixClearAction'],sdk.deps,sdk.hooks);
+  Object.assign(owner,{query:'query',interactionEnabled:true,mounted:true,generation:1,bookId:'book',sourceId:'local',view:{viewId:'empty'},onClearSearch:()=>clears++});owner.treeEmptyState();
   const state=[...owner.children.values()].find(c=>c.message==='没有匹配的目录项');assert(state);state.onAction();assert.equal(clears,1);owner.generation++;state.onAction();assert.equal(clears,1,'old empty-state clear callback cannot enter a successor presentation');
  }
  function defaultConsumer(){

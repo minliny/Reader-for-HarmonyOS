@@ -1,8 +1,6 @@
 {
   "src": [
     "pages/Index",
-    "pages/ReaderRendererPilot",
-    "pages/ReaderStartupRecovery",
-    "pages/ReaderPageStructureVerification"
+    "pages/ReaderStartupRecovery"
   ]
 }

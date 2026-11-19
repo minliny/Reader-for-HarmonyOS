@@ -383,6 +383,8 @@ export struct SearchPage {
   private visibleEnd: number = 0;
   private warmupGroups: SearchBook[][] = [];
   onRetry: () => void = (): void => {};
+  onNeedMore: () => void = (): void => {};
+  private moreResultsQueued: boolean = false;
   onManageSources: () => void = (): void => {};
   @State keyword: string = '';
   @State private focusInputOnAppear: boolean = false;
@@ -513,11 +515,11 @@ export struct SearchPage {
     };
     model.onSubmit = (): void => {
       if (!this.surfaceInputCurrent() || this.searchPanelOwnsInput()) return;
-      if (this.isSweeping()) this.onStop(); else this.submitSearch();
+      if (this.hasActiveSearchRequest()) this.onStop(); else this.submitSearch();
     };
     model.onAction = (): void => {
       if (!this.surfaceInputCurrent() || this.searchPanelOwnsInput()) return;
-      if (this.isSweeping()) this.onStop(); else this.submitSearch();
+      if (this.hasActiveSearchRequest()) this.onStop(); else this.submitSearch();
     };
     model.onClearHistory = (): void => { if (this.surfaceInputCurrent()) this.onClearHistory(); };
     model.onRetryHistory = (): void => { if (this.surfaceInputCurrent()) this.onRetryHistory(); };
@@ -538,7 +540,7 @@ export struct SearchPage {
     model.historyStatus = presentation.historyStatus;
     model.hasSession = this.hasSearchSession();
     model.sourceRecoveryVisible = presentation.kind === 'sourceRequired' || presentation.kind === 'sourceLoadError';
-    model.sweeping = this.isSweeping();
+    model.sweeping = this.hasActiveSearchRequest();
     model.canSubmit = this.canSubmit();
     model.fieldSubmitEnabled = presentation.kind !== 'loading';
     model.focusOnAppear = this.focusInputOnAppear;
@@ -551,6 +553,7 @@ export struct SearchPage {
   private publishVisibleGroups(start: number = this.visibleStart, end: number = this.visibleEnd): void {
     this.visibleStart = Math.max(0, start);
     this.visibleEnd = Math.max(-1, end);
+    this.scheduleMoreResults();
     const groups = this.presentation.kind !== 'results' || this.presentation.stopped === true ||
       this.visibleEnd < this.visibleStart ? [] :
       this.visibleGroups.slice(this.visibleStart, Math.min(this.visibleEnd + 1, this.visibleStart + 6))
@@ -841,15 +844,17 @@ export struct SearchPage {
   }
 
   private isSweeping(): boolean {
-    const operation = this.operation();
-    if (operation !== undefined) return operation.canCancel;
     return this.presentation.kind === 'loading' ||
       (this.presentation.kind === 'results' && this.presentation.searching);
   }
 
+  private hasActiveSearchRequest(): boolean {
+    return this.isSweeping() || (this.presentation.kind === 'results' && this.presentation.continuing === true);
+  }
+
   /** The pill is the stop control while sweeping and always active there. */
   private canSubmit(): boolean {
-    if (this.isSweeping()) {
+    if (this.hasActiveSearchRequest()) {
       return true;
     }
     return this.keyword.trim().length > 0;
@@ -1126,6 +1131,7 @@ export struct SearchPage {
   }
 
   private searchStatusColor(): string {
+    if (this.hasIncompleteSearch()) return readerAppColor('app.search.partialStatus', this.appThemeScheme);
     if (this.presentation.kind === 'error') return readerAppColor('app.search.failedStatus', this.appThemeScheme);
     if (this.isSweeping()) return readerAppColor('TOK_GREEN', this.appThemeScheme);
     if (this.hasSearchNotice('partial') || this.hasSearchNotice('failed')) return readerAppColor('app.search.partialStatus', this.appThemeScheme);
@@ -1140,9 +1146,12 @@ export struct SearchPage {
   private searchStatusLabel(): string {
     if (this.searchStopped()) return '已停止';
     if (this.isSweeping()) return '';
+    if (this.hasIncompleteSearch()) return '结果未确认';
     if (this.presentation.kind === 'error') return '搜索失败';
+    if (this.presentation.kind === 'results' && this.presentation.hasMoreSources && this.presentation.failedSourceCount === 0 &&
+      !this.presentation.localSearchFailed && !this.presentation.sourceListFailed) return '已取得结果';
     if (this.hasSearchNotice('partial') || this.hasSearchNotice('failed')) return '部分失败';
-    return '搜索完成';
+    return this.presentation.kind === 'results' && (this.presentation.hasMoreSources || (this.presentation.incompleteSourceCount ?? 0) > 0) ? '已取得结果' : '搜索完成';
   }
 
   private searchProgressText(): string {
@@ -1152,9 +1161,11 @@ export struct SearchPage {
       if (presentation.totalSourceCount <= 0) return this.isSweeping() ?
         '正在搜索本地与在线书籍…' : this.searchStopped() ? '已停止搜索' : '本次搜索已结束';
       const progress = `${presentation.completedSourceCount}/${presentation.totalSourceCount} 个书源`;
-      return `已处理 ${progress}`;
+      return (presentation.exhaustedSourceCount === presentation.totalSourceCount ? `已处理 ${progress}` : `已取得首轮结果 · ${progress}`) +
+        ((presentation.incompleteSourceCount ?? 0) > 0 ? ` · ${presentation.incompleteSourceCount} 个书源后续结果未确认` : '');
     }
     if (presentation.kind === 'empty' || presentation.kind === 'error') {
+      if ((presentation.incompleteSourceCount ?? 0) > 0) return `已处理首轮 ${presentation.searchedSourceCount} 个书源 · ${presentation.incompleteSourceCount} 个书源结果未确认`;
       if (presentation.searchedSourceCount > 0) return `已处理 ${presentation.searchedSourceCount} 个书源`;
       return this.searchStopped() ? '已停止搜索' : presentation.kind === 'error' ? '本次搜索未完成' : '本次搜索已结束';
     }
@@ -1182,7 +1193,8 @@ export struct SearchPage {
       operationGeneration: this.operation()?.generation, partial: false,
       partialText: '', failed: 0, skipped: 0, canRetry: false };
     if (presentation.kind === 'results' || presentation.kind === 'empty' || presentation.kind === 'error') {
-      facts.partial = presentation.localSearchFailed === true || presentation.sourceListFailed === true;
+      facts.partial = presentation.localSearchFailed === true || presentation.sourceListFailed === true ||
+        (presentation.incompleteSourceCount ?? 0) > 0;
       facts.partialText = facts.partial ? this.partialSearchFailure() : '';
       facts.failed = presentation.failedSourceCount ?? 0;
       facts.skipped = presentation.skippedSourceCount ?? 0;
@@ -1232,7 +1244,7 @@ export struct SearchPage {
     if (displayed.queryRevision !== current.queryRevision || displayed.operationGeneration !== current.operationGeneration) return false;
     const available = kind === 'partial' ? current.partial :
       kind === 'failed' ? current.failed > 0 : kind === 'skipped' && current.skipped > 0;
-    return available && !this.isSweeping() && current.canRetry;
+    return available && !this.hasActiveSearchRequest() && current.canRetry;
   }
 
   private searchNoticeRetryKind(): string {
@@ -1364,7 +1376,10 @@ export struct SearchPage {
           this.scrollRestored = false;
           this.restoreEpoch += 1;
         })
-        .onAreaChange((): void => { if (this.ownsList() && !this.scrollRestored) this.scheduleScrollRestore(); });
+        .onAreaChange((): void => {
+          if (this.ownsList() && !this.scrollRestored) this.scheduleScrollRestore();
+          this.scheduleMoreResults();
+        });
   }
 
   private acceptsResultSelection(book: SearchBook): boolean {
@@ -1437,6 +1452,28 @@ export struct SearchPage {
     if (this.viewState.anchorKey.length === 0) return;
     try { this.viewState.anchorItemY = this.resultScroller.getItemRect(this.resultNativeIndex(this.viewState.anchorIndex)).y; }
     catch (_error) { /* A lazy row can be between layout passes. */ }
+  }
+
+  private scheduleMoreResults(): void {
+    if (this.moreResultsQueued || !this.ownsPageQuery() || (!this.ownsList() && this.visibleGroups.length > 0)) return;
+    const revision = this.viewState.revision;
+    this.moreResultsQueued = true;
+    void Promise.resolve().then((): void => {
+      this.moreResultsQueued = false;
+      const state = this.presentation;
+      if (!this.ownsPageQuery() || (!this.ownsList() && this.visibleGroups.length > 0) || !this.isPresentationVisible() || revision !== this.viewState.revision ||
+        state.kind !== 'results' || state.searching || state.stopped || state.hasMoreSources !== true) return;
+      if (this.visibleGroups.length === 0) { this.onNeedMore(); return; }
+      const visibleCount = Math.max(1, this.visibleEnd - this.visibleStart + 1);
+      if (this.visibleEnd + Math.max(2, visibleCount) >= this.visibleGroups.length - 1) { this.onNeedMore(); return; }
+      // First layout can precede onScrollIndex, including a non-scrolling list.
+      try {
+        const last = this.resultScroller.getItemRect(this.resultNativeIndex(this.visibleGroups.length - 1));
+        const viewport = this.getUIContext().getComponentUtils().getRectangleById(this.resultViewportId());
+        const height = this.getUIContext().px2vp(viewport.size.height);
+        if (height > 0 && last.height > 0 && last.y < height) this.onNeedMore();
+      } catch (_) {}
+    });
   }
 
   private resultNativeIndex(bookIndex: number): number { return bookIndex + 1; }
@@ -1627,6 +1664,8 @@ export struct SearchPage {
     const messages: string[] = [];
     if (this.presentation.localSearchFailed) messages.push(`本地检索：${this.presentation.localFailureMessage ?? '读取未完成，请重试'}`);
     if (this.presentation.sourceListFailed) messages.push(`书源列表：${this.presentation.sourceListFailureMessage ?? '读取未完成，请重试'}`);
+    const incomplete = this.incompleteSearchMessage();
+    if (incomplete.length > 0) messages.push(incomplete);
     if (messages.length > 0) return messages.join('；');
     const failed = (this.presentation.failedSourceCount ?? 0) > 0 ?
       `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
@@ -1638,19 +1677,44 @@ export struct SearchPage {
   private searchFailureTitle(): string {
     if (this.presentation.kind !== 'error') return '搜索失败';
     if (this.presentation.localSearchFailed) return '本地检索未完成';
+    if (this.hasIncompleteSearch()) return '搜索结果未确认';
     return this.presentation.sourceListFailed ? '书源列表加载失败' : '书源搜索失败';
   }
 
   private searchFailureMessage(): string {
     if (this.presentation.kind !== 'error') return '';
+    if (this.hasIncompleteSearch()) return this.partialSearchFailure();
     return this.hasAnySearchNotice() ? '' : this.partialSearchFailure();
+  }
+
+  private hasIncompleteSearch(): boolean {
+    const presentation = this.presentation;
+    return (presentation.kind === 'results' || presentation.kind === 'empty' || presentation.kind === 'error') &&
+      (presentation.incompleteSourceCount ?? 0) > 0;
+  }
+
+  private incompleteSearchMessage(): string {
+    const presentation = this.presentation;
+    if ((presentation.kind !== 'results' && presentation.kind !== 'empty' && presentation.kind !== 'error') ||
+      (presentation.incompleteSourceCount ?? 0) <= 0) return '';
+    const reasons: string[] = [];
+    for (const source of presentation.incompleteSources ?? []) {
+      let reason = '响应有效性尚未确认';
+      if (source.reason === 'unverifiedEmpty') reason = '空结果的有效性尚未确认';
+      else if (source.reason === 'noProgress' || source.reason === 'noNewCandidates') reason = '后续页没有取得新的结果';
+      else if (source.reason === 'urlGuard') reason = '书源搜索请求尚未执行';
+      else if (source.reason === 'legacyReceipt') reason = '当前接口未提供后续页确认';
+      if (!reasons.includes(reason)) reasons.push(reason);
+    }
+    return `${presentation.incompleteSourceCount} 个书源结果未确认` +
+      (reasons.length > 0 ? `：${reasons.join('；')}` : '') + '。可重试未完成的书源，已取得结果会保留。';
   }
 
   @Builder
   private emptyContent(keyword: () => string, searchedSourceCount: () => number) {
         Column() {
           ReaderPageState({ title: this.isStoppedEmpty() ? '搜索已停止' : '没有找到相关书籍', padded: false,
-            message: this.isStoppedEmpty()
+            message: this.hasIncompleteSearch() ? this.incompleteSearchMessage() : this.isStoppedEmpty()
             ? (searchedSourceCount() > 0
               ? `已搜索 ${searchedSourceCount()} 个书源后停止,未找到「${keyword()}」的相关结果`
               : '停止前尚未返回结果，可继续搜索')

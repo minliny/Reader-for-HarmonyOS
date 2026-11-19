@@ -42,6 +42,9 @@ for (const id of selected) {
   const { selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
   const { MangaSourceSwitchGateway, MangaSwitchChapterSelectionRequired } = await import('../entry/src/main/ets/features/manga/application/MangaSourceSwitchGateway.ts');
+  const { ReaderDirectoryDataPublication } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+  const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+  const { ReaderEditingScrollBinding } = readerEditingSdk();
   const { MANGA_DIRECTORY_VISUAL } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
   const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
   const surfacesSource = read('app/composition/ReaderSourceSwitchSurfaces.ets');
@@ -121,6 +124,8 @@ for (const id of selected) {
   const forwarded = [];
   Object.assign(page, { mounted: true, admittedIdentity: page.identity(), admittedEntries: child.params.entries, viewportWidth: 366,
     geometry: { content: { frame: { left: 0, right: 0, width: 366 } } },
+    directoryPublication: new ReaderDirectoryDataPublication(),
+    editingScroll: new ReaderEditingScrollBinding(),
     mangaVisibleTopInset: () => 0, mangaNarrow: () => false, directoryScrollLayout: () => ({}),
     mangaToolbar() {}, mangaFlowFooter: () => false, mangaHeaderTrailingSlot() {}, consumeTemporaryBack: () => false,
     mangaLayoutRow: entry => ({ kind: 'row', columns: 1, entries: [entry], labels: [] }),
@@ -129,7 +134,10 @@ for (const id of selected) {
     onBack: child.params.onBack,
   });
   page.mangaContent();
-  const navigation = [...page.children.values()].find(actor => actor.params.chapterEntries !== undefined);
+  const navigation = [...page.children.values()].find(actor => actor.params.directoryPublication === page.directoryPublication);
+  assert.ok(navigation, 'actual target catalog receives the current directory publication');
+  assert.deepEqual(navigation.params.directoryPublication.entriesAt(navigation.params.directoryEntriesRevision)
+    .map(({ index, title }) => [index, title]), [[0, '目标章节']]);
   assert.equal(navigation.params.interactionEnabled, false, 'semantic catalog native eligibility follows pending owner');
   const entry = { index: 0, title: '目标章节', navigable: true, downloadState: 'unknown' };
   page.mangaFlatRow(entry, page.identity());

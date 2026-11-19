@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
@@ -239,8 +240,9 @@ export struct SettingsSelectOverlay {
   private safeHeight(): number {
     if (this.readerWindowMetricsRevision < 0) return 0;
     const metrics = readerWindowMetrics();
-    return Math.max(0, Math.min(this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height,
-      metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY) - this.safeTop());
+    return Math.max(0, readerKeyboardHostBottom(metrics, this.hostY,
+      this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height, this.hostX,
+      this.hostWidth > 0 ? this.hostWidth : metrics.windowRect.width) - this.safeTop());
   }
   private tabletWidth(): number { return Math.min(this.tabletSpec().width, this.safeWidth()); }
   private tabletTop(): number {

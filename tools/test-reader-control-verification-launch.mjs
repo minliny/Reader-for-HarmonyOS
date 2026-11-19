@@ -1,8 +1,8 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
- 'admission':{description:'Retired motion flag rejection, remaining exact debug cold-start and maintenance admission',resources:[]},
+ 'admission':{description:'Retired motion and renderer launch rejection with exact debug recovery and maintenance admission',resources:[]},
  'ability-consumer':{description:'Actual EntryAbility loadMainContent/Warm Want methods; no window or device',resources:[]},
- 'registration':{description:'Retired motion route absent; remaining required pages uniquely registered',resources:[]}
+ 'registration':{description:'Retired fixture routes absent; normal and startup recovery pages uniquely registered',resources:[]}
 };
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
@@ -26,9 +26,8 @@ function assertLaunchPolicy(policy) {
       for (const value of candidateValues) {
         assert.equal(policy(debug, mode, value, undefined), normal,
           'retired motion flag never opens a route');
-        const expectedRenderer = debug === true && mode === 'debug' && value === true ? rendererPilot : normal;
-        assert.equal(policy(debug, mode, undefined, value), expectedRenderer,
-          'remaining renderer pilot requires exact debug cold-start admission');
+        assert.equal(policy(debug, mode, undefined, value), normal,
+          'retired renderer flag never opens a route');
       }
     }
   }
@@ -41,7 +40,8 @@ assertLaunchPolicy(readerControlVerificationColdStartPage);
 const { stripTypeScriptTypes } = await import('node:module');
 const policySource = await readFile(new URL('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts', import.meta.url), 'utf8');
 const mutants = [
-  policySource.replace("if (motion) return 'pages/Index';", "if (motion) return 'pages/ReaderControlMotionVerification';"),
+  policySource.replace("if (mainLoadFailure) return 'pages/__ReaderStartupMainLoadFailure';",
+    "if (renderer) return 'pages/ReaderRendererPilot'; if (mainLoadFailure) return 'pages/__ReaderStartupMainLoadFailure';"),
   policySource.replace("if (debug !== true || buildModeName !== 'debug') return 'pages/Index';", "if (false) return 'pages/Index';"),
   policySource.replace("if ((motion && renderer) || (mainLoadFailure && (motion || renderer))) return 'pages/Index';", "if (false) return 'pages/Index';"),
 ];
@@ -61,13 +61,15 @@ assert.equal(readerRebuildableCacheClearEnabled(true, 'release', true), false);
 
 return;
 }
-const normal='pages/Index',diagnostic='pages/ReaderControlMotionVerification',rendererPilot='pages/ReaderRendererPilot';
+const normal='pages/Index',recovery='pages/ReaderStartupRecovery';
+const retired=['pages/ReaderControlMotionVerification','pages/ReaderRendererPilot','pages/ReaderPageStructureVerification'];
 if(selectedCase==='ability-consumer'){
  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');const received=[];
  const Ability=selectedProductionMethods(new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url),'EntryAbility',
  ['loadMainContent','onNewWant'],{ReaderStartupTrace:{current:()=>undefined},ReaderSystemFileOpenHost:{receive:want=>received.push(want)},hilog:{error(){}},DOMAIN:0});
- for(const page of [normal,rendererPilot]){
-  const ability=Object.assign(new Ability(),{coldStartPage:page,windowStageGeneration:1}),loads=[],done=[];
+ for(const page of [normal]){
+  const ability=Object.assign(new Ability(),{coldStartPage:page,windowStageGeneration:1,
+    frameworkCapture:{start(){}}}),loads=[],done=[];
   ability.loadMainContent({loadContent:(name,callback)=>{loads.push(name);callback({code:0});}},code=>done.push(code));
   assert.deepEqual(loads,[page]);assert.deepEqual(done,[0]);assert.equal(ability.coldStartPage,page);
   const want={parameters:{readerControlMotionVerification:true,route:'pages/anything'}};ability.onNewWant(want,{});
@@ -82,12 +84,12 @@ if(selectedCase==='ability-consumer'){
  const pages=JSON.parse(await readFile(new URL('../entry/src/main/resources/base/profile/main_pages.json',import.meta.url),'utf8'));
  function assertRegistration(src){
   assert.equal(new Set(src).size,src.length,'route IDs register uniquely');
-  for(const page of [normal,rendererPilot,'pages/ReaderStartupRecovery'])assert.ok(src.includes(page),page+' registered');
-  assert.ok(!src.includes(diagnostic),'reference-only motion route must not register');
+  for(const page of [normal,recovery])assert.ok(src.includes(page),page+' registered');
+  for(const page of retired)assert.ok(!src.includes(page),page+' must not register');
  }
  assertRegistration(pages.src);
- assert.throws(()=>assertRegistration([...pages.src,diagnostic]),'restoring retired route fails');
- assert.throws(()=>assertRegistration(pages.src.filter(page=>page!==rendererPilot)),'removing remaining diagnostic fails');
+ for(const page of retired)assert.throws(()=>assertRegistration([...pages.src,page]),'restoring retired route fails');
+ assert.throws(()=>assertRegistration(pages.src.filter(page=>page!==recovery)),'removing startup recovery fails');
 }
 
 }

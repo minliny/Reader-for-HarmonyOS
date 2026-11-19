@@ -1,7 +1,7 @@
 import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"book-row-input-owners":{"description":"Installed SDK click API and default child-first assembly, scoped intent callbacks and44vp lanes including old kind-less data","resources":[]},"definition": {"description": "demo/storage输入SHA→当前generated字段/provenance一致性，不代表设计用户批准/设备接受", "resources": []}, "native-bindings": {"description": "实际SDK header测量delta/长书名信息不固定高/cover同步/语义色/Normal Button", "resources": []}, "inline-filter": {"description": "实际InlineSelect→ReaderSelect→真实popup Panel→ChoiceRow→两filter及清selection", "resources": []}, "inline-settings": {"description": "实际shared select popup即时发送空间上限或天数意图并保持存储面板", "resources": []}, "inline-quick": {"description": "实际shared quick popup choice经真实page handler", "resources": []}, "inline-range": {"description": "实际shared range book popup保选中复合书identity", "resources": []}, "select-measurement": {"description": "当前shared face与实际measureText px→vp恰一次/最长option/cap/currentchrome", "resources": []}, "area-receipts": {"description": "实际10类Area numeric/vp接纳与每源点Number退化反例、保留List/Scroll", "resources": []}, "font-receipts": {"description": "实际字体pending/ready/retired/remount callbacks与scroll排队归属", "resources": []}, "short-layout": {"description": "实际窄短/大字体sheet/dialog完整document单Scroll且预算内", "resources": []}, "reactive-metrics": {"description": "实际StorageLink订阅驱动保留header safe边和input scale更新", "resources": []}, "storage-publication": {"description": "实际数值slot未知/零/已知保留身份与打开确认的最新candidate禁用", "resources": []}, "retained-dto": {"description": "实际book/chapter同key DTO更新/row与scroll保留/移除退役callback及frozen getter反例", "resources": []}, "management-scroll": {"description": "实际管理模式双frame/dock顺序、用户/过滤/字体/窗口/书identity取消及unbound offset", "resources": []}, "overlay-chrome": {"description": "实际Watch微任务归并overlay→dialog/double→App、scheme/retire/presentation fencing", "resources": []}};
-const confluenceCases = new Set(['book-row-input-owners','list-layout','list-restore','chapter-locate-restore','private-tool-budget','touch-targets','filter-reset','book-row-density']);
+const confluenceCases = new Set(['book-row-input-owners','list-layout','list-restore','chapter-locate-restore','private-tool-budget','touch-targets','filter-reset','book-row-density','chapter-read-states']);
 Object.assign(definitions, {
   'row-geometry-receipts': { description: 'Actual same-owner book row Area callbacks update cover and spacer during modal/background coverage while fresh business input stays rejected. Retired geometry and former eventBook predicate negatives reject.', resources: [] },
   'book-row-density': { description: '批准demo常态24/18/28/80与实际SDK行/More/状态绘制响应、状态/管理/摘要、自然增长和当前行入口', resources: [] },
@@ -11,6 +11,7 @@ Object.assign(definitions, {
   'private-tool-budget': { description: '实际筛选/排序native carrier及父预算320/366/720 x1/1.3/1.6/2/3.2；24vp旧排序carrier负例', resources: [] },
   'touch-targets': { description: '实际tabs/search-clear/management完成44vp原生carrier及陈旧管理epoch拒绝', resources: [] },
   'filter-reset': { description: '实际筛选空PageState清条件/保排序，current opening准入与retired callback拒绝', resources: [] },
+  'chapter-read-states': { description: 'Actual chapter empty/loading/error and management eligibility, retained content and current retry admission', resources: [] },
   'chapter-selection-actions': { description: '实际章节管理按钮最终enabled随当前选择及队列更新，复用动作准入和精确章节身份，实际点击与拒旧回调', resources: [] },
 });
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
@@ -226,7 +227,8 @@ const probeDependencies = { resolveReaderRaisedShape,
     requestAppChrome: () => chromeRequests.push({ owner: 'app' }) },
   ButtonType: enumValue('ButtonType'), ImageFit: enumValue('ImageFit'), InputType: enumValue('InputType'),
   WordBreak: enumValue('WordBreak'), ScrollAlign: enumValue('ScrollAlign'), ControlSize: enumValue('ControlSize'),
-  TouchType: enumValue('TouchType'),
+  TouchType: enumValue('TouchType'), ScrollSource: enumValue('ScrollSource'),
+  TextInputController: class {},
   Scroller: class { scrollTo() {} scrollToIndex() {} currentOffset() { return { yOffset: 0 }; } },
   // This case observes static material attributes with reduceMotion enabled;
   // it passes the native identity recipe through without simulating frames.
@@ -246,6 +248,16 @@ require(sdk + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set('Re
 const { DialogActionView } = pureModuleProbe(dialogSource.slice(0, dialogSource.indexOf('@Component')),
   'ReaderDialogActionView.ets', {}, ['DialogActionView']);
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { ReaderNativeSlotMeasurement } = pureModuleProbe(
+  readFileSync(new URL('../entry/src/main/ets/ui/layout/ReaderNativeSlotMeasurement.ets', import.meta.url), 'utf8'),
+  'ReaderNativeSlotMeasurement.ets',
+  { ReaderPostLayoutFrame: actualReaderPostLayoutFrame(), readerMeasureSurfaceRect: () => undefined },
+  ['ReaderNativeSlotMeasurement']);
+probeDependencies.ReaderNativeSlotMeasurement = ReaderNativeSlotMeasurement;
+const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+Object.assign(probeDependencies, readerEditingSdk());
+
+
 const { ReaderActionAccessibility } = pureModuleProbe(
   readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), 'utf8'),
   'ReaderActionAccessibility.ets', { AccessibilityRoleType: enumValue('AccessibilityRoleType') }, ['ReaderActionAccessibility']);
@@ -678,6 +690,67 @@ if (selectedCase === 'filter-reset') {
     reset();
     assert.equal(f.query, 'successor');
     assert.equal(moves.length, 1);
+}
+
+if (selectedCase === 'chapter-read-states') {
+  const states = [
+    ['ready', 0, [], '暂无可下载章节', false],
+    ['ready', undefined, [], '暂无章节下载信息', false],
+    ['ready', 0, [{ ...completeChapter, title: '仅分组', navigable: false }], '暂无可下载章节', false],
+    ['unloaded', undefined, [], '正在读取章节下载情况…', false],
+    ['unavailable', undefined, [], '章节下载情况暂不可用', false],
+    ['unavailable', 1, [completeChapter], '', false],
+    ['ready', 1, [completeChapter], '', true],
+  ];
+  for (const [projectionStatus, totalChapters, chapters, title, eligible] of states) {
+    const view = { ...book, projectionStatus, totalChapters, chapters };
+    const calls = [];
+    const f = owner('day', { fontsReady: true, books: [view, another], detailKey: book.key,
+      onOpenBook: (selected) => calls.push(selected) });
+    f.chapterPage(f.bookGetter(view));
+    admitListItems(f);
+    const pageStates = [...f.children.values()].filter((child) => typeof child.title === 'string' &&
+      (child.loading || ['暂无可下载章节', '暂无章节下载信息', '章节下载情况暂不可用'].includes(child.title)));
+    assert.deepEqual(pageStates.map((child) => child.title), title ? [title] : [], 'current download chapter state');
+    const state = pageStates[0];
+    if (state) assert.equal(state.loading ?? false, projectionStatus === 'unloaded');
+    if (state?.title === '章节下载情况暂不可用') {
+      assert.equal(state.actionLabel, '重试');
+      const retry = state.onAction;
+      retry();
+      assert.deepEqual(calls, [view]);
+      f.detailKey = another.key; retry();
+      f.detailKey = ''; retry();
+      f.detailKey = book.key;
+      f.books = [{ ...view, projectionStatus: 'ready' }, another]; retry();
+      f.books = [view, another];
+      f.presentationGeneration++; retry();
+      assert.deepEqual(calls, [view], 'retry rejects a different, recovered or retired chapter scene');
+    } else if (state) assert.equal(state.actionLabel ?? '', '');
+    if (!eligible) {
+      f.manageHeaderAction();
+      f.selectionDock();
+      const header = find(f, (node) => node.type === 'Button' && node.id === f.focusKey('manage'), 'manage header');
+      const select = find(f, (node) => node.type === 'Button' && node.id === f.focusKey('select-chapters:' + view.key), 'select chapters');
+      assert.equal(header.enabled, false);
+      assert.equal(select.enabled, false);
+      header.onClick(); select.onClick();
+      assert.equal(f.managing, false, 'empty or unread chapter cannot enter management');
+    } else {
+      f.manageHeaderAction();
+      const header = find(f, (node) => node.type === 'Button' && node.id === f.focusKey('manage'), 'ready manage header');
+      assert.equal(header.enabled, true);
+      header.onClick();
+      assert.equal(f.managing, true, 'a current proven chapter still enters management');
+      f.books = [{ ...view, chapters: [], totalChapters: 0 }, another];
+      f.manageHeaderAction();
+      const done = find(f, (node) => node.type === 'Button' && node.id === f.focusKey('manage'), 'done header');
+      assert.equal(done.enabled, true);
+      done.onClick();
+      assert.equal(f.managing, false, 'current management can exit after its rows disappear');
+    }
+  }
+  return;
 }
 
 if (selectedCase === 'book-row-input-owners') {
@@ -1326,6 +1399,7 @@ function modeOwner(detail = false, changes = {}, Component = probe.Component) {
   const positions = [];
   const scroller = { currentOffset: () => ({ yOffset: 143 }), scrollTo: value => positions.push(value) };
   return { positions, page: owner('day', { fontsReady: true, detailKey: detail ? book.key : '',
+    books: detail ? [{ ...book, chapters: [completeChapter] }, another] : [book, another],
     listScroller: scroller, chapterScroller: scroller, chapterOffset: 0, ...changes }, Component) };
 }
 for (const detail of [false, true]) {
@@ -1384,6 +1458,44 @@ for (const detail of [false, true]) {
   for (const frame of scheduledFrames.slice(start)) frame.onIdle();
   assert.deepEqual(positions, [{ xOffset: 0, yOffset: 143 }],
     'rapid mode toggles reuse the live transition anchor instead of a transient clamp');
+  selection.aboutToDisappear();
+}
+for (const detail of [false, true]) {
+  let nativeOffset = 143;
+  const positions = [];
+  const scroller = { currentOffset: () => ({ yOffset: nativeOffset }), scrollTo: value => positions.push(value) };
+  const { page: selection } = modeOwner(detail, { listScroller: scroller, chapterScroller: scroller });
+  selection.setManaging(true);
+  selection.recordDockHeight(112);
+  scheduledFrames.at(-1).onIdle();
+  assert.equal(selection.managingScrollAnchor, undefined, 'the incoming transition has settled');
+  nativeOffset = 80; // The shorter management List has clamped at its end.
+  const beforeBack = scheduledFrames.length;
+  assert.equal(selection.consumeBack(), true);
+  const frames = scheduledFrames.slice(beforeBack);
+  for (const frame of frames) frame.onIdle();
+  assert.deepEqual(positions.at(-1), { xOffset: 0, yOffset: 143 },
+    'Back without a user scroll must restore the original browsing offset after the management viewport clamped');
+  selection.aboutToDisappear();
+}
+for (const detail of [false, true]) for (const intent of ['tap', 'SCROLLER', 'DRAG', 'OTHER_USER_INPUT']) {
+  let offset = 143;
+  const positions = [];
+  const scroller = { currentOffset: () => ({ yOffset: offset }), scrollTo: value => positions.push(value) };
+  const { page: selection } = modeOwner(detail, { listScroller: scroller, chapterScroller: scroller });
+  selection.setManaging(true);
+  selection.recordDockHeight(112);
+  scheduledFrames.at(-1).onIdle();
+  offset = 80;
+  if (detail) selection.chapterPage(selection.bookGetter(book)); else selection.bookPage();
+  const list = find(selection, node => node.type === 'List', 'current managing List observes real scroll source');
+  list.onTouch({ type: 'TouchType.Down' });
+  if (intent !== 'tap') list.onWillScroll(5, 'ScrollState.Scroll', 'ScrollSource.' + intent);
+  const beforeBack = scheduledFrames.length;
+  assert.equal(selection.consumeBack(), true);
+  for (const frame of scheduledFrames.slice(beforeBack)) frame.onIdle();
+  assert.deepEqual(positions.at(-1), { xOffset: 0, yOffset: intent === 'tap' || intent === 'SCROLLER' ? 143 : 80 },
+    intent + ' uses the browsing anchor unless a real user scroll superseded it');
   selection.aboutToDisappear();
 }
 for (const [field, value] of [['query', 'new query'], ['bookType', 'manga'], ['stateFilter', 'downloaded'],

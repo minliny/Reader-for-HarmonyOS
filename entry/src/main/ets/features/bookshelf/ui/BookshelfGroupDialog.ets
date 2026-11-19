@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { FrameCallback } from '@kit.ArkUI';
 import { BookshelfGroupPresentation } from '../presentation/BookshelfGroupPresentation';
 import { BookshelfGroupSelector } from './BookshelfGroupSelector';
@@ -71,8 +72,9 @@ export struct BookshelfGroupDialog {
   private recoveryAvailableHeight(): number {
     this.metricsRevision;
     const metrics = readerWindowMetrics();
-    const bottom = metrics.windowRect.height - this.originY - readerInteractiveSafeBottom(metrics, true);
-    return Math.max(0, Math.min(this.viewportHeight >= 0 ? this.viewportHeight : bottom, bottom) - this.recoveryInsetTop() - 12);
+    const bottom = readerKeyboardHostBottom(metrics, this.originY,
+      this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height);
+    return Math.max(0, bottom - this.recoveryInsetTop() - 12);
   }
 
   @Builder

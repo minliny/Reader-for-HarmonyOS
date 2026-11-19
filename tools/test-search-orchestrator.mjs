@@ -312,7 +312,8 @@ const orchestratorSource = read('entry/src/main/ets/features/search/application/
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '');
 const combined = stripTypeScriptTypes(
-  `${authorMetadataModule}\n${sourceCategoryModule}\n${errorMessageModule}\n${operationFactsModule}\n${gatewaySource}\n${orchestratorSource}`
+  `${authorMetadataModule}\n${read('entry/src/main/ets/app/library/BookSearchPageProgress.ts')}\n${sourceCategoryModule}\n${errorMessageModule}\n${operationFactsModule}\n${gatewaySource}\n${orchestratorSource}`
+    .replace(/^import .*BookSearchPageProgress['"];\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(combined).toString('base64')}`;
@@ -651,7 +652,7 @@ case "worker-concurrency-dedup": {
   assert.equal(present.totalSourceCount, 8);
   assert.equal(present.completedSourceCount, 8);
   assert.equal(present.failedSourceCount, 0, 'a fully healthy sweep reports zero failed sources');
-  assert.equal(present.operation.fact, 'current');
+  assert.equal(present.operation.fact, 'partial', 'legacy page without receipt completes the first round but cannot prove source exhaustion');
   assert.equal(present.operation.value.resultCount, present.results.length);
   assert.ok(present.results.every((r) => r.searchRequestId === present.results[0].searchRequestId),
     'every result of one sweep carries the same searchRequestId');

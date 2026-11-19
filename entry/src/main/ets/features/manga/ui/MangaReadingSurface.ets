@@ -195,7 +195,7 @@ export struct MangaReadingSurface {
   private resumeChangedContent: boolean = false;
   private layoutGeneration: number = 0;
   private viewportGeneration: number = 0;
-  private presentationGeneration: number = 0;
+  @State private presentationGeneration: number = 0;
   private pageTurnInputRevision: number = 0;
   private viewportInputRevision: number = -1;
   private boundaryInputRevision: number = -1;

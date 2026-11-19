@@ -36,7 +36,7 @@ const providerFamilyModule = stripTypeScriptTypes(
 ).replace(/^export /gm, '');
 
 const executable = stripTypeScriptTypes(
-  (authorMetadataModule + '\n' + searchTimingModule + '\n' + sharedSearchDecoderModule + '\n' + gateway
+  (authorMetadataModule + '\n' + readFileSync(resolve(repo,'entry/src/main/ets/app/library/BookSearchPageProgress.ts'),'utf8') + '\n' + searchTimingModule + '\n' + sharedSearchDecoderModule + '\n' + gateway
     .replace(/^import \{ decodeReaderDirectoryDisplayMetadata \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/reading/application/ReaderDirectoryDisplayMetadata.ts'), 'utf8')
         .replace(/^import type .*;$/m, '').replace(/^export /gm, ''))
@@ -57,6 +57,7 @@ const executable = stripTypeScriptTypes(
       () => sourceCategoryModule)
     .replace(/^import \{[^\n]+\} from ['"]\.\/SourceSwitchProviderFamily['"];$/m,
       () => providerFamilyModule))
+    .replace(/^import .*BookSearchPageProgress['"];\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookSearchTiming(?:\.ts)?['"];?\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'\"]*search\/(?:application\/)?SearchGateway['"];?\n/gm, ''),
@@ -83,7 +84,7 @@ const cachedAt=Date.now();
 const ownedHosts=[];let sourceOwnerFixture,setCurrentRuntime,productionMotionMethods;
 
 if(['progressive','host-known','host-failed-delta'].includes(id)){const loaded=await import('./lib/source-switch-owner-probe.mjs');setCurrentRuntime=loaded.setCurrentRuntime;sourceOwnerFixture=(...args)=>{const f=loaded.fixture(...args);ownedHosts.push(f.host);return f;};}
-if(id==='host-known')({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
+
 const clock=['progressive','cancellation'].includes(id)?controlledClock():undefined;try{
 if(id==='identity-family'){
 assert.notEqual(
@@ -259,7 +260,7 @@ for (const scenario of ['all-http', 'all-rule-failed', 'successful-empty', 'mixe
     ] : [] } };
   } };
   const gw = new SourceSwitchGateway(owner);
-  const run = gw.discoverCandidates(query.sourceId, query.bookId, query.bookName, () => true, [], 'text',
+  const run = gw.discoverCandidates(query.sourceId, query.bookId, query.bookName, () => true, 'text',
     async rows => { published.push(rows); }, query);
   if (scenario === 'all-http' || scenario === 'all-rule-failed' || scenario === 'failure-and-empty') {
     await assert.rejects(run, error => {
@@ -309,7 +310,7 @@ for (const late of ['success', 'failure']) {
     if (late === 'failure') throw Error('late private failure');
     return searchResult(params.sourceId, [{ bookId: '/book', title: '大明望族', author: '府天' }]);
   } };
-  const run = new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族', () => current, [], 'text',
+  const run = new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族', () => current, 'text',
     async rows => { published.push(rows); });
   await dispatch; current = false; release();
   assert.deepEqual(await run, { kind: 'noSources' });
@@ -845,7 +846,7 @@ if(id==='missing-only'){
     if(method==='source.list')return{data:{sources:['a','b','c'].map(sourceId=>({sourceId,name:sourceId,enabled:true}))}};
     assert.equal(method,'book.search');searched.push(params.sourceId);return searchResult(params.sourceId,[]);
   }};const gateway=new SourceSwitchGateway(owner);
-  await gateway.discoverCandidates('a','/book','鸣龙',()=>true,['a','b']);assert.deepEqual(searched,['c']);
+  await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c'],'title discovery visits every enabled source without cross-query exclusions');
   searched.length=0;await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c']);
 }
 }
@@ -861,12 +862,15 @@ if(id==='host-known'){
   }};
   const gateway=new SourceSwitchGateway(owner);
   const query={sourceId:'a',bookId:'/book',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
-  const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'), ['knownSearchSourceCandidates'], {searchCandidateRank,readBookSearchTiming});
-  const page=Object.assign(new Index(),{detailReturnRoute:'search',sourceSwitchState:{kind:'discovering'},
-    searchDetailCandidates:['a'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
-      bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))});
+  const {actualSourceSwitchPresentation}=await import('./lib/source-switch-presentation-probe.mjs');
+  const Presentation=actualSourceSwitchPresentation({});
+  const presenter=new Presentation();
+  const page={sourceSwitchState:{kind:'discovering'},searchDetailCandidates:['a'].map(sourceId=>({
+    sourceId,sourceName:sourceId,sourceRuleVersion:'v1',bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))};
+  const context=presenter.workflowContext({entry:()=>({book:{sourceId:'a',bookId:'/book',title:'鸣龙',author:'关关公子'},
+    inBookshelf:false,toc:[],sessionActive:false}),shelfBook:()=>undefined,searchCandidates:()=>page.searchDetailCandidates});
   const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
-  const host=new f.Constructor(owner);ownedHosts.push(host);host.open({query,inBookshelf:false,toc:[],knownCandidates:page.knownSearchSourceCandidates(query),readKnownCandidates:()=>page.knownSearchSourceCandidates(query),searchedSourceIds:[]},
+  const host=new f.Constructor(owner);ownedHosts.push(host);host.open(context,
     {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
   // Intent authority admission happens first; known rows still paint before registry/cache RPC completes.
   for(let i=0;i<4;i++)await new Promise(r=>setImmediate(r));
@@ -875,11 +879,11 @@ if(id==='host-known'){
   page.searchDetailCandidates.push({sourceId:'b',sourceName:'b',sourceRuleVersion:'v1',bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'});
   listener({reset:false,identities:[{sourceId:'b',bookId:'/book'}]});
   assert.deepEqual(calls,['source.list'],'late candidate waits behind initial cache I/O');
-  release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
+  release();await new Promise(r=>setTimeout(r,150));
   assert.equal(page.sourceSwitchState.candidates.length,2);
   assert.deepEqual(calls.slice(0,3),['source.list','search-book.related','search-book.batch.get']);
-  assert.ok(calls.includes('book.search') || calls.includes('search-book.related'),
-    'the seeded candidates continue through the real incremental refresh path');
+  assert.equal(calls.includes('book.search'),false,
+    'qualified cached alternatives avoid unnecessary fresh discovery without excluding attempted sources');
 }
 }
 if(id==='host-failed-delta'){
@@ -907,7 +911,7 @@ for (const reset of [false, true]) {
   const page={sourceSwitchState:{kind:'discovering'}};
   const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
   const host=new f.Constructor(owner);ownedHosts.push(host);
-  host.open({query,inBookshelf:false,toc:[],knownCandidates:[],searchedSourceIds:[]},
+  host.open({query,inBookshelf:false,toc:[],knownCandidates:[]},
     {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
   const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)); };
   await settle(); calls.length = 0;
@@ -949,12 +953,12 @@ for (const phase of ['debounce', 'in-flight']) {
   };
   const gateway = new SourceSwitchGateway(owner);
   gateway.loadCachedCandidates = async () => [];
-  gateway.discoverCandidates = async (_source, _book, _keyword, _current, _excluded, _kind, completed) => {
+  gateway.discoverCandidates = async (_source, _book, _keyword, _current, _kind, completed) => {
     await completed([candidate]);
     return { kind: 'sources', candidates: [candidate] };
   };
   const run = gateway.refreshCandidates({ sourceId: 'a', bookId: '/book', bookName: '鸣龙', author: '关关公子',
-    currentChapterIndex: 0, currentChapterTitle: '' }, () => current, [], rows => progress.push(rows));
+    currentChapterIndex: 0, currentChapterTitle: '' }, () => current, rows => progress.push(rows));
   for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve));
   listener({ reset: false, identities: [{ sourceId: 'a', bookId: '/book' }] });
   if (phase === 'in-flight'){await clock.advance(100);await started;}

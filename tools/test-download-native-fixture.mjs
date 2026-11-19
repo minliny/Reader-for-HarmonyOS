@@ -8,7 +8,7 @@ const selected = selectContractCases({
   'initializer-safety': 'Actual SDK SharedDownloadPage initializer, exact debug and parent/shared checked font gates, normal public initial view. Management and modal state remain owned by the page.',
   'no-business': 'Typed in-memory text/manga chapter and policy samples; no Entry or runtime Core/Host/network/file port, scale setter or substituted font.',
   'callback-retire': 'Actual initializer callbacks and bridge: memory/log-only actions, current generation/read target validation, stale callback and cleanup retirement, actual area separate from system scale.',
-  'state-samples': 'Actual ten public input projections, default and restored query/detail views, one pending refresh/recovery and coalesced chapter read with generation/retirement guards.',
+  'state-samples': 'Actual twelve public input projections, default and restored query/detail views, one pending refresh/recovery and coalesced chapter read with generation/retirement guards.',
 });
 if (selected.length) {
   registerHooks({ resolve(specifier, context, next) {
@@ -122,7 +122,7 @@ if (selected.length) {
     f.page.fontsReady=false; f.page.onParentFontsChanged(); assert.equal(f.page.downloadFontsReady,false); assert.equal(f.page.consumeBack(),false); next.onRefresh(); assert.equal(f.actions.length,count);
   }
   async function stateSamples() {
-    assert.equal(DOWNLOAD_FIXTURE_SCENARIOS.length, 9);
+    assert.equal(DOWNLOAD_FIXTURE_SCENARIOS.length, 11);
     for (const scenario of ['content', ...DOWNLOAD_FIXTURE_SCENARIOS.map(item => item.value)]) {
       const f = fixture({ scenario }); f.page.aboutToAppear(); await tick(); f.page.initialRender();
       const ports = f.props(), books = ports.books;
@@ -138,7 +138,9 @@ if (selected.length) {
       if (scenario === 'filtered-empty') assert.deepEqual(filterDownloadBooks(books, ports.initialViewState), []);
       if (scenario.startsWith('chapter-')) {
         assert.equal(ports.initialViewState.detailKey, books[0].key);
-        assert.equal(books[0].projectionStatus, scenario === 'chapter-error' ? 'unavailable' : 'unloaded');
+        assert.equal(books[0].projectionStatus, scenario === 'chapter-error' ? 'unavailable' :
+          scenario === 'chapter-loading' ? 'unloaded' : 'ready');
+        assert.equal(books[0].totalChapters, scenario === 'chapter-empty' ? 0 : undefined);
         assert.equal(books[0].chapters.length, 0);
         assert.equal(books[0].downloadError, undefined, 'a projection error never creates a task failure');
         if (scenario === 'chapter-error') {

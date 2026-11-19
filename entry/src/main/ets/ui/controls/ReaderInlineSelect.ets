@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../foundation/ReaderWindowMetrics';
 import { ReaderSelect, type ReaderSelectVariant } from './ReaderSelect';
@@ -81,8 +82,8 @@ export struct ReaderInlineSelect {
   private popupViewportHeight(): number {
     const metrics = readerWindowMetrics();
     const height = this.metricsRevision < 0 ? 0 : metrics.windowRect.height;
-    return Number.isFinite(height) ? Math.max(0, height - readerInteractiveSafeTop(metrics) -
-      readerInteractiveSafeBottom(metrics, true) - 32) : 0;
+    return Number.isFinite(height) ? Math.max(0, readerKeyboardHostBottom(metrics, 0, height) -
+      readerInteractiveSafeTop(metrics) - 32) : 0;
   }
 
   @Builder

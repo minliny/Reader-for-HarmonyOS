@@ -3,6 +3,7 @@ import { deriveStructure, prototypeForBrief } from './derive-structure.mjs';
 import { loadInputs, safePath, digest, diagnostic, printReport, isMain, registrations, isEmbeddedContent } from './lib.mjs';
 import { checkDesignAuthority } from './design-authority.mjs';
 import { checkLayoutEvidence } from './layout-evidence.mjs';
+import { checkNormalPageEvidence } from './normal-page-evidence.mjs';
 
 // These rules consume typed declarations. Source bindings below independently
 // detect selected stale declarations. They do not claim native layout behavior.
@@ -22,7 +23,13 @@ export function evaluatePage(page, model) {
     else if (group.length > 1 && (new Set(group.map(a => a.owner)).size > 1 || group.filter(a => a.priority === 'primary').length > 1)) add('G-02', 'footer', 'actions', `${id}: duplicate action without shared owner/context hierarchy`);
   }
   if (f.scroll.underlap || f.header.presentation === 'Floating') {
-    if (f.scroll.obscurationCompensation === null) diagnostics.push(diagnostic('G-03', page.pageId, 'scroll', 'obscurationCompensation', 'Dynamic compensation requires measured geometry; null does not establish absence or PASS', 'NOT_RUN'));
+    const compensation = f.scroll.obscurationCompensationSource;
+    if (compensation !== undefined) {
+      const pinned = [page.source, ...(page.sourceInputs ?? [])].some(input => input.path === compensation.path);
+      if (f.scroll.obscurationCompensation !== null || !pinned || !compensation.symbol) {
+        add('G-03', 'scroll', 'obscurationCompensationSource', 'Dynamic compensation requires a fingerprinted declaration and a null constant');
+      }
+    } else if (f.scroll.obscurationCompensation === null) diagnostics.push(diagnostic('G-03', page.pageId, 'scroll', 'obscurationCompensation', 'Compensation is unknown without a constant or a bound geometry declaration', 'NOT_RUN'));
     else if (!(f.scroll.obscurationCompensation > 0)) add('G-03', 'scroll', 'obscurationCompensation', 'Underlap/floating header has no compensation');
   }
   if (fixedFooter && (f.scroll.footerInset === 'none' || f.footer.contentEndInset === 'none')) add('G-04', 'scroll', 'footerInset', 'Fixed footer has no end inset');
@@ -54,6 +61,7 @@ export function checkRegister(inputs = loadInputs(), { bindSource = true } = {})
   const designDigests = new Map();
   for (const { page, host } of all) {
     diagnostics.push(...evaluatePage(page, inputs.model));
+    diagnostics.push(...checkNormalPageEvidence(page, inputs.model));
     if (page.layers.visual.facts.designContractRef || page.layers.visual.result === 'PASS') {
       diagnostics.push(...checkDesignAuthority(page, inputs.designAuthority, designDigests).map(item =>
         diagnostic(item.rule, page.pageId, 'visual', 'designContractRef', item.message)));
@@ -71,6 +79,19 @@ export function checkRegister(inputs = loadInputs(), { bindSource = true } = {})
         const query = deriveStructure(page.brief, inputs.model).query;
         if (page.layers.query.facts.placement !== query) diagnostics.push(diagnostic('QUERY_VIEWPORT', page.pageId, 'query', 'brief.queryViewport', `Measured viewport requires ${query}, registered ${page.layers.query.facts.placement}`));
       } catch (error) { diagnostics.push(diagnostic('QUERY_VIEWPORT', page.pageId, 'query', 'brief.queryViewport', error.message)); }
+    }
+    if (page.layers.query.facts.inlineComposition === 'boundedEditor') {
+      const { placement, entryPlacements } = page.layers.query.facts;
+      const { viewportHeight, filterStackHeight } = page.layers.informationArchitecture.facts.firstScreenBudget ?? {};
+      if (!embedded || !page.brief.queryViewport || placement !== 'Inline' ||
+        entryPlacements?.length !== 1 || entryPlacements[0] !== 'inline') {
+        diagnostics.push(diagnostic('QUERY_COMPOSITION', page.pageId, 'query', 'inlineComposition', 'Bounded editor requires an embedded, measured Inline query with one entry'));
+      }
+      if (!Number.isFinite(viewportHeight) || !Number.isFinite(filterStackHeight) ||
+        filterStackHeight <= 0 || filterStackHeight >= viewportHeight ||
+        page.layers.scroll.facts.primaryCount !== 1 || page.layers.scroll.facts.underlap) {
+        diagnostics.push(diagnostic('QUERY_COMPOSITION', page.pageId, 'query', 'inlineComposition', 'Bounded editor requires a positive measured share and one unobscured primary results list'));
+      }
     }
     try { if (!embedded) derived = deriveStructure(page.brief, inputs.model); }
     catch (error) { diagnostics.push(diagnostic('DERIVE', page.pageId, 'scaffold', 'brief', error.message)); }

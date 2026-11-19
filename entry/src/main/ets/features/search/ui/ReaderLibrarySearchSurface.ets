@@ -1,3 +1,6 @@
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import curves from '@ohos.curves';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -73,6 +76,9 @@ class LibrarySearchFocusFrame extends FrameCallback {
 /** Persistent library bar and its transition. SearchHost remains the owner of search facts. */
 @Component
 export struct ReaderLibrarySearchSurface {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-library-search-surface');
+  private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @ObjectLink model: ReaderLibrarySearchModel;
@@ -130,6 +136,7 @@ export struct ReaderLibrarySearchSurface {
   private activeMounting: number = 0;
   private activeIdentity: number = 0;
   @State private surfaceWindowY: number = 0;
+  @State private surfaceViewportHeight: number = -1;
   @State private measuredHistoryFeedback: number = 0;
   @State private measuredHistoryFeedbackKey: string = '';
   private lastCardSuppressed: boolean = false;
@@ -554,12 +561,12 @@ export struct ReaderLibrarySearchSurface {
   }
   private surfaceHeight(): number {
     this.metricsRevision;
-    return Math.max(0, ReaderWindowCoordinator.metrics().windowRect.height - this.surfaceWindowY);
+    const windowHeight = Math.max(0, ReaderWindowCoordinator.metrics().windowRect.height - this.surfaceWindowY);
+    return this.surfaceViewportHeight >= 0 ? Math.min(windowHeight, this.surfaceViewportHeight) : windowHeight;
   }
   private availableBottom(): number {
     const metrics = ReaderWindowCoordinator.metrics();
-    return Math.max(0, this.surfaceHeight() -
-      Math.max(readerVisualSafeBottom(metrics), metrics.keyboardInsets.bottom));
+    return readerKeyboardHostBottom(metrics, this.surfaceWindowY, this.surfaceHeight());
   }
   private historyLimit(): number {
     const barBottom = readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset,
@@ -628,6 +635,12 @@ export struct ReaderLibrarySearchSurface {
     if (node !== null) {
       const y = node.getPositionToWindowWithTransform().y;
       if (Number.isFinite(y) && Math.abs(y - this.surfaceWindowY) > .1) this.surfaceWindowY = y;
+      try {
+        const info = this.getUIContext().getComponentUtils().getRectangleById('reader-library-search-surface');
+        const height = this.getUIContext().px2vp(info.size.height);
+        if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.surfaceViewportHeight) > .1)
+          this.surfaceViewportHeight = height;
+      } catch (_detached) { /* A later current Area supplies the native box. */ }
     }
     this.metricsChanged();
   }
@@ -688,7 +701,8 @@ export struct ReaderLibrarySearchSurface {
             space: { main: LengthMetrics.vp(5), cross: LengthMetrics.vp(5) } }) {
             ForEach([this.fieldIdentity()], (key: string) => {
               // The closing track keeps the field mounted after search mode ends.
-              ReaderSearchField({ variant: 'bookPanel', mode: 'submit', focusOnAppear: false,
+              ReaderSearchField({ editingHost: this.editingHost,
+                editingCurrent: (): boolean => this.acceptsField(this.model.currentOwner(), key), variant: 'bookPanel', mode: 'submit', focusOnAppear: false,
                 text: this.model.keyword, placeholder: '搜索书名、作者…', accessibilityLabel: '搜索书名或作者',
                 expandedLayout: this.expandedLayout, clearable: true, submitEnabled: this.model.fieldSubmitEnabled,
                 onTextChange: this.textAction(this.model.currentOwner(), key),
@@ -848,7 +862,9 @@ export struct ReaderLibrarySearchSurface {
           content: (): void => { this.header(); }, onHeightChange: (height: number, key: number): void => this.captureHeader(height, key) });
       }.width('100%').padding({ left: this.horizontalInset(true), right: this.horizontalInset(false) })
         .margin({ top: bookshelfHeaderSpec().topInset }).zIndex(4).hitTestBehavior(HitTestMode.Transparent);
-    }.id('reader-library-search-surface').width('100%').height('100%')
+    }.id(this.editingScroll.id).width('100%').height('100%')
+      .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
+      .onDisAppear((): void => this.editingScroll.unmount())
       .hitTestBehavior(HitTestMode.Transparent).onAreaChange((): void => this.surfaceAreaChanged());
   }
 }

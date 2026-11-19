@@ -137,6 +137,7 @@ export struct ReaderLabeledIconAction {
   @Prop showDivider: boolean = false;
   @Prop actionEnabled: boolean = true;
   @Prop focusId: string = '';
+  textLayoutOptions: TextOptions | undefined = undefined;
   onAction: () => void = (): void => {};
   @State private rowPaintShape: ReaderRaisedShape | undefined = undefined;
   @State private rowPaintAppearanceRevision: number = 0;
@@ -152,7 +153,7 @@ export struct ReaderLabeledIconAction {
     Image(this.icon).width(resolveReaderLabeledIconActionSpec(this.specId).iconSize).height(resolveReaderLabeledIconActionSpec(this.specId).iconSize)
       .objectFit(ImageFit.Contain).opacity(this.actionEnabled ? 1 : (resolveReaderLabeledIconActionSpec(this.specId).disabledIconOpacity ?? 0.45))
       .accessibilityLevel('no');
-    Text(this.label).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme, this.fontScale()));
+    Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme, this.fontScale()));
   }
   build() {
     if (resolveReaderLabeledIconActionSpec(this.specId).outerHit ||

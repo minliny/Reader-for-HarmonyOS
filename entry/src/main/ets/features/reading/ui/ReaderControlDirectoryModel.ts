@@ -13,6 +13,7 @@ export interface ReaderControlDirectoryRow {
 export interface ReaderControlDirectorySnapshot {
   rows: ReaderControlDirectoryRow[];
   loading: boolean;
+  bookmarkFilteredEmpty: boolean;
   catalogState: 'ready' | 'partial' | 'loading' | 'failed';
   currentTitle: string;
   currentPosition: string;
@@ -62,6 +63,7 @@ export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], 
     (catalog.loading === true ? 'loading' : catalog.loadFailed === true ? 'failed' : 'partial') : 'ready';
   return { rows: rows, catalogState, loading: entries.length === 0 ||
     (tab === 'bookmarks' && readerBookmarkLoadState(entries) === 'loading'), targetRow: targetRow,
+    bookmarkFilteredEmpty: tab === 'bookmarks' && rows.length === 0 && query.trim().length > 0,
     currentTitle: currentOrdinal < 0 ? '' : entries[currentOrdinal].title,
     currentPosition };
 }

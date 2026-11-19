@@ -14,6 +14,8 @@ import { resolveSourceManagementLayout } from '../../entry/src/main/ets/features
 import { readerSourceCategoryLabel } from '../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
 import { foundationSpecs } from './reader-foundation-control-probe.mjs';
 import { labeledIconSpecs } from './reader-labeled-icon-action-probe.mjs';
+import { readerEditingSdk } from './reader-editing-sdk-probe.mjs';
+import { READER_FEEDBACK_EXTENDED_MS } from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
 
 // Only unrelated material/scroll rendering is outside this action proof.
 // No Watch callback or member reachable from one may cross this seam.
@@ -98,7 +100,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
     'ReaderPostLayoutFrame', stripTypeScriptTypes(closure.support) + ';return {SourceListDataSource,SourceListLayoutFrame};')(FramePort, actualReaderPostLayoutFrame());
   const owner = sdk.consumer(source, closure.members, {
     ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers,
-    ...foundationSpecs(), ...labeledIconSpecs(),
+    ...foundationSpecs(), ...labeledIconSpecs(), ...readerEditingSdk(), READER_FEEDBACK_EXTENDED_MS,
     resolveSourceManagementLayout, readerSourceCategoryLabel, readerRecoveryView, ...support,
     hilog: { info() {}, warn() {}, error() {} },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },

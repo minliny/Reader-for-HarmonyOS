@@ -391,6 +391,7 @@ export struct ReaderFullDirectory {
   private directoryRulesForm(identity: string, bookId: string) {
     Column() {
       ReaderDirectoryRules({ reduceMotion: this.reduceMotion, bookId,
+        previewActive: this.directoryRulesVisible && this.interactive,
         availableWidthVp: this.panelWidth(), availableHeightVp: this.panelViewportHeight(),
         interactionEnabled: this.directoryRulesVisible && this.interactive,
         focusTargetId: this.directoryRulesFocusId(identity, true),

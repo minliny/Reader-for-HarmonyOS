@@ -25,6 +25,19 @@ export interface SearchOperationValue {
 
 export type SearchOperationFacts = OperationFacts<SearchOperationValue>;
 
+export interface SearchIncompleteSource {
+  sourceId: string;
+  sourceVersion?: string;
+  requestedPage: number;
+  /** Owner diagnostic code; the UI maps known codes, never displays raw text. */
+  reason: string;
+}
+
+export interface SearchIncompleteProjection {
+  incompleteSourceCount?: number;
+  incompleteSources?: SearchIncompleteSource[];
+}
+
 /**
  * The search page's full presentation. The three pre-search surfaces retain
  * recent history even when online sources are unavailable. `keyword` is the
@@ -43,7 +56,7 @@ export interface SearchLoadingPresentation extends SearchHistoryProjection {
   operation?: SearchOperationFacts;
 }
 
-export interface SearchResultsPresentation extends SearchHistoryProjection {
+export interface SearchResultsPresentation extends SearchHistoryProjection, SearchIncompleteProjection {
   kind: 'results';
   delta?: SearchResultDelta;
   localSearchFailed?: boolean;
@@ -56,9 +69,13 @@ export interface SearchResultsPresentation extends SearchHistoryProjection {
   /**
    * True while the source sweep is still running: the list already shows
    * partial results plus a trailing in-progress slot, and keeps updating as
-   * each source lands. False once every enabled source has finished.
+   * each source lands. False once the first round has finished; this is not source exhaustion.
    */
   searching: boolean;
+  /** A demanded later-page round is active; initial loading UI stays separate. */
+  continuing?: boolean;
+  hasMoreSources?: boolean;
+  exhaustedSourceCount?: number;
   /** Enabled sources the sweep attempts in total. */
   totalSourceCount: number;
   /** Enabled sources finished (ok or failed) so far. */
@@ -73,7 +90,7 @@ export interface SearchResultsPresentation extends SearchHistoryProjection {
   operation?: SearchOperationFacts;
 }
 
-export interface SearchEmptyPresentation extends SearchHistoryProjection {
+export interface SearchEmptyPresentation extends SearchHistoryProjection, SearchIncompleteProjection {
   kind: 'empty';
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;
@@ -93,7 +110,7 @@ export interface SearchEmptyPresentation extends SearchHistoryProjection {
   operation?: SearchOperationFacts;
 }
 
-export interface SearchErrorPresentation extends SearchHistoryProjection {
+export interface SearchErrorPresentation extends SearchHistoryProjection, SearchIncompleteProjection {
   kind: 'error';
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;

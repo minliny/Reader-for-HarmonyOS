@@ -7,22 +7,27 @@ const { createReaderBuilderProbe }=await import("./lib/reader-control-builder-pr
 const { ReaderTtsAudioSessionLease }=await import("../entry/src/main/ets/platform/tts/ReaderTtsAudioSessionLease.ts");
 const choices=await import("../entry/src/main/ets/features/reading/presentation/ReaderTtsConfigOptions.ts");
 const state=await import("../entry/src/main/ets/features/reading/application/ReaderTtsState.ts");
+const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+const labels=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets',import.meta.url),'utf8'),
+  'ReaderControlTtsMinimum.ets',{...choices,...state},['readerControlTtsEngineLabel','readerControlTtsVoiceLabel']);
 const { readerControlUnit }=await import("../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts");
 const file = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
-const ttsFile = file('reading/ReaderControlTtsContent.ets');
+const ttsFile = file('reading/ui/ReaderControlTtsContent.ets');
 const SliderChangeMode = { Begin: 0, Moving: 1, End: 2, Click: 3 };
 const methods = ['p','fullInput','sharedInput','openConfiguration','dismissConfiguration','configurationChoices',
   'configurationSelectedId','configurationMessage','commitConfiguration','fieldLabel','fieldValue','fieldWidth',
   'hasActiveQueue','isHttpEngineSelected','onlineServicePage','onEngineChanged','onlineEngineId','onlineServiceDescription','isTtsServiceTabSelected','systemEngineDisplay','currentEngineLabel','currentVoiceLabel','selectTtsServiceType',
-  'changeRateSlider','changeSeekSlider'];
-const deps = { ...choices, ...state, readerControlUnit, SliderChangeMode };
+  'changeRateSlider','changeSeekSlider','presentationPrepared','preparedProfile','displayedFacts',
+  'sourceMinimumCurrent','selectedMinimum','textMinimum','fieldHeight'];
+const deps = { ...choices, ...state, ...labels, readerControlUnit, SliderChangeMode };
 const Content = productionMotionMethods(ttsFile, methods, deps);
 function setup(owner = new Content()) {
   return Object.assign(owner, { motionProgress:1, interactionEnabled:true, configField:'', configIdentity:'', configGeneration:0,
     state:{status:'idle',rate:1}, onStop(){}, engine:'system', serviceTab:'', serviceBusy:false, serviceGeneration:0, serviceError:'', httpEngines:[], language:'zh-CN', person:0, allowMixing:false, failurePolicy:'stop',
     voiceOptions:[{language:'zh-CN',person:0,label:'中文女声'},{language:'zh-CN',person:1,label:'中文男声'},
       {language:'en-US',person:7,label:'English'}],
-    frame:()=>({config:{width:316}}), onTemporaryLayerChange(){},
+    frame:()=>({config:{width:316}}), onTemporaryLayerChange(){}, onAuditionStop(){}, sourceOnly:'none',
+    preparedMinimumRequired:false, minimumProfiles:new Map(), minimumKey:'',
     async onEngineChange(id){ this.engine=id; }, onVoiceChange(language,person){ this.language=language; this.person=person; },
     onAllowMixingChange(enabled){ this.allowMixing=enabled; }, onFailurePolicyChange(policy){ this.failurePolicy=policy; },
   });
@@ -63,6 +68,9 @@ c.motionProgress=.5; c.configField=''; c.openConfiguration('engine'); assert.equ
 if(id==='fields'){
 const probe=createReaderBuilderProbe(readFileSync(ttsFile,'utf8'), [...methods,'ttsSelectValueField'],deps);
 setup(probe.owner);
+probe.owner.getUIContext=()=>({px2vp:value=>value,getMeasureUtils:()=>({
+  measureText:options=>String(options.textContent).length*12,measureTextSize:()=>({width:120,height:18}),
+})});
 for(const field of ['voice','engine','language','session','failure']) probe.owner.ttsSelectValueField(field);
 const triggers=[...probe.owner.nodes.values()].filter(n=>n.onClick);
 assert.equal(triggers.length,5);
@@ -101,8 +109,8 @@ assert.equal(tabs.onlineServicePage(),false); assert.equal(tabs.engine,'system')
 }
 if(id==='manager-drafts'){
 const KeyboardAvoidMode={OFFSET:0,RESIZE:1,NONE:4};
-const Manager=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
-  ['stopPreview','aboutToAppear','aboutToDisappear','current','setBusy','beginEdit','canSubmit','submit','selectEngine','deleteEngine','clearDraft','resetDraft'],{KeyboardAvoidMode});
+const Manager=productionMotionMethods(file('reading/ui/ReaderTtsConfigOverlay.ets'),
+  ['stopPreview','aboutToAppear','aboutToDisappear','current','acceptsInput','setBusy','beginEdit','canSubmit','submit','selectEngine','deleteEngine','clearDraft','resetDraft'],{KeyboardAvoidMode});
 const manager=Object.assign(new Manager(),{mounted:false,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,draftId:-1,draftName:'服务',draftUrl:'https://example.invalid/?text={{text}}',
   draftApiKey:'',draftVoice:'',draftFormat:'mp3',draftClearApiKey:false,
   errorText:'',onBusyChange(){},onClose(){}}); manager.aboutToAppear();
@@ -119,26 +127,29 @@ resolveSave(); await tick(); assert.equal(manager.draftName,'失败草稿','late
 }
 if(id==='keyboard'){
 const KeyboardAvoidMode={OFFSET:0,RESIZE:1,NONE:4};
-const Manager=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
-  ['stopPreview','aboutToAppear','aboutToDisappear','current','setBusy','beginEdit','canSubmit','submit','selectEngine','deleteEngine','clearDraft','resetDraft'],{KeyboardAvoidMode});
 const keyboardWrites=[];
+const Manager=productionMotionMethods(file('reading/ui/ReaderTtsConfigOverlay.ets'),
+  ['stopPreview','aboutToAppear','aboutToDisappear'],{ReaderWindowCoordinator:{acquireReaderKeyboardResize(){
+    keyboardWrites.push('acquire');return ()=>keyboardWrites.push('release');
+  }}});
 const modal=Object.assign(new Manager(),{windowModal:true,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
-  getUIContext:()=>({getKeyboardAvoidMode:()=>KeyboardAvoidMode.NONE,
-    setKeyboardAvoidMode:mode=>keyboardWrites.push(mode)})});
+  getUIContext:()=>{throw new Error('only the registered window coordinator owns native keyboard policy');}});
 modal.aboutToAppear(); modal.aboutToDisappear(); modal.aboutToDisappear();
-assert.deepEqual(keyboardWrites,[KeyboardAvoidMode.RESIZE,KeyboardAvoidMode.NONE]);
+assert.deepEqual(keyboardWrites,['acquire','release']);
 const menu=Object.assign(new Manager(),{windowModal:false,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
   getUIContext:()=>{throw new Error('an anchored choice menu must not change keyboard policy');}});
 menu.aboutToAppear(); menu.aboutToDisappear();
+assert.deepEqual(keyboardWrites,['acquire','release'],'an anchored picker never acquires the manager resize lease');
 }
 if(id==='overlay'){
-const Overlay=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
-  ['stopPreview','choose','aboutToDisappear','onIdentityChanged']);
+const Overlay=productionMotionMethods(file('reading/ui/ReaderTtsConfigOverlay.ets'),
+  ['stopPreview','choose','aboutToDisappear','onIdentityChanged','acceptsInput']);
 let complete, closed=[];
 const busyChanges=[];
 const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
   onChoose:()=>new Promise(resolve=>complete=resolve),onBusyChange:busy=>busyChanges.push(busy),onClose:id=>closed.push(id)});
 overlay.choose('system'); overlay.choose('system'); overlay.selectionId='voice:2'; overlay.onIdentityChanged();
+await tick();
 assert.deepEqual(busyChanges,[false],'replaced selection releases the parent content-cover gate');
 complete(); await tick(); assert.deepEqual(closed,[],'old completion cannot close a newer menu');
 overlay.onChoose=async()=>{throw new Error('切换失败');}; overlay.choose('system'); await tick();

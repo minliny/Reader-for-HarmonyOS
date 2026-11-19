@@ -3,6 +3,7 @@
 // real WindowCoordinator metrics are deliberately shared with the actor.
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import type { common } from '@kit.AbilityKit';
 import { SourceManagementPage } from '../features/source/ui/SourceManagementPage';
 import type { BookSource } from '../features/source/application/SourceGateway';
 import type { SourceManagementProjection } from '../features/source/application/SourceOrchestrator';
@@ -10,6 +11,8 @@ import type { SourceManagementViewState } from '../features/source/presentation/
 import { prepareReaderFonts } from '../ui/foundation/ReaderFonts';
 import { ReaderPageState } from '../ui/feedback/ReaderPageState';
 import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
+import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
+import { ReaderSourceTextMetrics } from './ReaderSourceTextMetrics';
 import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
 import { readerContentSafeTop, readerInteractiveSafeBottom } from '../ui/foundation/ReaderWindowMetrics';
 import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
@@ -35,7 +38,7 @@ function defaultSourceManagementFilters(): SourceManagementFilterState {
 }
 
 type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'busy' |
-  'read-error' | 'read-empty-error' | 'original-unknown' | 'original-cleanup' |
+  'read-error' | 'read-empty-error' | 'read-empty-refresh-error' | 'unknown-empty' | 'original-unknown' | 'original-cleanup' |
   'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-offline-recovery' | 'directory-source-switch' | 'directory-source-switch-short' |
   'directory-source-switch-flat' | 'directory-source-switch-flat-short' | 'directory-empty-retry' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
   'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
@@ -53,6 +56,7 @@ interface PageStructureFixtureObservation {
   nativeFontFollowing?: boolean;
   nativeFontMaxScale?: number;
   nativeFontScaleVp?: number;
+  appFontPreviewScale?: number;
   sourceId: string;
   sourceVersion?: string;
   intentCount: number;
@@ -73,6 +77,7 @@ struct ReaderPageStructureVerification {
   @State private downloadScenario: DownloadFixtureScenario = 'content';
   @State private fontState: string = 'loading';
   @State private requestedWidth: number = 366;
+  @State private appFontPreviewScale: number = 0;
   @State private actualWidth: number = 0;
   @State private actualHeight: number = 0;
   @State private sources: BookSource[] = [];
@@ -86,6 +91,10 @@ struct ReaderPageStructureVerification {
   private operationRevision: number = 0;
   private temporaryBack: (() => boolean) | undefined;
   private temporaryBackIdentity: string = '';
+  private previewApplication: common.ApplicationContext | undefined;
+  private originalPreviewScale: number = 1;
+  private sourceTextMetrics: ReaderSourceTextMetrics | undefined;
+  private readonly previewScales: number[] = [1.3, 1.45, 1.6, 2];
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -99,13 +108,17 @@ struct ReaderPageStructureVerification {
   }
 
   aboutToDisappear(): void {
+    this.restoreFontPreview();
     this.mounted = false;
     this.admitted = false;
     this.fontAttempt += 1;
     this.presentation += 1;
+    this.sourceTextMetrics = undefined;
     this.temporaryBack = undefined;
     this.temporaryBackIdentity = '';
   }
+
+  onPageHide(): void { this.restoreFontPreview(); }
 
   onBackPress(): boolean {
     if (!this.admitted || this.scene === 'menu') return false;
@@ -142,13 +155,48 @@ struct ReaderPageStructureVerification {
     this.requestedWidth = width;
   }
 
+  private selectFontPreview(scale: number, menuPresentation: number): void {
+    if (!this.mounted || !this.admitted || !this.debugBuild() || this.fontState !== 'ready' ||
+      this.scene !== 'menu' || menuPresentation !== this.presentation) return;
+    if (scale === 0) {
+      this.restoreFontPreview();
+      return;
+    }
+    if (!this.previewScales.includes(scale) || scale === this.appFontPreviewScale) return;
+    try {
+      const application = this.previewApplication ?? this.getUIContext().getHostContext()?.getApplicationContext();
+      if (application === undefined) return;
+      const original = this.previewApplication === undefined ? this.systemFontScale() : this.originalPreviewScale;
+      application.setFontSizeScale(scale);
+      this.previewApplication = application;
+      this.originalPreviewScale = original;
+      this.appFontPreviewScale = scale;
+      this.record('font-preview-request');
+    } catch (error) {
+      hilog.error(0x5244, 'ReaderPageStructure', 'font-preview-request-failed %{public}s', (error as Error).message);
+    }
+  }
+
+  private restoreFontPreview(): void {
+    const application = this.previewApplication;
+    if (application === undefined) return;
+    try {
+      application.setFontSizeScale(this.originalPreviewScale);
+      this.previewApplication = undefined;
+      this.appFontPreviewScale = 0;
+      if (this.mounted && this.admitted) this.record('font-preview-restore');
+    } catch (error) {
+      hilog.error(0x5244, 'ReaderPageStructure', 'font-preview-restore-failed %{public}s', (error as Error).message);
+    }
+  }
+
   private returnToPilot(menuPresentation: number): void {
     if (this.mounted && this.admitted && this.scene === 'menu' && menuPresentation === this.presentation) this.getUIContext().getRouter().back();
   }
 
   private createSources(scene: PageStructureFixtureScene): BookSource[] {
     const sources: BookSource[] = [];
-    if (scene === 'empty' || scene === 'read-empty-error') return sources;
+    if (scene === 'empty' || scene === 'read-empty-error' || scene === 'read-empty-refresh-error' || scene === 'unknown-empty') return sources;
     for (let index = 0; index < 24; index++) {
       const id = `https://fixture-${index + 1}.example.invalid`;
       const source: BookSource = { sourceId: id, name: `夹具书源${index + 1} · 中文 English`,
@@ -167,11 +215,16 @@ struct ReaderPageStructureVerification {
   }
 
   private fixtureOperation(scene: PageStructureFixtureScene): SourceManagementProjection {
-    if (scene === 'read-error' || scene === 'read-empty-error') {
+    if (scene === 'read-error' || scene === 'read-empty-error' || scene === 'read-empty-refresh-error') {
       return { action: 'fixture-read', sourceId: '', readFacts: projectOperationFacts<BookSource[]>({
-        phase: scene === 'read-error' ? 'refreshFailed' : 'failed',
-        value: scene === 'read-error' ? this.sources : undefined, canRetry: true,
+        phase: 'failed', value: scene === 'read-empty-error' ? undefined : this.sources, canRetry: true,
         generation: ++this.operationRevision, message: '内存夹具：读取失败；已有样本保持可用，重试只记录夹具意图。' }) };
+    }
+    if (scene === 'unknown-empty') {
+      return { action: 'fixture-toggle', sourceId: '',
+        readFacts: projectOperationFacts<BookSource[]>({ phase: 'succeeded', value: this.sources, generation: ++this.operationRevision }),
+        receipt: projectPersistedReceipt<BookSource[]>({ confirmation: 'unknown', readback: 'failed',
+          value: this.sources, canRetry: true, generation: ++this.operationRevision }) };
     }
     if (scene === 'original-unknown' || scene === 'original-cleanup') {
       return { action: 'fixture-original', sourceId: this.sources[0]?.sourceId ?? '', original: {
@@ -191,7 +244,7 @@ struct ReaderPageStructureVerification {
           '：内存夹具：回执待核对，不会操作用户数据。'.repeat(12) : '内存夹具：正在刷新' }) };
   }
 
-  private launchSource(scene: PageStructureFixtureScene, menuPresentation: number): void {
+  private launchSource(scene: PageStructureFixtureScene, menuPresentation: number, measureText: boolean = false): void {
     if (!this.mounted || !this.admitted || !this.debugBuild() || this.fontState !== 'ready' ||
       this.scene !== 'menu' || menuPresentation !== this.presentation ||
       !this.isSourceScene(scene)) return;
@@ -200,6 +253,8 @@ struct ReaderPageStructureVerification {
     this.temporaryBackIdentity = '';
     this.filters = defaultSourceManagementFilters();
     this.sources = this.createSources(scene);
+    this.sourceTextMetrics = measureText && this.sources.length > 0 ?
+      new ReaderSourceTextMetrics(this.sources[0].sourceId) : undefined;
     this.operation = this.fixtureOperation(scene);
     this.actualWidth = 0;
     this.actualHeight = 0;
@@ -250,7 +305,8 @@ struct ReaderPageStructureVerification {
 
   private isSourceScene(scene: PageStructureFixtureScene): boolean {
     return scene === 'default' || scene === 'empty' || scene === 'recovery' || scene === 'busy' ||
-      scene === 'read-error' || scene === 'read-empty-error' || scene === 'original-unknown' || scene === 'original-cleanup';
+      scene === 'read-error' || scene === 'read-empty-error' || scene === 'read-empty-refresh-error' ||
+      scene === 'unknown-empty' || scene === 'original-unknown' || scene === 'original-cleanup';
   }
 
   private shortControlHeight(): number {
@@ -265,6 +321,7 @@ struct ReaderPageStructureVerification {
     if (this.temporaryBack?.() === true) { this.record('temporary-back'); return; }
     this.temporaryBack = undefined;
     this.temporaryBackIdentity = '';
+    this.sourceTextMetrics = undefined;
     this.scene = 'menu';
   }
 
@@ -329,6 +386,20 @@ struct ReaderPageStructureVerification {
       (width === this.actualWidth && height === this.actualHeight)) return;
     this.actualWidth = width; this.actualHeight = height;
     this.record('actual-area');
+    const metrics = this.sourceTextMetrics;
+    if (metrics === undefined) return;
+    const context = this.getUIContext();
+    context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+      if (!this.current(presentation) || this.sourceTextMetrics !== metrics ||
+        this.actualWidth !== width || this.actualHeight !== height) return;
+      const vpPx = context.vp2px(1);
+      const fontScale = context.fp2px(1) / vpPx;
+      if (!Number.isFinite(vpPx) || vpPx <= 0 || !Number.isFinite(fontScale) || fontScale <= 0) return;
+      hilog.info(0x5244, 'ReaderSourceTextMetrics', 'READER_SOURCE_TEXT_METRICS %{public}s', JSON.stringify({
+        presentation, scene: this.scene, requestedWidthVp: this.requestedWidth,
+        actualWidthVp: width, actualHeightVp: height, fontScale, vpPx, labels: metrics.read(),
+      }));
+    }));
   }
 
   private fixtureAction(presentation: number, kind: string, chapterIndex: number = -1): void {
@@ -377,6 +448,7 @@ struct ReaderPageStructureVerification {
       intentCount: this.intentCount, nativeFontObservationStatus: 'unavailable',
       filterObservation: 'initial-or-tools-capture', queryLength: this.filters.searchQuery.length, statusFilter: this.filters.statusValue,
       categoryFilter: this.filters.categoryValue, groupFilter: this.filters.groupValue };
+    if (this.appFontPreviewScale > 0) observation.appFontPreviewScale = this.appFontPreviewScale;
     try {
       // This component is mounted after loadContent. Observe its actual native
       // conversion/policy; it never writes the Coordinator's configuration fact.
@@ -417,16 +489,27 @@ struct ReaderPageStructureVerification {
     Scroll() {
     Column({ space: 12 }) {
       Text('页面结构 · 原生组件夹具').fontSize(20).fontWeight(FontWeight.Bold);
-      Text('仅内存样本；所有操作只记录意图。字号跟随系统，不替换生产字体。').fontSize(14);
-      Text(`外层请求 ${this.requestedWidth}vp；上次实测 ${this.actualWidth}×${this.actualHeight}vp；系统字号 ${this.systemFontScale()}`)
+      Text('仅内存样本，业务操作只记录意图。').fontSize(14);
+      Text(`外层请求 ${this.requestedWidth}vp；上次实测 ${this.actualWidth}×${this.actualHeight}vp；当前字号 ${this.systemFontScale()}`)
         .fontSize(12).id('reader-page-structure-metrics');
       Row({ space: 12 }) {
         Button('宽度 320').id('reader-page-structure-width-320').onClick((): void => this.selectWidth(320, menuPresentation));
         Button('宽度 366').id('reader-page-structure-width-366').onClick((): void => this.selectWidth(366, menuPresentation));
       }
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(this.previewScales, (scale: number): void => {
+          Button(`预览 ${scale}×`).enabled(this.fontState === 'ready')
+            .id(`reader-page-structure-font-${scale.toString().replace('.', '-')}`)
+            .onClick((): void => this.selectFontPreview(scale, menuPresentation));
+        }, (scale: number): string => scale.toString());
+        Button('恢复字号').enabled(this.appFontPreviewScale > 0).id('reader-page-structure-font-restore')
+          .onClick((): void => this.selectFontPreview(0, menuPresentation));
+      }
       if (this.fontState !== 'ready') { this.fontPreparationState(menuPresentation); }
       Button('书源 · 默认').enabled(this.fontState === 'ready').id('reader-page-structure-source-default')
         .onClick((): void => this.launchSource('default', menuPresentation));
+      Button('书源 · 原生文字尺寸').enabled(this.fontState === 'ready').id('reader-page-structure-source-text-metrics')
+        .onClick((): void => this.launchSource('default', menuPresentation, true));
       Button('书源 · 空').enabled(this.fontState === 'ready').id('reader-page-structure-source-empty')
         .onClick((): void => this.launchSource('empty', menuPresentation));
       Button('书源 · 回执待核对').enabled(this.fontState === 'ready').id('reader-page-structure-source-recovery')
@@ -437,6 +520,10 @@ struct ReaderPageStructureVerification {
         .onClick((): void => this.launchSource('read-error', menuPresentation));
       Button('书源 · 空列表读取失败').enabled(this.fontState === 'ready').id('reader-page-structure-source-read-empty-error')
         .onClick((): void => this.launchSource('read-empty-error', menuPresentation));
+      Button('书源 · 空列表刷新失败').enabled(this.fontState === 'ready').id('reader-page-structure-source-read-empty-refresh-error')
+        .onClick((): void => this.launchSource('read-empty-refresh-error', menuPresentation));
+      Button('书源 · 空列表回执待核对').enabled(this.fontState === 'ready').id('reader-page-structure-source-unknown-empty')
+        .onClick((): void => this.launchSource('unknown-empty', menuPresentation));
       Button('书源 · 原操作未确认可继续').enabled(this.fontState === 'ready').id('reader-page-structure-source-original-unknown')
         .onClick((): void => this.launchSource('original-unknown', menuPresentation));
       Button('书源 · 原操作已确认待清理').enabled(this.fontState === 'ready').id('reader-page-structure-source-original-cleanup')
@@ -514,6 +601,7 @@ struct ReaderPageStructureVerification {
       Stack() {
         SourceManagementPage({ sources: this.sources, expandedLayout: false, initialViewState: this.initialSourceView(),
           operation: this.operation, statusKind: this.scene === 'busy' ? 'loading' : 'idle',
+          textLayoutOptions: this.sourceTextMetrics?.options,
           statusActionLabel: this.scene === 'read-error' ? '夹具状态动作' : '',
           statusActionGeneration: this.operation.readFacts?.generation ?? 0,
           onStatusAction: (revision: number): void => this.statusFixture(presentation, revision),

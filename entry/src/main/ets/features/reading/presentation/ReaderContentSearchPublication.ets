@@ -23,6 +23,8 @@ export interface ReaderQuickSearchResultsState {
   /** The displayed rows remain usable after this visit releases its cursor. */
   paginationRetired?: boolean;
   loadMoreError?: string;
+  /** Retry permission is separate from the last successful Core continuation fact. */
+  continuationRetryable?: boolean;
 }
 
 interface ReaderQuickSearchEmptyState {
@@ -47,8 +49,10 @@ export type ReaderQuickSearchState =
 export class ReaderContentSearchPublication {
   private state: ReaderQuickSearchState = { kind: 'idle' };
   private generation: number = 0;
+  private bookId: string = '';
   private gateway: ReadingSessionFlowGateway | undefined = undefined;
   private cursor: string | undefined = undefined;
+  private resultKeys: Set<string> = new Set<string>();
   private resultScrollVisit: number = 0;
   private resultScrollSequence: number = 0;
   private resultScrollScope: number = 0;
@@ -60,6 +64,10 @@ export class ReaderContentSearchPublication {
       this.resultScrollScope = state.kind === 'results' ? ++this.resultScrollSequence : 0;
       this.resultScrollAnchorRows = 0;
     }
+    if (state.kind === 'results' && (this.state.kind !== 'results' || this.state.results !== state.results)) {
+      this.resultKeys = new Set<string>();
+      for (const result of state.results) this.resultKeys.add(this.key(result));
+    } else if (state.kind !== 'results') this.resultKeys.clear();
     this.state = state;
   }
   stateAt(_revision: number): ReaderQuickSearchState { return this.state; }
@@ -114,7 +122,7 @@ export class ReaderContentSearchPublication {
     // Keep admitted anchors selectable. The released cursor cannot append a
     // later snapshot to these rows, even when the query text is unchanged.
     this.publish({ kind: 'results', keyword: previous.keyword, results: previous.results,
-      offset: previous.offset, hasMore: false, loadingMore: false, paginationRetired: true });
+      offset: previous.offset, hasMore: previous.hasMore, loadingMore: false, paginationRetired: true });
     return true;
   }
 
@@ -122,6 +130,7 @@ export class ReaderContentSearchPublication {
     active: () => boolean, changed: () => void): void {
     this.cancel();
     this.gateway = gateway;
+    this.bookId = bookId;
     const generation = this.generation;
     const current = (): boolean => this.generation === generation && active();
     this.publish({ kind: 'loading', keyword });
@@ -144,7 +153,9 @@ export class ReaderContentSearchPublication {
   more(bookId: string, limit: number, active: () => boolean, changed: () => void): void {
     const before = this.state;
     const gateway = this.gateway;
-    if (gateway === undefined || before.kind !== 'results' || before.hasMore !== true || before.loadingMore === true) return;
+    if (!active() || bookId !== this.bookId) return;
+    if (gateway === undefined || before.kind !== 'results' || before.hasMore !== true || before.loadingMore === true || before.paginationRetired === true ||
+      (before.loadMoreError !== undefined && before.continuationRetryable !== true)) return;
     const generation = this.generation;
     const current = (): boolean => this.generation === generation && active();
     const offset = before.offset === undefined ? before.results.length : before.offset;
@@ -157,13 +168,24 @@ export class ReaderContentSearchPublication {
       if (!current() || this.state.kind !== 'results') { this.releasePage(gateway, page); return; }
       // A single in-flight continuation plus stable identities prevents retry append duplication.
       const latest = this.state;
-      const seen = new Set<string>(latest.results.map((result: ReadingContentSearchResult): string => this.key(result)));
-      const merged = latest.results.slice();
+      const merged = latest.results;
+      let appended = 0;
       for (const result of page.results) {
         const key = this.key(result);
-        if (seen.has(key)) continue;
-        seen.add(key);
+        if (this.resultKeys.has(key)) continue;
+        this.resultKeys.add(key);
         merged.push(result);
+        appended += 1;
+      }
+      if (page.hasMore && appended === 0) {
+        this.releasePage(gateway, page);
+        if (cursor !== undefined) this.release(gateway, cursor);
+        this.cursor = undefined;
+        this.publish({ kind: 'results', keyword: before.keyword, results: merged,
+          offset: offset + page.results.length, hasMore: page.hasMore, loadingMore: false,
+          paginationRetired: true, continuationRetryable: false, loadMoreError: '后续结果未能继续，请重新搜索' });
+        changed();
+        return;
       }
       this.cursor = page.nextCursor;
       // A final receipt may remain retryable in Core; proactively release its session.
@@ -184,13 +206,28 @@ export class ReaderContentSearchPublication {
       const retryable = cursor !== undefined && failure.code !== 'positionContextStale' &&
         failure.code !== 'sourceVersionChanged' && failure.code !== 'invalidInput';
       this.publish({ kind: 'results', keyword: latest.keyword, results: latest.results,
-        offset: latest.offset, hasMore: retryable, loadingMore: false, loadMoreError: error.message });
+        offset: latest.offset, hasMore: latest.hasMore, continuationRetryable: retryable,
+        paginationRetired: !retryable, loadingMore: false, loadMoreError: error.message });
       if (!retryable) {
         if (cursor !== undefined) this.release(gateway, cursor);
         this.cursor = undefined;
       }
       changed();
     });
+  }
+
+  /** Layout/scroll demand may advance only a healthy, exact continuation. */
+  needMore(bookId: string, limit: number, active: () => boolean, changed: () => void): void {
+    const state = this.state;
+    if (state.kind !== 'results' || state.loadMoreError !== undefined || state.paginationRetired === true ||
+      state.loadingMore === true || state.hasMore !== true) return;
+    if (this.cursor === undefined) {
+      this.publish({ kind: 'results', keyword: state.keyword, results: state.results, offset: state.offset,
+        hasMore: state.hasMore, loadingMore: false, paginationRetired: true, continuationRetryable: false });
+      changed();
+      return;
+    }
+    this.more(bookId, limit, active, changed);
   }
 
   private key(result: ReadingContentSearchResult): string {

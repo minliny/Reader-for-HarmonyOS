@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../../ui/layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeBottom } from '../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
@@ -95,7 +96,7 @@ export struct ReaderJourneyRecoveryNotices {
   private availableHeight(): number {
     if (this.readerWindowMetricsRevision < 0) return 0;
     const metrics = readerWindowMetrics();
-    return Math.max(0, Math.min(this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height,
-      metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY) - this.topInset - 12);
+    return Math.max(0, readerKeyboardHostBottom(metrics, this.hostY,
+      this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height) - this.topInset - 12);
   }
 }

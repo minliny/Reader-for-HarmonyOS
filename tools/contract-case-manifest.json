@@ -877,7 +877,7 @@
       }
     },
     "test-manga-directory-grid-sdk.mjs": {
-      "sourceSha256": "468fdaaafd097fefcebdbc4c5db10b00b861467bb950952eff26e8cb32008bd9",
+      "sourceSha256": "913050c5cd3863e81e1af9faac108783a7557f1bc2e636ba85241eb6ad544673",
       "cases": {
         "paged-data": {
           "resources": [],
@@ -888,6 +888,10 @@
           "qualification": "REVIEW_NEEDED"
         },
         "current-grid-geometry": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "catalog-result-position": {
           "resources": [],
           "qualification": "REVIEW_NEEDED"
         }
@@ -1627,7 +1631,7 @@
       }
     },
     "test-reader-bookmark-panels.mjs": {
-      "sourceSha256": "d0711da259d302788ce661337bfecbdcd998d5bc1b4dce25802236284361f8e6",
+      "sourceSha256": "81e2903c2f8904314af0f9915862138d2a44501e2c55412d5ce4bea726e0de51",
       "cases": {
         "full-projection": {
           "resources": [],
@@ -2454,7 +2458,7 @@
       }
     },
     "test-reader-directory-navigation-ui.mjs": {
-      "sourceSha256": "c28acb98e68243071825c6fe38c277f68a5d78e71ce54bf0662bcc9aa9298cac",
+      "sourceSha256": "392ef311b39deb8bd49c3435afbae7e860861ed45df1d575ce45151ae6834d26",
       "cases": {
         "actions": {
           "resources": [],
@@ -2475,6 +2479,10 @@
         "diagnostic-cancellation": {
           "resources": [],
           "qualification": "DIAGNOSTIC_ONLY"
+        },
+        "catalog-filter-admission": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7613,7 +7621,7 @@
       }
     },
     "test-shared-download-ui.mjs": {
-      "sourceSha256": "f01970048836eb4ed3f4870d619ca9461e5ced69e218dbcfbdcad79bf61a4eb3",
+      "sourceSha256": "894ba84b69fee1e63807861004fbc11c4074896d289d77dae8f7e0349d6769b9",
       "cases": {
         "text-projection": {
           "resources": [],
@@ -7670,7 +7678,7 @@
       }
     },
     "test-shared-download-visual-contract.mjs": {
-      "sourceSha256": "b92d18624f490ace657698ad98d714ad5bdec89377a2fed8808490c697365607",
+      "sourceSha256": "f4ca843592283777a0dce5b44f6875f2165c9ef26957f9ac89def6cc0d00e0c9",
       "cases": {
         "definition": {
           "resources": [],
@@ -7729,6 +7737,10 @@
           "qualification": "REVIEW_NEEDED"
         },
         "overlay-chrome": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "chapter-read-states": {
           "resources": [],
           "qualification": "REVIEW_NEEDED"
         }
@@ -8634,7 +8646,7 @@
       }
     },
     "test-source-tools-original-recovery-sdk.mjs": {
-      "sourceSha256": "0da0e24f5ae198246a050b62d754e4a0266bc0b68b1aca5cbf92340234257314",
+      "sourceSha256": "3856fb271360e093b2ebe0571d27bc6ce373ba481c7cef4ea4dd83307ef19100",
       "cases": {
         "cold-before": {
           "resources": [],
@@ -8646,7 +8658,7 @@
         },
         "page-eligibility": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         }
       }
     },
@@ -11170,13 +11182,17 @@
       }
     },
     "test-source-journey-retention.mjs": {
-      "sourceSha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e",
+      "sourceSha256": "5745f5fd0aa877b5eb727dca47461bf3cdbc9a5838dccdcfcb20d37cfe53011d",
       "cases": {
         "journey-retention": {
           "resources": [],
           "qualification": "QUALIFIED"
         },
         "scroll-restoration": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "tools-delete-confirmation": {
           "resources": [],
           "qualification": "QUALIFIED"
         },
@@ -11187,17 +11203,25 @@
       }
     },
     "test-control-directory-short-content.mjs": {
-      "sourceSha256": "048000f39a76662c90d404b39bd172444ad20ec6c5587351bda55d0403ac484d",
+      "sourceSha256": "7cebcda243280445ec52dbfafd40a3714d10573a91d73cfe46a1844803158eff",
       "cases": {
-        "short-sdk": {
+        "bookmark-branch-admission": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
-        },
-        "prefix-anchors": {
-          "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "directory-focus": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "keyboard-ack-delay": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "keyboard-observation": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "keyboard-transfer": {
           "resources": [],
           "qualification": "QUALIFIED"
         },
@@ -11205,15 +11229,11 @@
           "resources": [],
           "qualification": "REVIEW_NEEDED"
         },
-        "keyboard-ack-delay": {
+        "prefix-anchors": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
-        "keyboard-transfer": {
-          "resources": [],
-          "qualification": "QUALIFIED"
-        },
-        "keyboard-observation": {
+        "short-sdk": {
           "resources": [],
           "qualification": "REVIEW_NEEDED"
         }
@@ -11295,7 +11315,7 @@
       }
     },
     "test-secondary-layout-repairs.mjs": {
-      "sourceSha256": "fb3ee10fdd770101cb66e29a308734e295a72bc51c68c45c47d52becb66fd1a4",
+      "sourceSha256": "99b08349c1982fc9e443f00c4fa0993a524078f11e74099da952a9b9e00e5f49",
       "cases": {
         "select-host": {
           "resources": [],

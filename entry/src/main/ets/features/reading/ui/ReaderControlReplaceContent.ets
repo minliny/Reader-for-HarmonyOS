@@ -1,3 +1,5 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { readerControlReplaceMinimumFacts, measureReaderControlReplaceMinimum,
   type ReaderControlReplaceMinimumFacts } from './ReaderControlReplaceMinimum';
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
@@ -48,6 +50,9 @@ class ReaderReplaceEditorFocusFrame extends FrameCallback {
  */
 @Component
 export struct ReaderControlReplaceContent {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly editorScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
+  private readonly editorScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
@@ -740,25 +745,14 @@ export struct ReaderControlReplaceContent {
     return this.availableHeight < 24 + this.frame().editorHeaderHeight + actionsHeight + 16 + 44;
   }
 
-  @Builder
-  private temporaryFlow(opening: number) {
-    Scroll() {
-      Column({ space: 8 }) {
-        this.temporaryHeader(opening); this.temporaryBodyContent(opening); this.temporaryActions(opening);
-      }.width('100%');
-    }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
-  }
+
 
   @Builder
   private temporaryOverlay(opening: number) {
-    if (this.temporaryNeedsFlow()) {
-      ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
-        body: (): void => { this.temporaryFlow(opening); } });
-    } else {
-      ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
-        header: (): void => { this.temporaryHeader(opening); }, body: (): void => { this.temporaryBody(opening); },
-        actions: (): void => { this.temporaryActions(opening); } });
-    }
+    ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
+      header: (): void => { if (!this.temporaryNeedsFlow()) this.temporaryHeader(opening); },
+      body: (): void => { this.temporaryBody(opening); },
+      actions: (): void => { if (!this.temporaryNeedsFlow()) this.temporaryActions(opening); } });
   }
 
   private temporaryTitle(): string {
@@ -799,8 +793,20 @@ export struct ReaderControlReplaceContent {
 
   @Builder
   private temporaryBody(opening: number) {
-    Scroll() { this.temporaryBodyContent(opening); }
-      .width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
+    Scroll(this.editorScroller) {
+      Column({ space: 8 }) {
+        if (this.temporaryNeedsFlow()) this.temporaryHeader(opening);
+        this.temporaryBodyContent(opening);
+        if (this.temporaryNeedsFlow()) this.temporaryActions(opening);
+      }.width('100%');
+    }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart)
+      .id(this.editorScroll.idFor(`${opening}`))
+      .onAppear((): void => {
+        if (this.mounted && opening === this.presentationRevision)
+          this.editorScroll.mount(this.getUIContext(), this.editingHost, this.editorScroller, (): number => 0, `${opening}`);
+      })
+      .onDisAppear((): void => this.editorScroll.unmount(`${opening}`))
+      .onAreaChange((): void => this.editingHost.refresh());
   }
 
   @Builder
@@ -868,7 +874,7 @@ export struct ReaderControlReplaceContent {
     Column({ space: 3 }) {
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .accessibilityLevel('no');
-      ReaderFormField({ specId: 'reader-replace-text', scheme: this.appThemeScheme, text: value(), placeholder: '',
+      ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.state.sessionKey}:${opening}:${label}`, specId: 'reader-replace-text', scheme: this.appThemeScheme, text: value(), placeholder: '',
         fieldAccessibilityLabel: label,
         isEditable: this.editorTextEnabled(opening),
         onTextChange: (text: string): void => { if (this.editorTextEnabled(opening)) change(text); } });

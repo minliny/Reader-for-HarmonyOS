@@ -1,3 +1,4 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
@@ -46,6 +47,7 @@ let nextRulesDraftOpening: number = 0;
 
 @Component
 export struct RulesManagementPage {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @Prop inputEnabled: boolean = true;
@@ -143,7 +145,7 @@ export struct RulesManagementPage {
   }
 
   build() {
-    ReaderStandardPage({
+    ReaderStandardPage({ editingHost: this.editingHost,
       variant: 'management',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
@@ -363,7 +365,7 @@ export struct RulesManagementPage {
 
   @Builder
   private input(value: () => string, placeholder: string, changed: (value: string) => void, draftKey: string) {
-    ReaderFormField({ scheme: this.appThemeScheme, specId: 'rules-input', text: value(), placeholder,
+    ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'rules-input', text: value(), placeholder,
       inputIdentity: `${draftKey}:${placeholder}`, isEditable: this.inputAllowed(),
       onTextChange: (next: string): void => {
         if (this.draftIsCurrent(draftKey)) changed(next);

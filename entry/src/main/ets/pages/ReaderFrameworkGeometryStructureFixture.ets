@@ -1,3 +1,4 @@
+import { ReaderEditingVisibility } from '../ui/layout/ReaderEditingVisibility';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { LengthMetrics } from '@kit.ArkUI';
@@ -14,6 +15,7 @@ import { BookRemovalDialogPresentation } from '../features/bookshelf/presentatio
 /** Actual native geometry and confirmation hosts with memory-only actions. */
 @Component
 export struct ReaderFrameworkGeometryStructureFixture {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   @Prop fontsReady: boolean = false;
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
@@ -81,7 +83,7 @@ export struct ReaderFrameworkGeometryStructureFixture {
   private pageHeader() {
     Column() {
       PageBackBar({ title: '页头测量样本', onBack: (): void => this.record('header-back') });
-      ReaderSearchField({ variant: 'bookPanel', text: this.query, placeholder: '原生键盘与页头测量',
+      ReaderSearchField({ editingHost: this.editingHost, variant: 'bookPanel', text: this.query, placeholder: '原生键盘与页头测量',
         accessibilityLabel: '框架测量样本输入', onTextChange: (value: string): void => {
           if (this.current()) this.query = value;
         }, onFocusChanged: (_focused: boolean): void => this.record('input-focus') });
@@ -115,7 +117,7 @@ export struct ReaderFrameworkGeometryStructureFixture {
         }.width('100%');
         Text(`内存确认 ${this.confirmations}`).fontSize(14).id('reader-framework-confirmations');
         Stack() {
-          ReaderStandardPage({ variant: 'tools', header: (): void => { this.pageHeader(); },
+          ReaderStandardPage({ editingHost: this.editingHost, variant: 'tools', header: (): void => { this.pageHeader(); },
             content: (): void => { this.pageContent(); }, onViewportChange: (width: number, height: number): void => {
               if (!this.current()) return;
               this.viewportWidth = width; this.viewportHeight = height; this.record('viewport');

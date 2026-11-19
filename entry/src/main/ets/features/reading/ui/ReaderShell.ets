@@ -337,6 +337,7 @@ export struct ReaderShell {
       .focusable(this.readingContentIsForeground())
       .enabled(this.readingContentIsForeground())
       .accessibilityLevel(this.readingContentIsForeground() ? 'auto' : 'no-hide-descendants')
+      .customProperty('readerLayoutDebugExcluded', !this.readingContentIsForeground())
       .hitTestBehavior(this.readingContentIsForeground() ? HitTestMode.Transparent : HitTestMode.None);
 
   }

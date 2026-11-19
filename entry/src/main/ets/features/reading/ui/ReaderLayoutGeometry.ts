@@ -574,11 +574,9 @@ export function resolveReaderControlLayout(
   // Control invocation reveals system chrome asynchronously. Its target lane
   // is already measured even while the current visible avoid-area is zero.
   const safeTop = Math.max(readerContentSafeTop(metrics), metrics.statusBarRect.top + metrics.statusBarHeight);
-  // A resized content viewport has already paid part/all of the IME inset.
-  // Subtract only the keyboard area that still intersects this viewport.
-  const consumedKeyboard = Math.max(0, metrics.windowRect.height - height);
-  const keyboardOcclusion = Math.max(0, metrics.keyboardInsets.bottom - consumedKeyboard);
-  const safeBottom = Math.max(readerInteractiveSafeBottom(metrics, false), keyboardOcclusion);
+  // IME belongs to the editing viewport, never to the authored shell size.
+  // A real native/window resize is already represented by viewportHeight.
+  const safeBottom = readerInteractiveSafeBottom(metrics, false);
   const topBarSideGap = Math.max(profile.topBarSideGap, safeHorizontal);
   const topBarWidth = Math.min(profile.topBarMaxWidth, Math.max(0, width - topBarSideGap * 2));
   const dockLeftGap = Math.max(profile.dockLeftGap, safeHorizontal);

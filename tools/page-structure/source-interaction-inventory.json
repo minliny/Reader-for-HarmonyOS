@@ -616,7 +616,7 @@
       "id": "unknown-reconcile",
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "pendingOverlay",
+        "symbol": "pendingRecovery",
         "component": "ReaderRecoveryNotice"
       },
       "drawHost": {
@@ -634,7 +634,7 @@
       "id": "unknown-expand-collapse",
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "pendingOverlay",
+        "symbol": "pendingRecovery",
         "component": "ReaderRecoveryNotice"
       },
       "drawHost": {

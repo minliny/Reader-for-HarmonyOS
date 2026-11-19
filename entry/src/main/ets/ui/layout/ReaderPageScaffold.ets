@@ -32,6 +32,11 @@ export struct ReaderPageScaffold {
   private footerSurfaceValue(): ReaderFooterSurface {
     return this.geometry.footer.surface;
   }
+  private layoutDebugHeaderKey(): string {
+    const header = this.frameStyle.header;
+    return this.headerVisible && !header.transparent && /^#(?:[0-9a-f]{6}|ff[0-9a-f]{6})$/i.test(header.backgroundColor)
+      ? this.footerMeasurement.id : '';
+  }
   private requestFooterMeasurement(): void { this.footerMeasurement.request(this.footerMeasurementKey); }
   private footerAreaChangeHandler(presentedKey: number): (_old: Area, next: Area) => void {
     return (_old: Area, next: Area): void => {
@@ -47,10 +52,12 @@ export struct ReaderPageScaffold {
         .width('100%').height(this.geometry.content.nativeEndInset > 0 ?
           `calc(100% - ${this.geometry.content.nativeEndInset}vp)` : '100%')
         .clip(this.geometry.content.nativeEndInset > 0).zIndex(0)
+        .customProperty('readerLayoutDebugContentUnderHeader', this.layoutDebugHeaderKey())
         .hitTestBehavior(this.transparentContent ? HitTestMode.Transparent : HitTestMode.Default);
       if (this.headerVisible) {
         Column() {
           ReaderFixedHeaderHost({ style: this.frameStyle.header, measurementKey: this.headerMeasurementKey,
+            layoutDebugHeaderKey: this.layoutDebugHeaderKey(),
             content: (): void => { this.header(); },
             onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
         }.width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })

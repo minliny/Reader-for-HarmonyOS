@@ -64,6 +64,23 @@ export type ReaderBookmarkRowModel = {
 
 export type ReaderBookmarkLoadState = 'loading' | 'ready';
 
+export interface ReaderBookmarkEmptyCopy {
+  title: string;
+  message: string;
+  action: string;
+}
+
+const BOOKMARK_EMPTY_COPY: ReaderBookmarkEmptyCopy = {
+  title: '暂无书签', message: '在阅读页面下拉，收藏当前位置。', action: '返回目录',
+};
+const BOOKMARK_FILTERED_EMPTY_COPY: ReaderBookmarkEmptyCopy = {
+  title: '没有匹配的书签', message: '', action: '清除搜索',
+};
+
+export function readerBookmarkEmptyCopy(filtered: boolean): ReaderBookmarkEmptyCopy {
+  return filtered ? BOOKMARK_FILTERED_EMPTY_COPY : BOOKMARK_EMPTY_COPY;
+}
+
 /**
  * Deterministic bookmark identity. JSON encoding keeps the tuple unambiguous
  * even when names contain separator characters.

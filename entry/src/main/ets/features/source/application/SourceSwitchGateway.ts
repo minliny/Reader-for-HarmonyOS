@@ -1,3 +1,4 @@
+import { BookSearchPageProgress, readBookSearchPageReceipt } from '../../../app/library/BookSearchPageProgress';
 import { decodeReaderDirectoryDisplayMetadata } from '../../reading/application/ReaderDirectoryDisplayMetadata';
 import { bookAuthorIdentity, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../../../app/library/BookAuthorMetadata';
 import { readBookSearchTiming } from '../../../app/library/BookSearchTiming';
@@ -140,8 +141,8 @@ function deduplicateSourceSwitchCandidates(
 }
 
 export type SourceSwitchDiscoveryOutcome =
-  | { kind: 'sources'; candidates: SourceSwitchCandidate[] }
-  | { kind: 'noSources' };
+  | { kind: 'sources'; candidates: SourceSwitchCandidate[]; incompleteSourceCount?: number }
+  | { kind: 'noSources'; incompleteSourceCount?: number };
 
 export type SourceSwitchTargetTocEntry = {
   index: number;
@@ -260,6 +261,8 @@ export class SourceSwitchGateway {
   private confirmedCandidates = new Set<string>();
   private discoveryGeneration: number = 0;
   private discoveryScope: string = '';
+  private readonly discoveryPages: Map<string, BookSearchPageProgress> = new Map();
+  private discoveryPageScope: string = '';
   private discoverySamples = new Map<string, SourceSwitchSearchSample>();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
@@ -556,7 +559,6 @@ export class SourceSwitchGateway {
   async refreshCandidates(
     query: SourceSwitchProbeQuery,
     isCurrent: (() => boolean) | undefined = undefined,
-    excludedSourceIds: string[] = [],
     onProgress: ((candidates: SourceSwitchCandidate[]) => void) | undefined = undefined,
     initialCandidates: SourceSwitchCandidate[] = [],
   ): Promise<SourceSwitchDiscoveryOutcome> {
@@ -762,7 +764,7 @@ export class SourceSwitchGateway {
     try {
       if (!current()) return { kind: 'noSources' };
       await projectInitial();
-      await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, current, excludedSourceIds, query.contentKind,
+      const discovery = await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, current, query.contentKind,
         async (discovered: SourceSwitchCandidate[]): Promise<void> => {
           if (!current()) return;
           for (const candidate of discovered) {
@@ -788,7 +790,8 @@ export class SourceSwitchGateway {
       for (const candidate of finalCandidates) candidateMap.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), candidate);
       candidates = finalCandidates;
       onProgress?.(candidates);
-      return candidates.length === 0 ? { kind: 'noSources' } : { kind: 'sources', candidates };
+      return candidates.length === 0 ? { kind: 'noSources', incompleteSourceCount: discovery.incompleteSourceCount } :
+        { kind: 'sources', candidates, incompleteSourceCount: discovery.incompleteSourceCount };
     } catch (error) {
       if (!current()) return { kind: 'noSources' };
       throw error;
@@ -810,7 +813,6 @@ export class SourceSwitchGateway {
     bookId: string,
     keyword: string,
     isCurrent: (() => boolean) | undefined = undefined,
-    excludedSourceIds: string[] = [],
     contentKind: 'text' | 'manga' = 'text',
     onSourceComplete: ((candidates: SourceSwitchCandidate[]) => Promise<void>) | undefined = undefined,
     expectedBook: SourceSwitchProbeQuery | undefined = undefined,
@@ -829,7 +831,6 @@ export class SourceSwitchGateway {
       throw new Error('source.list returned invalid data');
     }
     const sources: SourceSwitchRegistryEntry[] = [];
-    const excluded = new Set(excludedSourceIds);
     for (let sourceOrder = 0; sourceOrder < rawSources.length; sourceOrder += 1) {
       const raw = rawSources[sourceOrder];
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -840,7 +841,6 @@ export class SourceSwitchGateway {
         continue;
       }
       const sourceId = this.optionalString(source, 'sourceId');
-      if (sourceId !== undefined && excluded.has(sourceId)) continue;
       if (sourceId !== undefined && sourceId.length > 0) {
         const sourceName = this.optionalString(source, 'name');
         const rawBookSource = source['bookSource'];
@@ -869,17 +869,31 @@ export class SourceSwitchGateway {
     if (sources.length === 0) {
       return { kind: 'noSources' };
     }
+    const pageScope = JSON.stringify([sourceId, bookId, keyword, contentKind, expectedBook?.author, expectedBook?.sourceVersion]);
+    if (this.discoveryPageScope !== pageScope) { this.discoveryPages.clear(); this.discoveryPageScope = pageScope; }
+    const progressFor = (source: SourceSwitchRegistryEntry): BookSearchPageProgress => {
+      const key = JSON.stringify([source.sourceId, source.sourceVersion]);
+      let progress = this.discoveryPages.get(key);
+      if (progress === undefined) { progress = new BookSearchPageProgress(); this.discoveryPages.set(key, progress); }
+      return progress;
+    };
+    const activePageKeys = new Set(sources.map((source: SourceSwitchRegistryEntry): string => JSON.stringify([source.sourceId, source.sourceVersion])));
+    for (const key of this.discoveryPages.keys()) if (!activePageKeys.has(key)) this.discoveryPages.delete(key);
     const candidates: SourceSwitchCandidate[] = [];
     let domainFailures = 0;
     let sourceFailures = 0;
     const httpStatuses = new Map<number, number>();
-    await runBookSourceWorkers(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY,
+    let pending = sources.filter((source: SourceSwitchRegistryEntry): boolean => progressFor(source).state === 'ready' || progressFor(source).state === 'unknown');
+    const failed = new Set<string>();
+    while (pending.length > 0 && isCurrent?.() !== false) {
+    await runBookSourceWorkers(pending, SOURCE_SWITCH_DISCOVERY_CONCURRENCY,
       async (source: SourceSwitchRegistryEntry): Promise<void> => {
         let group: SourceSwitchCandidate[];
         try {
-          group = await this.discoverFromSource(keyword, source, isCurrent, expectedBook);
+          group = await this.discoverFromSource(keyword, source, isCurrent, expectedBook, progressFor(source));
         } catch (error) {
           if (isCurrent?.() === false) return;
+          failed.add(source.sourceId);
           if (!isDomainResolutionFailure(error)) {
             if (isNetworkEnvironmentFailure(error)) throw error;
             sourceFailures += 1;
@@ -897,6 +911,9 @@ export class SourceSwitchGateway {
           await onSourceComplete?.(group);
         }
       }, async (): Promise<boolean> => isCurrent?.() !== false);
+      pending = sources.filter((source: SourceSwitchRegistryEntry): boolean =>
+        !failed.has(source.sourceId) && progressFor(source).state === 'ready');
+    }
     if (isCurrent?.() === false) return { kind: 'noSources' };
     const statuses = Array.from(httpStatuses.keys()).sort((left: number, right: number): number => left - right)
       .slice(0, 4).map((status: number): string => `HTTP ${status}：${httpStatuses.get(status)}个`);
@@ -916,7 +933,9 @@ export class SourceSwitchGateway {
     for (const candidate of uniqueCandidates) {
       candidate.isCurrent = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) === currentCandidateKey;
     }
-    return { kind: 'sources', candidates: uniqueCandidates };
+    return { kind: 'sources', candidates: uniqueCandidates,
+      incompleteSourceCount: sources.filter((source: SourceSwitchRegistryEntry): boolean =>
+        failed.has(source.sourceId) || progressFor(source).state === 'unknown').length };
   }
 
   private async discoverFromSource(
@@ -924,23 +943,29 @@ export class SourceSwitchGateway {
     source: SourceSwitchRegistryEntry,
     isCurrent: (() => boolean) | undefined,
     expectedBook: SourceSwitchProbeQuery | undefined,
+    progress: BookSearchPageProgress = new BookSearchPageProgress(),
   ): Promise<SourceSwitchCandidate[]> {
     if (isCurrent?.() === false) return [];
     const startedAt = Date.now();
+    const negotiated = this.runtimeOwner.supportsCoreCapability?.('book.search.page-receipt.v1') === true;
+    const params: JsonObject = { sourceId: source.sourceId, keyword, page: progress.page };
+    if (negotiated) { params['pageReceipt'] = true; if (source.sourceVersion !== undefined) params['expectedSourceVersion'] = source.sourceVersion; }
     const result = await this.runtimeOwner.request(
-      'book.search',
-      { sourceId: source.sourceId, keyword, page: 1 },
+      'book.search', params,
       this.requestOptions(isCurrent),
     );
     if (isCurrent?.() === false) return [];
     const latencyMs = Math.max(0, Date.now() - startedAt);
     const measuredAt = Date.now();
     const decoded = await this.decodeDiscoveryCandidates(result.data, source, isCurrent);
+    const receipt = negotiated ? readBookSearchPageReceipt(result.data['pageReceipt'], source.sourceId, source.sourceVersion, keyword, progress.page) : undefined;
+    progress.accept(receipt, decoded.map((candidate: SourceSwitchCandidate): string => candidate.bookUrl));
     const candidates = decoded.filter((candidate): boolean =>
       expectedBook !== undefined ? this.matchesCandidateBook(candidate, expectedBook) :
         this.normalizeBookName(candidate.bookName) === this.normalizeBookName(keyword))
       .map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
         ({ ...candidate, latencyMs, latencyKind: 'search', latencyMeasuredAt: measuredAt }));
+    if (candidates.length > 0) progress.state = 'satisfied';
     // Search latency is a durable, version-bound fact. A failed timing
     // write must never hide a valid discovery result (legacy rows and
     // read-only runtimes are allowed), while successful writes make the next
@@ -948,6 +973,7 @@ export class SourceSwitchGateway {
     for (const candidate of candidates) {
       await this.persistSearchTiming(candidate, candidate.sourceVersion, latencyMs, measuredAt, isCurrent);
     }
+    if (isCurrent?.() !== false) this.runtimeOwner.observeSourceSearchPage?.('switch', params['page'] as number, decoded.length, candidates.length);
     return candidates;
   }
 

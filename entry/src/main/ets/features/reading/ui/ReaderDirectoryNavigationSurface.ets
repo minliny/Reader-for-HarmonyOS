@@ -1,3 +1,4 @@
+import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
@@ -47,6 +48,7 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop interacted: boolean = false;
   @Prop rowHeight: number = 40;
   @Prop mangaDisplay: boolean = false;
+  @Prop mangaFullCatalog: boolean = false;
   @Prop mangaRowMinHeight: number = 58;
   @Prop mangaCatalogDisplay: boolean = false;
   @Prop mangaQuickDisplay: boolean = false;
@@ -63,7 +65,12 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
-  @Prop chapterEntries: LocalReadingTocEntry[] = [];
+  chapterEntries: LocalReadingTocEntry[] = [];
+  directoryPublication: ReaderDirectoryDataPublication | undefined = undefined;
+  @Prop directoryEntriesRevision: number = 0;
+  private currentDirectoryEntries(): LocalReadingTocEntry[] {
+    return this.directoryPublication?.entriesAt(this.directoryEntriesRevision) ?? this.chapterEntries;
+  }
   @Prop showLoadStatus: boolean = true;
   @Prop chapterDownloadEnabled: boolean = false;
   /** Manga uses existing markers to manage active/retained downloads. */
@@ -76,6 +83,7 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop prefixIdentity: string = '';
   @Prop prefixRevealRevision: number = 0;
   @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
+  @BuilderParam mangaTailBuilder: () => void = this.emptyPrefix;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
@@ -115,6 +123,7 @@ export struct ReaderDirectoryNavigationSurface {
   private inputOwnerKey: string = '';
   private openedInputKey: string = '';
   private locateCurrentPending: boolean = false;
+  private acceptedCatalogFilter: string | undefined = undefined;
   private scrollIntentUnsubscribe: (() => void) | undefined = undefined;
 
   aboutToAppear(): void {
@@ -180,6 +189,7 @@ export struct ReaderDirectoryNavigationSurface {
     this.generation += 1;
     this.openingGeneration = -1;
     this.view = undefined;
+    this.acceptedCatalogFilter = undefined;
     this.loadPending = false;
     this.loadFailed = false;
     this.awaitingRulesRefresh = false;
@@ -338,10 +348,11 @@ export struct ReaderDirectoryNavigationSurface {
     if (ready.visibleTotal === 0) return [];
     cacheReaderDirectoryNavigationPage(ready, 0, { viewId: ready.viewId, visibleTotal: ready.visibleTotal, nodes: ready.nodes, nextOffset: ready.nextOffset });
     ready.nodes = [];
-    const anchor = ready.locateCurrent ? undefined : readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId));
+    const anchor = ready.locateCurrent || ready.startAtCatalogTop ? undefined :
+      readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId));
     const sameRevision = anchor?.navigationRevision === ready.navigationRevision;
-    const target = sameRevision && ready.anchorVisibleIndex !== undefined ? ready.anchorVisibleIndex :
-      (ready.currentVisibleIndex ?? 0);
+    const target = ready.startAtCatalogTop ? 0 :
+      (sameRevision && ready.anchorVisibleIndex !== undefined ? ready.anchorVisibleIndex : (ready.currentVisibleIndex ?? 0));
     const offsets: Set<number> = new Set<number>();
     const includeWindow = (index: number): void => {
       const center = Math.floor(index / pageSize) * pageSize;
@@ -389,11 +400,18 @@ export struct ReaderDirectoryNavigationSurface {
     this.loadPending = true;
     const query = this.query, descending = !this.ascending;
     const explicitLocateCurrent = this.locateCurrentPending;
+    const catalogFilter = this.mangaFullCatalog ? JSON.stringify([query.trim(), descending]) : undefined;
+    // Full opens with the actual search rail and the first chapter. A Quick
+    // viewport anchor describes a different list and must not hide this rail.
+    const startAtCatalogTop = catalogFilter !== undefined && !explicitLocateCurrent &&
+      (this.acceptedCatalogFilter === undefined ||
+        (this.headerCount === 0 && catalogFilter !== this.acceptedCatalogFilter));
     // A fresh Quick opening starts at the current chapter, even when Full left
     // a different browsing anchor. Paging still prepares only its bounded window.
     const locateCurrent = explicitLocateCurrent || first && this.mangaDisplay && this.mangaQuickDisplay &&
       query.trim().length === 0 && this.currentChapterIndex >= 0;
-    const anchorNodeId = locateCurrent ? undefined : readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
+    const anchorNodeId = locateCurrent || startAtCatalogTop ? undefined :
+      readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
     const runtimeOwner = this.runtimeOwner;
     let unavailableReason = '';
@@ -449,7 +467,7 @@ export struct ReaderDirectoryNavigationSurface {
           // A confirmed flat catalog can use its existing chapters. Other
           // unavailable results remain recoverable from the same opening.
           this.settledFlat = unavailableReason === 'unsupported' ||
-            (unavailableReason === 'NoStructure' && this.chapterEntries.length > 0);
+            (unavailableReason === 'NoStructure' && this.currentDirectoryEntries().length > 0);
           this.loadFailed = !this.settledFlat;
           if (this.settledFlat && this.awaitingRulesRefresh) {
             this.view = undefined;
@@ -472,6 +490,7 @@ export struct ReaderDirectoryNavigationSurface {
           this.pendingQueryRefresh = false;
           return;
         }
+        if (this.mangaFullCatalog) ready.startAtCatalogTop = startAtCatalogTop;
         ready.preparedPages = await this.prepareVisiblePages(gateway, bookId, ready, generation);
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId || this.sourceId !== sourceId) return;
         this.openingGeneration = -1;
@@ -489,6 +508,7 @@ export struct ReaderDirectoryNavigationSurface {
           ready.currentDisplayInset = explicitLocateCurrent ? 12 : this.mangaCurrentOpenInset;
           ready.currentDisplaySmooth = explicitLocateCurrent;
         }
+        this.acceptedCatalogFilter = catalogFilter;
         this.view = ready;
         this.loadFailed = false;
         this.awaitingRulesRefresh = false;
@@ -514,8 +534,8 @@ export struct ReaderDirectoryNavigationSurface {
 
   private hasRetainedContent(): boolean {
     if (this.view !== undefined) return this.view.visibleTotal > 0;
-    if (this.query.length === 0) return this.chapterEntries.length > 0;
-    return projectReaderDirectoryEntries(this.chapterEntries, this.query, true, this.mangaDisplay).length > 0;
+    if (this.query.length === 0) return this.currentDirectoryEntries().length > 0;
+    return projectReaderDirectoryEntries(this.currentDirectoryEntries(), this.query, true, this.mangaDisplay).length > 0;
   }
 
   private notifyReadFailure(generation: number, sourceId: string, bookId: string): void {
@@ -602,8 +622,8 @@ export struct ReaderDirectoryNavigationSurface {
   }
 
   @Builder
-  private treePrefixEmptyState() {
-    if (this.showLoadStatus && (this.loadPending || this.loadFailed)) {
+  private treeEmptyState(includeLoadState: boolean = true) {
+    if (includeLoadState && this.showLoadStatus && (this.loadPending || this.loadFailed)) {
       ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
         padded: false, actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.retryInputCurrent(),
         actionGeneration: this.generation, mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
@@ -667,7 +687,7 @@ export struct ReaderDirectoryNavigationSurface {
               listPaddingTop: this.listPaddingTop, listPaddingBottom: this.listPaddingBottom,
               scrollLayout: this.scrollLayout,
               edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled && !this.awaitingRulesRefresh,
-              chapterEntries: this.chapterEntries,
+              directoryPublication: this.directoryPublication, directoryEntriesRevision: this.directoryEntriesRevision,
               chapterDownloadEnabled: this.chapterDownloadEnabled,
               chapterDownloadActionsEnabled: this.chapterDownloadActionsEnabled,
               chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
@@ -675,7 +695,8 @@ export struct ReaderDirectoryNavigationSurface {
               headerCount: this.headerCount, prefixHeight: this.prefixHeight, prefixIdentity: this.prefixIdentity,
               prefixRevealRevision: this.prefixRevealRevision,
               prefixBuilder: (): void => this.prefixBuilder(),
-              emptyBuilder: (): void => this.treePrefixEmptyState(),
+              mangaTailBuilder: (): void => this.mangaTailBuilder(),
+              emptyBuilder: (): void => this.treeEmptyState(),
               emptyReadStateVisible: this.showLoadStatus && (this.loadPending || this.loadFailed),
               scroller: this.scroller,
               onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void => {
@@ -701,9 +722,7 @@ export struct ReaderDirectoryNavigationSurface {
               },
             });
             if (this.view.visibleTotal === 0 && !this.mangaDisplay && !this.hasPrefix()) {
-              ReaderPageState({ message: '没有匹配的目录项', padded: false,
-                mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) })
-                .hitTestBehavior(HitTestMode.None);
+              this.treeEmptyState(false);
             }
           }.width('100%').height('100%');
         }

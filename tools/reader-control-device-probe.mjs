@@ -209,8 +209,7 @@ function operationPlan(operation, outputDir) {
     return { kind: 'command', args: ['file', 'recv', path, resolve(outputDir, basename(path))], localPath: resolve(outputDir, basename(path)) };
   }
   if (operation.op === 'start') {
-    exactFields(operation, []);
-    return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry', '--pb', 'readerControlMotionVerification', 'true');
+    fail('retired diagnostic launch; enter the complete app with startNormal');
   }
   if (operation.op === 'startNormal') {
     exactFields(operation, []);
@@ -238,6 +237,10 @@ function operationPlan(operation, outputDir) {
   if (operation.op === 'motionLog') {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'ReaderControlMotionProbe');
+  }
+  if (operation.op === 'developerLayoutLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-e', 'READER_DEVELOPER_LAYOUT');
   }
   if (operation.op === 'force-stop') {
     exactFields(operation, ['explicitPermit']);
@@ -634,7 +637,7 @@ function selfTest() {
   }
   assert.equal(plan({ op: 'recv', path: '/data/local/tmp/reader-control-ok.png' }).localPath, join(directory, 'reader-control-ok.png'));
   assert.throws(() => plan({ op: 'screenCap', path: '/data/local/tmp/reader-control-ok.json' }));
-  assert.deepEqual(plan({ op: 'start' }).args.slice(-3), ['--pb', 'readerControlMotionVerification', 'true']);
+  assert.throws(() => plan({ op: 'start' }), /retired diagnostic launch/);
   assert.throws(() => plan({ op: 'start', bundle: 'other' }));
   assert.deepEqual(plan({ op: 'startNormal' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry']);

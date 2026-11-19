@@ -539,7 +539,7 @@ interface RouteContract {
 | 条件 | 结果 | 优先级 |
 |---|---|---|
 | `queryPriority=none` | None | 1 |
-| `queryPriority=primary` 且真实 `queryViewport.fixedChromeHeight + minimumContentHeight > availableHeight` | Inline，同一主列表内ScrollAway prefix | 2 |
+| `queryPriority=primary` 且真实 `queryViewport.fixedChromeHeight + minimumContentHeight > availableHeight` | Inline，默认同一主列表内的 ScrollAway 前缀。持续编辑的嵌入模块可以使用下述限高编辑区 | 2 |
 | `queryPriority=primary` 且预算足够或未声明响应预算 | HeaderSlot | 3 |
 | `queryComplexity=complex` 且 `queryFrequency=rare` | Overlay | 4 |
 | `queryPriority=complex` | Overlay | 5 |
@@ -552,6 +552,8 @@ interface RouteContract {
 `queryViewport`是可选的真实几何输入，包含有限数值`availableHeight>0`、`fixedChromeHeight>=0`、`minimumContentHeight>0`；fixedChromeHeight指候选固定装配在当前字号下所需的未clamp高度，不是降级后实扣的0。不能用`Math.max(0,listHeight)`掩盖欠账，也不能把降级后的0再送回选择器导致反复切换。它只适用于primary查询，推导器内部计算`queryHeightClass`，页面作者不得手填constrained布尔或降低查询优先级。缺输入不推定矮屏；availableHeight为0代表尚未就绪，不能伪造可用结构。原型不允许Inline时仍返回GRAMMAR错误。
 
 ScrollAway变体必须登记准确生效条件、测量/字号revision、唯一滚动owner、prefix与Core/data rank映射、锚点和焦点迁移。prefix不是第0章；分页/选择/下载仍用业务索引。空、加载、筛选空和错误时查询仍可达。嵌入模块只豁免整页原型外框，不豁免显式queryViewport的决策核对；`check-register`单独检查这一层。
+
+阅读内目录这类持续编辑的嵌入模块，在实际预算触发 Inline 时可以登记 `inlineComposition=boundedEditor`。查询在各高度下保持同一个原生编辑宿主。局部编辑 Scroll 与唯一主结果 List 各使用内容槽内不重叠的高度，编辑区可单独滚达查询，结果 List 保持自己的数据索引、滚动锚点和当前状态。登记提供实际首屏的内容槽及编辑区高度，并验证高度变化不重建同一输入及结果实例。没有可用结果空间时按模块的空间不足状态处理；可用状态需要实际可达的结果任务或状态回馈。此装配仍按 Inline 计入首屏预算及焦点验收。
 
 约束：
 
@@ -919,7 +921,7 @@ rowHeight = max(baseHeight, textStackHeight(scale), trailingHeight(scale))
 
 同一页面族有多个真实装配宿主时，使用可选`variants[]`：每项必须声明`variantId`、生效`condition`、`host`及完整`registration`。`host`含`kind: route/embedded/selection`、唯一owner、继承的`routeContractRef`、`contextKinds`及实际装配`factSource: {path,symbol}`。每个registration独立具有16层、Brief、控件/操作/消息引用、22项不变量及消费修订，不允许递归variants；登记身份与variantId不得重复。它描述宿主差异，不增设业务路由。embedded模块不被强制画整页Header/Footer，整页原型推导记NOT_RUN；适用层的规则、引用和源码绑定仍照常校验。完整选择页的实际结构与Selection原型冲突则保留FAIL，不能改Brief或声明embedded来规避。
 
-embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚的内容模块，仍允许模块内部的inline工具/状态区；宿主装配源码必须纳入SHA绑定。动态补偿标量未知时用null并保留G-03 NOT_RUN，不能用0伪报无补偿或用任意正数伪报通过。已知不变量FAIL必须在所属层同步为FAIL，其他方面未验证不能把该层降回NOT_RUN。
+embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚的内容模块，仍允许模块内部的inline工具/状态区；宿主装配源码必须纳入SHA绑定。固定遮挡补偿登记测得的恒定值。动态补偿使用 `obscurationCompensation: null` 及 `obscurationCompensationSource: {path,symbol}`，绑定实际计算源码，并在 `headerInset` 写出其被滚动容器消费的方式。G-03 核对这项声明，S3 依原生几何、裁切和操作证据判定。常量及计算来源都未知时保留 G-03 NOT_RUN。已知不变量FAIL必须在所属层同步为FAIL，其他方面未验证不能把该层降回NOT_RUN。
 
 可选`sourceInputs[]: {path,sha256,symbol?}[]`固定登记实际审读的装配/控件/业务来源；路径须在允许范围，引用与摘要逐变体检查，不代表已经捕获全部动态依赖。上游路由的view/query/scroll/selection保留策略为null时原样继承，代表未知，不能由页面补成false，也不能据此把route或S8记PASS。
 
@@ -933,7 +935,7 @@ embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚�
 | 2 | `scaffold` | `prototype: string`；`regions: string[]` |
 | 3 | `informationArchitecture` | `blockOrder: string[]`；`firstScreenBudget: {viewportHeight: number, filterStackHeight: number|null, firstRowTop: number|null, unit: vp}`；`budgetStatus: declared/unverified/missing` |
 | 4 | `header` | `role: Back/Home/Contextual/None`；`presentation: Fixed/Floating/ScrollAway/None`；`composition: string[]`；`surface: string`；`height: number|null`；`safeAreaOwner: string`；`actions: Action[]` |
-| 5 | `scroll` | `owner: string`；`primaryCount: integer`；`headerInset` / `footerInset` / `restore` / `refresh: string`；`underlap: boolean`；`obscurationCompensation: number|null` |
+| 5 | `scroll` | `owner: string`；`primaryCount: integer`；`headerInset` / `footerInset` / `restore` / `refresh: string`；`underlap: boolean`；`obscurationCompensation: number|null`；动态值另有 `obscurationCompensationSource?: {path,symbol}` |
 | 6 | `content` | `unit: Row/Card/Grid/Canvas/Document/Form`；`rowForm: single-line/two-line/overflow-menu/detail-entry/none`；`slots` / `controlRefs: string[]`；`density` / `truncation: string`；`rowHeight` / `availableWidth` / `textMinWidth` / `trailingMaxWidth: number|null`；`budgetDeclared: boolean` |
 | 7 | `query` | `placement: Inline/HeaderSlot/Overlay/None`；`entryPlacements: (inline/headerSlot/overlay/none)[]`；`applyTiming: live/submit/explicit/none`；`filteredEmpty` / `reset: boolean`；`normalization: string`；`filterSemantics: {filterId: string, definition: string}[]`；`actions: Action[]` |
 | 8 | `footer` | `presence: boolean`；`placement?: fixed/inline/none`；`placementCondition?: string`；`actions: Action[]`；`safeAreaOwner` / `contentEndInset: string`；`controlRefs: string[]` |
@@ -1426,3 +1428,12 @@ Text或Row接入原生Button时，同步核对边框所属节点与真实内容�
 准备请求的取消同时核对存储对象和当前有效身份。活跃请求的Back可以消费本次返回并退休请求代次。已因关闭、隐藏、opening或owner变化失活的对象完成清理后，同次Back继续当前页面的正常返回策略。所有取消调用方声明是否使用消费结果，普通清理继续退休旧测量回执。
 
 交互回归从真实build装配链到最终接收端核对可达性。直接调用私有Builder可以证明该方法的有限行为，当前挂载入口需要提供build或既有BuilderParam的实际接线。保留的未挂载Builder、只读sourceOnly预览和动态未解析入口分别记录，组件库存与当前UI入口的数量保留各自事实。
+
+
+## 2026-11-18 正常页面设备证据
+
+整页及模块 UI 验收从应用正常入口进入，保留实际父页面、公共页头页脚、原生弹层及操作链。测试时打开应用「设置 → 通用设置 → 开发者模式 → 显示组件边界」。复用同一 `ReaderWindowCoordinator` 的窗口、密度、安全区和键盘回执，以及 `ReaderLayoutDebugOverlay` 的 `READER_DEVELOPER_LAYOUT` 输出。节点原始与可见边界从当前正常页面的原生树取得。画布输出只用于定位组件盒，不能替代真实屏幕裁切或实际命中判断。
+
+每项在同一候选、同一应用窗口和同一稳定业务状态下绑定完整实屏、布局树、当前开发者参数及本场景必要回执。测量就绪、有效可见区域和预期场景必须吻合。任一必需参数缺失、过期、异常或轮廓被遮挡、实际文字裁切时判定不通过。未运行保留 `NOT_RUN`。隔离组件页、模拟窗口条带、内存替代回执及局部截图的原生验收全部撤销，不能用于整页或交互验收。 [验收撤销与当前证据](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md)
+
+显式运行现有登记检查时，页面层或规则的 `PASS` 引用 `kind=device`、`symbol=normal-page` 的同场景记录。记录注明 `pageId`、`routeContractRef` 和实际覆盖的 `claims`，用路径和 SHA-256 绑定签名清单、保数据部署回执、原始采集会话和实屏／布局树。每帧注明日志行、预期窗口／密度／生效字号／IME 状态及正常页锚点。平台字号与实际生效字号确有不同的场景应明确登记两项期望。登记检查读取这些现有证据，使用真实页面上的开发者模式及现有设备采集入口。通过绑定检查后，仍需按场景核对完整画面与实际动作结果。 [现有登记检查](../../tools/page-structure/check-register.mjs)

@@ -41,7 +41,8 @@ export function composeSourceE2(matrix,interaction,{matrixInput,interactionInput
  }
  for(const x of [matrixInput,interactionInput])if(x)inputs.set(x.path,x.sha256);
  for(const path of [entry,'tools/page-structure/layout-evidence.mjs','tools/page-structure/schema/layout-evidence.schema.json','entry/src/main/ets/ui/foundation/ReaderTokens.ets','tools/test-source-group-border-budget.mjs','tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets'])inputs.set(path,fingerprint(path));
- return {schemaVersion:'1.0',pageId:'source-management',command:{entry,cases:['complete-targets']},inputs:[...inputs].map(([path,sha256])=>({path,sha256})),widths:matrix.widths,fontScales:matrix.fontScales,results:{E2:'PASS',E3:'NOT_RUN'},targets,budgets:matrix.budgets};
+ // These dimensions are inputs to review. No original touch was dispatched.
+ return {schemaVersion:'1.0',pageId:'source-management',command:{entry,cases:['complete-targets']},inputs:[...inputs].map(([path,sha256])=>({path,sha256})),widths:matrix.widths,fontScales:matrix.fontScales,results:{E2:'NOT_RUN',E3:'NOT_RUN'},targets,budgets:matrix.budgets};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  const [matrixPath,interactionPath,outputPath]=process.argv.slice(2);assert.ok(matrixPath&&interactionPath&&outputPath,'explicit matrix, interaction, output required');assert.ok(outputPath.startsWith('.reader-artifacts/')||outputPath==='tools/page-structure/source-layout-evidence.json','output must be a private run or the controlled portable report');

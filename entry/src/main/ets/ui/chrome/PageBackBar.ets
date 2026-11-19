@@ -103,13 +103,19 @@ export struct PageBackBar {
           .fontWeight(this.variant === 'mangaDirectory' ? visual.headerFontWeight : this.floating ? FontWeight.Bold : TYPE_PAGE_TITLE.fontWeight,
             { enableVariableFontWeight: this.variant === 'mangaDirectory' })
           .fontSize(this.variant === 'mangaDirectory' ? visual.headerFontSize : this.floating ? 19 : TYPE_PAGE_TITLE.fontSizeFp)
-          .lineHeight(this.variant === 'mangaDirectory' ? visual.headerLineHeight : this.floating ? 28 : TYPE_PAGE_TITLE.lineHeightFp as number)
+          .lineHeight(this.adaptsTitleSize() ? undefined :
+            this.variant === 'mangaDirectory' ? visual.headerLineHeight : this.floating ? 28 : TYPE_PAGE_TITLE.lineHeightFp as number)
+          .minFontSize(this.adaptsTitleSize() ? Math.round(TYPE_PAGE_TITLE.fontSizeFp * 0.75) : undefined)
+          .maxFontSize(this.adaptsTitleSize() ? TYPE_PAGE_TITLE.fontSizeFp : undefined)
+          .heightAdaptivePolicy(TextHeightAdaptivePolicy.LAYOUT_CONSTRAINT_FIRST)
+          .constraintSize({ maxHeight: this.multilineTitle() ? this.standardTitleHeightLimit() : undefined })
           .halfLeading(this.variant === 'mangaDirectory')
           .minFontScale(this.variant === 'mangaDirectory' ? Math.min(1, this.mangaFontScale()) : 0)
           .maxFontScale(this.variant === 'mangaDirectory' ? Math.max(1, this.mangaFontScale()) : Math.max(1, this.fontScale()))
           .fontColor(this.titleColor.length > 0 ? this.titleColor : this.variant === 'mangaDirectory' ? mangaDirectoryColor('ink', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1)
+          .maxLines(this.multilineTitle() ? 2 : 1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .accessibilityText(this.title)
           .layoutWeight(1)
           .textAlign(this.centered ? TextAlign.Center : TextAlign.Start);
       }
@@ -156,6 +162,9 @@ export struct PageBackBar {
   }
 
   private framed(): boolean { return this.floating || this.variant === 'download'; }
+  private multilineTitle(): boolean { return this.variant === 'standard' && !this.floating; }
+  private adaptsTitleSize(): boolean { return this.multilineTitle() && this.fontScale() > 1; }
+  private standardTitleHeightLimit(): number { return APP_HEADER_BAR_HEIGHT * 2; }
   private verticalInset(): number { return this.variant === 'download' ? DOWNLOAD_HEADER_PADDING_Y : 0; }
   private raised(): boolean { return this.variant === 'standard' && this.elevation === 'raised'; }
   private veil(): boolean { return this.variant === 'standard' && this.material === 'veil'; }
@@ -231,7 +240,8 @@ export struct PageBackBar {
     if (this.variant === 'mangaDirectory') return mangaDirectoryHeaderHeight(this.mangaFontScale());
     return this.floating
       ? readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, this.fontScale(), 0)
-      : readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0);
+      : Math.min(this.standardTitleHeightLimit(),
+        readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0));
   }
 
   private leftInset(): number {

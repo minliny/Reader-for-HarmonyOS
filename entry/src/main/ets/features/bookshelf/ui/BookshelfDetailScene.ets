@@ -97,6 +97,7 @@ export struct BookshelfDetailScene {
         .enabled(this.foreground)
         .focusable(this.foreground)
         .hitTestBehavior(this.foreground ? HitTestMode.Default : HitTestMode.None)
+        .customProperty('readerLayoutDebugExcluded', !this.foreground)
         .accessibilityLevel(this.foreground ? 'auto' : 'no-hide-descendants');
     }
   }

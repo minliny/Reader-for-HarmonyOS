@@ -1,3 +1,4 @@
+import { readBookSearchPageReceipt, type BookSearchPageReceipt } from '../../../app/library/BookSearchPageProgress';
 import { bookTitleAuthorKey, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../../../app/library/BookAuthorMetadata';
 import { readBookSearchTiming } from '../../../app/library/BookSearchTiming';
 import type { JsonObject } from '@reader/core-harmony';
@@ -111,7 +112,7 @@ export function searchSourceHealthState(source: SearchSource, now: number = Date
 }
 
 export type SearchOutcome =
-  | { ok: true; results: SearchBook[]; discardedCount?: number; discardedReasons?: string[] }
+  | { ok: true; results: SearchBook[]; pageReceipt?: BookSearchPageReceipt; discardedCount?: number; discardedReasons?: string[] }
   | { ok: false; error: string; diagnostic?: HttpTransportFailureSummary };
 
 type SearchRequestGuard = () => boolean;
@@ -216,6 +217,7 @@ export class SearchGateway {
     isCurrent?: SearchRequestGuard,
     searchRequestId?: string,
     canDispatch?: SearchRequestGuard,
+    page: number = 1,
   ): Promise<SearchOutcome> {
     if (typeof keyword !== 'string' || keyword.trim().length === 0) {
       return { ok: false, error: 'empty keyword' };
@@ -243,10 +245,14 @@ export class SearchGateway {
       // Measure this Core search only after the shared scheduler dispatches it.
       // Waiting for page visibility or a request lane is not source latency.
       options.onDispatch = (): void => { dispatchedAt = Date.now(); };
-      const result = await this.runtimeOwner.request('book.search', {
-        sourceId: source.sourceId,
-        keyword: keyword,
-      }, options);
+      if (!Number.isSafeInteger(page) || page < 1) throw new Error('search page invalid');
+      const negotiated = this.runtimeOwner.supportsCoreCapability?.('book.search.page-receipt.v1') === true;
+      const params: JsonObject = { sourceId: source.sourceId, keyword, page };
+      if (negotiated) {
+        params['pageReceipt'] = true;
+        if (source.sourceVersion !== undefined) params['expectedSourceVersion'] = source.sourceVersion;
+      }
+      const result = await this.runtimeOwner.request('book.search', params, options);
       const measuredAt = Date.now();
       if (isCurrent?.() === false) return { ok: false, error: 'search superseded' };
       const data = result.data;
@@ -261,6 +267,7 @@ export class SearchGateway {
         }
         identity.sourceRuleVersion = data['sourceVersion'] as string;
       }
+      const pageReceipt = negotiated ? readBookSearchPageReceipt(data['pageReceipt'], source.sourceId, source.sourceVersion, keyword, page) : undefined;
       const rawBooks = data['books'];
       if ((sourceCategory === 'comic' && data['contentKind'] !== 'manga') ||
         (sourceCategory === 'novel' && data['contentKind'] !== undefined && data['contentKind'] !== 'text')) {
@@ -299,8 +306,9 @@ export class SearchGateway {
         }
         if (timedBooks.length > 0) this.enqueueSearchTimings(timedBooks, isCurrent);
       }
-      if (discardedCount > 0) return { ok: true, results: books, discardedCount, discardedReasons };
-      return { ok: true, results: books };
+      if (isCurrent?.() !== false) this.runtimeOwner.observeSourceSearchPage?.('search', page, rawBooks.length, books.length);
+      if (discardedCount > 0) return { ok: true, results: books, pageReceipt, discardedCount, discardedReasons };
+      return { ok: true, results: books, pageReceipt };
     } catch (error) {
       const message = errorMessageOf(error);
       const diagnostic = httpTransportFailureSummary(error);

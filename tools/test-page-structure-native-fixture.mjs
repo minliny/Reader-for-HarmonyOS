@@ -8,10 +8,11 @@ const selected = selectContractCases({
   'source-switch-scenes': 'Actual guarded source-switch target entries retain checked fonts, exact semantic/flat choice, real full/168vp parent and retired menu/child callbacks. No native child rendering.',
   'safe-area': 'Actual SDK fixture root consumes App top exactly once, reader/manga/control own edges, live metrics revision/320/366/explicit122/168/190 child viewports/default release; no native pixel claim.',
   'native-font-observation': 'Actual same-instance SDK Root record and metrics callback reread readonly UIContext font policy/conversions after dynamic change; unavailable observations drop prior values and retired metrics emit nothing. No font or AppStorage write.',
+  'native-font-preview': 'Actual guarded DEBUG buttons use only the current ApplicationContext and restore its first font baseline on explicit reset, page hide and destruction.',
   'menu-safe-area': 'Actual SDK menu Scroll viewport subtracts current interactive system/cutout/gesture/navigation bottom, clips buttons at its safe edge, updates on metrics revision and leaves actor stages intact; exact before-source100% negative. No Native hit claim.',
-  admission: 'Exact debug-only internal fixture/launcher routing, unique registration, no new cold Want or runtime Core/Host import.',
+  admission: 'Offline source check: the app and renderer pilot cannot route to the retired fixture and its retained code has no runtime Core/Host import.',
   'font-gate': 'Actual fixture lifecycle and SDK Source initializer: pending/failed/retired font preparation cannot mount; only current checked completion permits Source.',
-  'source-callbacks': 'Actual Source initializer callbacks: memory-only intents, scene generations, temporary Back before menu and real-area vs requested width. No native rendering or business receipt evidence.',
+  'source-callbacks': 'Actual Source initializer callbacks: memory-only intents, scene generations, temporary Back, actual viewport and optional Text measurement admission. No native rendering or business receipt evidence.',
   'source-states': 'Actual memory-only Source read/original/unknown recovery initializers, full long-message path through real projections, accurate generations and retired callbacks; no Host/RPC, native clipping or hit claim.',
   'fixture-scenes': 'Actual Directory/Download/Tools child initializers, checked admission, outer width vs actual Area, current-scene intent/Back and same-identity old bridge cleanup retirement. No native child subtree execution.',
   'tools-state-scenes': 'Actual Tools scenario menu callbacks forward the selected state, retain default content and reject denied or old menu callbacks. Frozen-state negative is rejected.',
@@ -68,14 +69,14 @@ if (selected.length) {
     ids.clear();
     try{return body();}finally{ids.clear();for(const [key,value]of saved)ids.set(key,value);}
   }
-  function fixture({debug=true,mode='debug',fonts=()=>Promise.resolve(),metrics,nativeContext,sourceText=source}={}) {
+  function fixture({debug=true,mode='debug',fonts=()=>Promise.resolve(),metrics,nativeContext,sourceText=source,measurementPorts={}}={}) {
     const sdk=boundedSurfaceSdk(),children=[],states=[],routes=[],events=[];let fontCalls=0;
     const liveMetrics=metrics??createDefaultReaderWindowMetrics();if(metrics===undefined)liveMetrics.systemFontScale=1.6;
     const child = kind => class {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;this.kind=kind;this.hostAtCreation={...[...owner.nodes.values()].filter(n=>n.type==='Stack').at(-1)};children.push(this);}updateStateVars(params){Object.assign(this.params,params);}};
     const SourceChild=child('source'), DirectoryChild=child('directory'), DownloadChild=child('downloads'), ToolsChild=child('tools'), GroupChild=child('group'), GeometryChild=child('geometry'), LegacyChild=child('legacy');
     class StateChild {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;states.push(this);}updateStateVars(params){Object.assign(this.params,params);}}
     const {owner:page}=compile(()=>createReaderBuilderProbe(sourceText,boundedMembers(sourceText),{
-      ...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:mode,SourceManagementPage:SourceChild,ReaderPageState:StateChild,
+      ...sdk.deps,...measurementPorts,DEBUG:debug,BUILD_MODE_NAME:mode,SourceManagementPage:SourceChild,ReaderPageState:StateChild,
       ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,ReaderGroupRecoveryStructureFixture:GroupChild,ReaderFrameworkGeometryStructureFixture:GeometryChild,ReaderLegacyBookmarkRecoveryStructureFixture:LegacyChild,
       defaultSourceManagementFilters,SOURCE_TOOLS_FIXTURE_SCENARIOS,DOWNLOAD_FIXTURE_SCENARIOS,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
       readerContentSafeTop,readerInteractiveSafeBottom,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
@@ -86,23 +87,22 @@ if (selected.length) {
     page.getUIContext=()=>({...nativeContext?.(),getRouter:()=>({replaceUrl:route=>routes.push({kind:'replace',...route}),back:()=>routes.push({kind:'back'})})});
     return{page,children,states,routes,events,sdk,fontCalls:()=>fontCalls,props:()=>children.at(-1)?.params};
   }
-  async function admission() {
-    for(const [debug,mode,allowed]of[[true,'debug',true],[false,'debug',false],[true,'release',false],[false,'release',false]]) {
-      const routes=[];
-      const Pilot=selectedProductionMethods(rendererFile,'ReaderRendererPilot',['openPageStructureVerification'],{
-        DEBUG:debug,BUILD_MODE_NAME:mode});
-      Object.assign(new Pilot(), {getUIContext:()=>({getRouter:()=>({pushUrl:route=>routes.push(route)})})}).openPageStructureVerification();assert.equal(routes.length,allowed?1:0);
-      if(allowed)assert.equal(routes[0].url,'pages/ReaderPageStructureVerification');
-      const f=fixture({debug,mode});f.page.aboutToAppear();await tick();
-      assert.equal(f.page.admitted,allowed);assert.equal(f.fontCalls(),allowed?1:0);
-      if(!allowed){assert.equal(f.routes[0].url,'pages/Index');f.page.launchSource('default', f.page.presentation);assert.equal(f.children.length,0);}
-    }
-    const pages=JSON.parse(readFileSync(new URL('../entry/src/main/resources/base/profile/main_pages.json',import.meta.url),'utf8'));
-    assert.equal(pages.src.filter(value=>value==='pages/ReaderPageStructureVerification').length,1);
-    const {ts,options}=installedEtsCompiler();const tree=ts.createSourceFile('ReaderPageStructureVerification.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
-    const runtimeImports=tree.statements.filter(ts.isImportDeclaration).filter(node=>node.importClause?.isTypeOnly!==true).map(node=>node.moduleSpecifier.text);
-    assert(!runtimeImports.some(value=>/SourceGateway|SourceHost|RuntimeOwner|ArkWeb|FilePicker|Network|HTTP/.test(value)),runtimeImports.join(','));
-    assert(!source.includes('AppStorage.set'));assert(!source.includes('registerFont('));
+  function admission() {
+    const profile = new URL('../entry/src/main/resources/base/profile/main_pages.json', import.meta.url);
+    const pages = JSON.parse(readFileSync(profile, 'utf8')).src;
+    assert(!pages.includes('pages/ReaderPageStructureVerification'), 'retired fixture cannot be registered');
+    assert(!pages.includes('pages/ReaderRendererPilot'), 'renderer pilot cannot be registered');
+    assert(!readFileSync(rendererFile, 'utf8').includes('pages/ReaderPageStructureVerification'),
+      'renderer pilot cannot offer a legacy route to the fixture');
+    const { ts, options } = installedEtsCompiler();
+    const tree = ts.createSourceFile('ReaderPageStructureVerification.ets', source,
+      ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    const runtimeImports = tree.statements.filter(ts.isImportDeclaration)
+      .filter(node => node.importClause?.isTypeOnly !== true).map(node => node.moduleSpecifier.text);
+    assert(!runtimeImports.some(value => /SourceGateway|SourceHost|RuntimeOwner|ArkWeb|FilePicker|Network|HTTP/.test(value)),
+      runtimeImports.join(','));
+    assert(!source.includes('AppStorage.set'));
+    assert(!source.includes('registerFont('));
   }
   async function fontGate() {
     const gate=deferred(),f=fixture({fonts:()=>gate.promise});f.page.aboutToAppear();
@@ -148,6 +148,46 @@ if (selected.length) {
     f.page.leaveScene(f.page.presentation);f.page.launchSource('empty', f.page.presentation);f.page.sourceStage();assert.equal(f.props().sources.length,0);
     assert(f.events.every(event=>event.sourceId===''||event.sourceId.endsWith('.example.invalid')));
     f.page.leaveScene(f.page.presentation);f.page.returnToPilot(f.page.presentation);assert.equal(f.routes.at(-1).kind,'back','diagnostic navigation is only admitted from the menu');
+    assert.equal(old.textLayoutOptions, undefined, 'ordinary fixture Source receives no controllers');
+    const frames = [];
+    class TestTextController {
+      getLayoutManager() {
+        return { getLineCount: () => 1, getLineMetrics: () =>
+          ({ startIndex: 0, endIndex: 2, left: 0, topHeight: 0, width: 38, height: 28, baseline: 23 }) };
+      }
+    }
+    const metricsFile = new URL('../entry/src/main/ets/pages/ReaderSourceTextMetrics.ets', import.meta.url);
+    const { ReaderSourceTextMetrics } = pureModuleProbe(readFileSync(metricsFile,'utf8'), 'ReaderSourceTextMetrics.ets',
+      { TextController: TestTextController }, ['ReaderSourceTextMetrics']);
+    class TestPostLayoutFrame {
+      constructor(_context, read) { this.read = read; }
+    }
+    const diagnostic = fixture({
+      nativeContext: () => ({ vp2px: () => 3.5, fp2px: () => 7, postFrameCallback: frame => frames.push(frame) }),
+      measurementPorts: { ReaderSourceTextMetrics, ReaderPostLayoutFrame: TestPostLayoutFrame },
+    });
+    diagnostic.page.aboutToAppear(); await tick();
+    diagnostic.page.launchSource('default', diagnostic.page.presentation, true); diagnostic.page.sourceStage();
+    const instrumented = diagnostic.props(), layout = instrumented.textLayoutOptions;
+    const first = instrumented.sources[0].sourceId, second = instrumented.sources[1].sourceId;
+    assert.equal(layout('row/title', second), undefined);
+    assert.strictEqual(layout('row/title', first), layout('row/title', first));
+    assert.notStrictEqual(layout('chip/全部'), layout('footer/manage'));
+    diagnostic.page.observeArea(diagnostic.page.presentation, { width:'320vp',height:'710vp' });
+    assert.equal(frames.length,1); frames.shift().read();
+    const receipt = diagnostic.events.at(-1);
+    assert.equal(receipt.fontScale,2); assert.equal(receipt.actualWidthVp,320);
+    assert.deepEqual(receipt.labels[0], {role:'row/title',lines:[
+      {start:0,end:2,leftPx:0,topPx:0,widthPx:38,heightPx:28,baselinePx:23},
+    ]});
+    diagnostic.page.observeArea(diagnostic.page.presentation, {width:'321vp',height:'710vp'});
+    instrumented.onBack();
+    const beforeStale = diagnostic.events.length;
+    frames.shift().read();
+    assert.equal(diagnostic.events.length,beforeStale,'closed scene rejects the outstanding native receipt');
+    diagnostic.page.launchSource('default',diagnostic.page.presentation); diagnostic.page.sourceStage();
+    assert.equal(diagnostic.props().textLayoutOptions,undefined,'normal successor receives no diagnostic hook');
+
   }
   async function sourceStates() {
     const f=fixture();f.page.aboutToAppear();await tick();
@@ -169,11 +209,11 @@ if (selected.length) {
     assert.equal(legacyView.message,legacy.receipt.message);assert(legacyView.message.length<20,'old noncanonical long input really collapses to standard short message');
     assert.equal(longView.message.startsWith(projectCommitReadback('unknown','failed').message),true);
     f.page.leaveScene(f.page.presentation);
-    for(const scene of ['read-error','read-empty-error','original-unknown','original-cleanup']) {
+    for(const scene of ['read-error','read-empty-error','read-empty-refresh-error','unknown-empty','original-unknown','original-cleanup']) {
       f.page.menu();const launch=f.sdk.nodes(f.page).findLast(n=>n.id===`reader-page-structure-source-${scene}`)?.onClick;
       assert.equal(typeof launch,'function');launch();assert.equal(f.page.scene,scene);f.page.sourceStage();
       const props=f.props(),original=props.operation.original;
-      assert.equal(props.sources.length,scene==='read-empty-error'?0:24);
+      assert.equal(props.sources.length,['read-empty-error','read-empty-refresh-error','unknown-empty'].includes(scene)?0:24);
       if(original){
         assert.equal(original.blocked,true);assert.equal(original.canRetryOriginal,true);assert.equal(original.busy,false);
         assert.equal(original.confirmation,scene==='original-cleanup'?'confirmed':'unknown');
@@ -182,9 +222,18 @@ if (selected.length) {
         props.onContinueOriginal(original.generation);assert.equal(f.page.intentCount,count+1);
         assert.equal(f.events.at(-1).kind,scene==='original-cleanup'?'intent-continue-cleanup':'intent-continue-original');
         props.onContinueOriginal(original.generation);props.onReconcile(original.generation);assert.equal(f.page.intentCount,count+1,'retired original cannot replay after successor facts');
+      }else if(scene==='unknown-empty'){
+        const pending=props.operation.receipt;
+        assert.equal(pending.receipt.confirmation,'unknown');
+        assert.equal(props.operation.readFacts.fact,'current');
+        assert.equal(pending.value?.length,0);
+        const count=f.page.intentCount;
+        props.onReconcile(props.operation.readFacts.generation);assert.equal(f.page.intentCount,count);
+        props.onReconcile(pending.facts.generation);assert.equal(f.page.intentCount,count+1);
+        assert.equal(f.page.operation.receipt.receipt.confirmation,'confirmed');
       }else{
         const read=props.operation.readFacts,view=readerRecoveryView(undefined,read);
-        assert.equal(read.fact,scene==='read-error'?'refreshFailed':'failed');assert.equal(read.hasValue,scene==='read-error');
+        assert.equal(read.fact,scene==='read-empty-error'?'failed':'refreshFailed');assert.equal(read.hasValue,scene!=='read-empty-error');
         assert.equal(view.canRetry,true);assert.equal(view.generation,read.generation);
         assert.equal(props.statusActionLabel,scene==='read-error'?'夹具状态动作':'');
         const count=f.page.intentCount;props.onStatusAction(read.generation-1);assert.equal(f.page.intentCount,count);
@@ -392,7 +441,7 @@ if (selected.length) {
   }
 
   async function safeArea(){
-    const sourceScenes=['default','empty','recovery','busy','read-error','read-empty-error','original-unknown','original-cleanup'];
+    const sourceScenes=['default','empty','recovery','busy','read-error','read-empty-error','read-empty-refresh-error','unknown-empty','original-unknown','original-cleanup'];
     const appScenes=['menu',...sourceScenes,'directory-detail','downloads','downloads-short','source-tools'];
     const ownedScenes=['directory-reader','directory-manga','directory-control-expanded','directory-control-compact','directory-control-flat-expanded','directory-control-flat-compact','directory-control-short-122','directory-control-short-168','directory-control-short-190'];
     for(const width of[320,366])for(const scene of[...appScenes,...ownedScenes]){
@@ -466,6 +515,62 @@ if (selected.length) {
       contextReplacement:true,readonlyPolicy:true,unavailableClearsPrevious:true,retiredCallbackRejected:true,
       boundary:'Actual SDK Root methods and finite readonly UIContext ports. Native system propagation remains target evidence.'}));
   }
+  async function nativeFontPreview() {
+    const metrics = createDefaultReaderWindowMetrics();
+    metrics.systemFontScale = 1;
+    const writes = [];
+    const application = { setFontSizeScale(scale) { writes.push(scale); } };
+    const nativeContext = () => ({
+      getHostContext: () => ({ getApplicationContext: () => application }),
+      isFollowingSystemFontScale: () => true, getMaxFontScale: () => 3.2,
+      vp2px: () => 3.5, fp2px: () => 3.5 * metrics.systemFontScale,
+    });
+    const f = fixture({ metrics, nativeContext });
+    const button = suffix => {
+      const node = f.sdk.nodes(f.page).findLast(n => n.id === 'reader-page-structure-font-' + suffix);
+      assert.equal(typeof node?.onClick, 'function');
+      return node;
+    };
+    f.page.aboutToAppear();
+    f.page.selectFontPreview(2, f.page.presentation);
+    assert.deepEqual(writes, [], 'pending fonts cannot change the application environment');
+    await tick();
+    f.page.menu();
+    const stale = button('2').onClick;
+    button('1-45').onClick();
+    assert.equal(f.events.at(-1).appFontPreviewScale, 1.45);
+    assert.equal(f.events.at(-1).nativeFontScaleVp, 1, 'request is separate from native observation');
+    metrics.systemFontScale = 1.45;
+    f.page.windowMetricsRevision = 2;
+    assert.equal(f.events.at(-1).nativeFontScaleVp, 1.45);
+    stale();
+    stale();
+    f.page.selectFontPreview(10, f.page.presentation);
+    assert.deepEqual(writes, [1.45, 2]);
+    f.page.launchFixture('group-recovery', f.page.presentation);
+    button('restore').onClick();
+    assert.deepEqual(writes, [1.45, 2], 'old menu cannot restore while its child is active');
+    f.page.onBackPress();
+    stale();
+    assert.deepEqual(writes, [1.45, 2], 'retired menu cannot mutate the next menu');
+    f.page.menu();
+    button('restore').onClick();
+    assert.deepEqual(writes, [1.45, 2, 1], 'explicit restore uses the first baseline');
+    assert.equal(Object.hasOwn(f.events.at(-1), 'appFontPreviewScale'), false);
+    metrics.systemFontScale = 1;
+    button('1-6').onClick();
+    f.page.onPageHide();
+    assert.deepEqual(writes.slice(-2), [1.6, 1]);
+    button('1-3').onClick();
+    f.page.aboutToDisappear();
+    f.page.onPageHide();
+    stale();
+    assert.deepEqual(writes.slice(-2), [1.3, 1], 'release restores once and rejects retired closures');
+    const denied = fixture({ debug: false, metrics, nativeContext });
+    denied.page.aboutToAppear();
+    denied.page.selectFontPreview(2, denied.page.presentation);
+    assert.deepEqual(writes, [1.45, 2, 1, 1.6, 1, 1.3, 1]);
+  }
   async function menuSafeArea() {
     const before=readFileSync(new URL('./fixtures/design/directory-confluence-before/root-menu-bottom.ets.txt',import.meta.url),'utf8');
     const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=366;metrics.windowRect.height=844;
@@ -520,7 +625,7 @@ if (selected.length) {
     page.page.onBackPress(); assert.equal(page.page.scene, 'menu');
     old.onTemporaryBackBridge(() => true, 'retired'); assert.equal(page.page.temporaryBackIdentity, '');
   }
-  const cases={'source-switch-scenes':sourceSwitchScenes,'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'tools-state-scenes':toolsStateScenes,'download-state-scenes':downloadStateScenes,
+  const cases={'source-switch-scenes':sourceSwitchScenes,'safe-area':safeArea,'native-font-observation':nativeFontObservation,'native-font-preview':nativeFontPreview,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes,'tools-state-scenes':toolsStateScenes,'download-state-scenes':downloadStateScenes,
     'group-recovery': () => componentFixtureBack('group-recovery', 'group', 'reader-page-structure-group-recovery'),
     'framework-geometry': () => componentFixtureBack('framework-geometry', 'geometry', 'reader-page-structure-framework-geometry'),
     'legacy-recovery': () => componentFixtureBack('legacy-recovery', 'legacy', 'reader-page-structure-legacy-recovery')};

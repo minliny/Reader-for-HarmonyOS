@@ -38,7 +38,6 @@ export interface SourceSwitchWorkflowPorts {
   entry: () => ReadingEntryPresentation;
   shelfBook: (sourceId: string, bookId: string) => ShelfBook | undefined;
   searchCandidates: () => SearchBook[];
-  searchedSourceIds: () => string[];
   preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession) => void;
   target: (book: ShelfBook, session: RemoteReadingSession, chapterIndex: number) => void;
   reopen: (book: ShelfBook) => void;
@@ -406,7 +405,7 @@ export class SourceSwitchPresentation {
     return { query, inBookshelf: entry.inBookshelf,
       toc: entry.toc.map((chapter: LocalReadingTocEntry): SourceSwitchAnchor => ({ chapterIndex: chapter.index, chapterTitle: chapter.title })),
       shelfBook: ports.shelfBook(query.sourceId, query.bookId), knownCandidates: readKnownCandidates(),
-      readKnownCandidates, searchedSourceIds: ports.searchedSourceIds() };
+      readKnownCandidates };
   }
 
   private workflowLease(host: SourceSwitchHost, ports: SourceSwitchWorkflowPorts): SourceSwitchLease {

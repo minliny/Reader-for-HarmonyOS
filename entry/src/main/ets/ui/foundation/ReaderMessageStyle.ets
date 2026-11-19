@@ -2,6 +2,8 @@ import { ReaderTextStyle } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_600 } from './ReaderFontFamilies';
 
+export const MESSAGE_INLINE_STATE_SPACING = 4;
+
 // User-reviewed message family (2026-10-19). These roles are deliberately
 // scoped to feedback; metadata, progress marks and ordinary page chrome keep
 // their existing typography and palette.

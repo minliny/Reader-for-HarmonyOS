@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
 import { ColorMetrics, FrameCallback } from '@kit.ArkUI';
@@ -214,7 +215,8 @@ export struct SourceSwitchWindow {
   @State private selectionPending: boolean = false;
   @State private coverFailed: boolean = false;
   private coverGeneration: number = 0;
-  @State private containerHeight: number = 0;
+  @State private containerHeight: number = -1;
+  private containerOriginY: number = 0;
   @State private containerWidth: number = 0;
   @State private novelFontsReady: boolean = sourceSwitchNovelFontsReady();
   @State private discoveryActionPressed: boolean = false;
@@ -535,7 +537,10 @@ export struct SourceSwitchWindow {
     return !this.consumeTopInset || this.readerWindowMetricsRevision < 0 ? 0 : readerVisualSafeTop(ReaderWindowCoordinator.metrics());
   }
   private safeBottom(): number {
-    return this.readerWindowMetricsRevision < 0 ? 0 : readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics(), true);
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(0, this.frameHeight() - readerKeyboardHostBottom(metrics, this.containerOriginY,
+      this.frameHeight(), 0, this.frameWidth()));
   }
   private safeLeft(): number {
     const metrics = ReaderWindowCoordinator.metrics();
@@ -625,7 +630,7 @@ export struct SourceSwitchWindow {
   private listHeaderHeight(): number {
     return this.flowChrome() ? this.headingHeight() + this.bookHeight() + this.discoveryHeight() + this.columnsHeight() : this.scrollBook() ? this.bookHeight() : 0;
   }
-  private frameHeight(): number { return this.containerHeight > 0 ? this.containerHeight : ReaderWindowCoordinator.metrics().windowRect.height; }
+  private frameHeight(): number { return this.containerHeight >= 0 ? this.containerHeight : ReaderWindowCoordinator.metrics().windowRect.height; }
   private frameWidth(): number { return this.containerWidth > 0 ? this.containerWidth : ReaderWindowCoordinator.metrics().windowRect.width; }
   private drawerWidth(): number { return Math.min(SOURCE_SWITCH_VISUAL.drawerMaxWidth, this.frameWidth()); }
   private novelSafeLeft(): number { return Math.max(0, this.safeLeft() - Math.max(0, this.frameWidth() - this.drawerWidth()) / 2); }
@@ -893,7 +898,8 @@ export struct SourceSwitchWindow {
       .onAreaChange((_old: Area, area: Area): void => {
         const height = Number(area.height);
         const width = Number(area.width);
-        if (Number.isFinite(height) && height > 0) this.containerHeight = height;
+        if (Number.isFinite(height) && height >= 0) this.containerHeight = height;
+        this.containerOriginY = Number(area.globalPosition.y);
         if (Number.isFinite(width) && width > 0) this.containerWidth = width;
       });
   }

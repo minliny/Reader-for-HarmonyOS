@@ -1,3 +1,6 @@
+import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import hilog from '@ohos.hilog';
 import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
@@ -45,6 +48,9 @@ let bookDirectoryBackGeneration = 0;
 /** Manga catalog shared by detail, the retained reader and source-switch candidates. */
 @Component
 export struct BookDirectoryPage {
+  private readonly directoryPublication: ReaderDirectoryDataPublication = new ReaderDirectoryDataPublication();
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('onMangaMetricsChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onIdentityChanged') sourceId: string = '';
@@ -101,8 +107,6 @@ export struct BookDirectoryPage {
   private mangaInputs: string = '';
   private geometryRevision: number = 0;
   private readonly toolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
-  private readonly flowToolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
-  private readonly treeToolsMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly footerMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly flowFooterMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   private readonly treeFooterMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
@@ -126,7 +130,6 @@ export struct BookDirectoryPage {
   private scrollGeneration: number = 0;
   private listReady: boolean = false;
   private pendingScrollEdge: Edge | undefined = undefined;
-  private pendingMangaCurrentScroll: boolean = false;
   private readonly listScroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
@@ -151,8 +154,6 @@ export struct BookDirectoryPage {
     this.headerInputs = '';
     this.mangaInputs = '';
     this.toolsMeasurement.unmount();
-    this.flowToolsMeasurement.unmount();
-    this.treeToolsMeasurement.unmount();
     this.footerMeasurement.unmount();
     this.flowFooterMeasurement.unmount();
     this.treeFooterMeasurement.unmount();
@@ -161,7 +162,6 @@ export struct BookDirectoryPage {
     this.admittedIdentity = '';
     this.listReady = false;
     this.pendingScrollEdge = undefined;
-    this.pendingMangaCurrentScroll = false;
   }
 
   build() {
@@ -219,7 +219,7 @@ export struct BookDirectoryPage {
           currentChapterIndex: this.currentChapterIndex, openRevision: identity,
           interactionEnabled: this.interactive && !this.selectionBusy,
           locateCurrentRevision: this.locateCurrentRevision,
-          interacted: this.navigationInteracted, mangaDisplay: true,
+          interacted: this.navigationInteracted, mangaDisplay: true, mangaFullCatalog: true,
           mangaInitialViewportWidth: this.viewportWidth > 0 ? this.viewportWidth : readerWindowMetrics().windowRect.width,
           mangaVisibleTopInset: this.mangaVisibleTopInset(), mangaCatalogNarrow: this.mangaNarrow(),
           rowHeight: visual.gridHeight, listPaddingX: this.geometry.content.frame.left,
@@ -229,9 +229,11 @@ export struct BookDirectoryPage {
           headerCount: this.mangaFlowFooter() ? 1 : 0,
           prefixHeight: this.mangaFlowFooter() ? this.geometry.content.startInset : 0,
           prefixIdentity: identity,
-          prefixBuilder: (): void => { this.mangaFlatPrefix(identity, this.treeToolsMeasurement, this.treeFooterMeasurement); },
+          prefixBuilder: (): void => { this.mangaFlatPrefix(); },
+          mangaTailBuilder: (): void => { this.mangaFlowSummary(this.treeFooterMeasurement); },
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
-          chapterEntries: this.admittedEntries,
+          directoryPublication: this.directoryPublication,
+          directoryEntriesRevision: this.directoryPublication.publish(this.admittedEntries),
           bookmarkActionsEnabled: false,
           chapterDownloadEnabled: this.mangaDownloadEnabled,
           chapterDownloadActionsEnabled: this.mangaDownloadEnabled,
@@ -262,9 +264,13 @@ export struct BookDirectoryPage {
             this.navigationActive = active; this.listReady = false;
           },
         }).width('100%').height('100%');
-        if (!this.mangaFlowFooter()) { this.mangaToolbar(identity); }
+        this.mangaToolbar(identity);
       }, (identity: string): string => identity);
-    }.width('100%').height('100%');
+    }.width('100%').height('100%').id(this.editingScroll.id)
+      .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.listScroller,
+        (): number => this.geometry.header.bottom))
+      .onDisAppear((): void => this.editingScroll.unmount())
+      .onAreaChange((): void => this.editingHost.refresh());
   }
 
   @Builder
@@ -288,40 +294,53 @@ export struct BookDirectoryPage {
 
   @Builder
   private mangaToolbar(identity: string, inline: boolean = false,
-    measurement: ReaderNativeSlotMeasurement = this.toolsMeasurement,
-    footerMeasurement: ReaderNativeSlotMeasurement = this.flowFooterMeasurement) {
+    measurement: ReaderNativeSlotMeasurement = this.toolsMeasurement) {
     Column() {
-      Column({ space: visual.summaryGap }) {
-        Text(this.bookTitle || '漫画目录').fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD)
-          .fontWeight(visual.summaryFontWeight).fontSize(visual.summaryFontSize).lineHeight(visual.summaryLineHeight).halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).fontColor(mangaDirectoryColor('ink', this.appThemeScheme))
-          .width('100%').wordBreak(WordBreak.BREAK_WORD)
-          .accessibilityText(this.bookTitle || '漫画目录');
-        Text(this.mangaSummaryLabel()).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-          .fontWeight(visual.bodyFontWeight).fontSize(visual.countFontSize).lineHeight(visual.countLineHeight).halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).fontColor(mangaDirectoryColor('muted', this.appThemeScheme))
-          .width('100%');
-      }.width('100%').alignItems(HorizontalAlign.Start).margin({ bottom: visual.summaryBottom });
-      ReaderDirectoryToolbar({
-        variant: 'manga-catalog', text: this.searchDraft, placeholder: '搜索章名或序号',
-        ascending: this.ascending, mangaFontScale: this.mangaFontScale(), locateEnabled: this.currentChapterIndex >= 0,
-        onTextChange: (value: string): void => {
-          if (this.directoryInputIsCurrent(identity)) { this.searchDraft = value; this.applySearch(); }
-        },
-        onSearch: (): void => { if (this.directoryInputIsCurrent(identity)) this.applySearch(); },
-        onToggleSort: (): void => { if (this.directoryInputIsCurrent(identity)) this.toggleSort(); },
-        onLocateCurrent: (): void => { if (this.directoryInputIsCurrent(identity)) this.locateCurrent(); },
-      }).hitTestBehavior(inline ? HitTestMode.Default : HitTestMode.BLOCK_HIERARCHY);
-      if (this.mangaFlowFooter()) {
-        Row() { this.mangaCurrentFooter(footerMeasurement); }.width('100%').justifyContent(FlexAlign.Center)
-          .margin({ top: this.mangaFooterBottomOffset() });
-      }
+      Column() {
+        if (!this.mangaFlowFooter()) { this.mangaSummary(); }
+        ReaderDirectoryToolbar({ editingHost: this.editingHost,
+          editingCurrent: (): boolean => this.directoryInputIsCurrent(identity) && !this.selectionBusy,
+          variant: 'manga-catalog', text: this.searchDraft, placeholder: '搜索章名或序号',
+          ascending: this.ascending, mangaFontScale: this.mangaFontScale(), locateEnabled: this.currentChapterIndex >= 0,
+          onTextChange: (value: string): void => {
+            if (this.directoryInputIsCurrent(identity)) { this.searchDraft = value; this.applySearch(); }
+          },
+          onSearch: (): void => { if (this.directoryInputIsCurrent(identity)) this.applySearch(); },
+          onToggleSort: (): void => { if (this.directoryInputIsCurrent(identity)) this.toggleSort(); },
+          onLocateCurrent: (): void => { if (this.directoryInputIsCurrent(identity)) this.locateCurrent(); },
+        }).hitTestBehavior(HitTestMode.Default);
+      }.width('100%').alignItems(HorizontalAlign.Start)
+        .id(measurement.id)
+        .onAppear((): void => measurement.mount(this.getUIContext(), this.mangaMeasurementKey,
+          (height: number, key: number): void => this.recordMangaHeight('tools', height, key)))
+        .onDisAppear((): void => measurement.unmount())
+        .onAreaChange(this.mangaHeightHandler('tools', this.mangaMeasurementKey));
     }.width(this.geometry.content.frame.width).alignItems(HorizontalAlign.Start)
       .hitTestBehavior(inline ? HitTestMode.Default : HitTestMode.Transparent)
-      .position(inline ? undefined : { x: this.geometry.content.frame.left, y: this.geometry.content.startInset - this.mangaToolsHeight - this.mangaScrollOffset })
-      .id(measurement.id)
-      .onAppear((): void => measurement.mount(this.getUIContext(), this.mangaMeasurementKey,
-        (height: number, key: number): void => this.recordMangaHeight('tools', height, key)))
-      .onDisAppear((): void => measurement.unmount())
-      .onAreaChange(this.mangaHeightHandler('tools', this.mangaMeasurementKey));
+      .position(inline ? undefined : { x: this.geometry.content.frame.left,
+        y: this.geometry.content.startInset - this.mangaToolsHeight - this.mangaScrollOffset });
+  }
+
+  @Builder
+  private mangaSummary() {
+    Column({ space: visual.summaryGap }) {
+      Text(this.bookTitle || '漫画目录').fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD)
+        .fontWeight(visual.summaryFontWeight).fontSize(visual.summaryFontSize).lineHeight(visual.summaryLineHeight)
+        .halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale()))
+        .fontColor(mangaDirectoryColor('ink', this.appThemeScheme)).width('100%').wordBreak(WordBreak.BREAK_WORD);
+      Text(this.mangaSummaryLabel()).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+        .fontWeight(visual.bodyFontWeight).fontSize(visual.countFontSize).lineHeight(visual.countLineHeight)
+        .halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale()))
+        .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).width('100%');
+    }.width('100%').alignItems(HorizontalAlign.Start).margin({ bottom: visual.summaryBottom });
+  }
+
+  @Builder
+  private mangaFlowSummary(measurement: ReaderNativeSlotMeasurement) {
+    Column() {
+      this.mangaSummary();
+      this.mangaCurrentFooter(measurement);
+    }.width('100%').padding({ top: this.mangaFooterBottomOffset() });
   }
 
   @Builder
@@ -461,7 +480,8 @@ export struct BookDirectoryPage {
     ReaderDirectoryList({
       entries: this.mangaLayoutEntries(), rowHeight: visual.gridHeight, naturalRowHeight: true,
       materializedInsets: this.mangaFlowFooter(),
-      prefixBuilder: (): void => { this.mangaFlatPrefix(identity); },
+      prefixBuilder: (): void => { this.mangaFlatPrefix(); },
+      tailBuilder: (): void => { this.mangaFlowSummary(this.flowFooterMeasurement); },
       listPaddingX: this.geometry.content.frame.left, listPaddingY: 8,
       listPaddingRight: this.geometry.content.frame.right,
       listPaddingTop: this.geometry.content.startInset, listPaddingBottom: this.geometry.content.endInset,
@@ -482,12 +502,11 @@ export struct BookDirectoryPage {
   }
 
   @Builder
-  private mangaFlatPrefix(identity: string,
-    measurement: ReaderNativeSlotMeasurement = this.flowToolsMeasurement,
-    footerMeasurement: ReaderNativeSlotMeasurement = this.flowFooterMeasurement) {
+  private mangaFlatPrefix() {
     Column() {
-      Blank().height(Math.max(0, this.geometry.content.startInset - this.mangaToolsHeight));
-      this.mangaToolbar(identity, true, measurement, footerMeasurement);
+      // The actual editor remains in the same overlay parent through a
+      // flow/footer threshold; this List prefix reserves its measured space.
+      Blank().height(Math.max(0, this.geometry.content.startInset));
     }.width('100%');
   }
 
@@ -777,7 +796,6 @@ export struct BookDirectoryPage {
     this.invalidateFrame();
     if (reset || wasEmpty) {
       this.scheduleTopScroll();
-      this.pendingMangaCurrentScroll = this.currentChapterIndex >= 0;
     }
   }
 
@@ -787,7 +805,7 @@ export struct BookDirectoryPage {
     this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
       nextQuery, this.ascending, true));
     if (this.mangaFlowFooter()) this.onListUserScroll();
-    else this.scheduleTopScroll();
+    else if (!this.navigationActive) this.scheduleTopScroll();
   }
 
   private toggleSort(): void {
@@ -795,7 +813,7 @@ export struct BookDirectoryPage {
     this.ascending = nextAscending;
     this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
       this.searchQuery, nextAscending, true));
-    this.scheduleTopScroll();
+    if (!this.navigationActive) this.scheduleTopScroll();
   }
 
   private scheduleTopScroll(): void {
@@ -816,21 +834,10 @@ export struct BookDirectoryPage {
   private onListFirstLayout(identity: string): void {
     if (!this.mounted || identity !== this.admittedIdentity || identity !== this.identity()) return;
     this.listReady = true;
-    if (this.pendingMangaCurrentScroll && !this.navigationActive) {
-      this.pendingMangaCurrentScroll = false;
-      const index = this.mangaLayoutRows.findIndex((row: MangaDirectoryLayoutRow): boolean =>
-        row.entries.some((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex));
-      if (index >= 0) {
-        this.pendingScrollEdge = undefined;
-        this.scrollMangaCurrent(index, 50);
-        return;
-      }
-    }
     this.flushPendingScroll();
   }
 
   private onListUserScroll(): void {
-    this.pendingMangaCurrentScroll = false;
     this.scrollGeneration += 1;
     this.pendingScrollEdge = undefined;
     this.navigationInteracted = true;
@@ -841,7 +848,14 @@ export struct BookDirectoryPage {
     if (!this.mounted || !this.listReady ||
       (this.projectedEntries.length === 0 && !this.navigationActive) || edge === undefined) return;
     this.pendingScrollEdge = undefined;
-    this.listScroller.scrollEdge(edge);
+    if (edge === Edge.Top && !this.mangaFlowFooter()) {
+      // Fixed catalogs reserve the tracked editor/header with contentStartOffset.
+      // START keeps that reservation; the container edge can hide it and a row.
+      this.listScroller.scrollToIndex(0, false, ScrollAlign.START);
+    } else {
+      // The short-host variant materializes its spacer as the first item.
+      this.listScroller.scrollEdge(edge);
+    }
   }
 
   private emptyMessage(): string {
@@ -902,8 +916,6 @@ export struct BookDirectoryPage {
       this.mangaMeasurementKey += 1;
       this.mangaFooterMeasured = 0;
       this.toolsMeasurement.request(this.mangaMeasurementKey);
-      this.flowToolsMeasurement.request(this.mangaMeasurementKey);
-      this.treeToolsMeasurement.request(this.mangaMeasurementKey);
       this.footerMeasurement.request(this.mangaMeasurementKey);
       this.flowFooterMeasurement.request(this.mangaMeasurementKey);
       this.treeFooterMeasurement.request(this.mangaMeasurementKey);

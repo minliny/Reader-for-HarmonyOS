@@ -34,6 +34,7 @@ export struct LibrarySearchResults {
       onSearch: (keyword: string, scopeSourceIds?: string[]): void => {
         if (this.inputCurrent()) this.onQuery(keyword, scopeSourceIds);
       },
+      onNeedMore: (): void => { if (this.inputCurrent()) this.presentation.host.needMoreResults(); },
       onStop: (): void => {
         if (!this.inputCurrent()) return;
         this.presentation.host.stop();

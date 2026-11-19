@@ -67,7 +67,7 @@ const palettes = {
   day: { ink: '#1F1B17', accent: '#425D45', surface: '#FFFCF8', line: '#E7E0D5', soft: '#F0ECE3' },
   night: { ink: '#EAE7DE', accent: '#B9CEB1', surface: '#282C25', line: '#3B4036', soft: '#30342D' },
 };
-const pageNames = ['mangaPage', 'mangaToolbar', 'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaSummaryLabel', 'mangaIsGroup',
+const pageNames = ['mangaPage', 'mangaToolbar', 'mangaCurrentFooter', 'mangaToolbarHeight', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaSummaryLabel', 'mangaIsGroup',
   'mangaCurrentTitle', 'mangaCurrentPosition', 'mangaToolsHeight', 'mangaViewportHeight', 'searchDraft', 'ascending',
   'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaSortIcon',
   'headerFrame', 'onMangaScrollOffset', 'mangaScrollOffset', 'readerWindowMetricsRevision', 'onMangaMetricsChanged',
@@ -216,6 +216,9 @@ async function adaptiveFooterCurrent() {
   const { readFileSync } = await import('node:fs');
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+  const { ReaderDirectoryDataPublication } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+  const { ReaderEditingScrollBinding, ReaderEditingVisibility } = readerEditingSdk();
   const { actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
   const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
@@ -240,7 +243,7 @@ async function adaptiveFooterCurrent() {
       metrics.systemFontScale = 3.2; metrics.systemInsets.bottom = 34;
       const names = ['mangaPage', 'mangaContentSlot', 'mangaContent', 'mangaHeader', 'mangaHeaderTrailingSlot',
         'mangaDownloadMenuButton', 'mangaFooterSlot', 'mangaFixedFooter', 'mangaToolbar', 'mangaFlatPrefix',
-        'mangaCurrentFooter', 'mangaFlowFooter', 'mangaFontScale', 'mangaFooterHeight', 'mangaBottomInset',
+        'mangaCurrentFooter', 'mangaToolbarHeight', 'mangaFlowFooter', 'mangaFontScale', 'mangaFooterHeight', 'mangaBottomInset',
         'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaFooterFrame',
         'mangaFrameStyle', 'mangaVisibleTopInset', 'mangaContentTopInset', 'directoryScrollLayout',
         'refreshGeometry', 'recordMangaHeight', 'mangaHeightHandler', 'mangaSummaryLabel', 'mangaIsGroup', 'mangaCurrentTitle',
@@ -266,14 +269,15 @@ async function adaptiveFooterCurrent() {
         mangaFontsReady: true, mangaViewportHeight: height, viewportWidth: 366, geometryRevision: 0,
         mangaMeasurementKey: 1, measurementKey: 1, mangaToolsHeight: 175, mangaFooterMeasured: 0,
         mangaScrollOffset: 0, readerWindowMetricsRevision: 0, navigationActive: false, mangaDownloadEnabled: false,
-        measurements: new layout.ReaderMeasurementStore(),
+        measurements: new layout.ReaderMeasurementStore(), directoryPublication: new ReaderDirectoryDataPublication(),
+        editingScroll: new ReaderEditingScrollBinding(), editingHost: new ReaderEditingVisibility(),
         contentFrame: () => new geometryApi.SurfaceHorizontalFrame(18, 18, 330),
         headerFrame: () => new geometryApi.SurfaceHorizontalFrame(8, 8, 350), topInset: () => 54,
         mangaNarrow: () => true, recordHeaderHeight() {}, recordViewport() {},
       });
       owner.refreshGeometry();
       owner.mangaPage();
-      const nav = [...owner.children.values()].find(child => child.params?.chapterEntries !== undefined);
+      const nav = [...owner.children.values()].find(child => child.params?.mangaFullCatalog === true);
       assert.ok(nav, 'actual manga content mounts the production navigation initializer');
       const flowing = height === 480;
       assert.equal(owner.mangaFlowFooter(), flowing);
@@ -287,14 +291,18 @@ async function adaptiveFooterCurrent() {
       assert.equal(owner.geometry.footer.height, flowing ? 0 : owner.mangaFooterHeight());
       assert.equal(owner.geometry.content.endInset, owner.mangaListBottomClearance());
       assert.equal(nav.params.scrollLayout.endInset, owner.geometry.content.endInset);
-      const measurement = flowing ? owner.treeFooterMeasurement : owner.footerMeasurement;
+      const measurement = flowing ? owner.flowFooterMeasurement : owner.footerMeasurement;
       const footerNode = [...owner.nodes.values()].find(node => node.id === measurement.id);
       assert.ok(footerNode?.onAreaChange, 'actual current native footer producer is attached');
+      const beforeFooter = owner.mangaFooterHeight();
+      const beforeContent = owner.geometry.content.startInset;
       footerNode.onAreaChange({}, { height: '201vp' }); sdk.properties.flush();
       assert.equal(owner.mangaFooterMeasured, 201);
+      assert.ok(Math.abs(owner.geometry.content.startInset - beforeContent - (flowing ? 201 - beforeFooter : 0)) < .001,
+        'footer-only Area pays the current inline prefix without waiting for another tools Area');
       assert.equal(owner.geometry.footer.height, flowing ? 0 : 201);
       assert.equal(footers()[0], footer, 'a native footer measurement retains the current child actor');
-      const tools = flowing ? owner.treeToolsMeasurement : owner.toolsMeasurement;
+      const tools = owner.toolsMeasurement;
       const toolbarNode = [...owner.nodes.values()].find(node => node.id === tools.id);
       const before = owner.geometry.content.startInset;
       toolbarNode.onAreaChange({}, { height: '453vp' }); sdk.properties.flush();

@@ -1,3 +1,10 @@
+import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
+import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { READER_FULL_PANEL_TOP } from './ReaderLayoutGeometry';
 import { measureReaderControlMinimum, readerControlModuleFactsGeometryKey, readerControlModuleFactsDisplayEqual,
   type ReaderControlHomeFormProfile, type ReaderControlMeasuredProfile,
@@ -188,6 +195,56 @@ class ReaderControlHeaderLineHeight implements AttributeModifier<TextAttribute> 
 
 @Component
 export struct ReaderControlPanel {
+  @StorageLink('readerWindowMetricsRevision') @Watch('onEditingWindowChanged') private editingMetricsRevision: number = 0;
+  @State @Watch('onEditingOffsetChanged') private editingOffsetY: number = 0;
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private onEditingWindowChanged(): void {
+    if (!readerControlKeyboardVisible(readerWindowMetrics())) this.editingOffsetY = 0;
+    this.editingHost.refresh();
+  }
+  private onEditingOffsetChanged(): void {
+    if (this.runtimeMounted && this.runtime !== undefined) this.acceptRuntime(this.runtime.configure(this.runtimeConfig()));
+    this.editingHost.refresh();
+  }
+  private presentedDockTop(): number { return this.dockTop() + this.editingOffsetY; }
+  private contentEditingHeight(): number {
+    const frame = this.frame();
+    const host = new ReaderRectVp(this.rootScreenX + this.dockLeft() + frame.content.x,
+      this.rootScreenY + this.presentedDockTop() + frame.dock.translateY + frame.content.y,
+      frame.content.width, frame.content.height);
+    return readerKeyboardViewport(readerWindowMetrics(), host).rect.height;
+  }
+  private editingRevealRegion(task: ReaderRectVp): ReaderRectVp {
+    const frame = this.frame();
+    const shell = new ReaderRectVp(this.rootScreenX + this.dockLeft() + frame.shell.x,
+      this.rootScreenY + this.presentedDockTop() + frame.dock.translateY + frame.shell.y,
+      frame.shell.width, frame.shell.height);
+    const viewport = readerKeyboardViewport(readerWindowMetrics(), new ReaderRectVp(this.rootScreenX, this.rootScreenY,
+      this.currentLayout().viewportWidth, this.currentLayout().viewportHeight), shell);
+    // Compact surfaces that fit above the IME move as one complete surface.
+    // A tall Full surface cannot fit there: preserve its task region and let
+    // the module allocate input/results/actions inside its visible viewport.
+    return viewport.known && viewport.occluded && shell.height <= viewport.rect.height &&
+      task.top >= shell.top - .5 && task.top + task.height <= shell.top + shell.height + .5 ? shell : task;
+  }
+  private mountEditingHost(): void {
+    this.editingHost.mount({ current: (): boolean => this.runtimeMounted && this.inputEnabled && !this.controlObscured &&
+        this.frame().visibility > 0,
+      metrics: readerWindowMetrics,
+      viewport: (): ReaderRectVp => new ReaderRectVp(this.rootScreenX, this.rootScreenY,
+        this.currentLayout().viewportWidth, this.currentLayout().viewportHeight),
+      scroll: (_delta: number): void => {},
+      revealRegion: (task: ReaderRectVp): ReaderRectVp => this.editingRevealRegion(task),
+      translate: (delta: number): void => {
+        const frame = this.frame();
+        const limit = Math.max(0, this.rootScreenY + this.dockTop() + frame.shell.y -
+          readerKeyboardViewport(readerWindowMetrics(), new ReaderRectVp(this.rootScreenX, this.rootScreenY,
+            this.currentLayout().viewportWidth, this.currentLayout().viewportHeight)).rect.top);
+        this.editingOffsetY = Math.min(0, Math.max(-limit, this.editingOffsetY - delta));
+        this.reportBackdropRegions();
+      } });
+  }
+
   @Prop sessionFontScale: number = 1;
   @StorageLink('readerAppScheme') private appScheme: string = 'day';
   @Prop @Watch('onLaunchSampleChanged') launchSample: ReaderSessionLaunchSample | undefined = undefined;
@@ -289,7 +346,8 @@ export struct ReaderControlPanel {
   private diagnosticReadyEvents: number = 0;
   private diagnosticTemporaryEvents: number = 0;
   private temporaryInputScope: string = '';
-  private temporaryInputActive: boolean = false;
+  private temporaryInputKind: ReaderControlTemporaryInputKind = '';
+  private endInlineEditing: (() => void | Promise<void>) | undefined = undefined;
   private runtimeMounted: boolean = false;
   private pendingRuntimeFrame: boolean = false;
   private pendingRuntimeTicket: number = -1;
@@ -351,8 +409,8 @@ export struct ReaderControlPanel {
     (key: string): ReaderControlMeasuredProfile | undefined => this.minimumProfiles.get(key);
   @Prop @Watch('dismissMoreMenu') dismissTemporaryRevision: number = 0;
   @Prop retireTemporaryRevision: number = 0;
-  @Prop @Watch('onTemporaryLayerActivityChanged') temporaryLayerActive: boolean = false;
-  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
+  @Prop @Watch('onTemporaryLayerActivityChanged') temporaryLayerKind: ReaderControlTemporaryInputKind = '';
+  onTemporaryLayerChange: (active: boolean, kind?: ReaderControlTemporaryInputKind) => void = (_active: boolean, _kind?: ReaderControlTemporaryInputKind): void => {};
   /** Non-reactive telemetry path for system-back/close decisions mid-motion. */
   onVisualSessionChange: (state: ReaderControlSessionState) => void =
     (_state: ReaderControlSessionState): void => {};
@@ -368,7 +426,12 @@ export struct ReaderControlPanel {
   @Prop @Watch('publishMinimumMeasurer') totalChapters: number = 0;
   @Prop @Watch('onMinimumFactsPropsChanged') readableChapterPosition: number = -1;
   @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
-  @Prop @Watch('onMinimumFactsPropsChanged') tocEntries: LocalReadingTocEntry[] = [];
+  tocEntries: LocalReadingTocEntry[] = [];
+  directoryPublication: ReaderDirectoryDataPublication | undefined = undefined;
+  @Prop @Watch('onMinimumFactsPropsChanged') directoryEntriesRevision: number = 0;
+  private currentDirectoryEntries(): LocalReadingTocEntry[] {
+    return this.directoryPublication?.entriesAt(this.directoryEntriesRevision) ?? this.tocEntries;
+  }
   @Prop @Watch('onMinimumFactsPropsChanged') catalogComplete: boolean = true;
   @Prop @Watch('onMinimumFactsPropsChanged') catalogLoading: boolean = false;
   @Prop @Watch('onMinimumFactsPropsChanged') catalogLoadFailed: boolean = false;
@@ -465,6 +528,7 @@ export struct ReaderControlPanel {
   onSearchQueryChange: (query: string) => void = (_query: string): void => {};
   onSearch: () => void = (): void => {};
   onSearchLoadMore: () => void = (): void => {};
+  onSearchNeedMore: () => void = (): void => {};
   onSearchResultSelect: (result: ReadingContentSearchResult) => void =
     (_result: ReadingContentSearchResult): void => {};
   onAutoPageToggle: () => void = (): void => {};
@@ -559,12 +623,12 @@ export struct ReaderControlPanel {
     }
     if (this.launchOwnsControls) return;
     this.onSessionLaunchShellMeasured(this.currentLayout().topBarTop + this.currentLayout().topBarHeight,
-      this.currentLayout().viewportHeight - this.dockTop() - this.frame().shell.y);
+      this.currentLayout().viewportHeight - this.presentedDockTop() - this.frame().shell.y);
     const frame = this.frame();
     const localLeft = left - this.rootScreenX;
     const localTop = top - this.rootScreenY;
     const clipLeft = this.dockLeft() + frame.content.x;
-    const clipTop = this.dockTop() + frame.content.y + frame.dock.translateY;
+    const clipTop = this.presentedDockTop() + frame.content.y + frame.dock.translateY;
     const visibleLeft = Math.max(0, clipLeft - localLeft);
     const visibleTop = Math.max(0, clipTop - localTop);
     const visibleRight = Math.min(width, clipLeft + frame.content.width - localLeft);
@@ -621,9 +685,10 @@ export struct ReaderControlPanel {
   private readonly controlMotionCurve = curves.cubicBezierCurve(0.2, 0, 0, 1);
 
   aboutToAppear(): void {
+    this.mountEditingHost();
     this.runtimeMounted = true;
-    this.temporaryInputScope = this.temporaryLayerActive ? this.currentTemporaryInputScope() : '';
-    this.temporaryInputActive = this.temporaryLayerActive;
+    this.temporaryInputScope = (this.temporaryLayerKind !== '') ? this.currentTemporaryInputScope() : '';
+    this.temporaryInputKind = this.temporaryLayerKind;
     this.runtimeLifecycle += 1;
     this.runtime = new ReaderControlRuntime(this.runtimeConfig(), readerMotionNowMs);
     this.acceptRuntime(this.runtime.start(this.controlSession));
@@ -648,6 +713,7 @@ export struct ReaderControlPanel {
   }
 
   aboutToDisappear(): void {
+    this.editingHost.unmount();
     this.dismissMoreMenu();
     this.runtimeMounted = false;
     this.runtimeLifecycle += 1;
@@ -668,7 +734,7 @@ export struct ReaderControlPanel {
   private runtimeConfig(): ReaderControlGestureConfig {
     return { axis: readerControlMotionAxis(readerControlMotionBounds(this.currentLayout().fullPanelWidth,
       this.controlPanelHeight(), this.currentLayout().dockBottomGap, this.controlQuickHeight(), this.currentLayout().contentBudget),
-      this.rootScreenY + this.dockTop()), tapMaxDurationMs: 500, directionSlopVp: 8,
+      this.rootScreenY + this.presentedDockTop()), tapMaxDurationMs: 500, directionSlopVp: 8,
       settleDurationMs: readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion),
       showDurationMs: readerControlMotionMs(READER_CONTROL_OPEN_MS, this.reduceMotion),
       dismissDurationMs: readerControlMotionMs(READER_CONTROL_DISMISS_MS, this.reduceMotion), coordinatedMotion: true };
@@ -701,7 +767,7 @@ export struct ReaderControlPanel {
     if (this.contentMotionWidth !== f.content.width) this.contentMotionWidth = f.content.width;
     if (this.contentMotionHeight !== f.content.height) this.contentMotionHeight = f.content.height;
     this.dockRect.x = this.rootScreenX + this.dockLeft();
-    this.dockRect.y = this.rootScreenY + this.dockTop() + f.shell.y + f.dock.translateY;
+    this.dockRect.y = this.rootScreenY + this.presentedDockTop() + f.shell.y + f.dock.translateY;
     this.dockRect.width = f.shell.width;
     this.dockRect.height = f.shell.height;
     this.reportBackdropRegions();
@@ -756,11 +822,11 @@ export struct ReaderControlPanel {
         this.catalogComplete, this.catalogChapterCount, this.catalogLoading, this.catalogLoadFailed,
         this.catalogCurrentPosition, this.totalChapters, this.readableChapterPosition, this.mangaSearch,
         this.bookmarkLoadFailed, this.bookmarkLoadMessage]);
-      if (this.directoryMinimumFactsCache !== undefined && this.directoryMinimumEntries === this.tocEntries &&
+      if (this.directoryMinimumFactsCache !== undefined && this.directoryMinimumEntries === this.currentDirectoryEntries() &&
         this.directoryMinimumBook === this.bookmarkIdentity && this.directoryMinimumInputs === inputs) {
         return this.directoryMinimumFactsCache;
       }
-      const snapshot = readerControlDirectorySnapshot(this.tocEntries, location.directoryTab, '', true,
+      const snapshot = readerControlDirectorySnapshot(this.currentDirectoryEntries(), location.directoryTab, '', true,
         this.currentChapterIndex, this.bookmarkIdentity, { complete: this.catalogComplete,
           chapterCount: this.catalogChapterCount, loading: this.catalogLoading, loadFailed: this.catalogLoadFailed,
           currentPosition: this.catalogCurrentPosition, readableChapterCount: this.totalChapters,
@@ -768,7 +834,7 @@ export struct ReaderControlPanel {
       const facts: ReaderControlModuleFacts = { module: module, directory: readerControlDirectoryMinimumFacts({ snapshot: snapshot,
         tab: location.directoryTab, catalogComplete: this.catalogComplete,
         bookmarkLoadFailed: this.bookmarkLoadFailed, bookmarkLoadMessage: this.bookmarkLoadMessage }) };
-      this.directoryMinimumEntries = this.tocEntries;
+      this.directoryMinimumEntries = this.currentDirectoryEntries();
       this.directoryMinimumBook = this.bookmarkIdentity;
       this.directoryMinimumInputs = inputs;
       this.directoryMinimumFactsCache = facts;
@@ -864,7 +930,8 @@ export struct ReaderControlPanel {
   }
 
   private onCommittedMinimumIdentityChanged(): void {
-    this.temporaryInputActive = false;
+    this.temporaryInputKind = '';
+    this.endInlineEditing = undefined;
     this.temporaryInputScope = '';
     if (this.runtimeMounted) this.onTemporaryLayerChange(false);
     this.onPresentationReceiptChanged();
@@ -1114,16 +1181,16 @@ export struct ReaderControlPanel {
   }
 
   private onTemporaryLayerActivityChanged(): void {
-    this.temporaryInputScope = this.temporaryLayerActive ? this.currentTemporaryInputScope() : '';
-    this.temporaryInputActive = this.temporaryLayerActive;
+    this.temporaryInputScope = (this.temporaryLayerKind !== '') ? this.currentTemporaryInputScope() : '';
+    this.temporaryInputKind = this.temporaryLayerKind;
     if (DEBUG && this.diagnosticTemporaryEvents < 32) {
       this.diagnosticTemporaryEvents += 1;
       hilog.info(0xD004, 'ReaderControlDiagnostic',
         'stage=temporary-changed active=%{public}s ready=%{public}s input=%{public}s obscured=%{public}s',
-        String(this.temporaryLayerActive), String(this.minimumInputReady()),
+        String((this.temporaryLayerKind !== '')), String(this.minimumInputReady()),
         String(this.inputEnabled), String(this.controlObscured));
     }
-    if (this.temporaryLayerActive) this.cancelBrightnessDrag();
+    if ((this.temporaryLayerKind !== '')) this.cancelBrightnessDrag();
     this.syncProgressInput();
   }
 
@@ -1158,7 +1225,7 @@ export struct ReaderControlPanel {
       // A successor measurement fences new gestures, not the original
       // pointer's Move/Up/Cancel while its accepted runtime rebases the axis.
       if (this.inputCurrent?.() === false || !this.minimumInputReady()) return;
-      if (pointers.length > 0 && runtime.owner() < 0 && !this.temporaryLayerActive) {
+      if (pointers.length > 0 && runtime.owner() < 0 && this.temporaryLayerKind === '') {
         this.onInputActivity();
         this.inputClock = new ReaderPageInputClock();
         const time = this.inputClock.sample(event.timestamp, readerMotionNowMs());
@@ -1329,21 +1396,27 @@ export struct ReaderControlPanel {
   private hasCurrentTemporaryInput(): boolean {
     // Keep an accepted native editor/modal through its own measurement reflow.
     // Metrics, selected key and p are outputs; a successor opening/module is not.
-    return (this.temporaryInputActive || this.temporaryLayerActive) && this.temporaryInputScope.length > 0 &&
+    return (this.temporaryInputKind !== '') && this.temporaryInputScope.length > 0 &&
       this.temporaryInputScope === this.currentTemporaryInputScope();
   }
 
-  private moduleTemporaryLayerHandler(module: string): (active: boolean) => void {
+  private moduleTemporaryLayerHandler(module: string): (active: boolean, kind?: ReaderControlTemporaryInputKind, endEditing?: () => void | Promise<void>) => void {
     const identity = this.currentMinimumIdentity();
-    return (active: boolean): void => {
-      if (!this.runtimeMounted || this.contentLocation().module !== module ||
+    const scope = this.currentTemporaryInputScope();
+    return (active: boolean, kind: ReaderControlTemporaryInputKind = 'modal', endEditing?: () => void | Promise<void>): void => {
+      if (!this.runtimeMounted || scope !== this.currentTemporaryInputScope() || this.contentLocation().module !== module ||
         (this.preparedMinimumRequired && (identity !== this.committedMinimumIdentity() || identity !== this.currentMinimumIdentity()))) return;
       if (active && !this.minimumInputReady() && !this.hasCurrentTemporaryInput()) return;
-      this.temporaryInputActive = active;
-      this.temporaryInputScope = active ? this.currentTemporaryInputScope() : '';
-      this.onTemporaryLayerChange(active);
+      this.temporaryInputKind = active ? kind : '';
+      this.temporaryInputScope = active ? scope : '';
+      this.endInlineEditing = active && kind === 'inlineEditor' ? endEditing : undefined;
+      this.onTemporaryLayerChange(active, this.temporaryInputKind);
       if (active && module === 'tts' && this.secondaryModuleInputEnabled('tts')) this.onTtsConfigurationOpen();
     };
+  }
+
+  private hasCurrentModalInput(): boolean {
+    return this.hasCurrentTemporaryInput() && this.temporaryInputKind !== 'inlineEditor';
   }
 
   private moduleEditorInputEnabled(module: 'search' | 'directory' | 'tts'): boolean {
@@ -1410,10 +1483,10 @@ export struct ReaderControlPanel {
     this.onPageChange(page);
   }
 
-  private controlActionInputEnabled(): boolean {
+  private controlActionInputEnabled(allowInlineEditor: boolean = false): boolean {
     return this.runtimeMounted && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
       (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
-      !this.hasCurrentTemporaryInput() && !this.moreMenuVisible && this.visualVisibilityProgress > 0 &&
+      !(allowInlineEditor ? this.hasCurrentModalInput() : this.hasCurrentTemporaryInput()) && !this.moreMenuVisible && this.visualVisibilityProgress > 0 &&
       this.visualHeldPointerId < 0;
   }
 
@@ -1428,7 +1501,9 @@ export struct ReaderControlPanel {
       readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
   }
 
-  private activateModule(module: string): void {
+  private navigationIntentPending: boolean = false;
+  private async activateModule(module: string): Promise<void> {
+    if (this.navigationIntentPending) return;
     let page: ReaderControlPage;
     if (module === 'directory') page = 'moduleDirectory';
     else if (module === 'tts') page = 'moduleTts';
@@ -1436,8 +1511,19 @@ export struct ReaderControlPanel {
     else if (module === 'settings') page = 'moduleSettings';
     else return;
     const destination: ReaderControlPage = this.isActiveModule(module) ? 'home' : page;
-    this.requestPage(destination);
-    this.onModuleSelect(destination === 'home' ? 'home' : module);
+    if (!this.navigationInputEnabled()) return;
+    const scope = this.currentTemporaryInputScope();
+    this.navigationIntentPending = true;
+    try {
+      if (this.hasCurrentTemporaryInput() && this.temporaryInputKind === 'inlineEditor') {
+        const end = this.endInlineEditing;
+        if (end === undefined) return;
+        await end();
+        if (!this.runtimeMounted || scope !== this.currentTemporaryInputScope() || !this.navigationInputEnabled()) return;
+      }
+      this.requestPage(destination);
+      this.onModuleSelect(destination === 'home' ? 'home' : module);
+    } finally { this.navigationIntentPending = false; }
   }
 
   private promoteSearch(): void { this.requestPage('quickSearch'); }
@@ -1478,7 +1564,7 @@ export struct ReaderControlPanel {
         .translate({ y: this.frame().topBar.translateY }).opacity(this.currentLayout().topBarVisible ? this.frame().topBar.opacity : 0)
         .enabled(this.topBarInputEnabled() && this.frame().topBar.opacity > 0)
         .hitTestBehavior(this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 ? HitTestMode.Transparent : HitTestMode.None)
-        .accessibilityLevel(this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 && (!this.temporaryLayerActive || this.moreMenuVisible) ?
+        .accessibilityLevel(this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 && (this.temporaryLayerKind === '' || this.moreMenuVisible) ?
           'auto' : 'no-hide-descendants')
         .onAreaChange((_previous: Area, current: Area): void => {
           this.measureTopBar({ x: Number(current.globalPosition.x),
@@ -1554,11 +1640,11 @@ export struct ReaderControlPanel {
           // Default admits the child collapse action and masks lower siblings.
           // Block here would skip every child, leaving a visible but dead button.
           .zIndex(2)
-          .hitTestBehavior(!this.temporaryLayerActive && (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace') ?
+          .hitTestBehavior(this.temporaryLayerKind === '' && (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace') ?
             HitTestMode.Default : HitTestMode.None)
-          .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0 && !this.temporaryLayerActive &&
+          .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0 && this.temporaryLayerKind === '' &&
             (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace'))
-          .accessibilityLevel(this.temporaryLayerActive ? 'no-hide-descendants' : 'auto');
+          .accessibilityLevel((this.temporaryLayerKind !== '') ? 'no-hide-descendants' : 'auto');
         this.headerAction();
         Stack({ alignContent: Alignment.TopStart }) { this.brightnessRail(); }
           .width(this.frame().brightness.width).height(this.frame().brightness.height)
@@ -1566,16 +1652,16 @@ export struct ReaderControlPanel {
           .opacity(this.frame().brightness.opacity)
           // HitTestMode.None excludes only this container, not its children.
           // Retain the authored actors, but retire the whole faded subtree.
-          .enabled(this.contentInputEnabled() && !this.temporaryLayerActive && this.frame().brightness.opacity > 0)
-          .hitTestBehavior(!this.temporaryLayerActive && this.frame().brightness.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
-          .accessibilityLevel(this.contentInputEnabled() && !this.temporaryLayerActive &&
+          .enabled(this.contentInputEnabled() && this.temporaryLayerKind === '' && this.frame().brightness.opacity > 0)
+          .hitTestBehavior(this.temporaryLayerKind === '' && this.frame().brightness.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
+          .accessibilityLevel(this.contentInputEnabled() && this.temporaryLayerKind === '' &&
             this.frame().brightness.opacity > 0 ? 'auto' : 'no-hide-descendants');
         Stack({ alignContent: Alignment.TopStart }) { this.moduleNavBar(); }
           .width(this.frame().navigation.width).height(this.frame().navigation.height)
           .position({ x: this.frame().navigation.x, y: this.frame().navigation.y })
           .opacity(this.frame().navigation.opacity)
           .enabled(this.navigationInputEnabled())
-          .accessibilityLevel(!this.temporaryLayerActive && this.frame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
+          .accessibilityLevel(!this.hasCurrentModalInput() && this.frame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
         // The cap and central grabber retain their one gesture owner.
         this.headerGrabCap();
@@ -1606,7 +1692,7 @@ export struct ReaderControlPanel {
         .id('reader-control-motion-dock')
         .translate({ y: this.frame().dock.translateY })
         .opacity(this.frame().dock.opacity)
-        .position({ x: this.dockLeft(), y: this.dockTop() })
+        .position({ x: this.dockLeft(), y: this.presentedDockTop() })
         // A held pointer may reach the hidden endpoint before UP. Retiring
         // its ancestor here loses UP/CANCEL and leaves the runtime held.
         .enabled(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0))
@@ -1661,7 +1747,7 @@ export struct ReaderControlPanel {
 
   private setMoreMenuVisible(visible: boolean): void {
     if (this.moreMenuVisible === visible) return;
-    if (visible && (!this.runtimeMounted || !this.inputEnabled || this.controlObscured || this.temporaryLayerActive || this.frame().visibility <= 0)) return;
+    if (visible && (!this.runtimeMounted || !this.inputEnabled || this.controlObscured || (this.temporaryLayerKind !== '') || this.frame().visibility <= 0)) return;
     if (visible) {
       this.moreMenuGeneration += 1;
       this.moreMenuRecoveryIdentity = this.recoveryIdentity;
@@ -2072,7 +2158,7 @@ export struct ReaderControlPanel {
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
           onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
             this.bindModuleMinimum('directory', identity, measurer),
-          entries: this.tocEntries, currentChapterIndex: this.currentChapterIndex,
+          directoryPublication: this.directoryPublication, directoryEntriesRevision: this.directoryEntriesRevision, currentChapterIndex: this.currentChapterIndex,
           catalogComplete: this.catalogComplete, catalogChapterCount: this.catalogChapterCount,
           catalogLoading: this.catalogLoading, catalogLoadFailed: this.catalogLoadFailed,
           catalogCurrentPosition: this.catalogCurrentPosition,
@@ -2091,7 +2177,7 @@ export struct ReaderControlPanel {
           editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('directory'),
           onTemporaryLayerChange: this.moduleTemporaryLayerHandler('directory'),
           dismissTemporaryRevision: this.dismissTemporaryRevision,
-          availableWidth: this.contentMotionWidth, availableHeight: this.contentMotionHeight,
+          availableWidth: this.contentMotionWidth, availableHeight: this.contentEditingHeight(),
           tab: this.contentLocation().directoryTab,
           sessionKey: this.listSessionKey(), bookmarkIdentity: this.bookmarkIdentity,
           onTabChange: (tab: string): void => {
@@ -2140,7 +2226,7 @@ export struct ReaderControlPanel {
         this.bindModuleMinimum('appearance', identity, measurer),
       expandedLayout: this.isExpanded(),
       availableWidth: this.contentMotionWidth,
-      availableHeight: this.contentMotionHeight,
+      availableHeight: this.contentEditingHeight(),
       fullContentHeight: this.contentEndpointHeight(true),
       interactionEnabled: this.secondaryModuleInputEnabled('appearance'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('appearance'),
@@ -2182,7 +2268,7 @@ export struct ReaderControlPanel {
 
   @Builder
   private searchModuleContent() {
-    ReaderControlSearchContent({
+    ReaderControlSearchContent({ editingHost: this.editingHost,
       minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
       preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
@@ -2191,7 +2277,7 @@ export struct ReaderControlPanel {
       fullContentHeight: this.contentEndpointHeight(true), quickContentHeight: this.contentEndpointHeight(false),
       motionProgress: this.contentMotionProgress,
       availableWidth: this.contentMotionWidth,
-      availableHeight: this.contentMotionHeight,
+      availableHeight: this.contentEditingHeight(),
       interactionEnabled: this.secondaryModuleInputEnabled('search'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('search'),
       dismissTemporaryRevision: this.dismissTemporaryRevision,
@@ -2204,6 +2290,7 @@ export struct ReaderControlPanel {
       onQueryChange: (query: string): void => this.onSearchQueryChange(query),
       onSearch: (): void => this.onSearch(),
       onLoadMore: (): void => this.onSearchLoadMore(),
+      onNeedMore: (): void => this.onSearchNeedMore(),
       onSelectResult: (result: ReadingContentSearchResult): void => this.onSearchResultSelect(result),
     });
   }
@@ -2219,7 +2306,7 @@ export struct ReaderControlPanel {
       fullViewportHeight: this.contentEndpointHeight(true),
       motionProgress: this.contentMotionProgress,
       availableWidth: this.contentMotionWidth,
-      availableHeight: this.contentMotionHeight,
+      availableHeight: this.contentEditingHeight(),
       interactionEnabled: this.secondaryModuleInputEnabled('settings'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('settings'),
       snapshot: this.settingsSnapshot,
@@ -2257,7 +2344,7 @@ export struct ReaderControlPanel {
       form: this.contentLocation().form,
       expandedLayout: this.isExpanded(),
       availableWidth: this.contentMotionWidth,
-      availableHeight: this.contentMotionHeight,
+      availableHeight: this.contentEditingHeight(),
       interactionEnabled: this.secondaryModuleInputEnabled('tts'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('tts'),
       editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('tts'),
@@ -2319,7 +2406,7 @@ export struct ReaderControlPanel {
           expandedLayout: this.isExpanded(), motionProgress: this.contentMotionProgress,
           form: this.contentLocation().form,
           availableWidth: this.contentMotionWidth,
-          availableHeight: this.contentMotionHeight,
+          availableHeight: this.contentEditingHeight(),
           interactionEnabled: this.secondaryModuleInputEnabled('autoPage'),
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('autoPage'),
           canPreviousChapter: this.canStepChapter(-1),
@@ -2351,14 +2438,14 @@ export struct ReaderControlPanel {
             this.bindModuleMinimum('replace', identity, measurer),
           fullContentHeight: this.contentEndpointHeight(true), quickContentHeight: this.contentEndpointHeight(false),
           state: this.controlReplaceState, motionProgress: this.contentMotionProgress,
-          availableWidth: this.contentMotionWidth, availableHeight: this.contentMotionHeight,
+          availableWidth: this.contentMotionWidth, availableHeight: this.contentEditingHeight(),
           interactionEnabled: this.secondaryModuleInputEnabled('replace'),
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('replace'),
           dismissTemporaryRevision: this.dismissTemporaryRevision, retireTemporaryRevision: this.retireTemporaryRevision,
           onTemporaryLayerChange: this.moduleTemporaryLayerHandler('replace'),
           onBack: (): void => this.requestPage('home'),
           onExpand: (): void => {
-            if (this.temporaryLayerActive) return;
+            if ((this.temporaryLayerKind !== '')) return;
             this.onInputActivity();
             this.applySemanticSession(expandReaderControlSession(this.controlSession,
               readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
@@ -2399,9 +2486,9 @@ export struct ReaderControlPanel {
     .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .responseRegion(readerActionTouchRegion(44, 44))
     .attributeModifier(new ReaderActionAccessibility('退出阅读，返回上一页',
-      this.topBarInputEnabled() && !this.controlObscured && !this.temporaryLayerActive && !this.moreMenuVisible, false, true, undefined, 'nativeButton'))
+      this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible, false, true, undefined, 'nativeButton'))
     .onClick(this.controlActionHandler((): void => {
-      if (this.topBarInputEnabled() && !this.controlObscured && !this.temporaryLayerActive && !this.moreMenuVisible) this.onExitReading();
+      if (this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible) this.onExitReading();
     }));
   }
 
@@ -2440,10 +2527,10 @@ export struct ReaderControlPanel {
     .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control'))
     .responseRegion(readerActionTouchRegion(62, this.sourceActionHeight()))
     .attributeModifier(new ReaderActionAccessibility('换源',
-      this.topBarInputEnabled() && !this.controlObscured && !this.temporaryLayerActive && !this.moreMenuVisible && !this.isLocalBook(), false, true, undefined, 'nativeButton'))
+      this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook(), false, true, undefined, 'nativeButton'))
     .onClick(this.controlActionHandler((): void => {
       // 本地书籍换源置灰不可点; 仅在线书籍可换源。
-      if (this.topBarInputEnabled() && !this.controlObscured && !this.temporaryLayerActive && !this.moreMenuVisible && !this.isLocalBook()) {
+      if (this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook()) {
         this.onSourceSwitch(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control'));
       }
     }));
@@ -2459,7 +2546,7 @@ export struct ReaderControlPanel {
     .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .responseRegion(readerActionTouchRegion(44, 44))
     .attributeModifier(new ReaderActionAccessibility('更多',
-      this.topBarInputEnabled() && !this.controlObscured && (!this.temporaryLayerActive || this.moreMenuVisible), false, true, undefined, 'nativeButton'))
+      this.topBarInputEnabled() && !this.controlObscured && (this.temporaryLayerKind === '' || this.moreMenuVisible), false, true, undefined, 'nativeButton'))
     .onClick(this.controlActionHandler((): void => { if (this.topBarInputEnabled()) this.setMoreMenuVisible(!this.moreMenuVisible); }))
     .bindPopup(this.moreMenuVisible && this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
   }
@@ -2475,10 +2562,10 @@ export struct ReaderControlPanel {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back')).width(24).height(24);
       }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
-        .enabled(this.shortWindowActionInput() && !this.temporaryLayerActive && !this.moreMenuVisible)
+        .enabled(this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible)
         .accessibilityText('退出阅读，返回上一页')
         .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && !this.temporaryLayerActive && !this.moreMenuVisible) this.onExitReading();
+          if (this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible) this.onExitReading();
         }));
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: 6 }) {
@@ -2490,19 +2577,19 @@ export struct ReaderControlPanel {
         }.justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
       }.width(76).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
         .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control-short'))
-        .enabled(this.shortWindowActionInput() && !this.temporaryLayerActive && !this.moreMenuVisible && !this.isLocalBook())
+        .enabled(this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook())
         .accessibilityText('换源')
         .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && !this.temporaryLayerActive && !this.moreMenuVisible && !this.isLocalBook())
+          if (this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook())
             this.onSourceSwitch(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control-short'));
         }));
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image($r(this.appScheme === 'night' ? 'app.media.rc_dots_theme_night' : 'app.media.rc_dots')).width(20).height(20);
       }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
-        .enabled(this.shortWindowActionInput() && (!this.temporaryLayerActive || this.moreMenuVisible))
+        .enabled(this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible))
         .accessibilityText('更多')
         .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && (!this.temporaryLayerActive || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
+          if (this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
         }))
         .bindPopup(this.moreMenuVisible && !this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
     }.width(Math.max(180, this.frame().content.width)).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).justifyContent(FlexAlign.End);
@@ -2704,7 +2791,7 @@ export struct ReaderControlPanel {
 
   private progressInputEnabled(): boolean {
     return this.runtimeMounted && this.contentLocation().level === 'home' && this.contentInputEnabled() &&
-      !this.temporaryLayerActive && !this.moreMenuVisible;
+      this.temporaryLayerKind === '' && !this.moreMenuVisible;
   }
 
   private invalidateProgressInput(): void {
@@ -2898,7 +2985,7 @@ export struct ReaderControlPanel {
   }
 
   private brightnessInputEnabled(): boolean {
-    return this.runtimeMounted && this.contentInputEnabled() && !this.temporaryLayerActive &&
+    return this.runtimeMounted && this.contentInputEnabled() && this.temporaryLayerKind === '' &&
       !this.moreMenuVisible && this.frame().brightness.opacity > 0;
   }
 
@@ -2987,7 +3074,7 @@ export struct ReaderControlPanel {
     return this.clampBrightness(stepped);
   }
   private navigationInputEnabled(): boolean {
-    return this.controlActionInputEnabled() && (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
+    return this.controlActionInputEnabled(true) && (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
       (!this.preparedMinimumRequired || this.presentationReceipt?.environmentKey === this.minimumEnvironmentKey) &&
       this.frame().navigation.opacity > 0 && this.frame().navigation.height > 0;
   }
@@ -3050,7 +3137,7 @@ export struct ReaderControlPanel {
     .opacity(module === 'tts' && this.ttsState.status === 'unavailable' ? 0.72 : 1)
     .attributeModifier(new ReaderActionAccessibility(label, this.navigationInputEnabled(), this.isActiveModule(module), true, undefined, 'nativeButton'))
     .onClick(this.controlActionHandler((): void => {
-      if (this.navigationInputEnabled()) this.activateModule(module);
+      if (this.navigationInputEnabled()) void this.activateModule(module);
     }));
   }
 
@@ -3064,10 +3151,10 @@ export struct ReaderControlPanel {
       const target = this.readableChapterPosition + delta;
       return target >= 0 && target < this.totalChapters;
     }
-    for (let position = 0; position < this.tocEntries.length; position += 1) {
-      if (this.tocEntries[position].index !== this.currentChapterIndex) continue;
-      for (let target = position + delta; target >= 0 && target < this.tocEntries.length; target += delta) {
-        if (this.tocEntries[target].navigable !== false) return true;
+    for (let position = 0; position < this.currentDirectoryEntries().length; position += 1) {
+      if (this.currentDirectoryEntries()[position].index !== this.currentChapterIndex) continue;
+      for (let target = position + delta; target >= 0 && target < this.currentDirectoryEntries().length; target += delta) {
+        if (this.currentDirectoryEntries()[target].navigable !== false) return true;
       }
       return false;
     }

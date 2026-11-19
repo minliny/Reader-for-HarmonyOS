@@ -18,6 +18,7 @@ const content = await import('../../entry/src/main/ets/features/reading/applicat
 const errors = await import('../../entry/src/main/ets/app/ErrorMessage.ts');
 const metadata = await import('../../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
 const searchTiming = await import('../../entry/src/main/ets/app/library/BookSearchTiming.ts');
+const pages = await import('../../entry/src/main/ets/app/library/BookSearchPageProgress.ts');
 const acquisition = await import('../../entry/src/main/ets/app/library/BookAcquisitionPresentation.ts');
 const category = await import('../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 const providerFamily = await import('../../entry/src/main/ets/features/source/application/SourceSwitchProviderFamily.ts');
@@ -33,7 +34,7 @@ const compile = (source, name, deps) => new Function(...Object.keys(deps),
 let currentRuntime;
 export const setCurrentRuntime=value=>{currentRuntime=value;};
 export const Runtime = { current: () => currentRuntime, isCurrent: runtime => currentRuntime === runtime && !runtime.closed };
-const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ...searchTiming, ...acquisition, ...category, ...providerFamily, ...scheduler };
+const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ...searchTiming, ...pages, ...acquisition, ...category, ...providerFamily, ...scheduler };
 // Keep source-switch discovery on the same exported live-search decoder as
 // production. Extract its ordinary function dependency closure with the
 // installed compiler instead of copying the JSON/admission implementation.
@@ -184,7 +185,7 @@ export function fixture(options={},productionSource=hostSource) {
   currentRuntime=runtime;
   const host=options.shared?ProductionHost.forRuntime(runtime):new ProductionHost(runtime),context={query:{sourceId:'old',bookId:'book',bookName:'Book',author:'Writer',
     currentChapterIndex:0,currentChapterTitle:'Chapter 1'},inBookshelf:options.preview!==true,
-    toc:[{chapterIndex:0,chapterTitle:'Chapter 1'}],knownCandidates:[],searchedSourceIds:[]};
+    toc:[{chapterIndex:0,chapterTitle:'Chapter 1'}],knownCandidates:[]};
   const lease={isCurrent:book=>live&&book.sourceId===identity.sourceId&&book.bookId===identity.bookId,
     changed:snapshot=>changes.push(snapshot),effect:effect=>{effects.push(effect);
       if(effect.kind==='restoredForNextChoice')identity={sourceId:effect.book.sourceId,bookId:effect.book.bookId};

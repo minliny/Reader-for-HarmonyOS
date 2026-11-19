@@ -1,3 +1,4 @@
+import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { mangaDirectoryDisplay } from '../../manga/ui/MangaDirectoryDisplay';
@@ -7,6 +8,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600 } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
@@ -44,10 +46,15 @@ export function cacheReaderDirectoryNavigationPage(view: ReaderDirectoryNavigati
   return { viewId: page.viewId, visibleTotal: page.visibleTotal, nextOffset: page.nextOffset, nodes: [] };
 }
 
-class ReaderDirectoryPageWindow {
+export class ReaderDirectoryPageWindow {
   private prefix: string = '';
   bind(view: ReaderDirectoryNavigationReady): void {
     this.prefix = directoryPagePrefix(view);
+  }
+  clear(): void {
+    if (this.prefix.length === 0) return;
+    for (const key of directoryPages.keys()) if (key.startsWith(this.prefix)) directoryPages.remove(key);
+    this.prefix = '';
   }
   get(offset: number): ReaderDirectoryNavigationNode[] | undefined { return directoryPages.get(`${this.prefix}${offset}`); }
   put(offset: number, nodes: ReaderDirectoryNavigationNode[]): void { directoryPages.put(`${this.prefix}${offset}`, nodes); }
@@ -77,9 +84,11 @@ interface ReaderDirectoryPositionPlan {
   viewId: string;
   index: number;
   rowFraction: number;
+  leadingInsetProgress?: number;
   align: ScrollAlign;
   currentInset?: number;
   smooth?: boolean;
+  startAtCatalogTop?: boolean;
 }
 
 class ReaderDirectoryNavigationDataSource implements IDataSource {
@@ -271,7 +280,12 @@ export struct ReaderDirectoryNavigationList {
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   inputCurrent: (() => boolean) | undefined = undefined;
   chapterInputCurrent: ((chapter: LocalReadingTocEntry) => boolean) | undefined = undefined;
-  @Prop @Watch('onChapterEntriesChanged') chapterEntries: LocalReadingTocEntry[] = [];
+  chapterEntries: LocalReadingTocEntry[] = [];
+  directoryPublication: ReaderDirectoryDataPublication | undefined = undefined;
+  @Prop @Watch('onChapterEntriesChanged') directoryEntriesRevision: number = 0;
+  private currentDirectoryEntries(): LocalReadingTocEntry[] {
+    return this.directoryPublication?.entriesAt(this.directoryEntriesRevision) ?? this.chapterEntries;
+  }
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterDownloadActionsEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
@@ -282,6 +296,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop @Watch('onPrefixChanged') prefixIdentity: string = '';
   @Prop @Watch('onPrefixReveal') prefixRevealRevision: number = 0;
   @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
+  @BuilderParam mangaTailBuilder: () => void = this.emptyPrefix;
   @BuilderParam emptyBuilder: () => void = this.emptyPrefix;
   @Prop emptyReadStateVisible: boolean = false;
   scroller: Scroller | undefined = undefined;
@@ -358,7 +373,7 @@ export struct ReaderDirectoryNavigationList {
       (): void => this.onScrollCommand());
     this.dataSource.replace(this.view);
     this.rowPresentationRevision += 1;
-    this.positionPlan = this.planPosition();
+    this.positionPlan = this.planPosition(true);
     this.onChapterEntriesChanged();
   }
 
@@ -391,7 +406,7 @@ export struct ReaderDirectoryNavigationList {
     this.generation += 1;
     this.selectionGeneration += 1;
     this.pendingPages = [];
-    this.positionPlan = this.planPosition();
+    this.positionPlan = this.planPosition(true);
     this.initialPositionPending = this.positionPlan !== undefined;
     this.dataSource.replace(this.view);
     this.rowPresentationRevision += 1;
@@ -442,7 +457,7 @@ export struct ReaderDirectoryNavigationList {
       if (anchor !== undefined && anchor.viewId === this.view.viewId &&
         anchor.navigationRevision === this.view.navigationRevision) {
         this.positionPlan = { viewId: this.view.viewId, index: anchor.visibleIndex,
-          rowFraction: anchor.rowFraction, align: ScrollAlign.START };
+          rowFraction: anchor.rowFraction, leadingInsetProgress: anchor.leadingInsetProgress, align: ScrollAlign.START };
         this.initialPositionPending = true;
         this.positionInitialCurrent();
       }
@@ -545,11 +560,20 @@ export struct ReaderDirectoryNavigationList {
       const anchor: ReaderDirectoryViewportAnchor = { bookId: readerDirectoryScopeKey(this.sourceId, this.bookId),
         navigationRevision: view.navigationRevision, viewId: view.viewId,
         nodeId: node.nodeId, visibleIndex: index, rowFraction: -rect.y / rect.height };
+      if (this.mangaDisplay && !this.mangaQuickDisplay && headerCount === 0 && index === 0 && rect.y > 0) {
+        const inset = this.mangaContentStartOffset();
+        // Space before the first row is measured chrome. Saving only the
+        // clamped row fraction would move that row under the fixed header.
+        if (inset > 0) anchor.leadingInsetProgress = Math.max(0, 1 - rect.y / inset);
+      }
       readerDirectorySaveViewportAnchor(anchor);
     } catch (_error) { /* The native List may be between layout frames. */ }
   }
 
-  private planPosition(): ReaderDirectoryPositionPlan | undefined {
+  private planPosition(adoptingView: boolean = false): ReaderDirectoryPositionPlan | undefined {
+    if (adoptingView && this.mangaDisplay && this.view.startAtCatalogTop) {
+      return { viewId: this.view.viewId, index: 0, rowFraction: 0, align: ScrollAlign.START, startAtCatalogTop: true };
+    }
     if (this.view.locateCurrent && this.view.currentVisibleIndex !== undefined)
       return { viewId: this.view.viewId, index: this.view.currentVisibleIndex,
         rowFraction: 0, align: this.mangaDisplay ? ScrollAlign.START : ScrollAlign.CENTER,
@@ -560,7 +584,8 @@ export struct ReaderDirectoryNavigationList {
       const index = this.view.anchorVisibleIndex ??
         (anchor.viewId === this.view.viewId ? anchor.visibleIndex : undefined);
       if (index !== undefined && index < this.view.visibleTotal) {
-        return { viewId: this.view.viewId, index, rowFraction: anchor.rowFraction, align: ScrollAlign.START };
+        return { viewId: this.view.viewId, index, rowFraction: anchor.rowFraction,
+          leadingInsetProgress: anchor.leadingInsetProgress, align: ScrollAlign.START };
       }
     }
     if (this.view.currentVisibleIndex !== undefined)
@@ -569,26 +594,37 @@ export struct ReaderDirectoryNavigationList {
         currentInset: this.mangaDisplay ? (this.view.currentDisplayInset ?? 50) : undefined,
         smooth: false };
     if (this.mangaDisplay && this.nativeHeaderCount() === 1) return undefined;
-    if (this.view.visibleTotal > 0)
-      return { viewId: this.view.viewId, index: 0, rowFraction: 0, align: ScrollAlign.START };
+    if (this.view.visibleTotal > 0) {
+      // An unanchored full manga catalog retains the measured title and query
+      // inset by using START without applying a second offset.
+      return { viewId: this.view.viewId, index: 0, rowFraction: 0, align: ScrollAlign.START,
+        startAtCatalogTop: this.mangaDisplay && !this.mangaQuickDisplay };
+    }
     return undefined;
   }
 
   private schedulePosition(): void {
     const generation = this.generation, prefixEpoch = this.prefixLayoutGeneration;
-    setTimeout((): void => {
+    const apply = (): void => {
       if (this.mounted && generation === this.generation && prefixEpoch === this.prefixLayoutGeneration) this.positionInitialCurrent();
-    }, 0);
+    };
+    if (this.positionPlan?.startAtCatalogTop) {
+      const context = this.getUIContext();
+      // LazyForEach must adopt the accepted view before its first item can align.
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, apply));
+    } else {
+      setTimeout(apply, 0);
+    }
   }
 
   private onChapterEntriesChanged(): void {
-    if (this.chapterSource === this.chapterEntries) return;
-    this.chapterSource = this.chapterEntries;
+    if (this.chapterSource === this.currentDirectoryEntries()) return;
+    this.chapterSource = this.currentDirectoryEntries();
     const previous = this.chapterSignatures;
     const next = new Map<number, string>();
     const changed = new Set<number>();
     this.chapterByIndex.clear();
-    for (const chapter of this.chapterEntries) {
+    for (const chapter of this.currentDirectoryEntries()) {
       this.chapterByIndex.set(chapter.index, chapter);
       const signature = `${chapter.title}:${chapter.navigable}:${chapter.downloadState}:${chapter.bookmarks === undefined ? '?' :
         chapter.bookmarks.map((bookmark): number => bookmark.time).join(',')}`;
@@ -665,6 +701,15 @@ export struct ReaderDirectoryNavigationList {
     if (!this.initialPositionPending || this.scroller === undefined) return;
     const plan = this.positionPlan ?? this.planPosition();
     if (plan === undefined || plan.viewId !== this.view.viewId) return;
+    if (plan.startAtCatalogTop) {
+      if (!this.layoutReady) return;
+      try {
+        this.scroller.scrollToIndex(0, false, ScrollAlign.START);
+        this.initialPositionPending = false;
+        this.positionPlan = undefined;
+      } catch (_detached) { /* The first native layout can still admit this plan. */ }
+      return;
+    }
     const displayIndex = this.nativeDisplayIndex(plan.index);
     if (displayIndex === undefined) return;
     try {
@@ -676,10 +721,13 @@ export struct ReaderDirectoryNavigationList {
             Math.max(0, this.mangaViewportHeight - visibleTop - this.positionRowHeight(plan.index))) : plan.currentInset;
         // Official START aligns the item to contentStartOffset. Translate only
         // viewport geometry; canonical Core ranks and target proofs stay intact.
+        const progress = plan.leadingInsetProgress;
+        const offset = currentInset !== undefined ? startOffset - visibleTop - currentInset :
+          startOffset > 0 && !this.mangaQuickDisplay && plan.index === 0 && progress !== undefined ?
+            startOffset * progress :
+            startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : this.rowHeight);
         this.scroller.scrollToIndex(displayIndex, plan.smooth === true && !this.reduceMotion, ScrollAlign.START,
-          { extraOffset: LengthMetrics.vp(currentInset === undefined ?
-            startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : this.rowHeight) :
-            startOffset - visibleTop - currentInset) });
+          { extraOffset: LengthMetrics.vp(offset) });
       } else if (this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive) {
         this.scroller.scrollToIndex(displayIndex, false, ScrollAlign.CENTER);
       } else {
@@ -768,9 +816,9 @@ export struct ReaderDirectoryNavigationList {
       this.dataSource.displayIndex(index) === undefined) return;
     // Only an actual pre-admission node rect contributes a pixel fraction.
     // A placeholder becoming a target restores its canonical index at START.
-    this.positionPlan = { viewId: this.view.viewId, index,
-      rowFraction: anchor?.viewId === this.view.viewId && anchor.visibleIndex === index ? anchor.rowFraction : 0,
-      align: ScrollAlign.START };
+    const current = anchor?.viewId === this.view.viewId && anchor.visibleIndex === index ? anchor : undefined;
+    this.positionPlan = { viewId: this.view.viewId, index, rowFraction: current?.rowFraction ?? 0,
+      leadingInsetProgress: current?.leadingInsetProgress, align: ScrollAlign.START };
     this.initialPositionPending = true;
     this.schedulePosition();
   }
@@ -1517,7 +1565,8 @@ export struct ReaderDirectoryNavigationList {
           }.width('100%');
         }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
         if (this.nativeHeaderCount() === 1) {
-          GridItem() {}.width('100%').height(this.mangaContentEndOffset());
+          GridItem() { this.mangaTailBuilder(); }.width('100%')
+            .padding({ bottom: this.mangaContentEndOffset() });
         }
       }.columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr')
         .columnsGap(0).rowsGap(0).width('100%').height('100%')

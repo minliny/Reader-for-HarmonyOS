@@ -8,6 +8,7 @@ import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
 import { pureModuleProbe } from './ets-pure-module-probe.mjs';
+import { readerEditingSdk } from './reader-editing-sdk-probe.mjs';
 export { readerFoundationTokens };
 const { root: sdk, require } = installedEtsCompiler();
 const file=name=>new URL('../../entry/src/main/ets/ui/surfaces/'+name+'.ets',import.meta.url);
@@ -32,7 +33,7 @@ export function foundationModifiers(specs=foundationSpecs(),ColorMetrics,sourceO
  const feedback=productionReaderPressFeedback({ColorMetrics});
  const common={...readerFoundationTokens,...specs,...surfaceFontResolvers(),readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'},TextOverflow:{Ellipsis:'TextOverflow.Ellipsis'},VerticalAlign:{Center:'VerticalAlign.Center'},AccessibilityRoleType:{BUTTON:'AccessibilityRoleType.BUTTON',RADIO:'AccessibilityRoleType.RADIO'},Color:{Transparent:'Color.Transparent'}};
  const load=(source,fileName,names)=>pureModuleProbe(source.slice(0,source.indexOf('@Component')),fileName,common,names);
- return {...load(sourceOverrides.buttonSource??buttonSource,'ReaderButton.ets',['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier','ReaderButtonSelectionModifier']),...load(sourceOverrides.fieldSource??fieldSource,'ReaderFormField.ets',['ReaderFormFieldModifier','ReaderFormAreaModifier'])};
+ return {...load(sourceOverrides.buttonSource??buttonSource,'ReaderButton.ets',['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier','ReaderButtonSelectionModifier']),...load(sourceOverrides.fieldSource??fieldSource,'ReaderFormField.ets',['ReaderFormFieldModifier','ReaderFormAreaModifier','ReaderContentSearchNaturalFrame'])};
 }
 export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonSource:buttonDefinition=buttonSource,fieldSource:fieldDefinition=fieldSource,windowMetrics=()=>({systemFontScale:1})}={}) {
  const properties=createArkUIPropertyRuntimeProbe(),creationOrder=new WeakMap();let creationSequence=0;
@@ -42,7 +43,15 @@ export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonS
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderButton',new Set(['leading']));
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderCard',new Set(['content']));
  const button=createReaderBuilderProbe(buttonDefinition,['readerWindowMetricsRevision','scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel','selectionSemantic','focusId','leading','emptyLeading','onAction','mounted','aboutToAppear','aboutToDisappear','build','commit','fontScale'],deps,properties.hooks);
- const field=createReaderBuilderProbe(fieldDefinition,['readerWindowMetricsRevision','scheme','specId','text','placeholder','isEditable','password','inputIdentity','fieldAccessibilityLabel','inputController','onEditingChange','editChanged','onTextChange','onSubmit','submit','mounted','aboutToAppear','aboutToDisappear','build','change','fontScale'],deps,properties.hooks);
+ const editing = readerEditingSdk();
+ const field = createReaderBuilderProbe(fieldDefinition, [
+   'readerWindowMetricsRevision', 'scheme', 'specId', 'text', 'placeholder', 'isEditable', 'password',
+   'inputIdentity', 'fieldAccessibilityLabel', 'naturalInputHeightVp', 'inputController', 'editingHost',
+   'editingContext', 'nativeInputController', 'nativeAreaController', 'editingTarget',
+   'onEditingChange', 'onTextChange', 'onSubmit', 'mounted', 'aboutToAppear', 'aboutToDisappear',
+   'nativeInputId', 'bindEditingTarget', 'editingGeometryChanged', 'textChangeHandler', 'submitHandler',
+   'build', 'change', 'editChanged', 'submit', 'fontScale',
+ ], { ...deps, ...editing, TextInputController: class {} }, properties.hooks);
  const cardSpecs=pureModuleProbe(readFileSync(file('ReaderCardSpecs'),'utf8'),'ReaderCardSpecs.ets',readerFoundationTokens,['resolveReaderCardSpec']);
  const card=createReaderBuilderProbe(cardSource,['appThemeScheme','specId','cardWidth','content','build'],{...deps,...cardSpecs,readerAppColor},properties.hooks);
  const dependencies={...deps,ReaderButton:button.Component,ReaderFormField:field.Component,ReaderCard:card.Component};

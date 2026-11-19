@@ -8,6 +8,7 @@ import { ReaderNativeSlotMeasurement } from './ReaderNativeSlotMeasurement';
 @Component
 export struct ReaderFixedHeaderHost {
   @Prop style: ReaderHeaderFrameStyle;
+  @Prop layoutDebugHeaderKey: string = '';
   @Prop @Watch('requestMeasurement') measurementKey: number = 0;
   private readonly nativeMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   onHeightChange: (height: number, presentedKey: number) => void = (_height: number, _presentedKey: number): void => {};
@@ -20,6 +21,7 @@ export struct ReaderFixedHeaderHost {
       .attributeModifier(new ReaderHeaderFrameModifier(this.style))
       .hitTestBehavior(HitTestMode.Transparent)
       .id(this.nativeMeasurement.id)
+      .customProperty('readerLayoutDebugOpaqueHeader', this.layoutDebugHeaderKey)
       .onAppear((): void => this.nativeMeasurement.mount(this.getUIContext(), this.measurementKey,
         (height: number, key: number): void => this.onHeightChange(height, key)))
       .onDisAppear((): void => this.nativeMeasurement.unmount())

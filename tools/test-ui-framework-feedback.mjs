@@ -2,6 +2,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 const cases = {
   'loading-motion': { description: 'Actual shared loading/busy SDK nodes follow accepted app motion/foreground facts and keep their current content/action state.', resources: [] },
+  'source-tools-state-admission': { description: 'Actual SourceTools SDK status, batch texts and retry actions follow the current receipt, read generation and opening.', resources: [] },
   'transient-announcement': { description: 'Actual feedback registry, Toast lifecycle and platform adapter announce once for the active foreground generation and preserve state after platform rejection.', resources: [] },
   'removal-resize': { description: 'Actual removal-message SDK observer recomputes Scroll capacity after a height-only metrics publication without a Text Area event.', resources: [] },
   'group-native-fixture': { description: 'Actual DEBUG group fixture methods use memory-only receipts and guarded actions, retaining generation and retired-host fences.', resources: [] },
@@ -10,6 +11,7 @@ const cases = {
 
 for (const id of selectContractCases(cases)) {
   if (id === 'loading-motion') await loadingMotion();
+  else if (id === 'source-tools-state-admission') await sourceToolsStateAdmission();
   else if (id === 'transient-announcement') await transientAnnouncement();
   else if (id === 'removal-resize') await removalResize();
   else if (id === 'group-native-fixture') await groupNativeFixture();
@@ -118,7 +120,8 @@ async function loadingMotion() {
     const runtime = boundedSurfaceSdk();
     const snapshot = { sources: retained ? [{ sourceId: 'memory-source' }] : [], busy: true,
       statusMessage: '正在读取书源', batchCheck: { phase: 'idle' } };
-    const owner = runtime.consumer(source, ['appThemeScheme', 'reduceMotion', 'snapshot', 'statusCard'],
+    const owner = runtime.consumer(source, ['appThemeScheme', 'reduceMotion', 'snapshot', 'statusCard', 'hasPendingRecovery',
+      'hasDedicatedReadFailure', 'retryEmptyReadAction'],
       { EMPTY_SOURCE_TOOLS_SNAPSHOT: snapshot }, { snapshot, reduceMotion: false });
     owner.statusCard();
     const state = runtime.walk(owner).find(child => child instanceof runtime.deps.ReaderPageState);
@@ -142,6 +145,93 @@ async function loadingMotion() {
   }
   console.log(JSON.stringify({ nativeLoadingInventory: inventory,
     scope: 'All native constructor gates inspected through actual ETS AST. Shared native properties and current SourceTools producer updates executed with installed SDK. Native timing, pixels and other full page assembly are separate.' }));
+}
+
+async function sourceToolsStateAdmission() {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const facts = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
+  const { projectOperationFacts } = facts;
+  const { compile } = await import('./lib/rules-mutation-durable-probe.mjs');
+  const projectPersistedReceipt = compile('app/ReaderPersistedReceiptProjection.ts', 'projectPersistedReceipt', facts, true);
+  const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { readerRecoveryView } = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+  const source = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), 'utf8');
+  const available = boundedMembers(source);
+  const empty = { sources: [], busy: false, batchCheck: { phase: 'idle' },
+    readFacts: projectOperationFacts({ phase: 'succeeded', value: [], generation: 5 }) };
+  const failed = generation => ({ ...empty,
+    readFacts: projectOperationFacts({ phase: 'failed', canRetry: true, generation }) });
+  const attempts = [];
+  const makeStatus = snapshot => {
+    const sdk = boundedSurfaceSdk();
+    const requested = ['appThemeScheme', 'reduceMotion', 'appForeground', 'mounted', 'temporaryBackIdentity',
+      'isOpeningCurrent', 'isInputAllowed', 'snapshot', 'onReconcile', 'statusCard', 'toolsOpeningIsCurrent',
+      'toolsInputIsCurrent', 'hasPendingRecovery', 'hasDedicatedReadFailure', 'showsInlineRecovery',
+      'retryEmptyReadAction', 'recovery'];
+    const owner = sdk.consumer(source, requested.filter(name => available.includes(name)), {
+      EMPTY_SOURCE_TOOLS_SNAPSHOT: empty, AppStorage: { get: () => true }, readerRecoveryView,
+    }, { snapshot, onReconcile: generation => attempts.push(generation) });
+    // The focused status sub-tree does not mount the catalog projection watched by the full page.
+    owner.syncListDataSources = () => {};
+    owner.showTransientFeedback = () => {};
+    owner.mounted = true;
+    owner.temporaryBackIdentity = 'tools:1';
+    owner.statusCard();
+    const state = sdk.walk(owner).find(child => child instanceof sdk.deps.ReaderPageState);
+    const retry = sdk.nodes(owner).find(node => node.type === 'Button' && node.onClick)?.onClick;
+    return { owner, state, retry };
+  };
+
+  const unknown = makeStatus({ ...empty, receipt: projectPersistedReceipt({
+    confirmation: 'unknown', readback: 'failed', canRetry: true, generation: 6 }) });
+  const stale = makeStatus(failed(7));
+  assert.ok(stale.retry, 'failed empty read has an actual native retry');
+  stale.owner.snapshot = failed(8);
+  stale.retry();
+  const current = makeStatus(failed(8));
+  assert.ok(current.retry, 'current failure has an actual native retry');
+  current.retry();
+  const retired = makeStatus(failed(9));
+  retired.owner.temporaryBackIdentity = 'tools:2';
+  retired.retry();
+  const succeeded = makeStatus(empty);
+
+  const batchText = phase => {
+    const controls = foundationControls();
+    const sdk = boundedSurfaceSdk({ properties: controls.properties });
+    const snapshot = { ...empty, batchCheck: { phase, total: 1, completed: 0,
+      currentSourceName: '', passed: 0, failed: 0, errors: 0, results: [] } };
+    const owner = createReaderBuilderProbe(source, ['snapshot', 'appThemeScheme', 'batchCheckCard',
+      'batchCheckPercent', 'batchCheckPhaseLabel', 'batchCounter'], {
+        ...sdk.deps, ...controls.dependencies, EMPTY_SOURCE_TOOLS_SNAPSHOT: empty,
+      }, { ...sdk.hooks, childSources: { ...sdk.childSources, ...controls.hooks.childSources },
+        initialParams: { snapshot } }).owner;
+    owner.batchCheckCard();
+    return sdk.nodes(owner).filter(node => node.type === 'Text').map(node => node.create);
+  };
+  const waiting = '每个书源完成后，结果会立即出现在这里。';
+  const running = batchText('running');
+  const stopped = batchText('stopped');
+  const observation = {
+    unknownReadTitle: unknown.state?.title ?? null,
+    currentReadTitle: current.state.title,
+    currentActionGeneration: current.state.actionGeneration,
+    confirmedEmpty: succeeded.state.title,
+    attempts,
+    readFailureDuplicatesInline: current.owner.showsInlineRecovery?.() ?? current.owner.recovery().canRetry,
+    runningHint: running.includes(waiting),
+    stoppedHint: stopped.includes(waiting),
+    stoppedState: stopped.includes('已停止'),
+  };
+  console.log(JSON.stringify(observation));
+  assert.deepEqual(observation, {
+    unknownReadTitle: null, currentReadTitle: '书源读取失败', currentActionGeneration: 8,
+    confirmedEmpty: '暂无书源', attempts: [8], readFailureDuplicatesInline: false,
+    runningHint: true, stoppedHint: false, stoppedState: true,
+  });
 }
 
 async function geometryNativeFixture() {

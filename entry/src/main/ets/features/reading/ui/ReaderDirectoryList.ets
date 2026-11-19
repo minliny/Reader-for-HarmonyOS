@@ -59,6 +59,7 @@ export struct ReaderDirectoryList {
   @BuilderParam emptyBuilder: () => void = this.emptyContent;
   @Prop prefixHeight: number = 0;
   @BuilderParam prefixBuilder: () => void = this.emptyContent;
+  @BuilderParam tailBuilder: () => void = this.emptyContent;
 
   @Builder
   private emptyContent() {}
@@ -179,7 +180,8 @@ export struct ReaderDirectoryList {
           .height(this.naturalRowHeight ? undefined : this.rowHeight);
         }, (entry: LocalReadingTocEntry): string => `reader-directory-row-${entry.index}-${JSON.stringify(entry)}`);
       if (this.materializedInsets) {
-        ListItem() {}.width('100%').height(this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY);
+        ListItem() { this.tailBuilder(); }.width('100%')
+          .padding({ bottom: this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY });
       }
     }
     .width('100%')

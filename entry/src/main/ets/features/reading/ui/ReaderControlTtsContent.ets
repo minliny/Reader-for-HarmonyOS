@@ -408,7 +408,12 @@ export struct ReaderControlTtsContent {
     if (this.sourceOnly !== 'none') return;
     this.syncMorphScroll();
     if (!this.sharedInput()) this.ratePreview = -1;
-    if (!this.fullInput()) this.dismissConfiguration();
+    // An accepted native editor has its own current owner through measurement
+    // reflow. Ordinary module minimum admission may briefly become false when
+    // its keyboard/RESIZE facts change; it must not dismiss that editor.
+    const currentEditor = this.configMounted && this.configField !== '' && p === 1 &&
+      (this.editorInputCurrent?.() ?? this.fullInput());
+    if (!this.fullInput() && !currentEditor) this.dismissConfiguration();
   }
   aboutToAppear(): void { this.configMounted = this.sourceOnly === 'none'; this.publishMinimumMeasurer();
     if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();

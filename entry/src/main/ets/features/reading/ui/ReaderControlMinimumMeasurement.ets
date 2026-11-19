@@ -205,6 +205,8 @@ export interface ReaderControlMeasuredProfile {
   headerPaint: ReaderControlHeaderPaintProfile;
   identity: string;
   metricsRevision: number;
+  /** Native measurement origin, retained across an IME-only environment rebind. */
+  measurementMetricsRevision?: number;
   widths: ReaderControlCandidateWidths;
   playbackData: ReaderControlPlaybackProfileData | undefined;
   quick: ReaderControlHomeFormProfile | undefined;
@@ -373,7 +375,8 @@ export function readerControlModuleFactsGeometryKey(facts: ReaderControlModuleFa
   return JSON.stringify([facts.module, facts.home?.chapterTitle, facts.home?.totalChapters,
     directory === undefined ? undefined : [directory.tab, directory.title, directory.excerpt,
       directory.currentTitle, directory.currentPosition, directory.hasRows, directory.loading,
-      directory.message, directory.action, directory.bookmarkError, directory.catalogStatus, directory.catalogAction],
+      directory.message, directory.action, directory.bookmarkError, directory.bookmarkFilteredEmpty,
+      directory.catalogStatus, directory.catalogAction],
     search === undefined ? undefined : [search.query, search.title, search.snippet, search.message,
       search.hasResults, search.resultsMode, search.loading, search.loadMoreLabel, search.loadMoreMessage],
     tts === undefined ? undefined : [tts.playbackLabel, tts.status, tts.voice, tts.timerCaption,

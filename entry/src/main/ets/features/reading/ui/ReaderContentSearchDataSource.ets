@@ -11,6 +11,7 @@ export function readerContentSearchResultKey(row: ReadingContentSearchResult): s
 export class ReaderContentSearchDataSource implements IDataSource {
   private rows: ReadingContentSearchResult[] = [];
   private keys: string[] = [];
+  private publishedCount: number = 0;
   private query: string = '';
   private listeners: DataChangeListener[] = [];
 
@@ -22,7 +23,15 @@ export class ReaderContentSearchDataSource implements IDataSource {
   }
 
   publish(query: string, rows: ReadingContentSearchResult[]): ReaderContentSearchDataChange {
-    if (query === this.query && rows === this.rows) return 'same';
+    if (query === this.query && rows === this.rows && rows.length >= this.publishedCount) {
+      const start = this.publishedCount;
+      this.publishedCount = rows.length;
+      for (let index = start; index < rows.length; index += 1) this.keys.push(readerContentSearchResultKey(rows[index]));
+      for (const listener of this.listeners) {
+        for (let index = start; index < rows.length; index += 1) listener.onDataAdd(index);
+      }
+      return rows.length > start ? 'append' : 'same';
+    }
     const keys = rows.map(readerContentSearchResultKey);
     const prefix = query === this.query && this.keys.length > 0 && this.keys.length <= keys.length &&
       this.keys.every((key: string, index: number): boolean => key === keys[index]);
@@ -30,6 +39,7 @@ export class ReaderContentSearchDataSource implements IDataSource {
     this.query = query;
     this.rows = rows;
     this.keys = keys;
+    this.publishedCount = rows.length;
     if (!prefix) {
       for (const listener of this.listeners) listener.onDataReloaded();
       return 'replace';

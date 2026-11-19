@@ -178,16 +178,16 @@ export class SourceJourneyPresentation {
 
   requestDelete(identity: string, selected: SourceToolsSelection, show: (count: number,
     confirm: () => void, current: () => boolean) => void): void {
-    const host = this.toolsForSelection(identity, selected);
+    const selection: SourceToolsSelection = { sourceIds: selected.sourceIds.slice(),
+      sourceListRevision: selected.sourceListRevision, selectionRevision: selected.selectionRevision };
+    const host = this.toolsForSelection(identity, selection);
     if (host === undefined) return;
-    const selection = host.consumeSelection(selected.sourceIds);
-    if (selection.length === 0) return;
-    const listRevision = this.view.tools.sourceListRevision;
-    const selectionRevision = this.view.tools.selectionRevision;
-    const current = (): boolean => this.tools(identity) === host && !this.view.tools.busy &&
-      this.view.tools.sourceListRevision === listRevision && this.view.tools.selectionRevision === selectionRevision &&
-      selection.every((id: string): boolean => this.view.tools.sources.some((source: BookSource): boolean => source.sourceId === id));
-    show(selection.length, (): void => { if (current()) host.deleteSelected(selection); }, current);
+    const current = (): boolean => this.toolsForSelection(identity, selection) === host;
+    show(selection.sourceIds.length, (): void => {
+      if (!current()) return;
+      const accepted = host.consumeSelection(selection.sourceIds);
+      if (accepted.length > 0) host.deleteSelected(accepted);
+    }, current);
   }
 
   private copyManagementViewState(value: SourceManagementViewState): SourceManagementViewState {

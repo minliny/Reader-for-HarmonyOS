@@ -1,11 +1,12 @@
 import type { ReaderControlDirectorySnapshot } from './ReaderControlDirectoryModel';
+import { readerBookmarkEmptyCopy } from '../presentation/ReaderBookmarkProjection';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { ReaderInheritedTextStyle, TYPE_READER_DIRECTORY_TAB_COMPACT, TYPE_READER_DIRECTORY_TITLE,
   TYPE_SEARCH_DIRECTORY_INPUT, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION,
   TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_BOOKMARK_META } from '../../../ui/foundation/ReaderTypography';
-import { MESSAGE_BODY, MESSAGE_TITLE, MESSAGE_ACTION } from '../../../ui/foundation/ReaderMessageStyle';
+import { MESSAGE_BODY, MESSAGE_TITLE, MESSAGE_ACTION, MESSAGE_INLINE_STATE_SPACING } from '../../../ui/foundation/ReaderMessageStyle';
 import { TOK_SPACE_CONTROL_INLINE, TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderControlCandidateWidths, ReaderControlFormMinimum } from './ReaderLayoutGeometry';
 import type { ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
@@ -21,6 +22,7 @@ export interface ReaderDirectoryMinimumFactsInput {
 }
 export function readerControlDirectoryMinimumFacts(input: ReaderDirectoryMinimumFactsInput): ReaderDirectoryMinimumFacts {
   const snapshot = input.snapshot;
+  const bookmarkEmpty = readerBookmarkEmptyCopy(snapshot.bookmarkFilteredEmpty);
   const representative = input.snapshot.rows[Math.max(0, input.snapshot.targetRow)] ?? input.snapshot.rows[0];
   const incomplete = input.tab === 'directory' && !input.catalogComplete;
   const status = incomplete ? input.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :
@@ -33,11 +35,12 @@ export function readerControlDirectoryMinimumFacts(input: ReaderDirectoryMinimum
     currentPosition: input.snapshot.currentPosition, hasRows: input.snapshot.rows.length > 0,
     loading: input.snapshot.loading || incomplete && input.snapshot.catalogState === 'loading',
     bookmarkError: input.tab === 'bookmarks' && input.bookmarkLoadFailed,
+    bookmarkFilteredEmpty: snapshot.bookmarkFilteredEmpty,
     message: input.tab === 'bookmarks' ? input.bookmarkLoadFailed ?
       input.bookmarkLoadMessage.trim().length === 0 || input.bookmarkLoadMessage === '书签载入失败，请稍后重试' ? '请稍后重试。' : input.bookmarkLoadMessage :
-      input.snapshot.loading ? '书签载入中…' : '在阅读页面下拉，收藏当前位置。' : incomplete ? status :
+      input.snapshot.loading ? '书签载入中…' : bookmarkEmpty.message : incomplete ? status :
         input.snapshot.loading ? '目录载入中…' : '没有匹配的章节',
-    action: input.tab === 'bookmarks' ? input.bookmarkLoadFailed ? '重试' : input.snapshot.loading ? '' : '返回目录' : action,
+    action: input.tab === 'bookmarks' ? input.bookmarkLoadFailed ? '重试' : input.snapshot.loading ? '' : bookmarkEmpty.action : action,
     catalogStatus: status, catalogAction: action };
 }
 export interface ReaderDirectoryMinimumFacts {
@@ -55,6 +58,7 @@ export interface ReaderDirectoryMinimumFacts {
   message: string;
   action: string;
   bookmarkError: boolean;
+  bookmarkFilteredEmpty: boolean;
   catalogStatus: string;
   catalogAction: string;
 }
@@ -134,12 +138,13 @@ function form(context: UIContext, width: number, full: boolean,
   if (!facts.hasRows) {
     const message = measureReaderControlText(context, facts.message, MESSAGE_BODY, Math.max(1, width - (facts.tab === 'bookmarks' ? 40 : 4)), 'wrap');
     const action = measureReaderControlText(context, facts.action, MESSAGE_ACTION, Math.max(1, width - 36), 'wrap');
-    const heading = measureReaderControlText(context, facts.bookmarkError ? '书签载入失败' : '暂无书签', MESSAGE_TITLE,
+    const heading = measureReaderControlText(context, facts.bookmarkError ? '书签载入失败' :
+      readerBookmarkEmptyCopy(facts.bookmarkFilteredEmpty).title, MESSAGE_TITLE,
       Math.max(1, width - 40), 'wrap');
     if (message === undefined || action === undefined || heading === undefined) return undefined;
     if (facts.tab === 'bookmarks' && !facts.loading && !facts.bookmarkError) {
-      // The original empty surface Scroll can expose the real return action.
-      viewport = Math.max(44, action.heightVp);
+      const actionHeight = Math.max(44, action.heightVp);
+      viewport = facts.bookmarkFilteredEmpty ? heading.heightVp + MESSAGE_INLINE_STATE_SPACING + actionHeight : actionHeight;
     } else {
       viewport = message.heightVp + (facts.loading ? 44 : facts.action.length > 0 ? Math.max(44, action.heightVp) + 12 : 0);
       if (facts.bookmarkError) viewport = heading.heightVp + 9 + message.heightVp + 23 +

@@ -167,6 +167,7 @@ export struct ReaderButton {
   @Prop actionAccessibilityLabel: string = '';
   @Prop selectionSemantic: boolean = false;
   @Prop focusId: string = '';
+  textLayoutOptions: TextOptions | undefined = undefined;
   @BuilderParam leading: () => void = this.emptyLeading;
   onAction: () => void = (): void => {};
   onFocused: () => void = (): void => {};
@@ -182,7 +183,7 @@ export struct ReaderButton {
       // target. Its 44vp slot belongs to layout instead of an outer response
       // region, so adjacent filter targets never overlap.
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Text(this.label)
+        Text(this.label, this.textLayoutOptions)
           .attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled,
             'intrinsic', this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
           .accessibilityLevel('no')
@@ -200,10 +201,10 @@ export struct ReaderButton {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Stack({ alignContent: resolveReaderButtonSpec(this.specId).leadingSlot ? Alignment.End : Alignment.Center }) {
           if (resolveReaderButtonSpec(this.specId).leadingSlot) {
-            Row({ space: 5 }) { this.leading(); Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale())); }
+            Row({ space: 5 }) { this.leading(); Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale())); }
               .width('100%').justifyContent(FlexAlign.End).alignItems(VerticalAlign.Center);
           } else {
-            Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()));
+            Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()));
           }
         }.accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
@@ -216,7 +217,7 @@ export struct ReaderButton {
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()))
+        Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()))
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
         .type(resolveReaderButtonSpec(this.specId).radius === 999 ? ButtonType.Capsule : ButtonType.Normal)

@@ -19,7 +19,7 @@ export async function verifySourceSwitchWorkflow() {
   const root = Object.assign(new Index(), { mountedRuntimeOwner: f.runtime, shelfReceiptRetired: false,
     detailShelfAdmissionMount: 1, navigationGeneration: 1, readingSessionActive: true,
     directoryCurrentChapterIndex: 7, requestedChapterIndex: undefined,
-    shelfRead: { snapshot: { books: [origin, target] } }, librarySearch: { candidates: () => [], admissionCandidates: () => [], host: { searchedSourceIds: () => [] } },
+    shelfRead: { snapshot: { books: [origin, target] } }, librarySearch: { candidates: () => [], admissionCandidates: () => [] },
   });
   root.readingEntry.book = { ...target, contentKind: 'text', sourceVersion: 'v1' };
   root.readingEntry.toc = [{ index: 1, title: 'First' }, { index: 7, title: 'Active' }, { index: 11, title: 'Last' }];
@@ -73,7 +73,7 @@ export async function verifySourceSwitchWorkflow() {
   const ports = {
     scene: () => ({ ...scene, book: entry.book }), entry: () => entry,
     shelfBook: () => old,
-    searchCandidates: () => searchBooks, searchedSourceIds: () => ['old'],
+    searchCandidates: () => searchBooks,
     preview: (_seed, name) => events.push(['preview', name]), target: () => events.push('target'),
     reopen: book => events.push(['reopen', book.bookId]), invalidateDownloads: book => events.push(['invalidate', book.bookId]),
     detailForShelf: book => ({ ...book, contentKind: 'text' }),

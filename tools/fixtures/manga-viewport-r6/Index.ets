@@ -5100,12 +5100,11 @@ struct Index {
       if (isCurrent()) this.sourceSwitchState = { kind: 'candidates', candidates, refreshing: true };
     };
     const load = forceRefresh
-      ? gateway.refreshCandidates(query, isCurrent, [], onProgress, gateway.withoutSearchTiming(previousCandidates))
+      ? gateway.refreshCandidates(query, isCurrent, onProgress, gateway.withoutSearchTiming(previousCandidates))
       : gateway.loadCachedCandidates(query, isCurrent, known)
         .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> => {
           if (isCurrent()) this.sourceSwitchState = { kind: 'candidates', candidates: cached, refreshing: true };
-          return gateway.refreshCandidates(query, isCurrent,
-            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : [], onProgress, cached);
+          return gateway.refreshCandidates(query, isCurrent, onProgress, cached);
         });
     load
       .then((outcome: SourceSwitchDiscoveryOutcome): void => {

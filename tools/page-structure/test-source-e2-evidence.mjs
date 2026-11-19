@@ -7,7 +7,7 @@ import {checkLayoutEvidence,sourceInteractiveControls} from './layout-evidence.m
 import {safePath,digest} from './lib.mjs';
 const args=process.argv.slice(2),paths={};
 for(const name of ['matrix','interaction','report']){const found=args.filter(a=>a.startsWith('--'+name+'='));assert.equal(found.length,1,'one explicit '+name+' input');paths[name]=found[0].split('=').slice(1).join('=');}
-const selected=selectContractCases({'complete-targets':'Real22refs x8 matrix composition with exact/minimum provenance; E3 remains NOT_RUN','rejection-boundaries':'Missing ref, undersize, stale input, matrix duplicate/missing, no parent payment and false intrinsic width rejected'}, {argv:args.filter(a=>!/^--(matrix|interaction|report)=/.test(a))});
+const selected=selectContractCases({'complete-targets':'SDK dimension composition with exact/minimum provenance; E2 and E3 remain NOT_RUN','rejection-boundaries':'Missing ref, undersize, stale input, matrix duplicate/missing, no parent payment and false intrinsic width rejected'}, {argv:args.filter(a=>!/^--(matrix|interaction|report)=/.test(a))});
 const read=p=>readFileSync(safePath(p),'utf8'),hash=x=>createHash('sha256').update(x).digest('hex');
 const matrix=JSON.parse(read(paths.matrix)),interaction=JSON.parse(read(paths.interaction)),report=JSON.parse(read(paths.report));
 const page=structuredClone(JSON.parse(read('tools/page-structure/register.json')).pages.find(p=>p.pageId==='source-management'));
@@ -15,10 +15,13 @@ page.invariants.E2.result='PASS';page.invariants.E3.result='FAIL';page.layers.in
 function check(value,{fingerprint=digest}={}){const bytes=JSON.stringify(value);return checkLayoutEvidence({...page,layoutEvidence:{path:'memory-report.json',sha256:hash(bytes)}},{read:p=>p==='memory-report.json'?bytes:read(p),fingerprint}).diagnostics;}
 for(const id of selected){
  if(id==='complete-targets'){
-  const rebuilt=composeSourceE2(matrix,interaction,{matrixInput:{path:paths.matrix,sha256:hash(read(paths.matrix))},interactionInput:{path:paths.interaction,sha256:hash(read(paths.interaction))}});assert.deepEqual(rebuilt,report);
-  assert.equal(report.targets.length,176);assert.equal(report.budgets.length,24);assert.deepEqual(new Set(report.targets.map(t=>t.controlRef)),new Set(sourceInteractiveControls));assert.deepEqual(check(report),[]);
+  const rebuilt=composeSourceE2(matrix,interaction,{matrixInput:{path:paths.matrix,sha256:hash(read(paths.matrix))},interactionInput:{path:paths.interaction,sha256:hash(read(paths.interaction))}});
+  assert.deepEqual(rebuilt.targets,report.targets);assert.deepEqual(rebuilt.budgets,report.budgets);
+  assert.equal(rebuilt.targets.length,176);assert.equal(rebuilt.budgets.length,24);assert.deepEqual(new Set(rebuilt.targets.map(t=>t.controlRef)),new Set(sourceInteractiveControls));
+  assert.deepEqual(rebuilt.results,{E2:'NOT_RUN',E3:'NOT_RUN'});
+  assert.ok(check(rebuilt).some(d=>d.ruleId==='LAYOUT_EVIDENCE_RESULT' && d.field==='results.E2'));
   for(const t of report.targets){if(t.basis!=='exact-sdk-size'){assert.equal(t.visual,null);assert.ok(t.minimum.width>=44&&t.minimum.height>=44);}if(t.controlRef.includes('reconcile')||t.controlRef.includes('expand')||t.controlRef==='source-original-continue')assert.equal(t.basis,'native-constraint-minimum');}
-  assert.equal(report.results.E3,'NOT_RUN');console.log(JSON.stringify({refs:22,contexts:8,targets:176,budgets:24,unknownPaintRetained:true,E3:'NOT_RUN'}));
+  console.log(JSON.stringify({refs:22,contexts:8,targets:176,budgets:24,unknownPaintRetained:true,...rebuilt.results}));
  }
  if(id==='rejection-boundaries'){
   const altered=fn=>{const x=structuredClone(report);fn(x);return x;};

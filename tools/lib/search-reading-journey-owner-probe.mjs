@@ -81,7 +81,7 @@ export function searchReadingJourneyFixture({ runtime, ReadingHost, route = 'sea
   searchHost.orchestrator = { visibilityChanged: () => onEvent('search.visibility'),
     resume: () => onEvent('search.resume'), close: () => onEvent('search.close'),
     open: () => onEvent('UNEXPECTED.search.open'), search: () => onEvent('UNEXPECTED.search.search'),
-    searchedSourceIds: () => [], ...onSearch };
+    ...onSearch };
   library.mode = 'results'; library.mount();
   const Entry = actualReadingEntryPresentation({ ReadingEntryHost: ReadingHost }), entry = new Entry();
   const authority = { current: currentRuntime, isCurrent: owner => owner === currentRuntime() };

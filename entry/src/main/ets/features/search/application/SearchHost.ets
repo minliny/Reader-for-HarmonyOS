@@ -46,6 +46,7 @@ export class SearchHost {
     this.getOrchestrator().search(keyword, scopeSourceIds);
   }
   stop(): void { this.getOrchestrator().stop(); }
+  needMoreResults(): void { this.getOrchestrator().needMoreResults(); }
   retry(): void { this.getOrchestrator().retry(); }
   retryHistory(): void { this.getOrchestrator().retryHistory(); }
   clearHistory(): void { this.getOrchestrator().clearHistory(); }
@@ -53,7 +54,6 @@ export class SearchHost {
   deleteHistory(keyword: string): Promise<void> { return this.getOrchestrator().deleteHistory(keyword); }
   resume(): void { this.getOrchestrator().resume(); }
   refreshSources(): void { this.getOrchestrator().refreshSources(); }
-  searchedSourceIds(): string[] { return this.orchestrator?.searchedSourceIds() ?? []; }
 
   presentation(): SearchPresentation { return this.publication.presentationAt(this.revision); }
   sources(): SearchSource[] { return this.publication.sourcesAt(this.revision); }

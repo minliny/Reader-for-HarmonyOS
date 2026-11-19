@@ -7,6 +7,8 @@ import hilog from '@ohos.hilog';
 import { KeyCode } from '@kit.InputKit';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { ReaderEditingVisibility } from '../layout/ReaderEditingVisibility';
+import { ReaderEditableTarget } from '../layout/ReaderEditableTarget';
 import { DEBUG } from '../../../../../build/default/generated/profile/default/BuildProfile';
 import {
   ReaderTextStyle,
@@ -53,14 +55,17 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
   private focusChanged: ((focused: boolean) => void) | undefined;
   private inputArea: ((area: Area) => void) | undefined;
   private keyboardOnFocus: boolean;
+  private geometryChanged: (() => void) | undefined;
   constructor(variant: ReaderSearchFieldVariant, height: number, fontScale: number = 1, focusId: string = '',
-    focusChanged?: (focused: boolean) => void, inputArea?: (area: Area) => void, keyboardOnFocus: boolean = true) {
+    focusChanged?: (focused: boolean) => void, inputArea?: (area: Area) => void, keyboardOnFocus: boolean = true,
+    geometryChanged?: () => void) {
     this.variant = variant;
     this.height = height;
     this.fontScale = fontScale;
     this.focusId = focusId;
     this.focusChanged = focusChanged; this.inputArea = inputArea;
     this.keyboardOnFocus = keyboardOnFocus;
+    this.geometryChanged = geometryChanged;
   }
   applyNormalAttribute(instance: TextInputAttribute): void {
     if (this.variant === 'sourceManagement') instance.responseRegion(readerActionTouchRegion('100%', this.height));
@@ -78,9 +83,9 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
         instance.enableKeyboardOnFocus(this.keyboardOnFocus);
         instance.onFocus((): void => this.focusChanged?.(true));
         instance.onBlur((): void => this.focusChanged?.(false));
-        instance.onAreaChange((_old: Area, area: Area): void => this.inputArea?.(area));
       }
     }
+    instance.onAreaChange((_old: Area, area: Area): void => { this.inputArea?.(area); this.geometryChanged?.(); });
   }
 }
 
@@ -94,7 +99,7 @@ class ReaderSearchFocusFrame extends FrameCallback {
 @Component
 export struct ReaderSearchField {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
 
   @Prop variant: ReaderSearchFieldVariant = 'bookPanel';
   @Prop mode: ReaderSearchFieldMode = 'submit';
@@ -109,7 +114,7 @@ export struct ReaderSearchField {
   @Prop naturalInputHeightVp: number = 0;
   /** Border-box width supplied by the passive RSS field's existing frame owner. */
   @Prop fieldWidthVp: number = 0;
-  @Prop @Watch('onDirectoryFocusRequest') directoryFocusId: string = '';
+  @Prop @Watch('onDirectoryIdentityChanged') directoryFocusId: string = '';
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusAllowed: boolean = false;
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusRevision: number = 0;
   @Prop directoryKeyboardOnFocus: boolean = true;
@@ -128,6 +133,10 @@ export struct ReaderSearchField {
   private mounted: boolean = false;
   private focusGeneration: number = 0;
   private readonly bookInputController: TextInputController = new TextInputController();
+  private readonly directoryInputController: TextInputController = new TextInputController();
+  private readonly editingTarget: ReaderEditableTarget = new ReaderEditableTarget();
+  editingHost: ReaderEditingVisibility | undefined = undefined;
+  editingCurrent: (() => boolean) | undefined = undefined;
   private bookInputFocused: boolean = false;
   private bookInputScrollPending: boolean = false;
   private bookInputScrollGeneration: number = 0;
@@ -137,6 +146,7 @@ export struct ReaderSearchField {
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.bindEditingTarget();
     const generation = ++this.focusGeneration;
     if (!this.focusOnAppear || !this.isBookField() || this.mode === 'passive') return;
     this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
@@ -147,6 +157,7 @@ export struct ReaderSearchField {
   }
 
   aboutToDisappear(): void {
+    this.editingTarget.unmount();
     if (DEBUG && this.directoryFocusId.length > 0) hilog.info(0xD004, 'ReaderControlDiagnostic',
       'directory-input-retired revision=%{public}d ticket=%{public}d focused=%{public}s',
       this.directoryFocusRevision, this.directoryFocusTicket, String(this.directoryNativeFocused));
@@ -163,6 +174,22 @@ export struct ReaderSearchField {
     this.directoryKeyboardRestorePendingRevision = -1;
     this.directoryKeyboardRestorePendingTicket = -1;
   }
+
+  private editingNativeId(): string {
+    return this.isBookField() ? 'reader-book-search-input' :
+      this.directoryFocusId.length > 0 ? this.directoryFocusId : this.editingTarget.id;
+  }
+  private bindEditingTarget(): void {
+    if (!this.mounted) return;
+    const id = this.editingNativeId();
+    this.editingTarget.mount(this.getUIContext(), this.editingHost,
+      this.isBookField() ? this.bookInputController : this.directoryInputController,
+      (): boolean => this.mounted && this.mode !== 'passive' && id === this.editingNativeId() &&
+        (this.variant !== 'readerDirectory' || this.directoryFocusId.length === 0 || this.directoryFocusAllowed) &&
+        (this.editingCurrent?.() ?? true), (): number => this.inputHeight(), id);
+  }
+  private onDirectoryIdentityChanged(): void { this.bindEditingTarget(); this.onDirectoryFocusRequest(); }
+  private editingGeometryChanged(): void { this.editingTarget.changed(); }
 
 
   private directoryFocusEnabled(id: string): boolean {
@@ -225,6 +252,7 @@ export struct ReaderSearchField {
   }
 
   private onDirectoryInputKey(id: string, event: KeyEvent): boolean {
+    if (event.type === KeyType.Down && event.keyCode === KeyCode.KEYCODE_BACK) this.editingTarget.back();
     if (this.directoryFocusEnabled(id) && this.directoryNativeFocused &&
       event.type === KeyType.Down && event.keyCode === KeyCode.KEYCODE_BACK) {
       this.directoryFocusTicket += 1;
@@ -430,6 +458,12 @@ export struct ReaderSearchField {
       TextInput({ placeholder: this.placeholder, text: this.text, controller: this.bookInputController })
         .id('reader-book-search-input')
         .enableKeyboardOnFocus(true)
+        .onEditChange((editing: boolean): void => this.editingTarget.edit(editing))
+        .onContentScroll((): void => this.editingTarget.changed())
+        .onKeyPreIme((event: KeyEvent): boolean => {
+          if (event.type === KeyType.Down && event.keyCode === KeyCode.KEYCODE_BACK) this.editingTarget.back();
+          return false;
+        })
         .layoutWeight(1)
         .height(this.inputHeight())
         .padding(0)
@@ -458,10 +492,10 @@ export struct ReaderSearchField {
           this.changeText(value);
           this.revealBookInputCaret();
         })
-        .onTextSelectionChange((_start: number, _end: number): void => this.revealBookInputCaret())
+        .onTextSelectionChange((_start: number, _end: number): void => { this.revealBookInputCaret(); this.editingTarget.changed(); })
         .onFocus((): void => this.onBookInputFocus(true))
         .onBlur((): void => this.onBookInputFocus(false))
-        .onAreaChange((_old: Area, _next: Area): void => this.revealBookInputCaret())
+        .onAreaChange((_old: Area, _next: Area): void => { this.revealBookInputCaret(); this.editingTarget.changed(); })
         .enterKeyType(EnterKeyType.Search)
         .onSubmit((_enterKey: EnterKeyType): void => this.submit());
       if (this.clearable && this.text.length > 0) {
@@ -497,7 +531,7 @@ export struct ReaderSearchField {
         Image(this.searchIcon())
           .width(this.iconSize())
           .height(this.iconSize());
-        TextInput({ placeholder: this.placeholder, text: this.text })
+        TextInput({ placeholder: this.placeholder, text: this.text, controller: this.directoryInputController })
           .onClick((): void => this.requestDirectoryEditing(inputFocusId))
           .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
           .layoutWeight(1)
@@ -505,7 +539,12 @@ export struct ReaderSearchField {
           .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.variant === 'readerDirectory' || this.variant === 'sourceManagement' ? this.directoryFontScale() : 1,
             this.directoryFocusAllowed ? inputFocusId : '',
             (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
-            (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus))
+            (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus,
+            (): void => this.editingTarget.changed()))
+          .id(this.editingNativeId())
+          .onEditChange((editing: boolean): void => this.editingTarget.edit(editing))
+          .onTextSelectionChange((): void => this.editingTarget.changed())
+          .onContentScroll((): void => this.editingTarget.changed())
           .padding(0)
           .borderRadius(0)
           .fontFamily(this.textStyle().fontFamily)

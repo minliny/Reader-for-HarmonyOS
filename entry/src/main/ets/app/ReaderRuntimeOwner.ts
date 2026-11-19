@@ -142,6 +142,8 @@ export class ReaderRuntimeOwner {
   private mangaReadingProbeImageScope: MangaOfflineProbeScope | undefined;
   private mangaReadingProbeForeignImages: number = 0;
   private runtime: ReaderCoreRuntime | undefined = undefined;
+  private searchPageEvidenceCount: number = 0;
+  private switchPageEvidenceCount: number = 0;
   private appearanceStore: ReaderAppearanceStore | undefined = undefined;
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
@@ -537,6 +539,28 @@ export class ReaderRuntimeOwner {
       }
     }
     return { retainedChapters, protectedChapters };
+  }
+
+  /** Bounded operational facts only. Never accepts source/query/body values
+   * or owns pagination; consumers publish after their normal receipt checks. */
+  observeSourceSearchPage(route: 'search' | 'switch', requestedPage: number,
+    decodedCount: number, matchedCount: number): void {
+    if (this.state !== 'ready' || (route !== 'search' && route !== 'switch') ||
+      !Number.isSafeInteger(requestedPage) || requestedPage < 2 || requestedPage > 0xffffffff ||
+      !Number.isSafeInteger(decodedCount) || decodedCount < 1 || decodedCount > 65536 ||
+      !Number.isSafeInteger(matchedCount) || matchedCount < 1 || matchedCount > decodedCount) return;
+    if (route === 'search') {
+      if (this.searchPageEvidenceCount >= 8) return;
+      this.searchPageEvidenceCount += 1;
+    } else {
+      if (this.switchPageEvidenceCount >= 8) return;
+      this.switchPageEvidenceCount += 1;
+    }
+    try {
+      hilog.info(LOG_DOMAIN, 'ReaderSourcePageEvidence',
+        'route=%{public}s requestedPage=%{public}d decoded=%{public}d matched=%{public}d',
+        route, requestedPage, decodedCount, matchedCount);
+    } catch (_) { /* A diagnostic failure cannot change a business receipt. */ }
   }
 
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {

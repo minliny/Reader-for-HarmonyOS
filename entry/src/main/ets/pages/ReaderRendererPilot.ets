@@ -1,8 +1,6 @@
 import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
 import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
-// Explicit debug cold-start route only. Uses an original frozen Core export;
-// never imports a user book, persists a position, or replaces the native reader.
+// Retained renderer diagnostic source. This page has no app route.
 import webview from '@ohos.web.webview';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ArkWebExecutionHost } from '../ui/platform/ArkWebExecutionHost';
@@ -28,11 +26,6 @@ struct ReaderRendererPilot {
 
   aboutToDisappear(): void {
     this.resourceDiagnostic.dispose();
-  }
-
-  private openPageStructureVerification(): void {
-    if (DEBUG !== true || BUILD_MODE_NAME !== 'debug') return;
-    this.getUIContext().getRouter().pushUrl({ url: 'pages/ReaderPageStructureVerification' });
   }
 
   private async returnToBookshelf(): Promise<void> {
@@ -82,11 +75,6 @@ struct ReaderRendererPilot {
           this.resourceDiagnostic.dispose(); this.resourceMode = false;
         });
       } else {
-        if (DEBUG === true && BUILD_MODE_NAME === 'debug') {
-          Button('页面结构验证').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-page-structure-open').onClick((): void => {
-            this.openPageStructureVerification();
-          });
-        }
         Button('漫画平台图像诊断').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-manga-probe-open').onClick((): void => { this.mangaMode = true; });
         Button('原生 Text 同节点诊断').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-textnode-open').onClick((): void => { this.textNodeMode = true; });
         Button('系统 Paragraph 诊断').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-paragraph-open').onClick((): void => { this.paragraphMode = true; });

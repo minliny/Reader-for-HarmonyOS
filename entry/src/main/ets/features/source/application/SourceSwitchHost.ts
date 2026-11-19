@@ -16,7 +16,7 @@ import type { BookAcquisitionChange } from '../../reading/application/BookAcquis
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
 import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, sourceSwitchIsAlternative, SourceSwitchGateway,
   type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome,
-  type SourceSwitchProbeQuery } from './SourceSwitchGateway';
+  type SourceSwitchProbeQuery, type SourceSwitchDiscoveryOutcome } from './SourceSwitchGateway';
 import type { SourceSwitchTransactionProjection } from './SourceSwitchGateway';
 import { SourceSwitchIntentStore, SourceSwitchIntentRecoveryError, type SourceSwitchIntent } from './SourceSwitchIntentStore';
 
@@ -30,7 +30,6 @@ export interface SourceSwitchContext {
   knownCandidates: SourceSwitchCandidate[];
   /** Current search publication, read only while the admitted lease is current. */
   readKnownCandidates?: () => SourceSwitchCandidate[];
-  searchedSourceIds: string[];
 }
 export interface SourceSwitchWriteFact {
   generation: number;
@@ -701,16 +700,20 @@ export class SourceSwitchHost {
       this.publish();
       const cached = force ? [] : await this.gateway.loadCachedCandidates(context.query, current, knownCandidates());
       if (!current()) return;
+      // An earlier broad-query request does not prove title-query exhaustion.
+      // Only qualified cached alternatives can avoid a fresh discovery.
       // A cached current binding is only context, so continue searching for
       // alternatives. Once an alternate is cached, its relation projection is
       // already selectable and remains the terminal first paint.
-      const outcome = cached.some(sourceSwitchIsAlternative) ?
+      const outcome: SourceSwitchDiscoveryOutcome = cached.some(sourceSwitchIsAlternative) ?
         { kind: 'sources' as const, candidates: cached } :
-        await this.gateway.refreshCandidates(context.query, current, force ? [] : context.searchedSourceIds,
+        await this.gateway.refreshCandidates(context.query, current,
           publishProgress, force ? previous : (cached.length > 0 ? cached : initialKnown));
       if (!current()) return;
       this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || outcome.candidates.length === 0
-        ? { kind: 'empty' } : { kind: 'candidates', candidates: outcome.candidates, refreshing: false } };
+        ? (outcome.incompleteSourceCount ? { kind: 'discoveryError', message: '部分书源未能确认后续结果，请重试或调整书源。' } : { kind: 'empty' }) :
+          { kind: 'candidates', candidates: outcome.candidates, refreshing: false,
+            refreshError: outcome.incompleteSourceCount ? '部分书源未能确认后续结果，请重试或调整书源。' : undefined } };
       this.publish();
     } catch (error) {
       if (!current()) return;

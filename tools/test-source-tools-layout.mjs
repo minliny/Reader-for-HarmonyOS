@@ -7,6 +7,7 @@ import { foundationControls, withReaderSectionHeading, readerFoundationTokens, s
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { actualSourceManagementGeometry } from './lib/source-management-owner-probe.mjs';
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { ReaderWindowMetricsSnapshot, ReaderRectVp } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { resolveSourceToolsRowLayout } from '../entry/src/main/ets/features/source/presentation/SourceToolsLayout.ts';
@@ -17,6 +18,7 @@ const outputPath = outputArg?.slice('--evidence-path='.length);
 if (outputPath !== undefined) assert.ok(outputPath.startsWith('.reader-artifacts/') && !outputPath.includes('..'));
 const selected = selectContractCases({
   'parent-budget': 'Actual SourceTools List/Card/row and three NativeButton parents at 320/366 × 1/1.3/1.6/2 with/without summary. Reject old58 row and forced-inline regressions. SDK dimensions only.',
+  'editor-opening-scroll': 'Current editor generation scrolls after layout, skips draft updates, and rejects retired callbacks.',
 }, { argv: process.argv.slice(2).filter(arg => !arg.startsWith('--evidence-path=')) });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const pageSource = readFileSync(new URL('features/source/ui/SourceToolsPage.ets', root), 'utf8');
@@ -110,7 +112,59 @@ function checkRow(fixture, row, definition) {
   return { layout, width, height, requiredRowHeight };
 }
 
+function checkEditorOpeningScroll() {
+  const Page = selectedProductionMethods(new URL('features/source/ui/SourceToolsPage.ets', root), 'SourceToolsPage',
+    ['onSnapshotChanged', 'revealNewEditor', 'showsBatchProgress', 'showsBatchResults'],
+    { ReaderPostLayoutFrame: actualReaderPostLayoutFrame(), ScrollAlign: { START: 'start' } });
+  const queue = [], scrolls = [];
+  const context = { postFrameCallback: frame => queue.push(frame) };
+  const page = Object.assign(new Page(), {
+    snapshot: { editorRevision: 0, editorSourceId: '', batchCheck: { phase: 'idle', results: [] } },
+    observedEditorRevision: 0,
+    temporaryBackIdentity: 'original-opening',
+    getUIContext: () => context,
+    syncListDataSources: () => {},
+    showTransientFeedback: () => {},
+    toolsInputIsCurrent(opening = this.temporaryBackIdentity) { return this.temporaryBackIdentity === opening; },
+    pageScroller: { scrollToIndex: (...args) => scrolls.push(args) },
+  });
+  const finishFrame = () => {
+    const frame = queue.shift();
+    assert.ok(frame, 'a new editor requests a layout continuation');
+    frame.onFrame(0);
+    frame.onIdle(0);
+    drainReaderPostLayoutFallbacks(queue);
+  };
+  const publish = patch => {
+    page.snapshot = { ...page.snapshot, ...patch };
+    page.onSnapshotChanged();
+  };
+  publish({ editorRevision: 1, editorSourceId: 'one' });
+  assert.deepEqual(scrolls, [], 'scroll waits for the item to be laid out');
+  finishFrame();
+  assert.deepEqual(scrolls, [[2, false, 'start']]);
+  publish({ editorText: 'same generation' });
+  assert.equal(queue.length, 0, 'typing must not jump the page');
+  publish({ editorRevision: 2, editorSourceId: 'two', batchCheck: { phase: 'completed', results: [] } });
+  finishFrame();
+  publish({ editorRevision: 3, editorSourceId: 'three', batchCheck: { phase: 'completed', results: [{}] } });
+  finishFrame();
+  assert.deepEqual(scrolls, [[2, false, 'start'], [3, false, 'start'], [4, false, 'start']]);
+  publish({ editorRevision: 4, editorSourceId: 'four' });
+  publish({ editorRevision: 5, editorSourceId: '' });
+  finishFrame();
+  publish({ editorRevision: 6, editorSourceId: 'another opening' });
+  page.temporaryBackIdentity = 'new-opening';
+  finishFrame();
+  assert.equal(scrolls.length, 3, 'closed, replaced, and detached editors cannot scroll the current page');
+}
+
 for (const id of selected) {
+  if (id === 'editor-opening-scroll') {
+    checkEditorOpeningScroll();
+    recordContractCasePass(id);
+    continue;
+  }
   for (const width of [320, 366]) for (const fontScale of [1, 1.3, 1.6, 2]) {
     const f = context(width, fontScale);
     const rowResults = f.rows.map(row => checkRow(f, row));

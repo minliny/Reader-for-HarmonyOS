@@ -1,3 +1,6 @@
+import { readerKeyboardHostBottom } from '../../ui/layout/ReaderKeyboardGeometry';
+import { ReaderEditingVisibility } from '../../ui/layout/ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from '../../ui/layout/ReaderEditingScrollBinding';
 import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
@@ -43,6 +46,9 @@ class JsonImportFocusFrame extends FrameCallback {
  */
 @Component
 export struct JsonImportDialog {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
+  private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private foreground: boolean = true;
 
@@ -114,7 +120,7 @@ export struct JsonImportDialog {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
+      Scroll(this.editingScroller) {
       Column() {
       ReaderDialogSurface({
         specId: 'json-import',
@@ -135,6 +141,10 @@ export struct JsonImportDialog {
       })
       }.width('100%').constraintSize({ minHeight: this.availableHeight() }).justifyContent(FlexAlign.Center);
       }.width('100%').height(this.availableHeight()).position({ x: 0, y: this.safeTop() })
+        .id(this.editingScroll.id)
+        .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
+        .onDisAppear((): void => this.editingScroll.unmount())
+        .onAreaChange((): void => this.editingHost.refresh())
         .scrollBar(BarState.Auto).clip(true);
     }
     .width('100%')
@@ -159,8 +169,7 @@ export struct JsonImportDialog {
   private availableHeight(): number {
     const metrics = readerWindowMetrics();
     const height = this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height;
-    const bottom = Math.min(height, metrics.windowRect.height -
-      readerInteractiveSafeBottom(metrics, true) - this.hostOriginY);
+    const bottom = readerKeyboardHostBottom(metrics, this.hostOriginY, height);
     return Math.max(0, bottom - this.safeTop());
   }
 
@@ -184,7 +193,7 @@ export struct JsonImportDialog {
           .fontSize(TYPE_FORM_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         ForEach([this.urlInputRevision], (revision: number): void => {
-          ReaderFormField({ scheme: this.appThemeScheme, specId: 'form-url', text: this.urlDraft,
+          ReaderFormField({ editingHost: this.editingHost, isEditable: this.inputIsCurrent(), scheme: this.appThemeScheme, specId: 'form-url', text: this.urlDraft,
             placeholder: 'https://example.com/data.json',
             onTextChange: (value: string): void => this.updateUrlDraft(revision, value),
             onSubmit: (): void => { if (revision === this.urlInputRevision) this.submitOnlineImport(); } });

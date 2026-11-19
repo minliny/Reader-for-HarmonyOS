@@ -15,12 +15,20 @@ for (const id of selected) {
     const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
     const source = read('features/reading/ui/LocalReadingExperience.ets');
     const methods = ['openReaderRecovery', 'readerRecoveryInputCurrent', 'requestExit', 'onReaderManualInteraction',
-      'readerRecoveryRequestCurrent', 'retireReaderRecovery', 'readerRecoveryOverlayId'];
-    const owner = createReaderBuilderProbe(source, methods).owner;
+      'readerRecoveryRequestCurrent', 'retireReaderRecovery', 'readerRecoveryOverlayId',
+      'refreshAppearanceSaveRecovery', 'updateAppearanceSaveRecovery', 'isSessionActive', 'isMountedToken',
+      'retirePendingPlaybackStarts'];
+    const runtime = {};
+    const owner = createReaderBuilderProbe(source, methods,
+      { ReaderRuntimeOwner: { isCurrent: value => value === runtime } }).owner;
     const events = [];
+    let appearanceReads = 0;
     Object.assign(owner, { mounted: true, exitRequested: false, readerRecoveryRequested: false,
       hasReaderRecoveryContent: () => true, isControlInputEnabled: () => true,
       sourceId: 'source-a', bookId: 'book-a', lifecycleToken: 7,
+      replaceRuntime: runtime, appearanceSaveRecovery: { generation: 0 },
+      appearanceGateway: { saveState() { appearanceReads++; return { revision: 1, unconfirmed: false, canRetry: false, retrying: false }; } },
+      autoPageCoordinator: { pendingStart: () => false },
       controlVisible: () => false, controlMotionVisible: () => false, sourceSwitchPresentationVisible: false,
       hideControl: () => events.push('close-control'), invalidateControlBackdrop: () => events.push('backdrop'),
       invalidateTtsPageFollow: () => events.push('follow'), pauseAutoPageForInteraction: () => events.push('pause'),
@@ -30,6 +38,7 @@ for (const id of selected) {
     assert.equal(owner.readerRecoveryInputCurrent(), false, 'a restored pending fact does not automatically cover reading');
     owner.openReaderRecovery(owner.readerRecoveryOverlayId());
     assert.equal(owner.readerRecoveryInputCurrent(), true);
+    assert.equal(appearanceReads, 1, 'opening reads the current appearance state without a save');
     assert.deepEqual(events, ['close-control']);
     owner.requestExit();
     assert.equal(owner.readerRecoveryRequested, false);
@@ -45,14 +54,19 @@ for (const id of selected) {
     owner.openReaderRecovery(owner.readerRecoveryOverlayId()); assert.equal(owner.readerRecoveryRequested, false);
 
     const panel = createReaderBuilderProbe(read('features/reading/ui/ReaderControlPanel.ets'),
-      ['readerMoreActions', 'readerMoreActionEnabled', 'performMoreAction'],
+      ['readerMoreActions', 'readerMoreActionEnabled', 'performMoreAction', 'currentMoreMenuOwnerScope'],
       { ReaderMenuActionView: class { constructor(id, label, enabled) { Object.assign(this, { id, label, enabled }); } } }).owner;
     let requests = 0;
-    Object.assign(panel, { inputEnabled: true, controlObscured: false, recoveryAvailable: true,
+    Object.assign(panel, { inputEnabled: true, controlObscured: false, recoveryAvailable: true, runtimeMounted: true,
+      frame: () => ({ visibility: 1 }), sourceId: 'source-a', sourceBookId: 'book-a', controlOpenRevision: 1, runtimeLifecycle: 1,
       moreMenuVisible: true, moreMenuGeneration: 4, recoveryIdentity: 'reading-a', moreMenuRecoveryIdentity: 'reading-a', dismissMoreMenu() { this.moreMenuVisible = false; },
       onOpenRecovery() { requests++; } });
+    panel.moreMenuOwnerScope = panel.currentMoreMenuOwnerScope();
     assert.equal(panel.readerMoreActions().filter(item => item.id === 'recovery').length, 1);
     panel.performMoreAction('recovery', 3); assert.equal(requests, 0);
+    panel.controlOpenRevision += 1;
+    panel.performMoreAction('recovery', 4); assert.equal(requests, 0, 'a retired opening cannot request recovery');
+    panel.moreMenuOwnerScope = panel.currentMoreMenuOwnerScope();
     panel.performMoreAction('recovery', 4); assert.equal(requests, 1);
     panel.moreMenuVisible = true; panel.recoveryAvailable = false;
     assert.equal(panel.readerMoreActions().some(item => item.id === 'recovery'), false);

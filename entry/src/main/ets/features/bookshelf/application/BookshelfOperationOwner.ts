@@ -1,5 +1,6 @@
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
+import { LocalBookSelectionFailure } from '../../../app/LocalImportFailure';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../../app/ReaderPersistedReceiptProjection';
 import { BookshelfFlowGateway, type BookshelfDataState, type BookshelfFilter, type BookshelfRemovalTarget,
   type BookshelfRemoveOutcome, type BookshelfRemoveBatchOutcome, type BookshelfImportOutcome } from './BookshelfFlowGateway';
@@ -129,6 +130,13 @@ export class BookshelfOperationOwner {
       }
       return outcome;
     } catch (error) {
+      if (error instanceof LocalBookSelectionFailure && !evidence.hasDispatched()) {
+        if (current()) {
+          this.presentation.write(identity, 'fileSelection');
+          this.publishPresentation(error.message);
+        }
+        return undefined;
+      }
       // Only the gateway's actual import.persist invocation marks dispatch.
       // A generic throw never proves a mutation was not executed.
       if (evidence.confirmation() === 'unknown') this.receipt(projectPersistedReceipt({ confirmation: 'unknown', readback: 'idle',

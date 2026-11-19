@@ -1,3 +1,4 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { readerStandardPageContentFrame } from '../../../ui/layout/ReaderPageShell';
@@ -46,6 +47,7 @@ import {
 
 @Component
 export struct SyncPage {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -88,7 +90,7 @@ export struct SyncPage {
   }
 
   build() {
-    ReaderStandardPage({
+    ReaderStandardPage({ editingHost: this.editingHost,
       variant: 'sync',
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
@@ -216,7 +218,7 @@ export struct SyncPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
         // Credential masking remains the original native password policy.
-        ReaderFormField({ scheme: this.appThemeScheme, specId: 'sync-credential', text: value(), placeholder, password: isPassword,
+        ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'sync-credential', text: value(), placeholder, password: isPassword,
           isEditable: this.canEdit(), onTextChange: (newValue: string): void => onChange(newValue) });
       }
       .layoutWeight(1)

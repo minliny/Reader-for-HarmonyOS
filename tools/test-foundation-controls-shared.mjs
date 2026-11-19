@@ -25,13 +25,14 @@ const liveSourcePaths = new Map([
 const source=file=>readFileSync(new URL('../entry/src/main/ets/features/'+(liveSourcePaths.get(file)??file)+'.ets',import.meta.url),'utf8');
 function parent(kind,options={}) {
  const shared=foundationControls(options),methods=kind==='source'?['smallButton','actionButton','fullWidthActionButton']:
-  kind==='rules'?['input','actionButton','smallButton','actionAllowed','draftKey','draftIsCurrent']:['manualActionButton','webdavInputRow','canMutate','canEdit'];
+  kind==='rules'?['input','actionButton','smallButton','actionAllowed','inputAllowed','draftKey','draftIsCurrent','ownsDraftKey']:['manualActionButton','webdavInputRow','canMutate','canEdit'];
  const {owner}=createReaderBuilderProbe(source(kind==='source'?'source/SourceToolsPage':kind==='rules'?'settings/RulesManagementPage':'sync/SyncPage'),methods,shared.dependencies,shared.hooks);
- Object.assign(owner,{mounted:true,draftOpening:1,replaceDraftRevision:0,txtDraftRevision:0,dictDraftRevision:0,subscriptionDraftRevision:0,appThemeScheme:'day',snapshot:{busy:false,config:{configured:true},configLoaded:true},busy:false,configSaving:false,operation:{},endpoint:'https://example',username:'name',password:'secret',sourceListRevision:1});
+ Object.assign(owner,{mounted:true,appForeground:true,inputEnabled:true,draftOpening:1,replaceDraftRevision:0,txtDraftRevision:0,dictDraftRevision:0,subscriptionDraftRevision:0,appThemeScheme:'day',snapshot:{busy:false,config:{configured:true},configLoaded:true},busy:false,configSaving:false,operation:{},endpoint:'https://example',username:'name',password:'secret',sourceListRevision:1});
  return {shared,owner,nodes:()=>shared.nodes(owner),flush:()=>shared.flush(owner)};
 }
 const updateButton=(child,changes)=>child.updateStateVars(Object.assign({scheme:child.scheme,specId:child.specId,label:child.label,primary:child.primary,actionEnabled:child.actionEnabled,layout:child.layout},changes));
-const updateField=(child,changes)=>child.updateStateVars(Object.assign({scheme:child.scheme,specId:child.specId,text:child.text,placeholder:child.placeholder,isEditable:child.isEditable,password:child.password},changes));
+const updateField=(child,changes)=>child.updateStateVars(Object.assign({scheme:child.scheme,specId:child.specId,text:child.text,placeholder:child.placeholder,isEditable:child.isEditable,password:child.password,
+ inputIdentity:child.inputIdentity,fieldAccessibilityLabel:child.fieldAccessibilityLabel,naturalInputHeightVp:child.naturalInputHeightVp},changes));
 const checkFont=(node,expected)=>{
  const map={fontFamily:'fontFamily',fontWeight:'fontWeight',fontSize:'fontSizeFp',lineHeight:'lineHeightFp',letterSpacing:'letterSpacingFp'};
  for(const[p,key]of Object.entries(map))if(expected[key]===undefined)assert.equal(Object.hasOwn(node,p),false,p+': AUTO omission');else assert.equal(node[p],expected[key],p);

@@ -1,5 +1,5 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"exit-once": {"description": "实际注册退出owner save/back仅一次与retired guard", "resources": []}, "brief-current-error": {"description": "实际admitted preparation brief/opened Watch保error和pixels", "resources": []}};
+const definitions = {"exit-once": {"description": "实际注册退出owner save/back仅一次与retired guard", "resources": []}, "brief-current-error": {"description": "实际admitted preparation brief/opened Watch保error和pixels", "resources": []}, "recovery-touch-actor": {"description": "真实恢复提示SDK在阅读触摸换代后生成当前动作并拒绝旧物理回调", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -12,12 +12,14 @@ const { createRequire } = await import('node:module');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { mangaUserError } = await import('../entry/src/main/ets/features/manga/presentation/MangaUserError.ts');
+const { READER_FEEDBACK_BRIEF_MS } = await import('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts');
+const { sourceSwitchTriggerFocusId } = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
 
 
 const file = new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const Surface = productionMotionMethods(file,
-  ['requestedLast', 'imageError', 'rowHasError', 'nativeFailureKey', 'wholeImageUnavailable', 'unavailableMarkerTile', 'unavailableMarkerTop', 'rowDisplayWidth', 'rowDisplayHeight', 'unavailableImageWidth', 'unavailableImageHeight', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery', 'notifyPreparationFailure']);
+  ['requestedLast', 'imageError', 'rowHasError', 'nativeFailureKey', 'wholeImageUnavailable', 'unavailableMarkerTile', 'unavailableMarkerTop', 'rowDisplayWidth', 'rowDisplayHeight', 'unavailableImageWidth', 'unavailableImageHeight', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery', 'notifyPreparationFailure'],{READER_FEEDBACK_BRIEF_MS});
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
   let resolve, reject;
@@ -35,6 +37,30 @@ function fixture() {
     viewportWidth: 390, viewportHeight: 844, zoom: 1, effectiveFit: () => 'width',
     data: { totalCount: () => rows.length, getData: index => rows[index] }, updateViewport: async () => {} });
   return { surface, controller, tiles };
+}
+
+if(selectedCase==='recovery-touch-actor') {
+ const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ const members=['presentationGeneration','recovering','onWindowChromeChanged','recoveryOverlay',
+  'recoveryOverlayIdentity','recoveryOverlayCurrent','onViewportTouch','phonePanelBackgroundEnabled'];
+ const owner=sdk.consumer(source,members,{TouchType:{Down:0}});let confirmed=0;
+ owner.onWindowChromeChanged=()=>{};
+ Object.assign(owner,{refreshLoginRequiredForControls(){},applyWindowChrome(){},applyWindowPolicyForChromeOwner(){}});
+ Object.assign(owner,{sourceId:'source',bookId:'book',mounted:true,opened:true,recovering:true,
+  viewportWidth:390,viewportHeight:844,windowMetricsRevision:0,controlsVisible:false,panel:'',panelPhase:'closed',
+  chapterEnd:false,openingRetry:false,loginRequiredForControls:false,boundaryBusy:false,
+  windowChromeOverlayActive:false,pageTurnInputRevision:1,layoutGeneration:0,restoringAnchor:false,
+  controller:{replacementRecoveryRequired:false},readerPanelForeground:()=>true,widePanel:()=>false,
+  onWindowChromeChanged(){},recoveryNoticeHeight:()=>180,interactiveInsets:()=>({left:0,right:0,top:0,bottom:0}),
+  confirmRecovery:async()=>{confirmed++;}});
+ sdk.properties.flush();owner.recoveryOverlay();sdk.properties.flush();
+ const action=()=>sdk.nodes(owner).filter(n=>n.type==='Button'&&typeof n.onClick==='function').at(-1);
+ const old=action();assert.ok(old,'actual recovery native action');
+ owner.onViewportTouch({type:0});sdk.properties.flush();
+ const current=action();assert.equal(current.enabled,true,'current recovery remains actionable after touch');
+ current.onClick();await tick();assert.equal(confirmed,1,'current native recovery action dispatches after presentation change');
+ old.onClick();await tick();assert.equal(confirmed,1,'old physical recovery actor cannot confirm a new presentation');
 }
 
 if(selectedCase==='exit-once') {
@@ -96,6 +122,8 @@ if(selectedCase==='brief-current-error') {
   const {surface,controller}=fixture(),messages=[];
   controller.preparationError='MANGA_CHAPTER_PREPARATION_FAILED';
   Object.assign(surface,{preparationFailureNoticeKey:'',error:'settings error',
+    readerPanelForeground:()=>true,
+    transientFeedback:{show(_context,fact,current){if(!current())return false;messages.push(fact.message);return true;}},
     displayError:()=> '整章加载暂未完成，已加载的内容仍可阅读。',
     getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})})});
   surface.notifyPreparationFailure();surface.notifyPreparationFailure();
@@ -118,11 +146,12 @@ async function openedErrorSdkProof(surfaceSource=source) {
   const members=['error','opened','mounted','openedErrorNoticeKey','presentationGeneration',
     'onErrorPresentationChanged','onWindowChromeChanged','notifyOpenedError','controlsPresentedForWindow','loginRequired',
     'requestedLast','rowHasError','imageError','nativeFailureKey','nativeImageFailures','topControls',
-    'mangaTopBarBack','mangaTopBarActions','chromeScheme','readerPanelForeground'];
-  const owner=sdk.consumer(surfaceSource,members,{TOK_BORDER_W:1,ButtonType:{Normal:'ButtonType.Normal'}});
+    'mangaTopBarBack','mangaTopBarActions','panelTriggerFocusId','chromeScheme','readerPanelForeground'];
+  const owner=sdk.consumer(surfaceSource,members,{sourceSwitchTriggerFocusId,TOK_BORDER_W:1,ButtonType:{Normal:'ButtonType.Normal'}});
   let live=true;
   const tile={image:{fileUri:'file://retained',revision:'v1'}},row={key:'page:0',ordinal:0,tileIndex:0};
   Object.assign(owner,{getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
+    transientFeedback:{show(_context,fact,current){if(!current())return false;messages.push(fact.message);return true;}},
     onWindowChromeChanged(){},displayError:code=>'public '+code,isReaderIdentityCurrent:()=>live,
     controller:{chapter:{manifest:{manifestVersion:'v1'}},tile:()=>tile,visiblePages:()=>[]},
     data:{totalCount:()=>1,getData:()=>row},first:0,last:0,iconAction(){},

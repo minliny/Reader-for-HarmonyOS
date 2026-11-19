@@ -16,7 +16,7 @@ const require=createRequire(import.meta.url);
 const sdkRoot=resolveEtsLoaderRoot();
 const ts=require(`${sdkRoot}/node_modules/typescript`),syntax=require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const options=require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
-const read=name=>readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`,import.meta.url),'utf8');
+const read=name=>readFileSync(new URL(`../entry/src/main/ets/features/reading/ui/${name}.ets`,import.meta.url),'utf8');
 const parse=source=>ts.createSourceFile(virtualFilePath('ReaderSearchPublication.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const member=(source,name)=>{const tree=parse(source);const type=tree.statements.find(node=>node.members?.some(item=>item.name?.getText(tree)===name));
   const node=type.members.find(node=>node.name?.getText(tree)===name);assert.ok(node,name);return node.getText(tree);};
@@ -24,9 +24,9 @@ function register(name,source){const tree=parse(source),type=tree.statements.fin
   syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set(type.members.filter(node=>node.getText(tree).includes('@Prop'))
     .map(node=>node.name?.getText(tree)).filter(Boolean)));}
 const runtime=createArkUIPropertyRuntimeProbe(),contentSource=read('ReaderControlSearchContent'),panelSource=read('ReaderControlPanel'),lreSource=read('LocalReadingExperience');
-const methods=['searchPublication','searchRevision','state','acceptedSearchState','acceptSearchPublication',
+const methods=['currentSearchState','searchPublication','searchRevision','state','acceptedSearchState','acceptSearchPublication',
   'resultDataSource','resultNativeFollowTimer','resultNativeFollowLifecycle','resultNativeRawBase',
-  ...searchListMethods,'currentResultIndex','currentResult','indexedResultRows','resultRowIndexes'];
+  ...searchListMethods,'currentResultIndex','currentResult','indexedResultRows','indexedResultCount','resultRowIndexes'];
 const child=createReaderBuilderProbe(contentSource,methods,{...searchListDependencies,...runtime.sdk,ReaderContentSearchPublication},runtime.hooks);
 register('ReaderControlSearchContent',contentSource);
 const panel=createReaderBuilderProbe(panelSource,['searchPublication','searchRevision','searchModuleContent'],{
@@ -45,10 +45,11 @@ const parent=createReaderBuilderProbe(`@Component struct SearchOwner {
 }`,fields.concat('build'),{...runtime.sdk,ReaderContentSearchPublication,ReaderControlPanel:panel.Component},runtime.hooks);
 parent.owner.initialRender();const stage=[...parent.owner.children.values()][0];
 Object.assign(stage,{contentEndpointHeight:full=>full?666:190,contentMotionProgress:0,contentMotionWidth:286,contentMotionHeight:190,
-  secondaryModuleInputEnabled:()=>true});
+  secondaryModuleInputEnabled:()=>true,currentMinimumIdentity:()=>'',currentMinimumKey:()=>'',preparedMinimum:()=>undefined,
+  publishMinimumMeasurer:()=>{},contentEditingHeight:()=>stage.contentMotionHeight,moduleTemporaryLayerHandler:()=>()=>{},moduleEditorInputEnabled:()=>true});
 stage.searchModuleContent();const page=[...stage.children.values()][0];
 Object.assign(page,{motionProgress:0,availableWidth:286,availableHeight:190,resultScrollMounted:false,
-  resultScrollPosition:scroll.createReaderControlSearchScroll()});
+  resultScrollPosition:scroll.createReaderControlSearchScroll(),publishMinimumMeasurer:()=>{}});
 page.acceptSearchPublication();
 const notices=[];
 page.resultDataSource.registerDataChangeListener({onDataReloaded(){notices.push(['reload']);},

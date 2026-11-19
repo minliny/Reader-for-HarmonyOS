@@ -42,6 +42,7 @@ export struct ReaderBookmarkRow {
 
   @Prop embeddedInControl: boolean = false;
   @Prop motionProgress: number = 1;
+  @Prop showExcerpt: boolean = true;
   @Prop availableWidth: number = 316;
   @Prop naturalSize: ReaderControlBookmarkNaturalSize | undefined = undefined;
   @Prop standaloneSize: ReaderStandaloneBookmarkSize | undefined = undefined;
@@ -67,7 +68,7 @@ export struct ReaderBookmarkRow {
   }
 
   private frame(): ReaderControlBookmarkFrame {
-    return sampleReaderControlBookmark(this.motionProgress, this.availableWidth, this.naturalSize);
+    return sampleReaderControlBookmark(this.motionProgress, this.availableWidth, this.naturalSize, this.showExcerpt);
   }
 
   @Builder
@@ -86,20 +87,24 @@ export struct ReaderBookmarkRow {
           .maxLines(1).constraintSize({ maxWidth: 64 }).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.width(this.frame().title.width).height(this.frame().title.height)
         .position({ x: this.frame().title.x, y: this.frame().title.y });
-      Text('').width(this.frame().accent.width).height(this.frame().accent.height)
-        .backgroundColor(readerAppColor('app.bookmark.excerptAccent', this.appThemeScheme)).borderRadius(1)
-        .position({ x: this.frame().accent.x, y: this.frame().accent.y });
-      Text(this.row.excerpt).width(this.frame().excerpt.width).height(this.frame().excerpt.height)
-        .fontFamily(TYPE_READER_BOOKMARK_EXCERPT.fontFamily).fontWeight(TYPE_READER_BOOKMARK_EXCERPT.fontWeight)
-        .fontSize(TYPE_READER_BOOKMARK_EXCERPT.fontSizeFp).lineHeight(TYPE_READER_BOOKMARK_EXCERPT.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: this.frame().excerpt.x, y: this.frame().excerpt.y });
+      if (this.showExcerpt) {
+        Text('').width(this.frame().accent.width).height(this.frame().accent.height)
+          .backgroundColor(readerAppColor('app.bookmark.excerptAccent', this.appThemeScheme)).borderRadius(1)
+          .position({ x: this.frame().accent.x, y: this.frame().accent.y });
+        Text(this.row.excerpt).width(this.frame().excerpt.width).height(this.frame().excerpt.height)
+          .fontFamily(TYPE_READER_BOOKMARK_EXCERPT.fontFamily).fontWeight(TYPE_READER_BOOKMARK_EXCERPT.fontWeight)
+          .fontSize(TYPE_READER_BOOKMARK_EXCERPT.fontSizeFp).lineHeight(TYPE_READER_BOOKMARK_EXCERPT.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .position({ x: this.frame().excerpt.x, y: this.frame().excerpt.y });
+      }
       Text('').width(this.frame().divider.width).height(this.frame().divider.height)
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: this.frame().divider.x, y: this.frame().divider.y });
     }.width(this.frame().card.width).height(this.frame().card.height).clip(true)
       .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}` +
-        (this.row.identityStatus === 'pendingConfirmation' ? ` ${BOOKMARK_PENDING_LABEL}` : ''))
+        (this.row.identityStatus === 'pendingConfirmation' ? ` ${BOOKMARK_PENDING_LABEL}` : '') +
+        (!this.showExcerpt && this.row.excerpt.trim().length > 0 ? `，${this.row.excerpt}` : ''))
       .onClick((): void => this.onSelectBookmark(this.row.bookmarkId, this.row.chapterIndex, this.row.chapterOffset, this.row.positionScope));
   }
 

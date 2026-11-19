@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
@@ -569,7 +570,7 @@ export struct LocalImportDialog {
     const metrics = ReaderWindowCoordinator.metrics();
     const windowHeight = Math.max(0, metrics.windowRect.height - this.viewportOriginY);
     const height = Math.min(this.viewportHeight >= 0 ? this.viewportHeight : windowHeight, windowHeight);
-    return readerSurfaceMaxHeight(height, this.recoveryTop() + readerInteractiveSafeBottom(metrics, true) + 8);
+    return readerSurfaceMaxHeight(readerKeyboardHostBottom(metrics, this.viewportOriginY, height), this.recoveryTop() + 8);
   }
 
   private allSucceeded(): boolean {

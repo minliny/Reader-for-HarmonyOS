@@ -61,8 +61,15 @@ const unavailable = await new SharedDownloadGateway({ request: async () => { thr
 assert.equal(unavailable.stateLabel, '');
 assert.equal(unavailable.projectionStatus, 'unavailable', 'a failed read is not a download failure');
 const unknown = await new SharedDownloadGateway({ request: async () => ({ data: status(novel, [], false) }) }).load(novel, () => true);
+assert.equal(unknown.projectionStatus, 'ready');
+assert.deepEqual(unknown.chapters, [], 'lookup can succeed before remote TOC data is available');
+assert.equal(unknown.totalChapters, undefined);
 assert.equal(unknown.state, undefined);
 assert.equal(unknown.progressPercent, undefined);
+const emptyCatalog = await new SharedDownloadGateway({ request: async () => ({ data: status(novel, [], true) }) }).load(novel, () => true);
+assert.equal(emptyCatalog.projectionStatus, 'ready');
+assert.deepEqual(emptyCatalog.chapters, []);
+assert.equal(emptyCatalog.totalChapters, 0, 'a canonical empty TOC carries a proven zero');
 const zeroBody = await new SharedDownloadGateway({ request: async () => ({ data: status(novel, [row(0, 'cached', 0)]) }) }).load(novel, () => true);
 assert.equal(zeroBody.downloadedChapters, 0, 'metadata alone cannot prove a saved body');
 const other = { ...createDownloadBookView(shelf('s2', 'same', 'manga')), recentRead: 2 };

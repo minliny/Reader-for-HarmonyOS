@@ -5,9 +5,14 @@ export interface ReaderControlKeyboardInsets {
   bottom: number;
 }
 
+export interface ReaderControlKeyboardArea {
+  available: boolean;
+  visible: boolean;
+}
 export interface ReaderControlKeyboardMetrics {
   ready: boolean;
   keyboardInsets: ReaderControlKeyboardInsets;
+  keyboardArea?: ReaderControlKeyboardArea;
 }
 
 export interface ReaderControlKeyboardHost {
@@ -21,6 +26,7 @@ function visibleInset(value: number): boolean {
 
 /** Keyboard visibility comes from TYPE_KEYBOARD window geometry. */
 export function readerControlKeyboardVisible(metrics: ReaderControlKeyboardMetrics): boolean {
+  if (metrics.ready && metrics.keyboardArea?.available === true) return metrics.keyboardArea.visible;
   const insets = metrics.keyboardInsets;
   return metrics.ready && (visibleInset(insets.left) || visibleInset(insets.top) ||
     visibleInset(insets.right) || visibleInset(insets.bottom));

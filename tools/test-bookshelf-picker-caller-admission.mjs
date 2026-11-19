@@ -3,13 +3,14 @@ import { readFileSync } from 'node:fs';
 import { ReaderDocumentPickerActivity as Activity } from '../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts';
 import { ReaderWriteEvidence } from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from '../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts';
-import { localImportFailure } from '../entry/src/main/ets/app/LocalImportFailure.ts';
+import { localImportFailure, LocalBookSelectionFailure } from '../entry/src/main/ets/app/LocalImportFailure.ts';
 import { bookshelfOperationClass as actual } from './lib/bookshelf-operation-owner-probe.mjs';
 import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
 import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const definitions = {
+  'provider-selection-boundary': 'Actual Host→OperationOwner rejects 51/huge/malformed provider batches before filename parsing, staging or persist; normal 0/1/50 and retired UI preserved',
   'retired-opening-before-launch': 'Actual original OperationOwner and four forwards reject closed/reopened/departed same-window opening after Host StageRecovery',
   'new-root-same-opening': 'Actual original opening survives a new Root adapter while its retired caller lease is rejected',
   'covered-input-before-launch': 'Actual current presentation denies same-window covered input before Native launch and a new valid Root adapter can restore admission',
@@ -26,7 +27,7 @@ let windowId = 10100;
 
 function fixture() {
   Activity.destroy(); Activity.bind(++windowId); Activity.setForeground(true);
-  const f = { calls: [], native: [], nativeJobs: [], released: [], commits: [], stageInputs: [],
+  const f = { calls: [], native: [], nativeJobs: [], released: [], commits: [], stageInputs: [], parsedInputs: [],
     recovery: deferred(), recoveryEntered: false, caller: true, persistPause: undefined };
   const Runtime = selectedProductionMethods(file('app/ReaderRuntimeOwner.ts'), 'ReaderRuntimeOwner', ['instance', 'current', 'isCurrent', 'selectLocalBookInputs']);
   const picker = { DocumentSelectOptions: class {}, DocumentViewPicker: class {
@@ -35,13 +36,13 @@ function fixture() {
   } };
   const Host = selectedProductionMethods(file('app/ReaderHostRegistry.ts'), 'ReaderHostRegistry',
     ['LocalBookSelectionLimit', 'LocalBookStagingConcurrency', 'selectLocalBookInputs'], {
-      ReaderDocumentPickerActivity: Activity, picker, READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName, localImportFailure,
+      ReaderDocumentPickerActivity: Activity, picker, READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName, localImportFailure, LocalBookSelectionFailure,
       errorMessageOf: error => error instanceof Error ? error.message : String(error), LOG_DOMAIN: 0, hilog: { warn() {}, error() {} },
     });
   const input = { fileName: 'original.txt', bookId: 'local-input', stagedPath: '/controlled-stage/original.txt', assetKind: 'source' };
   const host = Object.assign(new Host(), { context: { controlled: 'UIAbilityContext' },
     ensureStageRecovery: () => { f.recoveryEntered = true; return f.recovery.promise; },
-    requireSelectedFileName: uri => uri.split('/').at(-1),
+    requireSelectedFileName: uri => { f.parsedInputs.push(uri); return uri.split('/').at(-1); },
     stageLocalBook: async uri => { f.stageInputs.push(uri); return input; },
   });
   const runtime = Object.assign(new Runtime(), { state: 'ready', host, supportsCoreCapability: () => false,
@@ -106,6 +107,28 @@ function fixture() {
 }
 
 for (const id of selectContractCases(definitions)) {
+  if (id === 'provider-selection-boundary') {
+    for (const returned of [Array(51).fill('file://provider/book.txt'), Array(100000).fill('file://provider/book.txt'), null, ['file://provider/book.txt', 7]]) {
+      const f = fixture(), work = f.start(); f.recovery.resolve(); await until(() => f.native.length === 1);
+      f.nativeJobs[0].resolve(returned); await work;
+      assert.deepEqual(f.parsedInputs, []); assert.deepEqual(f.stageInputs, []); assert.deepEqual(f.calls, []);
+      assert.equal(f.owner.current().receipt, undefined); assert.equal(f.owner.current().busy, false);
+      assert.equal(f.owner.current().importPresentation.state, 'fileSelection');
+      assert.match(f.owner.current().importFailureMessage, /尚未导入.*重新选择/);
+      assert.equal(Activity.isPending(), false);
+    }
+    for (const count of [0, 1, 50]) {
+      const f = fixture(), work = f.start(); f.recovery.resolve(); await until(() => f.native.length === 1);
+      f.nativeJobs[0].resolve(Array.from({length:count},(_,i)=>`file://provider/book${i}.txt`)); await work;
+      assert.equal(f.parsedInputs.length,count); assert.equal(f.stageInputs.length,count);
+      assert.equal(f.calls.filter(c=>c.method==='import.persist').length,count);
+      assert.equal(f.owner.current().importPresentation.state,count ? 'result' : 'fileSelection');
+    }
+    const f = fixture(), work = f.start(); f.recovery.resolve(); await until(() => f.native.length === 1);
+    f.close(); f.reopen(); f.nativeJobs[0].resolve(Array(51).fill('file://provider/book.txt')); await work;
+    assert.equal(f.owner.current().importFailureMessage,'','old selection cannot publish into a reopened owner');
+    assert.deepEqual(f.stageInputs,[]); assert.deepEqual(f.calls,[]);
+  }
   if (id === 'retired-opening-before-launch') for (const mode of ['closed', 'reopened', 'route-departed']) {
     const f = fixture(), oldIdentity = f.owner.current().importIdentity, work = f.start(); await until(() => f.recoveryEntered);
     assert.equal(f.owner.current().importPresentation.state, 'pickerOpening'); assert.equal(f.native.length, 0);

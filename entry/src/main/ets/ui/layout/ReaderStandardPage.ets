@@ -11,6 +11,8 @@ import { ReaderFrameStyle, readerFrameStyle } from './ReaderFrameStyle';
 import { ReaderPageScrollHost } from './ReaderPageScrollHost';
 import { ReaderScrollLayout, readerScrollLayout } from './ReaderScrollLayout';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { ReaderEditingVisibility } from './ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from './ReaderEditingScrollBinding';
 
 /** Standard pages share the resolved page geometry, Scroll body, measured
  * header clearance and footer budget. Pages supply business builders only. */
@@ -33,12 +35,15 @@ export struct ReaderStandardPage {
   private mounted: boolean = false;
   onViewportChange: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   scroller: Scroller = new Scroller();
+  editingHost: ReaderEditingVisibility | undefined = undefined;
+  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   @BuilderParam content: () => void = this.emptySlot;
   @BuilderParam nativeListItems: () => void = this.emptySlot;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam footer: () => void = this.emptySlot;
   @BuilderParam overlayContent: (contentStartInset: number) => void = this.emptyOverlaySlot;
   @Prop boundedOverlayVisible: boolean = false;
+  @Prop boundedOverlayLeadingReserve: number = 0;
   @BuilderParam boundedOverlayContent: () => void = this.emptySlot;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @Builder private emptySlot() {}
@@ -117,20 +122,27 @@ export struct ReaderStandardPage {
       footerBackground: pageBackground });
   }
 
-  private overlayAvailableHeight(): number {
+  private overlayBottom(): number {
     const geometry = this.geometry;
     if (this.viewportHeight <= 0) return 0;
     const contentBottom = this.viewportHeight - Math.max(geometry.content.endInset, geometry.content.nativeEndInset);
-    return Math.max(0, Math.min(contentBottom, geometry.footer.top) - geometry.content.startInset);
+    return Math.min(contentBottom, geometry.footer.top);
+  }
+
+  private overlayTop(): number {
+    const start = this.geometry.content.startInset;
+    const reserved = start + this.boundedOverlayLeadingReserve;
+    // Keep a route to the pending operation on extremely short windows.
+    return this.overlayBottom() - reserved >= 44 ? reserved : start;
   }
 
   @Builder
   private pageOverlay() {
     this.overlayContent(this.geometry.content.startInset);
-    if (this.boundedOverlayVisible && this.overlayAvailableHeight() > 0) {
+    if (this.boundedOverlayVisible && this.overlayBottom() > this.overlayTop()) {
       Scroll() { Column({ space: 8 }) { this.boundedOverlayContent(); }.width('100%'); }
-        .width(this.geometry.content.frame.width).constraintSize({ maxHeight: this.overlayAvailableHeight() })
-        .margin({ left: this.geometry.content.frame.left, right: this.geometry.content.frame.right, top: this.geometry.content.startInset })
+        .width(this.geometry.content.frame.width).constraintSize({ maxHeight: this.overlayBottom() - this.overlayTop() })
+        .margin({ left: this.geometry.content.frame.left, right: this.geometry.content.frame.right, top: this.overlayTop() })
         .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Default)
         .onTouch((event: TouchEvent): void => event.stopPropagation());
     }
@@ -166,6 +178,11 @@ export struct ReaderStandardPage {
   @Builder private pageBody() {
     if (this.scrollOwner === 'native-list') {
       List({ scroller: this.scroller }) { this.nativeListItems(); }
+        .id(this.editingScroll.id)
+        .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.scroller,
+          (): number => this.geometry.content.startInset))
+        .onDisAppear((): void => this.editingScroll.unmount())
+        .onAreaChange((): void => this.editingHost?.refresh())
         .width('100%').height('100%')
         .contentStartOffset(this.geometry.content.startInset)
         .contentEndOffset(this.geometry.content.endInset)
@@ -177,7 +194,7 @@ export struct ReaderStandardPage {
   }
 
   @Builder private scrollContent() {
-    ReaderPageScrollHost({ scroller: this.scroller, layout: this.scrollLayout(),
+    ReaderPageScrollHost({ scroller: this.scroller, layout: this.scrollLayout(), editingHost: this.editingHost,
       content: (): void => { this.pageContent(); } });
   }
 

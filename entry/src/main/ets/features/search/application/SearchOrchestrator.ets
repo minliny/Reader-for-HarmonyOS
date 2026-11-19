@@ -1,3 +1,4 @@
+import { BookSearchPageProgress } from '../../../app/library/BookSearchPageProgress';
 import {
   SearchGateway,
   searchBookWithAdmission,
@@ -8,7 +9,7 @@ import {
   searchSourceHealthState,
 } from './SearchGateway';
 import { projectOperationFacts } from '../../../app/ReaderOperationFacts';
-import type { SearchHistoryStatus, SearchOperationFacts, SearchOperationValue, SearchPresentation, SearchSourceSkip } from '../presentation/SearchPresentation';
+import type { SearchHistoryStatus, SearchIncompleteSource, SearchOperationFacts, SearchOperationValue, SearchPresentation, SearchSourceSkip } from '../presentation/SearchPresentation';
 import type { SearchBookPatch } from './SearchBookProjection';
 import type { BookAcquisitionChange } from '../../reading/application/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../../app/BookRequestScheduler';
@@ -47,6 +48,9 @@ class SearchQueryRun {
   scope: string[] | undefined;
   sources: SearchSource[] = [];
   sourceResults: Map<string, SearchBook[]> = new Map();
+  pages: Map<string, BookSearchPageProgress> = new Map();
+  continuationRunning: boolean = false;
+  resumePages: boolean = false;
   completed: Set<string> = new Set();
   completedVersions: Map<string, string | undefined> = new Map();
   failures: Map<string, WorkerFailure> = new Map();
@@ -93,6 +97,20 @@ class SearchQueryRun {
     // an earlier nonempty bucket still changes membership and must invalidate.
     if (admitted.length > 0 || previous.length > 0) this.revision += 1;
     return admitted;
+  }
+
+  progress(source: SearchSource): BookSearchPageProgress {
+    let value = this.pages.get(source.sourceId);
+    if (value === undefined) { value = new BookSearchPageProgress(); this.pages.set(source.sourceId, value); }
+    return value;
+  }
+
+  append(source: SearchSource, books: SearchBook[]): void {
+    const previous = this.sourceResults.get(source.sourceId) ?? [];
+    const merged = new Map<string, SearchBook>();
+    for (const book of previous) merged.set(`${book.sourceId}\u0000${book.bookId}`, book);
+    for (const book of this.admit(books)) merged.set(`${book.sourceId}\u0000${book.bookId}`, book);
+    this.sourceResults.set(source.sourceId, Array.from(merged.values()));
   }
 
   results(): SearchBook[] {
@@ -154,9 +172,6 @@ export class SearchOrchestrator {
    * True while the live sweep has active or paused workers.
    */
   private sweepAlive: boolean = false;
-  private searchedSources: Set<string> = new Set();
-
-  searchedSourceIds(): string[] { return Array.from(this.searchedSources); }
   /**
    * Completed (ok or failed) sources of the live sweep. stop() reads it to
    * settle an interrupted loading surface with an honest source count.
@@ -312,7 +327,6 @@ export class SearchOrchestrator {
       return;
     }
     this.cancelRunTimer();
-    this.searchedSources.clear();
     this.resultGeneration += 1;
     this.gateway.resetBookProjection();
     this.pendingBookReset = false;
@@ -342,6 +356,8 @@ export class SearchOrchestrator {
       // not published them yet. Stop is a synchronous commit boundary.
       this.cancelRunTimer();
       run.stopped = true;
+      run.resumePages = true;
+      run.continuationRunning = false;
       hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{private}s',
         this.truncatedKeywordForLog(run.keyword));
       this.publishRun(run, true);
@@ -404,9 +420,10 @@ export class SearchOrchestrator {
   retry(): void {
     const run = this.run;
     if (run !== undefined) {
+      if (run.continuationRunning) return;
       const retryLocal = run.localStatus === 'failed' || (!this.sweepAlive && run.localStatus !== 'done');
       const retryOnline = (!this.sweepAlive || run.onlineStatus !== 'running') && (run.onlineStatus !== 'done' || run.failures.size > 0 ||
-        run.skippedSourceCount > 0 || run.sources.some((source: SearchSource): boolean => !run.completed.has(source.sourceId)));
+        run.skippedSourceCount > 0 || run.resumePages || run.sources.some((source: SearchSource): boolean => run.progress(source).state === 'unknown') || run.sources.some((source: SearchSource): boolean => !run.completed.has(source.sourceId)));
       if (!retryLocal && !retryOnline) {
         // The empty surface labels this action as a new search, not failure recovery.
         if (this.presentation.kind === 'empty') this.search(run.keyword, run.scope);
@@ -505,7 +522,7 @@ export class SearchOrchestrator {
         const resultDelta: SearchResultDelta = { baseRevision: this.resultRevision, revision: this.resultRevision + 1,
           reset: false, upserted: accepted, removedKeys: removed };
         this.present({ kind: 'results', keyword: latest.keyword, results: Array.from(this.resultIndex.values()), delta: resultDelta,
-          searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
+          searching: latest.searching, continuing: latest.continuing, hasMoreSources: latest.hasMoreSources, incompleteSourceCount: latest.incompleteSourceCount, incompleteSources: latest.incompleteSources, exhaustedSourceCount: latest.exhaustedSourceCount, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
           completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
           skippedSourceCount: latest.skippedSourceCount,
           skippedSources: latest.skippedSources,
@@ -546,7 +563,7 @@ export class SearchOrchestrator {
         this.present({ kind: 'results', keyword: latest.keyword, results: merged,
           localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
           localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage,
-          searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
+          searching: latest.searching, continuing: latest.continuing, hasMoreSources: latest.hasMoreSources, incompleteSourceCount: latest.incompleteSourceCount, incompleteSources: latest.incompleteSources, exhaustedSourceCount: latest.exhaustedSourceCount, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
           completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
           skippedSourceCount: latest.skippedSourceCount, skippedSources: latest.skippedSources,
           operation: latest.operation }, false);
@@ -680,17 +697,19 @@ export class SearchOrchestrator {
     if (stopped) phase = 'cancelled';
     else if (run.retrying) phase = 'refreshing';
     else if (searching) phase = hasResults ? 'partial' : 'loading';
-    else if (!hasResults) phase = failed ? 'failed' : 'empty';
-    else if (failed || run.failures.size > 0) phase = 'partial';
+    else if (!hasResults) phase = failed ? 'failed' :
+      run.sources.some((source: SearchSource): boolean => run.progress(source).state === 'unknown') ? 'partial' : 'empty';
+    else if (failed || run.failures.size > 0 || run.sources.some((source: SearchSource): boolean => run.progress(source).state !== 'end')) phase = 'partial';
     else phase = 'succeeded';
     // A health/cooldown skip is not a live empty result. Keep explicit retry
     // available so the page can dispatch the skipped sources with fresh work.
-    const canRetry = !searching && (stopped || failed || run.failures.size > 0 || run.skippedSourceCount > 0);
+    const canRetry = !searching && (stopped || failed || run.failures.size > 0 || run.skippedSourceCount > 0 ||
+      run.sources.some((source: SearchSource): boolean => run.progress(source).state === 'unknown'));
     return projectOperationFacts({
       phase,
       value: hasResults ? value : undefined,
       canRetry,
-      canCancel: searching,
+      canCancel: searching || run.continuationRunning,
       generation: this.work,
     });
   }
@@ -698,12 +717,21 @@ export class SearchOrchestrator {
   private publishRun(run: SearchQueryRun, stopped: boolean = false): void {
     if (this.run !== run || !this.sessionOpen) return;
     const results = run.results();
-    const searching = !stopped && (run.localStatus === 'running' || run.onlineStatus === 'running');
+    const searching = !stopped && (run.localStatus === 'running' || run.onlineStatus === 'running' ||
+      (results.length === 0 && run.continuationRunning));
     const localFailureMessage = this.branchFailureMessage(run.localFailureReason);
     const sourceListFailureMessage = this.branchFailureMessage(run.sourceListFailureReason);
+    const incompleteSources: SearchIncompleteSource[] = run.sources
+      .filter((source: SearchSource): boolean => run.progress(source).state === 'unknown')
+      .map((source: SearchSource): SearchIncompleteSource => ({ sourceId: source.sourceId,
+        sourceVersion: source.sourceVersion, requestedPage: run.progress(source).page,
+        reason: run.progress(source).reason }));
     this.sweepCompletedSourceCount = run.completed.size;
     if (results.length > 0) {
-      this.present({ kind: 'results', keyword: run.keyword, results, searching,
+      this.present({ kind: 'results', keyword: run.keyword, results, searching, continuing: run.continuationRunning,
+        hasMoreSources: run.sources.some((source: SearchSource): boolean => run.progress(source).state === 'ready'),
+        incompleteSourceCount: incompleteSources.length, incompleteSources,
+        exhaustedSourceCount: run.sources.filter((source: SearchSource): boolean => run.progress(source).state === 'end').length,
         totalSourceCount: run.totalSourceCount, completedSourceCount: run.completed.size,
         failedSourceCount: run.failures.size, localSearchFailed: run.localFailed,
         skippedSourceCount: run.skippedSourceCount > 0 ? run.skippedSourceCount : undefined,
@@ -713,7 +741,8 @@ export class SearchOrchestrator {
     } else if (!searching) {
       const failed = run.localFailed || run.sourceListFailed ||
         (run.sources.length > 0 && run.failures.size === run.sources.length);
-      this.present({ kind: failed && !stopped ? 'error' : 'empty', keyword: run.keyword,
+      this.present({ kind: (failed || incompleteSources.length > 0) && !stopped ? 'error' : 'empty', keyword: run.keyword,
+        incompleteSourceCount: incompleteSources.length, incompleteSources,
         searchedSourceCount: run.completed.size, failedSourceCount: run.failures.size,
         skippedSourceCount: run.skippedSourceCount > 0 ? run.skippedSourceCount : undefined,
         skippedSources: run.skippedSources.length > 0 ? run.skippedSources : undefined,
@@ -811,21 +840,22 @@ export class SearchOrchestrator {
         // Keep successful source buckets on retry. Replaced/deleted sources
         // cannot survive an explicit registry refresh through a stale bucket.
         const retained = new Set<string>(enabled.map((source: SearchSource): string => source.sourceId));
-        for (const id of run.sourceResults.keys()) if (!retained.has(id)) run.sourceResults.delete(id);
+        for (const id of run.sourceResults.keys()) if (!retained.has(id)) { run.sourceResults.delete(id); run.pages.delete(id); }
         for (const id of run.completed) if (!retained.has(id)) run.completed.delete(id);
         for (const id of run.failures.keys()) if (!retained.has(id)) run.failures.delete(id);
         for (const source of enabled) {
           if (run.completed.has(source.sourceId) && run.completedVersions.get(source.sourceId) !== source.sourceVersion) {
-            run.completed.delete(source.sourceId); run.sourceResults.delete(source.sourceId);
+            run.completed.delete(source.sourceId); run.sourceResults.delete(source.sourceId); run.pages.delete(source.sourceId);
           }
         }
         run.revision += 1;
         const pending = admitted.filter((source: SearchSource): boolean =>
-          !run.completed.has(source.sourceId) || run.failures.has(source.sourceId));
+          !run.completed.has(source.sourceId) || run.failures.has(source.sourceId) || run.progress(source).state === 'unknown' ||
+          (run.resumePages && run.progress(source).state === 'ready'));
+        run.resumePages = false;
         await runBookSourceWorkers(pending, MAX_SEARCH_CONCURRENCY, async (source: SearchSource): Promise<void> => {
-            this.searchedSources.add(source.sourceId);
             const outcome = await this.gateway.searchBySource(source, run.keyword,
-              (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent());
+              (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent(), run.progress(source).page);
             if (!this.isCurrentWork(work, session)) return;
             run.completed.add(source.sourceId);
             run.completedVersions.set(source.sourceId, source.sourceVersion);
@@ -842,7 +872,8 @@ export class SearchOrchestrator {
                 (outcome.discardedReasons ?? []).join('; '));
               run.failures.delete(source.sourceId);
               this.failedSourceCooldown.delete(this.sourceCooldownKey(source));
-              run.sourceResults.set(source.sourceId, run.admit(outcome.results, run.sourceResults.get(source.sourceId) ?? []));
+              run.append(source, outcome.results);
+              run.progress(source).accept(outcome.pageReceipt, outcome.results.map((book: SearchBook): string => book.bookId));
             }
             this.scheduleRunPublish(run, work, session);
         }, async (): Promise<boolean> => await this.waitForDispatch(work, session) && this.isCurrent());
@@ -863,7 +894,35 @@ export class SearchOrchestrator {
       run.retrying = false;
       this.publishRun(run);
       this.sweepAlive = run.localStatus === 'running' || run.onlineStatus === 'running';
+      if (run.results().length === 0) this.needMoreResults();
     }
+  }
+
+  needMoreResults(): void {
+    const run = this.run;
+    if (run === undefined || run.stopped || this.sweepAlive || run.continuationRunning || !this.isCurrent() ||
+      run.localStatus === 'running' || run.onlineStatus !== 'done') return;
+    const pending = run.sources.filter((source: SearchSource): boolean =>
+      run.completed.has(source.sourceId) && !run.failures.has(source.sourceId) && run.progress(source).state === 'ready');
+    if (pending.length === 0) return;
+    const work = this.work, session = this.session;
+    run.continuationRunning = true; this.sweepAlive = true;
+    this.publishRun(run);
+    void runBookSourceWorkers(pending, MAX_SEARCH_CONCURRENCY, async (source: SearchSource): Promise<void> => {
+      const progress = run.progress(source);
+      const outcome = await this.gateway.searchBySource(source, run.keyword,
+        (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent(), progress.page);
+      if (!this.isCurrentWork(work, session) || this.run !== run) return;
+      if (outcome.ok === false) run.failures.set(source.sourceId, { source, error: outcome.error, diagnostic: outcome.diagnostic });
+      else { run.append(source, outcome.results); progress.accept(outcome.pageReceipt, outcome.results.map((book: SearchBook): string => book.bookId)); run.failures.delete(source.sourceId); }
+      this.scheduleRunPublish(run, work, session);
+    }, async (): Promise<boolean> => await this.waitForDispatch(work, session) && this.isCurrent()).catch((error: Error): void => {
+      if (this.isCurrentWork(work, session)) { run.sourceListFailureReason = errorMessageOf(error); run.sourceListFailed = true; }
+    }).finally((): void => {
+      if (!this.isCurrentWork(work, session) || this.run !== run) return;
+      this.cancelRunTimer(); run.continuationRunning = false; this.sweepAlive = false; this.publishRun(run);
+      if (run.results().length === 0) this.needMoreResults();
+    });
   }
 
   private isCurrentSession(session: number): boolean {
@@ -1042,7 +1101,7 @@ export class SearchOrchestrator {
     } else if (current.kind === 'results') {
       this.presentation = {
         kind: 'results', keyword: current.keyword, results: current.results, delta: current.delta,
-        searching: current.searching, totalSourceCount: current.totalSourceCount,
+        searching: current.searching, continuing: current.continuing, hasMoreSources: current.hasMoreSources, incompleteSourceCount: current.incompleteSourceCount, incompleteSources: current.incompleteSources, exhaustedSourceCount: current.exhaustedSourceCount, totalSourceCount: current.totalSourceCount,
         completedSourceCount: current.completedSourceCount, failedSourceCount: current.failedSourceCount,
         skippedSourceCount: current.skippedSourceCount, skippedSources: current.skippedSources,
         stopped: current.stopped, operation: current.operation,
@@ -1053,6 +1112,7 @@ export class SearchOrchestrator {
     } else if (current.kind === 'empty') {
       this.presentation = {
         kind: 'empty', keyword: current.keyword, searchedSourceCount: current.searchedSourceCount,
+        incompleteSourceCount: current.incompleteSourceCount, incompleteSources: current.incompleteSources,
         failedSourceCount: current.failedSourceCount, skippedSourceCount: current.skippedSourceCount,
         skippedSources: current.skippedSources, stopped: current.stopped, operation: current.operation,
         localSearchFailed: current.localSearchFailed, sourceListFailed: current.sourceListFailed,
@@ -1062,6 +1122,7 @@ export class SearchOrchestrator {
     } else {
       this.presentation = {
         kind: 'error', keyword: current.keyword, searchedSourceCount: current.searchedSourceCount,
+        incompleteSourceCount: current.incompleteSourceCount, incompleteSources: current.incompleteSources,
         failedSourceCount: current.failedSourceCount, skippedSourceCount: current.skippedSourceCount,
         skippedSources: current.skippedSources, operation: current.operation,
         localSearchFailed: current.localSearchFailed, sourceListFailed: current.sourceListFailed,

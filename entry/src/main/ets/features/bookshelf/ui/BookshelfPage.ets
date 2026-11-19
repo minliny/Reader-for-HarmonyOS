@@ -1,3 +1,4 @@
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { BOOKSHELF_GRID_TEXT_GAP } from './BookshelfGridSpec';
 import { BOOKSHELF_COVER_SHADOW_RADIUS, BOOKSHELF_COVER_SHADOW_OFFSET_Y } from './BookshelfCoverVisual';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
@@ -469,8 +470,9 @@ export struct BookshelfPage {
     const metrics = ReaderWindowCoordinator.metrics();
     const windowHeight = Math.max(0, metrics.windowRect.height - this.recoveryOriginY);
     const height = Math.min(this.recoveryViewportHeight >= 0 ? this.recoveryViewportHeight : windowHeight, windowHeight);
-    const bottom = Math.max(this.shelfContentEndInset(), readerInteractiveSafeBottom(metrics, true));
-    return readerSurfaceMaxHeight(height, this.shelfHeaderClearance() + this.noticeTopInset + bottom + 8);
+    const bottom = Math.max(this.shelfContentEndInset(), readerInteractiveSafeBottom(metrics, false));
+    return readerSurfaceMaxHeight(Math.min(height - bottom,
+      readerKeyboardHostBottom(metrics, this.recoveryOriginY, height)), this.shelfHeaderClearance() + this.noticeTopInset + 8);
   }
 
   private bookActionSheetOptions(presentationId: string = this.actionSheetId,

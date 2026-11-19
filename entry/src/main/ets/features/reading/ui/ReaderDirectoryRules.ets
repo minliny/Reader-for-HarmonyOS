@@ -1,3 +1,6 @@
+import { ReaderDirectoryRulesPreviewDataSource, type ReaderDirectoryRulesPreviewItem } from './ReaderDirectoryRulesPreviewDataSource';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
@@ -36,7 +39,11 @@ export interface ReaderDirectoryRulesRecoveryProjection {
  * the editor never changes TXT splitting or derives a tree in Host. */
 @Component
 export struct ReaderDirectoryRules {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
+  private readonly editingScroller: Scroller = new Scroller();
   @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onPreviewActiveChanged') previewActive: boolean = true;
   @Prop @Watch('loadRules') bookId: string = '';
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop focusTargetId: string = '';
@@ -46,14 +53,16 @@ export struct ReaderDirectoryRules {
   @State private rules: DirectoryRuleDraft[] = [];
   private nextRuleId: number = 0;
   @State private message: string = '';
-  @State private preview: string[] = [];
+  private readonly previewSource: ReaderDirectoryRulesPreviewDataSource = new ReaderDirectoryRulesPreviewDataSource((offset: number): void => { void this.loadPreviewPage(offset); });
+  @State private previewCount: number = 0;
+  @State private previewReadFailed: boolean = false;
   @State private previewReady: boolean = false;
   @State private busy: boolean = false;
   @State private loaded: boolean = false;
   @State private directoryRefreshFailed: boolean = false;
   private generation: number = 0;
   private mounted: boolean = false;
-  private presentationGeneration: number = 0;
+  @State private presentationGeneration: number = 0;
   private refreshedOperationIdentity: string = '';
   private gateway: ReaderDirectoryRulesGateway | undefined = undefined;
   private readonly feedback: ReaderTransientFeedback = new ReaderTransientFeedback();
@@ -69,6 +78,7 @@ export struct ReaderDirectoryRules {
     this.mounted = true; this.loadRules();
   }
   private onInteractionChanged(): void {
+    if (!this.interactionEnabled || !this.isPresentationCurrent()) this.releasePreview();
     const gateway = this.gateway;
     if (!this.interactionEnabled || !this.mounted || !this.isPresentationCurrent() || this.busy ||
       gateway?.ownsRuntime() !== true) return;
@@ -129,10 +139,29 @@ export struct ReaderDirectoryRules {
     return this.rules.find((rule: DirectoryRuleDraft): boolean => rule.id === id);
   }
   aboutToDisappear(): void {
+    this.releasePreview();
     this.mounted = false; this.generation += 1; this.presentationGeneration += 1;
     this.feedback.reset(); this.onRecoveryChanged(undefined);
   }
-  private changed(): void { this.generation += 1; this.previewReady = false; this.busy = false; this.preview = []; }
+  private onPreviewActiveChanged(): void { if (!this.previewActive) this.releasePreview(); }
+  private releasePreview(): void {
+    if ((this.previewCount > 0 || this.previewReady || this.busy) && (!this.busy || this.gateway?.snapshot().busy !== true))
+      this.message = '请重新预览当前草稿';
+    this.gateway?.releasePreview(); this.previewSource.clear(); this.previewCount=0; this.previewReadFailed=false; this.previewReady=false;
+  }
+  private changed(): void { this.generation += 1; this.releasePreview(); this.busy = false; }
+  private async loadPreviewPage(offset: number): Promise<void> {
+    const gateway=this.gateway,id=this.previewSource.currentId(),generation=this.generation;
+    const current=(): boolean=>this.mounted && this.previewActive && this.interactionEnabled && this.isPresentationCurrent() &&
+      gateway===this.gateway && gateway?.ownsRuntime()===true && generation===this.generation && id===this.previewSource.currentId();
+    if(gateway===undefined || !current())return;
+    try { const page=await gateway.previewPage(offset,current);if(current())this.previewSource.admit(page); }
+    catch(_error) { if(current()) {this.previewSource.reject(offset);this.previewReadFailed=true;} }
+    if(current())this.previewReadFailed=this.previewSource.firstFailure()!==undefined;
+  }
+  private prefetchPreview(end: number): void {
+    if(this.previewReady && this.previewActive && this.interactionEnabled && end>=0) this.previewSource.request(Math.floor((end+5)/256)*256);
+  }
   private async run(apply: boolean): Promise<void> {
     const gateway = this.gateway;
     if (!this.canEdit() || gateway === undefined || (apply && (!this.previewReady || !gateway.supportsApply()))) return;
@@ -141,10 +170,11 @@ export struct ReaderDirectoryRules {
       rule.pattern.trim().length === 0)) {
       this.message = '请填写匹配规则及 0–31 的层级；删除所有规则可恢复默认'; return;
     }
+    if (!apply) this.releasePreview();
     const generation = ++this.generation, bookId = this.bookId;
     const mountedRequest = (): boolean => this.mounted && generation === this.generation &&
       bookId === this.bookId && gateway === this.gateway && gateway.ownsRuntime();
-    const current = (): boolean => mountedRequest() && this.isPresentationCurrent();
+    const current = (): boolean => mountedRequest() && this.previewActive && this.interactionEnabled && this.isPresentationCurrent();
     const rules: JsonObject[] = this.rules.map((rule: DirectoryRuleDraft): JsonObject =>
       ({ pattern: rule.pattern, level: Number(rule.level), boundary: rule.boundary }));
     this.busy = true;
@@ -157,18 +187,19 @@ export struct ReaderDirectoryRules {
       this.previewReady = data['status'] === 'ready';
       if (!this.previewReady) { this.message = `无法应用：${String(data['reason'] ?? '没有可靠的层级边界')}`; return; }
       this.message = `${data['nodeCount']} 个目录节点 · ${data['readableChapterCount']} 个可读章节 · ${data['unmappedCount'] ?? 0} 个无法映射项`;
-      const raw: JsonObject[] = data['nodes'] as JsonObject[];
-      this.preview = Array.isArray(raw) ? raw.slice(0, 256).map((value: JsonObject): string => {
-        const node: JsonObject = value;
-        return `${'  '.repeat(Math.max(0, Math.min(32, Number(node['depth'] ?? 0))))}${String(node['title'] ?? '')}`;
-      }) : [];
-      if (apply) { this.message = '目录层级规则已应用，正文和分章保持原样'; this.notifyApplied(); }
+      if (!apply) {
+        const preview=gateway.currentPreview();
+        if(preview===undefined)throw new Error('完整预览身份缺失');
+        this.previewSource.replace(preview);this.previewCount=preview.nodeCount;this.previewReadFailed=false;
+      } else {
+        this.releasePreview();this.message='目录层级规则已应用，正文和分章保持原样';this.notifyApplied();
+      }
     } catch (_error) { if (current()) {
       this.operation = gateway.snapshot();
       this.message = apply ? (this.operation.confirmation === 'unknown' ? '本书目录规则应用尚未确认，原草稿已保留，请核对原操作' :
         this.operation.confirmation === 'confirmed' ? (this.operation.blocked && this.operation.writeStage === 'cleanup' ?
           '本书目录规则写入已确认，原记录清理尚未完成' : '本书目录规则写入已确认，当前目录刷新尚未完成') :
-          '本书目录规则未确认应用，草稿已保留') :
+          (!this.operation.blocked ? '本书目录规则未应用，请重新预览当前草稿' : '本书目录规则未确认应用，草稿已保留')) :
         '规则预览失败，草稿已保留';
       this.previewReady = false;
     } }
@@ -179,7 +210,7 @@ export struct ReaderDirectoryRules {
   }
   private canEdit(): boolean {
     const snapshot = this.gateway?.snapshot();
-    return this.interactionEnabled && this.mounted && this.isPresentationCurrent() &&
+    return this.previewActive && this.interactionEnabled && this.mounted && this.isPresentationCurrent() &&
       this.loaded && !this.busy && this.gateway?.ownsRuntime() === true &&
       snapshot !== undefined && !snapshot.busy && !snapshot.blocked && snapshot.confirmation !== 'unknown';
   }
@@ -280,17 +311,17 @@ export struct ReaderDirectoryRules {
       Text('正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
       ForEach([this.actorIdentity()], (identity: string) => {
       if (this.rules.length > 0) {
-        Scroll() { Column({ space: 8 }) {
+        Scroll(this.editingScroller) { Column({ space: 8 }) {
       ForEach(this.rules, (rule: DirectoryRuleDraft) => {
         Column({ space: 6 }) {
-          ReaderFormField({ specId: 'directory-rule-pattern', scheme: this.scheme, text: this.currentRule(rule.id)?.pattern ?? '',
+          ReaderFormField({ editingHost: this.editingHost, specId: 'directory-rule-pattern', scheme: this.scheme, text: this.currentRule(rule.id)?.pattern ?? '',
             fieldAccessibilityLabel: `规则${rule.id}匹配表达式`,
             isEditable: this.canEdit(), placeholder: '匹配完整标题或独立正文行的正则表达式',
             onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'pattern', value); } });
           Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
             space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
             Text('层级').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
-            ReaderFormField({ specId: 'directory-rule-level', scheme: this.scheme, text: this.currentRule(rule.id)?.level ?? '',
+            ReaderFormField({ editingHost: this.editingHost, specId: 'directory-rule-level', scheme: this.scheme, text: this.currentRule(rule.id)?.level ?? '',
               fieldAccessibilityLabel: `规则${rule.id}层级`,
               isEditable: this.canEdit(),
               onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'level', value); } });
@@ -309,7 +340,11 @@ export struct ReaderDirectoryRules {
           }.width('100%');
         }
       }, (rule: DirectoryRuleDraft): string => `${rule.id}`);
-        } }.height(Math.min(240, this.rules.length * 94, this.availableHeightVp >= 0 ? this.availableHeightVp : 240)).width('100%');
+        } }.height(Math.min(240, this.rules.length * 94, this.availableHeightVp >= 0 ? this.availableHeightVp : 240)).width('100%')
+          .id(this.editingScroll.id)
+          .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
+          .onDisAppear((): void => this.editingScroll.unmount())
+          .onAreaChange((): void => this.editingHost.refresh());
       }
       Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
         ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '添加规则', actionEnabled: this.canEdit() && this.rules.length < 32, onAction: (): void => {
@@ -337,10 +372,21 @@ export struct ReaderDirectoryRules {
             onReconcile: (): void => { this.retryDirectoryRefresh(identity); } });
         }
       }, (identity: string): string => identity);
-      if (this.preview.length > 0) {
-        Scroll() { Column() { ForEach(this.preview, (_title: string, index: number) => {
-          Text(this.preview[index] ?? '').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).width('100%');
-        }, (_title: string, index: number): string => `${index}`); } }.height(120).align(Alignment.Top);
+      if (this.previewCount > 0) {
+        List({space:0}) {
+          LazyForEach(this.previewSource,(item: ReaderDirectoryRulesPreviewItem)=>{
+            ListItem() {
+              Text(item.node===undefined ? '' : `${'  '.repeat(Math.max(0,Math.min(32,item.node.depth)))}${item.node.title}`)
+                .fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).width('100%');
+            }
+          },(item: ReaderDirectoryRulesPreviewItem): string=>item.key);
+        }.height(120).width('100%').cachedCount(2).maintainVisibleContentPosition(true)
+          .onScrollIndex((_start: number,end: number): void=>this.prefetchPreview(end));
+      }
+      if(this.previewReadFailed) {
+        ReaderRecoveryAction({label:'重试读取预览',generation:this.generation,
+          actionEnabled:this.previewActive && this.interactionEnabled && !this.busy,
+          onReconcile:(expected: number): void=>{if(expected===this.generation && this.previewActive && this.interactionEnabled)this.previewSource.retry();}});
       }
     }.width('100%').padding(10).foregroundColor(readerAppColor('TOK_INK', this.scheme))
       .backgroundColor(readerAppColor('TOK_PAPER', this.scheme));

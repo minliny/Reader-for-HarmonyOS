@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 29,
+  "revision": 30,
   "controls": [
     {
       "controlId": "page-back",
@@ -692,7 +692,7 @@
       "sources": [
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "symbol": "pendingOverlay"
+          "symbol": "pendingRecovery"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
@@ -725,7 +725,7 @@
       "sources": [
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "symbol": "pendingOverlay"
+          "symbol": "pendingRecovery"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
@@ -817,9 +817,9 @@
         "unit": "vp",
         "status": "unverified"
       },
-      "accessibleNameSource": "ReaderActionAccessibility(离线管理/离线操作进行中)",
+      "accessibleNameSource": "ReaderActionAccessibility(topBarMoreLabel(): eligible TXT rules/back-to-directory; otherwise offline management/in-progress)",
       "status": "partial",
-      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+      "knownGap": "Same conditional context trigger: eligible TXT routes to directory rules; admitted remote books route to offline menu. Existing control ID retained. Source declaration and current default structural/native rules entry are proven; full hit/focus/font/state/audible acceptance remains unverified."
     },
     {
       "controlId": "directory-full-offline-actions",
@@ -1424,7 +1424,7 @@
       "sources": [
         {
           "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-          "symbol": "directoryBody"
+          "symbol": "standaloneCatalogState"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
@@ -2850,7 +2850,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-          "symbol": "treePrefixEmptyState"
+          "symbol": "treeEmptyState"
         }
       ],
       "states": [

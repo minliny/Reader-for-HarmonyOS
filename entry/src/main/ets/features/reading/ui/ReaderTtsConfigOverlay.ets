@@ -1,3 +1,7 @@
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
+import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
+import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderBoundedSurfaceActions } from '../../../ui/surfaces/ReaderBoundedSurfaceActions';
@@ -22,6 +26,9 @@ import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderS
 /** Temporary choices/forms live in the viewport, never inside a clipped 48vp row. */
 @Component
 export struct ReaderTtsConfigOverlay {
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
+  private readonly editorScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
+  private readonly editorScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
 
@@ -142,8 +149,16 @@ export struct ReaderTtsConfigOverlay {
   private compactContent(): boolean {
     return this.compactManager() || (!this.manager && !this.voicePicker && this.panelHeight() - this.headerHeight() < 44);
   }
+  @State private modalOriginY: number = 0;
+  private modalEditingViewport(): ReaderRectVp {
+    this.metricsRevision;
+    return readerKeyboardViewport(ReaderWindowCoordinator.metrics(),
+      new ReaderRectVp(0, this.modalOriginY, this.modalUsableWidth, this.modalUsableHeight)).rect;
+  }
+  private modalVisibleTop(): number { return Math.max(0, this.modalEditingViewport().top - this.modalOriginY); }
+  private modalVisibleHeight(): number { return this.modalEditingViewport().height; }
   private managerOuterPadding(): number {
-    return Math.min(16, Math.max(0, (this.modalUsableHeight - 44) / 2));
+    return Math.min(16, Math.max(0, (this.modalVisibleHeight() - 44) / 2));
   }
   private panelHeight(): number {
     // Make V17: header + a bounded scrolling body + fixed footer.  The
@@ -154,7 +169,7 @@ export struct ReaderTtsConfigOverlay {
       this.headerHeight() + this.choices.reduce((height: number, choice: ReaderTtsConfigChoice): number => height + this.choiceHeight(choice), 0) +
       (this.statusMessage().length > 0 ? 80 : 0) + (this.showManage ? 44 : 0) + (this.errorText.length > 0 ? 48 : 0);
     if (this.manager) return Math.max(0, Math.min(content,
-      this.modalUsableHeight - 2 * this.managerOuterPadding()));
+      this.modalVisibleHeight() - 2 * this.managerOuterPadding()));
     return Math.max(0, Math.min(content, this.availableHeight - 2 * this.pickerOuterPadding()));
   }
   private formatActionHeight(): number {
@@ -213,8 +228,8 @@ export struct ReaderTtsConfigOverlay {
   }
 
   private recoveryOverlayTop(): number {
-    const top = this.manager ? Math.max(0,
-      this.modalUsableHeight - this.managerOuterPadding() - this.panelHeight()) : this.panelY();
+    const top = this.manager ? this.modalVisibleTop() + Math.max(0,
+      this.modalVisibleHeight() - this.managerOuterPadding() - this.panelHeight()) : this.panelY();
     return top + (this.compactContent() ? 0 : this.headerHeight());
   }
 
@@ -240,11 +255,11 @@ export struct ReaderTtsConfigOverlay {
       Column() {
       ReaderBoundedSurface({ specId: this.boundedSpecId(), surfaceWidth: this.manager ? '100%' : this.panelWidth(),
         surfaceHeight: this.panelHeight(), header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); }, actions: (): void => { this.boundedActions(); } });
-      }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? '100%' : this.panelHeight())
+      }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? this.modalVisibleHeight() : this.panelHeight())
         .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
         .padding(this.manager ? { left: 13, right: 13,
           top: this.managerOuterPadding(), bottom: this.managerOuterPadding() } : 0)
-        .position(this.manager ? undefined : {
+        .position(this.manager ? { x: 0, y: this.modalVisibleTop() } : {
           x: this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13),
           y: this.panelY() }).hitTestBehavior(HitTestMode.Transparent);
       if (this.windowModal && this.recoveryView.visible) {
@@ -261,9 +276,13 @@ export struct ReaderTtsConfigOverlay {
       .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
       .onSizeChange((_oldSize: SizeOptions, size: SizeOptions): void => {
         if (this.windowModal && typeof size.width === 'number' && size.width > 0) this.modalUsableWidth = size.width;
-        if (this.windowModal && typeof size.height === 'number' && size.height > 0) {
+        if (this.windowModal && typeof size.height === 'number' && size.height >= 0) {
           this.modalUsableHeight = size.height;
         }
+      }).onAreaChange((_old: Area, area: Area): void => {
+        if (!this.mounted || !this.windowModal) return;
+        const origin = Number.parseFloat(`${area.globalPosition.y}`);
+        if (Number.isFinite(origin)) this.modalOriginY = origin;
       });
   }
 
@@ -327,19 +346,19 @@ export struct ReaderTtsConfigOverlay {
 
   @Builder
   private boundedContent() {
-    if (this.compactContent()) {
-      Scroll() {
-        Column({ space: 0 }) {
-          if (!this.voicePicker) this.configurationHeader();
-          this.configurationBody();
-          if (this.manager) this.managerFooter();
-        }.width('100%');
-      }.width('100%').height(this.panelHeight()).scrollBar(BarState.Off);
-    } else {
-      Scroll() { this.configurationBody(); }
-        .width('100%').height(Math.max(0, this.panelHeight() - this.headerHeight() - (this.manager ? this.footerHeight() : 0)))
-        .align(Alignment.TopStart).scrollBar(BarState.Off);
-    }
+    Scroll(this.editorScroller) {
+      Column({ space: 0 }) {
+        if (this.compactContent() && !this.voicePicker) this.configurationHeader();
+        this.configurationBody();
+        if (this.compactContent() && this.manager) this.managerFooter();
+      }.width('100%');
+    }.width('100%').height(this.compactContent() ? this.panelHeight() :
+      Math.max(0, this.panelHeight() - this.headerHeight() - (this.manager ? this.footerHeight() : 0)))
+      .align(Alignment.TopStart).scrollBar(BarState.Off)
+      .id(this.editorScroll.id)
+      .onAppear((): void => this.editorScroll.mount(this.getUIContext(), this.editingHost, this.editorScroller))
+      .onDisAppear((): void => this.editorScroll.unmount())
+      .onAreaChange((): void => this.editingHost.refresh());
   }
 
   private currentChoice(snapshot: ReaderTtsConfigChoice): ReaderTtsConfigChoice {
@@ -451,21 +470,21 @@ export struct ReaderTtsConfigOverlay {
       Column({ space: 6 }) {
         Text('服务名称').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-        ReaderFormField({ specId: 'tts-manager-name', scheme: this.appThemeScheme, text: this.draftName, placeholder: '例如 Azure 语音',
+        ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftName`, specId: 'tts-manager-name', scheme: this.appThemeScheme, text: this.draftName, placeholder: '例如 Azure 语音',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 配置名称',
           onTextChange: (value: string): void => this.changeDraftText('name', value) });
       }.width('100%');
       Column({ space: 6 }) {
         Text('接口地址').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-        ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftUrl, placeholder: 'https://api.example.com/tts',
+        ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftUrl`, specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftUrl, placeholder: 'https://api.example.com/tts',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 请求 URL',
           onTextChange: (value: string): void => this.changeDraftText('url', value) });
       }.width('100%');
       Column({ space: 6 }) {
         Text('API 密钥').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-        ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftApiKey, placeholder: '填入访问密钥',
+        ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftApiKey`, specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftApiKey, placeholder: '填入访问密钥',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 访问密钥，不会显示或写入 Core', password: true,
           onTextChange: (value: string): void => this.changeDraftText('apiKey', value) });
         Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -484,7 +503,7 @@ export struct ReaderTtsConfigOverlay {
       Column({ space: 6 }) {
         Text('发音人 / 音色').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-        ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftVoice, placeholder: '例如 xiaoxiao',
+        ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftVoice`, specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftVoice, placeholder: '例如 xiaoxiao',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 音色',
           onTextChange: (value: string): void => this.changeDraftText('voice', value) });
       }.width('100%');

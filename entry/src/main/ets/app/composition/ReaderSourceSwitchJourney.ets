@@ -74,7 +74,6 @@ export class ReaderSourceSwitchJourney {
       shelfBook: (sourceId: string, bookId: string): ShelfBook | undefined => this.ports.shelfBooks().find(
         (book: ShelfBook): boolean => book.sourceId === sourceId && book.bookId === bookId),
       searchCandidates: (): SearchBook[] => fromSearch() ? this.ports.search().candidates() : [],
-      searchedSourceIds: (): string[] => fromSearch() ? this.ports.search().host.searchedSourceIds() : [],
       preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession): void =>
         this.preview(seed, sourceName, session),
       target: (book: ShelfBook, session: RemoteReadingSession, chapterIndex: number): void =>

@@ -1,3 +1,4 @@
+export type ReaderControlTemporaryInputKind = '' | 'inlineEditor' | 'modal';
 /** Product control state only. No reading, settings, TTS or list side effects. */
 export type ReaderControlLevel = 'hidden' | 'home' | 'secondary';
 export type ReaderControlForm = 'quick' | 'full';

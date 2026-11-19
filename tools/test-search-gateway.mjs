@@ -32,7 +32,8 @@ const errorMessageModule = stripTypeScriptTypes(
 // import so this contract test can exercise the real decoder and gateway with
 // an injected owner without replacing application code.
 const nodeSource = stripTypeScriptTypes(
-  (authorMetadataModule + '\n' + gatewaySource
+  (authorMetadataModule + '\n' + readFileSync(resolve(repo,'entry/src/main/ets/app/library/BookSearchPageProgress.ts'),'utf8') + '\n' + gatewaySource
+    .replace(/^import .*BookSearchPageProgress['"];\n/m, '')
     .replace(/^import \{ readBookSearchTiming \} from .*;$/m, () => timingModule)
     .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/application/SearchBookProjection.ts'), 'utf8'))
@@ -158,6 +159,7 @@ const validOutcome = await gatewayReturning({
 
 assert.deepEqual(validOutcome, {
   ok: true,
+  pageReceipt: undefined,
   results: [{
     sourceId: 'source-a',
     sourceName: '甲书源',

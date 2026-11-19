@@ -1,5 +1,22 @@
 import type { LocalReadingTocEntry, LocalReadingBookmark } from '../application/LocalReadingFlowGateway';
 
+/** One value snapshot per actual directory change. Only a numeric revision
+ * crosses ArkUI @Prop; motion, scrolling and IME updates never recursively
+ * clone the directory through every retained component. Readers do not mutate
+ * the published snapshot and keep their existing business-owner checks. */
+export class ReaderDirectoryDataPublication {
+  private entries: LocalReadingTocEntry[] = [];
+  private revision: number = 0;
+  publish(entries: LocalReadingTocEntry[]): number {
+    if (!sameReaderDirectoryData(this.entries, entries)) {
+      this.entries = snapshotReaderDirectoryData(entries);
+      this.revision += 1;
+    }
+    return this.revision;
+  }
+  entriesAt(_revision: number): LocalReadingTocEntry[] { return this.entries; }
+}
+
 /** Independent values, not retained aliases: detect same-reference in-place edits too. */
 export function snapshotReaderDirectoryData(entries: LocalReadingTocEntry[]): LocalReadingTocEntry[] {
   return entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
