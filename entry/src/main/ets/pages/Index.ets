@@ -15,6 +15,7 @@ import { ReaderLibrarySearchSurface } from '../features/search/ui/ReaderLibraryS
 import { LibrarySearchPresentation } from '../features/search/presentation/LibrarySearchPresentation';
 import { LibrarySearchResults } from '../features/search/ui/LibrarySearchResults';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { ReaderUIVerificationProbe, type ReaderUIVerificationChannel } from '../app/diagnostics/ReaderUIVerificationProbe';
 import { ReaderEntryStartupTrace, ReaderStartupTrace, type ReaderShelfEntryPhase } from '../app/ReaderStartupTrace';
 import { ReaderExitActions, type ReaderExitActionPorts } from '../app/composition/ReaderExitActions';
 import type { SystemFileOpenReaderIdentity } from '../app/navigation/ReaderSystemFileOpenNavigationHost';
@@ -617,6 +618,11 @@ struct Index {
       refreshMembership: (): void => this.refreshSearchShelfMembership(),
       refreshDetail: (): void => { void this.readingEntryActions.refreshDetailAcquisition(); },
     });
+    this.librarySearch.model.verification = {
+      enabled: (): boolean => ReaderUIVerificationProbe.enabled(),
+      emit: (kind: string, channel: ReaderUIVerificationChannel, payload: Object): void =>
+        ReaderUIVerificationProbe.emit(kind, channel, payload),
+    };
     this.librarySearch.mount();
     this.detailShelf.mount(this.mountedRuntimeOwner);
     // Mount after configuration recovery to avoid recursively waiting on that barrier.
@@ -664,6 +670,7 @@ struct Index {
     this.readingEntry.retire(false);
     this.retireSourceSwitchPresentation();
     this.librarySearch.dispose();
+    this.librarySearch.model.verification = undefined;
     this.mountedRuntimeOwner = undefined;
   }
 

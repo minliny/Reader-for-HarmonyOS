@@ -39,6 +39,16 @@ export type ReaderSearchFieldVariant =
 
 export type ReaderSearchFieldMode = 'submit' | 'live' | 'passive';
 
+export type ReaderSearchEditorEvent = 'focus' | 'edit' | 'selection' | 'unmounted';
+
+export interface ReaderSearchEditorObservation {
+  focused: boolean;
+  length: number;
+  beforeLength?: number;
+  start?: number;
+  end?: number;
+}
+
 /**
  * Shared search-field primitive.
  *
@@ -137,6 +147,9 @@ export struct ReaderSearchField {
   private readonly editingTarget: ReaderEditableTarget = new ReaderEditableTarget();
   editingHost: ReaderEditingVisibility | undefined = undefined;
   editingCurrent: (() => boolean) | undefined = undefined;
+  bookPanelFrameId: string = '';
+  observeBookEditor: ((event: ReaderSearchEditorEvent, facts: ReaderSearchEditorObservation) => void) | undefined;
+  private observedBookLength: number = -1;
   private bookInputFocused: boolean = false;
   private bookInputScrollPending: boolean = false;
   private bookInputScrollGeneration: number = 0;
@@ -146,6 +159,7 @@ export struct ReaderSearchField {
 
   aboutToAppear(): void {
     this.mounted = true;
+    if (this.observeBookEditor !== undefined) this.observedBookLength = this.text.length;
     this.bindEditingTarget();
     const generation = ++this.focusGeneration;
     if (!this.focusOnAppear || !this.isBookField() || this.mode === 'passive') return;
@@ -157,6 +171,10 @@ export struct ReaderSearchField {
   }
 
   aboutToDisappear(): void {
+    if (this.observeBookEditor !== undefined && this.mounted) {
+      this.observeBookEditor('unmounted', { focused: false, length: this.observedBookLength });
+      this.observedBookLength = -1;
+    }
     this.editingTarget.unmount();
     if (DEBUG && this.directoryFocusId.length > 0) hilog.info(0xD004, 'ReaderControlDiagnostic',
       'directory-input-retired revision=%{public}d ticket=%{public}d focused=%{public}s',
@@ -378,12 +396,34 @@ export struct ReaderSearchField {
     if (!this.mounted) return;
     this.bookInputFocused = focused;
     this.onFocusChanged(focused);
+    if (this.observeBookEditor !== undefined && this.bookEditorObservationCurrent()) {
+      if (focused) this.observedBookLength = this.text.length;
+      this.observeBookEditor?.('focus', { focused: focused, length: this.observedBookLength });
+    }
     if (focused) {
       this.revealBookInputCaret();
     } else {
       this.bookInputScrollGeneration += 1;
       this.bookInputScrollPending = false;
     }
+  }
+
+  private bookEditorObservationCurrent(): boolean {
+    return this.observeBookEditor !== undefined && this.mounted && this.mode !== 'passive' &&
+      (this.editingCurrent?.() ?? true);
+  }
+
+  private observeBookEdit(length: number): void {
+    if (!this.bookEditorObservationCurrent()) return;
+    const beforeLength = this.observedBookLength;
+    this.observedBookLength = length;
+    this.observeBookEditor?.('edit', { focused: this.bookInputFocused, length: length, beforeLength: beforeLength });
+  }
+
+  private observeBookSelection(start: number, end: number): void {
+    if (!this.bookEditorObservationCurrent()) return;
+    this.observeBookEditor?.('selection', { focused: this.bookInputFocused, length: this.observedBookLength,
+      start: start, end: end });
   }
 
   private revealBookInputCaret(): void {
@@ -490,9 +530,14 @@ export struct ReaderSearchField {
         .accessibilityText(this.resolvedAccessibilityLabel())
         .onChange((value: string): void => {
           this.changeText(value);
+          if (this.observeBookEditor !== undefined) this.observeBookEdit(value.length);
           this.revealBookInputCaret();
         })
-        .onTextSelectionChange((_start: number, _end: number): void => { this.revealBookInputCaret(); this.editingTarget.changed(); })
+        .onTextSelectionChange((start: number, end: number): void => {
+          if (this.observeBookEditor !== undefined) this.observeBookSelection(start, end);
+          this.revealBookInputCaret();
+          this.editingTarget.changed();
+        })
         .onFocus((): void => this.onBookInputFocus(true))
         .onBlur((): void => this.onBookInputFocus(false))
         .onAreaChange((_old: Area, _next: Area): void => { this.revealBookInputCaret(); this.editingTarget.changed(); })
@@ -507,6 +552,7 @@ export struct ReaderSearchField {
           .onClick((): void => this.clearBookInput());
       }
     }
+    .id(this.bookPanelFrameId)
     .width('100%')
     .height(this.fieldHeight())
     .padding({ left: this.horizontalPadding(), right: this.horizontalPadding() })

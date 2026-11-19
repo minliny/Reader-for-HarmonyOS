@@ -501,7 +501,7 @@ for (const id of selected) {
   const index = tree.statements.find(node => node.name?.text === 'Index');
   const { createLibraryShelfChromeProbe } = await import('./lib/bookshelf-projection-owner-probe.mjs');
   const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
-  const LibraryJourney = bookshelfOperationClass('app/composition/ReaderLibraryJourney.ts', 'ReaderLibraryJourney');
+  const LibraryJourney = bookshelfOperationClass('app/composition/ReaderLibraryJourney.ets', 'ReaderLibraryJourney');
   const ReaderNavigation = bookshelfOperationClass('app/navigation/ReaderNavigation.ts', 'ReaderNavigation');
   const names = ['librarySearchSurface', 'libraryJourneyPorts', 'bookshelfContentAcceptsInput', 'bookshelfModalVisible'];
   const methods = names.map(name => index.members.find(node => node.name?.getText(tree) === name).getText(tree)).join('\n');
@@ -567,7 +567,9 @@ for (const id of selected) {
     const owner = Object.assign(new Owner(undefined, {}), {
       navigationOwner: new ReaderNavigation(), route: 'bookshelf', mountedRuntimeOwner: runtime, rssInstanceIdentity: 1,
       navigationGeneration: 8, detailShelfAdmissionMount: 4, librarySearch,
-      searchAppForeground: true, readingEntry: { sessionActive: false },
+      searchAppForeground: true, arkWebCapturesInput: false, readingEntry: { sessionActive: false },
+      readingEntryActions: { shelfPreparing: false },
+      sourceSwitchPresentation: { isSurfacePresented: () => false }, mangaSourceSwitch: { selectionVisible: false },
       shelfMutations: { snapshot: {} }, shelfGroupPresentation: { identity: '' },
       shelfReceiptRetired: false, settingsPresentation: { snapshot: { reduceMotion: false } },
       shelfRead: { snapshot: { visualAdmitted: true } },

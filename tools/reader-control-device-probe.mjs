@@ -25,10 +25,14 @@ import { tmpdir } from 'node:os';
 import { basename, isAbsolute, parse, resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
-import { acquireLease, canonicalServerKey, releaseLease, targetRef as serverRefHash } from './reader-hdc-lease.mjs';
+import { acquireLease, canonicalServerKey, hdcDirectEnvironment, releaseLease, targetRef as serverRefHash } from './reader-hdc-lease.mjs';
 
 const BUNDLE = 'io.reader.minliny';
 const TIMEOUT_MS = 30000;
+const TRANSFER_TIMEOUT_MS = 120000;
+const IDLE_MS = 60000;
+const SESSION_MS = 600000;
+const hdcEnvironment = hdcDirectEnvironment();
 const MAX_OUTPUT = 4 * 1024 * 1024;
 // Reviewed standalone diagnostic only; never accept an arbitrary executable
 // merely because its caller knows a hash. Updating this pin needs code review.
@@ -40,6 +44,24 @@ const commandOK = result => !result.error && result.status === 0 &&
   !fatalOutput.test(`${result.stdout ?? ''}\n${result.stderr ?? ''}`);
 const targetReference = target => createHash('sha256').update(target).digest('hex').slice(0, 12);
 const fail = message => { throw new Error(message); };
+
+function readOperation(line) {
+  try { return JSON.parse(line); }
+  catch { fail('invalid device operation JSON'); }
+}
+
+function publicCommandResult(args, result, redact, privateBundleOutput = false) {
+  const isInput = args[0] === 'shell' && args[1] === 'uitest' && args[2] === 'uiInput' && args[3] === 'inputText';
+  const publicArgs = isInput ? [...args.slice(0, -1), `[length:${args.at(-1).length}]`] : args;
+  const sensitive = isInput || privateBundleOutput;
+  return {
+    args: publicArgs, status: result.status, signal: result.signal ?? null,
+    error: result.error ? (sensitive ? 'device-command-error' : redact(result.error.message)) : null,
+    stdout: sensitive ? '' : redact(result.stdout),
+    stderr: sensitive ? '' : redact(result.stderr),
+  };
+}
+
 
 function optionsFrom(argv) {
   const options = {};
@@ -120,10 +142,17 @@ function touchPlanText(events, width, height) {
 }
 function operationPlan(operation, outputDir) {
   exactFields(operation, ['x', 'y', 'fromX', 'fromY', 'toX', 'toY', 'velocity', 'key', 'path', 'text', 'explicitPermit', 'sampleDelaysMs',
-    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs']);
+    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs', 'targetKind', 'vmLog']);
   if (operation.op === 'quit') {
     exactFields(operation, []);
     return { kind: 'quit' };
+  }
+  if (operation.op === 'uiContractReadiness') {
+    exactFields(operation, ['targetKind', 'vmLog']);
+    const vm = operation.targetKind === 'vm' && typeof operation.vmLog === 'string' && isAbsolute(operation.vmLog);
+    const physical = operation.targetKind === 'physical' && operation.vmLog === undefined;
+    if (!vm && !physical) fail('Readiness requires an exact target kind and the current emulator log for a VM');
+    return { kind: 'uiContractReadiness', vmLog: operation.vmLog, targetKind: operation.targetKind };
   }
   if (operation.preflightConfirmed !== true) fail('fresh external boot/SceneBoard/exact-target preflight confirmation is required');
   const shell = (...args) => ({ kind: 'command', args: ['shell', ...args] });
@@ -238,6 +267,14 @@ function operationPlan(operation, outputDir) {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'ReaderControlMotionProbe');
   }
+  if (operation.op === 'uiContractLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-T', 'ReaderUIContract');
+  }
+  if (operation.op === 'uiContractInstalledIdentity') {
+    exactFields(operation, []);
+    return { ...shell('bm', 'dump', '-n', BUNDLE), privateBundleOutput: true };
+  }
   if (operation.op === 'developerLayoutLog') {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'READER_DEVELOPER_LAYOUT');
@@ -305,11 +342,14 @@ async function probe(options) {
   let activeChild;
   let stopping = false;
   let frameIndex = 0;
+  let idleTimer;
+  const deadline = performance.now() + SESSION_MS;
   // A reused remote name cannot establish capture provenance across runs.
   // Give every probe a unique namespace; never overwrite earlier evidence.
   const frameRunNonce = randomUUID();
   const abort = new AbortController();
   const stop = () => { stopping = true; abort.abort(); activeChild?.kill('SIGTERM'); input?.close(); };
+  const sessionTimer = setTimeout(stop, SESSION_MS);
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
   process.on('SIGHUP', stop);
@@ -319,29 +359,38 @@ async function probe(options) {
     const log = resolve(options.outputDir, `reader-control-probe-${Date.now()}-${randomUUID()}.jsonl`);
     writeFileSync(log, '', { flag: 'wx', mode: 0o600 });
     const redact = value => String(value ?? '').split(options.target).join(`[target:${lock.targetRef}]`);
+    let seq = 0;
     const record = value => {
-      const line = `${JSON.stringify({ recordedAt: new Date().toISOString(), targetRef: lock.targetRef, ...value })}\n`;
+      const line = `${JSON.stringify({ recordedAt: new Date().toISOString(), targetRef: lock.targetRef, seq: ++seq, ...value })}\n`;
       appendFileSync(log, line);
       process.stdout.write(line);
     };
     const prefix = ['-p', '-s', options.server, '-t', options.target];
-    const assess = (args, result, startedAt, elapsedMs) => {
-      const stdout = redact(result.stdout);
-      const stderr = redact(result.stderr);
-      const ok = commandOK(result);
-      record({ event: 'command', args, startedAt, elapsedMs, ok, status: result.status,
-        signal: result.signal ?? null, error: result.error ? redact(result.error.message) : null, stdout, stderr });
+    let parseBundleMetadata;
+    const assess = (args, result, startedAt, elapsedMs, privateBundleOutput = false) => {
+      let installed;
+      let ok = commandOK(result);
+      if (ok && privateBundleOutput) {
+        try { installed = parseBundleMetadata(String(result.stdout)); } catch { ok = false; }
+        if (!installed?.appVersion) ok = false;
+      }
+      // A failed input command can echo its arguments. Drop all echoed
+      // fields before serialization through the persistent log and IPC sink.
+      record({ event: 'command', startedAt, elapsedMs, ok, ...publicCommandResult(args, result, redact, privateBundleOutput),
+        ...(installed ? { installed } : {}) });
       if (!ok) fail('device command failed or stop-condition output observed; no automatic retry');
     };
     const run = plan => {
-      if (stopping) fail('probe is stopping');
+      if (stopping || deadline <= performance.now()) fail('probe is stopping');
       if (plan.localPath && evidenceEntryExists(plan.localPath)) fail('refusing to overwrite existing local evidence or symlink');
       const start = performance.now();
       const startedAt = new Date().toISOString();
+      const transfer = plan.args[0] === 'file';
+      const timeout = Math.min(transfer ? TRANSFER_TIMEOUT_MS : TIMEOUT_MS, Math.max(1, Math.floor(deadline - start)));
       const result = spawnSync(options.hdc, [...prefix, ...plan.args], {
-        shell: false, encoding: 'utf8', timeout: TIMEOUT_MS, maxBuffer: MAX_OUTPUT, stdio: ['ignore', 'pipe', 'pipe'],
+        shell: false, encoding: 'utf8', timeout, env: hdcEnvironment, maxBuffer: MAX_OUTPUT, stdio: ['ignore', 'pipe', 'pipe'],
       });
-      assess(plan.args, result, startedAt, performance.now() - start);
+      assess(plan.args, result, startedAt, performance.now() - start, plan.privateBundleOutput);
       if (plan.localPath) {
         if (plan.artifactSha256 && (!lstatSync(plan.localPath).isFile() || lstatSync(plan.localPath).isSymbolicLink())) fail('touch artifact readback is not a regular file');
         const bytes = readFileSync(plan.localPath);
@@ -357,6 +406,24 @@ async function probe(options) {
           meaning: 'file extent/parse and identity only; not visual or interaction acceptance' });
       }
       return result;
+    };
+    const readiness = async plan => {
+      const { targetReadiness } = await import('../scripts/lib/hap-delivery-evidence.mjs');
+      const query = command => {
+        if (stopping || deadline <= performance.now()) fail('probe is stopping');
+        const result = spawnSync(options.hdc, [...prefix, 'shell', command], {
+          shell: false, encoding: 'utf8', env: hdcEnvironment, timeout: Math.min(10000, Math.max(1, Math.floor(deadline - performance.now()))),
+          maxBuffer: 1024 * 1024,
+        });
+        if (result.error || result.status !== 0) fail('Current target readiness query failed');
+        return `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
+      };
+      const listing = spawnSync(options.hdc, ['-p','-s',options.server,'list','targets','-v'],
+        { shell: false, encoding: 'utf8', env: hdcEnvironment, timeout: 10000, maxBuffer: 1024 * 1024 });
+      const exact = (listing.stdout ?? '').split(/\r?\n/u).filter(line => line.split(/\s+/u)[0] === options.target);
+      if (!commandOK(listing) || exact.length !== 1 || !/\bConnected\b/u.test(exact[0])) fail('Exact target is not independently confirmed Connected');
+      const checked = targetReadiness({ targetKind: plan.targetKind, vmLog: plan.vmLog, targetEndpoint: options.target, query });
+      record({ event: 'readiness', ...checked, hdcServer: options.server, targetKind: plan.targetKind, exactConnected: true });
     };
     const touchTickets = new Map();
     const verifyTouchArtifacts = ticket => {
@@ -516,7 +583,7 @@ async function probe(options) {
       let stderr = '';
       let childError;
       activeChild = spawn(options.hdc, [...prefix, ...plan.args], {
-        shell: false, stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS,
+        shell: false, env: hdcEnvironment, stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS,
       });
       const child = activeChild;
       const completed = new Promise(resolveDone => {
@@ -561,20 +628,30 @@ async function probe(options) {
     };
     record({ event: 'ready', log, warning: 'Lock acquired only; boot readiness/authorization must already be established externally. No retries or service startup.' });
     input = createInterface({ input: process.stdin, crlfDelay: Infinity });
+    const waitForInput = () => { idleTimer = setTimeout(stop, IDLE_MS); };
+    waitForInput();
     for await (const line of input) {
       if (stopping) break;
       if (line.length > 32768) fail('operation line exceeds limit');
       if (line.trim() === '') continue;
-      const plan = operationPlan(JSON.parse(line), options.outputDir);
+      clearTimeout(idleTimer);
+      const plan = operationPlan(readOperation(line), options.outputDir);
       if (plan.kind === 'quit') break;
       if (['sampledDrag', 'sampledClick', 'sampledHeldTouch'].includes(plan.kind)) await sampledDrag(plan);
       else if (plan.kind === 'prepareTouchSequence') prepareTouchSequence(plan);
       else if (plan.kind === 'dryRunTouchSequence') dryRunTouchSequence(plan);
       else if (plan.kind === 'sampledTouchSequence') await sampledTouchSequence(plan);
-      else run(plan);
+      else if (plan.kind === 'uiContractReadiness') await readiness(plan);
+      else {
+        if (plan.privateBundleOutput) ({ parseBundleMetadata } = await import('../scripts/hap-pipeline.mjs'));
+        run(plan);
+      }
+      waitForInput();
     }
     record({ event: 'closed', reason: stopping ? 'signal' : 'quit-or-eof' });
   } finally {
+    clearTimeout(idleTimer);
+    clearTimeout(sessionTimer);
     input?.close();
     process.off('SIGINT', stop);
     process.off('SIGTERM', stop);
@@ -681,6 +758,15 @@ function selfTest() {
   assert.throws(() => plan({ op: 'dryRunTouchSequence', ticket, requestAuth: true }));
   assert.throws(() => operationPlan({ ...execute, preflightConfirmed: false }, directory));
   assert.equal(targetReference('test-serial'), createHash('sha256').update('test-serial').digest('hex').slice(0, 12));
+  const privateMarker = 'PRIVATEINPUTSHOULDNOTBEWRITTEN';
+  const privatePlan = plan({ op: 'inputText', x: 1, y: 2, text: privateMarker });
+  const echoedFailure = { status: 1, stdout: privateMarker, stderr: privateMarker, error: new Error(privateMarker) };
+  const safeEvidence = publicCommandResult(privatePlan.args, echoedFailure, value => String(value ?? ''));
+  assert.equal(safeEvidence.args.at(-1), `[length:${privateMarker.length}]`);
+  assert.ok(!JSON.stringify(safeEvidence).includes(privateMarker));
+  assert.throws(() => readOperation(`{"text":"${privateMarker}",invalid`), /^Error: invalid device operation JSON$/);
+  assert.deepEqual(plan({ op: 'uiContractLog' }).args, ['shell','hilog','-x','-T','ReaderUIContract']);
+  assert.throws(() => plan({op:'uiContractReadiness', targetKind:'physical', vmLog:'/tmp/vm.log'}));
   const owner = { pid: 123, targetRef: 'abc', probeNonce: 'owned' };
   assert.equal(ownerMatches(owner, owner), true);
   for (const changed of [{ pid: 124 }, { targetRef: 'other' }, { probeNonce: 'other' }]) assert.equal(ownerMatches({ ...owner, ...changed }, owner), false);

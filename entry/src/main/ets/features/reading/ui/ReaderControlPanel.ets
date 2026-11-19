@@ -34,6 +34,8 @@ import { readerControlPlaybackProfileMatches, readerControlPlaybackSourceKindMat
 import { FrameCallback } from '@kit.ArkUI';
 import { readerControlMotionMs, sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
+import { ReaderControlVerificationMotion } from './ReaderControlVerificationMotion';
+import type { ReaderControlVerificationSession } from './ReaderControlVerificationSession';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../../../ui/foundation/ProductMotionTiming';
 import { registerReaderFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
@@ -349,6 +351,8 @@ export struct ReaderControlPanel {
   private temporaryInputKind: ReaderControlTemporaryInputKind = '';
   private endInlineEditing: (() => void | Promise<void>) | undefined = undefined;
   private runtimeMounted: boolean = false;
+  verificationSession: ReaderControlVerificationSession | undefined = undefined;
+  private verificationMotion: ReaderControlVerificationMotion | undefined = undefined;
   private pendingRuntimeFrame: boolean = false;
   private pendingRuntimeTicket: number = -1;
   private runtimeLifecycle: number = 0;
@@ -713,6 +717,7 @@ export struct ReaderControlPanel {
   }
 
   aboutToDisappear(): void {
+    this.verificationMotion?.finish('unmounted');
     this.editingHost.unmount();
     this.dismissMoreMenu();
     this.runtimeMounted = false;
@@ -783,12 +788,45 @@ export struct ReaderControlPanel {
     const lifecycle = this.runtimeLifecycle;
     this.pendingRuntimeFrame = true;
     this.pendingRuntimeTicket = ticket;
-    this.getUIContext().postFrameCallback(new ReaderControlFrameCallback((_time: number): void => {
+    this.getUIContext().postFrameCallback(new ReaderControlFrameCallback((frameTimeNs: number): void => {
       if (!this.runtimeMounted || lifecycle !== this.runtimeLifecycle || this.pendingRuntimeTicket !== ticket) return;
       this.pendingRuntimeFrame = false;
-      const update = runtime.frame(readerMotionNowMs(), ticket, (p: number): number => this.clockSample(p));
-      if (update !== undefined) this.acceptRuntime(update);
-      else this.scheduleRuntimeFrame();
+      const runtimeTickMs = readerMotionNowMs();
+      const update = runtime.frame(runtimeTickMs, ticket, (p: number): number => this.clockSample(p));
+      if (update !== undefined) {
+        const previous = this.visualSession;
+        const verification = this.verificationSession;
+        const request = verification?.current(previous);
+        // Use the component snapshot preceding this frame's publication. No
+        // probe value is fed back to runtime or used to advance its clock.
+        if (request !== undefined && previous.transition?.kind === request.direction) {
+          if (this.verificationMotion === undefined) this.verificationMotion = new ReaderControlVerificationMotion();
+          this.verificationMotion.sample(request, this.getUIContext(), previous, this.contentLocation(),
+            frameTimeNs, runtimeTickMs, ticket, this.motionOffsetY, false);
+        }
+        this.acceptRuntime(update);
+        if (request !== undefined && previous.transition?.kind === request.direction && this.verificationMotion !== undefined) {
+          verification?.observeVisual(update.session, this.visualVisibilityProgress);
+          if (update.endpoint !== undefined) {
+            const endpoint = update.endpoint;
+            const expectedLevel = request.direction === 'open' ? 'home' : 'hidden';
+            const trace = this.verificationMotion;
+            // Observe native nodes after the normal endpoint publication has
+            // reached a following frame. This callback never advances runtime.
+            this.getUIContext().postFrameCallback(new ReaderControlFrameCallback((endpointFrameNs: number): void => {
+              if (!this.runtimeMounted || lifecycle !== this.runtimeLifecycle || runtime.ticket() !== ticket ||
+                verification?.current(this.visualSession)?.transitionId !== request.transitionId ||
+                this.visualSession.transition !== undefined || this.visualSession.location.level !== expectedLevel) {
+                trace.finish('interrupted');
+                return;
+              }
+              trace.sample(request, this.getUIContext(), endpoint, this.contentLocation(),
+                endpointFrameNs, runtimeTickMs, ticket, this.motionOffsetY, true);
+              trace.finish('completed');
+            }));
+          }
+        }
+      } else this.scheduleRuntimeFrame();
     }));
   }
 
@@ -1608,6 +1646,7 @@ export struct ReaderControlPanel {
         }
           .width(this.frame().content.width).height(this.frame().content.height)
           .position({ x: this.frame().content.x, y: this.frame().content.y })
+          .id('reader-control-motion-content-clip')
           .borderRadius(8 + 4 * this.frame().progress)
           .clip(true).opacity(this.frame().content.opacity)
           .enabled(this.contentInputEnabled())

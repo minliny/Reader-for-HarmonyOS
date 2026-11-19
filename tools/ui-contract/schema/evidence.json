@@ -1,0 +1,171 @@
+{
+  "$id": "reader-ui-phase0-v1",
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9._:-]{1,128}$" },
+    "ref": {
+      "type": "object", "additionalProperties": false, "required": ["path","bytes","sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "id-list": {
+      "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" }
+    },
+    "fixture": {
+      "type": "object", "additionalProperties": false, "required": ["id","description"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "description": { "type": "string", "minLength": 1 },
+        "inputWord": { "const": "Reader" },
+        "bookTitle": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "step": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["id","kind","anchors"],
+          "properties": {
+            "kind": { "enum": ["sample","locate"] }, "id": { "$ref": "#/$defs/id" },
+            "anchors": { "$ref": "#/$defs/id-list" }, "anyAnchor": { "$ref": "#/$defs/id-list" },
+            "focus": { "$ref": "#/$defs/id" }, "keyboard": { "type": "boolean" },
+            "book": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["id","kind","op","from"],
+          "properties": {
+            "id": { "$ref": "#/$defs/id" }, "kind": { "const": "action" },
+            "op": { "enum": ["click","inputText","keyEvent"] }, "from": { "$ref": "#/$defs/id" },
+            "target": {
+              "oneOf": [
+                { "$ref": "#/$defs/id" },
+                { "$ref": "#/$defs/id-list" },
+                {
+                  "type": "object", "additionalProperties": false, "required": ["publicBookTitle"],
+                  "properties": { "publicBookTitle": { "type": "string", "minLength": 1, "maxLength": 128 } }
+                }
+              ]
+            },
+            "gesture": { "type": "boolean" }, "wait": { "$ref": "#/$defs/id-list" }
+          }
+        }
+      ]
+    },
+    "case": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id","version","pageId","fixture","steps","assertions","ownerSources"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "pageId": { "$ref": "#/$defs/id" },
+        "fixture": { "$ref": "#/$defs/fixture" },
+        "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } },
+        "ownerSources": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^entry/src/main/ets/" } },
+        "assertions": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["id","evaluator","kind","expected","source","sources"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" }, "kind": { "$ref": "#/$defs/id" },
+              "evaluator": { "enum": ["layout","search","motion"] },
+              "source": { "type": "string", "minLength": 1 },
+              "expected": true,
+              "required": { "type": "boolean" },
+              "sources": {
+                "type": "array", "minItems": 1, "uniqueItems": true,
+                "items": { "enum": ["native-tree","window-metrics","app-input","app-owner","debug-frame"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "event": {
+      "type": "object", "additionalProperties": false,
+      "required": ["instanceId","eventSeq","semanticSeq","deviceMonoMs","windowRevision","kind","channel","payload"],
+      "properties": {
+        "instanceId": { "$ref": "#/$defs/id" },
+        "eventSeq": { "type": "integer", "minimum": 1 },
+        "semanticSeq": { "type": "integer", "minimum": 0 },
+        "deviceMonoMs": { "type": "number", "minimum": 0 },
+        "windowRevision": { "type": "integer", "minimum": 0 },
+        "kind": { "$ref": "#/$defs/id" },
+        "channel": { "enum": ["input","business","motion","probe"] },
+        "payload": { "type": "object" }
+      }
+    },
+    "session": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runId","platform","instanceId","result","commands","chain","reason","fixture"],
+      "properties": {
+        "runId": { "$ref": "#/$defs/id" },
+        "platform": { "const": "harmonyos" },
+        "instanceId": { "anyOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "result": { "enum": ["COMPLETED","INCOMPLETE"] },
+        "reason": { "type": ["string","null"] },
+        "commands": { "$ref": "#/$defs/ref" },
+        "fixture": { "$ref": "#/$defs/ref" },
+        "chain": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["index","previous","entry","sha256"],
+            "properties": {
+              "index": { "type": "integer", "minimum": 0 },
+              "previous": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+              "entry": { "type": "object" },
+              "sha256": { "$ref": "#/$defs/digest" }
+            }
+          }
+        }
+      }
+    },
+    "receipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema","runId","case","caseId","caseVersion","caseSha256","tool","candidate","session","chainTail",
+        "assertions","observations","behavior","execution","page","capabilities","coverage","diagnostics","measurement"],
+      "properties": {
+        "schema": { "const": "reader-ui-receipt-v1" },
+        "runId": { "$ref": "#/$defs/id" },
+        "case": { "$ref": "#/$defs/ref" },
+        "caseId": { "$ref": "#/$defs/id" },
+        "caseVersion": { "type": "integer", "minimum": 1 },
+        "caseSha256": { "$ref": "#/$defs/digest" },
+        "tool": { "type": "object", "required": ["version","sha256"], "properties": {
+          "version": { "$ref": "#/$defs/id" }, "sha256": { "$ref": "#/$defs/digest" }
+        } },
+        "candidate": { "type": "object", "required": ["manifest","deployment","snapshot","ownerSources","identity"],
+          "properties": {
+            "manifest": { "$ref": "#/$defs/ref" }, "deployment": { "$ref": "#/$defs/ref" },
+            "snapshot": { "$ref": "#/$defs/ref" },
+            "ownerSources": { "type": "object", "additionalProperties": { "$ref": "#/$defs/ref" } },
+            "identity": { "type": "object" }
+          }
+        },
+        "session": { "$ref": "#/$defs/ref" },
+        "chainTail": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+        "assertions": {
+          "type": "array", "minItems": 1, "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id","actual","expected","verdict","reason","evidenceRefs"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" }, "actual": true, "expected": true,
+              "verdict": { "enum": ["PASS","FAIL","NOT_RUN"] }, "reason": { "type": "string" },
+              "evidenceRefs": { "type": "array", "items": { "$ref": "#/$defs/ref" } }
+            }
+          }
+        },
+        "observations": { "enum": ["COMPLETE","INCOMPLETE"] },
+        "behavior": { "enum": ["PASS","FAIL","NOT_RUN"] },
+        "execution": { "enum": ["PASS","FAIL","INCOMPLETE"] },
+        "page": { "type": "object" },
+        "capabilities": { "type": "object" },
+        "coverage": { "type": "object" },
+        "measurement": { "type": "object" },
+        "diagnostics": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -1,10 +1,18 @@
 import type { SearchHistoryStatus } from './SearchPresentation';
+import type { ReaderUIVerificationChannel } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 
 export const READER_LIBRARY_SEARCH_BACK_FOCUS_ID: string = 'reader-library-search-back';
+
+export interface LibrarySearchVerificationPort {
+  enabled: () => boolean;
+  emit: (kind: string, channel: ReaderUIVerificationChannel, payload: Object) => void;
+}
 
 /** Stable surface identity. Its current query owner replaces the intent ports. */
 @Observed
 export class ReaderLibrarySearchModel {
+  /** The normal application root can attach a read-only diagnostic sink. */
+  verification: LibrarySearchVerificationPort | undefined;
   keyword: string = '';
   history: string[] = [];
   historyStatus: SearchHistoryStatus | undefined = undefined;

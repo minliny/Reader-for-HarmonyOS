@@ -22,6 +22,7 @@ import { motionSpecGet, MotionSpecEntry } from '../../../ui/foundation/MotionSpe
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
+import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../../../ui/controls/ReaderSearchField';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
 import { ReaderSearchHistoryPanel } from './ReaderSearchHistoryPanel';
 import { SearchHistoryGeometry, SearchHistoryViewport } from './SearchHistoryGeometry';
@@ -31,6 +32,23 @@ import { ReaderLibrarySearchModel, READER_LIBRARY_SEARCH_BACK_FOCUS_ID } from '.
 import type { LibrarySearchMode } from '../presentation/LibrarySearchPresentation';
 
 type SearchSurfaceTransition = 'none' | 'open' | 'submit' | 'edit' | 'back';
+
+interface SearchSurfaceEvidence {
+  editorId: string;
+  identity: number;
+  navigation: number;
+  mounting: number;
+  owner: number;
+  stacked: boolean;
+  mode: LibrarySearchMode;
+  semantic?: string;
+  enabled?: boolean;
+  focused?: boolean;
+  length?: number;
+  beforeLength?: number;
+  start?: number;
+  end?: number;
+}
 
 /** One measured value that follows a retarget without owning the frame clock.
  * Interrupting it starts from the currently displayed sample, never from zero. */
@@ -349,8 +367,14 @@ export struct ReaderLibrarySearchSurface {
       const mode = this.mode, identity = this.activeIdentity, navigation = this.activeNavigation, mounting = this.activeMounting;
       const notify = (): void => {
         if (this.mounted && token === this.generation && mode === this.mode && identity === this.identity &&
-          navigation === this.navigationGeneration && mounting === this.mounting)
+          navigation === this.navigationGeneration && mounting === this.mounting) {
+          const verification = this.model.verification;
+          if (mode !== 'idle' && verification !== undefined && verification.enabled()) {
+            verification.emit('search-header-layout', 'probe', this.surfaceEvidence(
+              this.model.currentOwner(), this.fieldIdentity()));
+          }
           this.onSettled(mode, identity, navigation, mounting);
+        }
       };
       if (deferParent) this.getUIContext().postFrameCallback(new LibrarySearchFrame(notify));
       else notify();
@@ -480,6 +504,24 @@ export struct ReaderLibrarySearchSurface {
   private fieldIdentity(): string {
     return JSON.stringify([this.identity, this.navigationGeneration, this.mounting, this.model.currentOwner()]);
   }
+  private surfaceEvidence(owner: number, field: string): SearchSurfaceEvidence {
+    return { editorId: field, identity: this.identity, navigation: this.navigationGeneration, mounting: this.mounting,
+      owner: owner, stacked: this.stackedSearch(), mode: this.mode };
+  }
+  private bookEditorObservation(owner: number, field: string):
+    ((event: ReaderSearchEditorEvent, facts: ReaderSearchEditorObservation) => void) | undefined {
+    const verification = this.model.verification;
+    if (verification === undefined || !verification.enabled()) return undefined;
+    const identity = this.identity, navigation = this.navigationGeneration, mounting = this.mounting;
+    return (event: ReaderSearchEditorEvent, facts: ReaderSearchEditorObservation): void => {
+      if (event !== 'unmounted' && (!this.acceptsField(owner, field) || this.model.panelOwnsInput)) return;
+      const observation: SearchSurfaceEvidence = { editorId: field, identity: identity, navigation: navigation,
+        mounting: mounting, owner: owner, stacked: this.stackedSearch(), mode: this.mode,
+        focused: facts.focused, length: facts.length, beforeLength: facts.beforeLength,
+        start: facts.start, end: facts.end };
+      verification.emit(`search-editor-${event}`, 'input', observation);
+    };
+  }
   private consumeInputBack(): boolean {
     if (!this.mounted || this.mode === 'idle' || !this.searchMounted ||
       this.model.currentOwner() === 0) return false;
@@ -538,7 +580,15 @@ export struct ReaderLibrarySearchSurface {
   }
   private searchAction(owner: number, field: string): () => void {
     return (): void => {
-      if (this.acceptsField(owner, field) && this.actionInteractive()) this.model.dispatchAction(owner);
+      if (!this.acceptsField(owner, field) || !this.actionInteractive()) return;
+      const verification = this.model.verification;
+      if (!this.model.sweeping && verification !== undefined && verification.enabled()) {
+        const facts = this.surfaceEvidence(owner, field);
+        facts.semantic = 'search';
+        facts.enabled = true;
+        verification.emit('search-button-intent', 'input', facts);
+      }
+      this.model.dispatchAction(owner);
     };
   }
   private historyAction(owner: number): (value: string) => void {
@@ -703,6 +753,9 @@ export struct ReaderLibrarySearchSurface {
               // The closing track keeps the field mounted after search mode ends.
               ReaderSearchField({ editingHost: this.editingHost,
                 editingCurrent: (): boolean => this.acceptsField(this.model.currentOwner(), key), variant: 'bookPanel', mode: 'submit', focusOnAppear: false,
+                bookPanelFrameId: 'reader-bookshelf-search-field',
+                observeBookEditor: this.model.verification === undefined ? undefined :
+                  this.bookEditorObservation(this.model.currentOwner(), key),
                 text: this.model.keyword, placeholder: '搜索书名、作者…', accessibilityLabel: '搜索书名或作者',
                 expandedLayout: this.expandedLayout, clearable: true, submitEnabled: this.model.fieldSubmitEnabled,
                 onTextChange: this.textAction(this.model.currentOwner(), key),
@@ -719,6 +772,7 @@ export struct ReaderLibrarySearchSurface {
                 .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(13).fontWeight(FontWeight.Bold)
                 .fontColor(readerAppColor('TOK_ON_PRIMARY', this.scheme)).accessibilityLevel('no');
             }.width(this.actionWidth()).height(this.controlHeight()).padding(0).borderRadius(this.controlHeight() / 2)
+              .id('reader-bookshelf-search-submit')
               .backgroundColor(readerAppColor('app.action.fill', this.scheme))
               .opacity(this.model.sweeping || this.model.canSubmit ? 1 : .38)
               .enabled(this.actionInteractive())
@@ -727,7 +781,8 @@ export struct ReaderLibrarySearchSurface {
               .accessibilityText(this.model.sweeping ? '停止搜索' : '搜索')
               .accessibilityLevel(this.inputInteractive() ? 'auto' : 'no-hide-descendants')
               .onClick(this.searchAction(this.model.currentOwner(), this.fieldIdentity()));
-          }.width(this.searchLaneWidth()).height(this.searchLaneHeight());
+          }.width(this.searchLaneWidth()).height(this.searchLaneHeight())
+            .id(this.stackedSearch() ? 'reader-bookshelf-search-lane-stacked' : 'reader-bookshelf-search-lane-row');
         }.width(this.searchLaneWidth() * this.surfaceValue()).height(this.barHeight() - this.spec.barHeightExtra)
           .position({ x: this.searchLaneLeft(), y: this.laneTop() })
           .translate({ x: -22 * (1 - this.surfaceValue()) })
@@ -743,7 +798,7 @@ export struct ReaderLibrarySearchSurface {
         .attributeModifier(new ReaderActionAccessibility(this.presentedSearch() ? '返回' : '搜索书籍', !this.model.panelOwnsInput, false, true, undefined, 'nativeButton'))
         .accessibilityLevel(this.model.panelOwnsInput ? 'no-hide-descendants' : 'auto')
         .onClick(this.leadingAction(this.identity, this.navigationGeneration, this.mounting));
-    }.width('100%').height(this.barHeight());
+    }.width('100%').height(this.barHeight()).id('reader-bookshelf-search-bar');
   }
   private panelBorderColor(): string {
     return readerAppColor(this.scheme === 'night' || this.historyProgress() > .01 ?

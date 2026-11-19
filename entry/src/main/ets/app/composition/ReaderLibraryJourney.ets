@@ -17,6 +17,19 @@ import type { ReadingEntryPresentation } from '../../features/reading/presentati
 import type { ReaderLibraryAcquisitionBinding } from './ReaderLibraryAcquisitionBinding';
 import type { ReaderReadingEntryActions } from './ReaderReadingEntryActions';
 
+interface LibrarySearchEvidence {
+  identity: number;
+  navigation: number;
+  mounting: number;
+  queryRevision: number;
+  owner?: number;
+  mode?: LibrarySearchMode;
+  previousNavigation?: number;
+  previousOwner?: number;
+  previousQueryRevision?: number;
+  length?: number;
+}
+
 export interface ReaderLibraryScope {
   owner: ReaderRuntimeOwner | undefined;
   instance: number;
@@ -108,7 +121,17 @@ export class ReaderLibraryJourney {
         }
       },
       onOpen: (identity: number, generation: number, mounting: number): void => {
-        if (identity === this.ports.search().identity && this.isInteractiveBookshelf(generation, owner, mounting)) this.openSearch();
+        if (identity !== this.ports.search().identity || !this.isInteractiveBookshelf(generation, owner, mounting)) return;
+        this.openSearch();
+        const search = this.ports.search(), verification = search.model.verification;
+        if (verification !== undefined && verification.enabled()) {
+          const route = this.navigation.snapshot();
+          if (route.route === 'search' && search.mode === 'input' && search.identity !== identity) {
+            const facts: LibrarySearchEvidence = { identity: search.identity, navigation: route.generation,
+              mounting: mounting, queryRevision: search.host.viewState.revision };
+            verification.emit('search-open-accepted', 'business', facts);
+          }
+        }
       },
       onBack: (identity: number, generation: number, mounting: number): void => {
         if (this.ports.scope().inputAllowed && identity === this.ports.search().identity &&
@@ -132,7 +155,16 @@ export class ReaderLibraryJourney {
         else if (this.isCurrentBookshelf(generation, owner, mounting) && search.mode === 'idle') this.ports.read().headerBottom = bottom;
       },
       onSettled: (mode: LibrarySearchMode, identity: number, generation: number, mounting: number): void => {
-        if (this.isCurrentSearch(generation, owner, mounting, host)) this.settled(mode, identity);
+        if (!this.isCurrentSearch(generation, owner, mounting, host)) return;
+        const search = this.ports.search(), verification = search.model.verification;
+        if (mode !== 'idle' && verification !== undefined && verification.enabled()) {
+          if (mode === search.mode && identity === search.identity) {
+            const facts: LibrarySearchEvidence = { identity: identity, navigation: generation, mounting: mounting,
+              owner: search.model.currentOwner(), queryRevision: host.viewState.revision, mode: mode };
+            verification.emit('search-surface-settled', 'business', facts);
+          }
+        }
+        this.settled(mode, identity);
       },
     };
   }
@@ -203,9 +235,23 @@ export class ReaderLibraryJourney {
 
   search(keyword: string, scopeSourceIds?: string[]): void {
     const acquisition = this.ports.acquisition();
-    if (this.navigation.snapshot().route !== 'search' || keyword.trim().length === 0 || acquisition.currentOwner() === undefined) return;
+    const opening = this.navigation.snapshot();
+    if (opening.route !== 'search' || keyword.trim().length === 0 || acquisition.currentOwner() === undefined) return;
+    const searchAtBegin = this.ports.search(), verification = searchAtBegin.model.verification;
+    const verify = verification?.enabled() === true;
+    const previousOwner = verify ? searchAtBegin.model.currentOwner() : 0;
+    const previousQuery = verify ? searchAtBegin.host.viewState.revision : 0;
     this.ports.advance();
-    if (acquisition.beginSearch()) this.ports.search().search(keyword, scopeSourceIds);
+    if (!acquisition.beginSearch()) return;
+    const search = this.ports.search();
+    search.search(keyword, scopeSourceIds);
+    if (verify && verification !== undefined && search === searchAtBegin &&
+      search.mode === 'results' && search.host.viewState.revision > previousQuery) {
+      const facts: LibrarySearchEvidence = { identity: search.identity, navigation: this.navigation.snapshot().generation,
+        mounting: this.ports.scope().mounting, queryRevision: search.host.viewState.revision, previousQueryRevision: previousQuery,
+        previousOwner: previousOwner, previousNavigation: opening.generation, length: keyword.trim().length };
+      verification.emit('search-submit-accepted', 'business', facts);
+    }
   }
 
   back(): void {

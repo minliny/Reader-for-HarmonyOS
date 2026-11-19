@@ -29,6 +29,7 @@ import { readerMotionNowMs } from '../ui/foundation/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { WebDavCredentialStore } from '../features/sync/application/WebDavCredentialStore';
 import { ReaderFrameworkCapture } from '../app/diagnostics/ReaderFrameworkCapture';
+import { ReaderUIVerificationProbe } from '../app/diagnostics/ReaderUIVerificationProbe';
 const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
@@ -64,6 +65,7 @@ export default class EntryAbility extends UIAbility {
         .catch((): void => {});
       return;
     }
+    ReaderUIVerificationProbe.configure(DEBUG === true && BUILD_MODE_NAME === 'debug');
     installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));

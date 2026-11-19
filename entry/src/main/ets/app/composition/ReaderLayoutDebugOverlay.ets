@@ -1,6 +1,29 @@
 import { ReaderWindowCoordinator } from '../ReaderWindowCoordinator';
+import { ReaderUIVerificationProbe } from '../diagnostics/ReaderUIVerificationProbe';
+import type { ReaderWindowMetricsSnapshot } from '../../ui/foundation/ReaderWindowMetrics';
 import { ExpandMode, FrameNode } from '@ohos.arkui.node';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+
+interface ReaderDeveloperWindowReport {
+  metrics: ReaderWindowMetricsSnapshot;
+  vpPixels: number | null;
+  fpPixels: number | null;
+  followsSystemFontScale: boolean | null;
+  maxFontScale: number | null;
+  canvasWidthVp: number | null;
+  canvasHeightVp: number | null;
+  frameTreeReady: boolean;
+  frameScanTruncated: boolean;
+  excludedBackgroundBranches: number;
+  excludedTransparentBranches: number;
+  measuredOpaqueHeaders: number;
+}
+
+interface ReaderVerificationWindowSample {
+  windowId: string;
+  orientation: string;
+  report: ReaderDeveloperWindowReport;
+}
 
 interface ReaderDebugRect {
   x: number;
@@ -80,7 +103,7 @@ export struct ReaderLayoutDebugOverlay {
     } catch (_) {
       // Unavailable properties stay null in the receipt.
     }
-    const payload = JSON.stringify({
+    const report: ReaderDeveloperWindowReport = {
       metrics, vpPixels, fpPixels, followsSystemFontScale, maxFontScale,
       canvasWidthVp: this.canvasReady ? this.drawingContext.width : null,
       canvasHeightVp: this.canvasReady ? this.drawingContext.height : null,
@@ -89,7 +112,19 @@ export struct ReaderLayoutDebugOverlay {
       excludedBackgroundBranches: this.excludedBackgroundBranches,
       excludedTransparentBranches: this.excludedTransparentBranches,
       measuredOpaqueHeaders: this.opaqueHeaders.size,
-    });
+    };
+    if (ReaderUIVerificationProbe.enabled()) {
+      const windowId = ReaderWindowCoordinator.diagnosticWindowId();
+      if (windowId !== null && metrics.ready) {
+        const sample: ReaderVerificationWindowSample = {
+          windowId: windowId.toString(), orientation: metrics.windowRect.width > metrics.windowRect.height ?
+            'landscape' : 'portrait',
+          report: report,
+        };
+        ReaderUIVerificationProbe.emit('window-stable', 'probe', sample);
+      }
+    }
+    const payload = JSON.stringify(report);
     if (payload === this.lastWindowSample) return;
     this.lastWindowSample = payload;
     hilog.info(0x5244, 'Reader', 'READER_DEVELOPER_LAYOUT %{public}s', payload);

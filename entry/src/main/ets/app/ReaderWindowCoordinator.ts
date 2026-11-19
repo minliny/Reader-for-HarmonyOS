@@ -175,6 +175,14 @@ export class ReaderWindowCoordinator {
    */
   private static installEpoch: number = 0;
 
+  static diagnosticWindowId(): number | null {
+    try {
+      return ReaderWindowCoordinator.mainWindow?.getWindowProperties().id ?? null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static async install(win: window.Window, configuration?: Configuration): Promise<boolean> {
     ReaderWindowCoordinator.detach();
     ReaderWindowCoordinator.installEpoch += 1;

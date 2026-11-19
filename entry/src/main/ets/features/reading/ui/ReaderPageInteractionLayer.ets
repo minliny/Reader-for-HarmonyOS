@@ -125,6 +125,7 @@ export struct ReaderPageInteractionLayer {
 
   build() {
     Row()
+      .id(this.interactionEnabled ? 'reader-reading-interaction-host-paged' : '')
       .width('100%')
       .height('100%')
       // XComponent composition order is device-dependent; make the sole raw

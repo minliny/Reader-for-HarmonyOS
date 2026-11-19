@@ -294,6 +294,7 @@ export struct ReaderContinuousReadingStage {
           .width('100%');
         }, (fragment: ReadingSurfacePageFragment): string => this.fragmentRenderKey(fragment));
       }
+      .id('reader-reading-interaction-host-continuous')
       .width('100%')
       .height('100%')
       .padding({

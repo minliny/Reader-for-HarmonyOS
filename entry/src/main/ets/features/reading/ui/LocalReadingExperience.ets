@@ -67,6 +67,7 @@ import { LocalReadingContentMetricIndex } from '../application/LocalReadingWhole
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
+import { ReaderControlVerificationSession, type ReaderControlVerificationOrigin } from './ReaderControlVerificationSession';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../../../ui/foundation/ProductMotionTiming';
 import { readerControlMotionMs } from './ReaderControlMotionPolicy';
 import {
@@ -798,6 +799,7 @@ export struct ReadingExperience {
    * the reading page.
    */
   private latestControlVisualSession: ReaderControlSessionState = createReaderControlSessionState();
+  private readonly controlVerification: ReaderControlVerificationSession = new ReaderControlVerificationSession();
   @State private controlOpenRevision: number = 0;
   private controlTemporaryLayer: ReaderControlTemporaryInputKind = '';
   @State private controlTemporaryLayerPresented: ReaderControlTemporaryInputKind = '';
@@ -1277,6 +1279,7 @@ export struct ReadingExperience {
     this.restoreEntryPresentation();
     this.admitInitialWindowGeometry();
     this.controlSession = createReaderControlSessionState();
+    this.controlVerification.start();
     this.controlDirectoryDataRetained = false;
     this.latestControlVisualSession = copyReaderControlSessionState(this.controlSession);
     this.observedControlCloseRevision = 0;
@@ -1686,6 +1689,7 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.controlVerification.stop();
     this.retireReaderRecovery();
     this.appearanceSaveUnsubscribe?.();
     this.appearanceSaveUnsubscribe = undefined;
@@ -1893,7 +1897,7 @@ export struct ReadingExperience {
             this.onContinuousBoundaryDrag(direction),
           onTurn: (direction: ReaderPageTurnDirection): ReaderPageTurnOutcome =>
             this.requestPageTurn(direction),
-          onOpenControl: (): void => this.openReaderControl(),
+          onOpenControl: (): void => this.openReaderControl('continuous-tap'),
           onManualInteraction: (): void => this.onContinuousManualInteraction(),
           onPointerStart: (pointerId: number): boolean => this.acquirePagePointer(pointerId),
           onPointerEnd: (pointerId: number): void => this.releasePagePointer(pointerId),
@@ -2001,6 +2005,7 @@ export struct ReadingExperience {
           profileReader?: ReaderControlMeasuredProfileReader, facts?: ReaderControlModuleFacts, factsGeometryKey?: string): void =>
           this.bindControlMinimum(identity, measurer, profileReader, facts, factsGeometryKey),
         controlSession: $controlSession,
+        verificationSession: this.controlVerification,
         onSessionRequest: (next: ReaderControlSessionState): void => this.requestControlSession(next),
         inputEnabled: this.isControlInputEnabled() && (this.sessionLaunch === undefined || this.sessionLaunch.ownership === 'released'),
         inputCurrent: (): boolean => this.isControlInputEnabled() &&
@@ -2241,7 +2246,7 @@ export struct ReadingExperience {
           onBookmarkRelease: (changed: boolean): void => this.onReaderBookmarkGestureReleased(changed),
           onBookmarkUnavailable: (reason: 'busy' | 'unavailable'): void =>
             this.onReaderBookmarkGestureUnavailable(reason),
-          onOpenControl: (): void => this.openReaderControl(),
+          onOpenControl: (): void => this.openReaderControl('paged-tap'),
           onManualInteraction: (): void => this.onReaderManualInteraction(),
           onPointerStart: (pointerId: number): boolean => this.acquirePagePointer(pointerId),
           onPointerEnd: (pointerId: number): void => this.releasePagePointer(pointerId),
@@ -2295,6 +2300,7 @@ export struct ReadingExperience {
     }
     .width('100%')
     .height('100%')
+    .id('reader-reading-stage')
     .clip(true)
     .onTouch((event: TouchEvent): void => this.onControlBackdropTouch(event))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
@@ -2305,6 +2311,7 @@ export struct ReadingExperience {
       const width = this.numericAreaLength(newValue.width);
       const height = this.numericAreaLength(newValue.height);
       this.admitReaderViewportSize(width, height, lifecycleToken);
+      this.publishControlVerificationReady();
     });
   }
 
@@ -2822,6 +2829,7 @@ export struct ReadingExperience {
   }
 
   private sourceSwitchCompletionChanged(): void {
+    this.publishControlVerificationReady();
     const completion = this.sourceSwitchCompletion;
     if (completion === undefined) {
       this.sourceSwitchPendingCompletionKey = '';
@@ -6802,6 +6810,8 @@ export struct ReadingExperience {
     // semantic host session intentionally lags during a drag/settlement.
     const result = backReaderControlHostSession(this.latestControlVisualSession, this.controlTiming());
     if (result.consumed) {
+      this.controlVerification.accept('system-back', this.latestControlVisualSession, result.state,
+        this.controlOpenRevision);
       this.requestControlSession(result.state);
       return;
     }
@@ -11178,7 +11188,16 @@ export struct ReadingExperience {
     });
   }
 
-  private openReaderControl(): void {
+  private publishControlVerificationReady(): void {
+    if (this.phase !== 'ready' || this.viewportWidth <= 0 || this.viewportHeight <= 0 ||
+      !this.isReaderPageInteractionEnabled() || this.pageTurnOwnsReaderInput() ||
+      this.sessionLaunch !== undefined || this.controlTemporaryLayer.length > 0) return;
+    const mode = readerRenderStageKind(this.readerSettingsSnapshot.navigationMode, this.hasContinuousRenderContent());
+    this.controlVerification.ready(mode === 'continuous' ? 'continuous' : 'paged', this.controlSession,
+      this.controlOpenRevision, this.sourceId === 'local', this.reduceMotion);
+  }
+
+  private openReaderControl(verificationOrigin?: ReaderControlVerificationOrigin): void {
     this.retireReaderRecovery();
     if (this.sessionLaunch !== undefined) { this.cancelSessionLaunch('openControl'); return; }
     if (this.pageTurnSettlementActive && this.pageTurnCommitStarted && !this.pageTurnCommitFinished) {
@@ -11196,7 +11215,11 @@ export struct ReadingExperience {
     this.controlDirectoryDataRetained = true;
     this.invalidateControlBackdrop();
     this.controlOpenRevision += 1;
-    this.controlSession = openReaderControlSession(this.controlSession, this.controlTiming().showDurationMs);
+    const nextControl = openReaderControlSession(this.controlSession, this.controlTiming().showDurationMs);
+    if (verificationOrigin !== undefined) {
+      this.controlVerification.accept(verificationOrigin, this.controlSession, nextControl, this.controlOpenRevision);
+    }
+    this.controlSession = nextControl;
     void this.loadContentMetricsIfNeeded(this.lifecycleToken);
     this.refreshReaderBrightness();
   }
@@ -11304,6 +11327,7 @@ export struct ReadingExperience {
     }
     this.invalidateControlBackdrop();
     this.syncVolumeKeyPolicy();
+    this.publishControlVerificationReady();
   }
 
   private retirePagePointer(): void {
@@ -11337,6 +11361,7 @@ export struct ReadingExperience {
   }
 
   private onControlSessionChanged(): void {
+    this.controlVerification.observeHostState(this.controlSession, this.controlOpenRevision);
     if (this.controlVisible()) this.cancelAutomaticPageStart?.();
     else this.scheduleTtsPageFollowResume?.();
     // Keep the non-reactive decision snapshot aligned even before the child

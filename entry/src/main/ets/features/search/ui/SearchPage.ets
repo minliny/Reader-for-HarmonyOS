@@ -72,6 +72,16 @@ import { SearchHeaderSpec, searchHeaderSpec } from '../../../ui/foundation/Reade
 const SEARCH_LOCAL_SCOPE = '本地';
 let nextSearchSurfaceOwner: number = 0;
 
+type SearchVerificationProjection = 'empty' | 'results' | 'pending';
+
+interface SearchProjectionEvidence {
+  queryRevision: number;
+  owner: number;
+  page: number;
+  state: SearchVerificationProjection;
+  viewportId: string;
+}
+
 interface SearchResultSelection {
   queryRevision: number;
   book: SearchBook;
@@ -416,6 +426,7 @@ export struct SearchPage {
   private resultFlushEpoch: number = 0;
   @State private displayIdleRevision: number = 0;
   @State private resultNoticeFacts: SearchNoticeFacts | undefined = undefined;
+  private observedProjection: SearchVerificationProjection | undefined;
 
   private acceptPublication(): void {
     if (!this.ownsPageQuery()) return;
@@ -423,10 +434,12 @@ export struct SearchPage {
     this.shelfBooks = this.publication.shelfAt(this.publicationRevision);
     this.refreshVisibleResults();
     this.publishSurface();
+    if (this.surfaceModel?.verification !== undefined) this.observeResultProjection();
   }
 
   aboutToAppear(): void {
     this.pageMounted = true;
+    this.observedProjection = undefined;
     this.pageEpoch = ++this.viewState.pageRevision;
     this.queryAtMount = this.viewState.revision;
     this.startPositionedQuery = -1;
@@ -446,6 +459,7 @@ export struct SearchPage {
     this.keyword = this.viewState.keywordDraft;
     this.acceptPublication();
     this.bindSurface();
+    if (this.surfaceModel?.verification !== undefined) this.observeResultProjection();
     if (this.pendingResultFocus.length > 0 && !this.hasSearchSession())
       this.restoreResultFocus((): boolean => this.ownsPageQuery());
   }
@@ -479,6 +493,23 @@ export struct SearchPage {
   private ownsSurface(): boolean {
     return this.ownsPageQuery() && this.surfaceModel?.owns(this.surfaceOwner) === true &&
       this.surfaceModel?.interactive === true;
+  }
+
+  private resultProjectionState(): SearchVerificationProjection {
+    if (this.presentation.kind === 'empty' && this.presentation.stopped !== true && !this.isStoppedEmpty()) return 'empty';
+    if (this.presentation.kind === 'results' && !this.hasActiveSearchRequest() && this.presentation.stopped !== true) return 'results';
+    return 'pending';
+  }
+
+  private observeResultProjection(): void {
+    const verification = this.surfaceModel?.verification;
+    if (verification === undefined || !verification.enabled() || !this.ownsSurface()) return;
+    const state = this.resultProjectionState();
+    if (state === this.observedProjection) return;
+    this.observedProjection = state;
+    const facts: SearchProjectionEvidence = { queryRevision: this.queryAtMount, owner: this.surfaceOwner,
+      page: this.pageEpoch, state: state, viewportId: this.resultViewportId() };
+    verification.emit('search-result-projection', 'business', facts);
   }
 
   private pageInputCurrent(): boolean {
@@ -925,6 +956,7 @@ export struct SearchPage {
     if (this.hasSearchSession()) {
       Stack() { this.resultsContent(); }
         .width('100%').height('100%')
+        .id(this.surfaceModel?.verification === undefined ? '' : `reader-bookshelf-search-${this.resultProjectionState()}`)
         .backgroundColor(this.retainedViewportPending ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent);
     } else if (this.presentation.kind === 'initial') {
       Blank().width('100%').height(0);
