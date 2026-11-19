@@ -131,7 +131,7 @@ const evaluate = (kind, data) => evaluateMotion(byKind.get(kind), data);
 const openFrames = data => data.events.filter(event => event.kind === 'reading.control-motion' && event.payload.direction === 'open');
 const part = (data, index, role) => openFrames(data)[index].payload.frames[0].actors.find(actor => actor.id === role);
 
-function rebaseFixture() {
+function rebaseFixture(withCauses = false) {
   const data = fixture();
   const blocks = openFrames(data);
   const frames = [
@@ -148,7 +148,8 @@ function rebaseFixture() {
     const sample = frame('open', endpoint ? 2 : index === 0 ? 0 : 1, 1, 1000);
     // A new layout can move children as local opacity/translation rewind.
     // Compensation within a ticket is applied to children of the fixed dock.
-    const childLayoutOffset = (index >= 2 ? -4.5 : 0) + (index === 3 ? 2 : 0);
+    const compensation = !withCauses && index === 3 ? 2 : 0;
+    const childLayoutOffset = (index >= 2 ? -4.5 : 0) + compensation;
     for (const actor of sample.actors) {
       const isDock = actor.id === 'reader-control-motion-dock';
       const travel = 18 * (1 - visibility);
@@ -164,14 +165,54 @@ function rebaseFixture() {
     return { ...sample, index, frameTimeNs: clock * 1e6, captureStartMs: clock, captureEndMs: clock + 1,
       runtimeTicket: ticket, runtimeDurationMs: duration, runtimeElapsedMs: elapsed,
       runtimeTickMs: endpoint ? clock - 60 : clock, visibilityProgress: visibility,
-      runtimeLayoutOffsetVp: index === 3 ? 2 : 0 };
+      runtimeLayoutOffsetVp: compensation };
   });
   for (const [index, block] of blocks.entries()) {
     const selected = index < 2 ? [frames[index]] : frames.slice(index);
     Object.assign(block.payload, { frames: selected, frameStart: selected[0].index, frameEnd: selected.at(-1).index });
     block.deviceMonoMs = 1363 + index;
   }
-  return { data, frames };
+  const causes = [];
+  if (withCauses) {
+    for (const event of data.events) {
+      if (event.eventSeq > 11) event.eventSeq += 2;
+    }
+    data.actions.open.afterSeq += 2;
+    data.actions.dismiss.beforeSeq += 2;
+    data.actions.dismiss.afterSeq += 2;
+    for (const sampleId of ['control-open', 'control-closed']) {
+      data.samples[sampleId].beforeSeq += 2;
+      data.samples[sampleId].afterSeq += 2;
+    }
+    const request = data.events.find(event => event.eventSeq === 11);
+    request.deviceMonoMs = 995;
+    const { transitionId, epoch } = { ...request.payload, ...request.payload.accepted };
+    const observed = (quickGrabberScreenY, startProgress, progress, elapsedMs, durationMs, revision, anchor) => ({
+      axis: { quickGrabberScreenY, fullGrabberScreenY: 400, hiddenGrabberScreenY: quickGrabberScreenY + 18 },
+      transition: { kind: 'open', startProgress, progress, targetProgress: 1, elapsedMs, durationMs,
+        from: { expansionProgress: 0, visibilityProgress: 0 }, to: { expansionProgress: 0, visibilityProgress: 1 } },
+      compensation: { startOffsetY: 0, offsetY: 0, elapsedMs: 0, durationMs: 0, running: false, revision },
+      compensatedGrabberScreenY: anchor,
+    });
+    const axis6 = 504.56794075764134, axis7 = 499.9895561334555;
+    const anchor5 = 517.9448764442413, anchor6 = 517.1011331538555;
+    const observations = [
+      [5, 1000, 1045, observed(500, 0, 0.003062419764372816, 4, 220, 0, anchor5),
+        observed(axis6, 0.2568369063, 0.2568369063, 0, 216, 1, anchor5)],
+      [6, 1060, 1099, observed(axis6, 0.2568369063, 0.3037115335436587, 15, 216, 1, anchor6),
+        observed(axis7, 0.0493568322, 0.0493568322, 0, 201, 2, anchor6)],
+    ];
+    for (const [index, [fromTicket, beforeTickMs, ticketStartTickMs, before, after]] of observations.entries()) {
+      causes.push(record('reading.control-rebased', 'motion', 12 + index, {
+        readingId, transitionId, direction: 'open', epoch, source: 'ReaderControlRuntime.configure', fromTicket,
+        toTicket: fromTicket + 1, beforeTickMs, ticketStartTickMs, rebaseReason: 'projected', anchorPreserved: true,
+        before, after,
+      }, ticketStartTickMs + 1));
+    }
+    data.events.push(...causes);
+    data.events.sort((first, second) => first.eventSeq - second.eventSeq);
+  }
+  return { data, frames, causes };
 }
 
 test('recomputes both complete owner transitions and animated trajectories independently', () => {
@@ -214,6 +255,75 @@ test('preserves independent deviations across valid ticket partitions', () => {
   assert.ok(result.actual.runtimeSegments.at(-1).maxVisibilityError > 0.02);
   assert.ok(result.actual.deviations.some(item => item.actor === 'shell' && item.field === 'matrix' && item.frame === 3));
   assert.ok(result.actual.deviations.some(item => item.actor === 'runtime' && item.field === 'normalizedCurve' && item.frame === 4));
+});
+
+test('replays measured projections, ticket clocks and actor continuity with complete rebase evidence', () => {
+  const { data } = rebaseFixture(true);
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'PASS', JSON.stringify(result.actual?.deviations));
+  assert.equal(result.observationsComplete, true);
+  assert.equal(result.actual.checks['runtime.rebaseProjection'].observed, 2);
+  assert.equal(result.actual.checks['runtime.rebaseClock'].observed, 2);
+  assert.deepEqual(result.actual.ticketBoundaries.map(boundary => boundary.rebaseEventSeqs), [[12], [13]]);
+});
+
+test('replays each link across an intermediate ticket with no frame', () => {
+  const { data, frames, causes } = rebaseFixture(true);
+  const [first, second] = causes.map(event => event.payload);
+  second.before = structuredClone(first.after);
+  second.beforeTickMs = first.ticketStartTickMs;
+  second.ticketStartTickMs = 1084;
+  causes[1].deviceMonoMs = 1085;
+  Object.assign(second.after.axis, { quickGrabberScreenY: 500.83329942384137, hiddenGrabberScreenY: 518.83329942384137 });
+  second.after.compensatedGrabberScreenY = first.after.compensatedGrabberScreenY;
+  second.after.transition.durationMs = 216;
+  const observed = [frames[0], ...frames.slice(2)];
+  const localVisibilities = [0.0493568322, 0.4356297076, 0.8474575995, 0.9706145858, 1];
+  for (const [index, frame] of observed.entries()) {
+    frame.index = index;
+    if (index === 0) continue;
+    frame.runtimeDurationMs = 216;
+    frame.runtimeElapsedMs = index === 1 ? 0 : 36 + (index - 2) * 60;
+    frame.visibilityProgress = localVisibilities[index - 1];
+    const translation = 18 * (1 - frame.visibilityProgress);
+    for (const actor of frame.actors) {
+      actor.windowOriginVp.y = actor.layoutRectVp.y + translation;
+      if (actor.id === 'reader-control-motion-dock') {
+        actor.translateVp.y = translation;
+        actor.opacity = frame.visibilityProgress;
+      }
+    }
+  }
+  for (const [index, block] of openFrames(data).entries()) {
+    const selected = index < 2 ? [observed[index]] : observed.slice(index);
+    Object.assign(block.payload, { frames: selected, frameStart: selected[0].index, frameEnd: selected.at(-1).index });
+  }
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'PASS', JSON.stringify(result.actual?.deviations));
+  assert.deepEqual(result.actual.ticketBoundaries.map(boundary => boundary.rebaseEventSeqs), [[12, 13]]);
+  data.events = data.events.filter(event => event !== causes[0]);
+  assert.equal(evaluate('motion-open', data).verdict, 'NOT_RUN');
+});
+
+test('rejects incomplete rebase chains and fails complete contradictory projection or clocks', () => {
+  const stale = rebaseFixture(true);
+  stale.causes[0].payload.epoch += 1;
+  const duplicate = rebaseFixture(true);
+  duplicate.data.events.push(structuredClone(duplicate.causes[0]));
+  const missing = rebaseFixture(true);
+  delete missing.causes[1].payload.after.axis.quickGrabberScreenY;
+  for (const { data } of [stale, duplicate, missing]) {
+    assert.equal(evaluate('motion-open', data).verdict, 'NOT_RUN');
+  }
+  const projection = rebaseFixture(true);
+  projection.causes[1].payload.after.compensation.offsetY += 1;
+  const contradiction = evaluate('motion-open', projection.data);
+  assert.equal(contradiction.verdict, 'FAIL');
+  assert.ok(contradiction.actual.deviations.some(item => item.field === 'rebaseProjection'));
+  const clock = rebaseFixture(true);
+  clock.causes[0].payload.beforeTickMs -= 1;
+  assert.equal(evaluate('motion-open', clock.data).verdict, 'FAIL');
+  assert.match(evaluate('motion-open', clock.data).reason, /runtime\.rebaseClock/u);
 });
 
 test('rejects ticket rollback, incompatible reset and a forged runtime clock interval', () => {

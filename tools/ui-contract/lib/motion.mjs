@@ -14,11 +14,17 @@ const MOTION_INPUTS = {
   ...OWNER_INPUTS,
   [OWNER + 'ReaderControlSessionState.ts']: [...OWNER_INPUTS[OWNER + 'ReaderControlSessionState.ts'],
     'advanceReaderControlSession', 'rebaseReaderControlTransitionProgress'],
-  [OWNER + 'ReaderControlPanel.ets']: ['scheduleRuntimeFrame', 'clockSample', 'controlContent'],
+  [OWNER + 'ReaderControlPanel.ets']: ['configureRuntime', 'scheduleRuntimeFrame', 'clockSample', 'controlContent'],
+  [OWNER + 'ReaderControlRuntime.ts']: ['configure', 'frame', 'invalidate', 'rebaseSample'],
+  [OWNER + 'ReaderControlGestureDriver.ts']: ['readerControlGrabberScreenY'],
+  [OWNER + 'ReaderControlLayoutRebase.ts']: ['rebaseReaderControlLayout', 'advanceReaderControlLayoutCompensation'],
+  [OWNER + 'ReaderControlSpatialPath.ts']: ['readerControlSpatialY', 'projectReaderControlSpatialPath'],
   [OWNER + 'ReaderControlMotionGeometry.ts']: ['sampleReaderControlWholeVisibility', 'sampleReaderControlMotionComposition',
-    'ReaderControlMotionFrameCache'],
+    'readerControlMotionAxis', 'ReaderControlMotionFrameCache'],
   [OWNER + 'ReaderControlMotionPolicy.ts']: ['readerControlMotionCommandTiming'],
   [OWNER + 'ReaderControlVerificationMotion.ets']: ['recordActor', 'ReaderControlVerificationMotion'],
+  [OWNER + 'ReaderControlVerificationSession.ts']: [...OWNER_INPUTS[OWNER + 'ReaderControlVerificationSession.ts'],
+    'observeLayoutRebase'],
   [TIMING]: ['READER_CONTROL_OPEN_MS', 'READER_CONTROL_DISMISS_MS'],
 };
 const ACTORS = {
@@ -274,7 +280,11 @@ class MotionEvidence {
     requireEvidence(vis.length === 1 && vis[0].windowRevision === revision && vis[0].payload.source === 'runtime-progress' &&
       vis[0].payload.visibilityProgress > 0 && vis[0].payload.visibilityProgress < 1,
     'The current transition has no matching admitted visual progression before commit');
-    return { frames, events, segments };
+    const rebases = this.event('reading.control-rebased', 'motion', data.action.instanceId,
+      event => event.eventSeq > data.request.eventSeq && event.eventSeq < data.commit.eventSeq &&
+        event.payload.transitionId === p.transitionId && event.payload.readingId === p.readingId &&
+        event.payload.direction === p.direction && event.payload.epoch === p.accepted.epoch);
+    return { frames, events, segments, rebases };
   }
 }
 
@@ -332,6 +342,158 @@ function easedFraction(fraction) {
   return fraction === 0 ? 0 : fraction === 1 ? 1 : (3 - 2 * t) * t * t;
 }
 
+const axisKeys = ['quickGrabberScreenY', 'fullGrabberScreenY', 'hiddenGrabberScreenY'];
+const visualKeys = ['expansionProgress', 'visibilityProgress'];
+const transitionKeys = ['progress', 'startProgress', 'targetProgress', 'elapsedMs', 'durationMs'];
+const compensationKeys = ['offsetY', 'startOffsetY', 'elapsedMs', 'durationMs', 'revision'];
+const unit = value => Math.max(0, Math.min(1, value));
+const sameFields = (a, b, keys) => keys.every(key => a[key] === b[key]);
+const motionFraction = (elapsed, duration) => easedFraction(duration > 0 ? unit(elapsed / duration) : 1);
+
+function completeRebaseSample(sample) {
+  return present(sample?.axis, axisKeys) && present(sample.transition, transitionKeys) &&
+    typeof sample.transition.kind === 'string' && present(sample.transition.from, visualKeys) &&
+    present(sample.transition.to, visualKeys) && present(sample.compensation, compensationKeys) &&
+    typeof sample.compensation.running === 'boolean' && finite(sample.compensatedGrabberScreenY);
+}
+
+function rebaseChain(rebases, fromTicket, frame, previous, data) {
+  const toTicket = frame.runtimeTicket;
+  const candidates = rebases.filter(event => event.payload.fromTicket >= fromTicket && event.payload.fromTicket < toTicket);
+  const beginMs = previous?.captureEndMs ?? data.request.deviceMonoMs;
+  if (candidates.length !== toTicket - fromTicket || !candidates.every((event, index) => {
+    const p = event.payload;
+    return event.windowRevision === data.request.windowRevision && p.source === 'ReaderControlRuntime.configure' &&
+      p.fromTicket === fromTicket + index && p.toTicket === p.fromTicket + 1 &&
+      finite(event.deviceMonoMs) && event.deviceMonoMs >= beginMs && event.deviceMonoMs <= frame.runtimeTickMs &&
+      (!index || (event.eventSeq > candidates[index - 1].eventSeq && event.deviceMonoMs >= candidates[index - 1].deviceMonoMs)) &&
+      present(p, ['beforeTickMs', 'ticketStartTickMs']) &&
+      typeof p.rebaseReason === 'string' && typeof p.anchorPreserved === 'boolean' &&
+      completeRebaseSample(p.before) && completeRebaseSample(p.after);
+  })) return null;
+  return candidates;
+}
+
+function visualAt(transition, progress) {
+  return {
+    expansionProgress: transition.from.expansionProgress +
+      (transition.to.expansionProgress - transition.from.expansionProgress) * progress,
+    visibilityProgress: transition.from.visibilityProgress +
+      (transition.to.visibilityProgress - transition.from.visibilityProgress) * progress,
+  };
+}
+
+function grabberY(axis, visual) {
+  return axis.quickGrabberScreenY + (axis.fullGrabberScreenY - axis.quickGrabberScreenY) * visual.expansionProgress +
+    (axis.hiddenGrabberScreenY - axis.quickGrabberScreenY) * (1 - visual.visibilityProgress);
+}
+
+function rebaseProjection(before, axis) {
+  const transition = before.transition;
+  const anchor = grabberY(before.axis, visualAt(transition, transition.progress)) + before.compensation.offsetY;
+  const fromY = grabberY(axis, transition.from);
+  const toY = grabberY(axis, transition.to);
+  const travel = toY - fromY;
+  const epsilon = Number.EPSILON * Math.max(1, Math.abs(fromY), Math.abs(toY), Math.abs(anchor)) * 16;
+  const spatiallyStatic = Math.abs(travel) <= epsilon;
+  const currentY = grabberY(axis, visualAt(transition, transition.progress));
+  const projected = (anchor - fromY) / travel;
+  const reachableRoot = finite(projected) &&
+    projected >= -Number.EPSILON * 64 && projected <= 1 + Number.EPSILON * 64;
+  const alreadyAtAnchor = Math.abs(currentY - anchor) <= epsilon;
+  const progress = !alreadyAtAnchor && !spatiallyStatic && reachableRoot ? unit(projected) : transition.progress;
+  const reason = spatiallyStatic ? 'compensated-static-segment' :
+    alreadyAtAnchor || reachableRoot ? 'projected' : 'compensated-outside-segment';
+  const offsetY = anchor - grabberY(axis, visualAt(transition, progress));
+  const durationMs = Math.max(0, transition.durationMs - transition.elapsedMs);
+  const running = offsetY !== 0 && durationMs > 0;
+  return { reason, progress, anchor, durationMs, compensation: {
+    offsetY, startOffsetY: offsetY, elapsedMs: 0, durationMs: running ? durationMs : 0, running,
+    revision: before.compensation.revision + (running ? 2 : 1),
+  } };
+}
+
+function compensationAt(compensation, elapsedMs) {
+  return compensation.running ?
+    compensation.startOffsetY * (1 - motionFraction(elapsedMs, compensation.durationMs)) : compensation.offsetY;
+}
+
+function progressAt(transition, elapsedMs) {
+  return transition.startProgress + (transition.targetProgress - transition.startProgress) *
+    motionFraction(elapsedMs, transition.durationMs);
+}
+
+function checkRebase(check, event, frame, priorFrame, priorTick, incoming, data, expected) {
+  const p = event.payload;
+  const { before, after } = p;
+  const old = before.transition;
+  const next = after.transition;
+  const direction = data.request.payload.direction;
+  const target = direction === 'open' ? 1 : 0;
+  const model = rebaseProjection(before, after.axis);
+  const sourceAxis = axis => axis.fullGrabberScreenY <= axis.quickGrabberScreenY &&
+    near(axis.hiddenGrabberScreenY - axis.quickGrabberScreenY, expected.dockTravelVp, expected.transformTolerance);
+  const initial = !incoming && (!priorFrame || priorFrame.runtimeElapsedMs === 0);
+  const previous = incoming?.payload.after;
+  const p0 = previous?.transition.startProgress ?? (initial ? 0 : old.startProgress);
+  const oldExpected = { ...old, startProgress: p0 };
+  const oldProgress = progressAt(oldExpected, old.elapsedMs);
+  const offsetBefore = previous ? compensationAt(previous.compensation, old.elapsedMs) :
+    before.compensation.durationMs === 0 ? before.compensation.startOffsetY :
+      before.compensation.startOffsetY * (1 - motionFraction(before.compensation.elapsedMs, before.compensation.durationMs));
+  const intermediate = !priorFrame;
+  const oldTick = intermediate ? incoming?.payload.ticketStartTickMs : priorFrame.runtimeTickMs;
+  const oldElapsed = intermediate ? 0 : priorTick !== undefined ?
+    priorFrame.runtimeElapsedMs + priorFrame.runtimeTickMs - priorTick : undefined;
+  const clock = p.beforeTickMs >= data.request.deviceMonoMs && p.ticketStartTickMs >= p.beforeTickMs &&
+    event.deviceMonoMs >= p.ticketStartTickMs && (oldTick === undefined || p.beforeTickMs === oldTick) &&
+    (oldElapsed === undefined ? old.elapsedMs <= p.beforeTickMs - data.request.deviceMonoMs : old.elapsedMs === oldElapsed);
+  check('runtime', 'rebaseClock', frame.index,
+    { beforeTickMs: p.beforeTickMs, elapsedMs: old.elapsedMs, ticketStartTickMs: p.ticketStartTickMs },
+    { beforeTickMs: oldTick ?? null, elapsedMs: oldElapsed ?? null, eventDeviceMonoMs: event.deviceMonoMs }, clock);
+  const validInput = sourceAxis(before.axis) && sourceAxis(after.axis) && !sameFields(before.axis, after.axis, axisKeys) &&
+    old.kind === direction && old.targetProgress === 1 && old.from.visibilityProgress === 1 - target &&
+    old.to.visibilityProgress === target && old.from.expansionProgress === 0 && old.to.expansionProgress === 0 &&
+    old.startProgress === p0 && old.startProgress >= 0 && old.startProgress <= 1 &&
+    old.progress >= 0 && old.progress < 1 && old.elapsedMs >= 0 && old.elapsedMs < old.durationMs &&
+    near(old.progress, oldProgress, expected.opacityTolerance) &&
+    (!priorFrame || (old.durationMs === priorFrame.runtimeDurationMs &&
+      near(priorFrame.visibilityProgress, visualAt(oldExpected, progressAt(oldExpected, priorFrame.runtimeElapsedMs)).visibilityProgress,
+        expected.opacityTolerance)));
+  const samePrevious = !previous || sameFields(before.axis, previous.axis, axisKeys) &&
+    old.durationMs === previous.transition.durationMs &&
+    before.compensation.startOffsetY === previous.compensation.startOffsetY &&
+    before.compensation.durationMs === previous.compensation.durationMs &&
+    before.compensation.revision === previous.compensation.revision &&
+    before.compensation.running === previous.compensation.running &&
+    before.compensation.elapsedMs === (previous.compensation.running ? old.elapsedMs : 0);
+  const comp = before.compensation;
+  const validCompensation = sequence(comp.revision) && comp.elapsedMs >= 0 && comp.durationMs >= 0 &&
+    comp.running === (comp.durationMs > 0 && comp.elapsedMs < comp.durationMs) &&
+    near(comp.offsetY, offsetBefore, expected.layoutToleranceVp);
+  check('runtime', 'rebaseInputs', frame.index, { axis: before.axis, ...old, compensation: comp },
+    { progress: oldProgress, offsetY: offsetBefore, startProgress: p0 }, validInput && samePrevious && validCompensation);
+  const actual = { reason: p.rebaseReason, anchorPreserved: p.anchorPreserved,
+    beforeAnchorVp: before.compensatedGrabberScreenY, afterAnchorVp: after.compensatedGrabberScreenY,
+    progress: next.progress, startProgress: next.startProgress, elapsedMs: next.elapsedMs, durationMs: next.durationMs,
+    compensation: after.compensation };
+  const predicted = { reason: model.reason, anchorPreserved: true, beforeAnchorVp: model.anchor, afterAnchorVp: model.anchor,
+    progress: model.progress, startProgress: model.progress, elapsedMs: 0, durationMs: model.durationMs,
+    compensation: model.compensation };
+  const numericalTolerance = Number.EPSILON * Math.max(1, Math.abs(model.anchor)) * 64;
+  const projectionMatches = p.rebaseReason === model.reason && p.anchorPreserved === true &&
+    next.kind === old.kind && next.targetProgress === old.targetProgress &&
+    sameFields(next.from, old.from, visualKeys) && sameFields(next.to, old.to, visualKeys) &&
+    near(next.progress, model.progress, numericalTolerance) && next.startProgress === next.progress &&
+    next.elapsedMs === 0 && next.durationMs === model.durationMs &&
+    near(before.compensatedGrabberScreenY, model.anchor, numericalTolerance) &&
+    near(after.compensatedGrabberScreenY, model.anchor, numericalTolerance) &&
+    after.compensation.running === model.compensation.running &&
+    sameFields(after.compensation, model.compensation, ['elapsedMs', 'durationMs', 'revision']) &&
+    ['offsetY', 'startOffsetY'].every(key => near(after.compensation[key], model.compensation[key], numericalTolerance));
+  check('runtime', 'rebaseProjection', frame.index, actual, predicted, projectionMatches);
+}
+
 function motionResult(evidence, direction, data) {
   const expected = evidence.assertion.expected;
   requireEvidence(present(expected, ['durationMs', 'dockTravelVp', 'layoutToleranceVp',
@@ -342,7 +504,7 @@ function motionResult(evidence, direction, data) {
     Object.values(ACTORS).every(id => expected.actors.includes(id)),
   'The versioned motion expectation lacks a sourced duration, tolerance, or cadence rule');
   const sourceRefs = evidence.ownerSources(MOTION_INPUTS);
-  const { frames, events, segments } = evidence.trace(data);
+  const { frames, events, segments, rebases } = evidence.trace(data);
   const p = data.request.payload;
   const failures = new Map(), missing = new Map();
   const checks = {};
@@ -353,8 +515,13 @@ function motionResult(evidence, direction, data) {
   const segmentStarts = new Map(segments.map(segment => [segment.start, segment]));
   const segmentDiagnostics = [];
   const ticketBoundaries = [];
+  const appliedRebases = new Map();
+  const firstTicket = segments[0].ticket;
+  const leadingTickets = rebases.filter(event => sequence(event.payload.fromTicket) && event.payload.fromTicket < firstTicket)
+    .map(event => event.payload.fromTicket);
+  const leadingTicket = leadingTickets.length ? Math.min(...leadingTickets) : firstTicket;
   const targetVisibility = direction === 'open' ? 1 : 0;
-  let segment, segmentDiagnostic;
+  let segment, segmentDiagnostic, activeRebase;
 
   function check(actor, field, frame, actual, want, result) {
     const label = `${actor}.${field}`;
@@ -375,16 +542,19 @@ function motionResult(evidence, direction, data) {
   }
 
   check('runtime', 'commandDurationMs', 0, p.durationMs, expected.durationMs, p.durationMs === expected.durationMs);
-  check('runtime', 'durationMs', 0, segments[0].durationMs, expected.durationMs,
-    segments[0].durationMs === expected.durationMs);
-  check('runtime', 'startVisibility', 0, frames[0].visibilityProgress, 1 - targetVisibility,
-    near(frames[0].visibilityProgress, 1 - targetVisibility, expected.opacityTolerance));
+  if (leadingTicket === firstTicket) {
+    check('runtime', 'durationMs', 0, segments[0].durationMs, expected.durationMs,
+      segments[0].durationMs === expected.durationMs);
+    check('runtime', 'startVisibility', 0, frames[0].visibilityProgress, 1 - targetVisibility,
+      near(frames[0].visibilityProgress, 1 - targetVisibility, expected.opacityTolerance));
+  }
   for (const frame of frames) {
     const i = frame.index;
     const v = frame.visibilityProgress;
     const nextSegment = segmentStarts.get(i);
     if (nextSegment) {
       segment = nextSegment;
+      activeRebase = undefined;
       baselineActors.clear();
       lastActor.clear();
       segmentDiagnostic = {
@@ -395,7 +565,9 @@ function motionResult(evidence, direction, data) {
       segmentDiagnostics.push(segmentDiagnostic);
     } else {
       const fraction = Math.min(1, frame.runtimeElapsedMs / segment.durationMs);
-      const startVisibility = segment.start === 0 ? 1 - targetVisibility : segmentDiagnostic.startVisibility;
+      const rebased = activeRebase?.payload.after.transition;
+      const startVisibility = rebased ? visualAt(rebased, rebased.startProgress).visibilityProgress :
+        segment.start === 0 && leadingTicket === firstTicket ? 1 - targetVisibility : segmentDiagnostic.startVisibility;
       const predicted = startVisibility + (targetVisibility - startVisibility) * easedFraction(fraction);
       const error = Math.abs(v - predicted);
       segmentDiagnostic.comparedFrames += 1;
@@ -414,24 +586,56 @@ function motionResult(evidence, direction, data) {
       const matches = actorArray.filter(actor => actor?.id === id);
       return [role, matches.length === 1 ? matches[0] : null];
     }));
-    if (nextSegment && i > 0) {
+    if (nextSegment && (i > 0 || leadingTicket < firstTicket)) {
       const previous = frames[i - 1];
-      const previousActors = Array.isArray(previous.actors) ? previous.actors : [];
+      const previousActors = Array.isArray(previous?.actors) ? previous.actors : [];
       const previousGrabbers = previousActors.filter(actor => actor?.id === ACTORS.grabber && actor.mounted === true);
       const previousGrabber = previousGrabbers.length === 1 ? previousGrabbers[0] : null;
       const grabber = selected.grabber;
+      const fromTicket = previous?.runtimeTicket ?? leadingTicket;
+      const chain = rebaseChain(rebases, fromTicket, frame, previous, data);
       const boundary = {
-        frame: i, fromTicket: previous.runtimeTicket, toTicket: frame.runtimeTicket,
-        visibilityBefore: previous.visibilityProgress, visibilityAfter: v,
-        layoutOffsetBeforeVp: previous.runtimeLayoutOffsetVp, layoutOffsetAfterVp: frame.runtimeLayoutOffsetVp,
+        frame: i, fromTicket, toTicket: frame.runtimeTicket, rebaseEventSeqs: chain?.map(event => event.eventSeq) ?? [],
+        visibilityBefore: previous?.visibilityProgress ?? null, visibilityAfter: v,
+        layoutOffsetBeforeVp: previous?.runtimeLayoutOffsetVp ?? null, layoutOffsetAfterVp: frame.runtimeLayoutOffsetVp,
         grabberWindowDeltaYVp: present(previousGrabber?.windowOriginVp, ['y']) &&
           grabber?.mounted === true && present(grabber.windowOriginVp, ['y']) ?
           grabber.windowOriginVp.y - previousGrabber.windowOriginVp.y : null,
       };
       ticketBoundaries.push(boundary);
-      // Geometry before and after the boundary does not establish the state
-      // and measured axes that the runtime used to project its prior anchor.
-      check('runtime', 'rebaseCause', i, boundary, 'owner rebase cause, input axes and transition state', null);
+      check('runtime', 'rebaseCause', i, boundary, 'one current owner rebase for each revoked ticket', chain ? true : null);
+      for (const [index, event] of (chain ?? []).entries()) {
+        const priorFrame = index === 0 ? previous : undefined;
+        const incoming = appliedRebases.get(event.payload.fromTicket);
+        const earlier = frames[i - 2];
+        const priorTick = earlier?.runtimeTicket === priorFrame?.runtimeTicket ? earlier?.runtimeTickMs :
+          incoming?.payload.ticketStartTickMs;
+        checkRebase(check, event, frame, priorFrame, priorTick, incoming, data, expected);
+        appliedRebases.set(event.payload.toTicket, event);
+      }
+      activeRebase = chain?.at(-1);
+      if (activeRebase) {
+        const t = activeRebase.payload.after.transition;
+        const visual = visualAt(t, t.progress);
+        check('runtime', 'rebaseFrameAnchor', i,
+          { durationMs: frame.runtimeDurationMs, visibilityProgress: v, expansionProgress: frame.expansionProgress },
+          { durationMs: t.durationMs, ...visual },
+          frame.runtimeDurationMs === t.durationMs && near(v, visual.visibilityProgress, expected.opacityTolerance) &&
+          near(frame.expansionProgress, visual.expansionProgress, expected.transformTolerance));
+        if (!previous) {
+          const initial = chain[0].payload.before.transition;
+          check('runtime', 'durationMs', i, initial.durationMs, expected.durationMs, initial.durationMs === expected.durationMs);
+        }
+      }
+    }
+    if (activeRebase) {
+      if (i === segment.start + 1) {
+        const elapsed = frames[segment.start].runtimeTickMs - activeRebase.payload.ticketStartTickMs;
+        check('runtime', 'rebaseFirstTick', i, frame.runtimeElapsedMs, elapsed, frame.runtimeElapsedMs === elapsed);
+      }
+      const compensation = compensationAt(activeRebase.payload.after.compensation, frame.runtimeElapsedMs);
+      check('runtime', 'rebaseCompensationVp', i, frame.runtimeLayoutOffsetVp, compensation,
+        near(frame.runtimeLayoutOffsetVp, compensation, expected.layoutToleranceVp));
     }
     check('runtime', 'actorSet', i, actorArray.map(actor => actor?.id ?? null), Object.values(ACTORS),
       actorArray.length === Object.values(ACTORS).length && Object.values(selected).every(Boolean) ? true : null);
@@ -537,6 +741,11 @@ function motionResult(evidence, direction, data) {
     }
   }
 
+  const unused = rebases.filter(event => appliedRebases.get(event.payload.toTicket) !== event);
+  if (unused.length) {
+    check('runtime', 'rebaseCause', frames.at(-1).index, unused.map(event => event.eventSeq),
+      'every current rebase event assigned to exactly one sampled ticket boundary', null);
+  }
   const gaps = frames.slice(1).map((frame, index) => (frame.frameTimeNs - frames[index].frameTimeNs) / 1e6);
   const sortedGaps = [...gaps].sort((a, b) => a - b);
   const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)];

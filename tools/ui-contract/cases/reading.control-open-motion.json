@@ -1,6 +1,6 @@
 {
   "id": "reading.control-open-motion",
-  "version": 1,
+  "version": 2,
   "pageId": "reading",
   "fixture": {
     "id": "public-local-reading-v1",
@@ -90,6 +90,10 @@
     "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
     "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
     "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
     "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
     "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
     "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
@@ -147,7 +151,7 @@
           "reader-control-content-host"
         ]
       },
-      "source": "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts; ProductMotionTiming.ts",
+      "source": "ReaderControlRuntime#configure; ReaderControlLayoutRebase#rebaseReaderControlLayout; ReaderControlMotionGeometry; ProductMotionTiming",
       "sources": [
         "window-metrics",
         "app-owner",
@@ -173,7 +177,7 @@
           "reader-control-content-host"
         ]
       },
-      "source": "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts; ProductMotionTiming.ts",
+      "source": "ReaderControlRuntime#configure; ReaderControlLayoutRebase#rebaseReaderControlLayout; ReaderControlMotionGeometry; ProductMotionTiming",
       "sources": [
         "window-metrics",
         "app-owner",

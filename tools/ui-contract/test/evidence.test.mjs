@@ -266,6 +266,17 @@ test('rejects substituted signed HAP metadata, installed identities and scoped t
   assert.throws(() => sealReceipt(wrongTarget, wrongTarget.contract), /scope-matched isolated public fixture/);
 });
 
+test('online sweep admission is explicit and limited to a search fixture', t => {
+  const search = fixture(t, searchId, ({publicFixture}) => {
+    publicFixture.captureAfterOnlineSweep = true;
+  });
+  assert.equal(sealReceipt(search, search.contract).receipt.execution, 'INCOMPLETE');
+  for (const [id, setting] of [[searchId, 'true'], [readingId, true]]) {
+    const wrong = fixture(t, id, ({publicFixture}) => { publicFixture.captureAfterOnlineSweep = setting; });
+    assert.throws(() => sealReceipt(wrong, wrong.contract), /No scope-matched isolated public fixture/);
+  }
+});
+
 test('requires candidate source fingerprint and the deployed digest of each owner', t => {
   const wrongSnapshot = fixture(t, searchId, ({ snapshot }) => {
     snapshot.files[0].sha256 = 'f'.repeat(64);

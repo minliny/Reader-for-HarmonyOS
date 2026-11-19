@@ -39,7 +39,9 @@ export function fixtureAdmission(fixture, contract, candidate) {
     (candidate.targetKind === 'vm' ? typeof fixture.vmName === 'string' && fixture.vmName.trim().length > 0 :
       fixture.physicalTestDevice === true) &&
     fixture.publicBooks === true && fixture.publicHistory === true && fixture.publicImeCandidates === true &&
-    fixture.developerMode === true && fixture.noPersonalData === true,
+    fixture.developerMode === true && fixture.noPersonalData === true &&
+    (fixture.captureAfterOnlineSweep === undefined ||
+      Boolean(contract.fixture.inputWord) && typeof fixture.captureAfterOnlineSweep === 'boolean'),
   'No scope-matched isolated public fixture and Developer Mode record');
   for (const leg of ['clientToServer','serverToTarget']) {
     const link = fixture.directRoute?.[leg];
@@ -104,19 +106,31 @@ async function freshCheckpoint(probe, {
   return current;
 }
 
-async function waitForWindowState(probe, step, instanceId, submit) {
+async function waitForWindowState(probe, step, instanceId, submit, captureAfterOnlineSweep) {
   // SearchGateway allows a source request to take 15s before window projection.
-  const deadline = performance.now() + (submit ? 20000 : 8000);
+  const waitMs = captureAfterOnlineSweep ? 300000 : submit ? 20000 : 8000;
+  const deadline = performance.now() + waitMs;
   let firstStableResult;
+  let nextPoll = submit?.beforeLog;
+  const observed = new Map();
   do {
     const checkpoint = await freshCheckpoint(probe, {instanceId, deadline});
     const mark = checkpoint.mark;
     const area = mark.payload.report?.metrics?.keyboardArea;
+    if (submit) {
+      for (const event of probeEventsInRange(probe.records.slice(nextPoll, checkpoint.record.seq),
+        instanceId, submit.beforeSeq, mark.eventSeq)) {
+        const prior = observed.get(event.eventSeq);
+        requireEvidence(!prior || equalJson(prior, event), 'Conflicting result event across probe log polls');
+        observed.set(event.eventSeq, event);
+      }
+      nextPoll = checkpoint.record.seq;
+    }
     if (step.keyboard === undefined || area?.available === true && area.visible === step.keyboard) {
       if (!submit) return checkpoint;
-      const polls = probe.records.slice(submit.beforeLog, checkpoint.record.seq);
-      const events = probeEventsInRange(polls, instanceId, submit.beforeSeq, mark.eventSeq);
-      if (!searchResultEndpoint(events, submit.beforeSeq, submit.afterSeq)) firstStableResult = undefined;
+      const events = [...observed.values()].sort((left, right) => left.eventSeq - right.eventSeq);
+      const result = searchResultEndpoint(events, submit.beforeSeq, submit.afterSeq);
+      if (!result || captureAfterOnlineSweep && result.projected.payload.searchActive !== false) firstStableResult = undefined;
       else if (!firstStableResult) firstStableResult = mark;
       else if (firstStableResult.eventSeq !== mark.eventSeq) {
         // A result publication during screen/tree transfer invalidates the sample.
@@ -125,7 +139,7 @@ async function waitForWindowState(probe, step, instanceId, submit) {
         else if (mark.deviceMonoMs - firstStableResult.deviceMonoMs >= 1500) return checkpoint;
       }
     } else firstStableResult = undefined;
-    await delay(125);
+    await delay(captureAfterOnlineSweep ? 1750 : 125);
   } while (performance.now() < deadline);
   throw Error(`Required keyboard or owner state did not settle before ${step.id}`);
 }
@@ -150,6 +164,7 @@ export async function collectHarmony(options, contract) {
   mkdirSync(options.outputDir, { mode: 0o700 });
   const store = evidenceStore(options.outputDir);
   const {refs, fixture} = copyCandidate(store, inputs);
+  const captureAfterOnlineSweep = store.json(fixture).captureAfterOnlineSweep === true;
   const candidate = loadCandidate(store, refs, contract);
   const rawDir = join(store.root, 'raw');
   mkdirSync(rawDir, { mode: 0o700 });
@@ -182,7 +197,8 @@ export async function collectHarmony(options, contract) {
       const { record, mark: before } = isAction ?
         await freshCheckpoint(probe, {instanceId, deadline:performance.now()+2500}) :
         await waitForWindowState(probe, step, instanceId,
-          step.id === 'results-settled' ? actions['submit-search'] : undefined);
+          step.id === 'results-settled' ? actions['submit-search'] : undefined,
+          step.id === 'results-settled' && captureAfterOnlineSweep);
       const entry = {kind:step.kind, id:step.id, beforeLog:record.seq, beforeSeq:before.eventSeq, hostBeginMs};
       const priorEvents = isAction ? probeEventsInRange(probe.records.slice(initial.record.seq, record.seq),
         instanceId, initial.mark.eventSeq, before.eventSeq) : [];
