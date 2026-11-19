@@ -123,6 +123,19 @@ test('admits only the search action from the submit button native description', 
   assert.doesNotMatch(JSON.stringify(unrecognized), /private button description/);
 });
 
+test('reads an enabled search button’s direct native text child without accepting a stop action', () => {
+  const step = {id:'submit-search', op:'click', target:submit, from:'ready'};
+  const ready = (label, attributes = {}, childAttrs = {}) => sample(dump([node(submit, [10, 20, 50, 40], {
+    clickable:'true', ...attributes,
+    children:[node('', [20, 25, 40, 36], {type:'Text', originalText:label, ...childAttrs})],
+  })]));
+  assert.deepEqual(requestedOperation(step, {ready:ready('搜索')}), {op:'click', x:140, y:175});
+  assert.throws(() => requestedOperation(step, {ready:ready('停止搜索')}), /no enabled search semantics/);
+  assert.throws(() => requestedOperation(step, {ready:ready('搜索', {enabled:'false'})}), /no admitted native tap point/);
+  assert.throws(() => requestedOperation(step, {ready:ready('搜索', {}, {hostWindowId:'other'})}), /no enabled search semantics/);
+  assert.throws(() => requestedOperation(step, {ready:ready('搜索', {description:'停止搜索'})}), /no enabled search semantics/);
+});
+
 test('measures ancestor containment and distinguishes clipping configuration and effect', () => {
   const assertion = { a: content, b: clip };
   const config = { ...assertion, kind: 'clip', mode: 'configuration', expected: { enabled: true } };

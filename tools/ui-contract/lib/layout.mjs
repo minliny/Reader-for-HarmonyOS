@@ -19,6 +19,22 @@ const pixelRect = (left, top, width, height) => ({ left, top, width, height });
 const right = rect => rect.left + rect.width;
 const bottom = rect => rect.top + rect.height;
 const area = rect => rect.width * rect.height;
+const searchLabels = new Set(['搜索', '停止搜索']);
+
+function submitSemantic(node) {
+  const button = node.attributes;
+  if (button.id !== 'reader-bookshelf-search-submit') return undefined;
+  const values = [button.description, button.text, button.originalText, button.accessibilityText, button.contentDescription];
+  // UITest may expose the standard button's visible label only as its Text child.
+  for (const {attributes: label} of node.children ?? []) {
+    if (label?.type === 'Text' && String(label.hostWindowId) === String(button.hostWindowId) && boolean(label.visible) === true) {
+      values.push(label.originalText, label.text);
+    }
+  }
+  const semantics = [...new Set(values.filter(value => searchLabels.has(value)))];
+  if (semantics.length === 1) return semantics[0] === '搜索' ? 'search' : 'stop';
+  return undefined;
+}
 
 function validRect(rect, checkSize = nonNegative) {
   return RECT_KEYS.every(key => Number.isFinite(rect?.[key])) &&
@@ -114,9 +130,7 @@ export function normalizeHarmonyLayout({
     const fixtureTitle = Boolean(publicBookTitle) && [a.originalText, a.text].includes(publicBookTitle);
     const fixtureCard = bookAction && [a.originalText, a.text, a.description].some(value =>
       typeof value === 'string' && value.startsWith(`${publicBookTitle}，`));
-    const searchSemantic = a.id === 'reader-bookshelf-search-submit' ?
-      [a.description, a.text, a.originalText, a.accessibilityText, a.contentDescription]
-        .find(value => value === '搜索' || value === '停止搜索') : undefined;
+    const searchSemantic = submitSemantic(node);
     nodes.push({
       ...(fixtureTitle ? { fixtureTitle: true } : {}),
       ...(bookAction ? { localBookAction: true, fixtureCard } : {}),
@@ -133,7 +147,7 @@ export function normalizeHarmonyLayout({
       clip: boolean(a.clip),
       zIndex: finiteNumber(a.zIndex),
       source: TREE_SOURCE,
-      ...(searchSemantic ? { searchSemantic: searchSemantic === '搜索' ? 'search' : 'stop' } : {}),
+      ...(searchSemantic ? { searchSemantic } : {}),
     });
     for (let index = (node.children?.length ?? 0) - 1; index >= 0; index -= 1) {
       pending.push({ node: node.children[index], path: `${path}/${index}`, parentPath: path, depth: depth + 1 });
