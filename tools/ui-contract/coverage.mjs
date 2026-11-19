@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
-import { caseIds, loadCase } from './lib/cases.mjs';
+import { caseIds, equalJson, loadCase } from './lib/cases.mjs';
 import { requireEvidence } from './lib/evidence.mjs';
 import { replayReceipt } from './lib/receipt.mjs';
 
@@ -20,6 +20,8 @@ try {
   requireEvidence(['hdcServer', 'targetRef', 'targetKind'].every(field =>
     search.candidate.identity[field] === reading.candidate.identity[field]) && search.runId !== reading.runId,
   'Phase 0 handoff must bind two distinct runs on the same server and target');
+  requireEvidence(equalJson(search.candidate.identity, reading.candidate.identity),
+    'Phase 0 handoff must bind both runs to the same candidate build, signed HAP and source snapshot');
   const complete = receipts.every(receipt => receipt.observations === 'COMPLETE');
   const pass = receipts.every(receipt => receipt.execution === 'PASS');
   console.log(JSON.stringify({

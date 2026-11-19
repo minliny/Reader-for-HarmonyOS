@@ -131,6 +131,21 @@ const evaluate = (kind, data) => evaluateMotion(byKind.get(kind), data);
 const openFrames = data => data.events.filter(event => event.kind === 'reading.control-motion' && event.payload.direction === 'open');
 const part = (data, index, role) => openFrames(data)[index].payload.frames[0].actors.find(actor => actor.id === role);
 
+function setNativePosition(frame, axis) {
+  const translation = 18 * (1 - frame.visibilityProgress);
+  for (const actor of frame.actors) {
+    if (actor.id === 'reader-control-motion-dock') {
+      actor.layoutRectVp.y = axis.fullGrabberScreenY - 9;
+      actor.translateVp.y = translation;
+      actor.opacity = frame.visibilityProgress;
+    } else {
+      actor.layoutRectVp.y = axis.quickGrabberScreenY - 9 + frame.runtimeLayoutOffsetVp +
+        (actor.id === 'reader-control-content-host' ? 29 : 0);
+    }
+    actor.windowOriginVp.y = actor.layoutRectVp.y + translation;
+  }
+}
+
 function rebaseFixture(withCauses = false) {
   const data = fixture();
   const blocks = openFrames(data);
@@ -211,6 +226,7 @@ function rebaseFixture(withCauses = false) {
     }
     data.events.push(...causes);
     data.events.sort((first, second) => first.eventSeq - second.eventSeq);
+    for (const frame of frames.slice(1)) setNativePosition(frame, causes[frame.runtimeTicket - 6].payload.after.axis);
   }
   return { data, frames, causes };
 }
@@ -251,7 +267,9 @@ test('preserves independent deviations across valid ticket partitions', () => {
   matrix[1] = -0.3;
   frames[4].visibilityProgress += 0.07;
   const result = evaluate('motion-open', data);
-  assert.equal(result.verdict, 'NOT_RUN');
+  assert.equal(result.verdict, 'FAIL');
+  assert.equal(result.observationsComplete, false);
+  assert.ok(result.actual.missing.some(item => item.field === 'rebaseCause'));
   assert.ok(result.actual.runtimeSegments.at(-1).maxVisibilityError > 0.02);
   assert.ok(result.actual.deviations.some(item => item.actor === 'shell' && item.field === 'matrix' && item.frame === 3));
   assert.ok(result.actual.deviations.some(item => item.actor === 'runtime' && item.field === 'normalizedCurve' && item.frame === 4));
@@ -264,7 +282,44 @@ test('replays measured projections, ticket clocks and actor continuity with comp
   assert.equal(result.observationsComplete, true);
   assert.equal(result.actual.checks['runtime.rebaseProjection'].observed, 2);
   assert.equal(result.actual.checks['runtime.rebaseClock'].observed, 2);
+  assert.equal(result.actual.checks['dock.rebaseWindowAnchorVp'].observed, 3);
+  assert.equal(result.actual.checks['grabber.rebaseWindowAnchorVp'].observed, 3);
   assert.deepEqual(result.actual.ticketBoundaries.map(boundary => boundary.rebaseEventSeqs), [[12], [13]]);
+});
+
+test('rejects a common native shift at a one-frame ticket on either readback side', () => {
+  for (const index of [1, 2]) {
+    const { data, frames } = rebaseFixture(true);
+    for (const actor of frames[index].actors) {
+      actor.layoutRectVp.y += 64;
+      actor.windowOriginVp.y += 64;
+    }
+    const result = evaluate('motion-open', data);
+    assert.equal(result.verdict, 'FAIL');
+    assert.ok(result.actual.deviations.some(item => item.actor === 'dock' && item.field === 'rebaseWindowAnchorVp' && item.frame === index));
+    assert.ok(result.actual.deviations.some(item => item.actor === 'grabber' && item.field === 'rebaseWindowAnchorVp' && item.frame === index));
+  }
+});
+
+test('reports a missing native boundary anchor independently of the owner projection', () => {
+  const { data, frames } = rebaseFixture(true);
+  delete frames[1].actors.find(actor => actor.id === 'reader-control-motion-grabber').windowOriginVp;
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'NOT_RUN');
+  assert.equal(result.actual.checks['runtime.rebaseProjection'].failed, 0);
+  assert.ok(result.actual.missing.some(item => item.actor === 'grabber' && item.field === 'rebaseWindowAnchorVp' && item.frame === 1));
+});
+
+test('preserves a proved matrix failure with a later cadence gap', () => {
+  const { data, frames } = rebaseFixture(true);
+  for (const frame of frames.slice(4)) frame.frameTimeNs += 300e6;
+  assert.equal(evaluate('motion-open', data).verdict, 'NOT_RUN');
+  frames[3].actors.find(actor => actor.id === 'reader-control-motion-dock').matrix[0] = 2;
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'FAIL');
+  assert.equal(result.observationsComplete, false);
+  assert.ok(result.actual.missing.some(item => item.field === 'sampleGapMs' && item.frame === 4));
+  assert.ok(result.actual.deviations.some(item => item.actor === 'dock' && item.field === 'matrix' && item.frame === 3));
 });
 
 test('replays each link across an intermediate ticket with no frame', () => {
@@ -285,14 +340,7 @@ test('replays each link across an intermediate ticket with no frame', () => {
     frame.runtimeDurationMs = 216;
     frame.runtimeElapsedMs = index === 1 ? 0 : 36 + (index - 2) * 60;
     frame.visibilityProgress = localVisibilities[index - 1];
-    const translation = 18 * (1 - frame.visibilityProgress);
-    for (const actor of frame.actors) {
-      actor.windowOriginVp.y = actor.layoutRectVp.y + translation;
-      if (actor.id === 'reader-control-motion-dock') {
-        actor.translateVp.y = translation;
-        actor.opacity = frame.visibilityProgress;
-      }
-    }
+    setNativePosition(frame, second.after.axis);
   }
   for (const [index, block] of openFrames(data).entries()) {
     const selected = index < 2 ? [observed[index]] : observed.slice(index);
@@ -301,6 +349,17 @@ test('replays each link across an intermediate ticket with no frame', () => {
   const result = evaluate('motion-open', data);
   assert.equal(result.verdict, 'PASS', JSON.stringify(result.actual?.deviations));
   assert.deepEqual(result.actual.ticketBoundaries.map(boundary => boundary.rebaseEventSeqs), [[12, 13]]);
+  first.anchorPreserved = false;
+  second.beforeTickMs += 1;
+  const contradictory = evaluate('motion-open', data);
+  assert.equal(contradictory.verdict, 'FAIL');
+  assert.equal(contradictory.observationsComplete, false);
+  assert.equal(contradictory.actual.checks['runtime.rebaseProjection'].observed, 2);
+  assert.equal(contradictory.actual.checks['runtime.rebaseClock'].observed, 2);
+  assert.equal(contradictory.actual.checks['runtime.rebaseClock'].failed, 1);
+  assert.equal(contradictory.actual.checks['runtime.rebaseProjection'].failed, 1);
+  assert.equal(contradictory.actual.checks['grabber.rebaseWindowAnchorVp'].missing, 1);
+  second.beforeTickMs -= 1;
   data.events = data.events.filter(event => event !== causes[0]);
   assert.equal(evaluate('motion-open', data).verdict, 'NOT_RUN');
 });

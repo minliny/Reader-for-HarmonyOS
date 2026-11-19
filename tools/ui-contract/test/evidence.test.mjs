@@ -32,6 +32,8 @@ function appBuild(char) {
     contentId, appContentHash: char.repeat(64), appBuildId: `0.2.0.DEV.${contentId}` };
 }
 
+const snapshotFingerprint = files => sha256(files.map(file => `${JSON.stringify(file)}\n`).join(''));
+
 // These records are intentionally synthetic. There is no HAP, device session,
 // real source capture or product-verification PASS in any fixture.
 function fixture(t, id = searchId, mutate) {
@@ -40,12 +42,14 @@ function fixture(t, id = searchId, mutate) {
   mkdirSync(bundle);
   const store = evidenceStore(bundle);
   const contract = loadCase(id);
-  const ownerSources = Object.fromEntries(contract.ownerSources.map((path, index) => [
-    path, store.write(`candidate/owner/${path}`, `Synthetic source fixture ${index}\n`),
-  ]));
-  const files = Object.entries(ownerSources).map(([path, ref]) =>
-    ({ path, type: 'file', mode: 0o644, bytes: ref.bytes, sha256: ref.sha256 }));
-  const sourceFingerprint = sha256(files.map(file => `${JSON.stringify(file)}\n`).join(''));
+  const ownerSources = {};
+  const sourcePaths = [...new Set([searchId, readingId].flatMap(caseId => loadCase(caseId).ownerSources))].sort();
+  const files = sourcePaths.map((path, index) => {
+    const content = Buffer.from(`Synthetic source fixture ${index}\n`);
+    if (contract.ownerSources.includes(path)) ownerSources[path] = store.write(`candidate/owner/${path}`, content);
+    return { path, type: 'file', mode: 0o644, bytes: content.length, sha256: sha256(content) };
+  });
+  const sourceFingerprint = snapshotFingerprint(files);
   const expectedVersion = appBuild('a');
   const hapSha256 = 'b'.repeat(64);
   const manifest = {
@@ -202,7 +206,7 @@ test('replays two synthetic receipts and coverage in an exported standalone tool
   assert.notEqual(toolIdentity(copiedTool).sha256, changedCase.sha256);
 });
 
-test('combines distinct runs on one HDC server and refuses identical target references across servers', t => {
+test('combines distinct runs for the same candidate and exact target, rejecting mismatched identities', t => {
   function seal(run) {
     const { rootSha256 } = sealReceipt(run, run.contract);
     return { path: join(run.bundle, 'receipt.json'), rootSha256 };
@@ -229,6 +233,8 @@ test('combines distinct runs on one HDC server and refuses identical target refe
   const report = JSON.parse(sameServer.stdout);
   assert.equal(report.observationStatus, 'INCOMPLETE');
   assert.equal(report.cases.length, 2);
+  assert.notEqual(report.cases[0].runId, report.cases[1].runId);
+  assert.deepEqual(report.cases[0].candidate, report.cases[1].candidate);
   assert.ok(report.cases.every(item => item.candidate.targetRef === targetRef &&
     item.candidate.hdcServer === syntheticServer && item.candidate.targetKind === 'vm'));
 
@@ -237,6 +243,30 @@ test('combines distinct runs on one HDC server and refuses identical target refe
   assert.equal(otherServer.status, 1);
   assert.equal(otherServer.stdout, '');
   assert.match(JSON.parse(otherServer.stderr).reason, /same server and target/u);
+
+  const differentCandidates = [
+    ({ manifest, deployment }) => {
+      manifest.artifacts[0].sha256 = deployment.artifact.sha256 = 'f'.repeat(64);
+    },
+    ({ manifest, deployment }) => {
+      const hash = manifest.expectedVersion.contentId + 'f'.repeat(52);
+      manifest.expectedVersion.appContentHash = deployment.postInstall.appVersion.appContentHash = hash;
+    },
+    ({ manifest, snapshot, contract }) => {
+      snapshot.files.find(file => !contract.ownerSources.includes(file.path)).sha256 = 'f'.repeat(64);
+      manifest.source.buildInputs.fingerprint = snapshot.fingerprint = snapshotFingerprint(snapshot.files);
+    },
+    ({ manifest, deployment }) => {
+      manifest.runId = deployment.runId = 'another-synthetic-build';
+    },
+  ];
+  for (const mutate of differentCandidates) {
+    const otherCandidate = cover(seal(fixture(t, readingId, mutate)));
+    assert.ifError(otherCandidate.error);
+    assert.equal(otherCandidate.status, 1);
+    assert.equal(otherCandidate.stdout, '');
+    assert.match(JSON.parse(otherCandidate.stderr).reason, /same candidate build, signed HAP and source snapshot/u);
+  }
 });
 
 test('rejects a substituted case, altered receipt root and omitted assertion even with a new root', t => {
