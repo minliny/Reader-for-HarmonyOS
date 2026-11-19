@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { readinessQueryOutput } from '../../../scripts/lib/hap-delivery-evidence.mjs';
 import { captureRecord } from '../../lib/native-ui-evidence.mjs';
-import { probeEventsInRange, readProbeEvents, checkpoint, logCommand } from '../collectors/harmonyos/records.mjs';
+import { checkpoint, installedCommand, logCommand, probeEventsInRange, readProbeEvents, sessionContext, startCommand } from '../collectors/harmonyos/records.mjs';
 import { loadCandidate } from '../collectors/harmonyos/run.mjs';
 import { loadCase, toolIdentity } from '../lib/cases.mjs';
 import { evidenceStore, jsonBytes, jsonDigest, sealChain, sha256, verifyChain } from '../lib/evidence.mjs';
@@ -330,4 +330,98 @@ test('reconciles log polls when events roll out of the final snapshot', () => {
   assert.deepEqual(probeEventsInRange([last], instanceId, 2, 4), [mark(4)]);
   assert.throws(() => probeEventsInRange([first, log({...mark(3), windowRevision: 9}), last], instanceId, 2, 4),
     /Conflicting app event across probe log polls/);
+});
+
+test('preserves reading owner and samples only around a bound incomplete motion block', () => {
+  const instanceId = '11111111-1111-4111-8111-111111111111';
+  const state = { heldPointerId: -1, transition: '', level: 'hidden', targetLevel: 'hidden' };
+  const identity = { readingId: 'synthetic-reading', transitionId: 'synthetic-open', direction: 'open', epoch: 1 };
+  const rect = { left: 0, top: 0, width: 100, height: 200 };
+  const metrics = { ready: true, revision: 1, densityPixels: 1, windowRect: rect, globalRect: rect };
+  const event = (eventSeq, kind, channel, payload, semanticSeq = eventSeq) =>
+    ({ instanceId, eventSeq, semanticSeq, deviceMonoMs: eventSeq, windowRevision: 1, kind, channel, payload });
+  const mark = (seq, semanticSeq) => event(seq, 'window-stable', 'probe',
+    { windowId: '7', orientation: 'portrait', report: { metrics, vpPixels: 1 } }, semanticSeq);
+  const block = (index, owner = identity) => event(9 + index, 'reading.control-motion', 'motion',
+    { ...owner, blockIndex: index, blockCount: 3, frameStart: index, frameEnd: index,
+      endReason: 'completed', droppedSamples: 0, frames: [{ index }] });
+  const line = (e, index, count, value) =>
+    `I A05244/ReaderUIContract: RUI1 ${e.instanceId}/${e.eventSeq}/${index}/${count} ${value}`;
+  const full = e => line(e, 0, 1, JSON.stringify(e));
+  const partial = e => line(e, 0, 2, JSON.stringify(e).split('[{"index"')[0] + '[');
+  const installed = { bundlePresent: true, appVersion: appBuild('a') };
+  const candidate = { targetRef, completedAt, expectedVersion: installed.appVersion, postInstall: installed,
+    targetKind: 'vm', hdcServer: syntheticServer };
+  const bounds = '[0,0][100,200]';
+  const attributes = { bounds, origBounds: bounds, hostWindowId: '7', visible: 'true',
+    opacity: '1', enabled: 'true', clickable: 'true' };
+  const tree = Buffer.from(JSON.stringify({ attributes: { bounds }, children: [{
+    attributes: { ...attributes, bundleName: 'io.reader.minliny', abilityName: 'EntryAbility', pagePath: 'pages/Index', type: 'root' },
+    children: [{ attributes: { ...attributes, id: 'synthetic-target' }, children: [] }],
+  }] }));
+  const remote = '/data/local/tmp/reader-control-synthetic.json';
+  const local = '/synthetic/raw/reader-control-synthetic.json';
+  const layout = { path: 'raw/reader-control-synthetic.json', bytes: tree.length, sha256: sha256(tree) };
+  const commands = { path: 'session/journal.jsonl' };
+  function replay(middle, caseId = readingId) {
+    const records = [{ event: 'ready' }, { event: 'readiness', status: 'PASS', exactConnected: true, bootCompleted: true,
+      sceneBoardStable: true, targetKind: 'vm', emulatorLog: { bootMarker: true, instabilityAfterMarker: false }, hdcServer: syntheticServer }];
+    const chain = [];
+    const steps = [];
+    const command = (args, extra) => records.push({ event: 'command', ok: true, args, ...extra });
+    const log = (...lines) => command(logCommand, { stdout: lines.join('\n') });
+    const installedSeq = command(installedCommand, { installed });
+    const baselineLog = log();
+    const start = command(startCommand);
+    const startFloor = log();
+    const initialLog = log(full(mark(1, 0)));
+    chain.push({ entry: { kind: 'preflight', readiness: 2, installed: installedSeq, baselineLog, start, startFloor, initialLog } });
+    function step(kind, id, before, after, items, from) {
+      const beforeLog = log(full(before));
+      const hostBeginMs = beforeLog;
+      const entry = { id, kind, beforeLog, beforeSeq: before.eventSeq, hostBeginMs };
+      if (kind === 'action') {
+        steps.push({ id, kind, from, target: 'synthetic-target', op: 'click' });
+        entry.command = command(['shell', 'uitest', 'uiInput', 'click', '50', '100']);
+      } else {
+        steps.push({ id, kind, anchors: ['synthetic-target'] });
+        command(['shell', 'uitest', 'dumpLayout', '-p', remote]);
+        command(['file', 'recv', remote, local]);
+        records.push({ event: 'capture-integrity', path: local, bytes: layout.bytes, sha256: layout.sha256 });
+        entry.layout = layout;
+      }
+      const floorLog = log(full(before));
+      const afterLog = log(...items, full(after));
+      chain.push({ entry: { ...entry, floorLog, afterLog, afterSeq: after.eventSeq, hostEndMs: afterLog } });
+    }
+    step('locate', 'reading-book-entry', mark(2, 0), mark(3, 0), []);
+    const ready = event(4, 'reading.ready', 'business', { state, localBook: true, reduceMotion: false });
+    step('action', 'enter-reading', mark(3, 0), mark(5, 4), [full(ready)], 'reading-book-entry');
+    step('locate', 'reading-before', mark(5, 4), mark(6, 4), []);
+    const request = event(7, 'reading.control-requested', 'business', { ...identity, accepted: { epoch: 1 } });
+    const commit = event(8, 'reading.control-committed', 'business', { ...identity, state: { epoch: 1 } });
+    step('action', 'open', mark(6, 4), mark(12, 11),
+      [full(request), full(commit), full(block(0)), ...middle, full(block(2))], 'reading-before');
+    step('locate', 'control-open', mark(12, 11), mark(13, 11), []);
+    chain.push({ entry: { kind: 'postflight', installed: command(installedCommand, { installed }) } });
+    records.push({ event: 'closed', reason: 'quit-or-eof' });
+    const journal = Buffer.from(records.map((item, index) =>
+      JSON.stringify({ targetRef, seq: index + 1, recordedAt: completedAt, ...item })).join('\n'));
+    return sessionContext({ store: { bytes: ref => ref === commands ? journal : tree },
+      session: { chain, instanceId, result: 'COMPLETED', commands }, sessionRef: { path: 'session/session.json' },
+      candidate, contract: { id: caseId, steps, fixture: {} } });
+  }
+  const preserved = replay([partial(block(1))]);
+  assert.ok(preserved.actions.open);
+  assert.ok(preserved.samples['control-open']);
+  assert.ok(preserved.events.some(e => e.kind === 'reading.control-committed'));
+  assert.ok(!preserved.events.some(e => e.eventSeq === 10));
+  assert.deepEqual(preserved.problems, ['open: Incomplete motion block 2/3 (app event 10, 1/2 Hilog fragments)']);
+  const controls = [replay([]), replay([partial(block(1, { ...identity, transitionId: 'foreign' }))]),
+    replay([partial(block(1)), partial(block(1, { ...identity, transitionId: 'foreign' }))]), replay([partial(block(1))], searchId)];
+  for (const rejected of controls) {
+    assert.equal(rejected.actions.open, undefined);
+    assert.equal(rejected.samples['control-open'], undefined);
+    assert.match(rejected.problems[0], /Missing or out-of-order app event/u);
+  }
 });

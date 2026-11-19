@@ -8,13 +8,14 @@ import { layoutTapPoint, normalizeHarmonyLayout, selectLayoutNode } from '../../
 export const logCommand = ['shell', 'hilog', '-x', '-T', 'ReaderUIContract'];
 export const installedCommand = ['shell', 'bm', 'dump', '-n', 'io.reader.minliny'];
 export const startCommand = ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', 'io.reader.minliny', '-m', 'entry'];
+const fragmentLine = /\/ReaderUIContract:\s+RUI1 ([0-9a-f-]{36})\/(\d+)\/(\d+)\/(\d+) (.*)$/u;
 
 export function readProbeEvents(record, selectedInstance) {
   requireEvidence(record?.event === 'command' && record.ok === true && equalJson(record.args, logCommand),
     'App records require the successful UI contract Hilog command');
   const events = new Map();
   for (const line of record.stdout.split(/\r?\n/u)) {
-    const match = /\/ReaderUIContract:\s+RUI1 ([0-9a-f-]{36})\/(\d+)\/(\d+)\/(\d+) (.*)$/u.exec(line);
+    const match = fragmentLine.exec(line);
     if (!match || (selectedInstance && match[1] !== selectedInstance)) continue;
     const [, instanceId, seq, index, count, value] = match;
     const key = `${instanceId}:${seq}`;
@@ -98,7 +99,66 @@ function onlyLogPolls(records, start, end) {
   return records.slice(start, end - 1).every(record => record.ok === true && equalJson(record.args, logCommand));
 }
 
-function eventSlice(records, entry, session, from) {
+function partialMotionHeader(polls, instanceId, seq) {
+  const parts = new Map();
+  let count;
+  for (const poll of polls) {
+    let previousIndex = -1;
+    for (const line of poll.stdout.split(/\r?\n/u)) {
+      const match = fragmentLine.exec(line);
+      if (!match || match[1] !== instanceId || Number(match[2]) !== seq) continue;
+      const index = Number(match[3]);
+      const total = Number(match[4]);
+      const value = match[5];
+      count ??= total;
+      if (total !== count || count < 2 || count > 512 || index >= count || index <= previousIndex ||
+          (parts.has(index) && parts.get(index) !== value)) return null;
+      parts.set(index, value);
+      previousIndex = index;
+    }
+  }
+  const first = parts.get(0);
+  const frames = first?.indexOf(',"frames":[') ?? -1;
+  if (frames < 0 || parts.size >= count) return null;
+  try {
+    // Decode only the complete header. Retained frame fragments are never
+    // turned into a motion event or passed to a behavior evaluator.
+    const header = validate('event', JSON.parse(first.slice(0, frames) + '}}'));
+    if (header.instanceId === instanceId && header.eventSeq === seq && header.semanticSeq === seq &&
+        header.kind === 'reading.control-motion' && header.channel === 'motion') {
+      return { header, count, available: parts.size };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function bindsPartialMotionBlock(header, events, direction) {
+  const requests = events.filter(event => event.kind === 'reading.control-requested' && event.channel === 'business');
+  const commits = events.filter(event => event.kind === 'reading.control-committed' && event.channel === 'business');
+  if (requests.length !== 1 || commits.length !== 1) return false;
+  const [request] = requests;
+  const [commit] = commits;
+  const { readingId, transitionId, accepted } = request.payload;
+  const epoch = accepted?.epoch;
+  if (typeof readingId !== 'string' || !readingId || typeof transitionId !== 'string' || !transitionId ||
+      !Number.isSafeInteger(epoch) || request.payload.direction !== direction ||
+      commit.eventSeq <= request.eventSeq || commit.payload.direction !== direction ||
+      commit.payload.readingId !== readingId || commit.payload.transitionId !== transitionId || commit.payload.state?.epoch !== epoch) return false;
+  const blocks = events.filter(event => event.kind === 'reading.control-motion' && event.channel === 'motion');
+  blocks.push(header);
+  blocks.sort((a, b) => a.eventSeq - b.eventSeq);
+  return blocks.length >= 2 && blocks.length <= 72 && blocks[0].eventSeq > commit.eventSeq &&
+    blocks.every(({eventSeq, payload}, index) => eventSeq === blocks[0].eventSeq + index &&
+      payload.readingId === readingId && payload.transitionId === transitionId &&
+      payload.epoch === epoch && payload.direction === direction &&
+      payload.blockIndex === index && payload.blockCount === blocks.length &&
+      payload.frameStart === index && payload.frameEnd === index && payload.endReason === 'completed' &&
+      payload.droppedSamples === 0);
+}
+
+function eventSlice(records, entry, session, from, direction) {
   const before = checkpoint(requireCommand(records, entry.beforeLog, logCommand), session.instanceId);
   const floor = latestProbeEvent(requireCommand(records, entry.floorLog, logCommand), session.instanceId);
   const endLog = requireCommand(records, entry.afterLog, logCommand);
@@ -109,13 +169,23 @@ function eventSlice(records, entry, session, from) {
     floor && floor.eventSeq >= before.eventSeq && floor.eventSeq < after.eventSeq &&
     onlyLogPolls(records, from, entry.beforeLog) && onlyLogPolls(records, entry.floorLog, entry.afterLog),
   'Broken action or sample observation interval');
-  const events = probeEventsInRange(records.slice(entry.floorLog - 1, entry.afterLog),
-    session.instanceId, before.eventSeq, after.eventSeq);
-  requireEvidence(events.length === after.eventSeq - before.eventSeq &&
-    events.every((event, i) => event.eventSeq === before.eventSeq + i + 1 &&
-      event.deviceMonoMs >= (events[i - 1]?.deviceMonoMs ?? before.deviceMonoMs)),
-  'Missing or out-of-order app event in the selected action or sample interval');
-  return { before, after, events };
+  const polls = records.slice(entry.floorLog - 1, entry.afterLog);
+  const events = probeEventsInRange(polls, session.instanceId, before.eventSeq, after.eventSeq);
+  const length = after.eventSeq - before.eventSeq;
+  const chronologyError = 'Missing or out-of-order app event in the selected action or sample interval';
+  let partial;
+  let chronology = events;
+  if (events.length !== length) {
+    requireEvidence(direction && events.length === length - 1, chronologyError);
+    const offset = events.findIndex((event, index) => event.eventSeq !== before.eventSeq + index + 1);
+    requireEvidence(offset >= 0, chronologyError);
+    partial = partialMotionHeader(polls, session.instanceId, before.eventSeq + offset + 1);
+    requireEvidence(partial && bindsPartialMotionBlock(partial.header, events, direction), chronologyError);
+    chronology = [...events.slice(0, offset), partial.header, ...events.slice(offset)];
+  }
+  requireEvidence(chronology.every((event, i) => event.eventSeq === before.eventSeq + i + 1 &&
+      event.deviceMonoMs >= (chronology[i - 1]?.deviceMonoMs ?? before.deviceMonoMs)), chronologyError);
+  return { before, after, events, partial };
 }
 
 const nodeVisible = (layout, id) => layout.nodes.some(node => node.id === id && node.visible === true && node.opacity > 0);
@@ -275,7 +345,9 @@ export function sessionContext({store, session, sessionRef, candidate, contract}
     last = entry.afterLog;
     hostEndMs = entry.hostEndMs;
     try {
-      const { before, after, events } = eventSlice(records, entry, session, prior);
+      const direction = contract.id === 'reading.control-open-motion' && step.kind === 'action' &&
+        (step.id === 'open' || step.id === 'dismiss') ? step.id : undefined;
+      const { before, after, events, partial } = eventSlice(records, entry, session, prior, direction);
       if (previousAppSeq) {
         const intervening = probeEventsInRange(records.slice(prior, entry.beforeLog),
           session.instanceId, previousAppSeq, before.eventSeq);
@@ -306,6 +378,10 @@ export function sessionContext({store, session, sessionRef, candidate, contract}
             step.target.find(id => nodeVisible(context.samples[step.from], id)) : step.target?.id,
           beforeSeq: before.eventSeq, afterSeq: after.eventSeq,
           hostBeginMs: entry.hostBeginMs, hostEndMs: entry.hostEndMs, evidenceRefs: refs };
+        if (partial) {
+          const { eventSeq, payload } = partial.header;
+          problems.push(`${entry.id}: Incomplete motion block ${payload.blockIndex + 1}/${payload.blockCount} (app event ${eventSeq}, ${partial.available}/${partial.count} Hilog fragments)`);
+        }
       }
     } catch (error) {
       problems.push(`${entry.id}: ${error.message}`);
