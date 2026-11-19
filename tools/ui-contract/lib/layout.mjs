@@ -239,9 +239,13 @@ export function layoutTapPoint(node, { requireClickable = true } = {}) {
   return { x: Math.floor(rect.left + rect.width / 2), y: Math.floor(rect.top + rect.height / 2) };
 }
 
-function nodeBox(sample, node) {
+function nativeNodeBox(node) {
   if (!validRect(node?.rectPx)) throw new Error(`Missing native bounds for ${node?.id ?? 'an ancestor'}`);
-  return toVp(node.rectPx, sample.window.density, sample.window.rectPx);
+  return node.rectPx;
+}
+
+function nodeBox(sample, node) {
+  return toVp(nativeNodeBox(node), sample.window.density, sample.window.rectPx);
 }
 
 function viewportBox(sample) {
@@ -493,15 +497,18 @@ function measureRelative(assertion, sample, baseline, node, tolerance) {
   const sameContinuity = assertion.sameContinuity === true && sample.continuityId &&
     sample.continuityId === baseline.continuityId;
   if (!sameNodeInstances && !sameContinuity) return missing('The native layout-node instances are not continuous');
-  const current = nodeBox(sample, node);
-  const reference = nodeBox(baseline, baselineNode);
-  const currentAnchor = nodeBox(sample, anchor);
-  const previousAnchor = nodeBox(baseline, baselineAnchor);
+  const current = nativeNodeBox(node);
+  const reference = nativeNodeBox(baselineNode);
+  const currentAnchor = nativeNodeBox(anchor);
+  const previousAnchor = nativeNodeBox(baselineAnchor);
+  const density = sample.window.density;
+  // Both samples share a pixel space and density. Subtract before converting
+  // so an exact one-pixel displacement also matches a one-pixel tolerance.
   const actual = {
-    dx: (current.left - currentAnchor.left) - (reference.left - previousAnchor.left),
-    dy: (current.top - currentAnchor.top) - (reference.top - previousAnchor.top),
-    dw: current.width - reference.width,
-    dh: current.height - reference.height,
+    dx: ((current.left - currentAnchor.left) - (reference.left - previousAnchor.left)) / density,
+    dy: ((current.top - currentAnchor.top) - (reference.top - previousAnchor.top)) / density,
+    dw: (current.width - reference.width) / density,
+    dh: (current.height - reference.height) / density,
   };
   return compare({ ...actual, toleranceVp: tolerance },
     Object.entries(assertion.expected).every(([key, value]) => Math.abs(actual[key] - value) <= tolerance),

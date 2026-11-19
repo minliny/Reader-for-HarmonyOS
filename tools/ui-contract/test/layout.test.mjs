@@ -225,6 +225,12 @@ test('compares node displacement relative to the same anchor with verified conti
   const after = sample(dump([search(50)]), { continuityId: 'search-2' });
   assert.equal(check(comparison, after, before).actual.dy, 0);
   assert.equal(check(comparison, after, before).verdict, 'PASS');
+  const moved = pixels => ({ ...after, nodes: after.nodes.map(item => item.id === field ?
+    {...item, rectPx:{...item.rectPx, left:item.rectPx.left + pixels}} : item) });
+  const atTolerance = check(comparison, moved(1), before);
+  assert.equal(atTolerance.actual.dx, 1 / density);
+  assert.equal(atTolerance.verdict, 'PASS');
+  assert.equal(check(comparison, moved(2), before).verdict, 'FAIL');
   assert.equal(check(comparison, sample(dump([search(50, 3)])), before).verdict, 'FAIL');
   assert.equal(check(comparison, { ...after, instanceId: 'different' }, before).verdict, 'NOT_RUN');
   const newMount = { ...after, nodes: after.nodes.map(item => item.id === field ? { ...item, key: '40' } : item) };
