@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { readinessQueryOutput } from '../../../scripts/lib/hap-delivery-evidence.mjs';
 import { captureRecord } from '../../lib/native-ui-evidence.mjs';
-import { checkpoint, installedCommand, logCommand, probeEventsInRange, readProbeEvents, sessionContext, startCommand } from '../collectors/harmonyos/records.mjs';
+import { checkpoint, installedCommand, logCommand, probeEventsInRange, readProbeEvents, sessionContext, startCommand, windowStable } from '../collectors/harmonyos/records.mjs';
 import { loadCandidate } from '../collectors/harmonyos/run.mjs';
 import { loadCase, toolIdentity } from '../lib/cases.mjs';
 import { evidenceStore, jsonBytes, jsonDigest, sealChain, sha256, verifyChain } from '../lib/evidence.mjs';
@@ -312,6 +312,15 @@ test('app log parser rejects incomplete and mixed-instance checkpoints', () => {
   assert.deepEqual(readProbeEvents(log([first])), []);
   assert.deepEqual(readProbeEvents(log([first, first, second])), []);
   assert.throws(() => checkpoint(log([first, second, ...chunks(foreignInstance, 1)]), instanceId), /instance changed/);
+});
+
+test('a new result publication breaks a quiet native capture window even when the revision is unchanged', () => {
+  const baseline = {kind:'window-stable', instanceId:'test', eventSeq:120, semanticSeq:119, deviceMonoMs:11000,
+    windowRevision:3, payload:{windowId:'45', orientation:'portrait', report:{metrics:{revision:3}}}};
+  const later = {...baseline, eventSeq:126, deviceMonoMs:12601};
+  assert.equal(windowStable(baseline, later), true);
+  assert.equal(windowStable(baseline, {...later, semanticSeq:125}), false);
+  assert.equal(windowStable(baseline, baseline), false);
 });
 
 test('reconciles log polls when events roll out of the final snapshot', () => {

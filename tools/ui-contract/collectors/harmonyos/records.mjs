@@ -67,7 +67,7 @@ export function probeEventsInRange(records, instanceId, afterSeq, throughSeq) {
   return [...bySequence.values()].sort((left, right) => left.eventSeq - right.eventSeq);
 }
 
-function windowStable(start, end) {
+export function windowStable(start, end) {
   return start.kind === 'window-stable' && end.kind === 'window-stable' &&
     start.instanceId === end.instanceId && start.eventSeq < end.eventSeq &&
     start.deviceMonoMs < end.deviceMonoMs && start.semanticSeq === end.semanticSeq &&

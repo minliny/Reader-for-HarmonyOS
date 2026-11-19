@@ -7,7 +7,7 @@ import { candidateIdentity, sha256 } from '../../../lib/native-ui-evidence.mjs';
 import { evidenceStore, requireEvidence, sealChain, validate } from '../../lib/evidence.mjs';
 import { equalJson } from '../../lib/cases.mjs';
 import { evaluateSearch, searchResultEndpoint } from '../../lib/search.mjs';
-import { assertCurrentActionState, assertInstalled, assertOwnerActionState, checkpoint, latestProbeEvent, normalizeSample, probeEventsInRange, readyForStep, requestedOperation } from './records.mjs';
+import { assertCurrentActionState, assertInstalled, assertOwnerActionState, checkpoint, latestProbeEvent, normalizeSample, probeEventsInRange, readyForStep, requestedOperation, windowStable } from './records.mjs';
 import { openProbe } from './transport.mjs';
 
 const repo = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -107,15 +107,24 @@ async function freshCheckpoint(probe, {
 async function waitForWindowState(probe, step, instanceId, submit) {
   // SearchGateway allows a source request to take 15s before window projection.
   const deadline = performance.now() + (submit ? 20000 : 8000);
+  let firstStableResult;
   do {
     const checkpoint = await freshCheckpoint(probe, {instanceId, deadline});
-    const area = checkpoint.mark.payload.report?.metrics?.keyboardArea;
+    const mark = checkpoint.mark;
+    const area = mark.payload.report?.metrics?.keyboardArea;
     if (step.keyboard === undefined || area?.available === true && area.visible === step.keyboard) {
       if (!submit) return checkpoint;
       const polls = probe.records.slice(submit.beforeLog, checkpoint.record.seq);
-      const events = probeEventsInRange(polls, instanceId, submit.beforeSeq, checkpoint.mark.eventSeq);
-      if (searchResultEndpoint(events, submit.beforeSeq, submit.afterSeq)) return checkpoint;
-    }
+      const events = probeEventsInRange(polls, instanceId, submit.beforeSeq, mark.eventSeq);
+      if (!searchResultEndpoint(events, submit.beforeSeq, submit.afterSeq)) firstStableResult = undefined;
+      else if (!firstStableResult) firstStableResult = mark;
+      else if (firstStableResult.eventSeq !== mark.eventSeq) {
+        // A result publication during screen/tree transfer invalidates the sample.
+        // Wait for the live projection to stay quiet before either capture.
+        if (!windowStable(firstStableResult, mark)) firstStableResult = mark;
+        else if (mark.deviceMonoMs - firstStableResult.deviceMonoMs >= 1500) return checkpoint;
+      }
+    } else firstStableResult = undefined;
     await delay(125);
   } while (performance.now() < deadline);
   throw Error(`Required keyboard or owner state did not settle before ${step.id}`);
