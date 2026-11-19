@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { captureRecord } from '../../lib/native-ui-evidence.mjs';
 import { readProbeEvents, checkpoint, logCommand } from '../collectors/harmonyos/records.mjs';
@@ -15,7 +17,6 @@ const readingId = 'reading.control-open-motion';
 const targetRef = '123456789abc';
 const syntheticServer = '127.0.0.1:8710';
 const completedAt = '2026-11-19T06:00:00Z';
-const runId = 'synthetic-incomplete-run';
 
 function scratch(t) {
   const directory = mkdtempSync(join(tmpdir(), 'reader-phase0-synthetic-'));
@@ -77,7 +78,7 @@ function fixture(t, id = searchId, mutate) {
     ownerSources,
   };
   const session = {
-    runId, platform: 'harmonyos', instanceId: null, result: 'INCOMPLETE', reason: 'Synthetic no-device fixture',
+    runId: `synthetic-incomplete-${id}`, platform: 'harmonyos', instanceId: null, result: 'INCOMPLETE', reason: 'Synthetic no-device fixture',
     commands: store.write('session/commands.ndjson', '\n'),
     fixture: store.writeJson('session/fixture.json', publicFixture),
     chain: [],
@@ -137,6 +138,43 @@ test('relocates both synthetic receipts and preserves exact assertion sets and p
       assert.ok(Object.values(receipt.capabilities[platform]).every(item => item.status === 'UNSUPPORTED'));
     }
   }
+});
+
+test('combines distinct runs on one HDC server and refuses identical target references across servers', t => {
+  function seal(run) {
+    const { rootSha256 } = sealReceipt(run, run.contract);
+    return { path: join(run.bundle, 'receipt.json'), rootSha256 };
+  }
+
+  const search = seal(fixture(t));
+  const localReading = seal(fixture(t, readingId));
+  const remoteReading = seal(fixture(t, readingId, ({ deployment, publicFixture }) => {
+    deployment.hdcServer = '192.168.1.10:8710';
+    publicFixture.hdcServer = deployment.hdcServer;
+  }));
+
+  function cover(reading) {
+    return spawnSync(process.execPath, [fileURLToPath(new URL('../coverage.mjs', import.meta.url)),
+      '--search', search.path, '--search-root', search.rootSha256,
+      '--reading', reading.path, '--reading-root', reading.rootSha256],
+    { encoding: 'utf8', timeout: 3000 });
+  }
+
+  const sameServer = cover(localReading);
+  assert.ifError(sameServer.error);
+  assert.equal(sameServer.stderr, '');
+  assert.equal(sameServer.status, 1);
+  const report = JSON.parse(sameServer.stdout);
+  assert.equal(report.observationStatus, 'INCOMPLETE');
+  assert.equal(report.cases.length, 2);
+  assert.ok(report.cases.every(item => item.candidate.targetRef === targetRef &&
+    item.candidate.hdcServer === syntheticServer && item.candidate.targetKind === 'vm'));
+
+  const otherServer = cover(remoteReading);
+  assert.ifError(otherServer.error);
+  assert.equal(otherServer.status, 1);
+  assert.equal(otherServer.stdout, '');
+  assert.match(JSON.parse(otherServer.stderr).reason, /same server and target/u);
 });
 
 test('rejects a substituted case, altered receipt root and omitted assertion even with a new root', t => {

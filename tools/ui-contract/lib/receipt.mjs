@@ -8,8 +8,8 @@ import { fixtureAdmission, loadCandidate } from '../collectors/harmonyos/run.mjs
 import { sessionContext } from '../collectors/harmonyos/records.mjs';
 
 function publicIdentity(candidate) {
-  const {appBuildId, appContentHash, hapSha256, sourceFingerprint, targetRef, buildRunId} = candidate;
-  return {appBuildId, appContentHash, hapSha256, sourceFingerprint, targetRef, buildRunId};
+  const { appBuildId, appContentHash, hapSha256, sourceFingerprint, buildRunId, hdcServer, targetRef, targetKind } = candidate;
+  return { appBuildId, appContentHash, hapSha256, sourceFingerprint, buildRunId, hdcServer, targetRef, targetKind };
 }
 
 function evaluate(assertion, context) {

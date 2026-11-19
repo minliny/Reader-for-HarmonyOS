@@ -141,7 +141,20 @@
             "manifest": { "$ref": "#/$defs/ref" }, "deployment": { "$ref": "#/$defs/ref" },
             "snapshot": { "$ref": "#/$defs/ref" },
             "ownerSources": { "type": "object", "additionalProperties": { "$ref": "#/$defs/ref" } },
-            "identity": { "type": "object" }
+            "identity": {
+              "type": "object", "additionalProperties": false,
+              "required": ["appBuildId","appContentHash","hapSha256","sourceFingerprint","buildRunId","hdcServer","targetRef","targetKind"],
+              "properties": {
+                "appBuildId": { "$ref": "#/$defs/id" },
+                "appContentHash": { "$ref": "#/$defs/digest" },
+                "hapSha256": { "$ref": "#/$defs/digest" },
+                "sourceFingerprint": { "$ref": "#/$defs/digest" },
+                "buildRunId": { "$ref": "#/$defs/id" },
+                "hdcServer": { "enum": ["127.0.0.1:8710","192.168.1.10:8710"] },
+                "targetRef": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
+                "targetKind": { "enum": ["vm","physical"] }
+              }
+            }
           }
         },
         "session": { "$ref": "#/$defs/ref" },

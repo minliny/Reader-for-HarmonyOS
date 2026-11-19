@@ -39,7 +39,7 @@ node tools/ui-contract/cli.mjs --case reading.control-open-motion \
 
 ## 离线复核
 
-交接双方分别留存 receipt 的 SHA-256。把整个输出目录移动到接收方目录，从可信工具安装处运行重放。
+交接双方分别留存 receipt 的 SHA-256。把整个输出目录移动到接收方目录，从可信工具安装处运行重放。两份回执用各自部署记录的 HDC server、目标引用和目标类型核对是否来自同一目标。
 
 ```sh
 node tools/ui-contract/cli.mjs --case bookshelf.search-input-ime \

@@ -16,8 +16,10 @@ try {
     receiptPath:values[key], expectedRoot:values[`${key}-root`], contract:loadCase(caseIds[index]),
   }));
   const receipts = runs.map(run => run.receipt);
-  requireEvidence(receipts[0].candidate.identity.targetRef === receipts[1].candidate.identity.targetRef &&
-    receipts[0].runId !== receipts[1].runId, 'Phase 0 handoff must bind two distinct runs on the same target');
+  const [search, reading] = receipts;
+  requireEvidence(['hdcServer', 'targetRef', 'targetKind'].every(field =>
+    search.candidate.identity[field] === reading.candidate.identity[field]) && search.runId !== reading.runId,
+  'Phase 0 handoff must bind two distinct runs on the same server and target');
   const complete = receipts.every(receipt => receipt.observations === 'COMPLETE');
   const pass = receipts.every(receipt => receipt.execution === 'PASS');
   console.log(JSON.stringify({
