@@ -1,48 +1,25 @@
 export type JsonObject = { [key: string]: unknown };
 
-/** Core-owned local recovery only. No path, nonce or remote URL is accepted. */
-export type RuntimeStorageBackupCreateParams = Record<string, never>;
-export type RuntimeStorageBackupCreateData = {
-  backupId: string;
-  sha256: string;
-  bytes: number;
-  format: "library47";
-  schemaUserVersion: 47;
+/** Reader-owned source organization, separate from executable BookSource rules. */
+export type SourceGroupRecord = { groupId: string; name: string };
+export type SourceGroupMembership = { sourceId: string; groupId: string; locallyAssigned: boolean };
+export type SourceGroupCatalogData = { version: 1; revision: number; groups: SourceGroupRecord[]; memberships: SourceGroupMembership[] };
+export type SourceGroupMutateParams = {
+  expectedRevision: number; action: "create" | "rename" | "delete" | "assign";
+  groupId?: string; name?: string; targetGroupId?: string; sourceIds?: string[];
 };
-export type RuntimeStorageBackupRestoreParams = {
-  backupId: string;
-  expectedSha256: string;
+export type SourceGroupMutateData = { version: 1; revision: number; action: SourceGroupMutateParams["action"]; groupId: string; affectedSourceIds: string[] };
+export type SourceGroupedImportParams = {
+  expectedRevision: number; strategy: "preserve" | "fill" | "all";
+  targetGroupId?: string; targetGroupName?: string;
+  items: { sourceId: string; name?: string; baseUrl?: string; rules?: JsonObject | null; bookSource?: JsonObject | null; useSourceReplacement?: boolean }[];
 };
-export type RuntimeStorageBackupRestoreData = {
-  restored: boolean;
-  backupId: string;
-  sha256: string;
-  format: "library47";
-  schemaUserVersion: 47;
-  revokedResourceGrants: number;
-  resourceEvidenceRequiringValidation: number;
-};
+export type SourceGroupedImportResult = { index: number; sourceId: string; status: "imported" | "failed"; name?: string; groupId?: string; locallyAssigned?: boolean; error?: string };
+export type SourceGroupedImportData = { version: 1; revision: number; importedCount: number; failedCount: number; results: SourceGroupedImportResult[] };
 
-/** Compiled operation support; concrete data still needs Core preflight. */
-export type CoreStorageCapabilities = {
-  logicalExport: boolean;
-  logicalRestore: boolean;
-  legacyHostImport: boolean;
-  physicalBackup: boolean;
-  physicalRestore: boolean;
-  webdavConfigRestore: boolean;
-  activeLibrarySync: false;
-  logicalExportRequiresDataPreflight: true;
-  logicalRestoreRequiresCompleteCoverage: true;
-  resourceEvidenceOnly: true;
-  externalFilesIncluded: false;
-};
-/** Missing matrix is an old declaration, not permission for new operations. */
-export type CoreStorageFormatInfo = {
-  format: "legacy" | "library47";
-  /** Equals logicalExport && logicalRestore && legacyHostImport when matrix is present. */
-  portableSnapshotSupported: boolean;
-  capabilities?: CoreStorageCapabilities;
+export type ReaderCoreStorageMigration = { sourceSchemaVersion: number; targetSchemaVersion: number };
+export type ReaderCoreRuntimeConfig = JsonObject & {
+  dataDirectory?: string; cacheDirectory?: string; storageMigration?: ReaderCoreStorageMigration;
 };
 
 export type NativeRuntimeHandle = unknown;
@@ -62,6 +39,7 @@ export type NativeReaderCoreModule = {
   readEpubEntry(archivePath: string, entryPath: string, maxBytes: number): Uint8Array;
   readEpubEntryAsync(archivePath: string, entryPath: string, maxBytes: number): Promise<Uint8Array>;
   encodeText(text: string, charset: string, maxBytes: number): Uint8Array;
+  probeStorageAsync?(dataDirectory: string): Promise<string>;
   createRuntime(config?: JsonObject | string): NativeRuntimeHandle;
   createRuntimeAsync?(config?: JsonObject | string): Promise<NativeRuntimeHandle>;
   releaseRuntime(runtime: NativeRuntimeHandle): void;
@@ -95,6 +73,47 @@ export type NativeReaderCoreModule = {
   lifecycleSmoke(iterations?: number): string;
 };
 
+/** Independent maintenance v1; never an extension of the closed core.info DTO. */
+export type ReaderCoreStorageProbe = {
+  schemaVersion: number;
+  buildIdentity: JsonObject;
+  contractSha256: string;
+  coreInputFingerprint: string | null;
+  observation: {
+    freshStorage: boolean;
+    layout: JsonObject | null;
+    requiresMigration: boolean;
+    explicitMigration: JsonObject | null;
+    observedDataFormatGeneration: number | null;
+  };
+};
+
+export async function probeReaderCoreStorageWithModule(native: NativeReaderCoreModule,
+  dataDirectory: string, isCurrent: () => boolean = () => true): Promise<ReaderCoreStorageProbe> {
+  if (!isCurrent()) throw new Error('Reader Core storage admission cancelled');
+  if (native.probeStorageAsync === undefined) throw new Error('Reader Core storage admission API is unavailable');
+  const raw = await native.probeStorageAsync(dataDirectory);
+  if (!isCurrent()) throw new Error('Reader Core storage admission cancelled');
+  if (raw.length === 0 || raw.length > 64 * 1024) throw new Error('Reader Core storage admission response exceeds budget');
+  const value: unknown = JSON.parse(raw);
+  if (!isJsonObject(value) || value['schemaVersion'] !== 1 || !isJsonObject(value['buildIdentity']) ||
+    typeof value['contractSha256'] !== 'string' || !/^[0-9a-f]{64}$/.test(value['contractSha256']) ||
+    !(value['coreInputFingerprint'] === null || (typeof value['coreInputFingerprint'] === 'string' && /^[0-9a-f]{64}$/.test(value['coreInputFingerprint']))) ||
+    !isJsonObject(value['observation'])) throw new Error('Reader Core storage admission response is invalid');
+  const observed = value['observation'];
+  if (typeof observed['freshStorage'] !== 'boolean' || typeof observed['requiresMigration'] !== 'boolean' ||
+    !(observed['layout'] === null || isJsonObject(observed['layout'])) ||
+    !(observed['explicitMigration'] === null || isJsonObject(observed['explicitMigration'])) ||
+    !(observed['observedDataFormatGeneration'] === null || isNonNegativeSafeInteger(observed['observedDataFormatGeneration'])) ||
+    (observed['requiresMigration'] && observed['explicitMigration'] === null) ||
+    (!observed['freshStorage'] && !observed['requiresMigration'] && observed['layout'] === null)) {
+    throw new Error('Reader Core storage admission observation is invalid');
+  }
+  // Core owns the supported layout and explicit migration table. The Host does
+  // not reproduce schema bounds or infer compatibility from the cursor.
+  return value as unknown as ReaderCoreStorageProbe;
+}
+
 export type ReaderCoreLastError = { code: number; message: string };
 
 /** Content-free native terminal observation, never a result or wire copy. */
@@ -110,8 +129,7 @@ export type ReaderCoreTerminalMetadata = {
 const TERMINAL_DIAGNOSTIC_METHODS = new Set<string>([
   "core.info", "runtime.ping", "runtime.hostSmoke", "runtime.status",
   "runtime.storage.restore", "runtime.storage.flush", "runtime.storage.export", "runtime.storage.apply",
-  "runtime.storage.backup.create", "runtime.storage.backup.restore",
-  "source.list", "source.import", "source.supply", "source.update", "source.delete",
+  "source.group.catalog", "source.list", "source.import", "source.supply", "source.update", "source.delete",
   "book.search", "book.detail", "book.toc", "chapter.content",
   "bookshelf.list", "bookshelf.get", "bookshelf.add", "bookshelf.book.update",
   "local_book.toc", "local_book.content.metrics", "local_book.chapter.content",
@@ -368,7 +386,7 @@ export class ReaderCoreRuntime {
   private readonly activeHostRequests = new Map<number, ReaderCoreHostRequestEvent>();
   private readonly resultWaiters = new Map<number, Set<ResultWaiter>>();
 
-  constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}, initializedHandle?: NativeRuntimeHandle) {
+  constructor(nativeModule: NativeReaderCoreModule, config: ReaderCoreRuntimeConfig = {}, initializedHandle?: NativeRuntimeHandle) {
     this.native = nativeModule;
     this.runtime = initializedHandle === undefined ? nativeModule.createRuntime(config) : initializedHandle;
     this.deliveryMode = nativeModule.enableEventAcknowledgements !== undefined && nativeModule.acknowledgeEvent !== undefined
@@ -379,7 +397,7 @@ export class ReaderCoreRuntime {
     }
   }
 
-  static async createAsync(nativeModule: NativeReaderCoreModule, config: JsonObject = {},
+  static async createAsync(nativeModule: NativeReaderCoreModule, config: ReaderCoreRuntimeConfig = {},
     isCurrent: () => boolean = () => true): Promise<ReaderCoreRuntime> {
     if (!isCurrent()) throw new Error('Reader Core startup cancelled');
     const handle = nativeModule.createRuntimeAsync === undefined ? nativeModule.createRuntime(config) :
@@ -837,6 +855,22 @@ export class ReaderCoreRuntime {
       if (this.closed || waiter.interruption !== undefined) finish();
       else timer = setTimeout(finish, waitMs);
     });
+  }
+
+  async sourceGroupCatalog(timeoutMs = 5000): Promise<ReaderCoreResultEvent> {
+    return this.request("source.group.catalog", { reportVersion: 1 }, { timeoutMs });
+  }
+
+  async sourceGroupMutate(operationId: string, sequence: number, params: SourceGroupMutateParams,
+    options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+    return this.request("rules.mutation.apply", { operationId, sequence,
+      mutation: { method: "source.group.mutate", params } }, options);
+  }
+
+  async sourceImportGrouped(operationId: string, sequence: number, params: SourceGroupedImportParams,
+    options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+    return this.request("rules.mutation.apply", { operationId, sequence,
+      mutation: { method: "source.import.grouped", params } }, options);
   }
 
   async coreInfo(timeoutMs = 2000): Promise<ReaderCoreResultEvent> {

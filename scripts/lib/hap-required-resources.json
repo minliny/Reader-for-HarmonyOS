@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "scope": "Required production fonts and redistribution notices; explicit review when assets change.",
   "paths": [
+    "reader-core-storage-identity.v1.json",
     "FONT-SOURCES.txt",
     "Inter-OFL.txt",
     "InterVariable.ttf",

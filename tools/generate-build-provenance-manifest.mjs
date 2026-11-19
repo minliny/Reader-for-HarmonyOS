@@ -2,6 +2,8 @@
 import { resolveHostTool } from './lib/tool-environment.mjs';
 
 import { createHash } from 'node:crypto';
+import { verifyStorageBuildContract } from '../../Reader-Core/scripts/storage-build-contract.mjs';
+import { verifyStorageBootstrapIdentity, STORAGE_BOOTSTRAP_RESOURCE } from '../scripts/lib/storage-delivery-contract.mjs';
 import { execFileSync } from 'node:child_process';
 import {
   copyFileSync,
@@ -227,6 +229,7 @@ const preflight = args.get('--preflight') === true;
 const hapPath = preflight ? undefined : requireArg(args, '--hap');
 const outputPath = requireArg(args, '--output');
 const buildEvidencePath = requireArg(args, '--core-build-evidence');
+const bootstrapIdentityPath = requireArg(args, '--storage-bootstrap-identity');
 const nativeStripToolPath = preflight ? undefined : requireArg(args, '--native-strip-tool');
 const coreInputPath = requireArg(args, '--core-input-snapshot');
 const allowDirty = args.get('--allow-dirty') === true;
@@ -235,7 +238,7 @@ const allowDirty = args.get('--allow-dirty') === true;
 // Check type before JSON parsing, hashing, unzip, copy or tool execution: a
 // FIFO must fail promptly instead of blocking before the Host source gate.
 const staticFileInputs = [identityPath, napiManifestPath, nativeSoPath, appNativeSoPath,
-  buildEvidencePath, coreInputPath, hapPath, nativeStripToolPath].filter(Boolean);
+  buildEvidencePath, coreInputPath, bootstrapIdentityPath, hapPath, nativeStripToolPath].filter(Boolean);
 for (const path of staticFileInputs) assertRegularFile(path);
 const outputCanonical = canonicalPath(outputPath);
 const protectedInputs = [...staticFileInputs, join(coreRepo, '.git'), join(harmonyRepo, '.git')];
@@ -298,6 +301,15 @@ if (new Set(packageSdk.map(entry => entry.path)).size !== packageSdk.length ||
       entry.path === expected.path && entry.sha256 === expected.sha256 && entry.bytes === expected.bytes))) {
   throw new Error('Harmony vendored SDK does not match the NAPI package manifest');
 }
+const storageCompanionPath = resolve(vendorRoot, 'storage-contract.v1.json');
+const storageBuildContract = JSON.parse(readRegular(storageCompanionPath, 'utf8'));
+verifyStorageBuildContract(storageBuildContract, { coreIdentity, identitySha256: identityArtifact.sha256,
+  coreInputSnapshot, nativeRecord: nativeSo,
+  contractSource: readRegular(resolve(coreRepo, 'storage/storage-contract.v1.json'), 'utf8') });
+verifyStorageBootstrapIdentity(readRegular(bootstrapIdentityPath), storageBuildContract);
+if (buildEvidence.values['storage_contract_sha256'] !== fileRecord(storageCompanionPath).sha256) {
+  throw new Error('Core build evidence does not bind the storage companion');
+}
 const packageNative = napiPackage.entries.find((entry) => entry.path === `libs/${abi}/libreader_core_napi.so`);
 if (packageNative === undefined || packageNative.sha256 !== nativeSo.sha256 || packageNative.bytes !== nativeSo.bytes) {
   throw new Error('NAPI package manifest does not bind the supplied native library');
@@ -305,11 +317,15 @@ if (packageNative === undefined || packageNative.sha256 !== nativeSo.sha256 || p
 if (preflight) {
   writeJsonAtomic(outputPath, { schemaVersion: 1, name: 'reader-native-preflight', abi,
     coreGit, harmonyGit, coreInputArtifact, coreInputFingerprint: coreInputSnapshot.fingerprint,
-    buildId: coreIdentity.buildId, nativeSo, vendor, napiPackage, sdkSmoke: sdkSmoke.status, sdkSmokeEvidence: sdkSmoke });
+    buildId: coreIdentity.buildId, nativeSo, vendor, napiPackage, storageBuildContract, sdkSmoke: sdkSmoke.status, sdkSmokeEvidence: sdkSmoke });
   console.log(JSON.stringify({ status: 'PASS', evidenceLayer: 'native-input-compatibility', abi, output: outputPath, nativeInputSha256: nativeSo.sha256, sdkSmoke: sdkSmoke.status, sdkSmokeEvidence: sdkSmoke }));
   process.exit(0);
 }
 const embeddedNative = archiveEntryRecord(hapPath, `libs/${abi}/libreader_core_napi.so`);
+const embeddedBootstrap = archiveEntryRecord(hapPath, `resources/rawfile/${STORAGE_BOOTSTRAP_RESOURCE}`);
+if (embeddedBootstrap.sha256 !== fileRecord(bootstrapIdentityPath).sha256) {
+  throw new Error('HAP storage bootstrap expectation differs from the verified Native companion');
+}
 const packagedNative = stripAllRecord(appNativeSoPath, nativeStripToolPath);
 if (embeddedNative.sha256 !== packagedNative.sha256 || embeddedNative.bytes !== packagedNative.bytes) {
   throw new Error('HAP embedded NAPI does not match the reproducibly stripped Harmony app native input');
@@ -322,6 +338,7 @@ const manifest = {
   generatedAt: new Date().toISOString(),
   acceptanceEligible: sdkSmoke.acceptanceEligible && !coreGit.dirty && !harmonyGit.dirty && !coreIdentity.gitDirty,
   sdkSmoke: sdkSmoke.status,
+  storageBuildContract,
   sdkSmokeEvidence: sdkSmoke,
   core: {
     git: coreGit,
@@ -354,6 +371,7 @@ const manifest = {
     // artifact name instead of the ephemeral staging path.
     ...fileRecord(hapPath, basename(hapPath)),
     embeddedNative,
+    embeddedBootstrap,
   },
   generator: {
     node: process.version,

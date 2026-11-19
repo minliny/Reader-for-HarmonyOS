@@ -70,3 +70,5 @@ SKILL.md
 
 # Local development gate and HAP attempt receipts are generated evidence.
 /.reader-artifacts/
+
+/entry/src/main/resources/rawfile/reader-core-storage-identity.v1.json

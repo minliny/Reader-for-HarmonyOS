@@ -7,12 +7,13 @@ import common from '@ohos.app.ability.common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   createReaderCoreRuntimeAsync,
+  probeReaderCoreStorageAsync,
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
+  type ReaderCoreStorageProbe,
   type RequestOptions,
 } from '@reader/core-harmony';
-import type { CoreStorageFormatInfo, CoreStorageCapabilities } from '@reader/core-harmony/sdk/reader_core';
 import {
   type BookSourceJsonSelection,
   type LocalBookAssetCommit,
@@ -112,8 +113,26 @@ type CoreStorageCompatibility = {
   sqliteStorageSourceSha256: string;
 };
 
-/** An opened Core's format capability; Host never derives this from a schema number. */
-type CoreStorageFormat = CoreStorageFormatInfo;
+/** Legacy recovery facts that older Core builds could return in core.info. */
+type LegacyCoreStorageCapabilities = {
+  logicalExport: boolean;
+  logicalRestore: boolean;
+  legacyHostImport: boolean;
+  physicalBackup: boolean;
+  physicalRestore: boolean;
+  webdavConfigRestore: boolean;
+  activeLibrarySync: false;
+  logicalExportRequiresDataPreflight: true;
+  logicalRestoreRequiresCompleteCoverage: true;
+  resourceEvidenceOnly: true;
+  externalFilesIncluded: false;
+};
+
+type LegacyCoreStorageFormat = {
+  format: 'legacy' | 'library47';
+  portableSnapshotSupported: boolean;
+  capabilities?: LegacyCoreStorageCapabilities;
+};
 export type ReaderLegacySnapshotRecovery = 'none' | 'unsupportedStorageFormat' | 'storageCapabilityUnavailable' | 'automaticImportDeferred';
 
 type BundledSourceInstallSummary = {
@@ -1679,6 +1698,29 @@ export class ReaderRuntimeOwner {
     await this.startRuntime();
   }
 
+  private async requireStorageProbeIdentity(probe: ReaderCoreStorageProbe, current: () => boolean): Promise<void> {
+    const raw = await this.host.readBundledRawFileText('reader-core-storage-identity.v1.json');
+    if (!current() || raw.length > 4096) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
+    const value: unknown = JSON.parse(raw);
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
+    }
+    const expected = value as JsonObject;
+    if (Object.keys(expected).length !== 5 || expected['format'] !== 'reader.storage-bootstrap-identity' ||
+      expected['version'] !== 1 || !this.isLowerHex(expected['buildId'], 64, 64) ||
+      !this.isLowerHex(expected['contractSha256'], 64, 64) ||
+      !this.isLowerHex(expected['coreInputFingerprint'], 64, 64) ||
+      expected['buildId'] !== probe.buildIdentity['buildId'] || expected['contractSha256'] !== probe.contractSha256 ||
+      expected['coreInputFingerprint'] !== probe.coreInputFingerprint) {
+      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
+    }
+    if (!current()) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
+    const receipt = JSON.stringify({ schemaVersion: 1, buildId: expected['buildId'], contractSha256: expected['contractSha256'],
+      coreInputFingerprint: expected['coreInputFingerprint'], matched: true });
+    hilog.info(LOG_DOMAIN, 'Reader', 'Storage bootstrap identity: %{public}s', receipt);
+    ReaderStartupTrace.current()?.mark('startup.storage-identity', 'matched');
+  }
+
   private async startRuntime(): Promise<void> {
     // Host file-existence checks are independent of native database open and
     // capability negotiation. Start them together, but consume the result
@@ -1689,10 +1731,22 @@ export class ReaderRuntimeOwner {
     // retaining its original rejection for the admission barrier below.
     void legacyMigration.catch((): void => {});
     let runtime: ReaderCoreRuntime;
+    let admittedBuild: CoreBuildIdentity;
+    const isCurrent = (): boolean => this.state === 'starting' && ReaderRuntimeOwner.isCurrent(this);
     try {
-      runtime = await ReaderStartupTrace.measure('startup.native-open', (): Promise<ReaderCoreRuntime> => createReaderCoreRuntimeAsync({
-        dataDirectory: `${this.host.getContext().filesDir}/reader-core`,
-      }, (): boolean => this.state === 'starting'));
+      const dataDirectory = `${this.host.getContext().filesDir}/reader-core`;
+      const storageProbe = await ReaderStartupTrace.measure('startup.storage-admission',
+        (): Promise<ReaderCoreStorageProbe> => probeReaderCoreStorageAsync(dataDirectory, isCurrent));
+      if (!isCurrent()) throw new Error('Reader Core startup cancelled after storage admission');
+      admittedBuild = this.requireCoreBuildIdentity(storageProbe.buildIdentity);
+      await this.requireStorageProbeIdentity(storageProbe, isCurrent);
+      const startupConfig: JsonObject = { dataDirectory: dataDirectory };
+      // Core owns the explicit migration plan and revalidates it on open.
+      if (storageProbe.observation.requiresMigration && storageProbe.observation.explicitMigration !== null) {
+        startupConfig['storageMigration'] = storageProbe.observation.explicitMigration;
+      }
+      runtime = await ReaderStartupTrace.measure('startup.native-open',
+        (): Promise<ReaderCoreRuntime> => createReaderCoreRuntimeAsync(startupConfig, isCurrent));
     } catch (error) {
       if (this.state === 'starting') this.state = 'new';
       throw error;
@@ -1736,6 +1790,9 @@ export class ReaderRuntimeOwner {
         }
       }
       const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
+      if (buildIdentity.buildId !== admittedBuild.buildId) {
+        throw new Error('Reader Core build changed after storage admission');
+      }
       const storageFormat = this.requireCoreStorageFormat(coreInfo.data['storageFormat']);
       const sqliteUserVersion = coreInfo.data['sqliteUserVersion'];
       if (typeof sqliteUserVersion === 'number' && Number.isSafeInteger(sqliteUserVersion) &&
@@ -1774,7 +1831,7 @@ export class ReaderRuntimeOwner {
       hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
-      if (this.state !== 'starting') {
+      if (!isCurrent()) {
         throw new Error('Reader Core runtime was closed during startup');
       }
       this.runtime = runtime;
@@ -2241,7 +2298,7 @@ export class ReaderRuntimeOwner {
     return result;
   }
 
-  private requireCoreStorageFormat(value: unknown): CoreStorageFormat | undefined {
+  private requireCoreStorageFormat(value: unknown): LegacyCoreStorageFormat | undefined {
     if (value === undefined) return undefined;
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       throw new Error('core.info returned invalid storage format capability');
@@ -2262,7 +2319,7 @@ export class ReaderRuntimeOwner {
     return { format, portableSnapshotSupported: portable, capabilities };
   }
 
-  private requireCoreStorageCapabilities(value: unknown): CoreStorageCapabilities {
+  private requireCoreStorageCapabilities(value: unknown): LegacyCoreStorageCapabilities {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       throw new Error('core.info returned invalid storage format capability');
     }

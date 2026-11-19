@@ -2,6 +2,8 @@ import readerCoreNapi from 'libreader_core_napi.so';
 
 import {
   ReaderCoreRuntime,
+  probeReaderCoreStorageWithModule,
+  type ReaderCoreStorageProbe,
   type JsonObject,
   type NativeReaderCoreModule,
   type ReaderCoreAssetBridge,
@@ -37,6 +39,7 @@ export {
   type ReaderCoreEvent,
   type ReaderCoreHostRequestEvent,
   type ReaderCoreLastError,
+  type ReaderCoreStorageProbe,
   type ReaderCoreResultEvent,
   type ReaderCoreTransactionKind,
   type ReaderCoreTransactionPendingDetails,
@@ -58,6 +61,11 @@ export {
 } from './sdk/smoke_report';
 
 const nativeReaderCore = readerCoreNapi as NativeReaderCoreModule;
+
+export async function probeReaderCoreStorageAsync(dataDirectory: string,
+  isCurrent: () => boolean = () => true): Promise<ReaderCoreStorageProbe> {
+  return probeReaderCoreStorageWithModule(nativeReaderCore, dataDirectory, isCurrent);
+}
 
 export function createReaderCoreRuntime(config: JsonObject = {}): ReaderCoreRuntime {
   return new ReaderCoreRuntime(nativeReaderCore, config);

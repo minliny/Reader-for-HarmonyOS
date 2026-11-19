@@ -31,7 +31,11 @@ import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core/scripts/bu
 import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development-environment.mjs';
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
-import { embeddedStorageCompatibility, storageUpdateRoute, loadStorageTransitionProof, bindStorageTransitionTarget, storageTransitionResources, readStoppedStorageTransitionState } from './lib/hap-storage-admission.mjs';
+import { embeddedStorageCompatibility, storageUpdateRoute } from './lib/hap-storage-admission.mjs';
+import { publishStorageDeliveryContract, verifyStorageDeliveryContract, storageBootstrapIdentityBytes, STORAGE_BOOTSTRAP_RESOURCE } from './lib/storage-delivery-contract.mjs';
+import { collectStorageAdmission, installedStorageIdentity, storageAdmissionAllowed, revalidateStorageAdmission,
+  recordInstalledStorageCandidate, releaseStorageAdmission } from './lib/storage-deployment-admission.mjs';
+import { collectStorageDeviceEvidence } from './lib/storage-device-evidence.mjs';
 import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
 import { APP_IDENTITY_SCHEMA, APP_RELEASE_LEDGER, createAppBuildIdentity, packagedAppVersion, assertAppVersion, installedAppIdentity } from './lib/app-build-identity.mjs';
 import { prepareAppIdentity, assertAppIdentityUnchanged, verifyAppContentEvidence } from './lib/app-build-context.mjs';
@@ -944,6 +948,7 @@ export function nativeInputPaths(coreRoot = CORE_ROOT, env = process.env) {
     packageManifest: resolve(base, 'harmony-package-manifest.sha256'),
     buildEvidence: resolve(base, 'harmony-napi-build-evidence.txt'),
     nativeSo: resolve(base, 'package/libs', abi, 'libreader_core_napi.so'),
+    storageContract: resolve(base, 'package/storage-contract.v1.json'),
   };
 }
 
@@ -964,6 +969,7 @@ function nativeProvenanceArguments(env = process.env) {
     '--napi-manifest', inputs.packageManifest, '--native-so', inputs.nativeSo,
     '--app-native-so', resolve(REPO_ROOT, 'entry/libs', abi, 'libreader_core_napi.so'),
     '--harmony-vendor', resolve(REPO_ROOT, 'entry/vendor/core-harmony'),
+    '--storage-bootstrap-identity', resolve(REPO_ROOT, 'entry/src/main/resources/rawfile', STORAGE_BOOTSTRAP_RESOURCE),
     '--core-build-evidence', inputs.buildEvidence,
   ];
 }
@@ -1060,7 +1066,7 @@ function syncNative(env = process.env) {
   const inputs = requireAcceptanceInputs(CORE_ROOT, env);
   const packageRoot = resolve(dirname(inputs.packageManifest), 'package');
   const localRoot = resolve(REPO_ROOT, '.reader-local/native-sync');
-  for (const path of [localRoot, resolve(REPO_ROOT, 'entry/vendor'), resolve(REPO_ROOT, 'entry/libs', abi)]) {
+  for (const path of [localRoot, resolve(REPO_ROOT, 'entry/vendor'), resolve(REPO_ROOT, 'entry/libs', abi), resolve(REPO_ROOT, 'entry/src/main/resources/rawfile')]) {
     for (let parent = path; parent !== REPO_ROOT; parent = dirname(parent)) {
       const stat = lstatSync(parent, { throwIfNoEntry: false });
       if (stat && !stat.isDirectory()) fail('Native synchronization parents must be real directories');
@@ -1070,19 +1076,24 @@ function syncNative(env = process.env) {
   const stage = mkdtempSync(join(localRoot, 'sync-'));
   const stagedSdk = join(stage, 'sdk');
   const stagedNative = join(stage, 'libreader_core_napi.so');
+  const stagedBootstrap = join(stage, STORAGE_BOOTSTRAP_RESOURCE);
   const sdk = resolve(REPO_ROOT, 'entry/vendor/core-harmony');
   const native = resolve(REPO_ROOT, 'entry/libs', abi, 'libreader_core_napi.so');
+  const bootstrap = resolve(REPO_ROOT, 'entry/src/main/resources/rawfile', STORAGE_BOOTSTRAP_RESOURCE);
   const sdkBackup = join(stage, 'previous-sdk');
   const nativeBackup = join(stage, 'previous-native.so');
-  let sdkMoved = false, nativeMoved = false, sdkInstalled = false, nativeInstalled = false;
+  const bootstrapBackup = join(stage, 'previous-storage-bootstrap.json');
+  let sdkMoved = false, nativeMoved = false, sdkInstalled = false, nativeInstalled = false, bootstrapMoved = false, bootstrapInstalled = false;
   try {
     if (!lstatSync(inputs.nativeSo).isFile()) fail('Native package must contain a regular SO');
     cpSync(packageRoot, stagedSdk, { recursive: true,
       filter: path => relative(packageRoot, path).split(sep)[0] !== 'libs' });
     copyFileSync(inputs.nativeSo, stagedNative);
+    writeFileSync(stagedBootstrap, storageBootstrapIdentityBytes(JSON.parse(readFileSync(inputs.storageContract, 'utf8'))), { flag: 'wx', mode: 0o644 });
     const args = nativeProvenanceArguments(env);
     args[args.indexOf('--app-native-so') + 1] = stagedNative;
     args[args.indexOf('--harmony-vendor') + 1] = stagedSdk;
+    args[args.indexOf('--storage-bootstrap-identity') + 1] = stagedBootstrap;
     run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
       ...args, '--preflight', '--allow-dirty', '--output', join(stage, 'preflight.json')], { env });
     // The package contains SDK source/data, not executable tools. Some local
@@ -1096,17 +1107,25 @@ function syncNative(env = process.env) {
     // retained privately, and a failed replacement restores both inputs.
     mkdirSync(dirname(native), { recursive: true });
     mkdirSync(dirname(sdk), { recursive: true });
+    mkdirSync(dirname(bootstrap), { recursive: true });
     if (existsSync(sdk)) { renameSync(sdk, sdkBackup); sdkMoved = true; }
     if (existsSync(native)) { renameSync(native, nativeBackup); nativeMoved = true; }
+    if (existsSync(bootstrap)) {
+      if (!lstatSync(bootstrap).isFile()) fail('storage bootstrap expectation must be a regular file');
+      renameSync(bootstrap, bootstrapBackup); bootstrapMoved = true;
+    }
     renameSync(stagedSdk, sdk); sdkInstalled = true;
     renameSync(stagedNative, native); nativeInstalled = true;
+    renameSync(stagedBootstrap, bootstrap); bootstrapInstalled = true;
     console.log(JSON.stringify({ status: 'PASS', operation: 'sync-native', abi,
       nativeSha256: fileRecord(native).sha256, recovery: stage }));
   } catch (error) {
+    if (bootstrapInstalled) rmSync(bootstrap);
     if (nativeInstalled) rmSync(native);
     if (sdkInstalled) rmSync(sdk, { recursive: true });
     if (nativeMoved) renameSync(nativeBackup, native);
     if (sdkMoved) renameSync(sdkBackup, sdk);
+    if (bootstrapMoved) renameSync(bootstrapBackup, bootstrap);
     throw error;
   }
 }
@@ -1453,6 +1472,8 @@ function buildImpl(options) {
         nativeEnvironment,
       );
       nativeProvenance.push(provenance);
+      artifact.storageContract = publishStorageDeliveryContract(runDir, artifact,
+        JSON.parse(readFileSync(resolve(runDir, provenance), 'utf8')));
       if (buildClass === 'acceptance' && artifact.kind === 'signed') acceptanceProvenance = provenance;
     }
     const vendoredNapi = fileRecord(
@@ -1462,6 +1483,7 @@ function buildImpl(options) {
     const manifest = {
       schemaVersion: 2,
       deliveryEvidenceVersion: 1,
+      storageEvidenceVersion: 1,
       appIdentitySchema: APP_IDENTITY_SCHEMA,
       expectedVersion: appIdentity.expectedVersion,
       appContentInputs: fileRecord(resolve(runDir, 'app-content-snapshot.json'), 'app-content-snapshot.json'),
@@ -1904,6 +1926,9 @@ export function verifyManifest(path) {
         current.embeddedCoreNapi.sha256 !== artifact.embeddedCoreNapi.sha256) {
       fail(`manifest artifact identity mismatch: ${artifactPath}`);
     }
+    if (loaded.manifest.storageEvidenceVersion === 1 && !artifact.storageContract) fail('Current manifest requires storage capability binding');
+    current.storageContract = artifact.storageContract;
+    current.storageCapability = verifyStorageDeliveryContract(loaded.directory, current, loaded.manifest.source.vendoredCoreNapi);
     verified.push(current);
   }
   if (loaded.manifest.expectedVersion && ['RC', 'REL'].includes(loaded.manifest.expectedVersion.channel) &&
@@ -2050,127 +2075,84 @@ export function storageTransitionCandidate(verified, artifact) {
     coreInputSnapshotBytes: provenance.core.buildInputSnapshot.bytes };
 }
 
-function archiveStorageTransition(verified, handle) {
-  const directoryName = `storage-transition-${handle.receiptSha256}`;
-  const root = resolve(verified.directory, directoryName), records = [];
-  for (const file of storageTransitionResources(handle)) {
-    const path = resolve(root, file.path);
-    for (let parent = dirname(path); parent !== verified.directory; parent = dirname(parent)) {
-      const stat = lstatSync(parent, { throwIfNoEntry: false });
-      if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) fail('storage transition archive parents must be regular directories');
-    }
-    mkdirSync(dirname(path), { recursive: true });
-    const existing = lstatSync(path, { throwIfNoEntry: false });
-    if (existing) {
-      if (!existing.isFile() || existing.isSymbolicLink() || fileRecord(path).sha256 !== file.sha256) fail('storage transition archive collision');
-    } else writeFileSync(path, file.bytes, { flag: 'wx' });
-    records.push(fileRecord(path, `${directoryName}/${file.path}`));
-  }
-  return { contract: handle.contract, receiptSha256: handle.receiptSha256,
-    files: records, evidenceLayer: handle.evidenceLayer };
-}
-
-function resolveDeployment(options) {
-  const manifestPath = requiredOption(options, '--manifest');
-  const artifactKind = requiredOption(options, '--artifact');
-  if (!['signed', 'unsigned'].includes(artifactKind)) fail('--artifact must be signed or unsigned', 2);
+function resolveDeployment(options, mode = 'inspect') {
+  if (options.has('--storage-transition')) fail('Deployment requires live storage admission using the matching Inspector', 3);
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
+  const artifactKind = requiredOption(options, '--artifact');
   if (!['vm', 'physical'].includes(targetKind)) fail('--target-kind must be vm or physical', 2);
+  if (artifactKind !== 'signed') fail('Preserve-data deployment requires a signed artifact', 2);
+  const vmLog = option(options, '--vm-log');
+  if (targetKind === 'vm' && !vmLog) fail('VM deployment requires the current instance emulator log', 2);
   const hdcRoute = resolveHdcServer({ targetKind, vmLocation: option(options, '--vm-location'),
     configuredServer: process.env.READER_HDC_SERVER_KEY });
-  const verified = verifyManifest(manifestPath);
-  const candidateAbi = verified.manifest.abi ?? 'arm64-v8a'; // Frozen legacy manifests used the original arm64 contract.
-  const artifact = verified.artifacts.find((candidate) => candidate.kind === artifactKind);
-  if (artifact === undefined) fail(`manifest does not contain a ${artifactKind} artifact`);
+  const verified = verifyManifest(requiredOption(options, '--manifest'));
+  const candidateAbi = verified.manifest.abi ?? 'arm64-v8a';
+  const artifact = verified.artifacts.find(candidate => candidate.kind === artifactKind);
+  if (!artifact?.storageCapability) fail('Deployment candidate has no verified storage capability companion', 3);
   const artifactPath = resolve(verified.directory, artifact.path);
   const hdc = hdcBinary();
   assertTargetConnected(hdc, target, hdcRoute.serverKey);
-  const deviceQuery = (...command) => {
-    const result = runTargetHdc(hdc, target, hdcRoute.serverKey, ['-t', target, ...command],
-      { timeoutMs: 10_000, maxBuffer: 1024 * 1024 });
-    return typeof result.stdout === 'string' ? result.stdout.trim() : result.stdout;
-  };
-  const query = command => deviceQuery('shell', command);
-  const readiness = targetReadiness({ targetKind, targetEndpoint: target, vmLog: option(options, '--vm-log'),
-    query });
-  const installed = installedMetadata(hdc, target, hdcRoute.serverKey);
+  const runHdc = (args, settings = {}) => runTargetHdc(hdc, target, hdcRoute.serverKey, args, settings);
+  const query = (command, settings = {}) => runHdc(['-t', target, 'shell', command], settings);
+  const observeReadiness = () => targetReadiness({ targetKind, targetEndpoint: target, vmLog,
+    query: command => {
+      const result = query(command, { timeoutMs: 10000, maxBuffer: 1024 * 1024, allowFailure: true });
+      return `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
+    } });
+  const observeInstalled = () => installedMetadata(hdc, target, hdcRoute.serverKey);
+  const readiness = observeReadiness();
+  const installed = observeInstalled();
   let route = deploymentSigningRoute({ targetKind, installed, artifact });
-  if (verified.manifest.expectedVersion && installed.bundlePresent &&
-      (!Number.isSafeInteger(installed.versionCode) || installed.versionCode > verified.manifest.expectedVersion.versionCode)) {
-    route = { allowed: false, reason: 'app-version-code-would-regress-or-is-unavailable' };
-  }
-  if (options.has('--storage-transition') && !installed.bundlePresent) fail('storage transition requires an existing installed bundle');
-  let storageEvidence = null;
-  const revalidateInstalledIdentity = () => {
-    if (JSON.stringify(installedMetadata(hdc, target, hdcRoute.serverKey)) !== JSON.stringify(installed)) {
-      fail('installed identity changed before replacement');
+  if (route.allowed && installed.bundlePresent) {
+    if (!Number.isSafeInteger(installed.uid) || installed.uid <= 0 || installed.cpuAbi !== candidateAbi) {
+      route = { allowed: false, reason: 'installed-abi-or-uid-does-not-match-candidate' };
+    } else if (verified.manifest.expectedVersion &&
+        (!Number.isSafeInteger(installed.versionCode) || installed.versionCode > verified.manifest.expectedVersion.versionCode)) {
+      route = { allowed: false, reason: 'app-version-code-would-regress-or-is-unavailable' };
     }
-  };
-  let revalidateDeployment = revalidateInstalledIdentity;
-  if (route.allowed && installed.bundlePresent && options.has('--storage-transition')) {
-    const localProof = loadStorageTransitionProof(requiredOption(options, '--storage-transition'), storageTransitionCandidate(verified, artifact));
-    const querySandbox = command => deviceQuery('shell', '-b', BUNDLE_NAME, command);
-    const observe = () => readStoppedStorageTransitionState({ bundleName: BUNDLE_NAME, installed,
-      abi: candidateAbi, targetRef: targetReference(target), targetKind, query, querySandbox });
-    const observedStorage = observe();
-    const transition = bindStorageTransitionTarget(localProof, observedStorage);
-    storageEvidence = { targetSqliteVersion: transition.sourceSqliteUserVersion,
-      candidateStorage: artifact.embeddedCoreNapi.storageCompatibility, installedStorage: null,
-      versionSource: 'verified-stopped-snapshot-and-formal-runtime-clone', transition };
-    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence, candidateAbi });
-    revalidateDeployment = () => {
-      revalidateInstalledIdentity();
-      bindStorageTransitionTarget(localProof, observe());
-    };
-    if (route.allowed) revalidateDeployment();
-  } else if (route.allowed && installed.bundlePresent) {
-    // There is no authenticated passive current-owner port in the incumbent.
-    // Do not start it, read its live DB header, or accept retained logs/source
-    // equality as authority. A new, candidate-bound formal proof is required.
-    storageEvidence = { targetSqliteVersion: null, installedStorage: null,
-      candidateStorage: artifact.embeddedCoreNapi.storageCompatibility,
-      versionSource: null, policy: 'formal-stopped-transition-required',
-      headerRead: 'NOT_RUN_UNSAFE_READ_BOUNDARY', lineageAuthority: 'RETIRED' };
-    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence, candidateAbi });
   }
-  return {
-    verified,
-    artifact,
-    artifactPath,
-    candidateAbi,
-    hdc,
-    hdcRoute,
-    target,
-    targetKind,
-    targetRef: targetReference(target),
-    installed,
-    route,
-    readiness,
-    storageEvidence,
-    revalidateDeployment,
-  };
+  let storageAdmission;
+  if (route.allowed) {
+    try {
+      storageAdmission = collectStorageAdmission({ mode, target, targetKind, serverKey: hdcRoute.serverKey,
+        bundleName: BUNDLE_NAME, bootIdSha256: readiness.bootIdSha256, initialReadiness: readiness, installed,
+        installedIdentitySha256: installedStorageIdentity(installed), candidate: artifact.storageCapability,
+        runDirectory: verified.directory, query, runHdc, observeInstalled, observeReadiness,
+      }, collectStorageDeviceEvidence);
+      if (mode === 'install' && !storageAdmissionAllowed(storageAdmission, { targetKind, installed, artifact })) {
+        route = { allowed: false, reason: 'live-storage-admission-does-not-match-the-candidate' };
+      } else if (storageAdmission.migration) {
+        route = { allowed: false, reason: 'application-storage-migration-requires-separate-scope' };
+      }
+    } catch (error) {
+      route = { allowed: false, reason: error.message };
+    }
+  }
+  return { verified, artifact, artifactPath, candidateAbi, hdc, hdcRoute, target, targetKind,
+    targetRef: targetReference(target), installed, route, readiness, storageAdmission };
 }
 
 function inspectDeployment(options) {
   const resolved = resolveDeployment(options);
-  console.log(JSON.stringify({
-    status: resolved.route.allowed ? 'PASS' : 'STOP',
-    runId: resolved.verified.manifest.runId,
-    targetKind: resolved.targetKind,
-    ...hdcRouteEvidence(resolved.hdcRoute),
-    targetRef: resolved.targetRef,
-    artifact: {
-      kind: resolved.artifact.kind,
-      sha256: resolved.artifact.sha256,
-      signature: resolved.artifact.signature,
-    },
-    installed: resolved.installed,
-    route: resolved.route,
-    readiness: resolved.readiness,
-    storageEvidence: resolved.storageEvidence,
-  }, null, 2));
-  if (!resolved.route.allowed) process.exitCode = 3;
+  try {
+    const observed = resolved.storageAdmission?.status === 'OBSERVED';
+    console.log(JSON.stringify({
+      status: observed ? 'OBSERVED' : 'STOP',
+      runId: resolved.verified.manifest.runId,
+      targetKind: resolved.targetKind,
+      ...hdcRouteEvidence(resolved.hdcRoute),
+      targetRef: resolved.targetRef,
+      artifact: { kind: resolved.artifact.kind, sha256: resolved.artifact.sha256, signature: resolved.artifact.signature },
+      installed: resolved.installed,
+      route: resolved.route,
+      readiness: resolved.readiness,
+      storageAdmission: resolved.storageAdmission ?? { status: 'STOP', reason: resolved.route.reason },
+    }, null, 2));
+    if (!observed) process.exitCode = 3;
+  } finally {
+    releaseStorageAdmission(resolved.storageAdmission);
+  }
 }
 
 export function assertInstalledAppVersion(expected, installed) {
@@ -2205,8 +2187,10 @@ export function installDeployment(options) {
     targetRef,
     startedAt: new Date().toISOString(),
   }, false);
+  let storageAdmission;
   try {
-    const resolved = resolveDeployment(options);
+    const resolved = resolveDeployment(options, 'install');
+    storageAdmission = resolved.storageAdmission;
     if (!resolved.route.allowed) fail(`deployment stopped: ${resolved.route.reason}`, 3);
     // A successful install followed by a failed launch must still protect the
     // package. Keep this marker across errors/crashes until a full receipt exists.
@@ -2214,11 +2198,11 @@ export function installDeployment(options) {
       `retention-install-${resolved.targetKind}-${resolved.targetRef}.json`);
     writeJson(installProtection, { name: 'reader-hap-install-protection',
       runId: resolved.verified.manifest.runId, startedAt: new Date().toISOString() });
-    const storageTransition = resolved.storageEvidence?.transition ?
-      archiveStorageTransition(resolved.verified, resolved.storageEvidence.transition) : null;
-    // This runs while the same immutable run and target locks are held, after
-    // archiving exact consumed proof bytes and immediately before replacement.
-    resolved.revalidateDeployment();
+    const currentArtifact = fileRecord(resolved.artifactPath);
+    if (currentArtifact.sha256 !== resolved.artifact.sha256 || currentArtifact.bytes !== resolved.artifact.bytes) {
+      fail('candidate HAP changed after storage admission', 3);
+    }
+    const dataRecheck = revalidateStorageAdmission(storageAdmission);
     const install = runTargetHdc(resolved.hdc, resolved.target, resolved.hdcRoute.serverKey, [
       '-t', resolved.target, 'install', '-r', resolved.artifactPath,
     ], { allowFailure: true });
@@ -2232,6 +2216,7 @@ export function installDeployment(options) {
     assertInstalledDeploymentIdentity({ before: resolved.installed, after: postInstall,
       artifact: resolved.artifact, candidateAbi: resolved.candidateAbi,
       expectedVersion: resolved.verified.manifest.expectedVersion, targetKind: resolved.targetKind });
+    const storageCandidateBinding = recordInstalledStorageCandidate(storageAdmission, postInstall);
     let launch = 'NOT_RUN';
     if (options.get('--no-launch') !== true) {
       const start = runTargetHdc(resolved.hdc, resolved.target, resolved.hdcRoute.serverKey, [
@@ -2259,8 +2244,9 @@ export function installDeployment(options) {
       },
       dataPolicy: 'preserve',
       readiness: resolved.readiness,
-      storageEvidence: resolved.storageEvidence,
-      ...(storageTransition ? { storageTransition } : {}),
+      storageAdmission,
+      dataRecheck,
+      storageCandidateBinding,
       install: 'PASS',
       launch,
       preInstall: resolved.installed,
@@ -2280,6 +2266,7 @@ export function installDeployment(options) {
     rmSync(installProtection);
     console.log(JSON.stringify({ status: 'PASS', receipt: receiptPath, dataPreserved: true }));
   } finally {
+    releaseStorageAdmission(storageAdmission);
     rmSync(lockDir, { recursive: true, force: true });
   }
 }
@@ -2292,8 +2279,8 @@ function usage() {
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [--abi arm64-v8a|x86_64] [sync-core alias]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
-  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>]
-  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>] [--no-launch]`);
+  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>]
+  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>] [--no-launch]`);
 }
 
 async function main() {

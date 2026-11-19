@@ -1,0 +1,11 @@
+{
+  "format": "reader.storage-build-contract",
+  "version": 1,
+  "contractSource": "{\n  \"format\": \"reader.storage-contract\",\n  \"version\": 1,\n  \"productCompatibilityLine\": \"0.2\",\n  \"dataFormatGenerations\": [\n    1\n  ],\n  \"acceptedDirectoryPolicies\": [\n    \"reader-directory-broad-v1\",\n    \"reader-directory-visible-content-v2\"\n  ],\n  \"normalOpen\": {\n    \"migrateExisting\": false,\n    \"acceptedLayouts\": [\n      44,\n      45,\n      46,\n      47\n    ]\n  },\n  \"layouts\": [\n    {\n      \"schemaVersion\": 44,\n      \"layoutId\": \"reader-sqlite-44-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [],\n      \"syncEpochOwner\": \"none\",\n      \"syncLogReceipts\": false\n    },\n    {\n      \"schemaVersion\": 45,\n      \"layoutId\": \"reader-sqlite-45-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [\n        1\n      ],\n      \"syncEpochOwner\": \"state\",\n      \"syncLogReceipts\": false\n    },\n    {\n      \"schemaVersion\": 46,\n      \"layoutId\": \"reader-sqlite-46-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [\n        2\n      ],\n      \"syncEpochOwner\": \"state\",\n      \"syncLogReceipts\": true\n    },\n    {\n      \"schemaVersion\": 47,\n      \"layoutId\": \"reader-sqlite-47-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [\n        2\n      ],\n      \"syncEpochOwner\": \"clock\",\n      \"syncLogReceipts\": true\n    }\n  ],\n  \"migrations\": {\n    \"automaticExisting\": false,\n    \"targetSchemaVersion\": 44,\n    \"explicitLegacyRange\": [\n      0,\n      43\n    ],\n    \"preserveLegacyFactsBefore\": [\n      8,\n      9\n    ]\n  }\n}\n",
+  "contractSha256": "22d7e41722c66ff342ba4c21d52282c3df817ecc5aa012d201a328bae1e474be",
+  "coreBuildId": "7e1e188320068dded24bc75d41c84012454a4fca5888d99dc51315e05b190b44",
+  "coreBuildIdentitySha256": "cd13d0b25a586a12982373165b7fe79cf55eb4552b8df243917af3c12bbfc32c",
+  "coreInputFingerprint": "f487d0882bb340b959ba4f26b22000c43796f360f37792235aa099a523d720d2",
+  "nativeSha256": "43f9b7303a56f2409eef1aac622bc78d691205f670adb66e0a9dc672689015e8",
+  "nativeBytes": 31689304
+}
