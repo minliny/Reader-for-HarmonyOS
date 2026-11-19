@@ -50,6 +50,7 @@ function attachReadingClip(context, open) {
 function assertionResults(contract, context, store, candidateRefs) {
   const results = new Map();
   const verifiedRefs = new Map();
+  const requiredWithPartialFailure = [];
   for (const assertion of contract.assertions) {
     let supported = !context.fatal;
     if (supported && assertion.kind === 'clip') attachReadingClip(context, results.get('reading.control-open'));
@@ -64,6 +65,9 @@ function assertionResults(contract, context, store, candidateRefs) {
     const assessed = supported ? evaluate(assertion, context) : {
       verdict: 'NOT_RUN', reason: context.fatal ?? 'No verified editor continuity across the two native samples',
     };
+    if (assertion.required !== false && assessed.verdict === 'FAIL' && assessed.observationsComplete === false) {
+      requiredWithPartialFailure.push(assertion.id);
+    }
     const ownerEvidence = supported && assertion.sources.includes('app-owner') && assessed.verdict !== 'NOT_RUN' ?
       [candidateRefs.manifest, candidateRefs.deployment, candidateRefs.snapshot] : [];
     const refs = mergeRefs([...assessed.evidenceRefs ?? [], ...ownerEvidence]);
@@ -79,7 +83,7 @@ function assertionResults(contract, context, store, candidateRefs) {
       expected: assessed.expected ?? assertion.expected, verdict: assessed.verdict,
       reason: assessed.reason ?? '', evidenceRefs: refs });
   }
-  return [...results.values()];
+  return { assertions: [...results.values()], requiredWithPartialFailure };
 }
 
 function coverage(contract, results) {
@@ -106,7 +110,7 @@ function recompute({store, contractRef, contract, refs, session, sessionRef}) {
   } catch (error) {
     context = {fatal:error.message, problems:[error.message]};
   }
-  const assertions = assertionResults(contract, context, store, refs);
+  const { assertions, requiredWithPartialFailure } = assertionResults(contract, context, store, refs);
   const commands = context.records ?? [];
   const elapsedMs = Date.parse(commands.at(-1)?.recordedAt) - Date.parse(commands[0]?.recordedAt);
   const measurement = {
@@ -120,7 +124,7 @@ function recompute({store, contractRef, contract, refs, session, sessionRef}) {
     motionBlockPayloadBytes: (context.events ?? []).filter(event => event.kind === 'reading.control-motion')
       .reduce((bytes, event) => bytes + jsonBytes(event.payload).length, 0),
   };
-  const observations = session.result === 'COMPLETED' && !context.problems.length &&
+  const observations = session.result === 'COMPLETED' && !context.problems.length && !requiredWithPartialFailure.length &&
     !assertions.some((assertion, i) => assertion.verdict === 'NOT_RUN' && contract.assertions[i].required !== false) ? 'COMPLETE' : 'INCOMPLETE';
   const behavior = assertions.some(assertion => assertion.verdict === 'FAIL') ? 'FAIL' :
     observations === 'COMPLETE' ? 'PASS' : 'NOT_RUN';
@@ -131,7 +135,8 @@ function recompute({store, contractRef, contract, refs, session, sessionRef}) {
     execution:observations === 'INCOMPLETE' ? 'INCOMPLETE' : behavior, page:pageStatus(contract.pageId),
     capabilities:Object.fromEntries(['harmonyos','android','ios'].map(platform => [platform, platformCapabilities(platform)])),
     coverage:coverage(contract, assertions), measurement,
-    diagnostics:[session.reason, ...context.problems].filter(Boolean),
+    diagnostics:[session.reason, ...context.problems,
+      ...requiredWithPartialFailure.map(id => `${id}: observed deviation and missing required evidence`)].filter(Boolean),
   });
 }
 

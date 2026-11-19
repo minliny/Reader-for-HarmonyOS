@@ -421,6 +421,14 @@ function motionResult(evidence, direction, data) {
       check(role, 'transformedWindowOriginVp', i, position ?? null, expectedPosition,
         present(position, ['x', 'y']) && chainReadable && dockParent ?
           comparable([position.x, position.y], expected.layoutToleranceVp, expectedPosition) : null);
+      if (role === 'dock') {
+        // In a normal open/Back transition the authored dock layout stays
+        // fixed. Its visibility translation moves the entire group.
+        const anchoredPosition = [baseline.layoutRectVp.x, baseline.layoutRectVp.y + y];
+        check(role, 'anchoredWindowPathVp', i, position ?? null, anchoredPosition,
+          present(position, ['x', 'y']) && chainReadable ?
+            comparable([position.x, position.y], expected.layoutToleranceVp, anchoredPosition) : null);
+      }
       const clipAncestor = chain.find(item => item.uniqueId === ancestors.clip?.uniqueId);
       const clipEvidence = { self: actor.clipToFrame ?? null,
         ancestorClipIds: chain.filter(item => item.clipToFrame === true).map(item => item.uniqueId),
@@ -471,7 +479,7 @@ function motionResult(evidence, direction, data) {
   const unusableCadence = missing.has('runtime.sampleGapMs');
   const verdict = unusableCadence ? 'NOT_RUN' : failures.size ? 'FAIL' : missing.size ? 'NOT_RUN' : 'PASS';
   const first = verdict === 'FAIL' ? failures.values().next().value : missing.values().next().value;
-  return { actual, expected, verdict,
+  return { actual, expected, verdict, observationsComplete: missing.size === 0,
     reason: first ? `${first.actor}.${first.field} at frame ${first.frame}: ${verdict === 'FAIL' ? 'observed deviation' : 'missing comparable evidence'}` : null };
 }
 

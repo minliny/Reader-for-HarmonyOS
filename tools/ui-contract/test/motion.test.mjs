@@ -169,8 +169,26 @@ test('does not convert already-vp translation again and reports the first mid-tr
   part(matrix, 1, 'reader-control-motion-shell').matrix[1] = -0.3;
   const midFrame = evaluate('motion-open', matrix);
   assert.equal(midFrame.verdict, 'FAIL');
+  assert.equal(midFrame.observationsComplete, true);
   assert.ok(midFrame.actual.deviations.some(item => item.actor === 'shell' && item.field === 'matrix' && item.frame === 1));
   assert.equal(evaluate('motion-dismiss', matrix).verdict, 'PASS');
+});
+
+test('rejects a common window-space hop with correct local transforms in either direction', () => {
+  for (const direction of ['open', 'dismiss']) {
+    const data = fixture();
+    const frame = data.events.find(event => event.kind === 'reading.control-motion' &&
+      event.payload.direction === direction && event.payload.blockIndex === 1).payload.frames[0];
+    for (const actor of frame.actors) {
+      actor.layoutRectVp.y += 64;
+      actor.windowOriginVp.y += 64;
+    }
+    const result = evaluate(`motion-${direction}`, data);
+    assert.equal(result.verdict, 'FAIL');
+    assert.deepEqual(result.actual.deviations.map(({actor, field, frame}) => ({actor, field, frame})), [
+      {actor:'dock', field:'anchoredWindowPathVp', frame:1},
+    ]);
+  }
 });
 
 test('reports the affected actor and frame when a real z observation is missing', () => {
@@ -178,9 +196,21 @@ test('reports the affected actor and frame when a real z observation is missing'
   delete part(data, 1, 'reader-control-motion-grabber').zIndex;
   const result = evaluate('motion-open', data);
   assert.equal(result.verdict, 'NOT_RUN');
+  assert.equal(result.observationsComplete, false);
   assert.ok(result.actual.missing.some(item =>
     item.actor === 'grabber' && item.field === 'stackingContext' && item.frame === 1));
   assert.equal(evaluate('control-open', data).verdict, 'PASS');
+});
+
+test('preserves a measured deviation alongside incomplete required motion observations', () => {
+  const data = fixture();
+  delete part(data, 1, 'reader-control-motion-grabber').zIndex;
+  part(data, 1, 'reader-control-motion-shell').matrix[1] = -0.3;
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'FAIL');
+  assert.equal(result.observationsComplete, false);
+  assert.ok(result.actual.missing.some(item => item.actor === 'grabber' && item.field === 'stackingContext'));
+  assert.ok(result.actual.deviations.some(item => item.actor === 'shell' && item.field === 'matrix'));
 });
 
 test('cannot accept an old request, wrong epoch or an owner omitted from deployed provenance', () => {
