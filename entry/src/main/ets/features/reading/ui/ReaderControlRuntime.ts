@@ -1,6 +1,7 @@
 import {
   advanceReaderControlSession, copyReaderControlSessionState, createReaderControlSessionState,
-  readerControlSessionStateEquals, type ReaderControlSessionState,
+  readerControlSessionStateEquals, type ReaderControlSessionState, type ReaderControlTransition,
+  type ReaderControlTransitionKind, type ReaderControlVisualFrame,
   sampleReaderControlSession,
 } from './ReaderControlSessionState.ts';
 import {
@@ -8,11 +9,12 @@ import {
   endReaderControlGesture, updateReaderControlGesture,
   readerControlGrabberScreenY,
   type ReaderControlGestureConfig, type ReaderControlGestureResult, type ReaderControlGestureState,
+  type ReaderControlMeasuredAxis,
 } from './ReaderControlGestureDriver.ts';
 import {
   advanceReaderControlLayoutCompensation, createReaderControlLayoutCompensation,
   pauseReaderControlLayoutCompensation, rebaseReaderControlLayout, settleReaderControlLayoutCompensation,
-  type ReaderControlLayoutCompensation,
+  type ReaderControlLayoutCompensation, type ReaderControlLayoutRebaseReason,
 } from './ReaderControlLayoutRebase.ts';
 import { readerControlMotionCommandTiming,
   sampleReaderControlMotionContinuation } from './ReaderControlMotionPolicy.ts';
@@ -21,6 +23,51 @@ export interface ReaderControlRuntimeUpdate {
   session: ReaderControlSessionState;
   offsetY: number;
   endpoint: ReaderControlSessionState | undefined;
+  layoutRebase?: ReaderControlRuntimeRebase;
+}
+
+interface ReaderControlRuntimeRebaseSample {
+  axis: ReaderControlMeasuredAxis;
+  transition: ReaderControlRuntimeRebaseTransition;
+  compensation: ReaderControlLayoutCompensation;
+  compensatedGrabberScreenY: number;
+}
+
+interface ReaderControlRuntimeRebaseTransition {
+  kind: ReaderControlTransitionKind;
+  progress: number;
+  startProgress: number;
+  targetProgress: number;
+  elapsedMs: number;
+  durationMs: number;
+  from: ReaderControlVisualFrame;
+  to: ReaderControlVisualFrame;
+}
+
+export interface ReaderControlRuntimeRebase {
+  epoch: number;
+  fromTicket: number;
+  toTicket: number;
+  beforeTickMs: number;
+  ticketStartTickMs: number;
+  rebaseReason: ReaderControlLayoutRebaseReason;
+  anchorPreserved: boolean;
+  before: ReaderControlRuntimeRebaseSample;
+  after: ReaderControlRuntimeRebaseSample;
+}
+
+function rebaseSample(state: ReaderControlSessionState, transition: ReaderControlTransition,
+  axis: ReaderControlMeasuredAxis, compensation: ReaderControlLayoutCompensation): ReaderControlRuntimeRebaseSample {
+  return {
+    axis: { ...axis },
+    transition: {
+      kind: transition.kind, progress: transition.progress, startProgress: transition.startProgress,
+      targetProgress: transition.targetProgress, elapsedMs: transition.elapsedMs, durationMs: transition.durationMs,
+      from: { ...transition.from }, to: { ...transition.to },
+    },
+    compensation: { ...compensation },
+    compensatedGrabberScreenY: readerControlGrabberScreenY(sampleReaderControlSession(state), axis) + compensation.offsetY,
+  };
 }
 
 /** Production control clock. No UI builders, business data, timers or framework
@@ -84,8 +131,12 @@ export class ReaderControlRuntime {
     return this.snapshot();
   }
 
-  configure(config: ReaderControlGestureConfig): ReaderControlRuntimeUpdate {
+  configure(config: ReaderControlGestureConfig, observeLayoutRebase: boolean = false): ReaderControlRuntimeUpdate {
     const previous = this.session;
+    const previousAxis = this.gesture.config.axis;
+    const previousCompensation = this.compensation;
+    const fromTicket = this.revision;
+    const beforeTickMs = this.previousTimeMs;
     const rebased = rebaseReaderControlLayout(this.session, this.gesture, this.compensation, config.axis);
     this.config = config;
     if (!rebased.accepted) return this.snapshot();
@@ -104,7 +155,23 @@ export class ReaderControlRuntime {
       return this.snapshot(previous);
     }
     if (rebased.reason !== 'unchanged') this.invalidate();
-    return this.snapshot();
+    const update = this.snapshot();
+    const before = previous.transition;
+    const after = this.session.transition;
+    if (observeLayoutRebase && this.active && this.now !== undefined && this.revision !== fromTicket &&
+      this.continuationSlope === undefined && this.session.epoch === previous.epoch &&
+      previous.heldPointerId < 0 && this.session.heldPointerId < 0 &&
+      before !== undefined && after !== undefined && (before.kind === 'open' || before.kind === 'dismiss') &&
+      before.kind === after.kind) {
+      update.layoutRebase = {
+        epoch: this.session.epoch, fromTicket: fromTicket, toTicket: this.revision,
+        beforeTickMs: beforeTickMs, ticketStartTickMs: this.previousTimeMs,
+        rebaseReason: rebased.reason, anchorPreserved: rebased.anchorPreserved,
+        before: rebaseSample(previous, before, previousAxis, previousCompensation),
+        after: rebaseSample(this.session, after, this.gesture.config.axis, this.compensation),
+      };
+    }
+    return update;
   }
 
   ticket(): number { return this.revision; }

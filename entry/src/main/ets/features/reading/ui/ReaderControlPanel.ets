@@ -205,7 +205,7 @@ export struct ReaderControlPanel {
     this.editingHost.refresh();
   }
   private onEditingOffsetChanged(): void {
-    if (this.runtimeMounted && this.runtime !== undefined) this.acceptRuntime(this.runtime.configure(this.runtimeConfig()));
+    if (this.runtimeMounted) this.configureRuntime();
     this.editingHost.refresh();
   }
   private presentedDockTop(): number { return this.dockTop() + this.editingOffsetY; }
@@ -745,6 +745,17 @@ export struct ReaderControlPanel {
       dismissDurationMs: readerControlMotionMs(READER_CONTROL_DISMISS_MS, this.reduceMotion), coordinatedMotion: true };
   }
 
+  private configureRuntime(): void {
+    const runtime = this.runtime;
+    if (runtime === undefined) return;
+    const verification = this.runtimeMounted ? this.verificationSession : undefined;
+    const request = verification?.current(this.visualSession);
+    const observe = request !== undefined && request.direction === this.visualSession.transition?.kind;
+    const update = runtime.configure(this.runtimeConfig(), observe);
+    if (update.layoutRebase !== undefined) verification?.observeLayoutRebase(update.session, update.layoutRebase);
+    this.acceptRuntime(update);
+  }
+
   private acceptRuntime(update: ReaderControlRuntimeUpdate): void {
     if (!this.runtimeMounted) return;
     this.rememberVisibleContentLocation(update.session);
@@ -832,7 +843,7 @@ export struct ReaderControlPanel {
 
   private onLayoutChanged(): void {
     this.geo = new ReaderControlGeometry(this.isExpanded());
-    if (this.runtime !== undefined) this.acceptRuntime(this.runtime.configure(this.runtimeConfig()));
+    this.configureRuntime();
     if (this.previousTopBarVisibility !== this.currentLayout().topBarVisible && this.moreMenuVisible) this.setMoreMenuVisible(false);
     this.previousTopBarVisibility = this.currentLayout().topBarVisible;
     this.onMinimumAvailabilityChanged();

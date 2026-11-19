@@ -1,4 +1,5 @@
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
+import type { ReaderControlRuntimeRebase } from './ReaderControlRuntime';
 import { readerControlTargetLocation, type ReaderControlSessionState } from './ReaderControlSessionState';
 
 export type ReaderControlVerificationDirection = 'open' | 'dismiss';
@@ -97,6 +98,27 @@ export class ReaderControlVerificationSession {
     const request = this.request;
     if (!ReaderUIVerificationProbe.enabled() || request?.accepted.epoch !== state.epoch) return undefined;
     return request;
+  }
+
+  observeLayoutRebase(state: ReaderControlSessionState, rebase: ReaderControlRuntimeRebase): void {
+    const request = this.current(state);
+    if (request === undefined || this.committed || request.direction !== state.transition?.kind ||
+      rebase.epoch !== state.epoch) return;
+    ReaderUIVerificationProbe.emit('reading.control-rebased', 'motion', {
+      readingId: request.readingId,
+      transitionId: request.transitionId,
+      direction: request.direction,
+      source: 'ReaderControlRuntime.configure',
+      epoch: rebase.epoch,
+      fromTicket: rebase.fromTicket,
+      toTicket: rebase.toTicket,
+      beforeTickMs: rebase.beforeTickMs,
+      ticketStartTickMs: rebase.ticketStartTickMs,
+      rebaseReason: rebase.rebaseReason,
+      anchorPreserved: rebase.anchorPreserved,
+      before: rebase.before,
+      after: rebase.after,
+    });
   }
 
   observeVisual(state: ReaderControlSessionState, visibilityProgress: number): void {
