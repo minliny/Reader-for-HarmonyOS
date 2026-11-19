@@ -6,12 +6,10 @@ import type { ReaderControlVerificationRequest } from './ReaderControlVerificati
 
 const ACTORS: string[] = ['reader-control-motion-shell', 'reader-control-motion-grabber',
   'reader-control-motion-dock', 'reader-control-content-host'];
-const DOCK: string = 'reader-control-motion-dock';
 const CONTENT_CLIP: string = 'reader-control-motion-content-clip';
 const MAX_FRAMES: number = 72;
 const MAX_ANCESTORS: number = 24;
 const MAX_INSPECTOR_TEXT: number = 262144;
-const MAX_INSPECTOR_NODES: number = 256;
 
 interface MotionPoint {
   x: number;
@@ -50,7 +48,6 @@ interface InspectorAttributes {
 interface InspectorNode {
   $ID?: number;
   $attrs?: InspectorAttributes;
-  $children?: InspectorNode[];
 }
 
 interface MotionAncestor {
@@ -110,39 +107,24 @@ interface MotionFrame {
   contentClip: MotionActor;
 }
 
-function inspectorAttrs(dock: FrameNode | null): Map<number, InspectorAttributes> {
-  const result = new Map<number, InspectorAttributes>();
-  if (dock === null || !dock.isAttached()) return result;
+function readOwnInspectorAttrs(node: FrameNode | null, attrs: Map<number, InspectorAttributes>): void {
+  if (node === null) return;
   try {
-    const raw: Object = dock.getInspectorInfo();
-    if (typeof raw === 'string' && raw.length > MAX_INSPECTOR_TEXT) return result;
-    const tree: InspectorNode = (typeof raw === 'string' ? JSON.parse(raw) : raw) as InspectorNode;
-    if (tree === undefined || tree === null || typeof tree !== 'object') return result;
-    const pending: InspectorNode[] = [tree];
-    let visited = 0;
-    while (pending.length > 0 && visited < MAX_INSPECTOR_NODES) {
-      const node = pending.pop();
-      if (node === undefined || node === null) continue;
-      visited += 1;
-      const id = node.$ID;
-      const attrs = node.$attrs;
-      // Only copy approved values. Neither hierarchy text nor the inspector
-      // JSON is exported, even on a malformed or oversized inspector response.
-      if (id !== undefined && Number.isSafeInteger(id) && attrs !== undefined && attrs !== null) {
-        if (result.has(id)) return new Map<number, InspectorAttributes>();
-        result.set(id, { zIndex: attrs.zIndex, borderRadius: attrs.borderRadius, clip: attrs.clip });
-      }
-      const children = node.$children;
-      if (Array.isArray(children)) {
-        if (pending.length + children.length > MAX_INSPECTOR_NODES) return new Map<number, InspectorAttributes>();
-        for (const child of children) pending.push(child);
-      }
-    }
-    if (pending.length > 0) return new Map<number, InspectorAttributes>();
+    if (node.isDisposed() || !node.isAttached()) return;
+    const id = node.getUniqueId();
+    if (!Number.isSafeInteger(id)) return;
+    const raw: Object = node.getInspectorInfo();
+    if (typeof raw === 'string' && raw.length > MAX_INSPECTOR_TEXT) return;
+    const root: InspectorNode = (typeof raw === 'string' ? JSON.parse(raw) : raw) as InspectorNode;
+    if (root === undefined || root === null || typeof root !== 'object' || root.$ID !== id) return;
+    const attributes = root.$attrs;
+    if (attributes === undefined || attributes === null || typeof attributes !== 'object') return;
+    // Keep only same-frame attributes from this exact attached node. The
+    // inspector response can omit children and can contain private text.
+    attrs.set(id, { zIndex: attributes.zIndex, borderRadius: attributes.borderRadius, clip: attributes.clip });
   } catch (_) {
-    return new Map<number, InspectorAttributes>();
+    // Geometry remains usable when a node's Inspector fields are unavailable.
   }
-  return result;
 }
 
 function inspectorZ(attrs: InspectorAttributes | undefined): number | undefined {
@@ -188,7 +170,7 @@ function recordActor(id: string, node: FrameNode | null, context: UIContext,
   const fact: MotionActor = { id: id, mounted: false };
   if (node === null) return fact;
   try {
-    if (!node.isAttached() || node.isDisposed()) return fact;
+    if (node.isDisposed() || !node.isAttached()) return fact;
     fact.mounted = true;
     const uniqueId = node.getUniqueId();
     const attributes = attrs.get(uniqueId);
@@ -251,11 +233,16 @@ export class ReaderControlVerificationMotion {
     }
     const start = readerMotionNowMs();
     try {
-      const dock = context.getFrameNodeById(DOCK);
-      const attrs = inspectorAttrs(dock);
-      const actors = ACTORS.map((id: string): MotionActor =>
-        recordActor(id, id === DOCK ? dock : context.getFrameNodeById(id), context, attrs));
-      const contentClip = recordActor(CONTENT_CLIP, context.getFrameNodeById(CONTENT_CLIP), context, attrs);
+      const attachedActors = ACTORS.map((id: string): FrameNode | null => context.getAttachedFrameNodeById(id));
+      const attachedClip = context.getAttachedFrameNodeById(CONTENT_CLIP);
+      const attrs = new Map<number, InspectorAttributes>();
+      // Populate the same-frame values before walking any actor's ancestors,
+      // so the content host can resolve its actual clip owner's observation.
+      for (const node of attachedActors) readOwnInspectorAttrs(node, attrs);
+      readOwnInspectorAttrs(attachedClip, attrs);
+      const actors = ACTORS.map((id: string, index: number): MotionActor =>
+        recordActor(id, attachedActors[index], context, attrs));
+      const contentClip = recordActor(CONTENT_CLIP, attachedClip, context, attrs);
       const visual = sampleReaderControlSession(state);
       const previous = this.frames[this.frames.length - 1];
       const prior = this.frames[this.frames.length - 2];
