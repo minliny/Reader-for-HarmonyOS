@@ -7,7 +7,7 @@ import { candidateIdentity, sha256 } from '../../../lib/native-ui-evidence.mjs';
 import { evidenceStore, requireEvidence, sealChain, validate } from '../../lib/evidence.mjs';
 import { equalJson } from '../../lib/cases.mjs';
 import { evaluateSearch, searchResultEndpoint } from '../../lib/search.mjs';
-import { assertCurrentActionState, assertInstalled, assertOwnerActionState, checkpoint, latestProbeEvent, normalizeSample, readProbeEvents, readyForStep, requestedOperation } from './records.mjs';
+import { assertCurrentActionState, assertInstalled, assertOwnerActionState, checkpoint, latestProbeEvent, normalizeSample, probeEventsInRange, readyForStep, requestedOperation } from './records.mjs';
 import { openProbe } from './transport.mjs';
 
 const repo = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -85,14 +85,18 @@ function logRead(probe) {
   return probe.command({ op: 'uiContractLog' });
 }
 
-async function freshCheckpoint(probe, {instanceId, laterThan = 0, since = laterThan, baseline, wait = [], predicate, deadline, allowMissing = false}) {
+async function freshCheckpoint(probe, {
+  instanceId, laterThan = 0, since = laterThan, firstPoll, baseline, wait = [], predicate, deadline, allowMissing = false,
+}) {
   let current;
   do {
     const record = await logRead(probe);
     const mark = checkpoint(record, instanceId);
     if (mark && (baseline?.instanceId !== mark.instanceId || mark.eventSeq > baseline.eventSeq) && mark.eventSeq > laterThan) {
       current = { record, mark };
-      const events = readProbeEvents(record, mark.instanceId).filter(event => event.eventSeq > since);
+      if (!wait.length && !predicate) return current;
+      const polls = probe.records.slice(firstPoll - 1, record.seq);
+      const events = probeEventsInRange(polls, mark.instanceId, since, mark.eventSeq);
       if (wait.every(kind => events.some(event => event.kind === kind)) && (!predicate || predicate(events))) return current;
     }
     await delay(125);
@@ -101,13 +105,17 @@ async function freshCheckpoint(probe, {instanceId, laterThan = 0, since = laterT
   return current;
 }
 
-async function waitForWindowState(probe, step, instanceId, predicate) {
+async function waitForWindowState(probe, step, instanceId, submit) {
   const deadline = performance.now() + 8000;
   do {
     const checkpoint = await freshCheckpoint(probe, {instanceId, deadline});
     const area = checkpoint.mark.payload.report?.metrics?.keyboardArea;
-    if ((step.keyboard === undefined || area?.available === true && area.visible === step.keyboard) &&
-      (!predicate || predicate(readProbeEvents(checkpoint.record, instanceId)))) return checkpoint;
+    if (step.keyboard === undefined || area?.available === true && area.visible === step.keyboard) {
+      if (!submit) return checkpoint;
+      const polls = probe.records.slice(submit.beforeLog, checkpoint.record.seq);
+      const events = probeEventsInRange(polls, instanceId, submit.beforeSeq, checkpoint.mark.eventSeq);
+      if (searchResultEndpoint(events, submit.beforeSeq, submit.afterSeq)) return checkpoint;
+    }
     await delay(125);
   } while (performance.now() < deadline);
   throw Error(`Required keyboard or owner state did not settle before ${step.id}`);
@@ -164,11 +172,11 @@ export async function collectHarmony(options, contract) {
       const isAction = step.kind === 'action';
       const { record, mark: before } = isAction ?
         await freshCheckpoint(probe, {instanceId, deadline:performance.now()+2500}) :
-        await waitForWindowState(probe, step, instanceId, step.id === 'results-settled' ?
-          events => searchResultEndpoint(events, actions['submit-search'].beforeSeq, actions['submit-search'].afterSeq) : undefined);
+        await waitForWindowState(probe, step, instanceId,
+          step.id === 'results-settled' ? actions['submit-search'] : undefined);
       const entry = {kind:step.kind, id:step.id, beforeLog:record.seq, beforeSeq:before.eventSeq, hostBeginMs};
-      const priorEvents = readProbeEvents(record, instanceId).filter(event =>
-        event.eventSeq > initial.mark.eventSeq && event.eventSeq <= before.eventSeq);
+      const priorEvents = isAction ? probeEventsInRange(probe.records.slice(initial.record.seq, record.seq),
+        instanceId, initial.mark.eventSeq, before.eventSeq) : [];
       if (isAction) {
         assertCurrentActionState(step, samples[step.from], before);
         assertOwnerActionState(step, {actions, samples, events:priorEvents}, contract, before);
@@ -192,12 +200,14 @@ export async function collectHarmony(options, contract) {
         }}).verdict === 'PASS';
       }
       let after = await freshCheckpoint(probe, {instanceId, laterThan:postCommandFloor.eventSeq, since:before.eventSeq,
+        firstPoll:floor.seq,
         wait:isAction ? step.wait ?? [] : [], deadline:performance.now()+(isAction ? 10000 : 2500),
         allowMissing:step.id === 'input-search',
         predicate:step.id === 'submit-search' ? events => searchResultEndpoint(events, before.eventSeq) :
           step.id === 'input-search' ? inputCompleted : undefined});
       if (step.id === 'open' || step.id === 'dismiss') {
-        after = await freshCheckpoint(probe, {instanceId, laterThan:postCommandFloor.eventSeq, since:before.eventSeq, deadline:performance.now() + 1500,
+        after = await freshCheckpoint(probe, {instanceId, laterThan:postCommandFloor.eventSeq, since:before.eventSeq,
+          firstPoll:floor.seq, deadline:performance.now() + 1500,
           allowMissing:true, predicate:events => events.some(event => event.kind === 'reading.control-motion' &&
             event.payload.direction === step.id && event.payload.blockIndex === event.payload.blockCount - 1)});
       }

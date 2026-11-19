@@ -408,15 +408,14 @@ async function probe(options) {
       return result;
     };
     const readiness = async plan => {
-      const { targetReadiness } = await import('../scripts/lib/hap-delivery-evidence.mjs');
+      const { readinessQueryOutput, targetReadiness } = await import('../scripts/lib/hap-delivery-evidence.mjs');
       const query = command => {
         if (stopping || deadline <= performance.now()) fail('probe is stopping');
         const result = spawnSync(options.hdc, [...prefix, 'shell', command], {
           shell: false, encoding: 'utf8', env: hdcEnvironment, timeout: Math.min(10000, Math.max(1, Math.floor(deadline - performance.now()))),
           maxBuffer: 1024 * 1024,
         });
-        if (result.error || result.status !== 0) fail('Current target readiness query failed');
-        return `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
+        return readinessQueryOutput(command, result);
       };
       const listing = spawnSync(options.hdc, ['-p','-s',options.server,'list','targets','-v'],
         { shell: false, encoding: 'utf8', env: hdcEnvironment, timeout: 10000, maxBuffer: 1024 * 1024 });

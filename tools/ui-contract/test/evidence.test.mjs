@@ -5,8 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { readinessQueryOutput } from '../../../scripts/lib/hap-delivery-evidence.mjs';
 import { captureRecord } from '../../lib/native-ui-evidence.mjs';
-import { readProbeEvents, checkpoint, logCommand } from '../collectors/harmonyos/records.mjs';
+import { probeEventsInRange, readProbeEvents, checkpoint, logCommand } from '../collectors/harmonyos/records.mjs';
 import { loadCandidate } from '../collectors/harmonyos/run.mjs';
 import { loadCase } from '../lib/cases.mjs';
 import { evidenceStore, jsonBytes, jsonDigest, sealChain, sha256, verifyChain } from '../lib/evidence.mjs';
@@ -90,6 +91,17 @@ function fixture(t, id = searchId, mutate) {
 function replay(path, rootSha256, contract) {
   return replayReceipt({ receiptPath: path, expectedRoot: rootSha256, contract });
 }
+
+test('readiness preserves supported procfs denial and rejects other nonzero or interrupted queries', () => {
+  const path = '/proc/sys/kernel/random/boot_id';
+  const denied = {status: 1, stdout: '', stderr: `cat: ${path}: Permission denied\r\n`};
+  assert.equal(readinessQueryOutput(`cat ${path}`, denied), denied.stderr.trim());
+  assert.equal(readinessQueryOutput('param get bootevent.boot.completed', {status: 0, stdout: 'true\n'}), 'true');
+  assert.throws(() => readinessQueryOutput('cat /proc/uptime', denied), /readiness query failed/u);
+  assert.throws(() => readinessQueryOutput(`cat ${path}`, {...denied, stderr: denied.stderr + 'Connect server failed'}), /readiness query failed/u);
+  assert.throws(() => readinessQueryOutput(`cat ${path}`, {...denied, signal: 'SIGTERM'}), /readiness query failed/u);
+  assert.throws(() => readinessQueryOutput('param get bootevent.boot.completed', {status: 1, stdout: 'true'}), /readiness query failed/u);
+});
 
 test('canonical digests are independent of insertion order and nested evidence bytes are verified', t => {
   const directory = scratch(t);
@@ -250,4 +262,22 @@ test('app log parser rejects incomplete and mixed-instance checkpoints', () => {
   assert.deepEqual(readProbeEvents(log([first])), []);
   assert.deepEqual(readProbeEvents(log([first, first, second])), []);
   assert.throws(() => checkpoint(log([first, second, ...chunks(foreignInstance, 1)]), instanceId), /instance changed/);
+});
+
+test('reconciles log polls when events roll out of the final snapshot', () => {
+  const instanceId = '11111111-1111-4111-8111-111111111111';
+  const foreignId = '22222222-2222-4222-8222-222222222222';
+  const mark = (eventSeq, id = instanceId) => ({ instanceId: id, eventSeq, semanticSeq: 0,
+    deviceMonoMs: eventSeq, windowRevision: 8, kind: 'window-stable', channel: 'probe', payload: {} });
+  const log = (...events) => ({ event: 'command', ok: true, args: logCommand, stdout: events.map(event =>
+    `11-19 06:00:00.000 123 456 I A05244/ReaderUIContract: RUI1 ${event.instanceId}/${event.eventSeq}/0/1 ${JSON.stringify(event)}`
+  ).join('\n') });
+
+  const first = log(mark(2), mark(3));
+  const last = log(mark(4), mark(5), mark(3, foreignId));
+  assert.deepEqual(probeEventsInRange([first, last], instanceId, 2, 4), [mark(3), mark(4)]);
+  assert.deepEqual(probeEventsInRange([first, log(mark(3), mark(4)), last], instanceId, 2, 4), [mark(3), mark(4)]);
+  assert.deepEqual(probeEventsInRange([last], instanceId, 2, 4), [mark(4)]);
+  assert.throws(() => probeEventsInRange([first, log({...mark(3), windowRevision: 9}), last], instanceId, 2, 4),
+    /Conflicting app event across probe log polls/);
 });

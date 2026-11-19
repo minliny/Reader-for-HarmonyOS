@@ -52,10 +52,23 @@ export function verifyPublishedCoreGate(directory, record) {
 const BOOT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SYSTEM_INSTABILITY = /SceneBoard exits|LIFECYCLE_TIMEOUT|guest reset|kernel panic|System is reset|OnSystemReset/i;
 const BOOT_MILESTONES = ['kernel', 'init', 'samgr.ready', 'appspawn.started', 'wms.ready', 'boot.completed'];
-function procRead(query, path, strict = false) {
-  const denied = value => (strict ?
+function procReadDenied(value, path, strict = false) {
+  return (strict ?
     /^(?:(?:\/bin\/sh|sh):\s*)?cat:\s*(\/proc\/(?:sys\/kernel\/random\/boot_id|uptime)):\s*Permission denied$/i :
     /^(?:(?:\/bin\/sh|sh):\s*)?(?:cat:\s*)?(\/proc\/(?:sys\/kernel\/random\/boot_id|uptime)):\s*Permission denied$/i).exec(value)?.[1] === path;
+}
+
+/** Keep the boot owner’s procfs fallback available when the guest shell reports a nonzero exit. */
+export function readinessQueryOutput(command, result) {
+  if (result.error || result.signal) throw new Error('Current target readiness query failed');
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
+  const procfsDenial = command.startsWith('cat /proc/') && procReadDenied(output, command.slice(4));
+  if (result.status !== 0 && !procfsDenial) throw new Error('Current target readiness query failed');
+  return output;
+}
+
+function procRead(query, path, strict = false) {
+  const denied = value => procReadDenied(value, path, strict);
   let text;
   try { text = String(query(`cat ${path}`)).trim(); }
   catch (error) {

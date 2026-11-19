@@ -52,6 +52,20 @@ export function checkpoint(record, instanceId) {
   return event?.kind === 'window-stable' ? event : null;
 }
 
+export function probeEventsInRange(records, instanceId, afterSeq, throughSeq) {
+  const bySequence = new Map();
+  for (const record of records) {
+    if (record.event !== 'command' || !record.ok || !equalJson(record.args, logCommand)) continue;
+    for (const event of readProbeEvents(record, instanceId)) {
+      if (event.eventSeq <= afterSeq || event.eventSeq > throughSeq) continue;
+      const previous = bySequence.get(event.eventSeq);
+      requireEvidence(!previous || equalJson(previous, event), 'Conflicting app event across probe log polls');
+      if (!previous) bySequence.set(event.eventSeq, event);
+    }
+  }
+  return [...bySequence.values()].sort((left, right) => left.eventSeq - right.eventSeq);
+}
+
 function windowStable(start, end) {
   return start.kind === 'window-stable' && end.kind === 'window-stable' &&
     start.instanceId === end.instanceId && start.eventSeq < end.eventSeq &&
@@ -95,12 +109,12 @@ function eventSlice(records, entry, session, from) {
     floor && floor.eventSeq >= before.eventSeq && floor.eventSeq < after.eventSeq &&
     onlyLogPolls(records, from, entry.beforeLog) && onlyLogPolls(records, entry.floorLog, entry.afterLog),
   'Broken action or sample observation interval');
-  const events = readProbeEvents(endLog, session.instanceId)
-    .filter(event => event.eventSeq > before.eventSeq && event.eventSeq <= after.eventSeq);
+  const events = probeEventsInRange(records.slice(entry.floorLog - 1, entry.afterLog),
+    session.instanceId, before.eventSeq, after.eventSeq);
   requireEvidence(events.length === after.eventSeq - before.eventSeq &&
     events.every((event, i) => event.eventSeq === before.eventSeq + i + 1 &&
       event.deviceMonoMs >= (events[i - 1]?.deviceMonoMs ?? before.deviceMonoMs)),
-  'Missing, out-of-order, or repeated app event in the selected action or sample interval');
+  'Missing or out-of-order app event in the selected action or sample interval');
   return { before, after, events };
 }
 
@@ -263,8 +277,8 @@ export function sessionContext({store, session, sessionRef, candidate, contract}
     try {
       const { before, after, events } = eventSlice(records, entry, session, prior);
       if (previousAppSeq) {
-        const intervening = readProbeEvents(records[entry.beforeLog - 1], session.instanceId)
-          .filter(event => event.eventSeq > previousAppSeq && event.eventSeq <= before.eventSeq);
+        const intervening = probeEventsInRange(records.slice(prior, entry.beforeLog),
+          session.instanceId, previousAppSeq, before.eventSeq);
         requireEvidence(intervening.length === before.eventSeq - previousAppSeq &&
           intervening.every((event, i) => event.eventSeq === previousAppSeq + i + 1), 'Lost app events between steps');
         for (const event of intervening) allEvents.set(event.eventSeq, { ...event, evidenceRefs: refs });
