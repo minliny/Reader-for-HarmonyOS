@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { posix } from 'node:path';
 import { canonicalAppJson } from '../../../scripts/lib/app-build-identity.mjs';
 import { jsonDigest, requireEvidence, sha256, validate } from './evidence.mjs';
 
@@ -26,24 +27,41 @@ export function loadCase(id) {
   return contract;
 }
 
-export function toolIdentity() {
+export function replayToolFiles(root = toolRoot) {
   const tracked = [];
-  function walk(url, path) {
-    for (const item of readdirSync(url, { withFileTypes: true })) {
-      const name = `${path}${item.name}`;
-      if (item.isDirectory() && ['lib','collectors','schema'].includes(item.name)) {
-        walk(new URL(`${item.name}/`, url), `${name}/`);
-      } else if (item.isDirectory() && path.startsWith('collectors/')) {
-        walk(new URL(`${item.name}/`, url), `${name}/`);
-      } else if (item.isFile() && /\.(mjs|json)$/.test(item.name)) tracked.push(name);
+  function walk(path, dependency = false) {
+    for (const item of readdirSync(new URL(path, root), { withFileTypes: true })) {
+      const name = path === './' ? item.name : `${path}${item.name}`;
+      if (item.isDirectory() && (dependency || ['cases','lib','collectors','schema'].includes(item.name) ||
+        path.startsWith('collectors/'))) {
+        walk(`${name}/`, dependency);
+      } else if (item.isFile() && (dependency || /\.(mjs|json)$/.test(item.name))) {
+        tracked.push(name);
+      } else if (dependency && !item.isDirectory()) {
+        throw new Error(`Unsupported installed dependency file type: ${name}`);
+      }
     }
   }
-  walk(toolRoot, '');
-  tracked.push('../lib/native-ui-evidence.mjs', '../reader-control-device-probe.mjs',
+  walk('./');
+  tracked.push('README.md', '../lib/native-ui-evidence.mjs', '../reader-control-device-probe.mjs',
     '../reader-hdc-lease.mjs', '../reader-hdc-foreground.mjs', '../page-structure/register.json',
     '../../scripts/hap-pipeline.mjs', '../../scripts/lib/hap-delivery-evidence.mjs', '../../scripts/lib/app-build-identity.mjs');
-  const inputs = tracked.sort().map(path => ({ path, sha256: sha256(readFileSync(new URL(path, toolRoot))) }));
-  return { version: 'phase0.1', sha256: jsonDigest(inputs) };
+  const lock = JSON.parse(readFileSync(new URL('package-lock.json', root), 'utf8'));
+  for (const [path, metadata] of Object.entries(lock.packages)) {
+    if (path === '') continue;
+    requireEvidence(path.startsWith('node_modules/') && path === posix.normalize(path) && !path.includes('\\') &&
+      typeof metadata.version === 'string' && lstatSync(new URL(path, root)).isDirectory(),
+    `Invalid locked dependency location: ${path}`);
+    const installed = JSON.parse(readFileSync(new URL(`${path}/package.json`, root), 'utf8'));
+    requireEvidence(installed.version === metadata.version, `Installed version differs from package lock: ${path}`);
+    walk(`${path}/`, true);
+  }
+  return [...new Set(tracked)].sort();
+}
+
+export function toolIdentity(root = toolRoot) {
+  const inputs = replayToolFiles(root).map(path => ({ path, sha256: sha256(readFileSync(new URL(path, root))) }));
+  return { version: 'phase0.2', sha256: jsonDigest(inputs) };
 }
 
 export function pageStatus(pageId) {

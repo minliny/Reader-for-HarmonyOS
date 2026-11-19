@@ -39,7 +39,13 @@ node tools/ui-contract/cli.mjs --case reading.control-open-motion \
 
 ## 离线复核
 
-交接双方分别留存 receipt 的 SHA-256。把整个输出目录移动到接收方目录，从可信工具安装处运行重放。两份回执用各自部署记录的 HDC server、目标引用和目标类型核对是否来自同一目标。
+在采集工作区安装锁定依赖后，可将同版本工具复制到新的独立目录。
+
+```sh
+node tools/ui-contract/export-replay.mjs "$REPLAY_TOOL_DIR"
+```
+
+交接双方分别留存 receipt 根 SHA-256 和工具目录内的 `tool-identity.json`。导出保留两份 case、页面登记以及本次安装依赖的字节和许可证。将完整工具目录及证据目录交付给接收方，并从工具目录运行下述命令。接收方预装 Node.js 即可离线重放。重放从实际工具和依赖字节复算工具摘要，再与 receipt 核对。两份回执用各自部署记录的 HDC server、目标引用和目标类型核对是否来自同一目标。
 
 ```sh
 node tools/ui-contract/cli.mjs --case bookshelf.search-input-ime \

@@ -1,17 +1,18 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { readinessQueryOutput } from '../../../scripts/lib/hap-delivery-evidence.mjs';
 import { captureRecord } from '../../lib/native-ui-evidence.mjs';
 import { probeEventsInRange, readProbeEvents, checkpoint, logCommand } from '../collectors/harmonyos/records.mjs';
 import { loadCandidate } from '../collectors/harmonyos/run.mjs';
-import { loadCase } from '../lib/cases.mjs';
+import { loadCase, toolIdentity } from '../lib/cases.mjs';
 import { evidenceStore, jsonBytes, jsonDigest, sealChain, sha256, verifyChain } from '../lib/evidence.mjs';
 import { replayReceipt, sealReceipt } from '../lib/receipt.mjs';
+import { exportReplayTool } from '../export-replay.mjs';
 
 const searchId = 'bookshelf.search-input-ime';
 const readingId = 'reading.control-open-motion';
@@ -150,6 +151,55 @@ test('relocates both synthetic receipts and preserves exact assertion sets and p
       assert.ok(Object.values(receipt.capabilities[platform]).every(item => item.status === 'UNSUPPORTED'));
     }
   }
+});
+
+test('replays two synthetic receipts and coverage in an exported standalone tool directory', t => {
+  const toolDir = join(realpathSync(scratch(t)), 'tool');
+  const bundles = realpathSync(scratch(t));
+  const cwd = realpathSync(scratch(t));
+  const identity = exportReplayTool(toolDir);
+  assert.deepEqual(identity, toolIdentity());
+  assert.throws(() => exportReplayTool(toolDir), /EEXIST/u);
+
+  const packageDir = join(toolDir, 'tools/ui-contract');
+  const permissions = process.allowedNodeEnvironmentFlags.has('--allow-net') ?
+    ['--permission', `--allow-fs-read=${toolDir}`, `--allow-fs-read=${bundles}`] : [];
+  const env = {...process.env};
+  delete env.NODE_PATH;
+  delete env.NODE_OPTIONS;
+  function cli(name, args) {
+    const result = spawnSync(process.execPath, [...permissions, join(packageDir, name), ...args],
+      {env, cwd, encoding:'utf8', timeout:5000});
+    assert.ifError(result.error);
+    assert.equal(result.stderr, '');
+    assert.equal(result.status, 1);
+    return JSON.parse(result.stdout);
+  }
+  const replays = [searchId, readingId].map(id => {
+    const source = fixture(t, id);
+    const sealed = sealReceipt(source, source.contract);
+    const moved = join(bundles, id);
+    renameSync(source.bundle, moved);
+    const path = join(moved, 'receipt.json');
+    const result = cli('cli.mjs', ['--case', id, '--replay', path, '--expected-root', sealed.rootSha256]);
+    assert.deepEqual(result.receipt, sealed.receipt);
+    assert.equal(result.rootSha256, sealed.rootSha256);
+    return {path, ...result};
+  });
+  const [search, reading] = replays;
+  const coverage = cli('coverage.mjs', ['--search', search.path, '--search-root', search.rootSha256,
+    '--reading', reading.path, '--reading-root', reading.rootSha256]);
+  assert.equal(coverage.observationStatus, 'INCOMPLETE');
+  assert.deepEqual(coverage.cases.map(item => item.rootSha256), replays.map(item => item.rootSha256));
+  assert.ok(coverage.cases.every(item => item.page.registration === 'UNREGISTERED_PAGE' &&
+    Object.values(item.assertions).every(verdict => verdict === 'NOT_RUN')));
+
+  const copiedTool = pathToFileURL(packageDir + '/');
+  appendFileSync(join(packageDir, 'cases', `${readingId}.json`), '\n');
+  const changedCase = toolIdentity(copiedTool);
+  assert.notEqual(changedCase.sha256, identity.sha256);
+  appendFileSync(join(packageDir, 'node_modules/fast-deep-equal/index.js'), '\n');
+  assert.notEqual(toolIdentity(copiedTool).sha256, changedCase.sha256);
 });
 
 test('combines distinct runs on one HDC server and refuses identical target references across servers', t => {
