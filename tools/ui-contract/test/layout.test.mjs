@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { evaluateLayout, layoutTapPoint, normalizeHarmonyLayout, selectLayoutNode } from '../lib/layout.mjs';
+import { requestedOperation } from '../collectors/harmonyos/records.mjs';
 
 const density = 3.5;
 const windowId = '42';
@@ -112,6 +113,16 @@ test('replays row gap, center alignment and non-overlap with one px-to-vp conver
   assert.equal(check({ kind: 'gap', a: field, b: submit, axis: 'x', branch: 'stacked', expected: 5 }, current).verdict, 'NOT_RUN');
 });
 
+test('admits only the search action from the submit button native description', () => {
+  const step = {id:'submit-search', op:'click', target:submit, from:'ready'};
+  const ready = description => sample(dump([node(submit, [10, 20, 50, 40], {clickable:'true', description})]));
+  assert.deepEqual(requestedOperation(step, {ready:ready('搜索')}), {op:'click', x:140, y:175});
+  assert.throws(() => requestedOperation(step, {ready:ready('停止搜索')}), /no enabled search semantics/);
+  const unrecognized = ready('private button description');
+  assert.throws(() => requestedOperation(step, {ready:unrecognized}), /no enabled search semantics/);
+  assert.doesNotMatch(JSON.stringify(unrecognized), /private button description/);
+});
+
 test('measures ancestor containment and distinguishes clipping configuration and effect', () => {
   const assertion = { a: content, b: clip };
   const config = { ...assertion, kind: 'clip', mode: 'configuration', expected: { enabled: true } };
@@ -155,6 +166,25 @@ test('separates window clipping, opacity and zero area, and uses exact measured 
   assert.equal(rounded.verdict, 'FAIL');
   assert.ok(Math.abs(rounded.actual.visibleAreaVp2 - (100 - 16 + 4 * Math.PI)) < 1e-10);
   assert.equal(check({ ...visibility, a: probe, basis: 'rounded', acceptedSources: ['native-tree'] }, current).verdict, 'NOT_RUN');
+});
+
+test('constrains visible fraction by native node and window readback bounds', () => {
+  const box = [0, 20, 20, 40];
+  const tree = dump([node(submit, box, {bounds: bounds(0, 20, 10, 40)})]);
+  const visibility = { kind:'visibleFraction', basis:'rectangular', a:submit, expected:{minFraction:1} };
+  const measured = check(visibility, sample(tree));
+  assert.equal(measured.verdict, 'FAIL');
+  assert.equal(measured.actual.fraction, 0.5);
+  assert.equal(measured.actual.sourceAreaVp2, 400);
+  assert.deepEqual(measured.actual.visibleReadbackVp, {left:0, top:20, width:10, height:20});
+
+  const partialWindow = dump([node(submit, box)]);
+  partialWindow.children[0].attributes.bounds = bounds(0, 30, 100, 200);
+  assert.equal(check(visibility, sample(partialWindow)).actual.fraction, 0.5);
+
+  const missing = check(visibility, sample(dump([node(submit, box, {bounds: ''})])));
+  assert.equal(missing.verdict, 'NOT_RUN');
+  assert.match(missing.reason, /Native visible bounds are unavailable/);
 });
 
 test('uses window-local IME geometry for floating and bottom-docked keyboards and rejects old IME revisions', () => {

@@ -106,7 +106,8 @@ async function freshCheckpoint(probe, {
 }
 
 async function waitForWindowState(probe, step, instanceId, submit) {
-  const deadline = performance.now() + 8000;
+  // SearchGateway allows a source request to take 15s before window projection.
+  const deadline = performance.now() + (submit ? 20000 : 8000);
   do {
     const checkpoint = await freshCheckpoint(probe, {instanceId, deadline});
     const area = checkpoint.mark.payload.report?.metrics?.keyboardArea;
@@ -203,8 +204,7 @@ export async function collectHarmony(options, contract) {
         firstPoll:floor.seq,
         wait:isAction ? step.wait ?? [] : [], deadline:performance.now()+(isAction ? 10000 : 2500),
         allowMissing:step.id === 'input-search',
-        predicate:step.id === 'submit-search' ? events => searchResultEndpoint(events, before.eventSeq) :
-          step.id === 'input-search' ? inputCompleted : undefined});
+        predicate:step.id === 'input-search' ? inputCompleted : undefined});
       if (step.id === 'open' || step.id === 'dismiss') {
         after = await freshCheckpoint(probe, {instanceId, laterThan:postCommandFloor.eventSeq, since:before.eventSeq,
           firstPoll:floor.seq, deadline:performance.now() + 1500,

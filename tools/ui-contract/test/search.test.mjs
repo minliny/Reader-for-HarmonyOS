@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { evaluateSearch } from '../lib/search.mjs';
+import { loadCase } from '../lib/cases.mjs';
+import { evaluateSearch, searchResultEndpoint } from '../lib/search.mjs';
 
 const INSTANCE = 'instance-1';
 const BAR = 'reader-bookshelf-search-bar';
@@ -120,6 +121,21 @@ test('the accepted submit fails the focus expectation when the current editor bl
   const result = evaluate('submit', context);
   assert.equal(result.verdict, 'FAIL');
   assert.equal(result.actual.focusedAtTapStart, false);
+});
+
+test('seals valid submit evidence independently of a pending result and matches later settlement', () => {
+  const contract = loadCase('bookshelf.search-input-ime');
+  const submit = contract.steps.find(step => step.id === 'submit-search');
+  const context = capture();
+  const { beforeSeq, afterSeq } = context.actions[submit.id];
+  const pendingEvents = context.events.filter(event => event.eventSeq <= afterSeq);
+  const duringSubmit = pendingEvents.filter(event => event.eventSeq > beforeSeq);
+  assert.deepEqual(submit.wait, duringSubmit.map(event => event.kind));
+  const pending = {...context, events:pendingEvents, samples:{...context.samples, 'results-settled':undefined}};
+  assert.equal(evaluate('submit', pending).verdict, 'PASS');
+  assert.equal(evaluate('results-settled', pending).verdict, 'NOT_RUN');
+  assert.equal(searchResultEndpoint(pendingEvents, beforeSeq, afterSeq), undefined);
+  assert.equal(searchResultEndpoint(context.events, beforeSeq, afterSeq).projected.eventSeq, 19);
 });
 
 test('an old onSettled endpoint cannot occupy the current accepted submit interval', () => {

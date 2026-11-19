@@ -115,7 +115,8 @@ export function normalizeHarmonyLayout({
     const fixtureCard = bookAction && [a.originalText, a.text, a.description].some(value =>
       typeof value === 'string' && value.startsWith(`${publicBookTitle}，`));
     const searchSemantic = a.id === 'reader-bookshelf-search-submit' ?
-      [a.text, a.originalText, a.accessibilityText, a.contentDescription].find(value => value === '搜索' || value === '停止搜索') : undefined;
+      [a.description, a.text, a.originalText, a.accessibilityText, a.contentDescription]
+        .find(value => value === '搜索' || value === '停止搜索') : undefined;
     nodes.push({
       ...(fixtureTitle ? { fixtureTitle: true } : {}),
       ...(bookAction ? { localBookAction: true, fixtureCard } : {}),
@@ -389,7 +390,12 @@ function measureVisible(assertion, sample, node) {
   if (sourceAreaVp2 <= 0) return missing('The original layout box has zero area');
   if (!['rounded', 'rectangular'].includes(assertion.basis)) return missing('No visibility geometry basis was declared');
   if (node.visible === null) return missing('Native visibility state is unavailable');
+  if (node.visible && (!validRect(node.visibleRectPx) || !validRect(sample.window.visibleRectPx))) {
+    return missing('Native visible bounds are unavailable');
+  }
   const { box: clipped, clips } = clippedBox(sample, node);
+  const visibleReadbackVp = node.visible ?
+    toVp(intersect(node.visibleRectPx, sample.window.visibleRectPx), sample.window.density, sample.window.rectPx) : null;
   const named = (assertion.occluders ?? []).map(selector => {
     const occluder = selectLayoutNode(sample, selector);
     if (occluder.opacity !== 1) throw new Error('The declared opaque occluder lacks opaque native readback');
@@ -397,7 +403,7 @@ function measureVisible(assertion, sample, node) {
     return toVp(occluder.visibleRectPx, sample.window.density, sample.window.rectPx);
   });
   const occluders = assertion.includeKeyboard ? [...named, ...keyboardFor(assertion, sample).rectsVp] : named;
-  const pieces = node.visible ? subtractAll(clipped, occluders) : [];
+  const pieces = visibleReadbackVp ? subtractAll(intersect(clipped, visibleReadbackVp), occluders) : [];
   let visibleAreaVp2 = pieces.reduce((sum, piece) => sum + area(piece), 0);
   if (assertion.basis === 'rounded' && visibleAreaVp2 > 0) {
     let roundedConstraints = 0;
@@ -416,7 +422,7 @@ function measureVisible(assertion, sample, node) {
   if (Math.abs(visibleAreaVp2 - sourceAreaVp2) <= sourceAreaVp2 * 1e-12) visibleAreaVp2 = sourceAreaVp2;
   visibleAreaVp2 = Math.max(0, Math.min(visibleAreaVp2, sourceAreaVp2));
   const fraction = visibleAreaVp2 / sourceAreaVp2;
-  return compare({ fraction, visibleAreaVp2, sourceAreaVp2, opacity: node.opacity, basis: assertion.basis,
+  return compare({ fraction, visibleAreaVp2, sourceAreaVp2, visibleReadbackVp, opacity: node.opacity, basis: assertion.basis,
     includedOccluders: assertion.occluders ?? [], includedKeyboard: assertion.includeKeyboard === true },
   fraction >= assertion.expected.minFraction, 'Measured geometric visibility under the declared clipping and occlusions');
 }

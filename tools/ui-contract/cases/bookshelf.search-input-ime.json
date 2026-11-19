@@ -1,6 +1,6 @@
 {
   "id": "bookshelf.search-input-ime",
-  "version": 1,
+  "version": 2,
   "pageId": "bookshelf",
   "fixture": {
     "id": "public-search-v1",
@@ -67,9 +67,7 @@
       "from": "submit-ready",
       "wait": [
         "search-button-intent",
-        "search-submit-accepted",
-        "search-surface-settled",
-        "search-result-projection"
+        "search-submit-accepted"
       ]
     },
     {
