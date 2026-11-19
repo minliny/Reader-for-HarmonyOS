@@ -39,8 +39,7 @@ export function fixtureAdmission(fixture, contract, candidate) {
     (candidate.targetKind === 'vm' ? typeof fixture.vmName === 'string' && fixture.vmName.trim().length > 0 :
       fixture.physicalTestDevice === true) &&
     fixture.publicBooks === true && fixture.publicHistory === true && fixture.publicImeCandidates === true &&
-    fixture.developerMode === true && fixture.noPersonalData === true &&
-    (!contract.fixture.inputWord || fixture.publicEnabledSource === true),
+    fixture.developerMode === true && fixture.noPersonalData === true,
   'No scope-matched isolated public fixture and Developer Mode record');
   for (const leg of ['clientToServer','serverToTarget']) {
     const link = fixture.directRoute?.[leg];

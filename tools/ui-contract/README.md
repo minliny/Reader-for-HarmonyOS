@@ -23,10 +23,11 @@ node tools/ui-contract/cli.mjs --case reading.control-open-motion --dry-run --pl
 | checkedAt | 本次核对时的 ISO 8601 时间 |
 | vmName | 已核验的 VM 实例名称，真机用 physicalTestDevice: true |
 | publicBooks、publicHistory、publicImeCandidates、developerMode、noPersonalData | 确认均为 true 后执行 |
-| publicEnabledSource | 搜索环境至少有一个可达、已启用、使用公开数据的受控书源。 |
 | directRoute.clientToServer、directRoute.serverToTarget | 两段各记录 direct: true、socketObservation、routeObservation。记录实际现场依据。 |
 
 操作前，VM 的 emulator 日志必须来自已确认的当前实例。真机使用本机 HDC server，并单独核验授权、官方保数据准入和隔离测试环境。工具在已取得的租约里确认准确目标、boot、SceneBoard、已安装候选和正常启动，依次执行所选 case。每次提供新的输出目录。留存原始图、树和日志的目录权限默认为 0700。
+
+搜索用例允许公开本地书成为命中结果。已有在线书源按正常应用语义参与；结果页实际可见数据同样须在公开范围内。
 
 ```sh
 node tools/ui-contract/cli.mjs --case bookshelf.search-input-ime \

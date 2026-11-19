@@ -66,7 +66,7 @@ function fixture(t, id = searchId, mutate) {
   const publicFixture = {
     schema: 'reader-ui-public-fixture-v1', caseId: id, fixtureId: contract.fixture.id, targetRef,
     hdcServer: syntheticServer, vmName: 'Synthetic fixture with no target',
-    checkedAt: completedAt, publicBooks: true, publicHistory: true, publicEnabledSource: true,
+    checkedAt: completedAt, publicBooks: true, publicHistory: true,
     publicImeCandidates: true, developerMode: true, noPersonalData: true,
     directRoute: Object.fromEntries(['clientToServer', 'serverToTarget'].map(leg =>
       [leg, { direct: true, socketObservation: 'Synthetic socket', routeObservation: 'Synthetic route' }])),

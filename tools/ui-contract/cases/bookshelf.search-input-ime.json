@@ -1,11 +1,11 @@
 {
   "id": "bookshelf.search-input-ime",
-  "version": 2,
+  "version": 3,
   "pageId": "bookshelf",
   "fixture": {
     "id": "public-search-v1",
     "inputWord": "Reader",
-    "description": "Empty entry editor; public test books, history, results and keyboard candidates; one or more reachable enabled public test sources."
+    "description": "Empty entry editor with public books, history, results and keyboard candidates. A controlled local book can supply a genuine search result."
   },
   "steps": [
     {
