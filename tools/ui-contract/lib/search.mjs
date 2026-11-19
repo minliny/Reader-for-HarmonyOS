@@ -293,6 +293,8 @@ function resultsSettled(evidence) {
   const node = evidence.node(result, marker);
   const viewport = evidence.node(result, expectedViewport, [marker]);
   return compare({ state: projection.payload.state, queryRevision: commit.payload.queryRevision,
+    searchActive: typeof projection.payload.searchActive === 'boolean' ? projection.payload.searchActive : null,
+    publicationRevision: sequence(projection.payload.publicationRevision) ? projection.payload.publicationRevision : null,
     owner: endpoint.payload.owner, marker, markerPath: node.path, viewportId: expectedViewport,
     viewportPath: viewport.path, settledSeq: endpoint.eventSeq, projectionSeq: projection.eventSeq },
   { states: ['empty', 'results'], queryRevision: commit.payload.queryRevision, matchingNativeViewport: true }, true);

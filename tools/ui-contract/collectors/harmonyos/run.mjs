@@ -206,7 +206,7 @@ export async function collectHarmony(options, contract) {
         predicate:step.id === 'input-search' ? inputCompleted : undefined});
       if (step.id === 'open' || step.id === 'dismiss') {
         after = await freshCheckpoint(probe, {instanceId, laterThan:postCommandFloor.eventSeq, since:before.eventSeq,
-          firstPoll:floor.seq, deadline:performance.now() + 1500,
+          firstPoll:floor.seq, deadline:performance.now() + 9000,
           allowMissing:true, predicate:events => events.some(event => event.kind === 'reading.control-motion' &&
             event.payload.direction === step.id && event.payload.blockIndex === event.payload.blockCount - 1)});
       }

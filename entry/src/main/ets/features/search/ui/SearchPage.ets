@@ -76,9 +76,11 @@ type SearchVerificationProjection = 'empty' | 'results' | 'pending';
 
 interface SearchProjectionEvidence {
   queryRevision: number;
+  publicationRevision: number;
   owner: number;
   page: number;
   state: SearchVerificationProjection;
+  searchActive: boolean;
   viewportId: string;
 }
 
@@ -426,7 +428,7 @@ export struct SearchPage {
   private resultFlushEpoch: number = 0;
   @State private displayIdleRevision: number = 0;
   @State private resultNoticeFacts: SearchNoticeFacts | undefined = undefined;
-  private observedProjection: SearchVerificationProjection | undefined;
+  private observedProjection: SearchProjectionEvidence | undefined;
 
   private acceptPublication(): void {
     if (!this.ownsPageQuery()) return;
@@ -497,18 +499,22 @@ export struct SearchPage {
 
   private resultProjectionState(): SearchVerificationProjection {
     if (this.presentation.kind === 'empty' && this.presentation.stopped !== true && !this.isStoppedEmpty()) return 'empty';
-    if (this.presentation.kind === 'results' && !this.hasActiveSearchRequest() && this.presentation.stopped !== true) return 'results';
+    if (this.presentation.kind === 'results' && this.presentation.stopped !== true) return 'results';
     return 'pending';
   }
 
   private observeResultProjection(): void {
     const verification = this.surfaceModel?.verification;
-    if (verification === undefined || !verification.enabled() || !this.ownsSurface()) return;
+    if (verification === undefined || !verification.enabled() || !this.surfaceInputCurrent()) return;
     const state = this.resultProjectionState();
-    if (state === this.observedProjection) return;
-    this.observedProjection = state;
-    const facts: SearchProjectionEvidence = { queryRevision: this.queryAtMount, owner: this.surfaceOwner,
-      page: this.pageEpoch, state: state, viewportId: this.resultViewportId() };
+    const searchActive = this.hasActiveSearchRequest();
+    const previous = this.observedProjection;
+    // Result publications can update the native list while the sweep continues.
+    if (previous !== undefined && previous.state === state && previous.searchActive === searchActive &&
+      (state === 'pending' || previous.publicationRevision === this.publicationRevision)) return;
+    const facts: SearchProjectionEvidence = { queryRevision: this.queryAtMount, publicationRevision: this.publicationRevision,
+      owner: this.surfaceOwner, page: this.pageEpoch, state: state, searchActive: searchActive, viewportId: this.resultViewportId() };
+    this.observedProjection = facts;
     verification.emit('search-result-projection', 'business', facts);
   }
 

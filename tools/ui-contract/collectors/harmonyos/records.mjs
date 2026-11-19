@@ -150,8 +150,7 @@ function bindsPartialMotionBlock(header, events, direction) {
   blocks.push(header);
   blocks.sort((a, b) => a.eventSeq - b.eventSeq);
   return blocks.length >= 2 && blocks.length <= 72 && blocks[0].eventSeq > commit.eventSeq &&
-    blocks.every(({eventSeq, payload}, index) => eventSeq === blocks[0].eventSeq + index &&
-      payload.readingId === readingId && payload.transitionId === transitionId &&
+    blocks.every(({payload}, index) => payload.readingId === readingId && payload.transitionId === transitionId &&
       payload.epoch === epoch && payload.direction === direction &&
       payload.blockIndex === index && payload.blockCount === blocks.length &&
       payload.frameStart === index && payload.frameEnd === index && payload.endReason === 'completed' &&

@@ -12,8 +12,11 @@ const OWNER_INPUTS = {
 };
 const MOTION_INPUTS = {
   ...OWNER_INPUTS,
+  [OWNER + 'ReaderControlSessionState.ts']: [...OWNER_INPUTS[OWNER + 'ReaderControlSessionState.ts'],
+    'advanceReaderControlSession', 'rebaseReaderControlTransitionProgress'],
   [OWNER + 'ReaderControlPanel.ets']: ['scheduleRuntimeFrame', 'clockSample', 'controlContent'],
-  [OWNER + 'ReaderControlMotionGeometry.ts']: ['sampleReaderControlWholeVisibility', 'sampleReaderControlMotionComposition'],
+  [OWNER + 'ReaderControlMotionGeometry.ts']: ['sampleReaderControlWholeVisibility', 'sampleReaderControlMotionComposition',
+    'ReaderControlMotionFrameCache'],
   [OWNER + 'ReaderControlMotionPolicy.ts']: ['readerControlMotionCommandTiming'],
   [OWNER + 'ReaderControlVerificationMotion.ets']: ['recordActor', 'ReaderControlVerificationMotion'],
   [TIMING]: ['READER_CONTROL_OPEN_MS', 'READER_CONTROL_DISMISS_MS'],
@@ -58,6 +61,32 @@ function sameState(a, b) {
 
 function withinInterval(event, action) {
   return event.eventSeq > action.beforeSeq && event.eventSeq <= action.afterSeq;
+}
+
+function runtimeSegments(frames) {
+  const segments = [];
+  for (const frame of frames) {
+    const segment = segments.at(-1);
+    const previous = frames[frame.index - 1];
+    const prior = frames[frame.index - 2];
+    const { runtimeTicket: ticket, runtimeDurationMs: durationMs, runtimeElapsedMs: elapsedMs } = frame;
+    if (segment?.ticket !== ticket) {
+      // Revocation can reset elapsed without changing the owner epoch. A
+      // sampled ticket boundary admits a local curve, not its cause.
+      requireEvidence(elapsedMs === 0 && (segment === undefined ||
+        (ticket > segment.ticket && durationMs <= segment.durationMs - previous.runtimeElapsedMs)),
+      `Incomparable runtime ticket boundary at frame ${frame.index}`);
+      segments.push({ ticket, durationMs, start: frame.index, end: frame.index });
+      continue;
+    }
+    // A progress observation precedes publication of the current runtime tick.
+    const hasPreviousDelta = prior?.runtimeTicket === ticket;
+    requireEvidence(durationMs === segment.durationMs && elapsedMs > previous.runtimeElapsedMs &&
+      (!hasPreviousDelta || elapsedMs - previous.runtimeElapsedMs === previous.runtimeTickMs - prior.runtimeTickMs),
+    `Incomparable elapsed time for runtime ticket ${ticket} at frame ${frame.index}`);
+    segment.end = frame.index;
+  }
+  return segments;
 }
 
 class MotionEvidence {
@@ -202,6 +231,10 @@ class MotionEvidence {
         event.payload.readingId === p.readingId && event.payload.transitionId === p.transitionId &&
         event.payload.direction === p.direction && event.payload.epoch === p.accepted.epoch);
     const blocks = events.map(event => event.payload);
+    const revision = data.request.windowRevision;
+    requireEvidence(sequence(revision) && data.first.window.revision === revision && data.last.window.revision === revision &&
+      data.commit.windowRevision === revision && events.every(event => event.windowRevision === revision),
+    `The ${p.direction} trace crosses window revisions`);
     requireEvidence(blocks.length > 0 && blocks.length <= 72 && blocks.every((block, index) =>
       block.blockIndex === index && block.blockCount === blocks.length &&
       block.endReason === 'completed' && block.droppedSamples === 0 &&
@@ -213,32 +246,35 @@ class MotionEvidence {
       const previous = frames[index - 1];
       const phase = index === 0 ? 'start' : index === frames.length - 1 ? 'endpoint' : 'progress';
       return frame.index === index && frame.phase === phase && frame.runtimeEpoch === p.accepted.epoch &&
-        sequence(frame.runtimeTicket) && frame.runtimeTicket === frames[0].runtimeTicket &&
+        sequence(frame.runtimeTicket) &&
         present(frame, ['frameTimeNs', 'captureStartMs', 'captureEndMs', 'runtimeElapsedMs', 'runtimeTickMs',
           'runtimeDurationMs', 'visibilityProgress', 'expansionProgress', 'runtimeLayoutOffsetVp', 'density']) &&
+        frame.runtimeDurationMs > 0 && frame.runtimeElapsedMs >= 0 &&
+        (phase === 'endpoint' ? frame.runtimeElapsedMs >= frame.runtimeDurationMs :
+          frame.runtimeElapsedMs < frame.runtimeDurationMs) &&
+        frame.visibilityProgress >= 0 && frame.visibilityProgress <= 1 &&
         frame.density > 0 && frame.density === frames[0].density &&
         frame.captureStartMs >= data.request.deviceMonoMs && frame.captureEndMs >= frame.captureStartMs &&
         frame.captureEndMs <= events.at(-1).deviceMonoMs &&
         frame.observationPhase === (phase === 'endpoint' ? 'after-endpoint-publication' : 'before-runtime-publication') &&
         frame.runtimeElapsedSource === (phase === 'endpoint' ? 'runtime-tick-delta' : 'runtime-transition') &&
         (!previous || frame.frameTimeNs > previous.frameTimeNs && frame.captureStartMs >= previous.captureEndMs &&
-          frame.runtimeElapsedMs > previous.runtimeElapsedMs &&
           (phase === 'endpoint' ? frame.runtimeTickMs === previous.runtimeTickMs :
             frame.runtimeTickMs > previous.runtimeTickMs));
     }), `The ${p.direction} frame sequence or timestamp endpoints are incomplete or incomparable`);
-    const [prior, beforeCommit, afterCommit] = frames.slice(-3);
-    requireEvidence(frames[0].runtimeElapsedMs === 0 && afterCommit.runtimeElapsedMs >= afterCommit.runtimeDurationMs &&
-      afterCommit.runtimeElapsedMs === beforeCommit.runtimeElapsedMs + beforeCommit.runtimeTickMs - prior.runtimeTickMs &&
+    const segments = runtimeSegments(frames);
+    const final = segments.at(-1);
+    requireEvidence(final.end - final.start >= 2 &&
       frames.some(frame => frame.phase === 'progress' && frame.visibilityProgress > 0 && frame.visibilityProgress < 1),
     'No complete runtime-time interval from start through an interior observation to the endpoint');
     const vis = this.event('reading.control-visual', 'motion', data.action.instanceId,
       event => event.eventSeq > data.request.eventSeq && event.eventSeq < data.commit.eventSeq &&
         event.payload.transitionId === p.transitionId && event.payload.readingId === p.readingId &&
         event.payload.direction === p.direction && event.payload.epoch === p.accepted.epoch);
-    requireEvidence(vis.length === 1 && vis[0].payload.source === 'runtime-progress' &&
+    requireEvidence(vis.length === 1 && vis[0].windowRevision === revision && vis[0].payload.source === 'runtime-progress' &&
       vis[0].payload.visibilityProgress > 0 && vis[0].payload.visibilityProgress < 1,
     'The current transition has no matching admitted visual progression before commit');
-    return { frames, events };
+    return { frames, events, segments };
   }
 }
 
@@ -284,7 +320,7 @@ function ownerResult(evidence, direction, data) {
 
 // ArkUI cubicBezierCurve(.2, 0, 0, 1) uses the x coordinate as elapsed
 // fraction. Invert the monotone x cubic before evaluating the y coordinate.
-function visibilityAt(fraction, direction) {
+function easedFraction(fraction) {
   let from = 0, to = 1;
   for (let index = 0; index < 20; index++) {
     const t = (from + to) / 2;
@@ -293,8 +329,7 @@ function visibilityAt(fraction, direction) {
     else to = t;
   }
   const t = (from + to) / 2;
-  const y = fraction === 0 ? 0 : fraction === 1 ? 1 : (3 - 2 * t) * t * t;
-  return direction === 'open' ? y : 1 - y;
+  return fraction === 0 ? 0 : fraction === 1 ? 1 : (3 - 2 * t) * t * t;
 }
 
 function motionResult(evidence, direction, data) {
@@ -307,13 +342,19 @@ function motionResult(evidence, direction, data) {
     Object.values(ACTORS).every(id => expected.actors.includes(id)),
   'The versioned motion expectation lacks a sourced duration, tolerance, or cadence rule');
   const sourceRefs = evidence.ownerSources(MOTION_INPUTS);
-  const { frames, events } = evidence.trace(data);
+  const { frames, events, segments } = evidence.trace(data);
   const p = data.request.payload;
   const failures = new Map(), missing = new Map();
   const checks = {};
+  const sessionActorIds = new Map();
   const baselineActors = new Map();
   const firstMount = {};
   const lastActor = new Map();
+  const segmentStarts = new Map(segments.map(segment => [segment.start, segment]));
+  const segmentDiagnostics = [];
+  const ticketBoundaries = [];
+  const targetVisibility = direction === 'open' ? 1 : 0;
+  let segment, segmentDiagnostic;
 
   function check(actor, field, frame, actual, want, result) {
     const label = `${actor}.${field}`;
@@ -334,15 +375,33 @@ function motionResult(evidence, direction, data) {
   }
 
   check('runtime', 'commandDurationMs', 0, p.durationMs, expected.durationMs, p.durationMs === expected.durationMs);
+  check('runtime', 'durationMs', 0, segments[0].durationMs, expected.durationMs,
+    segments[0].durationMs === expected.durationMs);
+  check('runtime', 'startVisibility', 0, frames[0].visibilityProgress, 1 - targetVisibility,
+    near(frames[0].visibilityProgress, 1 - targetVisibility, expected.opacityTolerance));
   for (const frame of frames) {
     const i = frame.index;
     const v = frame.visibilityProgress;
-    const elapsed = frame.runtimeElapsedMs;
-    const predicted = visibilityAt(Math.max(0, Math.min(1, elapsed / frame.runtimeDurationMs)), direction);
-    check('runtime', 'durationMs', i, frame.runtimeDurationMs, expected.durationMs,
-      frame.runtimeDurationMs === expected.durationMs && elapsed >= 0 &&
-        (frame.phase === 'endpoint' ? elapsed >= frame.runtimeDurationMs : elapsed < frame.runtimeDurationMs));
-    check('runtime', 'normalizedCurve', i, v, predicted, near(v, predicted, expected.opacityTolerance));
+    const nextSegment = segmentStarts.get(i);
+    if (nextSegment) {
+      segment = nextSegment;
+      baselineActors.clear();
+      lastActor.clear();
+      segmentDiagnostic = {
+        ticket: segment.ticket, firstFrame: i, lastFrame: segment.end, durationMs: segment.durationMs,
+        lastElapsedMs: frames[segment.end].runtimeElapsedMs,
+        startVisibility: v, targetVisibility, comparedFrames: 0, maxVisibilityError: null,
+      };
+      segmentDiagnostics.push(segmentDiagnostic);
+    } else {
+      const fraction = Math.min(1, frame.runtimeElapsedMs / segment.durationMs);
+      const startVisibility = segment.start === 0 ? 1 - targetVisibility : segmentDiagnostic.startVisibility;
+      const predicted = startVisibility + (targetVisibility - startVisibility) * easedFraction(fraction);
+      const error = Math.abs(v - predicted);
+      segmentDiagnostic.comparedFrames += 1;
+      segmentDiagnostic.maxVisibilityError = Math.max(segmentDiagnostic.maxVisibilityError ?? 0, error);
+      check('runtime', 'normalizedCurve', i, v, predicted, error <= expected.opacityTolerance);
+    }
     check('runtime', 'expansionProgress', i, frame.expansionProgress, 0,
       near(frame.expansionProgress, 0, expected.transformTolerance));
     const content = frame.content;
@@ -352,10 +411,29 @@ function motionResult(evidence, direction, data) {
 
     const actorArray = Array.isArray(frame.actors) ? frame.actors : [];
     const selected = Object.fromEntries(Object.entries(ACTORS).map(([role, id]) => {
-      const matches = actorArray.filter(actor => actor.id === id);
+      const matches = actorArray.filter(actor => actor?.id === id);
       return [role, matches.length === 1 ? matches[0] : null];
     }));
-    check('runtime', 'actorSet', i, actorArray.map(actor => actor.id), Object.values(ACTORS),
+    if (nextSegment && i > 0) {
+      const previous = frames[i - 1];
+      const previousActors = Array.isArray(previous.actors) ? previous.actors : [];
+      const previousGrabbers = previousActors.filter(actor => actor?.id === ACTORS.grabber && actor.mounted === true);
+      const previousGrabber = previousGrabbers.length === 1 ? previousGrabbers[0] : null;
+      const grabber = selected.grabber;
+      const boundary = {
+        frame: i, fromTicket: previous.runtimeTicket, toTicket: frame.runtimeTicket,
+        visibilityBefore: previous.visibilityProgress, visibilityAfter: v,
+        layoutOffsetBeforeVp: previous.runtimeLayoutOffsetVp, layoutOffsetAfterVp: frame.runtimeLayoutOffsetVp,
+        grabberWindowDeltaYVp: present(previousGrabber?.windowOriginVp, ['y']) &&
+          grabber?.mounted === true && present(grabber.windowOriginVp, ['y']) ?
+          grabber.windowOriginVp.y - previousGrabber.windowOriginVp.y : null,
+      };
+      ticketBoundaries.push(boundary);
+      // Geometry before and after the boundary does not establish the state
+      // and measured axes that the runtime used to project its prior anchor.
+      check('runtime', 'rebaseCause', i, boundary, 'owner rebase cause, input axes and transition state', null);
+    }
+    check('runtime', 'actorSet', i, actorArray.map(actor => actor?.id ?? null), Object.values(ACTORS),
       actorArray.length === Object.values(ACTORS).length && Object.values(selected).every(Boolean) ? true : null);
     const y = expected.dockTravelVp * (1 - v);
     const ancestors = { dock: selected.dock, clip: frame.contentClip?.id === CONTENT_CLIP ? frame.contentClip : null };
@@ -367,19 +445,22 @@ function motionResult(evidence, direction, data) {
         continue;
       }
       firstMount[role] ??= i;
-      const baseline = baselineActors.get(role) ?? actor;
+      if (!sessionActorIds.has(role)) sessionActorIds.set(role, actor.uniqueId);
+      const baseline = baselineActors.get(role) ?? { actor, layoutOffsetVp: frame.runtimeLayoutOffsetVp };
       baselineActors.set(role, baseline);
-      check(role, 'uniqueId', i, actor.uniqueId, baseline.uniqueId, actor.uniqueId === baseline.uniqueId);
+      check(role, 'uniqueId', i, actor.uniqueId, sessionActorIds.get(role), actor.uniqueId === sessionActorIds.get(role));
       const rect = actor.layoutRectVp;
+      const baselineRect = baseline.actor.layoutRectVp;
       const position = actor.windowOriginVp;
       const output = [rect.width, rect.height];
-      const stableSize = role === 'grabber' ? [72, 28] : [baseline.layoutRectVp.width, baseline.layoutRectVp.height];
+      const stableSize = role === 'grabber' ? [72, 28] : [baselineRect.width, baselineRect.height];
       check(role, 'layoutSizeVp', i, output, stableSize, comparable(output, expected.layoutToleranceVp, stableSize));
       const dockBox = ancestors.dock?.layoutRectVp;
-      const initialDockBox = baselineActors.get('dock')?.layoutRectVp ?? dockBox;
+      const initialDockBox = baselineActors.get('dock')?.actor.layoutRectVp ?? dockBox;
       const actualOffset = box(dockBox) ? [rect.x - dockBox.x, rect.y - dockBox.y] : null;
       const initialOffset = box(initialDockBox) ?
-        [baseline.layoutRectVp.x - initialDockBox.x, baseline.layoutRectVp.y - initialDockBox.y] : null;
+        [baselineRect.x - initialDockBox.x,
+          baselineRect.y - initialDockBox.y + frame.runtimeLayoutOffsetVp - baseline.layoutOffsetVp] : null;
       if (role !== 'dock') {
         check(role, 'layoutRelativeToDockVp', i, actualOffset, initialOffset,
           actualOffset && initialOffset ? comparable(actualOffset, expected.layoutToleranceVp, initialOffset) : null);
@@ -422,9 +503,9 @@ function motionResult(evidence, direction, data) {
         present(position, ['x', 'y']) && chainReadable && dockParent ?
           comparable([position.x, position.y], expected.layoutToleranceVp, expectedPosition) : null);
       if (role === 'dock') {
-        // In a normal open/Back transition the authored dock layout stays
-        // fixed. Its visibility translation moves the entire group.
-        const anchoredPosition = [baseline.layoutRectVp.x, baseline.layoutRectVp.y + y];
+        // The dock's layout anchor stays fixed within a ticket. Its visibility
+        // translation moves the entire group.
+        const anchoredPosition = [baselineRect.x, baselineRect.y + y];
         check(role, 'anchoredWindowPathVp', i, position ?? null, anchoredPosition,
           present(position, ['x', 'y']) && chainReadable ?
             comparable([position.x, position.y], expected.layoutToleranceVp, anchoredPosition) : null);
@@ -470,15 +551,18 @@ function motionResult(evidence, direction, data) {
     direction, actionId: data.action.actionId, transitionId: p.transitionId, readingId: p.readingId,
     frameCount: frames.length, firstMount, windowUnit: 'vp', affineMatrixOrder: 'column-first',
     sampleClock: 'FrameCallback nanoseconds', displayedRefreshSource: null,
-    elapsedMs: frames.at(-1).runtimeElapsedMs, callbackSpanMs: gaps.reduce((sum, gap) => sum + gap, 0),
+    elapsedMs: segments.length === 1 ? frames.at(-1).runtimeElapsedMs : null,
+    callbackSpanMs: gaps.reduce((sum, gap) => sum + gap, 0),
+    runtimeSegments: segmentDiagnostics, ticketBoundaries,
     sampleCadenceMs: { median: medianGap, max: Math.max(...gaps) },
     acquisitionMs: { total: captureMs.reduce((sum, ms) => sum + ms, 0), max: Math.max(...captureMs) },
     motionEventSeqs: events.map(event => event.eventSeq), sourceRefs, checks,
     missing: [...missing.values()], deviations: [...failures.values()],
   };
   const unusableCadence = missing.has('runtime.sampleGapMs');
-  const verdict = unusableCadence ? 'NOT_RUN' : failures.size ? 'FAIL' : missing.size ? 'NOT_RUN' : 'PASS';
-  const first = verdict === 'FAIL' ? failures.values().next().value : missing.values().next().value;
+  const unverifiedBoundary = missing.get('runtime.rebaseCause');
+  const verdict = unusableCadence || unverifiedBoundary ? 'NOT_RUN' : failures.size ? 'FAIL' : missing.size ? 'NOT_RUN' : 'PASS';
+  const first = verdict === 'FAIL' ? failures.values().next().value : unverifiedBoundary ?? missing.values().next().value;
   return { actual, expected, verdict, observationsComplete: missing.size === 0,
     reason: first ? `${first.actor}.${first.field} at frame ${first.frame}: ${verdict === 'FAIL' ? 'observed deviation' : 'missing comparable evidence'}` : null };
 }

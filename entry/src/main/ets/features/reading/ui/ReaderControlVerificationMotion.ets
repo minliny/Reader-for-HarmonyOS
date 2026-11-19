@@ -2,7 +2,7 @@ import { FrameNode, UIContext } from '@kit.ArkUI';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { sampleReaderControlSession, type ReaderControlLocation, type ReaderControlSessionState } from './ReaderControlSessionState';
-import type { ReaderControlVerificationRequest } from './ReaderControlVerificationSession';
+import type { ReaderControlVerificationDirection, ReaderControlVerificationRequest } from './ReaderControlVerificationSession';
 
 const ACTORS: string[] = ['reader-control-motion-shell', 'reader-control-motion-grabber',
   'reader-control-motion-dock', 'reader-control-content-host'];
@@ -10,6 +10,8 @@ const CONTENT_CLIP: string = 'reader-control-motion-content-clip';
 const MAX_FRAMES: number = 72;
 const MAX_ANCESTORS: number = 24;
 const MAX_INSPECTOR_TEXT: number = 262144;
+const EXPORT_BLOCK_INTERVAL_MS: number = 100;
+const EXPORT_SCHEDULER_SLACK_MS: number = 1000;
 
 interface MotionPoint {
   x: number;
@@ -105,6 +107,18 @@ interface MotionFrame {
   content: ReaderControlLocation;
   actors: MotionActor[];
   contentClip: MotionActor;
+}
+
+interface MotionExport {
+  readonly readingId: string;
+  readonly transitionId: string;
+  readonly direction: ReaderControlVerificationDirection;
+  readonly epoch: number;
+  readonly frames: MotionFrame[];
+  readonly blockCount: number;
+  readonly droppedSamples: number;
+  readonly endReason: string;
+  readonly deadlineMs: number;
 }
 
 function readOwnInspectorAttrs(node: FrameNode | null, attrs: Map<number, InspectorAttributes>): void {
@@ -217,13 +231,17 @@ export class ReaderControlVerificationMotion {
   private frames: MotionFrame[] = [];
   private droppedSamples: number = 0;
   private nextIndex: number = 0;
+  private pendingExport: MotionExport | undefined = undefined;
+  private exportTimer: number = -1;
 
   sample(request: ReaderControlVerificationRequest, context: UIContext, state: ReaderControlSessionState,
     content: ReaderControlLocation, frameTimeNs: number, runtimeTickMs: number, ticket: number, offsetY: number,
     endpoint: boolean): void {
     if (!ReaderUIVerificationProbe.enabled()) return;
-    if (this.request?.transitionId !== request.transitionId) {
-      this.finish('interrupted');
+    const previousRequest = this.request;
+    if (previousRequest?.transitionId !== request.transitionId || previousRequest?.accepted.epoch !== request.accepted.epoch) {
+      this.cancelExport();
+      this.resetRecording();
       this.request = request;
     }
     const index = this.nextIndex++;
@@ -283,34 +301,72 @@ export class ReaderControlVerificationMotion {
 
   finish(reason: 'completed' | 'interrupted' | 'unmounted'): void {
     const request = this.request;
-    if (request === undefined) return;
     const frames = this.frames;
     const droppedSamples = this.droppedSamples;
+    this.resetRecording();
+    if (reason === 'unmounted') {
+      this.cancelExport();
+      return;
+    }
+    if (request === undefined || !ReaderUIVerificationProbe.enabled()) return;
+    this.cancelExport();
     const last = frames.length > 0 ? frames[frames.length - 1] : undefined;
     const endReason = reason === 'completed' && last?.phase !== 'endpoint' ? 'endpoint-unavailable' : reason;
+    const blockCount = Math.max(frames.length, 1);
+    // Move the detached frames to one export. At most MAX_FRAMES intervals
+    // (7.2 s) plus scheduler slack are allowed, without catch-up bursts.
+    const trace: MotionExport = {
+      readingId: request.readingId,
+      transitionId: request.transitionId,
+      direction: request.direction,
+      epoch: request.accepted.epoch,
+      frames: frames,
+      blockCount: blockCount,
+      droppedSamples: droppedSamples,
+      endReason: endReason,
+      deadlineMs: readerMotionNowMs() + blockCount * EXPORT_BLOCK_INTERVAL_MS + EXPORT_SCHEDULER_SLACK_MS,
+    };
+    this.pendingExport = trace;
+    this.scheduleExportBlock(trace, 0);
+  }
+
+  private resetRecording(): void {
     this.request = undefined;
     this.frames = [];
     this.nextIndex = 0;
     this.droppedSamples = 0;
-    if (!ReaderUIVerificationProbe.enabled()) return;
-    // One frame per motion block bounds memory and allows the host to hash and
-    // look up a specific raw observation. The transport further chunks by bytes.
-    const blockCount = Math.max(frames.length, 1);
-    for (let blockIndex = 0; blockIndex < blockCount; blockIndex += 1) {
-      const frame = frames[blockIndex];
+  }
+
+  private cancelExport(): void {
+    this.pendingExport = undefined;
+    if (this.exportTimer >= 0) clearTimeout(this.exportTimer);
+    this.exportTimer = -1;
+  }
+
+  private scheduleExportBlock(trace: MotionExport, blockIndex: number): void {
+    this.exportTimer = setTimeout((): void => {
+      if (this.pendingExport !== trace) return;
+      this.exportTimer = -1;
+      if (!ReaderUIVerificationProbe.enabled() || readerMotionNowMs() > trace.deadlineMs) {
+        this.cancelExport();
+        return;
+      }
+      const frame = trace.frames[blockIndex];
       ReaderUIVerificationProbe.emit('reading.control-motion', 'motion', {
-        readingId: request.readingId,
-        transitionId: request.transitionId,
-        direction: request.direction,
-        epoch: request.accepted.epoch,
+        readingId: trace.readingId,
+        transitionId: trace.transitionId,
+        direction: trace.direction,
+        epoch: trace.epoch,
         blockIndex: blockIndex,
-        blockCount: blockCount,
+        blockCount: trace.blockCount,
         frameStart: frame?.index ?? -1,
         frameEnd: frame?.index ?? -1,
-        droppedSamples: droppedSamples,
-        endReason: endReason,
+        droppedSamples: trace.droppedSamples,
+        endReason: trace.endReason,
         frames: frame === undefined ? [] : [frame],
       });
-    }
+      if (blockIndex + 1 < trace.blockCount) this.scheduleExportBlock(trace, blockIndex + 1);
+      else this.pendingExport = undefined;
+    }, EXPORT_BLOCK_INTERVAL_MS);
   }
 }

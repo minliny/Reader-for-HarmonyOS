@@ -33,7 +33,7 @@ function action(actionId, op, beforeSeq, afterSeq, time, targetId) {
 }
 
 function record(kind, channel, eventSeq, payload, deviceMonoMs) {
-  return { instanceId, kind, channel, eventSeq, deviceMonoMs, payload };
+  return { instanceId, kind, channel, eventSeq, deviceMonoMs, windowRevision: 17, payload };
 }
 
 function frame(direction, index, epoch, startMs) {
@@ -131,6 +131,49 @@ const evaluate = (kind, data) => evaluateMotion(byKind.get(kind), data);
 const openFrames = data => data.events.filter(event => event.kind === 'reading.control-motion' && event.payload.direction === 'open');
 const part = (data, index, role) => openFrames(data)[index].payload.frames[0].actors.find(actor => actor.id === role);
 
+function rebaseFixture() {
+  const data = fixture();
+  const blocks = openFrames(data);
+  const frames = [
+    [5, 220, 0, 0],
+    [6, 216, 0, 0.2568369063],
+    [7, 201, 0, 0.0493568322],
+    [7, 201, 21, 0.214148829],
+    [7, 201, 81, 0.814623784],
+    [7, 201, 141, 0.965515540],
+    [7, 201, 201, 1],
+  ].map(([ticket, duration, elapsed, visibility], index, observations) => {
+    const endpoint = index === observations.length - 1;
+    const clock = 1000 + index * 60;
+    const sample = frame('open', endpoint ? 2 : index === 0 ? 0 : 1, 1, 1000);
+    // A new layout can move children as local opacity/translation rewind.
+    // Compensation within a ticket is applied to children of the fixed dock.
+    const childLayoutOffset = (index >= 2 ? -4.5 : 0) + (index === 3 ? 2 : 0);
+    for (const actor of sample.actors) {
+      const isDock = actor.id === 'reader-control-motion-dock';
+      const travel = 18 * (1 - visibility);
+      if (isDock) {
+        actor.translateVp.y = travel;
+        actor.opacity = visibility;
+      } else {
+        actor.layoutRectVp.y += childLayoutOffset;
+      }
+      actor.windowOriginVp.y = actor.layoutRectVp.y + travel;
+    }
+    if (index === 0) sample.actors = sample.actors.map(actor => ({ id: actor.id, mounted: false }));
+    return { ...sample, index, frameTimeNs: clock * 1e6, captureStartMs: clock, captureEndMs: clock + 1,
+      runtimeTicket: ticket, runtimeDurationMs: duration, runtimeElapsedMs: elapsed,
+      runtimeTickMs: endpoint ? clock - 60 : clock, visibilityProgress: visibility,
+      runtimeLayoutOffsetVp: index === 3 ? 2 : 0 };
+  });
+  for (const [index, block] of blocks.entries()) {
+    const selected = index < 2 ? [frames[index]] : frames.slice(index);
+    Object.assign(block.payload, { frames: selected, frameStart: selected[0].index, frameEnd: selected.at(-1).index });
+    block.deviceMonoMs = 1363 + index;
+  }
+  return { data, frames };
+}
+
 test('recomputes both complete owner transitions and animated trajectories independently', () => {
   const data = fixture();
   for (const kind of ['control-open', 'control-dismiss', 'motion-open', 'motion-dismiss']) {
@@ -141,6 +184,52 @@ test('recomputes both complete owner transitions and animated trajectories indep
   assert.equal(evaluate('control-dismiss', data).actual.hidden, true);
   assert.equal(evaluate('motion-open', data).actual.firstMount.grabber, 0);
   assert.equal(evaluate('motion-open', data).actual.frameCount, 3);
+});
+
+test('recomputes the final ticket and keeps unproven continuation boundaries incomplete', () => {
+  const { data, frames } = rebaseFixture();
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'NOT_RUN');
+  assert.match(result.reason, /runtime\.rebaseCause/u);
+  assert.deepEqual(result.actual.deviations, []);
+  assert.equal(result.actual.elapsedMs, null);
+  const [first, second, final] = result.actual.runtimeSegments;
+  assert.deepEqual([first, second, final].map(item => [item.ticket, item.durationMs, item.comparedFrames]),
+    [[5, 220, 0], [6, 216, 0], [7, 201, 4]]);
+  assert.equal(first.maxVisibilityError, null);
+  assert.equal(final.startVisibility, frames[2].visibilityProgress);
+  assert.ok(final.maxVisibilityError < 0.000001);
+  assert.ok(result.actual.ticketBoundaries[1].grabberWindowDeltaYVp < 0);
+  assert.equal(result.actual.checks['dock.opacity'].observed, 6);
+  assert.equal(evaluate('motion-dismiss', data).verdict, 'PASS');
+});
+
+test('preserves independent deviations across valid ticket partitions', () => {
+  const { data, frames } = rebaseFixture();
+  const matrix = frames[3].actors[0].matrix;
+  matrix[1] = -0.3;
+  frames[4].visibilityProgress += 0.07;
+  const result = evaluate('motion-open', data);
+  assert.equal(result.verdict, 'NOT_RUN');
+  assert.ok(result.actual.runtimeSegments.at(-1).maxVisibilityError > 0.02);
+  assert.ok(result.actual.deviations.some(item => item.actor === 'shell' && item.field === 'matrix' && item.frame === 3));
+  assert.ok(result.actual.deviations.some(item => item.actor === 'runtime' && item.field === 'normalizedCurve' && item.frame === 4));
+});
+
+test('rejects ticket rollback, incompatible reset and a forged runtime clock interval', () => {
+  const rollback = rebaseFixture();
+  rollback.frames[2].runtimeTicket = 5;
+  const duration = rebaseFixture();
+  duration.frames[2].runtimeDurationMs = 217;
+  const elapsed = rebaseFixture();
+  elapsed.frames[4].runtimeElapsedMs -= 1;
+  const window = rebaseFixture();
+  openFrames(window.data)[1].windowRevision = 18;
+  for (const { data } of [rollback, duration, elapsed, window]) {
+    const result = evaluate('motion-open', data);
+    assert.equal(result.verdict, 'NOT_RUN');
+    assert.equal(result.actual, null);
+  }
 });
 
 test('rejects a truncated or repeated frame block before classifying a numeric deviation', () => {

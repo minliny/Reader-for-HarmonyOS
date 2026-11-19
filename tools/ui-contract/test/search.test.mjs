@@ -155,6 +155,17 @@ test('a delayed projection for the old query is ignored and a missing current vi
   assert.equal(evaluate('results-settled', context).verdict, 'NOT_RUN');
 });
 
+test('a stable matched native result can be visible while the online sweep remains active', () => {
+  const context = capture('results');
+  change(context, 19, {searchActive:true, publicationRevision:12});
+  const result = evaluate('results-settled', context);
+  assert.equal(result.verdict, 'PASS');
+  assert.equal(result.actual.searchActive, true);
+  assert.equal(result.actual.publicationRevision, 12);
+  context.samples['results-settled'].nodes[0].id = 'reader-bookshelf-search-loading';
+  assert.equal(evaluate('results-settled', context).verdict, 'NOT_RUN');
+});
+
 test('native-only assertions do not silently accept a business or input event source', () => {
   const result = evaluate('focus', capture(), ['native-tree']);
   assert.equal(result.verdict, 'NOT_RUN');

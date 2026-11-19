@@ -1,6 +1,6 @@
 {
   "id": "bookshelf.search-input-ime",
-  "version": 3,
+  "version": 4,
   "pageId": "bookshelf",
   "fixture": {
     "id": "public-search-v1",
@@ -181,7 +181,7 @@
       "kind": "results-settled",
       "expected": {
         "mode": "results",
-        "terminalProjection": [
+        "nativeProjection": [
           "results",
           "empty"
         ]
