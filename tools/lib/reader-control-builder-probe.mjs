@@ -295,6 +295,14 @@ function indexFeatureSources() {
   };
   visit(root);
 }
+// When a real child cannot compile with the parent's ports, mount a
+// prop-compatible stand-in. Parent contracts still execute; the child's own
+// visuals keep their dedicated suite.
+function childStandIn(name, source) {
+  const props = [...builderChildProperties(source, name)];
+  const fields = props.map(prop => `  @Prop ${prop}: any = undefined;`).join('\n');
+  return `@Component\nexport struct ${name} {\n${fields}\n  build() { Column() {} }\n}`;
+}
 function missingComponents(error) {
   const names = new Set();
   for (const diagnostic of error?.actual ?? []) {
@@ -327,7 +335,15 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
           childSources[name] = child;
           added = true;
         } catch (childError) {
-          if (process.env.PROBE_DEBUG) console.error('AUTO-CHILD-FAIL', name, String(childError).split('\n')[0]);
+          const standIn = childStandIn(name, child);
+          try {
+            deps = { ...deps, [name]: createReaderBuilderProbe(standIn, ['build'], deps,
+              { ...hooks, componentName: name }).Component };
+            childSources[name] = standIn;
+            added = true;
+          } catch (stubError) {
+            if (process.env.PROBE_DEBUG) console.error('AUTO-CHILD-FAIL', name, String(childError).split('\n')[0]);
+          }
         }
       }
       if (!added) throw error;

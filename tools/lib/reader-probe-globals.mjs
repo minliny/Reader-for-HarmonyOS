@@ -12,12 +12,30 @@ import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryP
 import { ReaderMeasurementStore } from '../../entry/src/main/ets/features/common/ReaderMeasurements.ts';
 import { RemoteReadingGatewayError } from '../../entry/src/main/ets/features/reading/RemoteReadingContract.ts';
 import * as localImportMotion from '../../entry/src/main/ets/features/bookshelf/LocalImportMotion.ts';
+import * as readerScrollLayoutModule from '../../entry/src/main/ets/features/common/ReaderScrollLayout.ts';
+import * as headerMetrics from '../../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts';
 
 const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
   .match(/export const EMPTY_READABLE_ADMISSION:[\s\S]*?= \{[\s\S]*?\n\};/)[0];
 const EMPTY_READABLE_ADMISSION = new Function(stripTypeScriptTypes(readableAdmissionInitializer.replace('export ', '')) + ';return EMPTY_READABLE_ADMISSION;')();
 
 const recoveryChildren = ['ReaderRecoveryAction', 'ReaderRecoveryNotice'];
+
+// HeaderSpecs is .ets; mirror its finite geometry so pages that read the
+// initial fallback can compile without the whole chrome stack.
+class BookshelfHeaderSpec {
+  constructor(barHeight = 52, topInset = 8, contentGap = 14) {
+    this.barHeight = barHeight; this.topInset = topInset; this.contentGap = contentGap;
+    this.frameHeight = barHeight + topInset; this.contentClearance = barHeight + topInset + contentGap;
+  }
+}
+class DetailHeaderSpec {
+  topGap = 8; barHeight = 52; contentGap = 16; contentUnderlap = 8; scrollThreshold = 4;
+  headerTop(topInset) { return Math.max(0, topInset) + this.topGap; }
+  contentStart(topInset, measuredBarHeight) { return this.headerTop(topInset) + Math.max(0, measuredBarHeight) + this.contentGap; }
+}
+const headers = { bookshelfHeaderSpec: () => new BookshelfHeaderSpec(), detailHeaderSpec: () => new DetailHeaderSpec(),
+  readerPageInitialHeaderHeight: (kind) => kind === 'bookshelf' ? 60 : 58 };
 
 export function readerProbeGlobals({ source, dependencies, platform, Child }) {
   // Geometry/property probes do not register physical platform fonts. The
@@ -48,7 +66,11 @@ export function readerProbeGlobals({ source, dependencies, platform, Child }) {
       const width = metrics?.windowRect?.width;
       return Number.isFinite(width) && width > 0 && width >= 600;
     },
-    ...localImportMotion,
+    ...localImportMotion, ...headers, ...readerScrollLayoutModule, ...headerMetrics,
+    readerScaledBarHeight: (base, lineHeight, fs) => Math.ceil(
+      (Number.isFinite(base) ? Math.max(0, base) : 0) +
+      (Number.isFinite(lineHeight) ? Math.max(0, lineHeight) : 0) *
+      Math.max(0, (Number.isFinite(fs) && fs > 0 ? Math.max(1, fs) : 1) - 1)),
     readerMotionDurationMs: (_id, reduceMotion) => reduceMotion === true ? 0 : 200,
     motionAnimateParamDelayed: (_id, delay) => ({ duration: 200, curve: 'ease-in-out', delay }),
     RemoteReadingGatewayError,
