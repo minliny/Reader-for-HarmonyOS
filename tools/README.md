@@ -63,3 +63,26 @@ HDC probes require an explicit target and the existing device-readiness and leas
 rules. Running a host test is not an authorization to connect, install, clear
 application data or operate a device. Packaging and deployment continue through
 the canonical HAP pipeline.
+
+## HDC preflight (one-shot readiness check)
+
+`reader-hdc-preflight.mjs` is a **read-only** gate that turns the 2026-10-27 /
+2026-10-28 field lessons into a fixed checklist, so a device call is attempted
+"right the first time". It never starts, kills, restarts, retargets, changes
+ports, rewrites proxies, or retries. Every HDC call it makes still goes through
+`reader-hdc-lease.mjs`. Environment-variable stripping is reported as a caveat,
+never as proof that no system TUN proxy exists.
+
+```text
+node tools/reader-hdc-preflight.mjs \
+  --hdc <absolute hdc path> \
+  --target <exact target> \
+  [--server-key 127.0.0.1:8710] [--json]
+```
+
+Order: input validation → server TCP reachability → local listener ownership →
+proxy-env caveat → target/server consistency → `checkserver` → `list targets -v`
+→ stale `foreground.json` advisory. Exit codes: `0` READY, `1` NEEDS_ACTION,
+`2` STOP, `3` usage error. `STOP` at the TCP step means a server/address
+problem, not an unauthorized phone. `Offline`/`Unknown` is reported as
+NEEDS_ACTION, never as "phone denied authorization".
