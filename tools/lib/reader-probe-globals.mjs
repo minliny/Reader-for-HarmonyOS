@@ -9,6 +9,7 @@ import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
 import { readerContentSafeTop, createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import { ReaderMeasurementStore } from '../../entry/src/main/ets/features/common/ReaderMeasurements.ts';
 
 const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
   .match(/export const EMPTY_READABLE_ADMISSION:[\s\S]*?= \{[\s\S]*?\n\};/)[0];
@@ -40,6 +41,14 @@ export function readerProbeGlobals({ source, dependencies, platform, Child }) {
     readerInteractiveSafeLeft: () => 0, readerInteractiveSafeRight: () => 0,
     motionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
     readerMotionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
+    ReaderMeasurementStore,
+    readerExpandedLayout: (metrics) => {
+      const width = metrics?.windowRect?.width;
+      return Number.isFinite(width) && width > 0 && width >= 600;
+    },
+    readerMotionDurationMs: (_id, reduceMotion) => reduceMotion === true ? 0 : 200,
+    defaultSourceManagementFilters: () => ({ searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '全部分组' }),
+    TextInputController: class { caretPosition() {} },
     FrameCallback: class { onFrame() {} cancel() {} },
     ReaderActionAccessibility: class { constructor() {} applyNormalAttribute() {} },
     readerFontFamilyReady: () => true, MangaDirectoryCurrentFooter: Child,

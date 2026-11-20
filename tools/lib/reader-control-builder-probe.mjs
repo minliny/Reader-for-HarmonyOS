@@ -1,6 +1,6 @@
 import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { labeledIconControls } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls } from './reader-foundation-control-probe.mjs';
 import { switchControls } from './reader-switch-control-probe.mjs';
@@ -9,7 +9,7 @@ import { mangaDirectoryEntryRowSdk } from './manga-directory-entry-row-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
 import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
 import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
-import { createEtsBuilderProbe, builderChildProperties, builderSdkAvailable,
+import { createEtsBuilderProbe, builderChildProperties, builderComponentMembers, builderSdkAvailable,
   builderCompilationCacheStats, builderChildPropertyCacheStats } from './ets-builder-probe.mjs';
 import { readerProbeGlobals } from './reader-probe-globals.mjs';
 
@@ -278,7 +278,60 @@ function prepareReaderFixture({ source, names, dependencies, hooks, original, st
   }
   return { names, dependencies, hooks };
 }
+// The SDK reports "X({...}) does not meet UI component syntax" when a page
+// mounts a child the probe has not registered. Index the feature sources once
+// so compilation can resolve such a child by its real name instead of failing.
+const featureIndex = new Map();
+function indexFeatureSources() {
+  const root = new URL('../../entry/src/main/ets/features/', import.meta.url);
+  const visit = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) visit(new URL(`${entry.name}/`, dir));
+      else if (entry.name.endsWith('.ets')) {
+        const name = entry.name.slice(0, -4);
+        if (!featureIndex.has(name)) featureIndex.set(name, new URL(entry.name, dir));
+      }
+    }
+  };
+  visit(root);
+}
+function missingComponents(error) {
+  const names = new Set();
+  for (const diagnostic of error?.actual ?? []) {
+    const match = /'([A-Za-z][A-Za-z0-9_]*)\s*\(\{/.exec(diagnostic?.message ?? '');
+    if (match) names.add(match[1]);
+  }
+  return [...names];
+}
 export function createReaderBuilderProbe(source, names, dependencies = {}, hooks = {}) {
-  return createEtsBuilderProbe(source, names, dependencies, { ...hooks,
-    createGlobals: hooks.createGlobals ?? readerProbeGlobals, prepareComponent: prepareReaderFixture });
+  const childSources = { ...(hooks.childSources ?? {}) };
+  const options = { ...hooks, childSources, createGlobals: hooks.createGlobals ?? readerProbeGlobals,
+    prepareComponent: hooks.prepareComponent ?? prepareReaderFixture };
+  let deps = dependencies;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return createEtsBuilderProbe(source, names, deps, options);
+    } catch (error) {
+      const pending = missingComponents(error).filter(name => deps[name] === undefined);
+      if (process.env.PROBE_DEBUG) console.error('AUTO-PENDING', pending, 'actual', error?.actual?.length);
+      if (pending.length === 0) throw error;
+      if (featureIndex.size === 0) indexFeatureSources();
+      let added = false;
+      for (const name of pending) {
+        const path = featureIndex.get(name);
+        if (path === undefined) continue;
+        const child = readFileSync(path, 'utf8');
+        try {
+          deps = { ...deps, [name]: createReaderBuilderProbe(child, builderComponentMembers(child, name), deps,
+            { ...hooks, componentName: name }).Component };
+          childSources[name] = child;
+          added = true;
+        } catch (childError) {
+          if (process.env.PROBE_DEBUG) console.error('AUTO-CHILD-FAIL', name, String(childError).split('\n')[0]);
+        }
+      }
+      if (!added) throw error;
+    }
+  }
+  return createEtsBuilderProbe(source, names, deps, options);
 }
