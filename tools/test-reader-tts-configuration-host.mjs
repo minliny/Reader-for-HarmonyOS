@@ -198,19 +198,32 @@ for(const mode of ['error','unavailable','retired']) {
   const lre=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
   const f=fixture();let owner;const notices=[];
   const Owner=productionMotionMethods(lre,['requireTtsConfigurationHost','changeTtsEngine','saveHttpTtsEngine',
-    'deleteHttpTtsEngine','persistTtsConfig','onControlTemporaryLayerChange'],
+    'deleteHttpTtsEngine','persistTtsConfig','onControlTemporaryLayerChange',
+    'projectTtsConfigurationRecovery','notifyTtsConfigurationFailure'],
     {ReaderTtsConfigurationHost,ReaderTtsCredentialStore:{instance:f.credentials},hilog:{error(){}}});
   owner=new Owner();Object.assign(owner,{lifecycleToken:1,sourceId:'source',bookId:'book',ttsEngine:'system',
     ttsState:{rate:1,status:'stopped',errorMessage:'existing speech error'},ttsConfig:{...baseConfig},ttsConfigMutationGeneration:0,
     ttsHttpEngines:[],ttsHttpGateway:new ReaderHttpTtsGateway(f.runtime),ttsGateway:new ReaderTtsGateway(f.runtime),
     ttsCoordinator:{stop:f.coordinator.stop,probeConfigurationAvailability:f.coordinator.probeAvailability},
     isSessionActive:token=>token===owner.lifecycleToken,coreRateForMultiplier:()=>5,ratePercentForMultiplier:()=>100,
+    appForeground:true,windowChromeActive:true,ttsConfigurationLoading:false,ttsConfigurationLoadFailed:false,
+    ttsConfigurationMetadataFailed:false,ttsConfigurationNotice:undefined,
+    ttsConfigurationRecovery:{message:'',visible:false,canRetry:false,generation:0},
+    readerPreferenceModule:()=>'tts',
+    // Shared short feedback is a self-drawn surface; the port records what it
+    // would display so the assertion still covers the user-visible copy.
+    transientFeedback:{show(_context,payload,admitted){if(admitted===undefined||admitted())notices.push(payload.message);return true;},reset(){}},
     getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>notices.push(message)})})});
   f.hooks['http-tts.list']=async()=>{throw new Error('offline');};f.hooks.probe=async()=>{throw new Error('probe failure');};
   const playback=JSON.stringify(owner.ttsState);await owner.saveHttpTtsEngine(draft);
   assert.equal(owner.ttsEngine,'http-tts:12');assert.equal(owner.ttsHttpEngines[0].id,12);
   assert.equal(JSON.stringify(owner.ttsState),playback,'production callback never writes a configuration error into playback');
   assert.ok(notices.some(v=>/已保存/.test(v)));
+  // A pre-dispatch rejection (non-HTTPS) must surface the LRE-owned failure copy
+  // and leave formal playback untouched; this exercises notifyTtsConfigurationFailure.
+  await assert.rejects(owner.saveHttpTtsEngine({...draft,url:'http://127.0.0.1/tts'}),/HTTPS/);
+  assert.equal(JSON.stringify(owner.ttsState),playback,'a rejected save must not write playback state');
+  assert.ok(notices.some(v=>/未能保存/.test(v)),'the failure copy stays with the reading short-feedback owner');
   const writes=f.methods().filter(v=>v==='http-tts.put').length;
   delete f.hooks['http-tts.list'];owner.onControlTemporaryLayerChange(true);await drain();
   assert.equal(owner.ttsConfigurationHost.snapshot().metadata.fact,'current');

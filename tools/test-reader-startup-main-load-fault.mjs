@@ -31,16 +31,40 @@ function fixture(debug=true,mode='debug',parameters={readerStartupMainLoadFailur
   const events=[],requests=[],wants=[],errors=[];
   const runtime={start:()=>{events.push('core');return core.promise;},release:async()=>{events.push('release');}};
   const Ability=productionMotionMethods(abilityFile,
-    ['coldStartPage','windowStageGeneration','startupContent','runtimeOwner','themeReady','recoveryReady','bookshelfModeReady','shelfFontsReady','eventLoopProbe',
+    ['coldStartPage','windowStageGeneration','startupContent','runtimeOwner','themeReady','recoveryReady','bookshelfModeReady','shelfFontsReady',
+      'publishConfirmedBookshelfMode',
       'onCreate','onNewWant','onWindowStageCreate','onWindowStageDestroy','onDestroy','loadMainContent'],{
       DEBUG:debug,BUILD_MODE_NAME:mode,ReaderStartupTrace,ReaderStartupContentOwner,readerMotionNowMs:()=>performance.now(),
       errorMessageOf,localReadFailureSummary,
       readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerEventLoopProbeEnabled:()=>false,
       readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
       installMangaAtomicPayloadReader,ReaderMangaPlatformDiagnostic:{install:()=>undefined},
-      ReaderRuntimeOwner:{install:()=>runtime},DOMAIN:0x5244,hilog:{error:(...args)=>errors.push(args),warn() {},info() {}},
+      ReaderRuntimeOwner:{install:()=>runtime},
+      // Crash-evidence installation is diagnostic only; this fault path never
+      // reads it, so the port returns no handle.
+      ReaderCrashEvidence:{install:()=>undefined,markPhase(){},markReady(){}},
+      // Diagnostics are observational only; this fault path reads the cold-start
+      // page and lifecycle hooks, never the evidence payload itself.
+      // Mirror the real cold-start admission: no diagnostics outside the exact
+      // debug/debug build, and the page derives from the same five Want flags.
+      ReaderEntryDiagnostics:{forColdStart:(debug,mode,want)=>{
+        if(debug!==true||mode!=='debug')return undefined;
+        const params=want?.parameters??{};
+        const page=readerControlVerificationColdStartPage(debug,mode,
+          params.readerControlMotionVerification,params.readerOpenSourcePilot,
+          params.readerStartupMainLoadFailure,params.readerVerifyScene);
+        return {coldStartPage:page==='pages/ReaderPageStructureVerification'?'pages/Index':page,
+          disableOptionalEntryMemory:false,offlineScope:undefined,readingScope:undefined,selectionMode:undefined,
+          bindOwner(){},afterRecovery(){},start(){},stop(){},close(){},startEventLoop(){}};
+      }},
+      READER_REDUCE_MOTION_STORAGE_KEY:'readerReduceMotion',
+      READER_TRANSIENT_TOAST_STORAGE_KEY:'readerTransientToast',
+      READER_TRANSIENT_HOST_STORAGE_KEY:'readerTransientHost',
+      createReaderTransientToastState:()=>({}),
+      DOMAIN:0x5244,hilog:{error:(...args)=>errors.push(args),warn() {},info() {}},
       ConfigurationConstant:{ColorMode:{COLOR_MODE_DARK:1}},AppStorage:{setOrCreate() {}},
-      WebDavCredentialStore:{instance:{attachContext() {},loadBookshelfViewMode:()=>bookMode.promise}},
+      WebDavCredentialStore:{instance:{attachContext() {},loadBookshelfViewMode:()=>bookMode.promise,
+        currentBookshelfViewMode:()=>undefined}},
       prepareReaderShelfFonts:()=>fonts.promise,
       ReaderThemeHost:{install:()=>theme.promise,setRecoveryBarrier() {},detach() {}},
       SyncGateway:class{async recoverInterruptedRestore(){events.push('restore');await restore.promise;return false;}},
@@ -59,7 +83,11 @@ function fixture(debug=true,mode='debug',parameters={readerStartupMainLoadFailur
   const f=fixture();try{
     await tick();assert.deepEqual(f.requests,[],'fault cannot bypass original admission or fonts');
     f.core.resolve();f.theme.resolve();f.bookMode.resolve(null);f.windowReady.resolve(true);await tick();assert.deepEqual(f.requests,[]);
-    f.restore.resolve();await tick();assert.ok(f.events.indexOf('reset')>f.events.indexOf('restore'));assert.ok(f.events.indexOf('settings')>f.events.indexOf('reset'));assert.deepEqual(f.requests,[]);
+    f.restore.resolve();await tick();
+    // Recovery now runs reset -> mode publication -> settings; wait boundedly
+    // for the settings admission instead of assuming it lands in one frame.
+    for(let i=0;i<50&&!f.events.includes('settings');i++)await tick();
+    assert.ok(f.events.indexOf('reset')>f.events.indexOf('restore'));assert.ok(f.events.indexOf('settings')>f.events.indexOf('reset'));assert.deepEqual(f.requests,[]);
     f.settings.resolve();await tick();assert.deepEqual(f.requests,[],'existing shelf font barrier still withholds the faulty native dispatch');
     f.fonts.resolve();await tick();assert.deepEqual(f.requests.map(r=>r.page),[missing]);assert.equal(f.ability.coldStartPage,index,'probe is consumed before native return');
     const owner=f.ability.startupContent;assert.equal(owner.snapshot().phase,'loading');assert.equal(owner.snapshot().canRetry,false);
@@ -95,11 +123,17 @@ for(const [debug,mode,params] of [[false,'debug',{readerStartupMainLoadFailure:t
 }
 // Remove only the real production consumption statement and run its actual
 // method through the same recovery owner. This must make retry fault again.
-const abilitySource=readFileSync(abilityFile,'utf8'),consumption="this.coldStartPage = 'pages/Index';";
+const abilitySource=readFileSync(abilityFile,'utf8'),
+  // Scope the negative control to the fault branch: the bare assignment also
+  // appears in the ordinary reset path, so replacing the first occurrence
+  // removed the wrong line.
+  consumption="if (page === 'pages/__ReaderStartupMainLoadFailure') {\n      this.coldStartPage = 'pages/Index';",
+  withoutConsumption=abilitySource.replace(consumption,"if (page === 'pages/__ReaderStartupMainLoadFailure') {");
 assert.ok(abilitySource.includes(consumption));
 const directory=mkdtempSync(join(tmpdir(),'reader-startup-fault-negative-')),file=join(directory,'EntryAbility.ets');let owner;
 try{
-  writeFileSync(file,abilitySource.replace(consumption,''));
+  assert.notEqual(withoutConsumption,abilitySource,'negative control must actually remove the fault consumption');
+  writeFileSync(file,withoutConsumption);
   const Ability=productionMotionMethods(file,['loadMainContent'],{ReaderStartupTrace:{current:()=>undefined},DOMAIN:0,hilog:{error() {}}});
   const ability=Object.assign(new Ability(),{windowStageGeneration:0,coldStartPage:missing}),requests=[];
   const stage={loadContent:(page,callback)=>requests.push({page,callback})};

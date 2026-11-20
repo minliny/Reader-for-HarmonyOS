@@ -55,9 +55,18 @@ if(selectedCase==='source-drawer') {
   const drawer=sourceDrawer(p,o,844-SOURCE_SWITCH_VISUAL.drawerTopReserve),drawerId=drawer.node.id;
   const root=[...o.nodes.values()].find(n=>n.type==='Stack'&&n.width==='100%'&&n.height==='100%');assert.ok(root);
   const texts=p.nodes(o).filter(n=>n.type==='Text');assert.ok(texts.some(n=>n.create==='更换书源'));
-  const message=texts.find(n=>n.create==='source unavailable'),button=p.nodes(o).find(n=>n.type==='Button'&&n.createWithLabel?.[0]==='重试');assert.ok(message&&button);button.onClick();assert.equal(retry,1);
-  const close=p.nodes(o).find(n=>n.type==='Button'&&n.width===44&&n.height===44&&n.accessibilityText==='关闭更换书源'&&n.onClick);assert.ok(close);close.onClick();assert.equal(closed,1);
-  o.updateStateVars({state:{kind:'discoveryError',message:'new message'},currentSourceId:''});p.properties.flush();assert.equal(message.create,'new message');
+  // The inline failure region is the shared status label + retry action; the
+  // raw diagnostic message is projected through short feedback, not inline text.
+  const status=texts.find(n=>n.create==='查找失败');
+  const button=p.nodes(o).find(n=>n.onClick&&n.accessibilityText==='重新查找书源');
+  assert.ok(status&&button);button.onClick();assert.equal(retry,1);
+  // Close belongs to the shared bounded header now; keep proving one enabled
+  // close control reaches the owner without pinning its old raw-Button label.
+  const close=p.nodes(o).find(n=>n.onClick&&typeof n.accessibilityText==='string'&&n.accessibilityText.startsWith('关闭'));
+  assert.ok(close);close.onClick();assert.equal(closed,1);
+  o.updateStateVars({state:{kind:'discoveryError',message:'new message'},currentSourceId:''});p.properties.flush();
+  assert.equal(status.create,'查找失败','inline state never duplicates the raw diagnostic message');
+  assert.ok(!p.nodes(o).some(n=>n.create==='new message'),'raw message stays out of inline content');
   metrics.windowRect=new metricsApi.ReaderRectVp(0,0,270,320);o.readerWindowMetricsRevision++;p.properties.flush();
   assert.equal([...o.nodes.values()].find(n=>n.type==='Stack'&&n.width==='100%'&&n.height==='100%').id,root.id,'viewport/props keep the same actual source root actor');
   assert.equal(sourceDrawer(p,o,320).node.id,drawerId,'viewport updates reach the same shared drawer frame rather than a legacy fixed extent');

@@ -42,8 +42,9 @@ async function nonTxt(f) {
 function editor(f,alternate=source) {
  const methods=alternate===source?sourceUrl:localFileUrl(resolve(f.root,'mutated-directory.ets'));
  if(alternate!==source)writeFileSync(methods,alternate);
- const Editor=productionMotionMethods(methods,['loadRules','changed','edit','run','recover','aboutToDisappear','canEdit','actorIdentity','ownsActor','recoveryIdentity','ownsRecovery','recoveryView','canContinueOriginal','notifyApplied','retryDirectoryRefresh'],{DirectoryRuleDraft:Draft,ReaderRuntimeOwner:f.Runtime});
+ const Editor=productionMotionMethods(methods,['loadRules','changed','edit','run','publishRecovery','recover','aboutToDisappear','canEdit','actorIdentity','ownsActor','recoveryIdentity','ownsRecovery','recoveryView','canContinueOriginal','notifyApplied','retryDirectoryRefresh','onRecoveryChanged','originalBelongsToBook'],{DirectoryRuleDraft:Draft,ReaderRuntimeOwner:f.Runtime});
  return Object.assign(new Editor(),{bookId:f.id,mounted:true,generation:0,presentationGeneration:1,nextRuleId:1,
+  feedback:{show(){return true;},reset(){}},
   rules:[new Draft(1,'第一卷.*','0','title')],preview:[],previewReady:false,loaded:true,busy:false,message:'',
   directoryRefreshFailed:false,operation:f.owner.snapshot(),gateway:f.directoryGateway,applied:0,onApplied(){this.applied++;}});
 }

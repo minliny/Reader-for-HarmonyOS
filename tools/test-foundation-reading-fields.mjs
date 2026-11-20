@@ -27,7 +27,10 @@ const tuple=n=>Object.fromEntries(properties.filter(k=>Object.hasOwn(n,k)).map(k
 // seams: the original/full current Builder and original draft methods compile.
 
 function directoryConsumer(source,shared){
- const surface=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ // The directory case proves rule draft/mutation logic, not the inline select
+ // chrome. Stub that leaf so the probe does not need the whole select stack.
+ const inlineSelectStub=`@Component\nexport struct ReaderInlineSelect {\n  @Prop value: string = '';\n  @Prop options: string[] = [];\n  @Prop selectedIndex: number = 0;\n  @Prop actionEnabled: boolean = true;\n  onSelect: (index: number, value: string) => void = (): void => {};\n  build() { Column() {} }\n}`;
+ const surface=boundedSurfaceSdk({allowEmptyBranchAdmission:true,ReaderInlineSelect:inlineSelectStub});
  for(const[name,value]of Object.entries(shared.dependencies))if(!(name in surface.properties.sdk))surface.deps[name]=value;
  Object.assign(surface.childSources,shared.hooks.childSources);
  const enter=surface.hooks.onObserverEnter;surface.hooks.onObserverEnter=(...args)=>{enter?.(...args);shared.hooks.onObserverEnter?.(...args);};surface.hooks.lifecycleChildren=true;
@@ -49,7 +52,10 @@ function setup(tail,scheme,busy){
  const deps={...readerFoundationTokens,DirectoryRuleDraft,readerControlReplaceEndpoint};
  const old=compile('@Component struct OriginalReadingFields {\n'+f.methods.join('\n')+(f.names.includes('build')?'':'\nbuild(){Column(){}}')+'\n}',f.names,{...oldShared.dependencies,...deps},oldShared.hooks).owner;
  const source=readFileSync(new URL('../'+f.path,import.meta.url),'utf8'),directory=tail==='ReaderDirectoryRules.ets'?directoryConsumer(source,shared):undefined;
- const current=directory?.owner??compile(source,f.names,{...shared.dependencies,...deps},shared.hooks).owner;
+ // The overlay build now mounts its recovery + list state builders; include the
+ // nested @Builder members so the form can render without unresolved calls.
+ const names=tail==='ReaderTtsConfigOverlay.ets'?[...new Set([...f.names,'configurationRecovery','configurationListState'])]:f.names;
+ const current=directory?.owner??compile(source,names,{...shared.dependencies,...deps},shared.hooks).owner;
  const states={appThemeScheme:scheme,scheme,busy,localPending:busy,interactionEnabled:true,motionProgress:1,state:{kind:'ready',mutationPending:busy,writeBlocked:false,writeUncertain:false},query:'原正文关键词',queryInputId:'persistent-reading-input',draftName:'原服务',draftUrl:'https://original.invalid/tts',draftApiKey:'private-fixture-only',draftVoice:'原音色',draftFormat:'mp3',draftClearApiKey:true,errorText:'',rules:[new DirectoryRuleDraft(7,'^卷','2','title')],loaded:true,previewReady:false,preview:[],message:'原提示',generation:3,mounted:true,presentationGeneration:1,bookId:'current-book',directoryRefreshFailed:false,operation:{generation:0,busy:false,confirmation:'undispatched',label:'',method:'',message:'',blocked:false,canRetryOriginal:false,writeStage:'intent'}};
  const calls={old:[],current:[]},controller={stopEditing(){}};
  for(const[side,owner]of[['old',old],['current',current]]){

@@ -15,7 +15,26 @@ const methods = ['p','fullInput','sharedInput','openConfiguration','dismissConfi
   'configurationSelectedId','configurationMessage','commitConfiguration','fieldLabel','fieldValue','fieldWidth',
   'hasActiveQueue','isHttpEngineSelected','onlineServicePage','onEngineChanged','onlineEngineId','onlineServiceDescription','isTtsServiceTabSelected','systemEngineDisplay','currentEngineLabel','currentVoiceLabel','selectTtsServiceType',
   'changeRateSlider','changeSeekSlider'];
-const deps = { ...choices, ...state, readerControlUnit, SliderChangeMode };
+// The retained value field measures its text through the real UI context.
+// Width is not asserted here, so a deterministic measure stub is enough; it
+// only has to expose the same px2vp/getMeasureUtils surface as production.
+const deps = { ...choices, ...state, readerControlUnit, SliderChangeMode,
+  // Presentation-only leaves for the retained value field. Width/height are
+  // not asserted here, so deterministic values keep the contract probe focused
+  // on which trigger maps to which configuration field.
+  readerAppColor: () => '#000000',
+  readerActionTouchRegion: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
+  ReaderActionAccessibility: class { constructor() {}
+    applyNormalAttribute() {} applyPressedAttribute() {} applyFocusedAttribute() {}
+    applyDisabledAttribute() {} applySelectedAttribute() {} },
+  TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE: { fontFamily: 'sans-serif', fontWeight: 400, fontSizeFp: 14 },
+  TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY: {
+    fontFamily: 'sans-serif', fontWeight: 400, fontSizeFp: 14, lineHeightFp: 20 },
+  uiContext: { px2vp: value => value / 3,
+    getMeasureUtils: () => ({
+      measureText: ({ textContent }) => ({ width: String(textContent).length * 14 }),
+      measureTextSize: () => ({ width: 0, height: 42 }),
+    }) } };
 const Content = productionMotionMethods(ttsFile, methods, deps);
 function setup(owner = new Content()) {
   return Object.assign(owner, { motionProgress:1, interactionEnabled:true, configField:'', configIdentity:'', configGeneration:0,
@@ -61,7 +80,7 @@ assert.ok(c.configurationMessage().includes('没有可用'));
 c.motionProgress=.5; c.configField=''; c.openConfiguration('engine'); assert.equal(c.configField,'');
 }
 if(id==='fields'){
-const probe=createReaderBuilderProbe(readFileSync(ttsFile,'utf8'), [...methods,'ttsSelectValueField'],deps);
+const probe=createReaderBuilderProbe(readFileSync(ttsFile,'utf8'), [...methods,'ttsSelectValueField','fieldHeight'],deps);
 setup(probe.owner);
 for(const field of ['voice','engine','language','session','failure']) probe.owner.ttsSelectValueField(field);
 const triggers=[...probe.owner.nodes.values()].filter(n=>n.onClick);
@@ -95,7 +114,10 @@ assert.equal(tabs.configField,''); finishSwitch(); await tick();
 assert.equal(tabs.serviceBusy,false); assert.equal(tabs.engine,'http-tts:31');
 tabs.onEngineChange=async()=>{throw new Error('Switch failed');};
 tabs.selectTtsServiceType(false); await tick();
-assert.equal(tabs.onlineServicePage(),true); assert.equal(tabs.serviceError,'Switch failed');
+assert.equal(tabs.onlineServicePage(),true);
+assert.equal(tabs.serviceError,'','engine-switch failure copy is owned by the host, not this control');
+assert.equal(tabs.engine,'http-tts:31','a failed switch keeps the acknowledged engine');
+assert.equal(tabs.serviceBusy,false,'a failed switch releases the tab transaction');
 tabs.onEngineChange=async id=>{tabs.engine=id;}; tabs.selectTtsServiceType(false); await tick();
 assert.equal(tabs.onlineServicePage(),false); assert.equal(tabs.engine,'system'); assert.equal(tabs.configField,'');
 }
@@ -105,7 +127,7 @@ const Manager=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets')
   ['stopPreview','aboutToAppear','aboutToDisappear','current','setBusy','beginEdit','canSubmit','submit','selectEngine','deleteEngine','clearDraft','resetDraft'],{KeyboardAvoidMode});
 const manager=Object.assign(new Manager(),{mounted:false,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,draftId:-1,draftName:'服务',draftUrl:'https://example.invalid/?text={{text}}',
   draftApiKey:'',draftVoice:'',draftFormat:'mp3',draftClearApiKey:false,
-  errorText:'',onBusyChange(){},onClose(){}}); manager.aboutToAppear();
+  errorText:'',transientFeedback:{reset(){}},onBusyChange(){},onClose(){}}); manager.aboutToAppear();
 let resolveSave; manager.onPut=()=>new Promise(resolve=>resolveSave=resolve);
 manager.submit(); assert.equal(manager.busy,true);
 manager.beginEdit({id:2,name:'其他',url:'else'}); manager.clearDraft();
@@ -113,7 +135,7 @@ assert.equal(manager.draftName,'服务'); resolveSave(); await tick();
 assert.equal(manager.busy,false); assert.equal(manager.draftName,'');
 manager.draftName='失败草稿'; manager.draftUrl='https://example.invalid';
 manager.onPut=async()=>{throw new Error('保存失败');}; manager.submit(); await tick();
-assert.equal(manager.draftName,'失败草稿'); assert.equal(manager.errorText,'保存失败');
+assert.equal(manager.draftName,'失败草稿'); assert.equal(manager.errorText,'','save receipts belong to the host projection, not the field-validation text');
 manager.onPut=()=>new Promise(resolve=>resolveSave=resolve); manager.submit(); manager.aboutToDisappear();
 resolveSave(); await tick(); assert.equal(manager.draftName,'失败草稿','late result cannot clear an unmounted form');
 }
@@ -122,12 +144,12 @@ const KeyboardAvoidMode={OFFSET:0,RESIZE:1,NONE:4};
 const Manager=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
   ['stopPreview','aboutToAppear','aboutToDisappear','current','setBusy','beginEdit','canSubmit','submit','selectEngine','deleteEngine','clearDraft','resetDraft'],{KeyboardAvoidMode});
 const keyboardWrites=[];
-const modal=Object.assign(new Manager(),{windowModal:true,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
+const modal=Object.assign(new Manager(),{windowModal:true,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},transientFeedback:{reset(){}},
   getUIContext:()=>({getKeyboardAvoidMode:()=>KeyboardAvoidMode.NONE,
     setKeyboardAvoidMode:mode=>keyboardWrites.push(mode)})});
 modal.aboutToAppear(); modal.aboutToDisappear(); modal.aboutToDisappear();
 assert.deepEqual(keyboardWrites,[KeyboardAvoidMode.RESIZE,KeyboardAvoidMode.NONE]);
-const menu=Object.assign(new Manager(),{windowModal:false,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
+const menu=Object.assign(new Manager(),{windowModal:false,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},transientFeedback:{reset(){}},
   getUIContext:()=>{throw new Error('an anchored choice menu must not change keyboard policy');}});
 menu.aboutToAppear(); menu.aboutToDisappear();
 }
@@ -136,13 +158,13 @@ const Overlay=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets')
   ['stopPreview','choose','aboutToDisappear','onIdentityChanged']);
 let complete, closed=[];
 const busyChanges=[];
-const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
+const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,errorText:'',transientFeedback:{reset(){}},selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
   onChoose:()=>new Promise(resolve=>complete=resolve),onBusyChange:busy=>busyChanges.push(busy),onClose:id=>closed.push(id)});
 overlay.choose('system'); overlay.choose('system'); overlay.selectionId='voice:2'; overlay.onIdentityChanged();
 assert.deepEqual(busyChanges,[false],'replaced selection releases the parent content-cover gate');
 complete(); await tick(); assert.deepEqual(closed,[],'old completion cannot close a newer menu');
 overlay.onChoose=async()=>{throw new Error('切换失败');}; overlay.choose('system'); await tick();
-assert.equal(overlay.errorText,'切换失败'); assert.equal(overlay.busy,false);
+assert.equal(overlay.errorText,'','choice failures belong to the parent receipt, not the field-validation text'); assert.equal(overlay.busy,false);
 assert.deepEqual(busyChanges,[false],'choice transaction does not own the manager content-cover callback');
 }
 if(id==='audio-adapter'){

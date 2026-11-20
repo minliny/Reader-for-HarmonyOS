@@ -25,7 +25,7 @@ const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnaps
  'hydrateMangaPositions','refreshDetailMangaPosition','pumpMangaPositionProjections','mangaPositionProjectionCurrent','projectMangaPosition',
  'openLocalBookDetail','openRemoteBookDetail','onRemoteSessionReady','installRemoteReadingSession','probeRemoteContentVerdict','refreshCachedChapterFromPrompt','chooseCachedChapterRefresh',
  'refreshDetailAcquisitionProjection','openReading','isKnownDetailChapter','presentPreparedReading','returnToReadingOrigin','applyReaderDirectoryProjection',
- 'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure','runIndexRecoveryAction',
+ 'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','clearShelfNavigationMotion','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure','runIndexRecoveryAction',
  'detailOperationNoticeContent','externalDirectory','detailContent','detailSurface','isCurrentDetailPresentation','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','detailReadableAdmission','detailShelfMessage','detailBookKey','remoteContentVerdictLabel',
  'requestDetailShelfMutation','addDetailBook','cancelDetailBookAddition','readableAdmissionCurrent','publishReadableAdmission',
  'isSameDetailBook','canRemoveDetailBook','removeDetailBook','applyDetailBookRemoval','shelfFilter','shelfRecovery','emptyShelfRecovery',

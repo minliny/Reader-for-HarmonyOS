@@ -88,7 +88,10 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
    searchListLazyRequests(indices).LazyForEach.create(id,owner,source,generate,key);
  },pop(){}};
  const effect=(kind,parameters)=>({kind,parameters,animation(options){return{...this,options,animation:this.animation};}});
- const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
+ const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,
+   // SourceSwitchWindow owns a shared short-feedback port; presentation itself
+   // is covered by the message-lifecycle suites, so the probe keeps the port.
+   ReaderTransientFeedback:class{show(){return true;}reset(){}},SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
    curves:{cubicBezierCurve(...values){return{kind:'cubic-bezier',values};}},
    ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
    Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Move:'move',Up:'up',Cancel:'cancel'},

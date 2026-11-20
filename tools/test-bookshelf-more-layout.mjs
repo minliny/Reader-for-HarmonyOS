@@ -20,8 +20,10 @@ const specSource=readFileSync(new URL('../entry/src/main/ets/features/common/Rea
 const { resolvePopupSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
   .replace(/^import[^;]+;\s*/gm,'').replace(/^export /gm,'') + '; return { resolvePopupSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
 const popupSpec=resolvePopupSpec('bookshelf-more-menu');
-const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu','finishCollapse'];
-const Methods=productionMotionMethods(file,names,{resolvePopupSpec});
+const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu','finishCollapse','fontScale'];
+const Methods=productionMotionMethods(file,names,{resolvePopupSpec,
+  readerReadableFontScale:(fs)=>Number.isFinite(fs)&&fs>0?Math.max(1,fs):1,
+  ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})}});
 const menu=Object.assign(new Methods(),{overlayWidth:393,overlayHeight:650,anchorRight:373,anchorBottom:60,panelHeight:212});
 
 for(const [width,height,right,bottom] of [[320,190,312,60],[393,140,393,60],[800,300,798,80],[170,200,170,70]]) {
@@ -35,7 +37,10 @@ function measuredMenu(definition=source) {
  const surface=actionMenuProbe();
  const {owner:actual}=createReaderBuilderProbe(definition,boundedMembers(definition),
   {...surface.properties.sdk,...surface.dependencies,LineJoinStyle:{Round:'LineJoinStyle.Round'},
-   registerReaderFonts(){},uiContext:{animateTo:(_params,callback)=>callback()}},
+   registerReaderFonts(){},readerReadableFontScale:(fs)=>Number.isFinite(fs)&&fs>0?Math.max(1,fs):1,
+   readerSurfaceElevation:()=>({radius:0,offsetY:0}),
+   ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
+   uiContext:{...(surface.properties.sdk.uiContext??{}),animateTo:(_params,callback)=>callback()}},
   {...surface.properties.hooks,...surface.hooks});
  Object.assign(actual,{anchorRight:355,anchorBottom:52,reduceMotion:true,mounted:true});actual.initialRender();
  const area=[...actual.nodes.values()].find(node=>node.type==='Stack'&&node.onAreaChange);

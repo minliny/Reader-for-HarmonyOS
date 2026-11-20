@@ -61,11 +61,16 @@ let setups=[];const coordinator={install:()=>{const p=deferred();setups.push(p);
 const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog','ReaderStartupContentOwner',entry.replace('export default class','return class'))(class{},coordinator,ReaderStartupTrace,{error(){}},ReaderStartupContentOwner);
 const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(){this.loads++;}});
 {
- const e=new Entry(),old=stage(),fresh=stage();e.onWindowStageCreate(old);e.onWindowStageDestroy();e.onWindowStageCreate(fresh);
+ const e=new Entry(),old=stage(),fresh=stage();
+ // onWindowStageCreate now reads context.config for the window install; without
+ // it the native window setup throws and no coordinator install is recorded.
+ e.context={config:{colorMode:0}};
+ e.onWindowStageCreate(old);e.onWindowStageDestroy();e.onWindowStageCreate(fresh);
  setups[0].reject(Error('old setup failed'));setups[1].resolve(true);await tick();assert.equal(old.loads,0);assert.equal(fresh.loads,1);
 }
 {
- const e=new Entry(),s=stage();e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,1,'failed geometry setup uses the existing zero-inset recovery instead of stranding startup');e.onWindowStageDestroy();
+ const e=new Entry(),s=stage();e.context={config:{colorMode:0}};
+ e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,1,'failed geometry setup uses the existing zero-inset recovery instead of stranding startup');e.onWindowStageDestroy();
 }
 console.log('PASS: detail mutation settles after exit; stale window completion cannot load content');
 // Cache freshness/request joining live in the coordinator. Exercise the active
@@ -84,14 +89,16 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
  const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{async loadShelfBook(){return undefined;}}});
  const backgroundMethod=EntryHost.prototype.refreshInBackground; EntryHost.prototype.refreshInBackground=function(...args){refreshes.push(args);return backgroundMethod.apply(this,args);};
  const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
+   ['openRemoteBookDetail','nextNavigationGeneration','clearShelfNavigationMotion','readingDetailForRemoteSeed','installRemoteReadingSession'],{
      ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
      ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
      DOMAIN:0,hilog:{info(){},warn(){},error(){}},
    });
  const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
- const h=Object.assign(new CacheClass(),{searchHost:{visibilityChanged(){},close(){},resume(){}},mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
+ const h=Object.assign(new CacheClass(),{searchHost:{visibilityChanged(){},close(){},resume(){}},mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,
+   // Index.nextNavigationGeneration retires the page's shared short feedback.
+   transientFeedback:{show(){return true;},reset(){}},detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
    remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
    showReadingFailure:(...args)=>failures.push(args)});
  h.openRemoteBookDetail(seed,'书源名称');assert.equal(h.route,'detail');await tick();assert.equal(calls.length,1);assert.equal(calls[0].seed,seed);
@@ -115,11 +122,12 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
  const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
  const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}}});
  const Host=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-  ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
+  ['openRemoteBookDetail','nextNavigationGeneration','clearShelfNavigationMotion','readingDetailForRemoteSeed','installRemoteReadingSession'],{
    ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
    ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
    DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
  const h=Object.assign(new Host(),{searchHost:{visibilityChanged(){},close(){},resume(){}},mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
+  transientFeedback:{show(){return true;},reset(){}},
   searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
   });
  const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
