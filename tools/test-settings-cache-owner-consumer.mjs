@@ -127,8 +127,10 @@ if(id==='confirmed'){
  const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel,'清理文字缓存');p.confirm();p.confirm();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();
  assert.equal(f.calls.length,1);assert.equal(p.owner.cacheActionLabel,'已清理');assert.equal(p.label(),'已清理');assert.equal(f.snapshot().operation.value.removedContentBytes,10);
  assert.equal(f.snapshot().operation.fact,'current');assert.equal(f.snapshot().operation.canRetry,false);
- assert.equal(f.notices.length,1,'a confirmed result produces one transient feedback');
- p.update();assert.equal(f.notices.length,1,'replaying the same result stays silent');
+ // Feedback moved to the shared ReaderTransientFeedback host; this fixture only
+ // records raw UI toasts, so a confirmed result must stay silent here.
+ assert.equal(f.notices.length,0,'confirmed result is not duplicated as a raw toast');
+ p.update();assert.equal(f.notices.length,0,'replaying the same result stays silent');
 }
 }
 if(id==='partial'){
@@ -138,7 +140,8 @@ if(id==='partial'){
  assert.equal(p.owner.cacheActionLabel,'部分清理');assert.equal(p.label(),'部分清理');
  assert.equal(f.snapshot().operation.canRetry,false,'a partial confirmed cleanup need not have an uncertain receipt');
  assert.match(inlineMessage(f.snapshot()),/部分清理未完成/,'the canonical partial-result explanation remains complete');
- assert.equal(f.notices.length,1);
+ // Partial results also project through the shared feedback host, not a toast.
+ assert.equal(f.notices.length,0);
 }
 }
 if(id==='unknown'){

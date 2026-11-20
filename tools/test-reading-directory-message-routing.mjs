@@ -17,7 +17,9 @@ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/Reader
 function mount(recovery){
  const sdk=boundedSurfaceSdk(),messages=[],calls=[];
  const owner=sdk.consumer(source,undefined,{EMPTY_READING_DIRECTORY_RECOVERY});
- Object.assign(owner,{recovery,getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
+ // Transient feedback replaced the raw toast; keep recording the same messages.
+ Object.assign(owner,{recovery,transientFeedback:{show(_context,options){messages.push(options.message);return true;}},
+  getUIContext:()=>({getPromptAction:()=>({showToast(){}})}),
   onReconcileBookmarks:(g,p)=>calls.push(['bookmarks',g,p]),onReconcileOffline:(g,p)=>calls.push(['offline',g,p])});
  owner.aboutToAppear();owner.initialRender();sdk.properties.flush();
  const actions=()=>sdk.walk(owner).filter(child=>child instanceof sdk.deps.ReaderRecoveryAction);

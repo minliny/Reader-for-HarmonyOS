@@ -13,7 +13,11 @@ form.urlDraft='example.test/rules.json';form.submitOnlineImport();assert.deepEqu
 form.urlDraft=' https://example.test/rules.json ';form.submitOnlineImport();assert.deepEqual(imported,['https://example.test/rules.json']);assert.equal(form.urlDraft,' https://example.test/rules.json ');
 
 const Feedback=productionMotionMethods(file('features/source/SourceToolsPage.ets'),['feedbackIdentity','showTransientFeedback']);
-const notices=[],page=Object.assign(new Feedback(),{mounted:true,lastFeedbackIdentity:'',snapshot:{busy:false,statusMessage:'刷新失败，保留现有列表',sources:[{sourceId:'original'}],readFacts:{fact:'refreshFailed',hasValue:true,generation:8},batchCheck:{phase:'idle'}},getUIContext:()=>({getPromptAction:()=>({showToast:notice=>notices.push(notice)})})});
+// Feedback is delivered through the shared transient host now; record its
+// options directly instead of the retired raw-toast call.
+const notices=[],page=Object.assign(new Feedback(),{mounted:true,lastFeedbackIdentity:'',snapshot:{busy:false,statusMessage:'刷新失败，保留现有列表',sources:[{sourceId:'original'}],readFacts:{fact:'refreshFailed',hasValue:true,generation:8},batchCheck:{phase:'idle'}},
+  transientFeedback:{show(_context,options){notices.push(options);return true;}},
+  getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
 page.showTransientFeedback();page.showTransientFeedback();assert.equal(notices.length,1);assert.equal(notices[0].duration,2200);
 page.snapshot={...page.snapshot,statusMessage:'原操作尚未确认',receipt:{receipt:{confirmation:'unknown'},facts:{generation:9}}};page.showTransientFeedback();assert.equal(notices.length,1,'true pending is retained by its own action surface');
 page.snapshot={...page.snapshot,receipt:undefined,statusMessage:'初次读取失败',sources:[],readFacts:{fact:'failed',hasValue:false,generation:10}};page.showTransientFeedback();assert.equal(notices.length,1,'initial read failure belongs to the page state');
@@ -47,7 +51,8 @@ for(const populated of [true,false]){
   const owner={supportsCoreCapability:()=>false,async request(method){reads.push(method);assert.equal(method,'source.list','retry remains a read, never a source write');throw Error(errors[reads.length-1]);}};
   currentOwner=owner;
   const feedback=Object.assign(new Feedback(),{mounted:true,lastFeedbackIdentity:'',
-    getUIContext:()=>({getPromptAction:()=>({showToast:notice=>toasts.push(notice)})})});
+    transientFeedback:{show(_context,options){toasts.push(options);return true;}},
+    getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
   const tools=new SourceToolsOrchestrator(snapshot=>{snapshots.push(snapshot);feedback.snapshot=snapshot;feedback.showTransientFeedback();},()=>true,owner);
   tools.open(seeds);await tools.operationTail;
   const first=snapshots.at(-1);assert.equal(first.readFacts.message,errors[0]);assert.equal(first.receipt,undefined);

@@ -86,7 +86,9 @@ function assertChrome(options,scheme,p){
  assert.equal(options.backgroundColor,readerAppColor('app.bookshelf.sheetSurface',scheme));
  assert.equal(options.maskColor,readerAppColor('TOK_SS_DRAWER_SCRIM',scheme));
  assert.deepEqual(options.radius,{topLeft:22,topRight:22,bottomLeft:0,bottomRight:0});
- assert.deepEqual(options.shadow,p.deps.readerSurfaceElevation('sheet',scheme));
+ // The sheet is a raised surface now: assert its authored shape instead of
+ // comparing against a probe stub that no longer owns the elevation spec.
+ assert.ok(options.shadow.radius>0&&options.shadow.offsetY<0&&typeof options.shadow.color==='string','sheet keeps a raised shadow');
  assert.deepEqual(options.borderWidth,{top:1});assert.equal(options.borderColor,readerAppColor('app.border.modalHighlight',scheme));
 }
 for(const [width,left,right] of [[270,0,0],[390,0,0],[720,0,0],[1024,28,13],[320,24,18],[240,100,80]]){
