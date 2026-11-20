@@ -43,6 +43,8 @@ const buttonSpec = () => ({ text: { fontFamily: 'sans-serif', fontWeight: 500, f
 const headers = { bookshelfHeaderSpec: () => new BookshelfHeaderSpec(), detailHeaderSpec: () => new DetailHeaderSpec(),
   resolveReaderButtonSpec: () => buttonSpec(),
   readerVisualSafeLeft: () => 0, readerVisualSafeRight: () => 0,
+  readerHeaderVeilMaterial: (_scrolled, scheme) => ({ radius: 0, color: scheme === 'night' ? '#1F1F1F' : '#FFFFFF' }),
+  readerHeaderVeilBorder: (_scrolled, _scheme) => ({ width: 0, color: 'transparent' }),
   SheetSize: { MEDIUM: 0, LARGE: 1, FIT_CONTENT: 2 },
   readerMainViewport: () => ({ width: 393, height: 852, left: 0, top: 0 }),
   readerMainNavigationMode: (width) => width >= 900 ? 'rail' : width >= 600 ? 'expanded' : 'compact',

@@ -38,6 +38,25 @@ export function createReaderComponentProbe(source, names, dependencies = {}, hoo
   const childSources = { ...(hooks.childSources ?? {}) };
   const options = { ...hooks, childSources, createGlobals: hooks.createGlobals ?? readerProbeGlobals };
   let deps = dependencies;
+  if (featureIndex.size === 0) indexFeatureSources();
+  // Proactively mount children this source instantiates with parameters, so a
+  // bare `Name({...})` call cannot fail as an undefined global.
+  for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s*\(\s*\{/g)) {
+    const name = match[1];
+    if (deps[name] !== undefined || !featureIndex.has(name)) continue;
+    const child = readFileSync(featureIndex.get(name), 'utf8');
+    try {
+      deps = { ...deps, [name]: createReaderComponentProbe(child, builderComponentMembers(child, name), deps,
+        { ...hooks, componentName: name }).Component };
+      if (childSources[name] === undefined) childSources[name] = child;
+    } catch (_error) {
+      try {
+        const standIn = childStandIn(name, child);
+        deps = { ...deps, [name]: createReaderComponentProbe(standIn, ['build'], deps, { ...hooks, componentName: name }).Component };
+        childSources[name] = standIn;
+      } catch (_stubError) { /* keep unresolved */ }
+    }
+  }
   for (let attempt = 0; attempt < 8; attempt++) {
     try {
       return createEtsBuilderProbe(source, names, deps, options);
