@@ -62,7 +62,8 @@ async function unknown(before=true) {
   const actor=view.sdk.walk(view.shell).find(c=>c instanceof view.sdk.deps.ReaderRecoveryAction&&c.label==='核对操作结果');assert.ok(actor,'native action remains rendered');
   const nodes=view.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'&&n.create==='核对操作结果'),hit=nodes.find(n=>n.type==='Stack'&&n.onClick);
   assert.equal(label.opacity,busy?0:1,'label keeps its geometry while native loader covers it');
-  assert.equal(hit.constraintSize.minHeight,28);assert.equal(hit.enabled,!busy);
+  // Native recovery action now uses the 44vp accessibility target.
+  assert.equal(hit.constraintSize.minHeight,44);assert.equal(hit.enabled,!busy);
   const loaders=nodes.filter(n=>n.type==='LoadingProgress');assert.equal(loaders.length,busy?1:0);
   if(busy)assert.deepEqual([loaders[0].width,loaders[0].height],[18,18]);
   return hit;
