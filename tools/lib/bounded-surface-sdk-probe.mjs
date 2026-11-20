@@ -83,6 +83,11 @@ export function boundedSurfaceSdk(options={}){
     // uses extensionless relative imports Node cannot load directly, so the
     // three console budgets it exposes for this surface are mirrored here.
     readerReadableFontScale,readerScaledControlHeight,InputType,
+    createDefaultSettingsSnapshot:()=>({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,
+      crashLog:true,developerMode:false,wideNavigationRail:false}),
+    readerWidthClassWithHint:(width,hint)=>hint===true||width>=600?'expanded':'compact',
+    readerActionIcon:(kind,scheme)=>`resource:${kind}:${scheme==='night'?'night':'day'}`,
+    FrameCallback:class{onFrame(){}cancel(){}},
     readerActionTouchRegion:(width,height)=>({x:0,y:0,width,height}),
     // Module-private constant referenced by ReaderSelectPanel's field init.
     OPTION_H:44,TRIGGER_H:44,CHEVRON_W:12,CHEVRON_H:8,CHEVRON_GAP:8,
@@ -132,7 +137,22 @@ export function boundedSurfaceSdk(options={}){
   };
   const hooks={...properties.hooks,childSources,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:options.allowEmptyBranchAdmission===true};
   for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;
+  const lateChildren={ReaderPageScrollHost:read('ReaderPageScrollHost'),ReaderRaisedSurface:read('ReaderRaisedSurface'),
+    ReaderStandardPage:read('ReaderStandardPage'),ReaderButton:read('ReaderButton'),ReaderToggle:read('ReaderToggle'),
+    ReaderInlineSelect:childSources.ReaderInlineSelect,
+    BookshelfMoreActionSheet:readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfMoreActionSheet.ets',import.meta.url),'utf8'),
+    ReaderControlSwitchTrack:readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets',import.meta.url),'utf8')};
   const walk=owner=>[owner,...[...owner.children.values()].flatMap(child=>child.nodes?walk(child):[])];
   return {properties,deps,hooks,childSources,walk,nodes:owner=>walk(owner).flatMap(x=>[...x.nodes.values()]),
-    consumer(source,names=boundedMembers(source),extra={},initialParams={},componentName){return createReaderBuilderProbe(source,names,{...deps,...extra},{...hooks,initialParams,componentName}).owner;}};
+    consumer(source,names=boundedMembers(source),extra={},initialParams={},componentName){
+      const merged={...deps,...extra};
+      // Shared page-shell leaves introduced by the refactor. Compile only the
+      // ones this source actually mounts, and only when the caller did not
+      // already supply a port, so unrelated cases keep their exact deps.
+      for (const [name,child] of Object.entries(lateChildren)) {
+        if (merged[name]!==undefined || !new RegExp(`(^|[^A-Za-z0-9_$])${name}\\s*\\(`).test(source)) continue;
+        try { merged[name]=createReaderBuilderProbe(child,boundedMembers(child),merged,hooks).Component; } catch (_error) { /* leave unresolved for the SDK to report */ }
+      }
+      return createReaderBuilderProbe(source,names,merged,{...hooks,initialParams,componentName}).owner;
+    }};
 }

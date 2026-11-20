@@ -206,7 +206,10 @@ const builderNames = ['build', 'row', 'mangaColor', 'emptyState', 'emptyActionLa
 const stateNames = ['presentation', 'collapsedGroups', 'projectedEntries', 'layoutRows', 'viewportWidth',
   'rowHeight', 'mangaCatalogDisplay', 'mangaCatalogNarrow', 'currentChapterIndex', 'query'];
 function parentProbe(candidate = source, childCandidate = mangaDirectoryEntryRowSource) {
-  const shared = mangaDirectoryEntryRowSdk({ source: childCandidate, dependencies: { ...deps, ReaderDirectoryList: Child } });
+  const shared = mangaDirectoryEntryRowSdk({ source: childCandidate, dependencies: { ...deps, ReaderDirectoryList: Child,
+    ReaderActionAccessibility: class { constructor() {} applyNormalAttribute() {} },
+    readerActionTouchRegion: (width, height) => ({ x: 0, y: 0, width, height }),
+    registerReaderFonts: () => undefined } });
   const built = createReaderBuilderProbe(candidate, [...new Set([...methods, ...builderNames, ...stateNames])], shared.deps, shared.hooks);
   return { ...built, shared };
 }

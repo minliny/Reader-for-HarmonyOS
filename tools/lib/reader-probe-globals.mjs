@@ -20,6 +20,28 @@ export function readerProbeGlobals({ source, dependencies, platform, Child }) {
   // Geometry/property probes do not register physical platform fonts. The
   // actual registrar has a separate demand/failure/retry test.
   const globals = { readerRegisteredFontFamily: (_font, family) => family,
+    // Pure projections and presentation-only ports the refactored surfaces call
+    // directly. Explicit case dependencies still override every entry.
+    readerReadableFontScale: (fs) => Number.isFinite(fs) && fs > 0 ? Math.max(1, fs) : 1,
+    readerScaledControlHeight: (base, lineHeight, fs) => Math.ceil(
+      (Number.isFinite(base) ? Math.max(0, base) : 0) +
+      (Number.isFinite(lineHeight) ? Math.max(0, lineHeight) : 0) *
+      Math.max(0, (Number.isFinite(fs) && fs > 0 ? Math.max(1, fs) : 1) - 1)),
+    readerActionTouchRegion: (width, height) => ({ x: 0, y: 0, width, height }),
+    registerReaderFonts: () => undefined,
+    createDefaultSettingsSnapshot: () => ({ autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false,
+      crashLog: true, developerMode: false, wideNavigationRail: false }),
+    readerWidthClassWithHint: (width, hint) => hint === true || width >= 600 ? 'expanded' : 'compact',
+    readerActionIcon: (kind, scheme) => `resource:${kind}:${scheme === 'night' ? 'night' : 'day'}`,
+    readerSurfaceMaxHeight: (available, reserved, minimum = 0) => Math.max(
+      Number.isFinite(minimum) ? Math.max(0, minimum) : 0,
+      (Number.isFinite(available) ? Math.max(0, available) : 0) - (Number.isFinite(reserved) ? Math.max(0, reserved) : 0)),
+    readerSurfaceElevation: () => ({ radius: 0, offsetY: 0 }),
+    readerInteractiveSafeLeft: () => 0, readerInteractiveSafeRight: () => 0,
+    motionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
+    readerMotionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
+    FrameCallback: class { onFrame() {} cancel() {} },
+    ReaderActionAccessibility: class { constructor() {} applyNormalAttribute() {} },
     readerFontFamilyReady: () => true, MangaDirectoryCurrentFooter: Child,
     // Constructor arguments cross the platform seam unchanged; native color
     // parsing and focus-box rasterization remain target evidence.

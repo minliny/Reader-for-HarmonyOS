@@ -1,4 +1,4 @@
-import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
+import { readerIsExpandedWidth } from '../common/ReaderWidthClass.ts';
 
 /** Presentation only: a compact-width landscape keeps its image canvas; an
  * expanded-width, tablet-like viewport owns a stable directory column. The

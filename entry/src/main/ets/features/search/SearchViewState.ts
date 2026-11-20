@@ -1,5 +1,5 @@
 import type { SearchResultRelevance } from './SearchResultRelevance';
-import { ALL_SEARCH_SOURCE_GROUP, searchSourceGroupKey, type SearchFilterStep, type SearchSourceGroupSelection } from './SearchSourceGroups';
+import { ALL_SEARCH_SOURCE_GROUP, searchSourceGroupKey, type SearchFilterStep, type SearchSourceGroupSelection } from './SearchSourceGroups.ts';
 
 export type SearchContentType = '全部类型' | '小说' | '漫画';
 

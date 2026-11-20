@@ -89,6 +89,18 @@ const ParagraphRange = new Function(stripTypeScriptTypes(paragraphRangeSource).r
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
   dependencies = { readingFailureHint, mangaUserError, remoteReadingFailureKindOf, diagnosticCodeOf, ...mangaDirectoryAdaptiveDependencies, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, prepareReadingChapterLayoutMap, prepareReadingParagraphUtf16Ranges, readingParagraphBoundaryMode, ParagraphRange, hasKnownReadingImageGeometry, errorMessageOf,
+    // Pure projections the refactored pages call directly. Mirrored from their
+    // real modules so method-level probes do not stop on a missing free name.
+    createDefaultSettingsSnapshot: () => ({ autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false,
+      crashLog: true, developerMode: false, wideNavigationRail: false }),
+    readerSurfaceMaxHeight: (available, reserved, minimum = 0) => Math.max(
+      Number.isFinite(minimum) ? Math.max(0, minimum) : 0,
+      (Number.isFinite(available) ? Math.max(0, available) : 0) - (Number.isFinite(reserved) ? Math.max(0, reserved) : 0)),
+    readerWidthClassWithHint: (width, hint) => hint === true || width >= 600 ? 'expanded' : 'compact',
+    readerActionIcon: (kind, scheme) => `resource:${kind}:${scheme === 'night' ? 'night' : 'day'}`,
+    motionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
+    FrameCallback: class { onFrame() {} cancel() {} },
+    ReaderActionAccessibility: class { constructor() {} applyNormalAttribute() {} },
     // Execute the current complete page-shell policy through its finite import seam.
     ...actualReaderPageShell(),
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,

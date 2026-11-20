@@ -10,7 +10,7 @@ import {
   readerVisualSafeRight,
   readerVisualSafeTop,
 } from '../common/ReaderWindowMetrics.ts';
-import { ReaderWidthClass, readerWidthClassWithHint } from '../common/ReaderWidthClass.ts';
+import { readerWidthClassWithHint, type ReaderWidthClass } from '../common/ReaderWidthClass.ts';
 
 export const READER_PHONE_REFERENCE_WIDTH = 390;
 export const READER_PHONE_REFERENCE_HEIGHT = 844;

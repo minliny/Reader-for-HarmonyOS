@@ -99,6 +99,16 @@ export function createEtsBuilderProbe(source, names, dependencies = {}, hooks = 
           call.arguments.length === 1 && ts.isStringLiteral(call.arguments[0]) &&
           !names.includes(call.arguments[0].text)) names.push(call.arguments[0].text);
     }
+    // A selected method cannot run without the private helpers it calls.
+    // Pull same-struct members referenced as this.name(...) so fixtures do not
+    // have to mirror every refactor-internal call site.
+    if (member !== undefined) {
+      for (const match of member.getText(original).matchAll(/this\.([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) {
+        const callee = match[1];
+        if (callee !== 'build' && !names.includes(callee) &&
+            struct.members.some(candidate => candidate.name?.getText(original) === callee)) names.push(callee);
+      }
+    }
   }
   const members = names.map(name => {
     const member = struct.members.find(candidate => candidate.name?.getText(original) === name);
