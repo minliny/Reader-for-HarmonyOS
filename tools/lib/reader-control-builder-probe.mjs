@@ -316,6 +316,19 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const options = { ...hooks, childSources, createGlobals: hooks.createGlobals ?? readerProbeGlobals,
     prepareComponent: hooks.prepareComponent ?? prepareReaderFixture };
   let deps = dependencies;
+  if (featureIndex.size === 0) indexFeatureSources();
+  // Mount children this source instantiates with parameters before lowering,
+  // so an inline `Name({...})` never reaches the runtime as a bare global.
+  for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s*\(\s*\{/g)) {
+    const name = match[1];
+    if (deps[name] !== undefined || !featureIndex.has(name)) continue;
+    const child = readFileSync(featureIndex.get(name), 'utf8');
+    try {
+      deps = { ...deps, [name]: createReaderBuilderProbe(child, builderComponentMembers(child, name), deps,
+        { ...hooks, componentName: name }).Component };
+      if (childSources[name] === undefined) childSources[name] = child;
+    } catch (_error) { /* keep unresolved */ }
+  }
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return createEtsBuilderProbe(source, names, deps, options);
