@@ -68,10 +68,10 @@ function fixture() {
   controls.dependencies.AppTopBar = controls.consumer(header, boundedMembers(header)).constructor;
   for (const name of ['MainTabShell', 'BookshelfMoreMenu']) {
     const child = controls.hooks.childSources[name];
-    controls.dependencies[name] = controls.consumer(child, boundedMembers(child)).constructor;
+    controls.dependencies[name] = controls.consumer(child, [...new Set([...boundedMembers(child), 'build'])]).constructor;
   }
   const source = read('features/bookshelf/BookshelfShell.ets');
-  const shell = controls.consumer(source, boundedMembers(source), {}, props);
+  const shell = controls.consumer(source, [...new Set([...boundedMembers(source), 'build'])], {}, props);
   shell.mounted = true; shell.temporaryBackIdentity = 'bookshelf:7'; shell.moreMenuVisible = false;
   // The shell no longer exposes topBar(); render the whole shell so the
  // AppTopBar child mounts at its real position.

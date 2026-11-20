@@ -38,7 +38,7 @@ export function createReaderComponentProbe(source, names, dependencies = {}, hoo
   const childSources = { ...(hooks.childSources ?? {}) };
   const options = { ...hooks, childSources, createGlobals: hooks.createGlobals ?? readerProbeGlobals };
   let deps = dependencies;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 8; attempt++) {
     try {
       return createEtsBuilderProbe(source, names, deps, options);
     } catch (error) {
@@ -46,6 +46,14 @@ export function createReaderComponentProbe(source, names, dependencies = {}, hoo
       const pending = all.filter(name => deps[name] === undefined);
       if (process.env.PROBE_DEBUG && all.length > 0) console.error('AUTO-PENDING', pending, 'of', all,
         all.map(name => `${name}:${typeof deps[name]}`));
+      // A dependency may already hold the component value without the SDK
+      // knowing its prop metadata; register a minimal shape so the mount site
+      // is accepted, then retry.
+      const unregistered = all.filter(name => typeof deps[name] === 'function' && childSources[name] === undefined);
+      if (pending.length === 0 && unregistered.length > 0) {
+        for (const name of unregistered) childSources[name] = `@Component\nexport struct ${name} {\n  build() { Column() {} }\n}`;
+        continue;
+      }
       if (pending.length === 0) throw error;
       if (featureIndex.size === 0) indexFeatureSources();
       let added = false;
