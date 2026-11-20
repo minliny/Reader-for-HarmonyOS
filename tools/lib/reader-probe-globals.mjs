@@ -42,6 +42,19 @@ const buttonSpec = () => ({ text: { fontFamily: 'sans-serif', fontWeight: 500, f
   allPadding: undefined, maxLines: 1 });
 const headers = { bookshelfHeaderSpec: () => new BookshelfHeaderSpec(), detailHeaderSpec: () => new DetailHeaderSpec(),
   resolveReaderButtonSpec: () => buttonSpec(),
+  readerVisualSafeLeft: () => 0, readerVisualSafeRight: () => 0,
+  SheetSize: { MEDIUM: 0, LARGE: 1, FIT_CONTENT: 2 },
+  readerMainViewport: () => ({ width: 393, height: 852, left: 0, top: 0 }),
+  readerMainNavigationMode: (width) => width >= 900 ? 'rail' : width >= 600 ? 'expanded' : 'compact',
+  resolvePopupSpec: () => ({ collapsedHeight: 44, expandedHeight: 220, pointerWidth: 12, pointerHeight: 6,
+    radius: 12, maxWidth: 320, rowHeight: 44 }),
+  SheetType: { BOTTOM: 0, CENTER: 1, POPUP: 2 },
+  readerSheetWidth: (_id, viewportWidth, safeLeft, safeRight) => Math.min(390,
+    Math.max(0, (Number.isFinite(viewportWidth) ? viewportWidth : 0) - (safeLeft ?? 0) - (safeRight ?? 0))),
+  readerSheetChrome: (_id, _scheme, width) => ({ width,
+    backgroundColor: 'app.surface.sheet', radius: { topLeft: 22, topRight: 22, bottomLeft: 0, bottomRight: 0 },
+    maskColor: 'TOK_SS_DRAWER_SCRIM', shadow: { radius: 0, offsetX: 0, offsetY: 0, color: 'transparent' },
+    borderWidth: { top: 1 }, borderColor: 'app.border.modalHighlight' }),
   ReaderTransientFeedback: class { show() { return true; } reset() {} },
   readerPageInitialHeaderHeight: (kind) => kind === 'bookshelf' ? 60 : 58 };
 
