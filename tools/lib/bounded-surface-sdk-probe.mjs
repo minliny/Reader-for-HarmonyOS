@@ -139,20 +139,23 @@ export function boundedSurfaceSdk(options={}){
   for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;
   const lateChildren={ReaderPageScrollHost:read('ReaderPageScrollHost'),ReaderRaisedSurface:read('ReaderRaisedSurface'),
     ReaderStandardPage:read('ReaderStandardPage'),ReaderButton:read('ReaderButton'),ReaderToggle:read('ReaderToggle'),
-    ReaderInlineSelect:childSources.ReaderInlineSelect,
+    ReaderInlineSelect:childSources.ReaderInlineSelect,ReaderSectionCard:read('ReaderSectionCard'),
     BookshelfMoreActionSheet:readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfMoreActionSheet.ets',import.meta.url),'utf8'),
     ReaderControlSwitchTrack:readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets',import.meta.url),'utf8')};
   const walk=owner=>[owner,...[...owner.children.values()].flatMap(child=>child.nodes?walk(child):[])];
   return {properties,deps,hooks,childSources,walk,nodes:owner=>walk(owner).flatMap(x=>[...x.nodes.values()]),
     consumer(source,names=boundedMembers(source),extra={},initialParams={},componentName){
       const merged={...deps,...extra};
+      const registered={...hooks.childSources};
       // Shared page-shell leaves introduced by the refactor. Compile only the
-      // ones this source actually mounts, and only when the caller did not
-      // already supply a port, so unrelated cases keep their exact deps.
+      // ones this source actually mounts, and register them with the SDK so it
+      // accepts the mount site; the caller's explicit ports still win.
       for (const [name,child] of Object.entries(lateChildren)) {
-        if (merged[name]!==undefined || !new RegExp(`(^|[^A-Za-z0-9_$])${name}\\s*\\(`).test(source)) continue;
-        try { merged[name]=createReaderBuilderProbe(child,boundedMembers(child),merged,hooks).Component; } catch (_error) { /* leave unresolved for the SDK to report */ }
+        if (!new RegExp(`(^|[^A-Za-z0-9_$])${name}\\s*\\(`).test(source)) continue;
+        if (registered[name]===undefined) registered[name]=child;
+        if (merged[name]!==undefined) continue;
+        try { merged[name]=createReaderBuilderProbe(child,boundedMembers(child),merged,{...hooks,childSources:registered}).Component; } catch (_error) { /* leave unresolved for the SDK to report */ }
       }
-      return createReaderBuilderProbe(source,names,merged,{...hooks,initialParams,componentName}).owner;
+      return createReaderBuilderProbe(source,names,merged,{...hooks,childSources:registered,initialParams,componentName}).owner;
     }};
 }

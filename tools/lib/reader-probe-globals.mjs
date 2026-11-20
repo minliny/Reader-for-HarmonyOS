@@ -34,7 +34,15 @@ class DetailHeaderSpec {
   headerTop(topInset) { return Math.max(0, topInset) + this.topGap; }
   contentStart(topInset, measuredBarHeight) { return this.headerTop(topInset) + Math.max(0, measuredBarHeight) + this.contentGap; }
 }
+const buttonSpec = () => ({ text: { fontFamily: 'sans-serif', fontWeight: 500, fontSizeFp: 14, lineHeightFp: 20 },
+  height: 40, radius: 10, horizontalPadding: 12, stacked: false, primarySurface: 'app.button.primary',
+  secondarySurface: 'app.button.secondary', primaryBorder: 'app.border.control', secondaryBorder: 'app.border.control',
+  disabledOpacity: 0.4, primaryDisabledOpacity: 0.4, hasBorder: true, primaryHasBorder: true, hasSurface: true,
+  outerRadius: false, primaryText: 'TOK_READ_INK', secondaryText: 'TOK_READ_INK', verticalPadding: 8,
+  allPadding: undefined, maxLines: 1 });
 const headers = { bookshelfHeaderSpec: () => new BookshelfHeaderSpec(), detailHeaderSpec: () => new DetailHeaderSpec(),
+  resolveReaderButtonSpec: () => buttonSpec(),
+  ReaderTransientFeedback: class { show() { return true; } reset() {} },
   readerPageInitialHeaderHeight: (kind) => kind === 'bookshelf' ? 60 : 58 };
 
 export function readerProbeGlobals({ source, dependencies, platform, Child }) {
