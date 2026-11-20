@@ -7,11 +7,15 @@ import asset from '@ohos.security.asset';
 import util from '@ohos.util';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 
 const ASSET_ALIAS = 'reader.webdav.config.v2';
 const CONFIG_RECORD_PREFIX = 'reader.webdav.config-save.';
 const CONFIG_HEAD_FILE = 'reader-webdav-config-head-v1.json';
 const CONFIG_INTENT_FILE = 'reader-webdav-config-intent-v1.json';
+const DOWNLOAD_INTENT_FILE = 'reader-webdav-restore-download-v1.json';
+const LIBRARY_DOWNLOAD_INTENT_FILE = 'reader-webdav-library-download-v1.json';
+const STORAGE_PROBE_INTENT_FILE = 'reader-webdav-storage-probe-v1.json';
 const FORMAT_VERSION = 2;
 const MAX_CONFIG_BYTES = 64 * 1024;
 const MAX_FIELD_LENGTH = 4096;
@@ -33,6 +37,60 @@ export interface WebDavRestoreJournal {
   version: number;
   operationId: string;
   checksum: string;
+}
+
+export interface WebDavFileSelection {
+  remotePath: string;
+  strongEtag: string;
+  contentBytes: number;
+}
+export interface WebDavRestoreSelection extends WebDavFileSelection { backupId: string; }
+/** Only the selected read operation survives process loss. Credentials and
+ * permission to apply metadata remain with their original owners. */
+export interface WebDavRestoreDownloadIntent {
+  version: 1;
+  operationId: string;
+  configSaveOperationId: string;
+  configPayloadHash: string;
+  selection: WebDavRestoreSelection;
+  phase: 'prepared' | 'creating' | 'transferring' | 'paused' | 'downloaded' | 'retiring';
+  taskId?: string;
+  taskToken?: string;
+  fileName?: string;
+}
+export interface WebDavLibraryDownloadIntent {
+  version: 1;
+  purpose: 'libraryPackage';
+  /** Missing in the first library intent version means systemAgent. */
+  backend?: 'systemAgent' | 'foregroundHttp';
+  operationId: string;
+  configSaveOperationId: string;
+  configPayloadHash: string;
+  selection: WebDavFileSelection;
+  phase: WebDavRestoreDownloadIntent['phase'];
+  taskId?: string;
+  taskToken?: string;
+  fileName?: string;
+}
+export type WebDavDownloadIntent = WebDavRestoreDownloadIntent | WebDavLibraryDownloadIntent;
+export type WebDavStorageProbeCapability = 'unknown' | 'supported' | 'unsupported';
+export interface WebDavStorageProbeIntent {
+  version: 1;
+  operationId: string;
+  configSaveOperationId: string;
+  configPayloadHash: string;
+  remotePath: string;
+  stage: 'prepared' | 'createMayDispatch' | 'readCreated' | 'duplicateMayDispatch' | 'readDuplicate' |
+    'wrongPutMayDispatch' | 'readWrongPut' | 'wrongDeleteMayDispatch' | 'readWrongDelete' |
+    'replaceMayDispatch' | 'readReplaced' | 'deleteMayDispatch' | 'readDeleted' | 'cleanupMayDispatch' |
+    'blocked' | 'completed' | 'abandoned';
+  etag?: string;
+  createdByProbe: boolean;
+  wrongPutQualified: boolean;
+  wrongDeleteQualified: boolean;
+  capabilities: { read: WebDavStorageProbeCapability; create: WebDavStorageProbeCapability;
+    conditionalCreate: WebDavStorageProbeCapability; conditionalReplace: WebDavStorageProbeCapability;
+    conditionalDelete: WebDavStorageProbeCapability; cleanup: WebDavStorageProbeCapability; };
 }
 
 export type StoredWebDavConfig = {
@@ -93,6 +151,7 @@ export class WebDavCredentialStore {
   private contextGeneration: number = 0;
   private confirmedBookshelfMode: 'cover' | 'list' | undefined;
   private pendingBookshelfModeWrites: number = 0;
+  private bookshelfModeWriteUnconfirmed: boolean = false;
 
   /** Attach the ability context for non-secret WebDAV-adjacent preferences. */
   attachContext(context: common.UIAbilityContext): void {
@@ -101,6 +160,102 @@ export class WebDavCredentialStore {
     this.context = context;
     this.localPreferences = undefined;
     this.confirmedBookshelfMode = undefined;
+  }
+
+  loadStorageProbeIntent(): Promise<WebDavStorageProbeIntent | undefined> {
+    const path = this.intentPath().replace(CONFIG_INTENT_FILE, STORAGE_PROBE_INTENT_FILE), generation = this.contextGeneration;
+    return WebDavCredentialStore.writeTail.then(async (): Promise<WebDavStorageProbeIntent | undefined> => {
+      const value = await this.readStorageProbeIntent(path);
+      this.assertAdmission((): boolean => generation === this.contextGeneration); return value;
+    });
+  }
+
+  private async readStorageProbeIntent(path: string): Promise<WebDavStorageProbeIntent | undefined> {
+    let raw: string;
+    try {
+      if ((await fileIo.stat(path)).size > 16 * 1024) throw new Error('WebDAV original probe record exceeds capacity');
+      raw = await fileIo.readText(path);
+    } catch (error) { if ((error as { code?: number }).code === 13900002) return undefined; throw error; }
+    if (raw === '') return undefined;
+    if (this.utf8(raw).length > 16 * 1024) throw new Error('WebDAV original probe record exceeds capacity');
+    const value = JSON.parse(raw) as WebDavStorageProbeIntent; this.validateStorageProbeIntent(value); return value;
+  }
+  private validateStorageProbeIntent(value: WebDavStorageProbeIntent): void {
+    const fields = ['version', 'operationId', 'configSaveOperationId', 'configPayloadHash', 'remotePath', 'stage', 'etag',
+      'createdByProbe', 'wrongPutQualified', 'wrongDeleteQualified', 'capabilities'];
+    const stages = ['prepared', 'createMayDispatch', 'readCreated', 'duplicateMayDispatch', 'readDuplicate', 'wrongPutMayDispatch',
+      'readWrongPut', 'wrongDeleteMayDispatch', 'readWrongDelete', 'replaceMayDispatch', 'readReplaced', 'deleteMayDispatch',
+      'readDeleted', 'cleanupMayDispatch', 'blocked', 'completed', 'abandoned'];
+    const capabilities = ['read', 'create', 'conditionalCreate', 'conditionalReplace', 'conditionalDelete', 'cleanup'];
+    if (value === null || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !fields.includes(key)) ||
+      value.version !== 1 || !/^webdav-[0-9a-f]{32}$/.test(value.operationId) ||
+      typeof value.configSaveOperationId !== 'string' || value.configSaveOperationId.length < 1 || value.configSaveOperationId.length > 128 ||
+      !/^[0-9a-f]{64}$/.test(value.configPayloadHash) || typeof value.remotePath !== 'string' || this.utf8(value.remotePath).length > 4096 ||
+      !/(?:^|\/)\.reader-probe-[0-9a-f]{32}\.txt$/.test(value.remotePath) || /[\\\u0000-\u001f\u007f?#]/.test(value.remotePath) ||
+      /^https?:\/\//i.test(value.remotePath) || value.remotePath.startsWith('//') || /%2e/i.test(value.remotePath) ||
+      value.remotePath.split('/').some(part => part === '.' || part === '..') || !stages.includes(value.stage) ||
+      (value.etag !== undefined && (typeof value.etag !== 'string' || value.etag.length < 1 || this.utf8(value.etag).length > 1024 || /[\u0000-\u001f\u007f]/.test(value.etag))) ||
+      typeof value.createdByProbe !== 'boolean' || typeof value.wrongPutQualified !== 'boolean' || typeof value.wrongDeleteQualified !== 'boolean' ||
+      value.capabilities === null || typeof value.capabilities !== 'object' || Array.isArray(value.capabilities) ||
+      Object.keys(value.capabilities).length !== capabilities.length || Object.keys(value.capabilities).some(key => !capabilities.includes(key)) ||
+      Object.values(value.capabilities).some(result => !['unknown', 'supported', 'unsupported'].includes(result))) throw new Error('WebDAV original probe record invalid');
+  }
+
+  loadRestoreDownloadIntent(): Promise<WebDavRestoreDownloadIntent | undefined> {
+    const path = this.downloadIntentPath();
+    return WebDavCredentialStore.writeTail.then(async () => await this.readDownloadIntent(path) as WebDavRestoreDownloadIntent | undefined);
+  }
+
+  loadLibraryDownloadIntent(): Promise<WebDavLibraryDownloadIntent | undefined> {
+    const path = this.downloadIntentPath('libraryPackage');
+    return WebDavCredentialStore.writeTail.then(async () => await this.readDownloadIntent(path, 'libraryPackage') as WebDavLibraryDownloadIntent | undefined);
+  }
+
+  private downloadIntentPath(purpose: 'metadataRestore' | 'libraryPackage' = 'metadataRestore'): string {
+    return this.intentPath().replace(CONFIG_INTENT_FILE, purpose === 'libraryPackage' ? LIBRARY_DOWNLOAD_INTENT_FILE : DOWNLOAD_INTENT_FILE);
+  }
+
+  private async readDownloadIntent(path: string, purpose: 'metadataRestore' | 'libraryPackage' = 'metadataRestore'): Promise<WebDavDownloadIntent | undefined> {
+    let raw: string;
+    try { if ((await fileIo.stat(path)).size > 16 * 1024) throw new Error('WebDAV original download record exceeds capacity'); raw = await fileIo.readText(path); }
+    catch (error) { if ((error as { code?: number }).code === 13900002) return undefined; throw error; }
+    if (raw === '') return undefined;
+    if (raw.length > 16 * 1024) throw new Error('WebDAV original download record exceeds capacity');
+    const value = JSON.parse(raw) as WebDavDownloadIntent;
+    this.validateDownloadIntent(value, purpose);
+    return value;
+  }
+
+  private validateDownloadIntent(value: WebDavDownloadIntent, purpose: 'metadataRestore' | 'libraryPackage' = 'metadataRestore'): void {
+    const selected = value?.selection;
+    const library = purpose === 'libraryPackage';
+    const raw = value as WebDavLibraryDownloadIntent;
+    const foreground = library && raw.backend === 'foregroundHttp';
+    if (value?.version !== 1 || !/^webdav-[0-9a-f]{32}$/.test(value.operationId) ||
+      (library ? raw.purpose !== 'libraryPackage' : raw.purpose !== undefined) ||
+      (library && raw.backend !== undefined && raw.backend !== 'systemAgent' && raw.backend !== 'foregroundHttp') ||
+      typeof value.configSaveOperationId !== 'string' || value.configSaveOperationId.length < 1 || value.configSaveOperationId.length > 128 ||
+      !/^[0-9a-f]{64}$/.test(value.configPayloadHash) ||
+      !['prepared', 'creating', 'transferring', 'paused', 'downloaded', 'retiring'].includes(value.phase) || selected === undefined ||
+      (!library && (typeof (selected as WebDavRestoreSelection).backupId !== 'string' || (selected as WebDavRestoreSelection).backupId.length < 1 || (selected as WebDavRestoreSelection).backupId.length > 256 || /[\u0000-\u001f\u007f]/.test((selected as WebDavRestoreSelection).backupId))) ||
+      typeof selected.remotePath !== 'string' || selected.remotePath.length < 1 || selected.remotePath.length > 4096 || /[\u0000-\u001f\u007f?#]/.test(selected.remotePath) ||
+      !/^"[^"\u0000-\u001f\u007f]{1,1024}"$/.test(selected.strongEtag) ||
+      !Number.isSafeInteger(selected.contentBytes) || selected.contentBytes < 1 || selected.contentBytes > (library ? 160 : 64) * 1024 * 1024)
+      throw new Error('WebDAV original download record invalid');
+    const taskFields = [value.taskId, value.taskToken, value.fileName];
+    if (foreground) {
+      if (value.taskId !== undefined || value.taskToken !== undefined ||
+        (value.fileName !== undefined && !/^reader-webdav-library-transfer-[0-9a-f]{32}\.part$/.test(value.fileName)) ||
+        value.phase !== 'prepared' && value.phase !== 'retiring' && value.fileName === undefined)
+        throw new Error('WebDAV foreground file binding invalid');
+      return;
+    }
+    if (taskFields.some(field => field !== undefined) && ((value.taskId !== undefined && (typeof value.taskId !== 'string' || value.taskId.length < 1 || value.taskId.length > 256)) ||
+      typeof value.taskToken !== 'string' || value.taskToken.length < 8 || value.taskToken.length > 2048 ||
+      typeof value.fileName !== 'string' || !(library ? /^reader-webdav-library-transfer-[0-9a-f]{32}\.part$/ : /^reader-webdav-transfer-[0-9a-f]{32}\.part$/).test(value.fileName)))
+      throw new Error('WebDAV original download task binding invalid');
+    if (value.phase !== 'prepared' && value.phase !== 'creating' && value.phase !== 'retiring' && value.taskId === undefined) throw new Error('WebDAV original download task missing');
+    if (value.phase === 'creating' && (value.taskToken === undefined || value.fileName === undefined)) throw new Error('WebDAV original download creation missing');
   }
 
   async load(): Promise<StoredWebDavConfig | null> {
@@ -160,6 +315,13 @@ export class WebDavCredentialStore {
 
   /** Reuse the current context's acknowledged choice after startup/recovery.
    * Pending writes must take the serialized read path on a route remount. */
+  async awaitDurableBookshelfWrites(isCurrent: () => boolean): Promise<void> {
+    let tail: Promise<void>;
+    do { tail = this.localModeWriteTail; await tail; } while (tail !== this.localModeWriteTail);
+    if (!isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
+    if (this.bookshelfModeWriteUnconfirmed) throw new Error('LIBRARY_RESTORE_BOOKSHELF_SETTINGS_UNCONFIRMED');
+  }
+
   currentBookshelfViewMode(): 'cover' | 'list' | undefined {
     return this.pendingBookshelfModeWrites === 0 ? this.confirmedBookshelfMode : undefined;
   }
@@ -188,6 +350,7 @@ export class WebDavCredentialStore {
   saveBookshelfViewMode(mode: 'cover' | 'list', restoreOperationId?: string,
     observation?: ReaderWriteEvidence, isCurrent: () => boolean = (): boolean => true): Promise<void> {
     const generation = this.contextGeneration;
+    const settingsGeneration = ReaderThemeHost.settingsWriteGeneration();
     this.pendingBookshelfModeWrites += 1;
     const next = this.localModeWriteTail.then(async (): Promise<void> => {
       if (generation !== this.contextGeneration || !isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
@@ -201,6 +364,7 @@ export class WebDavCredentialStore {
         this.validateRestoreJournal(journal);
         if (journal.operationId !== restoreOperationId) throw new Error('BOOKSHELF_RESTORE_PENDING');
       }
+      ReaderThemeHost.assertSettingsWritable(settingsGeneration);
       await this.writeLocalViewMode(store, mode, observation,
         (): boolean => generation === this.contextGeneration && isCurrent());
       if (generation === this.contextGeneration) this.confirmedBookshelfMode = mode;
@@ -240,11 +404,14 @@ export class WebDavCredentialStore {
     const priorMode = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
     const priorVersion = await store.get(LOCAL_MIGRATION_KEY, 0);
     if (!isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
+    ReaderThemeHost.assertSettingsWritable();
+    this.bookshelfModeWriteUnconfirmed = true;
     observation?.dispatched();
     try {
       await store.put(LOCAL_VIEW_MODE_KEY, mode);
       await store.put(LOCAL_MIGRATION_KEY, LOCAL_CONFIG_VERSION);
       await store.flush();
+      this.bookshelfModeWriteUnconfirmed = false;
       observation?.confirmed();
     } catch (error) {
       // Preferences keeps pending values in memory after a failed flush. Undo
@@ -618,7 +785,7 @@ export class WebDavCredentialStore {
 
   private async configHash(config: StoredWebDavConfig): Promise<string> {
     const digest = cryptoFramework.createMd('SHA256');
-    await digest.update({ data: this.utf8(JSON.stringify(this.normalize(config))) });
+    await digest.update({ data: this.utf8(JSON.stringify(this.normalize(config, true))) });
     const output = await digest.digest(); let hex = '';
     for (let index = 0; index < output.data.length; index += 1) hex += output.data[index].toString(16).padStart(2, '0');
     return hex;
@@ -687,12 +854,12 @@ export class WebDavCredentialStore {
     }
   }
 
-  private normalize(config: StoredWebDavConfig): StoredWebDavConfig {
+  private normalize(config: StoredWebDavConfig, allowEmptyBackup: boolean = false): StoredWebDavConfig {
     const normalized: StoredWebDavConfig = {
       url: this.field(config.url, 'server URL'),
       user: this.field(config.user, 'user', true),
       password: this.field(config.password, 'password', true, false),
-      backupPassword: this.field(config.backupPassword, 'backup password', false, false),
+      backupPassword: this.field(config.backupPassword, 'backup password', allowEmptyBackup, false),
       directory: this.field(config.directory, 'directory'),
     };
     if ((normalized.user.length === 0) !== (normalized.password.length === 0)) {
@@ -720,7 +887,7 @@ export class WebDavCredentialStore {
       return false;
     }
     try {
-      this.normalize(value as StoredWebDavConfig);
+      this.normalize(value as StoredWebDavConfig, true);
       return true;
     } catch (_) {
       return false;

@@ -5,7 +5,7 @@ import {
   TYPE_SETTINGS_SELECT_PHONE_CANCEL,
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../common/ReaderTypography';
-import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
+import { PopupSurfaceSpec, resolvePopupSpec, readerSurfaceElevation } from '../common/ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../common/ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 
@@ -163,12 +163,9 @@ export struct SettingsSelectOverlay {
       right: PHONE_HORIZONTAL_INSET,
       bottom: PHONE_BOTTOM_INSET,
     })
-    .linearGradient({
-      angle: 180,
-      colors: [[readerAppColor('app.surface.selectWarm', this.appThemeScheme), 0], [readerAppColor('app.surface.selectGradientEnd', this.appThemeScheme), 1]],
-    })
+    .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
     .borderRadius({ topLeft: 18, topRight: 18 })
-    .shadow({ radius: 40, color: readerAppColor('app.shadow.selectPanel', this.appThemeScheme), offsetX: 0, offsetY: -8 });
+    .shadow(readerSurfaceElevation('sheet', this.appThemeScheme));
   }
 
   @Builder
@@ -185,16 +182,19 @@ export struct SettingsSelectOverlay {
   @Builder
   private tabletPanel() {
     Column() {
-      ForEach(this.options, (option: string, index: number) => {
-        this.tabletOption(option, index);
-      }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
+      // Only content is clipped. The existing outer Column remains the one
+      // painted frame, so its elevation can extend beyond rounded corners.
+      Column() {
+        ForEach(this.options, (option: string, index: number) => {
+          this.tabletOption(option, index);
+        }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
+      }.width('100%').borderRadius(this.tabletSpec().borderRadius).clip(true);
     }
     .width(this.tabletSpec().width)
     .backgroundColor(readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
     .border({ width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })
     .borderRadius(this.tabletSpec().borderRadius)
-    .clip(true)
-    .shadow({ radius: this.tabletSpec().shadowRadius, color: readerAppColor(this.tabletSpec().surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.tabletSpec().shadowOffsetY })
+    .shadow(readerSurfaceElevation('popover', this.appThemeScheme))
     .position({
       x: this.anchorRight - this.tabletSpec().width,
       y: this.anchorBottom + this.tabletSpec().anchorOverlap,

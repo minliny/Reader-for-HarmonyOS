@@ -7,6 +7,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { coreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
+import { createStorageBuildContract } from '../../Reader-Core/scripts/storage-build-contract.mjs';
+import { storageBootstrapIdentityBytes, STORAGE_BOOTSTRAP_RESOURCE } from '../scripts/lib/storage-delivery-contract.mjs';
 
 // Real LLVM ELF/strip and ZIP operations exercise the production generator.
 // This small unsigned ZIP is not an installable Reader or signing evidence.
@@ -24,7 +26,8 @@ const commit = repo => {
 };
 try {
   const core = join(root, 'core'), host = join(root, 'host'), vendor = join(host, 'vendor');
-  for (const path of [core, host, vendor, join(core, 'crates'), join(core, 'protocol')]) mkdirSync(path, { recursive: true });
+  for (const path of [core, host, vendor, join(core, 'crates'), join(core, 'protocol'), join(core, 'storage')]) mkdirSync(path, { recursive: true });
+  copyFileSync(new URL('../../Reader-Core/storage/storage-contract.v1.json', import.meta.url), join(core, 'storage/storage-contract.v1.json'));
   writeFileSync(join(core, 'Cargo.lock'), '# fixed test inputs\n');
   writeFileSync(join(core, 'crates/input.rs'), 'pub const INPUT: u8 = 1;\n');
   const protocolFiles = ['reader-command.schema.json', 'reader-event.schema.json', 'reader-runtime-config.schema.json'];
@@ -54,14 +57,18 @@ try {
   assert.notEqual(hash(readFileSync(packaged)), hash(readFileSync(native)), 'real strip must change the debug ELF');
   assert.notEqual(hash(readFileSync(packaged)), hash(readFileSync(wrongTransform)), 'wrong strip fixture must differ');
   const embeddedPath = 'libs/arm64-v8a/libreader_core_napi.so';
-  const archive = (name, input) => {
+  const bootstrapIdentity = join(host, STORAGE_BOOTSTRAP_RESOURCE);
+  const archive = (name, input, bootstrapBytes) => {
     const directory = join(root, `zip-${name}`), hap = join(root, `${name}.hap`);
     const entry = input ? embeddedPath : 'unrelated.txt';
     mkdirSync(dirname(join(directory, entry)), { recursive: true });
     if (input) copyFileSync(input, join(directory, entry)); else writeFileSync(join(directory, entry), 'missing native');
-    execFileSync('zip', ['-q', hap, entry], { cwd: directory }); return hap;
+    const bootstrapEntry = `resources/rawfile/${STORAGE_BOOTSTRAP_RESOURCE}`;
+    mkdirSync(dirname(join(directory, bootstrapEntry)), { recursive: true });
+    if (bootstrapBytes === undefined) copyFileSync(bootstrapIdentity, join(directory, bootstrapEntry));
+    else writeFileSync(join(directory, bootstrapEntry), bootstrapBytes);
+    execFileSync('zip', ['-q', hap, entry, bootstrapEntry], { cwd: directory }); return hap;
   };
-  const goodHap = archive('good', packaged);
   const snapshot = join(root, 'inputs.json'), identity = join(root, 'identity.json');
   json(snapshot, coreBuildSnapshot(core));
   const protocolHash = createHash('sha256');
@@ -76,18 +83,25 @@ try {
     cargoLockSha256, protocolSha256, rustProfile: 'release' });
   const packageManifest = join(root, 'package.sha256'), evidence = join(root, 'build.txt');
   const record = (path, label) => { const bytes = readFileSync(path); return `${hash(bytes)}  ${bytes.length}  ${label}`; };
+  const storageCompanion = join(vendor, 'storage-contract.v1.json');
   const writePair = () => {
-    writeFileSync(packageManifest, record(native, embeddedPath) + '\n' + record(join(vendor, 'Index.ts'), 'Index.ts') + '\n');
+    json(storageCompanion, createStorageBuildContract({ contractSource: readFileSync(join(core, 'storage/storage-contract.v1.json'), 'utf8'),
+      identityBytes: readFileSync(identity), coreInputSnapshot: JSON.parse(readFileSync(snapshot)), nativeBytes: readFileSync(native) }));
+    writeFileSync(bootstrapIdentity, storageBootstrapIdentityBytes(JSON.parse(readFileSync(storageCompanion))));
+    writeFileSync(packageManifest, record(native, embeddedPath) + '\n' + record(join(vendor, 'Index.ts'), 'Index.ts') + '\n' + record(storageCompanion, 'storage-contract.v1.json') + '\n');
     writeFileSync(evidence, Object.entries({ artifact_sha256: hash(readFileSync(native)), artifact_bytes: String(readFileSync(native).length),
       core_build_identity_sha256: hash(readFileSync(identity)), core_input_snapshot_sha256: hash(readFileSync(snapshot)),
-      package_manifest_sha256: hash(readFileSync(packageManifest)), sdk_smoke: 'pass' }).map(([key, value]) => `${key}=${value}`).join('\n') + '\n');
+      package_manifest_sha256: hash(readFileSync(packageManifest)), storage_contract_sha256: hash(readFileSync(storageCompanion)), sdk_smoke: 'pass' }).map(([key, value]) => `${key}=${value}`).join('\n') + '\n');
   };
   writePair();
+  commit(host);
+  const goodHap = archive('good', packaged);
   const output = join(root, 'result.json');
   const common = [fileURLToPath(new URL('./generate-build-provenance-manifest.mjs', import.meta.url)), '--allow-dirty',
     '--core-repo', core, '--harmony-repo', host, '--core-identity', identity, '--core-input-snapshot', snapshot,
     '--napi-manifest', packageManifest, '--native-so', native, '--app-native-so', app, '--harmony-vendor', vendor,
     '--core-build-evidence', evidence, '--native-strip-tool', strip];
+  common.push('--storage-bootstrap-identity', bootstrapIdentity);
   const run = (hap = goodHap, destination = output, harmony = host) => {
     const args = [...common]; args[args.indexOf('--harmony-repo') + 1] = harmony;
     const result = spawnSync(process.execPath, [...args, '--hap', hap, '--output', destination], { encoding: 'utf8', timeout: 30000 });
@@ -97,7 +111,7 @@ try {
     for (const [path, bytes] of before) assert.deepEqual(readFileSync(path), bytes, `generator changed input ${path}`);
   };
   const coreSource = join(core, 'crates/input.rs');
-  const inputPaths = [native, app, identity, snapshot, packageManifest, evidence, goodHap, strip, join(vendor, 'Index.ts'),
+  const inputPaths = [native, app, identity, snapshot, packageManifest, evidence, goodHap, strip, join(vendor, 'Index.ts'), storageCompanion, bootstrapIdentity,
     coreSource, join(core, 'Cargo.lock'), join(host, 'src/App.ets'), join(host, 'tools/controller.mjs'),
     ...protocolFiles.map(name => join(core, 'protocol', name))];
   const capturedInputs = () => inputPaths.map(path => [path, readFileSync(path)]);
@@ -107,10 +121,19 @@ try {
   assert.equal(value.hap.embeddedNative.sha256, hash(readFileSync(packaged)));
   assert.equal(value.harmony.nativePackaging.output.sha256, hash(readFileSync(packaged)));
   assert.deepEqual(value.harmony.nativePackaging.arguments, ['--strip-all']);
+  assert.equal(value.storageBuildContract.nativeSha256, hash(readFileSync(native)));
+  assert.equal(value.storageBuildContract.contractSha256, hash(readFileSync(join(core, 'storage/storage-contract.v1.json'))));
+  assert.equal(value.hap.embeddedBootstrap.sha256, hash(readFileSync(bootstrapIdentity)));
+  const wrongBootstrap = archive('wrong-bootstrap', packaged, '{\"buildId\":\"wrong\"}');
+  assert.match(run(wrongBootstrap).stderr, /HAP storage bootstrap expectation differs/);
+  const bootstrapBefore = readFileSync(bootstrapIdentity);
+  writeFileSync(bootstrapIdentity, '{}');
+  assert.match(run().stderr, /storage bootstrap expectation does not match/);
+  writeFileSync(bootstrapIdentity, bootstrapBefore);
   // Every argv file is a static input. Never open special nodes: a bounded
   // child invocation must reject them, rather than blocking on FIFO reads.
   const staticInputOptions = ['--native-so', '--app-native-so', '--core-identity', '--napi-manifest',
-    '--core-build-evidence', '--core-input-snapshot', '--hap', '--native-strip-tool'];
+    '--core-build-evidence', '--core-input-snapshot', '--storage-bootstrap-identity', '--hap', '--native-strip-tool'];
   const staticInputsBefore = capturedInputs(), staticPreviousJson = readFileSync(output);
   if (process.platform !== 'win32') for (const [index, option] of staticInputOptions.entries()) {
     const fifo = join(root, `static-input-${index}.fifo`), link = join(root, `static-input-${index}.link`);

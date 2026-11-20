@@ -10,11 +10,15 @@ export function readingFailureHint(code: string, kind?: RemoteReadingFailureKind
     case 'SOURCE_PAYWALL': return '此章节需要书源授权，请检查购买或登录状态。';
     case 'SOURCE_TOC_EMPTY': return '暂未获取到目录，请重试或切换书源。';
     case 'SOURCE_CONTENT_EMPTY': return '暂未获取到本章正文，请重试或切换书源。';
-    case 'SOURCE_HTTP_FAILED':
+    case 'SOURCE_HTTP_FAILED': return '书源请求失败，请稍后重试或切换书源。';
     case 'NETWORK_ENVIRONMENT': return '当前网络无法获取正文，请检查网络连接后重试。';
     case 'SOURCE_PARSE_FAILED': return '书源暂时无法解析本章，请重试或切换书源。';
     case 'POSITION_CONTEXT_STALE': return '章节内容已变化，原位置暂时无法对应，请重新打开本章。';
-    case 'STORAGE_FAILED': return '本地内容暂时无法读写，请检查存储空间后重试。';
+    case 'CACHE_CONTENT_MISSING': return '本机尚无可用的章节缓存，请检查书源与网络后重试。';
+    case 'CACHE_CONTENT_REJECTED': return '本章缓存未通过校验，原内容和阅读位置已保留，请刷新本章后重试。';
+    case 'STORAGE_FAILED': return '本地内容暂时无法读写，请重试；仍失败时可返回后重新打开。';
+    case 'HOST_CAPABILITY_UNSUPPORTED': return '当前版本暂不支持此书源所需的访问能力，请更新应用或切换书源。';
+    case 'CONTENT_LOAD_FAILED': return '正文暂时无法加载，请重试；仍失败时可返回后重新打开。';
     case 'PAGINATION_FAILED':
     case 'LAYOUT_FAILED':
     case 'RENDER_FAILED': return '本章暂时无法显示，请重试或调整阅读设置。';

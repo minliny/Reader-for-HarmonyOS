@@ -1,3 +1,5 @@
+import type { ReaderDirectoryNavigationPortFactory } from './ReaderDirectoryNavigation';
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from './ReadingDirectoryRecovery';
 import { TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER, TYPE_READER_DIRECTORY_OFFLINE_ACTION, TYPE_READER_DIRECTORY_SOURCE_ACTION } from '../common/ReaderTypography';
@@ -15,6 +17,7 @@ import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerReadableFontScale, readerScaledControlHeight } from '../common/ReaderSurfaceResolvers';
 import {
   readerInteractiveSafeBottom,
   readerVisualSafeLeft,
@@ -60,6 +63,7 @@ export struct ReaderFullDirectory {
   @Prop bookTitle: string = '';
   @Prop chapterTitle: string = '';
   @Prop entries: LocalReadingTocEntry[] = [];
+  navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   @Prop catalogMessage: string = '';
   @Prop catalogBusy: boolean = false;
   onRetryCatalog: () => void = (): void => {};
@@ -191,12 +195,12 @@ export struct ReaderFullDirectory {
   build() {
     ReaderPageScaffold({
       frameStyle: this.frameStyle(),
-      geometry: this.pageGeometry(), headerMeasurementKey: this.topBarTop(),
+      geometry: this.pageGeometry(), headerMeasurementKey: this.readerWindowMetricsRevision,
       header: (): void => { this.topBar(); },
       content: (): void => { this.directoryContent(); },
       overlayContent: (): void => { this.directoryOverlay(); },
-      onHeaderHeightChange: (height: number, presentedTop: number): void => {
-        if (!this.mounted || presentedTop !== this.topBarTop() || height <= 0) return;
+      onHeaderHeightChange: (height: number, presentedRevision: number): void => {
+        if (!this.mounted || presentedRevision !== this.readerWindowMetricsRevision || height <= 0) return;
         if (this.headerMeasurements.record(this.headerMeasurementKey(), height,
           Math.max(0, this.readerWindowMetricsRevision), 0.1)) this.headerMeasurementRevision += 1;
       },
@@ -217,6 +221,7 @@ export struct ReaderFullDirectory {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({
+          navigationPortFactory: this.navigationPortFactory,
           entries: this.entries,
           catalogMessage: this.catalogMessage,
           catalogBusy: this.catalogBusy,
@@ -264,15 +269,18 @@ export struct ReaderFullDirectory {
             .height(24);
         }
         .width(44)
-        .height(this.headerSpec.controlHeight)
+        .height(this.headerControlHeight())
         .margin({ left: 13 })
         .accessibilityText('收起目录')
+      .responseRegion( readerActionTouchRegion(44, this.headerControlHeight()))
+      .attributeModifier(new ReaderActionAccessibility('收起目录', true, false))
         .onClick((): void => this.requestCollapse());
 
         Column({ space: 6 }) {
           Text(this.bookTitle)
             .width('100%')
-            .height(22)
+            .height(22 * this.fontScale())
+            .maxFontScale(this.fontScale())
             .fontFamily(TYPE_READER_DIRECTORY_BOOK_TITLE.fontFamily)
             .fontWeight(TYPE_READER_DIRECTORY_BOOK_TITLE.fontWeight)
             .fontSize(TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp)
@@ -282,7 +290,8 @@ export struct ReaderFullDirectory {
 
           Text(this.chapterTitle)
             .width('100%')
-            .height(17)
+            .height(17 * this.fontScale())
+            .maxFontScale(this.fontScale())
             .fontFamily(TYPE_READER_DIRECTORY_CHAPTER.fontFamily)
             .fontWeight(TYPE_READER_DIRECTORY_CHAPTER.fontWeight)
             .fontSize(TYPE_READER_DIRECTORY_CHAPTER.fontSizeFp)
@@ -301,8 +310,9 @@ export struct ReaderFullDirectory {
             .alignSelf(ItemAlign.Center)
             .margin({ top: 1.25 });
           Text('换源')
-            .width(24)
-            .height(15)
+            .width(24 * this.fontScale())
+            .height(15 * this.fontScale())
+            .maxFontScale(this.fontScale())
             .fontFamily(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontFamily)
             .fontWeight(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontWeight)
             .fontSize(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontSizeFp)
@@ -311,11 +321,13 @@ export struct ReaderFullDirectory {
             .alignSelf(ItemAlign.Center);
         }
         .width(62)
-        .height(this.headerSpec.controlHeight)
+        .height(this.headerControlHeight())
         .margin({ left: 8 })
         .opacity(this.isLocalBook() ? 0.4 : 1)
         .enabled(!this.isLocalBook())
         .accessibilityText('换源')
+      .responseRegion( readerActionTouchRegion(62, this.headerControlHeight()))
+      .attributeModifier(new ReaderActionAccessibility('换源', !this.isLocalBook(), false))
         .onClick((): void => {
           if (!this.isLocalBook()) {
             this.onSwitchSource();
@@ -327,12 +339,14 @@ export struct ReaderFullDirectory {
             .width(20)
             .height(20);
         }
-        .width(34)
-        .height(this.headerSpec.controlHeight)
+        .width(44)
+        .height(this.headerControlHeight())
         .margin({ left: 8 })
         .opacity(this.isLocalBook() || this.offlineBookOperationActive ? 0.4 : 1)
         .enabled(!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true)
         .accessibilityText(this.offlineBookOperationActive ? '离线操作进行中' : '离线管理')
+      .responseRegion( readerActionTouchRegion(44, this.headerControlHeight()))
+      .attributeModifier(new ReaderActionAccessibility(this.offlineBookOperationActive ? '离线操作进行中' : '离线管理', !this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true, false))
         .onClick((): void => {
           if (!this.isLocalBook() && !this.offlineBookOperationActive) {
             this.offlineMenuVisible = !this.offlineMenuVisible;
@@ -340,14 +354,14 @@ export struct ReaderFullDirectory {
         });
       }
       .width('100%')
-      .height(this.headerSpec.barHeight)
+      .height(this.headerHeight())
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .borderRadius(this.headerSpec.radius);
     }
     .width('100%')
-    .height(this.headerSpec.barHeight)
+    .height(this.headerHeight())
     .padding({ left: this.topBarLeft(), right: this.topBarRight() });
   }
 
@@ -357,42 +371,50 @@ export struct ReaderFullDirectory {
       Column() {
         Text('下载整书')
           .width('100%')
-          .height(this.headerSpec.menuRowHeight)
+          .height(this.menuRowHeight())
           .padding({ left: 16 })
           .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
-          .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp)
+          .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp).maxFontScale(this.fontScale())
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .accessibilityText('下载整书')
+      .responseRegion( readerActionTouchRegion('100%', this.menuRowHeight()))
+      .enabled(!this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true)
+      .attributeModifier(new ReaderActionAccessibility('下载整书', !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true, false))
           .onClick((): void => {
+            if (!this.mounted || this.offlineBookOperationActive || this.directoryRecovery.offlineBlocked === true) return;
             this.offlineMenuVisible = false;
-            if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadBook();
+            this.onDownloadBook();
           });
         Divider()
           .color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
           .strokeWidth(TOK_BORDER_W);
         Text('清除本书离线')
           .width('100%')
-          .height(this.headerSpec.menuRowHeight)
+          .height(this.menuRowHeight())
           .padding({ left: 16 })
           .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
-          .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp)
+          .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp).maxFontScale(this.fontScale())
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .accessibilityText('清除本书离线内容')
+      .responseRegion( readerActionTouchRegion('100%', this.menuRowHeight()))
+      .enabled(!this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true)
+      .attributeModifier(new ReaderActionAccessibility('清除本书离线内容', !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true, false))
           .onClick((): void => {
+            if (!this.mounted || this.offlineBookOperationActive || this.directoryRecovery.offlineBlocked === true) return;
             this.offlineMenuVisible = false;
-            if (this.directoryRecovery.offlineBlocked !== true) this.onClearBookOffline();
+            this.onClearBookOffline();
           });
       }
-      .width(142)
-      .height(85)
+      .width(this.offlineMenuWidth())
+      .height(this.menuRowHeight() * 2 + 1)
       .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .borderRadius(12)
-      .position({ x: this.offlineMenuLeft(), y: this.headerSpec.menuTop(this.topBarTop()) })
+      .position({ x: this.offlineMenuLeft(), y: this.topBarTop() + this.headerHeight() + this.headerSpec.menuGap })
       .zIndex(8);
     }
   }
@@ -461,7 +483,7 @@ export struct ReaderFullDirectory {
   private offlineMenuLeft(): number {
     const figmaLeft = this.usesExpandedLayout() ? 548 : 206;
     return Math.max(this.topBarLeft(), Math.min(figmaLeft,
-      this.liveContainerWidth() - this.topBarRight() - 142));
+      this.liveContainerWidth() - this.topBarRight() - this.offlineMenuWidth()));
   }
 
   private panelViewportHeight(): number {
@@ -496,8 +518,17 @@ export struct ReaderFullDirectory {
     return Math.min(designHeight, available);
   }
 
+  private fontScale(): number {
+    return !Number.isFinite(this.readerWindowMetricsRevision) || this.readerWindowMetricsRevision < 0 ? 1 :
+      readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
+  private headerHeight(): number { return readerScaledControlHeight(this.headerSpec.barHeight, 39, this.fontScale()); }
+  private headerControlHeight(): number { return readerScaledControlHeight(Math.max(44, this.headerSpec.controlHeight), 15, this.fontScale()); }
+  private menuRowHeight(): number { return readerScaledControlHeight(Math.max(44, this.headerSpec.menuRowHeight), 20, this.fontScale()); }
+  private offlineMenuWidth(): number { return Math.min(142 + 72 * (this.fontScale() - 1), Math.max(44, this.liveContainerWidth() - this.topBarLeft() - this.topBarRight())); }
+
   private headerMeasurementKey(): string {
-    return `fullDirectory:header:${this.topBarTop()}`;
+    return `fullDirectory:header:${this.topBarTop()}:${this.liveContainerWidth()}:${this.fontScale()}`;
   }
 
   private pageGeometry(): ReaderPageGeometry {
@@ -507,7 +538,7 @@ export struct ReaderFullDirectory {
     input.viewportHeight = this.liveContainerHeight();
     input.measurementRevision = this.headerMeasurementRevision;
     input.headerTop = this.topBarTop();
-    input.headerHeight = this.headerMeasurements.read(this.headerMeasurementKey(), this.headerSpec.barHeight);
+    input.headerHeight = this.headerMeasurements.readForGeneration(this.headerMeasurementKey(), Math.max(0, this.readerWindowMetricsRevision), this.headerHeight());
     input.contentGap = this.headerSpec.panelGap;
     return resolveReaderPageGeometry(input);
   }

@@ -67,7 +67,9 @@ function consumer(file,members,params={},extra={}){
  const o=p.consumer(read('entry/src/main/ets/features/'+file+'.ets'),members,extra,params);return{p,o};
 }
 if(selectedCase==='source'){
- const calls=[],{p,o}=consumer('source/SourceManagementPage',['operation','sourceSwitch','sourceToggleBusy','sourceToggleEnabled'],{operation:{action:'load',sourceId:''}});
+ const calls=[],{p,o}=consumer('source/SourceManagementPage',[
+  'operation','sourceSwitch','sourceToggleBusy','sourceActionEnabled','onMessageChanged','feedbackIdentity'
+ ],{operation:{action:'load',sourceId:''}});
  Object.assign(o,{mounted:true,temporaryBackIdentity:'source-visit',onToggleSource:(id,next)=>calls.push([id,next])});o.sourceSwitch(false,next=>o.onToggleSource('source-A',next),'source-A');
  const actor=[...o.children.values()][0],click=p.nodes(actor).find(n=>n.onClick).onClick;click();assert.deepEqual(calls,[['source-A',true]]);
  p.update(actor,{value:true});click();assert.deepEqual(calls.at(-1),['source-A',false]);

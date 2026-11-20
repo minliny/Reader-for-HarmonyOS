@@ -4,13 +4,19 @@ import {registerHooks} from 'node:module';
 import {ReaderBrightnessWriter} from '../../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
 import * as metrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {findReaderTheme} from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import {installedEtsCompiler} from './ets-compiler-runtime.mjs';
+import {installedEtsCompiler,emitSdkProbe} from './ets-compiler-runtime.mjs';
 const base=new URL('../../entry/src/main/ets/',import.meta.url);
 export async function createWindowCoordinatorFixture(){
- const extensionHook=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
- const {ReaderStatusBarMeasurement}=await import('../../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
+ const statusBarUrl=new URL('app/ReaderStatusBarMeasurement.ts',base).href;
+ const extensionHook=registerHooks({resolve(s,c,next){
+  if(c.parentURL===statusBarUrl&&s==='../features/common/ReaderWindowMetrics')return next(s+'.ts',c);
+  return next(s,c);
+ }});
+ let ReaderStatusBarMeasurement;
+ try{({ReaderStatusBarMeasurement}=await import(statusBarUrl));}
+ finally{extensionHook.deregister();}
  const {ts}=installedEtsCompiler();
- const app=new Map(),appWrites=[],priorStorage=globalThis.AppStorage;globalThis.AppStorage={setOrCreate:(k,v)=>{app.set(k,v);appWrites.push([k,v]);}};
+ const app=new Map(),appWrites=[],storagePort={setOrCreate:(k,v)=>{app.set(k,v);appWrites.push([k,v]);}};
  const warnings=[];
  const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
  const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
@@ -21,8 +27,8 @@ export async function createWindowCoordinatorFixture(){
    './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
    '../features/common/ReaderWindowMetrics':metrics};
  const source=readFileSync(new URL('app/ReaderWindowCoordinator.ts',base),'utf8');
- const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
- const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);
+ const out=emitSdkProbe(source,{fileName:'ReaderWindowCoordinator.ts',compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}});
+ const module={exports:{}};new Function('require','module','exports','AppStorage',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports,storagePort);
  const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
  function windowPort(options={}){
    const zero={left:0,top:0,width:0,height:0};
@@ -44,5 +50,5 @@ export async function createWindowCoordinatorFixture(){
  }
 
  const colors=w=>w.calls.filter(x=>x[0]==='color');
- return{C,S,P,windowPort,colors,displayInfo,app,appWrites,warnings,cleanup(){C.detach();extensionHook.deregister();if(priorStorage===undefined)delete globalThis.AppStorage;else globalThis.AppStorage=priorStorage;}};
+ return{C,S,P,windowPort,colors,displayInfo,app,appWrites,appStorage:storagePort,warnings,cleanup(){C.detach();}};
 }

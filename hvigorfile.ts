@@ -1,7 +1,8 @@
 import { appTasks, OhosPluginId, OhosAppContext } from '@ohos/hvigor-ohos-plugin';
 import { hvigor } from '@ohos/hvigor';
 
-const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginIdeBuild, finishIdeBuild, isBuildResourceTask } = require('./hvigor/reader-hap-guard.cjs');
+const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginIdeBuild, finishIdeBuild,
+  isBuildResourceTask, needsIdeNativePreflight, assertArkTsOnlyTaskAllowed } = require('./hvigor/reader-hap-guard.cjs');
 
 type IdeSigningSession = {
   pipeline: {
@@ -57,7 +58,7 @@ hvigor.taskGraphResolved(async () => {
   assertReaderHapInvocation(tasks, ideSigning);
   if (ideSigning && tasks.some((name: string) => isBuildResourceTask(name))) {
     const buildEnv = await beginIdeBuild(ideSigning);
-    try { ideSigning.pipeline.preflightIdeNative(buildEnv); }
+    try { if (needsIdeNativePreflight(tasks)) ideSigning.pipeline.preflightIdeNative(buildEnv); }
     catch (error) { finishIdeBuild(); throw error; }
   }
 });
@@ -75,6 +76,7 @@ hvigor.nodesEvaluated(() => {
   for (const node of hvigor.getAllNodes()) {
     for (const task of node.getAllTasks()) {
       task.beforeRun(async () => {
+        assertArkTsOnlyTaskAllowed(hvigor.getCommandEntryTask() || [], task.getName());
         assertReaderHapInvocation([task.getName()], ideSigning);
         if (ideSigning && isBuildResourceTask(task.getName())) await beginIdeBuild(ideSigning);
       });

@@ -8,7 +8,7 @@ import type { JsonObject } from '@reader/core-harmony';
 import { HttpExecuteHost } from './HttpExecuteHost';
 import { readingImageHttpError } from './ReadingImageHttpError';
 import { MangaDisplayRetention, type MangaDisplayInventoryFile } from './MangaDisplayRetention';
-import type { MangaStorageChapter, MangaStorageGrant } from './ReadingImageDiskCache';
+import { ReadingImageDiskCache, type MangaStorageChapter, type MangaStorageGrant } from './ReadingImageDiskCache';
 
 export interface MangaImageDecodeProfile {
   format: 'jpeg' | 'png' | 'webp'; encodedWidth?: number; encodedHeight?: number;
@@ -112,6 +112,52 @@ export class ReadingBodyImageHost {
   // the last session owner releases both the file and every resource alias.
   private readonly resourcePayloads: Map<string, ReadingBodyImagePayload> = new Map<string, ReadingBodyImagePayload>();
   private readonly resourceReads: Map<string, ReadingImageResourceRead> = new Map<string, ReadingImageResourceRead>();
+  private restoreQuiescing: boolean = false;
+  private restoreDrained: boolean = false;
+  private restoreSettled: boolean = false;
+  private restoreDrain: Promise<void> | undefined;
+  // Outstanding physical display owners, including retention sidecars and
+  // startup cleanup. This observes work; existing per-file ordering is kept.
+  private readonly displayOperations = new Set<Promise<unknown>>();
+
+  private observeDisplayOperation<T>(operation: () => Promise<T>): Promise<T> {
+    this.assertCurrent();
+    const task = operation();
+    this.displayOperations.add(task);
+    const finish = (): void => { this.displayOperations.delete(task); };
+    void task.then(finish, finish);
+    return task;
+  }
+
+  quiesceForLibraryRestore(): Promise<void> {
+    this.restoreQuiescing = true;
+    this.resourceGeneration++;
+    this.displayCacheCleanupGeneration++;
+    this.mangaMetadataGeneration++;
+    this.mangaTemporaryRecoveryEnabled = false;
+    if (this.restoreDrain !== undefined) return this.restoreDrain;
+    this.restoreSettled = false;
+    const retention = this.mangaDisplay?.quiesceForLibraryRestore();
+    const drain = (async (): Promise<void> => {
+      let failure: unknown;
+      let pending = [retention, ...this.displayOperations, ...this.displayFileWrites.values(), ...this.displayFileRemovals.values()];
+      do {
+        for (const result of await Promise.allSettled(pending)) {
+          if (result.status === 'rejected' && !ReadingImageDiskCache.isRestoreRetirement(result.reason) && failure === undefined) failure = result.reason;
+        }
+        pending = [...this.displayOperations, ...this.displayFileWrites.values(), ...this.displayFileRemovals.values()];
+      } while (pending.length > 0);
+      if (failure !== undefined) throw failure;
+      this.restoreDrained = true;
+    })();
+    this.restoreDrain = drain;
+    void drain.then((): void => { this.restoreSettled = true; }, (): void => {
+      this.restoreSettled = true;
+      if (this.restoreDrain === drain) this.restoreDrain = undefined;
+    });
+    return drain;
+  }
+
   private resourceGeneration: number = 0;
   private displayCacheCleanupGeneration: number = 0;
   private nextTemporaryFile: number = 0;
@@ -124,6 +170,10 @@ export class ReadingBodyImageHost {
   }
 
   async mangaDisplayInventory(): Promise<MangaDisplayInventoryFile[]> {
+    return this.observeDisplayOperation(() => this.mangaDisplayInventoryOwned());
+  }
+
+  private async mangaDisplayInventoryOwned(): Promise<MangaDisplayInventoryFile[]> {
     await this.recoverMangaTemporaryFiles();
     return this.mangaDisplay?.inventory() ?? [];
   }
@@ -132,6 +182,10 @@ export class ReadingBodyImageHost {
    * Original manga files and Core manifests are owned by ReadingImageDiskCache;
    * this method only touches the versioned display namespace. */
   async clearRebuildableMangaDisplay(current: () => boolean = (): boolean => true): Promise<number> {
+    return this.observeDisplayOperation(() => this.clearRebuildableMangaDisplayOwned(current));
+  }
+
+  private async clearRebuildableMangaDisplayOwned(current: () => boolean = (): boolean => true): Promise<number> {
     await this.recoverMangaTemporaryFiles();
     return this.mangaDisplay?.clearRebuildable(current) ?? 0;
   }
@@ -157,6 +211,7 @@ export class ReadingBodyImageHost {
   /** Manga persistent display files belong to the shared files budget. Novel
    * transient display files continue to use the existing app cache folder. */
   configureMangaDisplayCache(filesDir: string): void {
+    this.assertCurrent();
     if (filesDir.trim().length === 0) throw new Error('MANGA_DISPLAY_DIRECTORY_REQUIRED');
     const directory = `${filesDir}/reader-manga-display-v1`;
     this.mangaDisplayDir = directory;
@@ -166,15 +221,27 @@ export class ReadingBodyImageHost {
   }
 
   async removeMangaDisplay(grant: MangaStorageGrant, files: MangaDisplayInventoryFile[]): Promise<boolean> {
+    return this.observeDisplayOperation(() => this.removeMangaDisplayOwned(grant, files));
+  }
+
+  private async removeMangaDisplayOwned(grant: MangaStorageGrant, files: MangaDisplayInventoryFile[]): Promise<boolean> {
     return this.mangaDisplay?.remove(grant, files) ?? true;
   }
 
-  async removeMangaDerived(chapter: MangaStorageChapter, files: MangaDisplayInventoryFile[],
+  async removeMangaDerived(chapter: MangaStorageChapter, files: MangaDisplayInventoryFile[], current: () => Promise<boolean>): Promise<boolean> {
+    return this.observeDisplayOperation(() => this.removeMangaDerivedOwned(chapter, files, current));
+  }
+
+  private async removeMangaDerivedOwned(chapter: MangaStorageChapter, files: MangaDisplayInventoryFile[],
     current: () => Promise<boolean>): Promise<boolean> {
     return this.mangaDisplay?.remove(chapter, files, current) ?? true;
   }
 
-  async loadMangaBytes(bytes: Uint8Array, chapter: MangaStorageChapter, isCurrent?: () => boolean,
+  async loadMangaBytes(bytes: Uint8Array, chapter: MangaStorageChapter, isCurrent?: () => boolean, mangaPosition: number = 0, mangaPreview: boolean = false, priority: 'foreground' | 'chapter' | 'background' | 'download' = 'foreground'): Promise<ReadingBodyImagePayload> {
+    return this.observeDisplayOperation(() => this.loadMangaBytesOwned(bytes, chapter, isCurrent, mangaPosition, mangaPreview, priority));
+  }
+
+  private async loadMangaBytesOwned(bytes: Uint8Array, chapter: MangaStorageChapter, isCurrent?: () => boolean,
     mangaPosition: number = 0, mangaPreview: boolean = false,
     priority: 'foreground' | 'chapter' | 'background' | 'download' = 'foreground'): Promise<ReadingBodyImagePayload> {
     const generation = this.resourceGeneration;
@@ -236,7 +303,9 @@ export class ReadingBodyImageHost {
     request: JsonObject,
     isCurrent?: () => boolean,
   ): Promise<ReadingBodyImagePayload> {
-    return this.decodeBytes(await this.fetchRequestBytes(request, isCurrent), isCurrent);
+    const generation = this.resourceGeneration;
+    const current = (): boolean => generation === this.resourceGeneration && isCurrent?.() !== false;
+    return this.decodeBytes(await this.fetchRequestBytes(request, current), current);
   }
 
   /** Fetch bounded response bytes without allocating a PixelMap. */
@@ -409,7 +478,11 @@ export class ReadingBodyImageHost {
     this.displayFileReferences.clear();
   }
 
-  private async decodeBytes(
+  private async decodeBytes(bytes: Uint8Array, isCurrent?: () => boolean, mangaPosition?: number, mangaPreview: boolean = false, mangaDisplayKey?: string): Promise<ReadingBodyImagePayload> {
+    return this.observeDisplayOperation(() => this.decodeBytesOwned(bytes, isCurrent, mangaPosition, mangaPreview, mangaDisplayKey));
+  }
+
+  private async decodeBytesOwned(
     bytes: Uint8Array,
     isCurrent?: () => boolean,
     mangaPosition?: number,
@@ -812,6 +885,7 @@ export class ReadingBodyImageHost {
   }
 
   private removeDisplayFile(path: string, isCurrent?: () => boolean): Promise<void> {
+    if (this.restoreQuiescing && this.restoreSettled) return Promise.resolve();
     const existing = this.displayFileRemovals.get(path);
     if (existing !== undefined) return existing;
     const writing = this.displayFileWrites.get(path);
@@ -820,11 +894,10 @@ export class ReadingBodyImageHost {
       if (isCurrent?.() === false || this.displayFileReferences.has(path) || this.displayTemporaryFiles.has(path)) return;
       await this.unlinkBestEffort(path, (): boolean => isCurrent?.() !== false &&
         !this.displayFileReferences.has(path) && !this.displayTemporaryFiles.has(path));
-    })().catch((): void => {});
+    })();
     this.displayFileRemovals.set(path, removal);
-    void removal.finally((): void => {
-      if (this.displayFileRemovals.get(path) === removal) this.displayFileRemovals.delete(path);
-    });
+    const finish = (): void => { if (this.displayFileRemovals.get(path) === removal) this.displayFileRemovals.delete(path); };
+    void removal.then(finish, finish);
     return removal;
   }
 
@@ -855,6 +928,8 @@ export class ReadingBodyImageHost {
   }
 
   private configureDisplayCache(cacheDir: string): void {
+    if (this.restoreQuiescing && !this.restoreDrained) throw new Error('READING_IMAGE_RESTORE_NOT_DRAINED');
+    this.restoreQuiescing = false; this.restoreDrained = false; this.restoreSettled = false; this.restoreDrain = undefined;
     if (cacheDir.trim().length === 0) {
       throw new Error('reading body image display cache is not configured');
     }
@@ -866,7 +941,8 @@ export class ReadingBodyImageHost {
     this.mangaDisplay = new MangaDisplayRetention(directory, (bytes: Uint8Array): Promise<string> => this.sha256(bytes),
       (path: string): boolean => this.displayFileReferences.has(path) || this.displayFileWrites.has(path) || this.displayTemporaryFiles.has(path));
     const generation = ++this.displayCacheCleanupGeneration;
-    void this.cleanupDisplayCache(cacheDir, directory, generation);
+    const cleanup = this.observeDisplayOperation(() => this.cleanupDisplayCache(cacheDir, directory, generation));
+    void cleanup.catch((): void => {});
   }
 
   private async cleanupDisplayCache(cacheDir: string, directory: string, generation: number): Promise<void> {
@@ -895,8 +971,9 @@ export class ReadingBodyImageHost {
         // Generation checks cannot cancel an unlink already inside the OS.
         await this.removeDisplayFile(path);
       }
-    } catch (_) {
-      // Cache cleanup is maintenance-only and must never block app startup.
+    } catch (error) {
+      // Startup may ignore this task, but the restore barrier observes it.
+      throw error;
     }
   }
 
@@ -913,12 +990,9 @@ export class ReadingBodyImageHost {
   }
 
   private async unlinkBestEffort(path: string, isCurrent?: () => boolean): Promise<void> {
-    try {
-      if (await fs.access(path)) {
-        if (isCurrent?.() === false) return;
-        await fs.unlink(path);
-      }
-    } catch (_) {
+    if (await fs.access(path)) {
+      if (isCurrent?.() === false) return;
+      await fs.unlink(path);
     }
   }
 
@@ -950,6 +1024,7 @@ export class ReadingBodyImageHost {
   }
 
   private assertCurrent(isCurrent?: () => boolean): void {
+    if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement();
     if (isCurrent !== undefined && !isCurrent()) {
       throw new Error('reading body image request was cancelled');
     }

@@ -13,6 +13,9 @@ import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerReadableFontScale, readerScaledControlHeight } from '../common/ReaderSurfaceResolvers';
+import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
 import {
   TYPE_SOURCE_TOOLS_ACTION,
   TYPE_SOURCE_TOOLS_BODY,
@@ -34,10 +37,10 @@ import {
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_INK,
-  TOK_MUTED,
   TOK_PRIMARY_DARK,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
+  TOK_SCREEN_INSET,
   TOK_SURFACE_PANEL_SOFT,
   TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
@@ -172,6 +175,8 @@ class SourceDebugLogDataSource implements IDataSource {
 export struct SourceToolsPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private cardWidth: number = 0;
 
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
@@ -275,7 +280,7 @@ export struct SourceToolsPage {
   private batchCard() {
     Column({ space: TOK_SPACE_SM }) {
       this.heading(`批量管理（已选 ${this.snapshot.selectedSourceCount}/${this.snapshot.sources.length}）`);
-      Row({ space: TOK_SPACE_XS }) {
+      Flex({ wrap: FlexWrap.Wrap }) {
         this.actionButton('全选', false, !this.snapshot.busy, (): void => this.onSelectAll());
         this.actionButton('清空', false, !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
           (): void => this.onClearSelection());
@@ -285,7 +290,7 @@ export struct SourceToolsPage {
             this.onExportSelected(this.snapshot.selectedSourceIds)));
       }
       .width('100%');
-      Row({ space: TOK_SPACE_XS }) {
+      Flex({ wrap: FlexWrap.Wrap }) {
         if (this.snapshot.batchCheck.phase === 'running' || this.snapshot.batchCheck.phase === 'stopping') {
           this.actionButton(this.snapshot.batchCheck.phase === 'stopping' ? '停止中…' : '停止检测', false,
             this.snapshot.batchCheck.phase === 'running', (): void => this.onStopCheck());
@@ -308,9 +313,9 @@ export struct SourceToolsPage {
       Text('批量操作复用 source.export / source.check.run / source.update / source.delete；删除由系统确认框二次确认。')
         .width('100%')
         .fontFamily(TYPE_SOURCE_TOOLS_NOTE.fontFamily as string)
-        .fontSize(TYPE_SOURCE_TOOLS_NOTE.fontSizeFp)
+        .fontSize(TYPE_SOURCE_TOOLS_NOTE.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
         .lineHeight(TYPE_SOURCE_TOOLS_NOTE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
@@ -328,11 +333,11 @@ export struct SourceToolsPage {
           .layoutWeight(1)
           .fontFamily(MESSAGE_TITLE.fontFamily)
           .fontWeight(MESSAGE_TITLE.fontWeight)
-          .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+          .fontSize(MESSAGE_TITLE.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
         Text(this.batchCheckPhaseLabel(this.snapshot.batchCheck))
           .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
-          .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+          .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
           .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
           .fontColor(this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.status.checkError', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
       }
@@ -353,30 +358,30 @@ export struct SourceToolsPage {
           `${this.snapshot.batchCheck.currentSourceName}（检测所选能力）`)
           .width('100%')
           .fontFamily(MESSAGE_BODY.fontFamily as string)
-          .fontSize(MESSAGE_BODY.fontSizeFp)
+          .fontSize(MESSAGE_BODY.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
           .lineHeight(MESSAGE_BODY.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
       }
-      Row({ space: TOK_SPACE_XS }) {
+      Flex({ wrap: FlexWrap.Wrap }) {
         this.batchCounter(`所选项通过 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
         this.batchCounter(`所选项未通过 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.status.checkError', this.appThemeScheme));
         this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, readerAppColor('app.status.checkWarning', this.appThemeScheme));
         this.batchCounter(`剩余 ${Math.max(0,
-          this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, readerAppColor('TOK_MUTED', this.appThemeScheme));
+          this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
       }
       .width('100%');
       if (this.snapshot.batchCheck.results.length === 0) {
         Text('每个书源完成后，结果会立即出现在这里。')
           .width('100%')
           .fontFamily(TYPE_SOURCE_TOOLS_HINT.fontFamily as string)
-          .fontSize(TYPE_SOURCE_TOOLS_HINT.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          .fontSize(TYPE_SOURCE_TOOLS_HINT.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
+          .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
       } else {
         Text('实时结果（最新在前）')
           .width('100%')
           .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
-          .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+          .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
           .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         List() {
@@ -388,7 +393,7 @@ export struct SourceToolsPage {
             `source-check-${result.sourceId}-${result.traceId}-${result.state}`);
         }
         .width('100%')
-        .height(Math.min(320, Math.max(58, this.snapshot.batchCheck.results.length * 58)))
+        .height(Math.min(320, Math.max(this.resultRowMinHeight(), this.snapshot.batchCheck.results.length * this.resultRowMinHeight())))
         .scrollBar(BarState.Off);
       }
     }
@@ -402,11 +407,14 @@ export struct SourceToolsPage {
   @Builder
   private batchCounter(label: string, color: string) {
     Text(label)
-      .layoutWeight(1)
-      .height(32)
+      .width(this.counterWidth())
+      .constraintSize({ minHeight: readerScaledControlHeight(32, 16.5, this.fontScale()) })
+      .padding({ left: 6, right: 6, top: 6, bottom: 6 })
+      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .textAlign(TextAlign.Center)
       .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
-      .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+      .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
+      .lineHeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp * 1.5)
       .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
       .fontColor(color)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
@@ -415,39 +423,40 @@ export struct SourceToolsPage {
 
   @Builder
   private batchResultRow(result: SourceBatchCheckResult) {
-    Row({ space: TOK_SPACE_XS }) {
+    Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Start }) {
       Column({ space: 3 }) {
         Text(result.sourceName)
           .width('100%')
           .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
-          .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
+          .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
+          .lineHeight(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 1.5)
           .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
         Text(result.sourceId)
           .width('100%').fontFamily(MESSAGE_META.fontFamily as string)
-          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontSize(MESSAGE_META.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
         Text(result.message)
           .width('100%')
           .fontFamily(MESSAGE_BODY.fontFamily as string)
-          .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontSize(MESSAGE_BODY.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_BODY.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
       }
-      .layoutWeight(1)
+      .width('100%')
       .alignItems(HorizontalAlign.Start);
       Text(this.batchResultLabel(result))
         .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
-        .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+        .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
+        .lineHeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp * 1.5)
         .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
         .fontColor(result.state === 'passed' ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) :
           (result.state === 'failed' ? readerAppColor('app.status.checkError', this.appThemeScheme) : readerAppColor('app.status.checkWarning', this.appThemeScheme)));
     }
     .width('100%')
-    .constraintSize({ minHeight: 58 })
-    .alignItems(VerticalAlign.Top)
+    .constraintSize({ minHeight: this.resultRowMinHeight() })
     .padding({ top: 13, bottom: 13, left: TOK_SPACE_XS, right: TOK_SPACE_XS })
     .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
@@ -518,7 +527,7 @@ export struct SourceToolsPage {
       Row({ space: 10 }) {
         LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
         Text(this.snapshot.statusMessage).layoutWeight(1)
-          .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
+          .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
           .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       }.width('100%').padding(17);
     }
@@ -531,9 +540,9 @@ export struct SourceToolsPage {
       Text('Core 生成 Legado 兼容 JSON；Host 只通过系统文件选择器写入。')
         .width('100%')
         .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
-        .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
+        .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
         .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
       this.fullWidthActionButton('导出全部书源', true,
         (): void => this.confirmExportThen((): void => this.onExportAll()));
     }
@@ -557,24 +566,47 @@ export struct SourceToolsPage {
           `source-tool-${row.source.sourceId}-${row.selected ? 1 : 0}-${row.actionsEnabled ? 1 : 0}`);
       }
       .width('100%')
-      .height(Math.min(420, Math.max(58, this.snapshot.sources.length * 58)))
+      .height(Math.min(420, Math.max(this.sourceRowMinHeight(true), this.snapshot.sources.length * this.sourceRowMinHeight(true))))
       .scrollBar(BarState.Off);
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(10);
+    .borderRadius(10)
+    .onAreaChange((_old: Area, next: Area): void => {
+      const width = typeof next.width === 'number' ? next.width : Number.parseFloat(next.width as string);
+      if (Number.isFinite(width) && width > 0 && Math.abs(width - this.cardWidth) > .1) this.cardWidth = width;
+    });
   }
 
   @Builder
   private sourceRow(row: SourceToolListRow) {
+    Column({ space: TOK_SPACE_XS }) {
+      if (this.sourceRowStacked()) {
+        this.sourceIdentity(row);
+        this.sourceActions(row);
+      } else {
         Row({ space: TOK_SPACE_XS }) {
+          Column() { this.sourceIdentity(row); }.layoutWeight(1);
+          this.sourceActions(row);
+        }.width('100%');
+      }
+    }
+    .width('100%')
+    .constraintSize({ minHeight: this.sourceRowMinHeight(row.source.lastCheckSummary !== undefined) })
+    .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+    .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
+  }
+
+  @Builder
+  private sourceIdentity(row: SourceToolListRow) {
           Column({ space: 3 }) {
             Text(row.source.name)
               .width('100%')
               .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
-              .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
+              .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
+              .lineHeight(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 1.5)
               .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
               .maxLines(1)
@@ -582,30 +614,36 @@ export struct SourceToolsPage {
             Text(row.source.baseUrl)
               .width('100%')
               .fontFamily(TYPE_SOURCE_TOOLS_URL.fontFamily as string)
-              .fontSize(TYPE_SOURCE_TOOLS_URL.fontSizeFp)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+              .fontSize(TYPE_SOURCE_TOOLS_URL.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
+              .lineHeight(TYPE_SOURCE_TOOLS_URL.fontSizeFp * 1.5)
+              .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
             if (row.source.lastCheckSummary !== undefined) {
               Text(row.source.lastCheckSummary)
                 .width('100%')
-                .fontSize(TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .fontSize(TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
+                .lineHeight(TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp * 1.5)
+                .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
           }
-          .layoutWeight(1)
+          .width('100%')
           .alignItems(HorizontalAlign.Start);
-          this.smallButton(row.selected ? '已选' : '选择', row.actionsEnabled,
-            (): void => this.onToggleSelection(row.source.sourceId));
-          this.smallButton('编辑', row.actionsEnabled && this.canWriteSources(), (): void => this.onOpenEditor(row.source.sourceId));
-          this.smallButton('调试', row.actionsEnabled, (): void => this.onDebugSource(row.source.sourceId));
-        }
-        .width('100%')
-        .height(58)
-        .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-        .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
+  }
+
+  @Builder
+  private sourceActions(row: SourceToolListRow) {
+    Flex({ wrap: FlexWrap.Wrap }) {
+      this.smallButton(row.selected ? '已选' : '选择', row.actionsEnabled,
+        (): void => this.onToggleSelection(row.source.sourceId),
+        `${row.selected ? '已选，取消选择' : '未选，选择'}书源：${row.source.name}`);
+      this.smallButton('编辑', row.actionsEnabled && this.canWriteSources(),
+        (): void => this.onOpenEditor(row.source.sourceId), `编辑书源：${row.source.name}`);
+      this.smallButton('调试', row.actionsEnabled,
+        (): void => this.onDebugSource(row.source.sourceId), `调试书源：${row.source.name}`);
+    }.width(this.sourceRowStacked() ? '100%' : this.sourceActionsWidth());
   }
 
   @Builder
@@ -615,11 +653,12 @@ export struct SourceToolsPage {
       Text('bookSourceUrl 是主键；本页不执行隐式迁移。保存时由 Core source.import 校验并持久化。')
         .width('100%')
         .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
-        .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
+        .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
         .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-code', text: this.snapshot.editorText, placeholder: 'BookSource JSON', isEditable: this.snapshot.original?.blocked !== true, onTextChange: (value: string): void => this.onEditorDraftChanged(value) });
-      Row({ space: TOK_SPACE_XS }) {
+        .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
+      ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-code', text: this.snapshot.editorText,
+        fieldAccessibilityLabel: `书源 JSON：${this.snapshot.editorSourceId}`, placeholder: 'BookSource JSON', isEditable: this.canWriteSources(), onTextChange: (value: string): void => this.onEditorDraftChanged(value) });
+      Flex({ wrap: FlexWrap.Wrap }) {
         this.actionButton('取消', false, !this.snapshot.busy && this.snapshot.editorReadback?.confirmation !== 'unknown' && this.snapshot.original?.blocked !== true, (): void => this.onCancelEditor());
         this.actionButton('校验并保存', true, this.canWriteSources(), (): void => this.onSaveEditor());
       }
@@ -641,42 +680,51 @@ export struct SourceToolsPage {
     Column({ space: TOK_SPACE_SM }) {
       Text(this.snapshot.debugSourceId.length > 0 ? '最近一次检测详情' : '书源调试')
         .width('100%').fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
-        .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+        .fontSize(MESSAGE_TITLE.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
-      Row({ space: TOK_SPACE_SM }) {
+      Flex({ wrap: FlexWrap.Wrap }) {
+        Column({ space: TOK_SPACE_XS }) {
+        this.selectLabel('检测范围');
         ReaderInlineSelect({
           value: this.snapshot.checkMode === 'explore' ? '发现' : '搜索',
           options: ['搜索', '发现'],
           selectedIndex: this.snapshot.checkMode === 'explore' ? 1 : 0,
           actionEnabled: !this.snapshot.busy,
+          controlWidth: this.debugSelectWidth(),
           onSelect: (index: number, _value: string): void => this.onCheckSelectionChanged(
             index === 1 ? 'explore' : 'search', this.snapshot.checkDepth),
         });
+        }.width(this.debugSelectWidth()).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
+        Column({ space: TOK_SPACE_XS }) {
+        this.selectLabel('检测深度');
         ReaderInlineSelect({
           value: ['列表', '详情', '目录', '正文'][this.snapshot.checkDepth - 2] ?? '列表',
           options: ['列表', '详情', '目录', '正文'],
           selectedIndex: Math.max(0, this.snapshot.checkDepth - 2),
           actionEnabled: !this.snapshot.busy,
+          controlWidth: this.debugSelectWidth(),
           onSelect: (index: number, _value: string): void => this.onCheckSelectionChanged(this.snapshot.checkMode, index + 2),
         });
+        }.width(this.debugSelectWidth()).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
       }.width('100%');
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-debug', text: this.snapshot.debugKey,
+      ReaderFormField({ scheme: this.appThemeScheme, specId: 'form-body', text: this.snapshot.debugKey,
+        fieldAccessibilityLabel: this.snapshot.debugSourceId.length > 0 ? `检测关键词：${this.snapshot.debugSourceId}` : '书源检测关键词',
         placeholder: '检测关键词（留空时使用 Core 默认“我的”）', onTextChange: (value: string): void => this.onDebugKeyChanged(value) });
       if (this.snapshot.debugSourceId.length > 0) {
         Text('检测对象')
           .width('100%').fontFamily(MESSAGE_META.fontFamily as string)
-          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontSize(MESSAGE_META.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
         Text(this.snapshot.debugSourceId)
           .width('100%')
           .fontFamily(MESSAGE_META.fontFamily as string)
-          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontSize(MESSAGE_META.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
       }
       if (this.snapshot.debugLogs.length === 0) {
         Text('暂无检测记录').width('100%').padding({ top: 28, bottom: 28 }).textAlign(TextAlign.Center)
-          .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
+          .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
           .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       }
       List() {
@@ -689,7 +737,7 @@ export struct SourceToolsPage {
             `${log.timestampMs}-${log.state}-${log.message}`);
       }
       .width('100%')
-      .height(Math.min(360, Math.max(32, this.snapshot.debugLogs.length * 32)))
+      .height(Math.min(360, Math.max(this.debugRowMinHeight(), this.snapshot.debugLogs.length * this.debugRowMinHeight())))
       .scrollBar(BarState.Off);
     }
     .width('100%')
@@ -702,19 +750,19 @@ export struct SourceToolsPage {
   @Builder
   private debugLogRow(log: SourceDebugLog, index: number) {
     Row({ space: 9 }) {
-      Text(`${index + 1}`).width(22).fontFamily(MESSAGE_META.fontFamily as string)
-        .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+      Text(`${index + 1}`).width(Math.max(22, String(index + 1).length * MESSAGE_META.fontSizeFp * this.fontScale() + 4)).fontFamily(MESSAGE_META.fontFamily as string)
+        .fontSize(MESSAGE_META.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       Column({ space: 4 }) {
         if (log.state === -1) {
-          Text('检测失败').fontFamily(MESSAGE_META.fontFamily as string).fontSize(MESSAGE_META.fontSizeFp)
+          Text('检测失败').fontFamily(MESSAGE_META.fontFamily as string).fontSize(MESSAGE_META.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
             .lineHeight(MESSAGE_META.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme));
         }
         Text(log.message).width('100%').fontFamily(MESSAGE_BODY.fontFamily as string)
-          .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontSize(MESSAGE_BODY.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_BODY.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme)).wordBreak(WordBreak.BREAK_ALL);
         Text(`状态码 ${log.state}`).width('100%').fontFamily(MESSAGE_META.fontFamily as string)
-          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontSize(MESSAGE_META.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).lineHeight(MESSAGE_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
     }.width('100%').alignItems(VerticalAlign.Top).padding({ top: 13, bottom: 13 })
@@ -727,28 +775,98 @@ export struct SourceToolsPage {
       .width('100%')
       .fontFamily(TYPE_SOURCE_TOOLS_HEADING.fontFamily)
       .fontWeight(TYPE_SOURCE_TOOLS_HEADING.fontWeight)
-      .fontSize(TYPE_SOURCE_TOOLS_HEADING.fontSizeFp)
+      .fontSize(TYPE_SOURCE_TOOLS_HEADING.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale())
       .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
   @Builder
-  private smallButton(label: string, enabled: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-compact', label, actionEnabled: enabled, onAction: action });
+  private selectLabel(label: string) {
+    Text(label).width('100%').fontFamily(TYPE_SOURCE_TOOLS_BODY.fontFamily as string)
+      .fontSize(TYPE_SOURCE_TOOLS_BODY.fontSizeFp).minFontScale(1).maxFontScale(this.fontScale()).fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
+  }
+
+  @Builder
+  private smallButton(label: string, enabled: boolean, action: () => void, accessibilityLabel: string) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-compact', label,
+      actionAccessibilityLabel: accessibilityLabel, actionEnabled: enabled, onAction: action })
+      .width(this.compactActionWidth()).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
   }
 
   @Builder
   private actionButton(label: string, primary: boolean, enabled: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-action', label, primary, actionEnabled: enabled, layout: 'equal', onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: enabled, onAction: action })
+      .width(this.actionWidth(label)).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
   }
 
   private canWriteSources(): boolean {
     return !this.snapshot.busy && this.snapshot.original?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown' &&
-      this.snapshot.editorReadback?.confirmation !== 'unknown';
+      this.snapshot.editorReadback?.confirmation !== 'unknown' &&
+      (this.snapshot.editorSourceId.length === 0 || this.snapshot.editorReadback?.confirmation !== 'confirmed');
   }
 
   @Builder
   private fullWidthActionButton(label: string, primary: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-action', label, primary, actionEnabled: !this.snapshot.busy, layout: 'full', onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: !this.snapshot.busy, layout: 'full', onAction: action });
+  }
+
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
+
+  private toolsInnerWidth(padding: number = TOK_SPACE_SM): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const card = this.cardWidth > 0 ? this.cardWidth : Math.max(0, metrics.windowRect.width -
+      readerVisualSafeLeft(metrics) - readerVisualSafeRight(metrics) - TOK_SCREEN_INSET * 2);
+    return Math.max(0, card - padding * 2);
+  }
+
+  private compactActionWidth(): number {
+    return 44 * this.fontScale();
+  }
+
+  private actionWidth(label: string): number {
+    return Math.min(this.toolsInnerWidth() - TOK_SPACE_XS,
+      Math.max(44, label.length * TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * this.fontScale() + 24));
+  }
+
+  private sourceActionsWidth(): number { return (this.compactActionWidth() + TOK_SPACE_XS) * 3; }
+
+  private sourceRowStacked(): boolean {
+    return this.sourceActionsWidth() + TOK_SPACE_XS + TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 7 * this.fontScale() >
+      this.toolsInnerWidth() - TOK_SPACE_XS * 2;
+  }
+
+  private sourceRowMinHeight(hasSummary: boolean): number {
+    const text = Math.ceil((TYPE_SOURCE_TOOLS_ACTION.fontSizeFp + TYPE_SOURCE_TOOLS_URL.fontSizeFp +
+      (hasSummary ? TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp : 0)) * 1.5 * this.fontScale()) + (hasSummary ? 6 : 3);
+    const columns = Math.max(1, Math.floor((this.toolsInnerWidth() - TOK_SPACE_XS * 2) /
+      (this.compactActionWidth() + TOK_SPACE_XS)));
+    const rows = this.sourceRowStacked() ? Math.ceil(3 / columns) : 1;
+    const actions = rows * (readerScaledControlHeight(44, TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp * 1.5, this.fontScale()) + TOK_SPACE_XS);
+    return TOK_SPACE_XS * 2 + (this.sourceRowStacked() ? text + TOK_SPACE_XS + actions : Math.max(text, actions));
+  }
+
+  private resultRowMinHeight(): number {
+    return Math.ceil((TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 1.5 + (MESSAGE_META.lineHeightFp as number) +
+      (MESSAGE_BODY.lineHeightFp as number) + TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp * 1.5) * this.fontScale()) + 32;
+  }
+
+  private debugRowMinHeight(): number {
+    return Math.ceil(((MESSAGE_META.lineHeightFp as number) * 2 +
+      (MESSAGE_BODY.lineHeightFp as number)) * this.fontScale()) + 34;
+  }
+
+  private counterWidth(): number {
+    const available = this.toolsInnerWidth(17);
+    const minimum = TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp * 7 * this.fontScale() + 12;
+    const columns = Math.max(1, Math.min(4, Math.floor(available / (minimum + TOK_SPACE_XS))));
+    return Math.max(0, available / columns - TOK_SPACE_XS);
+  }
+
+  private debugSelectWidth(): number {
+    return Math.min(this.toolsInnerWidth() - TOK_SPACE_XS,
+      Math.max(112, TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 2 * this.fontScale() + 60));
   }
 
   /**

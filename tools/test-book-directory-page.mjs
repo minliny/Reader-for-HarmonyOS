@@ -1,8 +1,17 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+import { registerReaderTypeScriptImports } from './lib/reader-typescript-imports.mjs';
 const definitions = {"projection": {"description": "实际3000 canonical目录过滤/排序/identity/scroll意图", "resources": []}, "sdk-callbacks": {"description": "实际目录Builder→tree/flat→row current/retired业务回调", "resources": []}, "measured-frame": {"description": "实际public host vp-string面积与header delta保目录actor", "resources": []}, "manga-header": {"description": "实际漫画目录header asymmetric safe-frame", "resources": []}, "rules-eligibility": {"description": "实际持久format/capability准入及identity撤销", "resources": []}};
-for (const id of selectContractCases(definitions)) {
-  await runSelectedCase(id);
-  recordContractCasePass(id);
+const selected = selectContractCases(definitions);
+if (selected.length) {
+  const resolution = registerReaderTypeScriptImports();
+  try {
+    for (const id of selected) {
+      await runSelectedCase(id);
+      recordContractCasePass(id);
+    }
+  } finally {
+    resolution.deregister();
+  }
 }
 async function runSelectedCase(selectedCase) {
 
@@ -18,7 +27,7 @@ const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } = await import('../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { createRequire, registerHooks } = await import('node:module');
+const { createRequire } = await import('node:module');
 const { fileURLToPath } = await import('node:url');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
@@ -28,7 +37,6 @@ const { SurfaceWidthSpec, SurfaceHorizontalFrame, resolveHorizontalFrame } = awa
 const directoryVisual = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
 const { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 
-registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 
 const path = fileURLToPath(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets', import.meta.url));
@@ -39,7 +47,16 @@ const completedScrolls = [];
 const Edge = { Top: 'top', Bottom: 'bottom' };
 let metrics = { windowRect: { width: 390, height: 844 }, systemFontScale: 1, systemInsets: { left: 0, right: 0, top: 48, bottom: 34 },
   cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
-const deps = { ...directoryState, mangaDirectoryDisplay, ...fonts, ...directoryVisual, visual: directoryVisual.MANGA_DIRECTORY_VISUAL, EMPTY_READING_DIRECTORY_RECOVERY, mangaDirectoryEntryRows, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
+class TextInputController { getCaretOffset() { return { index: 0, x: 0, y: 0 }; } scrollToVisible() {} }
+const geometry = await import('../entry/src/main/ets/features/common/ReaderPageGeometry.ts');
+const scrollLayout = await import('../entry/src/main/ets/features/common/ReaderScrollLayout.ts');
+const frameStyle = await import('../entry/src/main/ets/features/common/ReaderFrameStyle.ts');
+const {ReaderMeasurementStore}=await import('../entry/src/main/ets/features/common/ReaderMeasurements.ts');
+const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+const {APP_HEADER_BAR_HEIGHT}=await import('../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts');
+const {READER_DIRECTORY_TOOLBAR_HEIGHT}=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets',import.meta.url),'utf8').split('@Component')[0],'ReaderDirectoryToolbar.ts',{},['READER_DIRECTORY_TOOLBAR_HEIGHT']);
+const {BOOK_DIRECTORY_PAGE_HEADER_SPEC}=pureModuleProbe(source.slice(source.indexOf('class BookDirectoryPageHeaderSpec'),source.indexOf('@Component')), 'BookDirectoryPageHeaderSpec.ts', {APP_HEADER_BAR_HEIGHT,READER_DIRECTORY_TOOLBAR_HEIGHT,TOK_BORDER_W:1}, ['BOOK_DIRECTORY_PAGE_HEADER_SPEC']);
+const deps = { TextInputController, ...geometry, ...scrollLayout, ...frameStyle, ReaderMeasurementStore, BOOK_DIRECTORY_PAGE_HEADER_SPEC, ...directoryState, mangaDirectoryDisplay, ...fonts, ...directoryVisual, visual: directoryVisual.MANGA_DIRECTORY_VISUAL, EMPTY_READING_DIRECTORY_RECOVERY, mangaDirectoryEntryRows, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
   SurfaceWidthSpec, SurfaceHorizontalFrame, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop,
   readerInteractiveSafeBottom, ReaderWindowCoordinator: { metrics: () => metrics },
   TOK_CONTENT_MAX_W_TABLET: 720, registerReaderFonts() {}, prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true, Edge, ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => ({ value }) },
@@ -48,13 +65,13 @@ const deps = { ...directoryState, mangaDirectoryDisplay, ...fonts, ...directoryV
   readerDirectorySignalScrollIntent: bookId => programmaticScrolls.push(bookId),
   readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
   setTimeout: action => { pending.push(action); }, $r: value => value };
-const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
+const methods = ['retireRulesPresentation', 'aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
   'supportsDirectoryRules', 'supportsCurrentDirectoryView', 'onRulesKindChanged', 'mangaIsGroup',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
   'emptyMessage', 'contentFrame', 'topInset', 'bottomInset', 'mangaCurrentTitle', 'mangaCurrentPosition',
   'prepareMangaLayout', 'mangaVisibleEntries', 'mangaLayoutEntries', 'mangaLayoutRow', 'mangaEntryIsDisplayed',
   'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaSortIcon',
-  'headerFrame', 'onMangaScrollOffset', 'prepareMangaPageFonts', 'mangaSummaryLabel', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
+  'headerFrame', 'mangaFooterFrame', 'onMangaScrollOffset', 'prepareMangaPageFonts', 'mangaSummaryLabel', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
 const Page = productionMotionMethods(path, methods, deps);
 const entries = Array.from({ length: 3000 }, (_, i) => ({ index: i * 2 + 1, title: `Chapter ${i + 1}`,
   navigable: i !== 2, downloadState: 'missing', bookmarks: [] }));
@@ -160,7 +177,7 @@ const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const [name, props] of Object.entries({ ReaderDirectoryRecoverySurface: ['recovery'], ReaderDirectoryRules: ['bookId'], PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
   ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode'],
   ReaderDirectoryNavigationSurface: ['sourceId', 'bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
-    'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode', 'scroller'],
+    'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'scrollLayout', 'contentStartInset', 'contentEndInset', 'edgeEffectMode', 'scroller'],
   ReaderDirectoryChapterRow: ['entry', 'rowHeight', 'currentChapterIndex', 'chapterDownloadEnabled', 'chapterStartBookmarkCreationEnabled'] })) {
   syntax.componentCollection.customComponents.add(name); syntax.propCollection.set(name, new Set(props));
 }
@@ -174,7 +191,7 @@ syntax.propCollection.set('ReaderSearchField', new Set([...searchSource.matchAll
 const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
 const popupSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets', import.meta.url), 'utf8');
 const Footer = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), { ...deps, ...searchProperties.sdk }, searchProperties.hooks).Component;
-const builderNames = ['viewportWidth', 'standardContent', 'standardHeader', 'standardToolbar', 'fontPreparationContent', 'mangaContent', 'mangaHeader', 'mangaFixedFooter', 'build', 'recoveryContent', 'supportsCurrentDirectoryView', 'standardPage', 'mangaPage', 'mangaToolbar', 'mangaCurrentFooter',
+const builderNames = ['standardMeasurements', 'standardHeaderSpec', 'standardMeasurementRevision', 'standardFrameStyle', 'standardGeometry', 'standardMeasurementGeneration', 'standardDirectoryScrollLayout', 'pageRecoveryOverlay', 'viewportWidth', 'standardContent', 'standardHeader', 'standardToolbar', 'fontPreparationContent', 'mangaContent', 'mangaHeader', 'mangaFixedFooter', 'build', 'recoveryContent', 'supportsCurrentDirectoryView', 'standardPage', 'mangaPage', 'mangaToolbar', 'mangaCurrentFooter',
   'mangaFlatList', 'mangaFlatRow', 'mangaEmptyState', 'mangaDownloadMenuButton', 'selectMangaEntry', 'flatList', 'chapterRow'];
 const actualChrome = { ...searchProperties.sdk, MangaDirectoryCurrentFooter: Footer, ReaderMangaDownloadPopup: Child };
 const chromeHooks = { ...searchProperties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource,
@@ -248,19 +265,19 @@ if(selectedCase==='measured-frame') {
   for(const name of methods.filter(name=>name!=='supportsCurrentDirectoryView'))owner[name]=Page.prototype[name].bind(owner);
   owner.initialRender();
   const actors=current=>[current,...[...(current.children?.values()??[])].flatMap(actors)];
-  const frame=actors(owner).find(actor=>actor.params?.variant==='directory');
+  const frame=actors(owner).find(actor=>actor.geometry && actor.frameStyle);
   const hostArea=[...owner.nodes.values()].find(node=>node.type==='__Common__'&&node.onAreaChange);
   const nav=[...owner.children.values()].find(child=>child.params?.chapterEntries),scroller=nav.params.scroller,targets=nav.params.chapterEntries;
   assert.ok(frame?.nodes&&hostArea,'actual SDK mounts the public directory host and its measurement wrapper');
   hostArea.onAreaChange({}, {width:'365vp'}); searchProperties.flush();
   assert.equal(owner.viewportWidth,365);
   assert.deepEqual(owner.contentFrame(),new SurfaceHorizontalFrame(32,24,309),'narrow measured host overrides the 1280vp physical window and retains asymmetric safety');
-  const header=actors(frame).find(actor=>actor.kind==='standard'&&typeof actor.onHeightChange==='function');
-  const mask=[...header.nodes.values()].find(node=>node.type==='Column'&&node.backgroundColor&&node.onAreaChange);
+  const header=actors(frame).find(actor=>actor.style && typeof actor.onHeightChange==='function');
+  const mask=[...header.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
   assert.ok(mask,'actual public HeaderHost owns the opaque measured mask');
   mask.onAreaChange({}, {height:'132vp'}); searchProperties.flush();
-  const measuredStart=nav.params.contentStartInset; mask.onAreaChange({}, {height:'179vp'}); searchProperties.flush();
-  assert.equal(nav.params.contentStartInset-measuredStart,179-132,'actual header delta propagates to retained directory');
+  const measuredStart=nav.params.scrollLayout.startInset; mask.onAreaChange({}, {height:'179vp'}); searchProperties.flush();
+  assert.equal(nav.params.scrollLayout.startInset-measuredStart,179-132,'actual header delta propagates to retained directory');
   for(const width of ['invalid',0,-1,NaN,Infinity])hostArea.onAreaChange({}, {width});
   searchProperties.flush();assert.equal(owner.viewportWidth,365,'invalid Area values preserve the last admitted host width');
   assert.equal([...owner.children.values()].find(child=>child.params?.chapterEntries),nav,'measurement preserves the directory actor');
@@ -279,8 +296,21 @@ if(selectedCase==='manga-header') {
   result.page.aboutToAppear(); flush();
   for (let turn = 0; turn < 12; turn++) await Promise.resolve();
   assert.equal(result.page.mangaFontsReady, true, 'the real page font owner admits the controlled checked load receipts');
-  const { owner } = createReaderBuilderProbe(source, builderNames, {
-    ...deps, ...actualChrome, ReaderSearchField: SearchField, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
+  const scaleSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8');
+  const scales = pureModuleProbe(scaleSource, 'ReaderSurfaceResolvers.ts', {},
+    ['readerScaledControlHeight', 'readerReadableFontScale']);
+  const actionSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderActionAccessibility.ets', import.meta.url), 'utf8');
+  const action = pureModuleProbe(actionSource, 'ReaderActionAccessibility.ets',
+    { AccessibilityRoleType: { BUTTON: 'button' } }, ['readerActionTouchRegion', 'ReaderActionAccessibility']);
+  const fieldModifiers = pureModuleProbe(searchSource.slice(0, searchSource.indexOf('@Component')),
+    'ReaderSearchField.ets', { ...action, FrameCallback: class {} }, ['ReaderSearchInputTarget', 'ReaderSearchFocusFrame']);
+  const MangaSearchField = createReaderBuilderProbe(searchSource, boundedMembers(searchSource), {
+    ...deps, ...scales, ...action, ...fieldModifiers, ...searchProperties.sdk,
+    ReaderTextStyle: readerTypographyRoles.TYPE_SEARCH_BOOK_INPUT.constructor,
+  }, searchProperties.hooks).Component;
+  const { owner } = createReaderBuilderProbe(source,
+    [...builderNames, 'mangaFrameStyle', 'mangaPageGeometry', 'mangaDirectoryScrollLayout', 'mangaQueryHeight'], {
+    ...deps, ...scales, ...actualChrome, ReaderSearchField: MangaSearchField, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child }, chromeHooks);
   Object.assign(owner, result.page);
   for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
@@ -312,7 +342,8 @@ for (const [sourceId, bookKind, capability, expected] of [
   const result = fixture();
   Object.assign(result.page, { sourceId, bookKind, bookId: 'misleading.txt', rulesExpanded: true, rulesRevision: 0 });
   result.page.aboutToAppear(); flush();
-  const { owner } = createReaderBuilderProbe(source, builderNames, {
+  Object.assign(result.page, { rulesOpened: true, rulesPresentationGeneration: 1 });
+  const { owner } = createReaderBuilderProbe(source, [...builderNames, 'rulesEditor'], {
     ...deps, ...actualChrome, ReaderSearchField: SearchField, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => capability }) },
     ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child }, chromeHooks);

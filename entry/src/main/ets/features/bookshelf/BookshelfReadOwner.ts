@@ -1,5 +1,6 @@
 import type { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts.ts';
+import { classifyBookshelfReadFailure } from './BookshelfReadFailure.ts';
 import type { BookshelfDataState } from './BookshelfFlowGateway';
 
 export interface BookshelfReadResult {
@@ -44,8 +45,10 @@ export class BookshelfReadOwner {
         if (!live()) return;
         try { this.reportFailure?.(error as Object, attempt + 1); } catch (_diagnostic) { /* Diagnostics cannot change retry. */ }
         if (attempt === 0 && retryBlank && retained === undefined) continue;
+        const failure = classifyBookshelfReadFailure(error);
         return publish(projectOperationFacts({ phase: retained === undefined ? 'failed' : 'refreshFailed', value: retained,
-          generation, canRetry: true, message: retained === undefined ? '无法读取书架内容，请重试。' : '刷新失败，保留上次读取结果' }));
+          generation, canRetry: failure.canRetry, title: failure.title,
+          message: retained === undefined ? failure.message : `刷新失败，已保留上次读取结果。${failure.message}` }));
       }
       if (!live()) return;
       return publish(projectOperationFacts({ phase: state.kind === 'empty' ? 'empty' : 'succeeded', value: state,

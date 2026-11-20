@@ -10,7 +10,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 import {
-  deploymentRoute,
+  signingDeploymentRoute,
   parseBundleMetadata,
   profileIdentity,
   sourceSnapshot,
@@ -120,9 +120,9 @@ const signedDebug = {
 const unsigned = {
   signature: { status: 'unsigned', verified: false, profileType: 'none' },
 };
-assert.equal(deploymentRoute({ targetKind: 'vm', installed: { bundlePresent: false }, artifact: unsigned }).allowed, false,
+assert.equal(signingDeploymentRoute({ targetKind: 'vm', installed: { bundlePresent: false }, artifact: unsigned }).allowed, false,
   'even a fresh VM must never acquire an empty signing identity from unsigned deployment');
-assert.equal(deploymentRoute({ targetKind: 'vm', installed: { bundlePresent: false },
+assert.equal(signingDeploymentRoute({ targetKind: 'vm', installed: { bundlePresent: false },
   artifact: { signature: { status: 'signed', verified: false } } }).allowed, false);
 const installedDebugNone = {
   bundlePresent: true,
@@ -131,15 +131,15 @@ const installedDebugNone = {
   appIdSha256: 'same-app',
 };
 assert.deepEqual(
-  deploymentRoute({ targetKind: 'vm', installed: installedDebugNone, artifact: signedDebug }),
+  signingDeploymentRoute({ targetKind: 'vm', installed: installedDebugNone, artifact: signedDebug }),
   { allowed: true, reason: 'matching-identity-signed-update-candidate', preservesData: true },
   'appSignType=none must not override an independently established application identity',
 );
 for (const appIdSha256 of ['', 'different-app']) {
-  assert.equal(deploymentRoute({ targetKind: 'vm', installed: { ...installedDebugNone, appIdSha256 },
+  assert.equal(signingDeploymentRoute({ targetKind: 'vm', installed: { ...installedDebugNone, appIdSha256 },
     artifact: signedDebug }).allowed, false, 'debug Profile type alone cannot establish update identity');
 }
-assert.equal(deploymentRoute({ targetKind: 'vm',
+assert.equal(signingDeploymentRoute({ targetKind: 'vm',
   installed: { ...installedDebugNone, appIdSha256: 'old-key', appIdentifierSha256: 'stable-app' },
   artifact: { signature: { ...signedDebug.signature, appIdentifierSha256: 'stable-app' } } }).allowed, true,
   'a matching nonempty appIdentifier supports legitimate signing key renewal');
@@ -161,7 +161,7 @@ const installedMetadata = parseBundleMetadata('io.reader.minliny:\n' + JSON.stri
 }));
 assert.equal(installedMetadata.bundlePresent, true);
 assert.equal(installedMetadata.appIdentifierSha256, '');
-assert.equal(deploymentRoute({ targetKind: 'vm', installed: installedMetadata, artifact: signedDebug }).allowed, false);
+assert.equal(signingDeploymentRoute({ targetKind: 'vm', installed: installedMetadata, artifact: signedDebug }).allowed, false);
 assert.doesNotMatch(JSON.stringify(installedMetadata), /io\.reader\.minliny_/,
   'raw installed application identities must not enter deployment evidence');
 
@@ -195,12 +195,12 @@ try {
   rmSync(certificateFixture, { recursive: true, force: true });
 }
 assert.deepEqual(
-  deploymentRoute({ targetKind: 'vm', installed: installedDebugNone, artifact: unsigned }),
+  signingDeploymentRoute({ targetKind: 'vm', installed: installedDebugNone, artifact: unsigned }),
   { allowed: false, reason: 'installed-bundle-rejects-unsigned-preserve-data-route' },
   'an installed debug provision must reject the unsigned preserve-data route',
 );
 assert.deepEqual(
-  deploymentRoute({
+  signingDeploymentRoute({
     targetKind: 'physical',
     installed: { bundlePresent: false, appProvisionType: '', appSignType: '' },
     artifact: unsigned,
@@ -298,6 +298,8 @@ try {
     scopePolicies: { 'search-return-runtime': { timeoutMs: 120000, failFast: true, layers: [{ id: 'fixture', tests: ['test-selected.mjs'],
       proves: 'Runs the real selected runtime-policy fixture.', doesNotProve: 'No native ICU responsiveness or full-suite acceptance.' }] } } };
   writeFileSync(join(scoped, 'tools/contract-test-tiers.json'), JSON.stringify(classification));
+  writeFileSync(join(scoped, 'tools/contract-case-manifest.json'), JSON.stringify({ schemaVersion: 1, files: {},
+    legacy: { 'test-selected.mjs': { resources: [] }, 'test-omitted.mjs': { resources: [] } } }));
   mkdirSync(join(scoped, 'scripts'));
   copyFileSync(new URL('../scripts/hap-pipeline.mjs', import.meta.url), join(scoped, 'scripts/hap-pipeline.mjs'));
   copyFileSync(new URL('./hap-contract-evidence-policy.json', import.meta.url), join(scoped, 'tools/hap-contract-evidence-policy.json'));
@@ -410,6 +412,71 @@ try {
   rmSync(logPath); symlinkSync(join(scoped, 'sdk/compiler.js'), logPath);
   assert.throws(() => verifyContractEvidence(run, manifest), /symbolic links/);
   rmSync(logPath); writeFileSync(logPath, log);
+
+  // Schema-2 tier descriptors are registry pointers. Publishing must persist
+  // the materialized tier view, and verification must bind the descriptor and
+  // registry identities that produced it.
+  const registry = { schemaVersion: 2, tiers: classification,
+    tests: { 'test-selected.mjs': { tier: 'source', catalogId: 'selected' },
+      'test-omitted.mjs': { tier: 'integration', catalogId: 'omitted' } },
+    catalog: { schemaVersion: 1, entries: [{ testRef: 'test-selected.mjs' }, { testRef: 'test-omitted.mjs' }] },
+    caseDefinitions: {}, catalogCases: {} };
+  writeFileSync(join(scoped, 'tools/contract-registry.json'), JSON.stringify(registry));
+  writeFileSync(join(scoped, 'tools/contract-test-tiers.json'),
+    JSON.stringify({ schemaVersion: 2, registry: 'contract-registry.json', view: 'tiers' }));
+  const registryRun = join(scoped, 'registry-run'); mkdirSync(registryRun);
+  const registrySnapshots = { source: sourceSnapshot(scoped), controller: controllerSnapshot(scoped),
+    workspace: workspaceContractSnapshot(scoped), toolchain: contentSnapshot(scoped, ['sdk']) };
+  const registryInputs = Object.fromEntries(Object.entries(registrySnapshots).map(([key, snapshot]) => {
+    writeFileSync(join(registryRun, names[key]), JSON.stringify(snapshot));
+    return [key, snapshotDescriptor(snapshot, names[key])];
+  }));
+  const registryReport = await runContractsBounded(scoped, 'full', 1, { scope: 'manga-image-cache', timeoutMs: 2000 });
+  registryReport.pipelineGateMilliseconds = registryReport.millisecondsTotal;
+  const registryContracts = publishContractEvidence(registryRun, registryReport, 'manga-image-cache', registryInputs, scoped);
+  const registryManifest = { buildClass: 'iteration', acceptanceEligible: false,
+    source: { buildInputs: registryInputs.source }, gates: { harmonyContracts: 'PARTIAL',
+      contracts: registryContracts, controllerInputs: registryInputs.controller,
+      workspaceContractInputs: registryInputs.workspace, contractToolchainInputs: registryInputs.toolchain } };
+  verifyContractEvidence(registryRun, registryManifest);
+  assert.deepEqual(registryContracts.selected, ['test-selected.mjs']);
+  assert.equal(JSON.parse(readFileSync(join(registryRun, 'contracts/selection.json'), 'utf8')).schemaVersion, 1,
+    'published selection is the materialized tier view, not the descriptor pointer');
+  const registryReceiptPath = join(registryRun, 'contracts/results.json');
+  const registryReceipt = JSON.parse(readFileSync(registryReceiptPath, 'utf8'));
+  assert.equal(registryReceipt.selectionInputs.registry.path, 'tools/contract-registry.json');
+  const tamperRegistry = () => {
+    const receiptBytes = readFileSync(registryReceiptPath);
+    const alteredReceipt = JSON.parse(receiptBytes);
+    alteredReceipt.selectionInputs.registry.sha256 = '0'.repeat(64);
+    writeFileSync(registryReceiptPath, JSON.stringify(alteredReceipt));
+    const alteredManifest = structuredClone(registryManifest);
+    alteredManifest.gates.contracts.evidence = { path: 'contracts/results.json',
+      bytes: readFileSync(registryReceiptPath).length,
+      sha256: createHash('sha256').update(readFileSync(registryReceiptPath)).digest('hex') };
+    return { alteredManifest, receiptBytes };
+  };
+  {
+    const { alteredManifest, receiptBytes } = tamperRegistry();
+    assert.throws(() => verifyContractEvidence(registryRun, alteredManifest), /selection inputs/);
+    writeFileSync(registryReceiptPath, receiptBytes);
+  }
+  {
+    const selectionPath = join(registryRun, 'contracts/selection.json'), selectionBytes = readFileSync(selectionPath);
+    writeFileSync(selectionPath, JSON.stringify({ schemaVersion: 2, registry: 'contract-registry.json', view: 'tiers' }));
+    const receipt = JSON.parse(readFileSync(registryReceiptPath, 'utf8'));
+    receipt.selection = { path: 'contracts/selection.json', bytes: readFileSync(selectionPath).length,
+      sha256: createHash('sha256').update(readFileSync(selectionPath)).digest('hex') };
+    writeFileSync(registryReceiptPath, JSON.stringify(receipt));
+    const alteredManifest = structuredClone(registryManifest);
+    alteredManifest.gates.contracts.evidence = { path: 'contracts/results.json',
+      bytes: readFileSync(registryReceiptPath).length,
+      sha256: createHash('sha256').update(readFileSync(registryReceiptPath)).digest('hex') };
+    assert.throws(() => verifyContractEvidence(registryRun, alteredManifest), /materialized tier view/);
+    writeFileSync(selectionPath, selectionBytes);
+  }
+  rmSync(join(scoped, 'tools/contract-registry.json'));
+  writeFileSync(join(scoped, 'tools/contract-test-tiers.json'), JSON.stringify(classification));
 
   // Full remains all selected, with no omissions; a scope cannot be laundered
   // into full by changing only the outer status labels.

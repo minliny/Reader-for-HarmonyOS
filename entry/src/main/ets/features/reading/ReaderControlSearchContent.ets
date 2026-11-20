@@ -1,9 +1,10 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { MESSAGE_BODY, MESSAGE_ACTION } from '../common/ReaderMessageStyle';
 import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR } from '../common/ReaderTypography';
-import { TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../common/ReaderTypography';
+import { TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -16,6 +17,7 @@ import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,
 import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';
 import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';
 import { ReaderContentSearchPublication } from './ReaderContentSearchPublication';
+import { ReaderQuickBackButton } from './ReaderPanelChrome';
 import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';
 import { READER_SEARCH_LIST_ITEM_HEIGHT, READER_SEARCH_LIST_CACHE_COUNT, readerControlSearchListProjection,
   readerControlSearchListRowTranslation, readerControlSearchListScrollDelta,
@@ -413,28 +415,30 @@ export struct ReaderControlSearchContent {
     .position({ x: this.frame().action.x, y: this.frame().action.y })
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .enabled(this.canSearch())
-    .accessibilityText('搜索正文').onClick((): void => this.submit());
+    .accessibilityText('搜索正文')
+      .responseRegion( readerActionTouchRegion(this.frame().action.width, this.frame().action.height))
+      .attributeModifier(new ReaderActionAccessibility('搜索正文', this.canSearch(), false)).onClick((): void => this.submit());
   }
 
   @Builder
   private quickBack() {
-    Row({ space: 4 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_quick_back_theme_night') : $r('app.media.reader_quick_back'))).width(11).height(11);
-      Text('返回').fontFamily(TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK.fontFamily).fontWeight(TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK.fontWeight)
-        .fontSize(TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
+    Row() {
+      ReaderQuickBackButton({
+        specId: 'search',
+        frameWidth: this.frame().back.width,
+        frameHeight: this.frame().back.height,
+        actionEnabled: this.interactionEnabled && this.frame().back.opacity > 0,
+        accessibilityLabel: '返回初始控制栏',
+        onBack: (): void => this.onBack(),
+      });
     }
-    .width(this.frame().back.width).height(this.frame().back.height)
-    .padding({ left: 8 }).alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
     .position({ x: this.frame().back.x, y: this.frame().back.y })
     .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     // Keep the actor mounted while p changes; toggling Visibility at the
     // endpoint forces a subtree rebuild during the parent morph and can expose
     // a transient black frame. Opacity plus hit-testing preserves the same
     // visual and interaction contract without that lifecycle seam.
-    .hitTestBehavior(this.frame().back.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
-    .enabled(this.interactionEnabled && this.frame().back.opacity > 0)
-    .accessibilityText('返回初始控制栏').onClick((): void => this.onBack());
+    .hitTestBehavior(this.frame().back.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
   }
 
   @Builder
@@ -514,15 +518,19 @@ export struct ReaderControlSearchContent {
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .maxLines(1);
       }
-      .width(112).height(26)
+      .width(112).height(44)
       .position({ x: Math.max(0, this.frame().results.width - 120),
-        y: Math.max(0, this.frame().results.height - 30) })
+        y: Math.max(0, this.frame().results.height - 44) })
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .enabled(this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&
         this.state.loadingMore !== true)
       .accessibilityText(this.state.loadingMore === true ? '正在加载更多搜索结果' :
         (this.state.loadMoreError === undefined ? '加载更多搜索结果' : '重试加载更多搜索结果'))
+      .responseRegion( readerActionTouchRegion(112, 44))
+      .attributeModifier(new ReaderActionAccessibility(this.state.loadingMore === true ? '正在加载更多搜索结果' :
+        (this.state.loadMoreError === undefined ? '加载更多搜索结果' : '重试加载更多搜索结果'), this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&
+        this.state.loadingMore !== true, false))
       .onClick((): void => {
         if (this.state.kind === 'results' && this.state.loadingMore !== true && this.interactionEnabled &&
           (this.motionProgress === 0 || this.motionProgress === 1)) this.onLoadMore();
@@ -534,19 +542,23 @@ export struct ReaderControlSearchContent {
   @Builder
   private resultRow(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = '') {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.resultTitle(this.currentResult(chapterIndex, chapterOffset)))
-        .width(Math.max(0, this.frame().firstResult.width - 18)).height(13)
-        .fontFamily(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.fontFamily).fontSize(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.fontSizeFp).lineHeight(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.lineHeightFp as number)
-        .fontWeight(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 9, y: 9.09375 });
-      this.resultSnippet(chapterIndex, chapterOffset);
+      Column({ space: 9 }) {
+        Text(this.resultTitle(this.currentResult(chapterIndex, chapterOffset)))
+          .width(Math.max(0, this.frame().firstResult.width - 18)).constraintSize({ minHeight: 13 }).maxFontScale(1.3)
+          .fontFamily(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.fontFamily).fontSize(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.fontSizeFp).lineHeight(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.lineHeightFp as number)
+          .fontWeight(TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        this.resultSnippet(chapterIndex, chapterOffset);
+      }.width(Math.max(0, this.frame().firstResult.width - 18))
+        .alignItems(HorizontalAlign.Start).position({ x: 9, y: 9.09375 });
     }
     .width(this.frame().firstResult.width).height(this.frame().rowHeight)
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .clipShape(this.resultClip(chapterIndex, chapterOffset))
     .borderRadius(6).clip(false)
     .accessibilityText(`${this.resultTitle(this.currentResult(chapterIndex, chapterOffset))}，搜索结果`)
+      .responseRegion( readerActionTouchRegion(this.frame().firstResult.width, this.frame().rowHeight))
+      .attributeModifier(new ReaderActionAccessibility(`${this.resultTitle(this.currentResult(chapterIndex, chapterOffset))}，搜索结果`, true, false))
     .onClick((): void => this.selectCurrentResult(chapterIndex, chapterOffset, sourceId, bookId));
   }
 
@@ -560,11 +572,10 @@ export struct ReaderControlSearchContent {
       Span(this.currentSnippet(chapterIndex, chapterOffset).suffix)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontWeight(TYPE_READER_SNIPPET_INLINE_REGULAR.fontWeight);
     }
-    .width(Math.max(0, this.frame().firstResult.width - 18)).height(28)
+    .width(Math.max(0, this.frame().firstResult.width - 18)).constraintSize({ minHeight: 28 }).maxFontScale(1.3)
     .padding({ left: 11 }).border({ width: { left: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .fontFamily(TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET.fontFamily as string).fontSize(TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET.fontSizeFp).lineHeight(TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET.lineHeightFp as number)
-    .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-    .position({ x: 9, y: 31.09375 });
+    .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
   }
 
   private canSearch(): boolean {

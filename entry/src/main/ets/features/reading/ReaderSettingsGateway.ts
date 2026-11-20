@@ -60,6 +60,13 @@ export class ReaderSettingsGateway {
         copyReaderSettingsSnapshot(ReaderSettingsGateway.saved) };
   }
 
+  awaitDurableWrites(): Promise<void> {
+    return this.withSettingsAccess(async (): Promise<void> => {
+      this.assertAdmitted();
+      if (this.writeFacts().pendingReconciliation) throw new Error('LIBRARY_RESTORE_READING_SETTINGS_UNCONFIRMED');
+    });
+  }
+
   async load(): Promise<ReaderSettingsSnapshot> {
     await ReaderThemeHost.prepareUserChange();
     return this.loadAdmittedSnapshot((): boolean => true);
@@ -186,6 +193,7 @@ export class ReaderSettingsGateway {
   }
 
   private async writeSnapshot(store: preferences.Preferences, snapshot: ReaderSettingsSnapshot): Promise<ReaderSettingsSnapshot> {
+    ReaderThemeHost.assertSettingsWritable();
     if (ReaderSettingsGateway.acceptedRevision >= Number.MAX_SAFE_INTEGER)
       throw new Error('READER_SETTINGS_REVISION_EXHAUSTED');
     const revision = ++ReaderSettingsGateway.acceptedRevision;

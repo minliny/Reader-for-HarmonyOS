@@ -13,12 +13,11 @@ for(const id of selected){
 
 async function runSelectedCase(selectedCase){
 const [
- {createReaderBuilderProbe}, {boundedMembers,boundedSurfaceSdk}, metricsApi,
+ {createReaderBuilderProbe}, metricsApi,
  {readerFloatingTabContentInset}, {productionMotionMethods}, {readerRecoveryView},
  {BookshelfViewState}, headerMetrics, {pureModuleProbe}, {readerFoundationTokens},
 ]=await Promise.all([
  import('./lib/reader-control-builder-probe.mjs'),
- import('./lib/bounded-surface-sdk-probe.mjs'),
  import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts'),
  import('./lib/reader-floating-bar-metrics-probe.mjs'),
  import('./lib/reader-motion-method-probe.mjs'),
@@ -127,38 +126,80 @@ assert.match(index,/this\.invalidateBookshelfProjection\(\);\s*this\.refreshBook
 console.log('PASS bookshelf route return: complete native samples, captured zero, new-state top, signed/identity anchors, late callback isolation');
 }
 
-// The page owns the same List/Scroller under the real public page frame.
-// Header measurement only changes its scrollable start clearance; no spacer
-// item or alternate List may shift saved identities on route return.
-function headerScrollerIdentity(){
- const returned=page();const text=readFileSync(source,'utf8');
- const sdk=boundedSurfaceSdk(),mainText=readFileSync(new URL('../entry/src/main/ets/features/shell/MainTabShell.ets',import.meta.url),'utf8');
- sdk.childSources.MainTabBar=readFileSync(new URL('../entry/src/main/ets/features/shell/MainTabBar.ets',import.meta.url),'utf8');
- class Tab {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
- const deps={...sdk.deps,...metricsApi,readerFloatingTabContentInset,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},
-  MainTabBar:Tab,LazyForEach:{create(){},pop(){}},ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}}};
- const listOwner=createReaderBuilderProbe(text,['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent'],deps,sdk.hooks).owner;
- const scroller=returned.shelfScroller;
+// The actual shelf uses a scaffold with its header disabled. LibrarySearch owns
+// the public fixed header and publishes its measured bottom to the shelf route.
+async function headerScrollerIdentity(){
+ const {pageFrameSdkFixture}=await import('./lib/reader-page-frame-sdk-fixture.mjs');
+ const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+ const sdk=pageFrameSdkFixture(),text=readFileSync(source,'utf8');
+ const section=readFileSync(new URL('./BookshelfSectionHeader.ets',source),'utf8');
+ class SectionPort {
+  constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}
+  initialRender(){}
+  updateStateVars(next){Object.assign(this.params,next);}
+ }
+ const metrics=metricsApi.createDefaultReaderWindowMetrics();
+ metrics.windowRect.width=390;
+ metrics.windowRect.height=844;
+ const headerSpec=headerSpecs.bookshelfHeaderSpec();
+ const deps={...sdk.deps,...metricsApi,...headerSpecs,ReaderWindowCoordinator:{metrics:()=>metrics},
+  BookshelfSectionHeader:SectionPort,LazyForEach:{create(){},pop(){}},
+  ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}}
+ };
+ const {owner:listOwner}=createReaderBuilderProbe(text,['bookshelfList','shelfPageHandler','shelfScrollHandler',
+  'isShelfPresentationCurrent','shelfFirstItemPadding','shelfViewportMotionId','scrollLayout','pageGeometry',
+  'contentGeometry','shelfViewportScrollHandler'],deps,
+  {...sdk.hooks,childSources:{...sdk.hooks.childSources,BookshelfSectionHeader:section}});
+ const returned=page(),scroller=returned.shelfScroller;
  Object.assign(listOwner,{appThemeScheme:'day',readerWindowMetricsRevision:0,mounted:true,navigationGeneration:1,
-  shelfScroller:scroller,continueReading:undefined,filterRowVisible:false,viewModeError:'',visibleBookCount:1,headerClearance:74,
-  shelfContentWidth:()=>352,rowDataSource:{totalCount:()=>0},isWideViewport:()=>false,sectionAction(){},saveShelfViewport:returned.saveShelfViewport.bind(returned),restoreShelfViewport:returned.restoreShelfViewport.bind(returned)});
- const frame=createReaderBuilderProbe(mainText,boundedMembers(mainText),deps,sdk.hooks).owner;
- Object.assign(frame,{showBottomNav:false,showTabletRail:false,headerKind:'floating',headerTop:8,
-  content:()=>listOwner.bookshelfList(false),onHeaderHeightChange:height=>{listOwner.headerClearance=height+14;listOwner.replay();}});
+  shelfScroller:scroller,continueReading:undefined,filterRowVisible:false,viewModeError:'',visibleBookCount:1,
+  headerBottom:headerSpec.frameHeight,viewMode:'list',viewSwitchHeaderOpacity:1,hasActiveFilters:()=>false,
+  filterPanel(){},effectiveViewportWidth:()=>390,shelfContentEndValue:()=>0,shelfContentWidth:()=>352,
+  rowDataSource:{totalCount:()=>0},isWideViewport:()=>false,
+  saveShelfViewport:returned.saveShelfViewport.bind(returned),restoreShelfViewport:returned.restoreShelfViewport.bind(returned)});
+ const style=sdk.deps.readerFrameStyle({backgroundColor:'#FFFAF8F4',headerBackground:'#FFFAF8F4',footerBackground:'#FFFAF8F4'});
+ const frame=sdk.create('ReaderPageScaffold',{frameStyle:style,geometry:listOwner.pageGeometry(),
+  headerVisible:false,content:()=>listOwner.bookshelfList(false)});
  frame.initialRender();
  const list=sdk.nodes(listOwner).find(node=>node.type==='List'),items=sdk.nodes(listOwner).filter(node=>node.type==='ListItem');
- assert.equal(list.create.scroller,scroller,'public migration keeps the actual viewport Scroller owner');
- assert.equal(list.contentStartOffset,74);assert.equal(list.maintainVisibleContentPosition,true);
  assert.equal(items.length,1,'header remains outside the List and does not add an index-shifting item');
- assert.ok(sdk.nodes(frame).some(node=>node.type==='Stack'&&node.backgroundColor),'actual Scaffold paints the same page root');
- const headerOwner=sdk.walk(frame).find(owner=>owner.kind==='floating'&&typeof owner.onHeightChange==='function');
- const measured=[...headerOwner.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
- assert.ok(measured,'public HeaderHost owns measurement');measured.onAreaChange({}, {height:'96vp'});
- assert.equal(list.contentStartOffset,118,'public height plus top gap and approved list gap propagate once');
+ assert.equal(typeof items[0].create?.[0],'function','the SDK gives native List the actual lazy item body');
+ items[0].create[0](items[0].id,true);
+ const firstContent=sdk.nodes(listOwner).find(node=>node.type==='Column'&&node.padding?.top===headerSpec.contentGap+headerSpec.contentUnderlap);
+ assert.ok(firstContent,'the first item compensates for the approved header underlap');
+ assert.equal(list.create.scroller,scroller,'actual shelf retains its viewport Scroller');
+ assert.equal(list.contentStartOffset,headerSpec.frameHeight-headerSpec.contentUnderlap);
+ assert.equal(list.contentStartOffset+firstContent.padding.top,headerSpec.contentClearance);
+ assert.equal(list.maintainVisibleContentPosition,true);
+ assert.ok(sdk.nodes(frame).some(node=>node.type==='Stack'&&node.backgroundColor),'actual Scaffold paints the page root');
+ const surfaceFile=new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets',import.meta.url);
+ const SearchHeader=selectedProductionMethods(surfaceFile,'ReaderLibrarySearchSurface',['captureHeader'],{
+  readerPresentedHeaderBottom:sdk.deps.readerPresentedHeaderBottom,bookshelfHeaderSpec:headerSpecs.bookshelfHeaderSpec,
+ });
+ const accepted=[];
+ const search=Object.assign(new SearchHeader(),{mounted:true,measurementKey:7,identity:11,navigationGeneration:1,mounting:3,
+  headerBottom:headerSpec.frameHeight,onHeaderBottom(bottom,...identity){
+   accepted.push([bottom,...identity]);listOwner.headerBottom=bottom;listOwner.replay();
+  }});
+ const header=sdk.create('ReaderFixedHeaderHost',{style:new sdk.deps.ReaderHeaderFrameStyle(true,''),measurementKey:7,
+  onHeightChange:(height,key)=>search.captureHeader(height,key)});
+ header.initialRender();
+ const measured=sdk.nodes(header).find(node=>node.type==='Column'&&node.onAreaChange);
+ assert.ok(measured,'the public fixed header publishes a native measurement');
+ const oldMeasurement=measured.onAreaChange;
+ oldMeasurement({}, {height:'96vp'});
+ const bottom=96+headerSpec.topInset;
+ assert.deepEqual(accepted,[[bottom,11,7,1,3]],'actual search surface publishes the measured bottom with the shelf identity');
+ assert.equal(list.contentStartOffset,bottom-headerSpec.contentUnderlap);
+ assert.equal(list.contentStartOffset+firstContent.padding.top,bottom+headerSpec.contentGap,'actual measured header and content gap reach the same List');
  assert.equal(sdk.nodes(listOwner).find(node=>node.type==='List'),list,'changed header clearance keeps the native List actor');
- assert.equal(list.create.scroller,scroller);assert.deepEqual(sdk.nodes(listOwner).filter(node=>node.type==='ListItem'),items,'measurement preserves item identities');
+ assert.equal(list.create.scroller,scroller);assert.deepEqual(sdk.nodes(listOwner).filter(node=>node.type==='ListItem'),items);
+ search.measurementKey=8;
+ oldMeasurement({}, {height:'300vp'});
+ assert.equal(accepted.length,1,'a retired header measurement cannot change the list');
+ assert.equal(list.contentStartOffset,bottom-headerSpec.contentUnderlap);
 }
 
 if(selectedCase==='route-anchor-capture')routeAnchorCapture();
-else headerScrollerIdentity();
+else await headerScrollerIdentity();
 }

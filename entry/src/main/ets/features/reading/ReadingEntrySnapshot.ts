@@ -1,5 +1,7 @@
 import type { JsonObject } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
+import { readWithStableContent } from './ReadingContentRead';
+import { classifyRemoteReadingCommandFailure, RemoteReadingGatewayError } from './RemoteReadingContract';
 import { completeReadingParagraphWindow, type ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';
 import { readingChapterLayoutMap, sliceReadingChapterText, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap';
 import type { ReadingSessionChapter } from './ReadingChapterWindow';
@@ -26,6 +28,13 @@ export async function readReadingEntrySnapshot(runtime: ReadingGatewayRuntime, s
   chapterIndex: number | undefined, isCurrent: () => boolean,
   positionContext?: RemoteReadingPositionContext, windowScalarLimit?: number): Promise<ReadingEntrySnapshot | undefined> {
   if (!isCurrent() || runtime.supportsCoreCapability?.('reading.entry.snapshot.v1') !== true) return undefined;
+  return readWithStableContent(runtime, sourceId, bookId, isCurrent, (current) =>
+    readReadingEntrySnapshotOnce(runtime, sourceId, bookId, chapterIndex, current, positionContext, windowScalarLimit));
+}
+
+async function readReadingEntrySnapshotOnce(runtime: ReadingGatewayRuntime, sourceId: string, bookId: string,
+  chapterIndex: number | undefined, isCurrent: () => boolean,
+  positionContext?: RemoteReadingPositionContext, windowScalarLimit?: number): Promise<ReadingEntrySnapshot | undefined> {
   const contentCurrent = runtime.captureReadingContentValidity?.(sourceId, bookId);
   const current = (): boolean => isCurrent() && contentCurrent?.() !== false;
   const params: JsonObject = { sourceId, bookId };
@@ -36,7 +45,8 @@ export async function readReadingEntrySnapshot(runtime: ReadingGatewayRuntime, s
   if (chapterIndex !== undefined) params['chapterIndex'] = chapterIndex;
   const context = captureRemotePositionContext(positionContext);
   appendReadingSelectionContext(params, context);
-  const result = await runtime.request('reading.entry.snapshot', params, { shouldCancel: (): boolean => !current() });
+  const result = await runtime.request('reading.entry.snapshot', params, { shouldCancel: (): boolean => !current() })
+    .catch((error: Error): never => { throw classifyRemoteReadingCommandFailure('reading.entry.snapshot', error); });
   if (!current()) throw new Error('reading entry snapshot was cancelled');
   const data = result.data;
   if (data['kind'] !== 'ready') return decodeEntrySnapshot(data, sourceId, bookId, chapterIndex, context,
@@ -221,6 +231,12 @@ function integer(raw: JsonObject, key: string): number {
 export async function readReadingCatalog(runtime: ReadingGatewayRuntime, sourceId: string, bookId: string,
   isCurrent: () => boolean): Promise<{ bookId: string; entries: LocalReadingTocEntry[]; revision: string } | undefined> {
   if (runtime.supportsCoreCapability?.('reading.catalog.page.v1') !== true) return undefined;
+  return readWithStableContent(runtime, sourceId, bookId, isCurrent, (current) =>
+    readReadingCatalogOnce(runtime, sourceId, bookId, current));
+}
+
+async function readReadingCatalogOnce(runtime: ReadingGatewayRuntime, sourceId: string, bookId: string,
+  isCurrent: () => boolean): Promise<{ bookId: string; entries: LocalReadingTocEntry[]; revision: string } | undefined> {
   const valid = runtime.captureReadingContentValidity?.(sourceId, bookId);
   const current = (): boolean => isCurrent() && valid?.() !== false;
   const entries: LocalReadingTocEntry[] = [];
@@ -230,15 +246,17 @@ export async function readReadingCatalog(runtime: ReadingGatewayRuntime, sourceI
     if (!current()) throw new Error('reading catalog was cancelled');
     const params: JsonObject = { sourceId, bookId, offset: entries.length, limit: 256 };
     if (revision !== undefined) params['revision'] = revision;
-    const result = await runtime.request('reading.catalog.page', params, { shouldCancel: (): boolean => !current() });
+    const result = await runtime.request('reading.catalog.page', params, { shouldCancel: (): boolean => !current() })
+      .catch((error: Error): never => { throw classifyRemoteReadingCommandFailure('reading.catalog.page', error); });
     if (!current()) throw new Error('reading catalog was cancelled');
     const data = result.data;
     if (data['sourceId'] !== sourceId || data['bookId'] !== bookId) throw new Error('reading catalog identity mismatch');
     if (data['kind'] === 'missing') { if (entries.length === 0) return undefined; throw new Error('reading catalog disappeared'); }
-    if (data['kind'] === 'changed') throw new Error('READING_CATALOG_REVISION_CHANGED');
+    if (data['kind'] === 'changed') throw new RemoteReadingGatewayError('sourceVersionChanged', 'READING_CATALOG_REVISION_CHANGED');
     if (data['kind'] !== 'ready') throw new Error('invalid reading catalog result');
     const nextRevision = string(data, 'revision'), nextCount = integer(data, 'chapterCount');
-    if (!nextRevision || (revision !== undefined && nextRevision !== revision) || (count !== undefined && nextCount !== count)) throw new Error('READING_CATALOG_REVISION_CHANGED');
+    if (!nextRevision || (revision !== undefined && nextRevision !== revision) || (count !== undefined && nextCount !== count))
+      throw new RemoteReadingGatewayError('sourceVersionChanged', 'READING_CATALOG_REVISION_CHANGED');
     revision = nextRevision; count = nextCount;
     const rawEntries = data['entries'];
     if (integer(data, 'offset') !== entries.length || !Array.isArray(rawEntries) || rawEntries.length > 256 ||

@@ -12,6 +12,7 @@ import { mangaDirectoryEntryRows, type MangaDirectoryLayoutRow } from './MangaDi
 import { MangaDirectoryEntryRow } from './MangaDirectoryEntryRow';
 import { LengthMetrics } from '@kit.ArkUI';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../common/ReaderFontFamilies';
+import { ReaderPageState } from '../common/ReaderPageState';
 
 /** A source without explicit hierarchy facts still owns a usable canonical TOC.
  * Reuse the shared list/projection, preserving Core indexes and disabled rows. */
@@ -260,23 +261,33 @@ export struct MangaReadingDirectoryFallback {
   }
 
   @Builder
+  private emptyActions(scope: string) {
+    if (this.query.trim().length > 0) {
+      Stack() { this.emptyActionLabel('清除搜索'); }
+        .constraintSize({ minHeight: visual.quietEmptyClearHeight })
+        .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.mangaScheme))
+        .onClick((): void => {
+          if (this.mounted && this.query.trim().length > 0 && this.admittedIdentity === this.identity() &&
+            scope === `${this.admittedIdentity}\u0000${this.query}`) this.onClearSearch();
+        }).accessibilityText('清除目录搜索');
+    } else if (this.admittedEntries.length === 0) {
+      Button() { this.emptyActionLabel('打开完整目录'); }.constraintSize({ minHeight: visual.gridHeight })
+        .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.mangaScheme))
+        .onClick((): void => {
+          if (this.mounted && this.query.trim().length === 0 && this.admittedEntries.length === 0 &&
+            this.admittedIdentity === this.identity() && scope === `${this.admittedIdentity}\u0000${this.query}`) this.onOpenFullDirectory();
+        });
+    }
+  }
+
+  @Builder
   private emptyState() {
     Column({ space: visual.quietEmptyGap }) {
-      Text(this.query.trim().length > 0 ? '没有匹配的章节' : '暂无章节信息').width('100%')
-        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
-        .fontSize(visual.quietEmptyFontSize).lineHeight(visual.quietEmptyLineHeight).halfLeading(true)
-        .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
-        .fontColor(this.mangaColor('muted')).textAlign(TextAlign.Center);
-      if (this.query.trim().length > 0) {
-        Stack() { this.emptyActionLabel('清除搜索'); }
-          .constraintSize({ minHeight: visual.quietEmptyClearHeight })
-          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.mangaScheme))
-          .onClick((): void => this.onClearSearch()).accessibilityText('清除目录搜索');
-      } else if (this.admittedEntries.length === 0) {
-        Button() { this.emptyActionLabel('打开完整目录'); }.constraintSize({ minHeight: visual.gridHeight })
-          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.mangaScheme))
-          .onClick((): void => this.onOpenFullDirectory());
-      }
+      ForEach([`${this.admittedIdentity}\u0000${this.query}`], (scope: string): void => {
+        ReaderPageState({ message: this.query.trim().length > 0 ? '没有匹配的章节' : '暂无章节信息',
+          padded: false, mutedColor: this.mangaColor('muted'), customActions: true,
+          actionContent: (): void => this.emptyActions(scope) });
+      }, (scope: string): string => scope);
     }.width('100%').constraintSize({ minHeight: visual.quietEmptyMinHeight })
       .padding({ left: visual.quietEmptyPaddingX, right: visual.quietEmptyPaddingX,
         top: visual.quietEmptyPaddingY, bottom: visual.quietEmptyPaddingY })

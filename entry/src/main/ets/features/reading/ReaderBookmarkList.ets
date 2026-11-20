@@ -3,6 +3,8 @@ import { TOK_SPACE_CONTROL_INLINE } from '../common/ReaderTokens';
 import type { ReaderBookmarkRowModel } from './ReaderBookmarkProjection';
 import { BOOKMARK_ROW_HEIGHT, ReaderBookmarkRow } from './ReaderBookmarkRow';
 import { sampleReaderControlBookmark } from './ReaderControlBookmarkGeometry';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerReadableFontScale } from '../common/ReaderSurfaceResolvers';
 
 /**
  * Flat bookmark list: one row per bookmark, same-chapter bookmarks as separate
@@ -11,6 +13,7 @@ import { sampleReaderControlBookmark } from './ReaderControlBookmarkGeometry';
  */
 @Component
 export struct ReaderBookmarkList {
+  @StorageLink('readerWindowMetricsRevision') @Watch('onRowGeometryChanged') private readerWindowMetricsRevision: number = 0;
   @Prop rows: ReaderBookmarkRowModel[] = [];
   @Prop listPaddingX: number = TOK_SPACE_CONTROL_INLINE;
   @Prop listPaddingY: number = 4;
@@ -74,7 +77,12 @@ export struct ReaderBookmarkList {
   }
 
   private rowHeight(): number {
-    return this.embeddedInControl ? sampleReaderControlBookmark(this.motionProgress, this.rowWidth).card.height : BOOKMARK_ROW_HEIGHT;
+    return sampleReaderControlBookmark(this.embeddedInControl ? this.motionProgress : 1, this.rowWidth, this.fontScale()).card.height;
+  }
+
+  private fontScale(): number {
+    return !Number.isFinite(this.readerWindowMetricsRevision) || this.readerWindowMetricsRevision < 0 ? 1 :
+      readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
   private stableLayoutEnabled(): boolean {

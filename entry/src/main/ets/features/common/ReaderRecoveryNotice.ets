@@ -19,7 +19,7 @@ export struct ReaderRecoveryNotice {
   @State private clipped: boolean = false;
   @State private reservedSpace: string = '';
   @State private actionsWidth: number = 0;
-  @State private actionsHeight: number = 28;
+  @State private actionsHeight: number = 44;
   @State private titleLineHeight: number = 22;
   private measuredWidth: number = 0;
   private measuredGeneration: number = -1;
@@ -64,7 +64,10 @@ export struct ReaderRecoveryNotice {
           }
           if (this.clipped) {
             ReaderRecoveryAction({ variant: 'notice', label: this.expanded ? '收起' : '展开',
-              onReconcile: (): void => { this.expanded = !this.expanded; } });
+              generation: this.view.generation,
+              onReconcile: (generation: number): void => {
+                if (this.view.visible && this.clipped && generation === this.view.generation) this.expanded = !this.expanded;
+              } });
           }
         }.constraintSize({ maxWidth: '100%' }).width(this.actionsWidth > 0 ? this.actionsWidth : undefined)
           .onAreaChange((_old: Area, area: Area): void => {
@@ -91,9 +94,9 @@ export struct ReaderRecoveryNotice {
     try {
       const context = this.getUIContext();
       const utils = context.getMeasureUtils();
-      const labelWidth = (label: string): number => context.px2vp(utils.measureText({ textContent: label,
+      const labelWidth = (label: string): number => Math.max(44, context.px2vp(utils.measureText({ textContent: label,
         fontSize: `${MESSAGE_ACTION.fontSizeFp}fp`, fontFamily: MESSAGE_ACTION.fontFamily,
-        fontWeight: MESSAGE_ACTION.fontWeight })) + 12;
+        fontWeight: MESSAGE_ACTION.fontWeight })) + 4);
       let actions = (this.view.canRetry || this.busy) && this.actionLabel.length > 0 ? labelWidth(this.actionLabel) : 0;
       if (this.secondaryActionLabel.length > 0) actions += labelWidth(this.secondaryActionLabel);
       const space = context.px2vp(utils.measureText({ textContent: ' ', fontSize: '14fp',

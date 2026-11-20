@@ -38,6 +38,7 @@ try{
  const old=fixture('old','01'),latest=fixture('latest','02');
  const plan=planHapRetention(root,1);
  const release=await holder(old,true);
+ assert.deepEqual(planHapRetention(root,2).protected.map(row=>row.runId),['old']);
  assert.throws(()=>applyHapRetention(plan),/lock is busy/,'installing run cannot be pruned, including a previously planned deletion');
  assert.ok(existsSync(join(old,'entry-default-signed.hap')));
  let verified=false;
@@ -45,8 +46,11 @@ try{
  assert.equal(verified,false,'run lock is acquired before package verification');
  assert.doesNotThrow(()=>withHapRunLock(latest,()=>{}),'unrelated immutable run does not serialize');
  await release();
- assert.throws(()=>applyHapRetention(plan),/protected runs|inventory changed/,'completed/crashed install marker protects old package after lock release');
- rmSync(join(old,'retention-install-vm-fixture.json'));
+ assert.throws(()=>applyHapRetention(plan),/inventory changed/,'a new orphan marker requires a fresh reviewed plan');
+ const revised=planHapRetention(root,1);
+ assert.equal(revised.protected.length,0);
+ assert.equal(revised.staleInstallMarkers.length,1);
+ applyHapRetention(planHapRetention(root,2));
  const pruning=await holder(old);
  assert.throws(()=>withHapRunLock(old,()=>{verified=true;}),/lock is busy/,'prune-first ownership prevents installation from entering verification');
  assert.equal(verified,false);
@@ -58,21 +62,25 @@ try{
  const staleLock=join(process.env.READER_LOCK_DIR || tmpdir(),
   'reader-harmony-hap-run-'+createHash('sha256').update(realpathSync(latest)).digest('hex')+'.lock');
  mkdirSync(staleLock);staleLocks.push(staleLock);json(join(staleLock,'owner.json'),{pid:ended.pid,token:'dead-owner-fixture'});
- const staleOwner=readFileSync(join(staleLock,'owner.json'),'utf8');
+ const critical=join(root,'.critical');
  const contenders=Array.from({length:2},(_,i)=>spawn(process.execPath,['--input-type=module','-e',
-  `import assert from 'node:assert/strict';import {withHapRunLock} from ${JSON.stringify(pipeline)};
-   import {writeFileSync} from 'node:fs';
-   assert.throws(()=>withHapRunLock(${JSON.stringify(latest)},()=>writeFileSync(${JSON.stringify(join(root,'.stale-entered-'+i))},'unsafe')),/stale lock requires coordinated recovery/);`],{stdio:'pipe'}));
+  `import {withHapRunLock} from ${JSON.stringify(pipeline)};
+   import {mkdirSync,rmSync,writeFileSync} from 'node:fs';
+   try { withHapRunLock(${JSON.stringify(latest)},()=>{
+     mkdirSync(${JSON.stringify(critical)});
+     writeFileSync(${JSON.stringify(join(root,'.entered-'+i))},'safe');
+     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,300);
+     rmSync(${JSON.stringify(critical)},{recursive:true});
+   }); } catch(error) { if(!/lock is busy|lock exists without a readable owner/.test(error.message)) throw error; }`],{stdio:'pipe'}));
  children.push(...contenders);
- const contenderErrors=['',''];contenders.forEach((child,i)=>child.stderr.on('data',data=>contenderErrors[i]+=data));
- const staleCodes=await Promise.all(contenders.map(async child=>(await once(child,'close'))[0]));
- assert.deepEqual(staleCodes,[0,0],'both dead-owner contenders must refuse automatic takeover: '+contenderErrors.join('\n'));
- assert.equal(readFileSync(join(staleLock,'owner.json'),'utf8'),staleOwner,'stale owner and directory must not be removed or replaced');
- for(let i=0;i<2;i++)assert.equal(existsSync(join(root,'.stale-entered-'+i)),false);
+ const errors=['',''];contenders.forEach((child,i)=>child.stderr.on('data',data=>errors[i]+=data));
+ assert.deepEqual(await Promise.all(contenders.map(async child=>(await once(child,'close'))[0])),[0,0],errors.join('\n'));
+ assert.ok([0,1].some(i=>existsSync(join(root,'.entered-'+i))),'dead run owner recovered under root lock');
+ assert.ok(!existsSync(critical)); assert.ok(!existsSync(staleLock));
  const source=readFileSync(new URL('../scripts/hap-pipeline.mjs',import.meta.url),'utf8');
  assert.match(source,/command === 'install'\) withHapRunLock/,'CLI install uses exact same proven lock primitive before resolution');
  assert.doesNotMatch(source,/command === '(?:install|prune)'\) withArtifactLock/,'delivery and cleanup do not wait for unrelated cold builds');
- console.log('PASS actual cross-process run locks: install-first/prune-first exclusion, stale-plan marker protection, unrelated-run progress, manifest preservation, double dead-owner fail-closed');
+ console.log('PASS actual cross-process run locks: install-first/prune-first exclusion, orphan marker resolution, unrelated-run progress, manifest preservation, serialized dead-owner recovery');
 }finally{
  for(const child of children)if(child.exitCode===null)child.kill();
  for(const lock of staleLocks)rmSync(lock,{recursive:true,force:true});

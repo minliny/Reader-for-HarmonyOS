@@ -3,6 +3,7 @@
     "pages/Index",
     "pages/ReaderControlMotionVerification",
     "pages/ReaderRendererPilot",
+    "pages/ReaderPageStructureVerification",
     "pages/ReaderStartupRecovery"
   ]
 }

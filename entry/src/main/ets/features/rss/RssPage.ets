@@ -1,3 +1,4 @@
+import { readerMainViewport } from '../shell/MainNavigationSpec';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
@@ -14,10 +15,14 @@ import {
 } from './RssGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
-  readerFloatingBarBottomInset,
   readerFloatingTabContentInset,
 } from '../common/ReaderFloatingBarMetrics';
 import { MainTabShell } from '../shell/MainTabShell';
+import {
+  readerMainNavigationMode,
+  readerMainRailBottomInset,
+  readerMainRailLeading,
+} from '../shell/MainNavigationSpec';
 import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
 import { readerPageContentStartInset } from '../common/ReaderPageShell';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
@@ -57,7 +62,6 @@ export type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPres
 // Authored Day colors and opacity are retained in the shared App registry.
 // Figma 暂停源整行降透明度 62%
 const STATUS_PAUSED_OPACITY = 0.62;
-const RSS_TABLET_RAIL_WIDTH = 100;
 const RSS_FLOATING_HEADER_HEIGHT = readerPageContentStartInset() + 44 + 30 + TOK_SPACE_XS * 2;
 
 /**
@@ -74,7 +78,9 @@ const RSS_FLOATING_HEADER_HEIGHT = readerPageContentStartInset() + 44 + 30 + TOK
 export struct RssPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
+  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @Prop presentation: RssPresentation;
   @Prop expandedLayout: boolean;
   @Prop activeMode: RssMode = 'sources';
@@ -94,7 +100,6 @@ export struct RssPage {
   onDiscoverRequested: () => void = (): void => {};
   @State private filterValue: string = '全部';
   @State private filterOpen: boolean = false;
-  @State private viewportWidth: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -103,8 +108,6 @@ export struct RssPage {
   build() {
     MainTabShell({
       activeTab: 'rss', headerKind: 'rss',
-      showBottomNav: !this.isWideViewport(),
-      showTabletRail: this.isWideViewport(),
       onMainTab: (key: string): void => this.onMainTab(key),
       header: (): void => { this.rssHeader(); },
       content: (): void => { this.rssContent(); },
@@ -114,7 +117,6 @@ export struct RssPage {
   @Builder
   private rssContent() {
     Row() {
-      if (this.isWideViewport()) { Blank().width(RSS_TABLET_RAIL_WIDTH); }
       Stack({ alignContent: Alignment.TopStart }) {
         if (this.presentation.kind === 'feed') {
           this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, false);
@@ -126,19 +128,12 @@ export struct RssPage {
           this.errorContent(this.presentation.failedSources);
         }
       }.layoutWeight(1).height('100%');
-    }.width('100%').height('100%')
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        const width = this.numericAreaLength(newValue.width);
-        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-          this.viewportWidth = width;
-        }
-      });
+    }.width('100%').height('100%');
   }
 
   @Builder
   private rssHeader() {
     Row() {
-      if (this.isWideViewport()) { Blank().width(RSS_TABLET_RAIL_WIDTH); }
       Column() {
         this.topBar();
         this.searchBar();
@@ -659,8 +654,12 @@ export struct RssPage {
 
   private bottomContentInset(): number {
     if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_LG;
-    const metrics = ReaderWindowCoordinator.metrics();
-    return this.isWideViewport() ? readerFloatingBarBottomInset(metrics, TOK_SPACE_LG) : readerFloatingTabContentInset(metrics);
+    return this.railActive() ? readerMainRailBottomInset() :
+      readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
+  }
+
+  private railActive(): boolean {
+    return readerMainNavigationMode(this.wideNavigationRail, this.mainViewportRevision, this.readerWindowMetricsRevision) === 'rail';
   }
 
   @Builder
@@ -791,7 +790,7 @@ export struct RssPage {
     input.contentGap = TOK_SPACE_XS;
     input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
     input.contentHorizontalPadding = TOK_SCREEN_INSET;
-    input.contentLeadingRail = this.isWideViewport() ? RSS_TABLET_RAIL_WIDTH : 0;
+    input.contentLeadingRail = this.railActive() ? readerMainRailLeading() : 0;
     input.contentEndInset = this.bottomContentInset();
     return resolveReaderPageGeometry(input);
   }
@@ -822,8 +821,7 @@ export struct RssPage {
     if (this.readerWindowMetricsRevision < 0) {
       return 0;
     }
-    const metricsWidth = ReaderWindowCoordinator.metrics().windowRect.width;
-    return this.viewportWidth > 0 ? this.viewportWidth : metricsWidth;
+    return readerMainViewport(this.mainViewportRevision).width;
   }
 
   private numericAreaLength(value: Length): number {

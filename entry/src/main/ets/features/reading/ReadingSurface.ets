@@ -30,6 +30,7 @@ import {
 } from './ReaderLayoutGeometry';
 import { ReaderPageChrome } from './ReaderPageChrome';
 import { ReaderPaperBackground } from './ReaderPaperBackground';
+import type { ReaderPageBookmarkMode } from './ReaderPageBookmarkModel';
 
 export type { ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 
@@ -323,6 +324,7 @@ export struct ReadingSurface {
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   /** Per-gap full-page adjustment; zero for short/image-ending pages. */
   @Prop bottomJustifyGap: number = 0;
+  @Prop textOpacity: number = 1;
   @Prop longPressSelectText: boolean = false;
   @Prop chromeTopStartText: string = '';
   @Prop chromeTopEndText: string = '';
@@ -332,6 +334,12 @@ export struct ReadingSurface {
   @Prop chromeSessionVisible: boolean = false;
   @Prop chromeSessionWidth: number = 0;
   @Prop chromeSessionHeight: number = 0;
+  @Prop bookmarkMode: ReaderPageBookmarkMode = 'hidden';
+  @Prop bookmarkOpacity: number = 0;
+  @Prop bookmarkTopAccessoryX: number = 0;
+  @Prop bookmarkTopAccessoryY: number = 0;
+  @Prop bookmarkTopAccessoryWidth: number = 0;
+  @Prop bookmarkTopAccessoryHeight: number = 0;
 
   aboutToAppear(): void {
     this.highlightMounted = true; this.highlightLifecycle += 1;
@@ -364,7 +372,8 @@ export struct ReadingSurface {
             // the live provider may already point to a page without a title.
             ForEach(this.renderFragments().slice(0, 1).filter((fragment: ReadingSurfacePageFragment): boolean =>
               fragment.nativeTitle !== undefined), (fragment: ReadingSurfacePageFragment) => {
-              ReaderNativeParagraphView({ recipe: fragment.nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+              ReaderNativeParagraphView({ recipe: fragment.nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false })
+                .opacity(this.textOpacity);
             }, (fragment: ReadingSurfacePageFragment): string => fragment.nativeTitle!.key);
           } else {
           Text(this.chapterTitle)
@@ -375,7 +384,8 @@ export struct ReadingSurface {
             .lineHeight(this.layout.titleLineHeightFp)
             .fontColor(this.themeStyle().ink)
             .textAlign(TextAlign.Center)
-            .wordBreak(WordBreak.BREAK_ALL);
+            .wordBreak(WordBreak.BREAK_ALL)
+            .opacity(this.textOpacity);
           }
         }
 
@@ -424,7 +434,7 @@ export struct ReadingSurface {
                   highlightLayoutKey: readerNativeTextGeometryKey(fragment.nativeParagraph.style),
                   queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
                   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]): void => this.acceptHighlightGeometry(fragment.id, rects),
-                });
+                }).opacity(this.textOpacity);
               } else {
                 ReaderReadingTextFragment({
                   text: fragment.text,
@@ -442,7 +452,7 @@ export struct ReadingSurface {
                   onHighlightGeometry: (key: number, rects: ReaderDynamicHighlightRect[]): void => {
                     this.acceptHighlightGeometry(fragment.id, rects);
                   },
-                });
+                }).opacity(this.textOpacity);
               }
               }
             }, (fragment: ReadingSurfacePageFragment): string => fragment.text.length === 0 && fragment.imageHeight > 0 ?
@@ -464,7 +474,7 @@ export struct ReadingSurface {
                 autoPageHighlightStart: this.autoPageHighlightStart,
                 autoPageHighlightEnd: this.autoPageHighlightEnd,
                 longPressSelectText: this.longPressSelectText,
-              });
+              }).opacity(this.textOpacity);
             }, (paragraph: string, index: number): string => `${index}:${paragraph}`);
           }
         }
@@ -489,6 +499,12 @@ export struct ReadingSurface {
         sessionVisible: this.chromeSessionVisible,
         sessionWidth: this.chromeSessionWidth,
         sessionHeight: this.chromeSessionHeight,
+        bookmarkMode: this.bookmarkMode,
+        bookmarkOpacity: this.bookmarkOpacity,
+        bookmarkTopAccessoryX: this.bookmarkTopAccessoryX,
+        bookmarkTopAccessoryY: this.bookmarkTopAccessoryY,
+        bookmarkTopAccessoryWidth: this.bookmarkTopAccessoryWidth,
+        bookmarkTopAccessoryHeight: this.bookmarkTopAccessoryHeight,
         layout: this.layout,
         appearance: this.appearance,
       });

@@ -6,6 +6,18 @@ export type ReaderTtsVoiceOption = {
   label: string;
 };
 
+/** Read-only display contract. Durable acceptance remains owned by the gateway. */
+export interface ReaderTtsPreferencesView {
+  readonly language: string;
+  readonly person: number;
+  readonly pauseOnInterruption: boolean;
+  readonly allowMixing: boolean;
+  readonly failurePolicy: ReaderTtsFailurePolicy;
+  readonly followHighlight: boolean;
+  readonly backgroundPlayback: boolean;
+  readonly keepScreenOn: boolean;
+}
+
 export type ReaderTtsPreferencesSnapshot = {
   version: 1;
   language: string;
@@ -77,5 +89,16 @@ export function normalizeReaderTtsPreferencesSnapshot(
 export function copyReaderTtsPreferencesSnapshot(
   value: ReaderTtsPreferencesSnapshot,
 ): ReaderTtsPreferencesSnapshot {
-  return { ...value };
+  // Explicit typed copy is accepted by ArkTS for imported structural snapshots.
+  return {
+    version: 1,
+    language: value.language,
+    person: value.person,
+    pauseOnInterruption: value.pauseOnInterruption,
+    allowMixing: value.allowMixing,
+    failurePolicy: value.failurePolicy,
+    followHighlight: value.followHighlight,
+    backgroundPlayback: value.backgroundPlayback,
+    keepScreenOn: value.keepScreenOn,
+  };
 }

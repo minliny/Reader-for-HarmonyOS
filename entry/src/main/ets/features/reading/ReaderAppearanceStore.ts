@@ -36,6 +36,7 @@ export class ReaderAppearanceStore {
   private writeTail: Promise<void> = Promise.resolve();
   private changeTail: Promise<void> = Promise.resolve();
   private latestSave: Promise<void> = Promise.resolve();
+  private changesSealed: boolean = false;
 
   constructor(persistence: ReaderAppearancePersistence) {
     this.persistence = persistence;
@@ -76,7 +77,9 @@ export class ReaderAppearanceStore {
   async change(change: ReaderAppearanceChange, guard?: ReaderAppearanceChangeGuard):
     Promise<ReaderAppearanceCommit | undefined> {
     const applied = this.changeTail.then(async (): Promise<ReaderAppearanceCommit | undefined> => {
+      if (this.changesSealed) return undefined;
       await this.ensureLoaded();
+      if (this.changesSealed) return undefined;
       const current = this.current();
       // Check automatic recovery at admission, after every asynchronous load.
       if (guard !== undefined && !guard(current)) return undefined;
@@ -93,6 +96,11 @@ export class ReaderAppearanceStore {
     });
     this.changeTail = applied.then((): void => {}, (): void => {});
     return applied;
+  }
+
+  async sealForLibraryRestore(): Promise<void> {
+    this.changesSealed = true;
+    await this.flush();
   }
 
   async flush(): Promise<void> {

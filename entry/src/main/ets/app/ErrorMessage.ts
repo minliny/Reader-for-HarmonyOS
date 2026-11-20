@@ -54,6 +54,8 @@ export function localReadFailureSummary(error: unknown): string {
   let cause = 'other';
   if (message.includes('migration backup slots exhausted')) cause = 'migration-backup-slots';
   else if (message.includes('migration backup time budget exhausted')) cause = 'migration-backup-time';
+  else if (message.includes('storage schema too new')) cause = 'storage-schema-too-new';
+  else if (message.includes('storage data format too new')) cause = 'storage-data-format-too-new';
   else if (message.includes('failed to open Core SQLite database')) cause = 'native-sqlite-open';
   else if (message.includes('source switch rollback conflict') ||
     message.includes('source switch transaction state is stale')) cause = 'source-switch-rollback-conflict';

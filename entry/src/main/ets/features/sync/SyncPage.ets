@@ -5,7 +5,7 @@ import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
-import { TYPE_APP_COMPACT_BADGE, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../common/ReaderTypography';
+import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type SyncHistoryEntry,
@@ -17,6 +17,7 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderCard } from '../common/ReaderCard';
+import { ReaderSectionHeading } from '../common/ReaderSectionHeading';
 import {
   SurfaceHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
@@ -25,7 +26,6 @@ import {
   TOK_BORDER_W,
   TOK_INK,
   TOK_MUTED,
-  TOK_READ_PRIMARY,
   TOK_SETTING_ICON_BG,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
@@ -120,15 +120,7 @@ export struct SyncPage {
   // Section title inside the WebDAV section (dark 13px Inter Black).
   @Builder
   private sectionHeadingDark(title: string) {
-    Text(title)
-      .width('100%')
-      .height(16)
-      .fontFamily(TYPE_SECTION_HEADING.fontFamily)
-      .fontWeight(TYPE_SECTION_HEADING.fontWeight)
-      .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
-      .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM });
+    ReaderSectionHeading({ title: title });
   }
 
   // Auto Backup / History section titles: muted 11px tracked caps.
@@ -354,7 +346,7 @@ export struct SyncPage {
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width('100%')
-    .height(50)
+    .constraintSize({ minHeight: 50 })
     .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
     .opacity(0.72)
     .hitTestBehavior(HitTestMode.None);
@@ -396,7 +388,7 @@ export struct SyncPage {
       .accessibilityDescription('多选展开设计和持久化契约待确认，当前不可编辑');
     }
     .width('100%')
-    .height(50)
+    .constraintSize({ minHeight: 50 })
     .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
     .alignItems(VerticalAlign.Center);
   }
@@ -412,7 +404,6 @@ export struct SyncPage {
           ForEach(this.snapshot.history, (entry: SyncHistoryEntry) => {
             this.historyRow(entry);
           }, (entry: SyncHistoryEntry): string => `sync-history-${entry.timestamp}`);
-          this.expandRow();
         }
         .width('100%');
       }
@@ -460,7 +451,7 @@ export struct SyncPage {
               .maxLines(1);
           }
           .width(64)
-          .height(24)
+          .constraintSize({ minHeight: 24 })
           .borderRadius(12)
           .backgroundColor(readerAppColor('app.sync.badgeSurface', this.appThemeScheme));
 
@@ -497,30 +488,10 @@ export struct SyncPage {
         .alignItems(VerticalAlign.Center);
       }
       .width('100%')
-      .height(85)
-      .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
+      .constraintSize({ minHeight: 85 })
+      .padding({ left: 13, right: 13, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
       .alignItems(HorizontalAlign.Start);
     }
-  }
-
-  @Builder
-  private expandRow() {
-    Row() {
-      Stack({ alignContent: Alignment.Center }) {
-        Text('展开')
-          .fontFamily(TYPE_APP_COMPACT_BADGE.fontFamily)
-          .fontWeight(TYPE_APP_COMPACT_BADGE.fontWeight)
-          .fontSize(TYPE_APP_COMPACT_BADGE.fontSizeFp)
-          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
-      }
-      .height(26)
-      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .borderRadius(8);
-    }
-    .width('100%')
-    .height(32)
-    .justifyContent(FlexAlign.End);
   }
 
   private scopeSummary(): string {

@@ -1,13 +1,12 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync, mkdtempSync, writeFileSync, rmSync} from 'node:fs';
-import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import * as state from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {pureModuleProbe} from './lib/ets-pure-module-probe.mjs';
+import {readerThemeWriteBarrierProbe} from './lib/reader-theme-write-barrier-probe.mjs';
 
-const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');
 const dir=new URL('../entry/src/main/ets/features/reading/',import.meta.url),source=readFileSync(new URL('ReaderSettingsGateway.ts',dir),'utf8');
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<10;i++)await new Promise(done=>setImmediate(done));};
@@ -19,14 +18,16 @@ function fixture(text=source){
   async flush(){events.push(['flush']);if(flushGate){const g=flushGate;flushGate=undefined;await g.promise;}
    if(failure==='before'){failure=undefined;throw Error('flush before durable');}
    for(const [k,v]of cache)durable.set(k,v);if(failure==='after'){failure=undefined;throw Error('durable flush lost ACK');}}};
- const body=text.replace(/^import[\s\S]*?;\n/gm,'');
- const tree=ts.createSourceFile('ReaderSettingsGateway.ts',body,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
- assert.deepEqual(tree.parseDiagnostics,[]);const emitted=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});
- assert.deepEqual(emitted.diagnostics,[]);const exports={};
- new Function('exports',...Object.keys(state),'ReaderRuntimeOwner','ReaderThemeHost','preferences',emitted.outputText)(exports,...Object.values(state),
-  {isCurrent:owner=>owner===active,current:()=>active},{prepareUserChange:()=>barrier()},
-  {getPreferences:async()=>{if(storeGate){const g=storeGate;storeGate=undefined;await g.promise;}return store;}});
- const Gateway=exports.ReaderSettingsGateway,owner=new Gateway(runtime);
+ const ReaderRuntimeOwner = { isCurrent: owner => owner === active, current: () => active };
+ const ReaderThemeHost = readerThemeWriteBarrierProbe(ReaderRuntimeOwner);
+ ReaderThemeHost.setRecoveryBarrier(() => barrier());
+ const { ReaderSettingsGateway: Gateway } = pureModuleProbe(text, 'ReaderSettingsGateway.ts',
+  { ...state, ReaderRuntimeOwner, ReaderThemeHost,
+    preferences: { async getPreferences() {
+      if (storeGate) { const gate = storeGate; storeGate = undefined; await gate.promise; }
+      return store;
+    } } }, ['ReaderSettingsGateway']);
+ const owner = new Gateway(runtime);
  return{owner,Gateway,runtime,store,events,cache,durable,failFlush:when=>{failure=when;},failPut:()=>{putFailure=true;},
   hangRead:g=>{readGate=g;},hangStore:g=>{storeGate=g;},hangFlush:g=>{flushGate=g;},setBarrier:f=>{barrier=f;},
   remount(){active={...runtime};return new Gateway(active);},retire(){active=undefined;}};
@@ -104,16 +105,17 @@ function reader(f,file=new URL('LocalReadingExperience.ets',dir)){
  const Reader=productionMotionMethods(file,['commitReaderSessionSettings','commitReaderWindowSettings','changeReaderPageTurnStyle',
   'captureReaderSettingsAdmission','notifyReaderSettingsSavePending','retryPendingReaderSettings','showReaderSettingsFailure',
   'loadReaderSettingsSnapshot','isSessionActive'],{...state,ReaderRuntimeOwner:{current:()=>f.runtime},hilog:{warn(){}}});
- const host=Object.assign(new Reader(),{sourceId:'source',bookId:'book',mounted:true,lifecycleToken:1,exitRequested:false,
+ const host=Object.assign(new Reader(),{sourceId:'source',bookId:'book',mounted:true,appForeground:true,windowChromeActive:true,lifecycleToken:1,exitRequested:false,
   readerSettingsMutationGeneration:0,pageStyleChangeGeneration:0,readerSettingsSnapshot:initial,readerSettingsLoaded:false,
   pageTurnRenderRevision:0,bookTurnRuntimeFailed:true,continuousProgressRevision:0,phase:'ready',
   readerSettingsGateway:f.owner,configureReaderScreenAwakeLease:s=>events.push(['awake',s]),applyReaderSystemEventPolicy:s=>events.push(['system',s]),
   applyReaderWindowPolicy:async s=>events.push(['window',s]),applyInitialReaderWindowPolicy:()=>events.push(['initial-window']),
-  controlsPresentedForWindow:()=>false,reflowAfterWindowGeometryChange:()=>events.push(['reflow']),
+  controlsPresentedForWindow:()=>false,pageTurnInputPhase:()=> 'idle',reflowAfterWindowGeometryChange:()=>events.push(['reflow']),
   invalidatePageTurnRuntime:()=>events.push(['invalidate']),hasCurrentMaterializedChapter:()=>true,
   rebuildContinuousFragments:()=>events.push(['continuous']),setContinuousInitialAnchor:()=>{},beginCanonicalModeMeasurement:()=>events.push(['paged']),
   schedulePageTurnPreparation:()=>events.push(['prepare']),errorMessage:e=>e.message,
-  getUIContext:()=>({getPromptAction:()=>({showToast:spec=>events.push(['notice',spec.message])})})});
+  readerSettingsRecovery:{message:'',visible:false,canRetry:false,generation:0},
+  transientFeedback:{show(_context, spec, current){if(current())events.push(['notice',spec.message]);}}});
  return{host,events};
 }
 for(const kind of ['session','window','style','scroll']){

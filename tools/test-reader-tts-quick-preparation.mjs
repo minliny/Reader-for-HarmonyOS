@@ -1,16 +1,25 @@
-import { localFilePath } from './lib/tool-environment.mjs';
+import { registerReaderTypeScriptImports } from './lib/reader-typescript-imports.mjs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
-import * as state from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import { ReaderTtsConfigurationHost } from './lib/reader-tts-configuration-fixture.mjs';
-import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
+const readerImports = registerReaderTypeScriptImports();
+try {
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { localFilePath } = await import('./lib/tool-environment.mjs');
+
+
+
+
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { ReaderTtsSessionCoordinator } = await import('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts');
+const preferences = await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
+const state = await import('../entry/src/main/ets/features/reading/ReaderTtsState.ts');
+const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
+const actors = await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
+const { ReaderTtsConfigurationHost } = await import('./lib/reader-tts-configuration-fixture.mjs');
+const { FakeGateway, FakeHost, chapter, canonicalRemoteContent } = await import('./lib/reader-tts-fixtures.mjs');
 
 const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const lre = localFilePath(new URL('LocalReadingExperience.ets', root));
@@ -22,13 +31,13 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 async function drain() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
 let runtime;
 class Frame { constructor(fn) { this.fn = fn; } onFrame() { this.fn(); } }
-const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderTtsConfigurationHost,
+const dependencies = { ...state, ...preferences, ReaderTtsSessionCoordinator, ReaderTtsConfigurationHost,
   ReaderTtsCredentialStore: { instance: { create: async () => {}, remove: async () => {} } }, ReaderUIFrameCallback: Frame,
   ReaderRuntimeOwner: { current: () => runtime },
   ReaderTtsGateway: class { constructor(owner) { return owner.gateway; } },
   ReaderHttpTtsGateway: class { constructor(owner) { return owner.http; } },
   hilog: { error: () => {} } };
-const methods = ['notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
+const methods = ['finishOpeningHandoff', 'projectTtsConfigurationRecovery', 'resolvePageImagePixels', 'settleReaderRecovery', 'copyTtsPreferencesSnapshot', 'notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
   'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'retryPendingTtsPreferences', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
   'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate', 'requireTtsConfigurationHost',
   'persistTtsConfig', 'coreRateForMultiplier', 'ratePercentForMultiplier'];
@@ -46,9 +55,8 @@ function fixture(file = lre) {
     chapterSelectionToken: 1, visiblePageSelectionToken: 1,
     ttsWarmupScheduled: false, ttsInitialization: undefined, ttsPresentationMetadata: undefined, ttsAvailabilityResolved: false,
     ttsPreferenceMutationGeneration: 0, ttsConfigMutationGeneration: 0,
-    ttsState: state.createReaderTtsState(), ttsEngine: 'system', ttsHttpEngines: [], ttsVoiceOptions: [],
-    ttsLanguage: 'zh-CN', ttsPerson: 0, ttsPauseOnInterruption: true, ttsAllowMixing: false,
-    ttsFailurePolicy: 'stop', ttsFollowHighlight: true, ttsBackgroundPlayback: true, ttsKeepScreenOn: false,
+    ttsState: state.createReaderTtsState(), ttsConfigurationRecovery:{message:'',visible:false,canRetry:false,generation:0}, ttsEngine: 'system', ttsHttpEngines: [], ttsVoiceOptions: [],
+    ttsPreferences: {version:1,language:'zh-CN',person:0,pauseOnInterruption:true,allowMixing:false,failurePolicy:'stop',followHighlight:true,backgroundPlayback:true,keepScreenOn:false},
     isMountedToken(t) { return this.mounted && this.lifecycleToken === t; },
     isSessionActive(t) { return this.isMountedToken(t) && !this.exitRequested; },
     getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
@@ -97,10 +105,10 @@ assert.throws(() => readySchedulesAfterObservers(mutant), /ready schedules one d
   assert.equal(f.gateway.calls.length, 1, 'first entry and repeated visits reuse preparation');
   // Slow HTTP and voice calls cannot withhold already loaded saved preferences.
   f.prefs.resolve({ ...defaults, language: 'en-US', person: 2, followHighlight: false }); await drain();
-  assert.equal(f.owner.ttsLanguage, 'en-US'); assert.equal(f.owner.ttsFollowHighlight, false);
+  assert.equal(f.owner.ttsPreferences.language, 'en-US'); assert.equal(f.owner.ttsPreferences.followHighlight, false);
   assert.equal(f.owner.ttsVoiceOptions.length, 0);
   f.voice.resolve(voices); await drain(); assert.equal(f.owner.ttsVoiceOptions.length, 2);
-  assert.equal(f.owner.ttsLanguage, 'en-US');
+  assert.equal(f.owner.ttsPreferences.language, 'en-US');
   f.http.resolve([]); await drain();
   assert.equal(f.owner.ttsPresentationMetadata, undefined);
 }
@@ -127,12 +135,12 @@ for (const invalidate of [o => { o.exitRequested = true; }, o => { o.lifecycleTo
   const f = readySchedulesAfterObservers(), config = deferred(); f.gateway.getConfig = () => config.promise;
   f.frames.shift().onFrame(); await drain();
   f.owner.changeTtsRate(1.5); await drain();
-  f.owner.ttsPreferenceMutationGeneration++; f.owner.ttsLanguage = 'fr-FR';
+  f.owner.ttsPreferenceMutationGeneration++; f.owner.ttsPreferences.language = 'fr-FR';
   f.owner.ttsHttpEngines = [{ id: 9, name: 'Just saved' }];
   config.resolve({ engine: 'system', rate: 4, ratePercent: 75 }); f.resolveMetadata(); await drain();
   assert.equal(f.owner.ttsState.rate, 1.5, 'late initial rate cannot overwrite real user rate method');
   assert.equal(f.owner.ttsConfig.ratePercent, 150);
-  assert.equal(f.owner.ttsLanguage, 'fr-FR', 'late preferences cannot overwrite a newer user intent');
+  assert.equal(f.owner.ttsPreferences.language, 'fr-FR', 'late preferences cannot overwrite a newer user intent');
   assert.equal(f.owner.ttsHttpEngines[0].id, 9, 'late list cannot erase an acknowledged service update');
 }
 {
@@ -166,8 +174,10 @@ for (const invalidate of [o => { o.exitRequested = true; }, o => { o.lifecycleTo
 // label/play glyph/control; probing and ACK are state updates, never a new tree.
 const content = readFileSync(new URL('ReaderControlTtsContent.ets', root), 'utf8');
 const members = ['quickLabel', 'quickLabelActor', 'playbackLabel', 'roundControl', 'controlText', 'isActivelySpeaking',
-  'hasActiveQueue', 'sharedInput', 'transport', 'p', 'frame', 'effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'];
-const { owner: ui } = createReaderBuilderProbe(content, members, { ...geometry, ...actors, ...state,
+  'hasActiveQueue', 'sharedInput', 'transport', 'p', 'frame', 'playbackExtraHeight', 'effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'];
+const accessibility = pureModuleProbe(readFileSync(new URL('../common/ReaderActionAccessibility.ets', root), 'utf8'), 'ReaderActionAccessibility.ets',
+  {AccessibilityRoleType:{BUTTON:'button'}}, ['ReaderActionAccessibility','readerActionTouchRegion']);
+const { owner: ui } = createReaderBuilderProbe(content, members, { ...geometry, ...actors, ...state, ...accessibility,
   readerTtsPlayGradientStart: () => '#2F6373' });
 let toggles = 0;
 Object.assign(ui, { appScheme: 'day', motionProgress: 0, availableWidth: 286, cachedProgress: -1, cachedWidth: -1,
@@ -185,3 +195,7 @@ for (const status of ['probing', 'idle', 'unavailable']) {
 assert.equal(control.accessibilityText, '重试朗读'); assert.equal(control.enabled, true);
 control.onClick(); assert.equal(toggles, 1, 'failed warmup remains explicitly retryable');
 console.log('PH44 TTS Quick preparation PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete+newer intent guards/active session/SDK first frame/retry; omission negative control rejected');
+
+} finally {
+  readerImports.deregister();
+}

@@ -1,9 +1,11 @@
+import { MAIN_TAB_LABEL_LINE_HEIGHT } from '../../entry/src/main/ets/features/common/ReaderLayoutTokens.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { DOWNLOAD_VISUAL } from '../../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts';
 import { MANGA_DIRECTORY_VISUAL } from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { SEARCH_HISTORY_FONT_SIZE, SEARCH_HISTORY_LINE_HEIGHT } from '../../entry/src/main/ets/features/common/ReaderSearchControlGeometry.ts';
 
 /** Execute the real typography-only ETS module with its real physical-family
  * exports. Builder/layout probes no longer duplicate role names or tuples in
@@ -16,9 +18,11 @@ export function loadReaderTypographyRoles(source = readFileSync(new URL(
   const executable = stripTypeScriptTypes(source
     .replace(/^import[\s\S]*?;\s*/gm, '')
     .replace(/^export /gm, ''));
-  return new Function(...Object.keys(fontFamilies), 'DOWNLOAD_VISUAL', 'MANGA_DIRECTORY_VISUAL',
+  return new Function(...Object.keys(fontFamilies), 'DOWNLOAD_VISUAL', 'MANGA_DIRECTORY_VISUAL', 'MAIN_TAB_LABEL_LINE_HEIGHT',
+    'SEARCH_HISTORY_FONT_SIZE', 'SEARCH_HISTORY_LINE_HEIGHT',
     `${executable}; return { ${names.join(', ')} };`)(
-    ...Object.values(fontFamilies), DOWNLOAD_VISUAL, MANGA_DIRECTORY_VISUAL);
+    ...Object.values(fontFamilies), DOWNLOAD_VISUAL, MANGA_DIRECTORY_VISUAL, MAIN_TAB_LABEL_LINE_HEIGHT,
+    SEARCH_HISTORY_FONT_SIZE, SEARCH_HISTORY_LINE_HEIGHT);
 }
 
 const typography = loadReaderTypographyRoles();
@@ -31,7 +35,7 @@ const typographySource = readFileSync(new URL(
   '../../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
 const classSource = typographySource.slice(typographySource.indexOf('export class ReaderTextStyle'),
   typographySource.indexOf('\nexport class ReaderInheritedTextStyle'));
-const ReaderTextStyle = new Function(`${stripTypeScriptTypes(classSource).replace(/^export /gm, '')}; return ReaderTextStyle;`)();
+export const ReaderTextStyle = new Function(`${stripTypeScriptTypes(classSource).replace(/^export /gm, '')}; return ReaderTextStyle;`)();
 export const readerMessageStyles = new Function('ReaderTextStyle', ...Object.keys(fontFamilies),
   `${stripTypeScriptTypes(messageSource).replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return {${messageNames.join(',')}};`)(
   ReaderTextStyle, ...Object.values(fontFamilies));

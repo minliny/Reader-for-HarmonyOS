@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "scope": "Missing untracked historical docs/fixtures/test adapters; no active production registration",
   "files": [
     {
@@ -9,7 +9,8 @@
       "destination": "docs/history/worktrees/manga-directory-rules-20261007/docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
       "sha256": "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa",
       "bytes": 2373,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
@@ -18,7 +19,8 @@
       "destination": "docs/history/worktrees/manga-directory-rules-20261007/docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
       "sha256": "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1",
       "bytes": 2527,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
@@ -27,7 +29,8 @@
       "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/fixtures/design/shared-book-detail-typography-successor-20261008.json",
       "sha256": "af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed",
       "bytes": 21368,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
@@ -36,7 +39,8 @@
       "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/fixtures/icon-button-family/approved-search-layout-20261008.json",
       "sha256": "1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f",
       "bytes": 20208,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
@@ -45,7 +49,8 @@
       "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/test-book-detail-intro-measurement-sdk.mjs",
       "sha256": "4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148",
       "bytes": 9416,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
@@ -81,7 +86,8 @@
       "destination": "docs/history/worktrees/manga-three-agent-20261009/docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
       "sha256": "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa",
       "bytes": 2373,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
@@ -99,7 +105,8 @@
       "destination": "docs/history/worktrees/manga-three-agent-20261009/docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
       "sha256": "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1",
       "bytes": 2527,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
@@ -126,7 +133,8 @@
       "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/design/shared-book-detail-typography-successor-20261008.json",
       "sha256": "af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed",
       "bytes": 21368,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
@@ -135,7 +143,8 @@
       "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/icon-button-family/approved-search-layout-20261008.json",
       "sha256": "1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f",
       "bytes": 20208,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
@@ -180,7 +189,8 @@
       "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/test-book-detail-intro-measurement-sdk.mjs",
       "sha256": "4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148",
       "bytes": 9416,
-      "active": false
+      "active": false,
+      "contentObject": "docs/history/worktrees/objects/4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148.txt"
     },
     {
       "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
@@ -218,5 +228,6 @@
       "bytes": 10332,
       "active": false
     }
-  ]
+  ],
+  "contentStorage": "Exact bytes are at contentObject when present; logical archive/destination paths are inert references. Source hashes/provenance unchanged. See CONTENT_INDEX.json."
 }

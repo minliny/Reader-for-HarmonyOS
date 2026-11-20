@@ -1,0 +1,126 @@
+{
+  "kind": "issue-local-sdk-execution-record",
+  "recordedDate": "2026-10-21",
+  "command": "node tools/evidence/loading-layout-20261020/search-list-header-probe.mjs",
+  "status": "PASS",
+  "exitCode": 0,
+  "passedCount": 4,
+  "passedGroups": [
+    "real filter toggle changes natural header/inset identity; stale receipts reject and body facts never enter the fixed panel",
+    "loading/results/stopped/empty/error share one actual SDK List and permanent summary/notice prefix",
+    "filter height changes preserve measured book position; same scope is inert and type selection still resets once",
+    "pressed book identity survives publication; old page/query native scroll, IME, filter and stop callbacks cannot mutate the new owner"
+  ],
+  "probe": "tools/evidence/loading-layout-20261020/search-list-header-probe.mjs",
+  "probeSha256": "b104ec1491a0dc8823034bd3a2ef26ba955e5fc81f8112d8c811dc5f343f7840",
+  "productionSha256": "d62551fb614a6a5bc29a9c25bc37a29fb6ca8d2e675409c67a74baed5cdb46a7",
+  "actualLoweredSourceSha256": "d62551fb614a6a5bc29a9c25bc37a29fb6ca8d2e675409c67a74baed5cdb46a7",
+  "viewStateSha256": "8244298b2e08718f63bfba2276036cec9a304ec39d3e42c154c57c10badab0c6",
+  "snapshotHelperSha256": "99f3b3d23355b7bbdc473480d67c27f14d4986a62acb79df9272b17f9b1a386f",
+  "inputFingerprints": {
+    "entry/src/main/ets/features/search/SearchPage.ets": "d62551fb614a6a5bc29a9c25bc37a29fb6ca8d2e675409c67a74baed5cdb46a7",
+    "entry/src/main/ets/features/search/SearchViewState.ts": "8244298b2e08718f63bfba2276036cec9a304ec39d3e42c154c57c10badab0c6",
+    "entry/src/main/ets/features/search/SearchBookSnapshot.ts": "99f3b3d23355b7bbdc473480d67c27f14d4986a62acb79df9272b17f9b1a386f",
+    "entry/src/main/ets/features/search/SearchPublication.ts": "4aebd65809ff7f41f81e9bde7563cdc4b9413957514ee52039d9f8e461fbcc72",
+    "entry/src/main/ets/features/search/SearchResultProjection.ts": "fdba8e64b2cebe7af0fb56eae8088a412022e438f594d9126f96758ce55f6820",
+    "entry/src/main/ets/features/common/ReaderSearchField.ets": "00a1464ebfc667163b03022b497d97ad32dd70758bada03541d4f244b5efa315",
+    "entry/src/main/ets/features/common/ReaderButton.ets": "0aa03f6a4cbda9d6a22d0a718f6fbc5b396a63876108cad282f334bcd8a6af3a",
+    "entry/src/main/ets/features/common/ReaderIconButton.ets": "61aed40cd58184669bf2ee85e86166f74c1934c88275bd736c8f695aec8db904",
+    "entry/src/main/ets/features/search/SearchSpinner.ets": "0114264e98bac75e43d4536be03c22f3e7f2e4c03595be629152f8ce4d4602a7",
+    "entry/src/main/ets/features/common/ReaderPageState.ets": "5460cb185c8dae686d5c3e1cc74a0fa9b2e28059877a33a4d86694e214b058fe",
+    "entry/src/main/ets/features/common/ReaderControlSpecs.ets": "2b3498a7d3abd2ece30b3d63843af56c4433445ec7677b5204d22605bf085c90",
+    "entry/src/main/ets/features/common/ReaderTypography.ets": "e74b3087815ac45857a35020482c524fbaae15608943c4c9e5f832eb11065675",
+    "tools/lib/foundation-tail-consumer-probe.mjs": "0d60b090032bb3782e9ccd23d3ee4df7548e0f33027ed940bfd67d5a3c86b780",
+    "tools/lib/reader-control-builder-probe.mjs": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b",
+    "tools/lib/reader-foundation-control-probe.mjs": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24",
+    "tools/lib/arkui-property-runtime-probe.mjs": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+  },
+  "finalExecutionRecord": "tools/evidence/loading-layout-20261020/search-list-header-attempt-04-20261021.json",
+  "attempts": [
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-list-header-attempt-01-20261021.json",
+      "sha256": "aab38c686595db2dad11cd40bdc5e0841638934f7e3c9c4133b6bcc88054d6d3",
+      "exitCode": 1,
+      "sourceSha256": "101572ad4e7ed32414d8c0566c1a3bab4f54d6bc7d207e93e9e84a1645127e48"
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-list-header-attempt-02-20261021.json",
+      "sha256": "ae11283c2db4428665846cacd60be2844a67bd3eef03dd7b0cd651c5520e6148",
+      "exitCode": 1,
+      "sourceSha256": "d62551fb614a6a5bc29a9c25bc37a29fb6ca8d2e675409c67a74baed5cdb46a7"
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-list-header-attempt-03-20261021.json",
+      "sha256": "41fd851413611c35e5a1256993842a82596c8d48ed2a1e280b431b136805fbd2",
+      "exitCode": 1,
+      "sourceSha256": "d62551fb614a6a5bc29a9c25bc37a29fb6ca8d2e675409c67a74baed5cdb46a7"
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-list-header-attempt-04-20261021.json",
+      "sha256": "907e783621f038964b39a5954b676d59751514a5421baea096e4b8b35815911f",
+      "exitCode": 0,
+      "sourceSha256": "d62551fb614a6a5bc29a9c25bc37a29fb6ca8d2e675409c67a74baed5cdb46a7"
+    }
+  ],
+  "preparationFailures": [
+    {
+      "attempt": 1,
+      "type": "probe assertion false positive",
+      "symptom": "Broad progress regex matched the existing empty-page explanation that includes searched-source counts.",
+      "repair": "Assert absence of a second node whose full text equals the actual current fixed searchProgressText. Existing page-state business wording stays intact."
+    },
+    {
+      "attempt": 2,
+      "type": "issue-local native registration port wiring",
+      "symptom": "After actual SDK branch replacement, a retired child observer already queued later in the same dirty batch ran and could not find its retired native child.",
+      "repair": "At the native registration seam, check each observer registration immediately before replay, rather than filtering the whole dirty batch only once. No production source, SDK lowering output, shared helper, business function or Prop was replaced."
+    },
+    {
+      "attempt": 3,
+      "type": "probe assertion false positive",
+      "symptom": "The valid current-page aboutToDisappear cleanup emitted onVisibleGroups([]) before reset, while the assertion expected no warmup calls at all.",
+      "repair": "Capture the legitimate post-retirement baseline, then assert stale native callbacks add nothing. The actual cleanup was not removed or hidden."
+    }
+  ],
+  "productionFailuresConfirmedByThisProbe": [],
+  "sourceChangesBetweenAttempts": "Root changed loadingContent to the approved blank body and added an ownsPageQuery recheck inside the animateTo action between attempts 2 and 3. Earlier raw records retain their earlier source hashes; final result binds only the final hash above.",
+  "loweringScope": {
+    "page": "Complete current SearchPage member set, including build, stateContent, searchHeader, filterProgressRow, toggle/reset helpers, lifecycle and ownership guards. The original production source string is unchanged.",
+    "children": [
+      "Complete current SearchResultCard",
+      "Actual ReaderSearchField including bookPanel variant",
+      "Actual ReaderButton specs/modifiers/build/commit",
+      "Actual ReaderIconButton",
+      "Actual SearchSpinner including its default light=false",
+      "Actual ReaderPageState",
+      "Shared ReaderPageScaffold/ReaderFixedHeaderHost through the existing compiler helper"
+    ],
+    "runtime": "Installed SDK lowering and actual V1 State/Prop/ObjectLink/ObservedObject classes; observer/subscriber delivery instrumented. Real ViewState/Publication/Projection/DataSource/Snapshot execute.",
+    "execution": "Only the four named issue-local groups execute. Full Page lowering is not a full product test suite or execution of Core/network actions."
+  },
+  "nativePorts": [
+    "Finite native If branch registration/retirement: actual SDK supplies branch ids and generator closures; local records retire emitted nodes/child lifecycle/observer registrations before invoking the actual next generator.",
+    "Finite LazyForEach reconciliation follows actual DataSource keys/notifications and executes the actual generated item closure; native order/paint/physics are not modeled.",
+    "Non-Lazy ListItem bodies execute the actual SDK-emitted deferred render callback with recorded element id and initial flag.",
+    "Scroller current offset/item rectangles and scroll call results, frame queue, animateTo callback dispatch, MeasureUtils height/px2vp and window dimensions are explicit inputs. No font shaping algorithm is simulated."
+  ],
+  "nativeBranchTransitionCount": 14,
+  "retainedSdkWarnings": [
+    {
+      "type": "WARN",
+      "message": "The 'regular' property 'group' cannot be assigned to the '@ObjectLink' property 'group'.",
+      "pos": 46021
+    }
+  ],
+  "runtimeWarnings": [
+    "Node stripTypeScriptTypes ExperimentalWarning"
+  ],
+  "selectedGateStatus": "GATE_INDEX and exact header/layout-restoration/Index attachment entries were only queried and read. All registered gates remain NOT_RUN; stale old geometry/scroll assertions were not run or edited.",
+  "notExecuted": [
+    "Old search/header/main-notices/Card/list probes",
+    "Any registered business suite or full gate",
+    "HAP/ArkTS type-check build, signing, install or device operations",
+    "Network/Core request or user data mutation"
+  ],
+  "evidenceBoundary": "The four groups prove selected current SDK closure/state/native event behavior, logical List identity through state changes, emitted attributes, callback ownership and explicit measured preservation calls. Finite native registration ports are fixture wiring, not device evidence. This does not establish full ArkTS semantic compilation, native text/pixels/layout/animation/focus/scroll physics, complete platform node lifecycle, HAP provenance, device behavior or user acceptance."
+}

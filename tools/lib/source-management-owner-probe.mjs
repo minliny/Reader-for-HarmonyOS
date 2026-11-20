@@ -1,4 +1,4 @@
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
 import { virtualFilePath } from './tool-environment.mjs';
 import {bookshelfOperationClass,bookshelfOperationSource} from './bookshelf-operation-owner-probe.mjs';
 import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
@@ -24,6 +24,6 @@ export function actualSourceManagementHostField(index,SourceHost) {
  const owner=ast.statements.find(n=>n.members?.some(m=>m.name?.getText(ast)==='sourceHost'));
  const field=owner?.members.find(m=>m.name?.getText(ast)==='sourceHost');
  if (!field?.initializer) throw Error('actual SourceHost Index field initializer missing');
- const code=ts.transpileModule('const value='+field.initializer.getText(ast)+';',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const code=emitSdkProbe('const value='+field.initializer.getText(ast)+';',{fileName:'module.ts',parseSource:text,scriptKind:'ETS',compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}});
  return new Function('SourceHost',code+'return value;').call(index,SourceHost);
 }

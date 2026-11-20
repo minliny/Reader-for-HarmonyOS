@@ -13,7 +13,6 @@ const motionProps = { fullContentHeight: 666, quickContentHeight: 190, fullViewp
   scrollMotion: morphScroll.createReaderControlMorphScroll(), getUIContext: () => ({ vp2px: n => n * 3 }) };
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
-const { stripTypeScriptTypes }=await import('node:module');
 const { readerControlSearchSourceField, readerControlSearchSourceResult, sampleReaderControlSearch }=await import('../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts');
 const { readerControlSettingsLabel, readerControlSettingsBar, readerControlSettingsChoice,
   readerControlSettingsScreenTitle, readerControlSettingsAddedGroup, readerControlSettingsAddedChild,
@@ -205,23 +204,16 @@ return;
 const searchUI=read('entry/src/main/ets/features/reading/ReaderControlSearchContent.ets');
 const settingsUI=read('entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets');
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-function method(src, name) {
-  const start = src.indexOf('  private ' + name + '(');
-  assert.ok(start >= 0, name);
-  const open = src.indexOf('{', start);
-  let depth = 1, end = open + 1;
-  while (depth && end < src.length) {
-    if (src[end] === '{') depth++;
-    if (src[end] === '}') depth--;
-    end++;
-  }
-  return src.slice(start, end);
-}
+const { selectedProductionMethods, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const accessibility = pureModuleProbe(read('entry/src/main/ets/features/common/ReaderActionAccessibility.ets'),
+  'ReaderActionAccessibility.ets', { AccessibilityRoleType: { BUTTON: 'BUTTON' } },
+  ['ReaderActionAccessibility', 'readerActionTouchRegion']);
 if(selectedCase==='search-sdk'){
  const {foundationControls,foundationSpecs}=await import('./lib/reader-foundation-control-probe.mjs');
-const Search = new Function(stripTypeScriptTypes('class Probe {' +
-  ['canSearch', 'submit', 'statusText', 'dismissTemporaryLayer', 'onInputChanged'].map(n =>
-    method(searchUI, n)).join('\n') + '}') + ';return Probe;')();
+const Search = selectedProductionMethods(
+  new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url),
+  'ReaderControlSearchContent', ['canSearch', 'submit', 'statusText', 'dismissTemporaryLayer', 'onInputChanged']);
 const search = new Search(); let submit = 0, stopped = 0;
 Object.assign(search, { query: ' 雨夜 ', interactionEnabled: true, state: { kind: 'idle' },
   onSearch: () => submit++, inputController: { stopEditing() { stopped++; } },
@@ -270,7 +262,8 @@ assert.deepEqual(scroller, { x: 0, y: 108 });
   const searchMembers = ['frame', 'resultRow', 'resultSnippet', 'resultTitle', 'currentResult', 'currentResultIndex',
     'currentSnippet', 'selectCurrentResult', 'presentation', 'resultClip', 'resultScrollFrame', 'resultLayout'];
   function checkMountedSearchResults(source, frozen = false) {
-    const { owner } = createReaderBuilderProbe(source, searchMembers, { sampleReaderControlSearch, splitReaderSearchSnippet, ...searchScroll, ...motionDeps });
+    const { owner } = createReaderBuilderProbe(source, searchMembers,
+      { ...accessibility, sampleReaderControlSearch, splitReaderSearchSnippet, ...searchScroll, ...motionDeps });
     const result = { sourceId: 's', bookId: 'b', chapterIndex: 9, chapterOffset: 2, chapterTitle: '旧标题', snippet: '甲乙他旧',
       snippetStart: 0, matchLength: 1 };
     Object.assign(owner, { motionProgress: 0, availableWidth: 286, availableHeight: 190,
@@ -279,14 +272,16 @@ assert.deepEqual(scroller, { x: 0, y: 108 });
     const selected = []; owner.onSelectResult = value => selected.push(value);
     if (frozen) owner.resultRow(9, 2, result.sourceId, result.bookId, result);
     else owner.resultRow(9, 2, result.sourceId, result.bookId);
-    const row = owner.nodes.get(0), click = row.onClick;
-    assert.equal(owner.nodes.get(1).create, '旧标题');
+    const row = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.onClick);
+    const click = row.onClick;
+    const title = [...owner.nodes.values()].find(node => node.type === 'Text' && node.create === '旧标题');
+    assert.ok(title, 'initial result title reaches the actual Builder');
     const next = { ...result, chapterTitle: '新标题', snippet: '甲乙他新尾' };
     owner.state = { kind: 'results', keyword: '他', results: [next] };
     for (const p of [1, .5, 0, .25, 1]) {
       Object.assign(owner, { motionProgress: p, availableWidth: 286 + 52 * p, availableHeight: 190 + 476 * p });
       owner.replay();
-      assert.equal(owner.nodes.get(1).create, '新标题', 'same-key replacement updates mounted title');
+      assert.equal(title.create, '新标题', 'same-key replacement updates mounted title');
       assert.deepEqual([...owner.nodes.values()].filter(n => n.type === 'Span').map(n => n.create), ['甲乙', '他', '新尾']);
       assert.equal(row.height, 54 + 18 * p, 'mounted result row uses live shared p');
       assert.equal(row.width, owner.frame().firstResult.width);
@@ -311,12 +306,10 @@ assert.deepEqual(scroller, { x: 0, y: 108 });
 const settingsMethods = ['groupOptions', 'groupLabel', 'optionLabel', 'isSegmentActive',
   'isSegmentAvailable', 'segmentAccessibilityText', 'handleSegment', 'toggleValue', 'toggleAccessibilityText',
   'handleToggle', 'handleJustify'];
-const {selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
 const settingsConstants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets',import.meta.url),['SETTINGS_DIRECTION_OPTIONS','SETTINGS_PAGE_OPTIONS','SETTINGS_TIMEOUT_OPTIONS']);
-const Settings = new Function(...Object.keys(settingsPolicy),
-  ...Object.keys(settingsConstants),
-  stripTypeScriptTypes('class Probe { ' + settingsMethods.map(n => method(settingsUI, n)).join('\n') + ' }') +
-  '; return Probe;')(...Object.values(settingsPolicy), ...Object.values(settingsConstants));
+const Settings = selectedProductionMethods(
+  new URL('../entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets', import.meta.url),
+  'ReaderControlSettingsContent', settingsMethods, { ...settingsPolicy, ...settingsConstants });
 const settings = new Settings();
 const calls = [];
 Object.assign(settings, { snapshot: settingsPolicy.createDefaultReaderSettingsSnapshot(),
@@ -364,7 +357,7 @@ assert.equal(toggles.length, 6); assert.deepEqual(justify, [false]);
     'presentation', 'sharedRect', 'sharedClip', ...settingsMethods];
   let geometrySamples = 0, paintSamples = 0;
   const { owner } = createReaderBuilderProbe(settingsUI, [...new Set(settingsBuilderMembers)], {
-    ReaderControlSettingsOptionModifier: productionSettingsOptionModifier(),
+    ...accessibility, ReaderControlSettingsOptionModifier: productionSettingsOptionModifier(),
     ...settingsPolicy, ...settingsConstants, ...motionDeps, readerControlUnit, readerControlLerp, readerControlSettingsLabel, readerControlSettingsBar,
     sampleReaderControlSettings: (...args) => { geometrySamples++; return sampleReaderControlSettings(...args); },
     sampleReaderControlMotionPresentation: (...args) => { paintSamples++; return presentation.sampleReaderControlMotionPresentation(...args); },
@@ -399,7 +392,10 @@ assert.equal(toggles.length, 6); assert.deepEqual(justify, [false]);
         readerControlSettingsChoice(count, i, p, pose.bars[1].width));
     }
     assert.deepEqual(label.position, { x: owner.label(1).x, y: owner.label(1).y });
-    assert.equal(label.height, owner.label(1).height);
+    assert.equal(label.height, undefined, 'approved label slot grows naturally instead of retaining a fixed height');
+    assert.deepEqual(label.constraintSize, { minHeight: owner.label(1).height });
+    assert.equal(label.maxFontScale, 1.3, 'approved Settings label cap preserves adjacent fixed actor positions');
+    assert.equal(label.lineHeight, owner.label(1).height, 'authored endpoint line track remains unchanged');
     assert.equal(choices.find(n => n.create === '仿真').enabled, false, 'live capability change updates the mounted option');
     assert.equal(choices.find(n => n.create === '覆盖').backgroundColor, '#BDFFFCF8');
     assert.equal(choices.find(n => n.create === '滑动').backgroundColor, 'Color.Transparent', 'selected option follows live V4 snapshot');

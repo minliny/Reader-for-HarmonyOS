@@ -4,7 +4,9 @@ import { catalogCurrentChapterRecoveryMessage, errorMessageOf, isNetworkEnvironm
 export type RemoteReadingCommand =
   'book.detail' | 'book.toc' | 'chapter.content' |
   'reading.progress.get' | 'reader.location.resolve' | 'reading.progress.update' |
-  'cache.book.status' | 'search.content' | 'source.list';
+  'cache.book.status' | 'search.content' | 'source.list' |
+  'reading.entry.snapshot' | 'reading.catalog.page' | 'reading.document.window' |
+  'local_book.toc' | 'local_book.chapter.content' | 'local_book.content.metrics';
 
 export type RemoteReadingErrorCode =
   'invalidInput' | 'unsupportedHostCapability' | 'invalidResponse' |
@@ -16,7 +18,7 @@ export type RemoteReadingErrorCode =
 export type RemoteReadingFailureCategory = 'CACHE_MISSING' | 'CACHE_DERIVED_CORRUPT' |
   'STORAGE_FAILURE' | 'CANCELLED' | 'IDENTITY_MISMATCH' | 'SOURCE_VERSION_CHANGED' |
   'SOURCE_HTTP_FAILED' | 'SOURCE_RESPONSE_FORMAT' | 'SOURCE_RULE_FAILED' |
-  'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY' | 'POSITION_CONTEXT_STALE' | 'NETWORK_ENVIRONMENT';
+  'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY' | 'POSITION_CONTEXT_STALE' | 'NETWORK_ENVIRONMENT' | 'COMMAND_FAILED';
 
 export type RemoteReadingHostCapabilityId =
   'httpExecute' | 'responseCharsetDecoding' | 'platformCookieJar' |
@@ -52,6 +54,7 @@ export type RemoteReadingTocDiagnostic = {
   firstResponseDigest?: string;
   finalUrlDigest?: string;
   httpStatus?: number;
+  storageReason?: string;
   requestId?: number;
 };
 
@@ -68,6 +71,7 @@ export type RemoteReadingFailureRecord = {
   firstResponseDigest?: string;
   finalUrlDigest?: string;
   httpStatus?: number;
+  storageReason?: string;
   previousCategory?: RemoteReadingFailureCategory;
   requestId?: number;
   elapsedMs?: number;
@@ -125,7 +129,8 @@ function remoteReadingCategoryForCode(code: RemoteReadingErrorCode): RemoteReadi
     case 'cachedSessionUnavailable': case 'chapterNotDownloaded': return 'CACHE_MISSING';
     case 'cacheDerivedCorrupt': return 'CACHE_DERIVED_CORRUPT';
     case 'emptyToc': return 'SOURCE_TOC_EMPTY';
-    case 'commandFailed': case 'unsupportedHostCapability': return 'SOURCE_HTTP_FAILED';
+    case 'commandFailed': return 'COMMAND_FAILED';
+    case 'unsupportedHostCapability': return 'SOURCE_HTTP_FAILED';
     default: return 'SOURCE_RESPONSE_FORMAT';
   }
 }
@@ -140,6 +145,7 @@ export function remoteReadingFailureRecord(error: RemoteReadingGatewayError, att
     const value = error.diagnostic?.[name];
     if (typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value)) record[name] = value;
   }
+  if (error.diagnostic?.storageReason !== undefined) record.storageReason = error.diagnostic.storageReason;
   if (error.previousCategory !== undefined) record.previousCategory = error.previousCategory;
   else if (error.causeValue instanceof RemoteReadingGatewayError) record.previousCategory = error.causeValue.category;
   return record;
@@ -150,6 +156,11 @@ export function remoteReadingHttpSummary(value: unknown): Partial<RemoteReadingT
   const summary: Partial<RemoteReadingTocDiagnostic> = {};
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return summary;
   const raw = value as JsonObject;
+  const reason = raw['storageReason'];
+  if (typeof reason === 'string' && ['RESOURCE_PUBLICATION_CONTEXT_REQUIRED', 'RESOURCE_PUBLICATION_STALE',
+    'LIBRARY_WRITE_SCOPE_STALE', 'STORAGE_LOCK_POISONED', 'STORAGE_OPERATION_FAILED'].indexOf(reason) >= 0) {
+    summary.storageReason = reason;
+  }
   for (const name of ['responseBytes', 'firstResponseBytes', 'httpStatus'] as const) {
     const candidate = raw[name] ?? (name === 'httpStatus' ? raw['status'] : undefined);
     if (typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate >= 0) summary[name] = candidate;
@@ -344,7 +355,8 @@ export function classifyRemoteReadingCommandFailure(
     return new RemoteReadingGatewayError('positionContextStale',
       '搜索期间正文或处理状态已更新，请重新搜索。', command, undefined, diagnostic, error);
   }
-  if (details?.['requiresPositionMigration'] === true || details?.['reason'] === 'POSITION_CONTEXT_STALE' ||
+  if (code === 'POSITION_CONTEXT_STALE' || category === 'POSITION_CONTEXT_STALE' ||
+    details?.['requiresPositionMigration'] === true || details?.['reason'] === 'POSITION_CONTEXT_STALE' ||
     details?.['reason'] === 'PROCESSING_CONTEXT_STALE') {
     const recovery = details?.['reason'] === 'PROCESSING_CONTEXT_STALE' ?
       '当前正文处理结果与原阅读位置暂时无法核对，原位置已保留。可在阅读设置中检查简繁转换和正文替换后重试，或切换书源。' :
@@ -358,7 +370,7 @@ export function classifyRemoteReadingCommandFailure(
     return new RemoteReadingGatewayError('chapterNotDownloaded', message, command, undefined, diagnostic, error);
   }
   if (category === 'CACHE_DERIVED_CORRUPT') return new RemoteReadingGatewayError('cacheDerivedCorrupt', message, command, undefined, diagnostic, error);
-  if (category === 'STORAGE_FAILURE' || command === 'cache.book.status') {
+  if (code === 'STORAGE_FAILURE' || category === 'STORAGE_FAILURE') {
     return new RemoteReadingGatewayError('storageFailure', message, command, undefined, diagnostic, error);
   }
   if (category === 'SOURCE_HTTP_FAILED') {

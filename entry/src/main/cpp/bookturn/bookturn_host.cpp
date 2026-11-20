@@ -54,9 +54,14 @@ double TerminalRetainTimeoutMs()
 
 float Percentile(std::vector<float>& values, float fraction)
 {
-    if (values.empty()) return 0.0F;
+    // Diagnostic samples come only from the bounded frame window. Keep the
+    // original positive float rounding, with a proven range before converting
+    // the standard library's integer result to an index.
+    if (values.empty() || values.size() > kFrameDiagCapacity || !std::isfinite(fraction) ||
+        fraction < 0.0F || fraction > 1.0F) return 0.0F;
+    const long rounded = std::lround(std::floor(fraction * static_cast<float>(values.size() - 1) + 0.5F));
     const size_t index = std::min(values.size() - 1,
-        static_cast<size_t>(fraction * static_cast<float>(values.size() - 1) + 0.5F));
+        static_cast<size_t>(rounded));
     std::nth_element(values.begin(), values.begin() + static_cast<std::ptrdiff_t>(index), values.end());
     return values[index];
 }

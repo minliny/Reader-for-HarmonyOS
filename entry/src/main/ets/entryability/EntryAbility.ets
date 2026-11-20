@@ -1,4 +1,6 @@
+import { ReaderCrashEvidence } from '../app/ReaderCrashEvidence';
 import { prepareReaderShelfFonts, prepareReaderFontFamily } from '../features/common/ReaderFonts';
+import { READER_REDUCE_MOTION_STORAGE_KEY } from '../features/common/ReaderMotionPolicy';
 import { readerAppearanceSnapshotFontFamily } from '../features/reading/ReaderAppearanceRenderStyle';
 import { setReaderAppearanceFont, type ReaderAppearanceSnapshot } from '../features/reading/ReaderAppearanceState';
 import { ReaderCustomFontHost } from '../app/ReaderCustomFontHost';
@@ -15,17 +17,12 @@ import { ReaderStartupContentOwner } from '../app/ReaderStartupContentOwner';
 import { installMangaAtomicPayloadReader } from '../app/MangaAtomicPayloadReader';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerRebuildableCacheClearEnabled, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../app/ReaderControlVerificationLaunch';
-import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
-import { probeReaderAtomicSnapshot, type ReaderAtomicSnapshotSample } from '../app/ReaderAtomicSnapshotProbe';
-import { probeReaderAssetInventory, type ReaderAssetInventorySample } from '../app/ReaderAssetInventoryProbe';
-import { ReaderMangaPlatformDiagnostic } from '../app/ReaderMangaPlatformDiagnostic';
+import { ReaderEntryDiagnostics } from '../app/ReaderEntryDiagnostics';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
-import { ReaderCapacityProbe, type ReaderCapacityQueryOptions } from '../app/ReaderCapacityProbe';
-import type { JsonObject } from '@reader/core-harmony';
 import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';
+import { READER_TRANSIENT_TOAST_STORAGE_KEY, READER_TRANSIENT_HOST_STORAGE_KEY, createReaderTransientToastState } from '../features/common/ReaderTransientFeedback';
 const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
@@ -33,79 +30,56 @@ export default class EntryAbility extends UIAbility {
   private startupContent: ReaderStartupContentOwner | undefined = undefined;
   private coldStartPage: string = 'pages/Index';
   private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
+  private activeWindowStage: window.WindowStage | undefined = undefined;
+  private libraryRestoreHandoffDetach: (() => void) | undefined = undefined;
+  private libraryRestoreAdoptionPending: ReaderRuntimeOwner | undefined = undefined;
+  private libraryRestoreAdoption: Promise<void> | undefined = undefined;
   private themeReady: Promise<void> = Promise.resolve();
   private recoveryReady: Promise<void> = Promise.resolve();
   private bookshelfModeReady: Promise<void> = Promise.resolve();
   private shelfFontsReady: Promise<void> = Promise.resolve();
-  private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;
-  private capacityProbe: ReaderCapacityProbe | undefined = undefined;
-  private mangaPlatformDiagnostic: ReaderMangaPlatformDiagnostic | undefined = undefined;
+  private diagnostics: ReaderEntryDiagnostics | undefined = undefined;
+  private crashEvidence: ReaderCrashEvidence | undefined = undefined;
   private preparedReadingFontOwner: ReaderRuntimeOwner | undefined = undefined;
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
-  onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    this.crashEvidence = ReaderCrashEvidence.install(DEBUG === true && BUILD_MODE_NAME === 'debug',
+      this.context.filesDir, launchParam);
     installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
     }, DEBUG === true && BUILD_MODE_NAME === 'debug', want.parameters?.readerTtsTrace === true);
     trace.mark('ability.create');
-    // Diagnostics require a cold start, debug build, and exact primitive
-    // boolean parameters. Warm file Wants use the guarded import/exit queue.
-    this.coldStartPage = readerControlVerificationColdStartPage(
-      DEBUG,
-      BUILD_MODE_NAME,
-      want.parameters?.readerControlMotionVerification,
-      want.parameters?.readerOpenSourcePilot,
-      want.parameters?.readerStartupMainLoadFailure,
-    );
-    if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {
-      this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,
-        (sample: ReaderEventLoopSample): void => {
-          hilog.info(DOMAIN, 'Reader', 'READER_EVENT_LOOP %{public}s', JSON.stringify(sample));
-        });
-    }
+    this.diagnostics = ReaderEntryDiagnostics.forColdStart(DEBUG, BUILD_MODE_NAME, want, readerMotionNowMs);
+    this.coldStartPage = this.diagnostics?.coldStartPage ?? 'pages/Index';
     AppStorage.setOrCreate('readerAppForeground', true);
+    AppStorage.setOrCreate(READER_REDUCE_MOTION_STORAGE_KEY, false);
+    // The app-owned short-feedback host is mounted by Index. Initialize its
+    // state before any startup owner can publish a result.
+    AppStorage.setOrCreate(READER_TRANSIENT_TOAST_STORAGE_KEY, createReaderTransientToastState());
+    AppStorage.setOrCreate(READER_TRANSIENT_HOST_STORAGE_KEY, 0);
     WebDavCredentialStore.instance.attachContext(this.context);
-    this.bookshelfModeReady = trace.measure('startup.bookshelf-mode',
+    const bookshelfModeReady = trace.measure('startup.bookshelf-mode',
       (): Promise<'cover' | 'list'> => WebDavCredentialStore.instance.loadBookshelfViewMode())
       .then((mode): void => {
         if (mode !== null) {
           AppStorage.setOrCreate('readerBookshelfViewMode', mode);
         }
-      }).catch((): void => {});
+      });
+    this.bookshelfModeReady = bookshelfModeReady.catch((): void => {});
     this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts())
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
       });
-    // Selection diagnostics have no inferred identity. Conflicting diagnostic
-    // flags reject both selection modes; exact Want scope semantics stay intact.
-    const mangaSelectFlag = want.parameters?.readerMangaOfflineProbeSelectManga === true ||
-      want.parameters?.readerMangaReadingProbeSelectManga === true;
-    const mangaSelectionMode = this.coldStartPage === 'pages/Index' ? readerMangaProbeSelectionMode(DEBUG, BUILD_MODE_NAME,
-      want.parameters?.readerMangaOfflineProbeSelectManga, want.parameters?.readerMangaReadingProbeSelectManga,
-      [want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaReadingProbe,
-        want.parameters?.readerControlMotionVerification, want.parameters?.readerOpenSourcePilot,
-        want.parameters?.readerEventLoopProbe, want.parameters?.readerDisableOptionalEntryMemory]) : undefined;
-    this.mangaPlatformDiagnostic = ReaderMangaPlatformDiagnostic.install(mangaSelectionMode,
-      want.parameters?.readerMangaRecordedJankR31 === true);
     const owner = ReaderRuntimeOwner.install(this.context,
-      readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory),
-      this.coldStartPage === 'pages/Index' ? readerMangaOfflineProbeScope(DEBUG, BUILD_MODE_NAME,
-        want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaOfflineSourceId,
-        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaReadingProbe) : undefined,
-      this.coldStartPage === 'pages/Index' ? readerMangaReadingProbeScope(DEBUG, BUILD_MODE_NAME,
-        want.parameters?.readerMangaReadingProbe, want.parameters?.readerMangaOfflineSourceId,
-        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaOfflineProbe) : undefined,
-      mangaSelectionMode);
+      this.diagnostics?.disableOptionalEntryMemory ?? false, this.diagnostics?.offlineScope,
+      this.diagnostics?.readingScope, this.diagnostics?.selectionMode);
     this.runtimeOwner = owner;
-    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerCapacityTrace === true) {
-      this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, want.parameters?.readerCapacityTrace,
-        async (method: string, params: JsonObject, options: ReaderCapacityQueryOptions): Promise<JsonObject> => (await owner.request(method, params, options)).data,
-        (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner));
-    }
-    this.themeReady = trace.measure('startup.theme', (): Promise<void> => ReaderThemeHost.install(owner,
-      this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day'))
-      .catch((error: Error): void => {
+    this.diagnostics?.bindOwner(owner, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner));
+    const themeReady = trace.measure('startup.theme', (): Promise<void> => ReaderThemeHost.install(owner,
+      this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day'));
+    this.themeReady = themeReady.catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Theme restoration failed: %{private}s', error.message);
       });
     const sync = new SyncGateway(owner);
@@ -122,6 +96,7 @@ export default class EntryAbility extends UIAbility {
           await trace.measure('startup.sync-recovery', (): Promise<boolean> => sync.recoverInterruptedRestore());
           await trace.measure('startup.configuration-recovery', (): Promise<boolean> => LocalConfigurationReset.recover(owner));
           if (this.runtimeOwner !== owner) return;
+          this.publishConfirmedBookshelfMode(owner);
           // Reader-only fonts can prepare after confirmed recovery without
           // withholding the bookshelf. The reader still checks the native
           // receipt before it admits text layout.
@@ -140,27 +115,14 @@ export default class EntryAbility extends UIAbility {
         hilog.error(DOMAIN, 'Reader', 'Core or confirmed restore recovery failed summary=%{public}s detail=%{private}s',
           localReadFailureSummary(error), errorMessageOf(error));
       });
+    void this.recoveryReady.then((): void => this.bindLibraryRestoreHandoff(owner)).catch((): void => {});
     // Method-level probes may execute onCreate without private helpers; the
     // production class still owns the concrete scheduler below.
     this.scheduleRebuildableCacheClear?.(want, owner);
     ReaderSystemFileOpenHost.install(owner, this.recoveryReady);
     ReaderSystemFileOpenHost.receive(want);
-    // This diagnostic is an explicit cold debug Want only. Normal starts and
-    // warm external files perform no synthetic filesystem work.
-    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAtomicSnapshotProbe === true) {
-      void this.recoveryReady.then((): Promise<void> => probeReaderAtomicSnapshot(DEBUG, BUILD_MODE_NAME,
-        true, this.context.filesDir, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner),
-        readerMotionNowMs, (sample: ReaderAtomicSnapshotSample): void => {
-          hilog.info(DOMAIN, 'Reader', 'READER_ATOMIC_SNAPSHOT %{public}s', JSON.stringify(sample));
-        })).catch((): void => {});
-    }
-    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAssetInventoryProbe === true) {
-      void this.recoveryReady.then((): Promise<void> => probeReaderAssetInventory(DEBUG, BUILD_MODE_NAME,
-        true, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner), readerMotionNowMs,
-        (sample: ReaderAssetInventorySample): void => {
-          hilog.info(DOMAIN, 'Reader', 'READER_ASSET_INVENTORY %{public}s', JSON.stringify(sample));
-        })).catch((): void => {});
-    }
+    this.diagnostics?.afterRecovery(this.recoveryReady, this.context.filesDir,
+      (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner));
   }
 
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
@@ -171,28 +133,8 @@ export default class EntryAbility extends UIAbility {
   }
 
   private scheduleRebuildableCacheClear(want: Want, owner: ReaderRuntimeOwner | undefined): void {
-    if (owner === undefined || !readerRebuildableCacheClearEnabled(DEBUG, BUILD_MODE_NAME,
-      want.parameters?.readerClearRebuildableCache)) return;
-    void this.recoveryReady.then(async (): Promise<void> => {
-      if (this.runtimeOwner !== owner || !ReaderRuntimeOwner.isCurrent(owner)) return;
-      try {
-        const result = await owner.clearRebuildableCachesForVerification();
-        hilog.info(DOMAIN, 'Reader', 'READER_VM_CACHE_CLEAR %{public}s', JSON.stringify({
-          result: 'completed', ordinaryBytes: result.ordinaryBytes, derivedDisplayFiles: result.derivedDisplayFiles,
-          remainingAutomaticBytes: result.ordinaryBytes, removedContentBytes: result.removedContentBytes,
-          deletedBytes: result.deletedBytes, deletedFiles: result.deletedFiles,
-          preserved: ['downloads', 'manifests', 'bookshelf', 'progress', 'active-leases'],
-        }));
-      } catch (error) {
-        hilog.error(DOMAIN, 'Reader', 'READER_VM_CACHE_CLEAR %{public}s', JSON.stringify({
-          result: 'failed', error: (error as Error).message,
-        }));
-      }
-    }).catch((error: Error): void => {
-      hilog.error(DOMAIN, 'Reader', 'READER_VM_CACHE_CLEAR %{public}s', JSON.stringify({
-        result: 'recovery-failed', error: error.message,
-      }));
-    });
+    ReaderEntryDiagnostics.scheduleCacheClear(DEBUG, BUILD_MODE_NAME, want, owner, this.recoveryReady,
+      (): boolean => owner !== undefined && this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner));
   }
 
   private async prepareSelectedReadingFont(owner: ReaderRuntimeOwner, reusePrepared: boolean = false): Promise<void> {
@@ -238,14 +180,125 @@ export default class EntryAbility extends UIAbility {
       JSON.stringify(first.customFont) === JSON.stringify(second.customFont));
   }
 
+  /** Only the Ability can replace its Runtime lease and the root page together.
+   * The old owner invokes this after its actual Core and physical IO are closed. */
+  private bindLibraryRestoreHandoff(owner: ReaderRuntimeOwner): void {
+    if (this.runtimeOwner !== owner || !ReaderRuntimeOwner.isCurrent(owner)) return;
+    this.libraryRestoreHandoffDetach?.();
+    this.libraryRestoreHandoffDetach = owner.registerLibraryRestoreHandoff(
+      (): Promise<void> => this.adoptLibraryRestore(owner));
+  }
+
+  private adoptLibraryRestore(previous: ReaderRuntimeOwner): Promise<void> {
+    if (this.libraryRestoreAdoption !== undefined) return this.libraryRestoreAdoption;
+    if (this.runtimeOwner !== previous) return Promise.reject(new Error('LIBRARY_RESTORE_ABILITY_RETIRED'));
+    this.libraryRestoreAdoptionPending = previous;
+    const stage = this.activeWindowStage;
+    if (stage === undefined) return Promise.reject(new Error('LIBRARY_RESTORE_WINDOW_UNAVAILABLE'));
+    const task = this.adoptLibraryRestoreInWindow(previous, stage);
+    this.libraryRestoreAdoption = task;
+    void task.finally((): void => {
+      if (this.libraryRestoreAdoption === task) this.libraryRestoreAdoption = undefined;
+    }).catch((): void => {});
+    return task;
+  }
+
+  private async adoptLibraryRestoreInWindow(previous: ReaderRuntimeOwner, stage: window.WindowStage): Promise<void> {
+    const generation = this.windowStageGeneration;
+    const ownsWindow = (): boolean => this.runtimeOwner === previous && this.activeWindowStage === stage &&
+      generation === this.windowStageGeneration;
+    if (!ownsWindow()) throw new Error('LIBRARY_RESTORE_ABILITY_RETIRED');
+    this.startupContent?.close(); this.startupContent = undefined;
+    this.diagnostics?.stop('library-restore');
+    ReaderSystemFileOpenHost.detach(previous);
+    ReaderThemeHost.detach();
+    await previous.release();
+    if (!ownsWindow()) throw new Error('LIBRARY_RESTORE_ABILITY_RETIRED');
+    let installed: ReaderRuntimeOwner | undefined = undefined;
+    try { installed = ReaderRuntimeOwner.current(); } catch (_) {}
+    // Another Ability may have installed a successor during the asynchronous
+    // close. This Ability must not adopt that unrelated activation or lease.
+    if (installed !== undefined) throw new Error('LIBRARY_RESTORE_RUNTIME_OWNER_CHANGED');
+    const owner = ReaderRuntimeOwner.install(this.context);
+    this.runtimeOwner = owner;
+    this.libraryRestoreAdoptionPending = undefined;
+    this.preparedReadingFontOwner = undefined; this.preparedReadingFontSnapshot = undefined;
+    this.coldStartPage = 'pages/Index';
+    const current = (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner);
+    this.themeReady = ReaderThemeHost.install(owner,
+      this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day');
+    const sync = new SyncGateway(owner);
+    const bookshelfModeReady = WebDavCredentialStore.instance.loadBookshelfViewMode().then((): void => {});
+    this.bookshelfModeReady = bookshelfModeReady;
+    const coreReady = owner.start();
+    ReaderThemeHost.setRecoveryBarrier(async (): Promise<void> => {
+      await Promise.all([this.themeReady, this.bookshelfModeReady, coreReady]);
+      if (!current()) throw new Error('CONFIGURATION_OWNER_CHANGED');
+      await sync.recoverInterruptedRestore();
+      await LocalConfigurationReset.recover(owner);
+    });
+    // This barrier intentionally retains rejection: a failed durable recovery
+    // must reach the existing startup recovery surface, never mount an Index.
+    this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, coreReady]).then(async (): Promise<void> => {
+      if (!current()) throw new Error('LIBRARY_RESTORE_ABILITY_RETIRED');
+      await sync.recoverInterruptedRestore();
+      await LocalConfigurationReset.recover(owner);
+      if (!current()) throw new Error('LIBRARY_RESTORE_ABILITY_RETIRED');
+      this.publishConfirmedBookshelfMode(owner);
+      await new ReaderSettingsGateway(owner).loadAfterConfigurationRecovery(current);
+      if (!current()) throw new Error('LIBRARY_RESTORE_ABILITY_RETIRED');
+      void this.prepareSelectedReadingFont(owner).catch((error: Error): void => {
+        hilog.error(DOMAIN, 'Reader', 'Restored reading font preparation failed: %{private}s', error.message);
+      });
+      this.bindLibraryRestoreHandoff(owner);
+    });
+    ReaderSystemFileOpenHost.install(owner, this.recoveryReady);
+    this.onWindowStageCreate(stage);
+    const content = this.startupContent;
+    if (content === undefined) throw new Error('LIBRARY_RESTORE_WINDOW_UNAVAILABLE');
+    await this.waitForRestoredContent(content, owner);
+  }
+
+  /** Core/system restore may change the mode after the early preference read.
+   * Publish only the original owner's acknowledged result before Index mounts. */
+  private publishConfirmedBookshelfMode(owner: ReaderRuntimeOwner): void {
+    if (this.runtimeOwner !== owner || !ReaderRuntimeOwner.isCurrent(owner)) return;
+    const mode = WebDavCredentialStore.instance.currentBookshelfViewMode();
+    if (mode !== undefined) AppStorage.setOrCreate('readerBookshelfViewMode', mode);
+  }
+
+  private waitForRestoredContent(content: ReaderStartupContentOwner, owner: ReaderRuntimeOwner): Promise<void> {
+    return new Promise<void>((resolve, reject): void => {
+      let settled = false;
+      let detach: () => void = (): void => {};
+      detach = content.subscribe((state): void => {
+        if (settled) return;
+        const retired = this.startupContent !== content || this.runtimeOwner !== owner;
+        if (state.phase === 'ready' && !retired) { settled = true; detach(); resolve(); }
+        else if (retired || state.phase === 'recovery' || state.phase === 'platform-unavailable' || state.phase === 'retired') {
+          settled = true; detach(); reject(new Error('LIBRARY_RESTORE_CONTENT_NOT_READY'));
+        }
+      });
+      if (settled) detach();
+    });
+  }
+
   onWindowStageCreate(windowStage: window.WindowStage): void {
+    this.activeWindowStage = windowStage;
+    const pending = this.libraryRestoreAdoptionPending;
+    if (pending !== undefined && this.runtimeOwner === pending) {
+      void this.adoptLibraryRestore(pending).catch((error: Error): void => {
+        hilog.error(DOMAIN, 'Reader', 'Library restore Ability adoption failed: %{private}s', error.message);
+      });
+      return;
+    }
     ReaderStartupTrace.current()?.mark('window.create');
     const generation = ++this.windowStageGeneration;
     this.startupContent?.close();
     let windowReady: Promise<boolean>;
     try {
       const win = windowStage.getMainWindowSync();
-      windowReady = ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win))
+      windowReady = ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win, this.context.config))
         .catch((error: Error): boolean => {
           hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);
           return false;
@@ -263,8 +316,7 @@ export default class EntryAbility extends UIAbility {
         windowStage.loadContent('pages/ReaderStartupRecovery', (error): void => done(error.code));
       },
       ready: (): void => { if (generation === this.windowStageGeneration) {
-        this.eventLoopProbe?.start();
-        this.capacityProbe?.start();
+        this.diagnostics?.start();
       } },
       unavailable: (): void => {
         hilog.error(DOMAIN, 'Reader', 'Startup recovery content could not be mounted; platform recovery remains unavailable');
@@ -276,8 +328,8 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageDestroy(): void {
-    this.eventLoopProbe?.stop('window-destroyed');
-    this.capacityProbe?.stop();
+    this.activeWindowStage = undefined;
+    this.diagnostics?.stop('window-destroyed');
     this.startupContent?.close();
     this.startupContent = undefined;
     this.windowStageGeneration += 1;
@@ -290,10 +342,12 @@ export default class EntryAbility extends UIAbility {
       void ReaderThemeHost.systemChanged(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')
         .catch((error: Error): void => hilog.error(DOMAIN, 'Reader', 'System theme write failed: %{private}s', error.message));
     }
-    // scaledDensity can change without a window-size callback. Refreshing the
-    // shared snapshot advances its revision, so the reading pagination
-    // signature is recomputed before the next visible page is admitted.
-    ReaderWindowCoordinator.refreshConfiguration();
+    // Font configuration can change without Display density/window callbacks.
+    // Only this live stage may publish it; retired windows cannot affect a successor.
+    const stage = this.activeWindowStage;
+    if (stage !== undefined) {
+      try { ReaderWindowCoordinator.refreshConfiguration(newConfig, stage.getMainWindowSync()); } catch (_error) {}
+    }
   }
 
   onForeground(): void {
@@ -307,8 +361,7 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate('readerAppForeground', false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
     this.runtimeOwner?.releaseMangaOfflineProbe();
-    this.eventLoopProbe?.stop('background');
-    this.capacityProbe?.stop();
+    this.diagnostics?.stop('background');
     this.runtimeOwner?.flush().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);
     });
@@ -319,11 +372,13 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
-    this.mangaPlatformDiagnostic?.stop(); this.mangaPlatformDiagnostic = undefined;
-    this.eventLoopProbe?.stop('destroyed');
-    this.capacityProbe?.stop();
+    this.crashEvidence?.stop(); this.crashEvidence = undefined;
+    this.diagnostics?.close(); this.diagnostics = undefined;
     this.startupContent?.close();
     this.startupContent = undefined;
+    this.activeWindowStage = undefined;
+    this.libraryRestoreAdoptionPending = undefined;
+    this.libraryRestoreHandoffDetach?.(); this.libraryRestoreHandoffDetach = undefined;
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
@@ -356,7 +411,7 @@ export default class EntryAbility extends UIAbility {
       if (error.code) {
         hilog.error(DOMAIN, 'Reader', 'Failed to load main page: %{private}s', JSON.stringify(error));
       } else if (done === undefined) {
-        this.eventLoopProbe?.start();
+        this.diagnostics?.startEventLoop();
       }
       done?.(error.code);
     });

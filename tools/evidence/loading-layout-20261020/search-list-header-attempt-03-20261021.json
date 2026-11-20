@@ -1,0 +1,8 @@
+{
+  "command": "node tools/evidence/loading-layout-20261020/search-list-header-probe.mjs",
+  "exitCode": 1,
+  "stdout": "PASS real filter toggle changes natural header/inset identity; stale receipts reject and body facts never enter the fixed panel\nPASS loading/results/stopped/empty/error share one actual SDK List and permanent summary/notice prefix\nPASS filter height changes preserve measured book position; same scope is inert and type selection still resets once\n",
+  "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   []\n+ ]\n- []\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-list-header-probe.mjs:390:51\n    at scenario (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-list-header-probe.mjs:227:32)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-list-header-probe.mjs:365:1 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: [ [] ],\n  expected: [],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n",
+  "sourceSha256": "d62551fb614a6a5bc29a9c25bc37a29fb6ca8d2e675409c67a74baed5cdb46a7",
+  "probeSha256": "19b715bbdfa2afb68ce7e1725f89ca5540adbf8fcedd9ce33110d332bc0c52f7"
+}

@@ -1,104 +1,48 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
-import * as directoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-import * as directoryGeometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
-import { productionMangaDirectoryPressFeedback } from './manga-directory-press-feedback-probe.mjs';
-import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { labeledIconControls } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls } from './reader-foundation-control-probe.mjs';
 import { switchControls } from './reader-switch-control-probe.mjs';
 import { iconButtonControls } from './reader-icon-button-probe.mjs';
 import { mangaDirectoryEntryRowSdk } from './manga-directory-entry-row-probe.mjs';
-import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { readerContentSafeTop, createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
 import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
-import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import { createEtsBuilderProbe, builderChildProperties, builderSdkAvailable,
+  builderCompilationCacheStats, builderChildPropertyCacheStats } from './ets-builder-probe.mjs';
+import { readerProbeGlobals } from './reader-probe-globals.mjs';
 
+export const readerBuilderSdkAvailable = builderSdkAvailable;
+export const readerBuilderCompilationCacheStats = builderCompilationCacheStats;
+export const readerBuilderChildPropertyCacheStats = builderChildPropertyCacheStats;
+export const readerBuilderChildProperties = builderChildProperties;
 const sdkRoot = resolveEtsLoaderRoot();
-export const readerBuilderSdkAvailable = existsSync(`${sdkRoot}/lib/process_component_class.js`);
 let pageFrameworkProperties;
-// Cache only installed-SDK emitted code. Each use still constructs new real
-// dependency/property/native recording owners; no UI state or callback is shared.
-const sdkLoweringCache = new Map();
-let sdkLoweringCompiles = 0, sdkLoweringHits = 0;
-export const readerBuilderCompilationCacheStats = () => ({ compiles: sdkLoweringCompiles, hits: sdkLoweringHits, entries: sdkLoweringCache.size });
-const digest = value => createHash('sha256').update(value).digest('hex');
-const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
-  .match(/export const EMPTY_READABLE_ADMISSION:[\s\S]*?= \{[\s\S]*?\n\};/)[0];
-const EMPTY_READABLE_ADMISSION = new Function(stripTypeScriptTypes(readableAdmissionInitializer.replace('export ', '')) + ';return EMPTY_READABLE_ADMISSION;')();
-const childPropertyMetadata = new Map();
-let childPropertyParses = 0, childPropertyHits = 0;
-export const readerBuilderChildPropertyCacheStats = () => ({ parses: childPropertyParses, hits: childPropertyHits, entries: childPropertyMetadata.size });
-function selectComponentDeclaration(tree, name, ts) {
-  const declarations = tree.statements.filter(node => node.members && node.name &&
-    node.members.some(member => member.name?.getText(tree) === 'build'));
-  const exact = name === undefined ? undefined : declarations.find(node => node.name.getText(tree) === name);
-  if (exact !== undefined) return exact;
-  const exported = declarations.filter(node => node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
-  assert.ok(exported.length === 1 || declarations.length === 1,
-    'multi-component production ETS requires an explicit componentName or one exported component');
-  return exported[0] ?? declarations[0];
-}
-/** Share only successful immutable child Prop metadata before the existing
- * lowering cache. SDK registration receives a fresh Set on every invocation;
- * component classes, dependencies, windows and property runtimes stay fresh. */
-export function readerBuilderChildProperties(definition, name) {
-  const require = createRequire(import.meta.url), ts = require(`${sdkRoot}/node_modules/typescript`);
-  const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
-  const file = virtualFilePath('ReaderBuilderProbe.ets');
-  const key = JSON.stringify([sdkRoot, ts.version, file, ts.ScriptTarget.Latest, ts.ScriptKind.ETS, options, name ?? null, definition]);
-  let names = childPropertyMetadata.get(key);
-  if (names === undefined) {
-    childPropertyParses++;
-    const tree = ts.createSourceFile(file, definition, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-    assert.equal(tree.parseDiagnostics.length, 0, 'actual shared child ETS parses');
-    const declaration = selectComponentDeclaration(tree, name, ts);
-    names = Object.freeze((declaration?.members ?? []).filter(member => ts.isPropertyDeclaration(member) &&
-      ts.getAllDecorators(member).some(decorator => {
-        const expression = decorator.expression;
-        return (ts.isCallExpression(expression) ? expression.expression : expression).getText(tree) === 'Prop';
-      })).map(member => member.name.getText(tree)));
-    // A full cache follows the original parse path without adding entries.
-    if (childPropertyMetadata.size < 256) childPropertyMetadata.set(key, names);
-  } else childPropertyHits++;
-  return new Set(names);
+
+/** Mount actual SDK-emitted child components into the parent probe. The
+ * factory supplies its own deps/hooks/property runtime; the consumer's
+ * explicit values still win. Every child family here uses this exact merge. */
+function mountProbeChildren({ dependencies, hooks, factory, lifecycle = false }) {
+  const controls = factory();
+  const originalHooks = hooks;
+  return {
+    dependencies: { ...(controls.dependencies ?? controls.deps), ...dependencies },
+    hooks: { ...controls.hooks, ...originalHooks,
+      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true, ...(lifecycle ? { lifecycleChildren: true } : {}),
+      onChildUpdated(child, params) {
+        controls.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    },
+  };
 }
 
-/** Run the actual SDK-emitted observer closures, mounting each Builder once.
- * This models closure lifetime, not ArkUI's dependency scheduling/native layout.
- * No source files, compiler cache, HAP or device are written by this helper. */
-export function createReaderBuilderProbe(source, names, dependencies = {}, hooks = {}) {
-  assert.ok(readerBuilderSdkAvailable, 'SDK required for the real Builder closure probe');
-  const require = createRequire(import.meta.url);
-  const ts = require(`${sdkRoot}/node_modules/typescript`);
-  const compiler = require(`${sdkRoot}/lib/process_component_class.js`);
-  const utils = require(`${sdkRoot}/lib/utils.js`);
-  const main = require(`${sdkRoot}/main.js`);
-  const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
-  const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
-  const parse = text => ts.createSourceFile(virtualFilePath('ReaderBuilderProbe.ets'), text,
-    ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const componentDeclaration = (tree, name) => selectComponentDeclaration(tree, name, ts);
-  const childProps = readerBuilderChildProperties;
-  const original = parse(source);
-  assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
-  const struct = componentDeclaration(original, hooks.componentName);
-  assert.ok(struct, 'production component declaration exists');
-  readerPageBuilderSlots(source,struct.name.getText(original));
-  // Match the real SDK frontend's whole-struct Builder name collection. A
-  // focused probe may supply a pre-existing nonselected Builder seam, but its
-  // actual declared UI syntax must still be recognized by the compiler.
-  for (const member of struct.members) if (member.name && ts.getAllDecorators(member)
-    .some(decorator => decorator.getText(original) === '@Builder'))
-    require(`${sdkRoot}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(member.name.getText(original));
-  names = [...names];
+// Reader composition fixture. Generic SDK lowering lives in ets-builder-probe.
+function prepareReaderFixture({ source, names, dependencies, hooks, original, struct,
+  ts, syntax, parse, componentDeclaration, childProps, require }) {
+  readerPageBuilderSlots(source, struct.name.getText(original));
   // Main-tab migration adds real optional slots with production defaults.
   // Preserve those declarations/initializer Builders in old partial-method
   // probes rather than filling a fake empty callback in every consumer test.
@@ -212,17 +156,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const missingMessages = ['ReaderPageState', 'ReaderRecoveryAction', 'ReaderRecoveryNotice'].filter(name =>
     dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
   if (missingMessages.length > 0) {
-    const messages = boundedSurfaceSdk();
-    const originalHooks = hooks;
-    dependencies = { ...messages.deps, ...dependencies };
-    hooks = { ...messages.hooks, ...originalHooks,
-      childSources: { ...messages.childSources, ...originalHooks.childSources },
-      mountChildren: true, lifecycleChildren: true,
-      onChildUpdated(child, params) {
-        messages.properties.flush();
-        originalHooks.onChildUpdated?.(child, params);
-      },
-    };
+    ({ dependencies, hooks } = mountProbeChildren({ dependencies, hooks, factory: boundedSurfaceSdk, lifecycle: true }));
   }
   // Page migration introduces only these three finite visual hosts. Older
   // business probes still execute their own production slots, now delegated
@@ -264,17 +198,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     } };
   }
   if (dependencies.MangaDirectoryEntryRow === undefined && /\bMangaDirectoryEntryRow\s*\(/.test(members.join('\n'))) {
-    const controls = mangaDirectoryEntryRowSdk();
-    const originalHooks = hooks;
-    dependencies = { ...controls.deps, ...dependencies };
-    hooks = { ...controls.hooks, ...originalHooks,
-      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
-      mountChildren: true,
-      onChildUpdated(child, params) {
-        controls.properties.flush();
-        originalHooks.onChildUpdated?.(child, params);
-      },
-    };
+    ({ dependencies, hooks } = mountProbeChildren({ dependencies, hooks, factory: mangaDirectoryEntryRowSdk }));
   }
   // Legacy consumers now mount the same production controls as new callers.
   // Resolve only actual calls in the selected production members, and keep an
@@ -283,17 +207,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const missingFoundation = ['ReaderButton', 'ReaderFormField', 'ReaderLabeledIconAction'].filter(name =>
     dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
   if (missingFoundation.length > 0) {
-    const foundation = missingFoundation.includes('ReaderLabeledIconAction') ? labeledIconControls() : foundationControls();
-    const originalHooks = hooks;
-    dependencies = { ...foundation.dependencies, ...dependencies };
-    hooks = { ...foundation.hooks, ...originalHooks,
-      childSources: { ...foundation.hooks.childSources, ...originalHooks.childSources },
-      mountChildren: true, lifecycleChildren: true,
-      onChildUpdated(child, params) {
-        foundation.properties.flush();
-        originalHooks.onChildUpdated?.(child, params);
-      },
-    };
+    const factory = missingFoundation.includes('ReaderLabeledIconAction') ? labeledIconControls : foundationControls;
+    ({ dependencies, hooks } = mountProbeChildren({ dependencies, hooks, factory, lifecycle: true }));
   }
   // The two existing controlled switch families follow the same bounded
   // actual-child resolution. Explicit components remain authoritative; the
@@ -301,30 +216,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const missingSwitch = ['ReaderToggle', 'ReaderSegmentedControl'].filter(name =>
     dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
   if (missingSwitch.length > 0) {
-    const controls = switchControls();
-    const originalHooks = hooks;
-    dependencies = { ...controls.dependencies, ...dependencies };
-    hooks = { ...controls.hooks, ...originalHooks,
-      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
-      mountChildren: true, lifecycleChildren: true,
-      onChildUpdated(child, params) {
-        controls.properties.flush();
-        originalHooks.onChildUpdated?.(child, params);
-      },
-    };
+    ({ dependencies, hooks } = mountProbeChildren({ dependencies, hooks, factory: switchControls, lifecycle: true }));
   }
   if (dependencies.ReaderIconButton === undefined && /\bReaderIconButton\s*\(/.test(members.join('\n'))) {
-    const controls = iconButtonControls();
-    const originalHooks = hooks;
-    dependencies = { ...controls.dependencies, ...dependencies };
-    hooks = { ...controls.hooks, ...originalHooks,
-      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
-      mountChildren: true, lifecycleChildren: true,
-      onChildUpdated(child, params) {
-        controls.properties.flush();
-        originalHooks.onChildUpdated?.(child, params);
-      },
-    };
+    ({ dependencies, hooks } = mountProbeChildren({ dependencies, hooks, factory: iconButtonControls, lifecycle: true }));
   }
   // Index and reading-entry probes may mount the production full-directory
   // child directly. Register its real @Prop contract with the SDK syntax
@@ -367,8 +262,6 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       updateStateVars(next) { Object.assign(this.params, next); }
     } };
   }
-  main.partialUpdateConfig.partialUpdateMode = true;
-  utils.storedFileInfo.setCurrentArkTsFile();
   // Register the actual shared child Prop names so the SDK emits its real
   // updateStateVarsOfChildByElmtId payload instead of an empty test stub.
   const childName = 'ReaderControlSwitchTrack';
@@ -383,176 +276,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     syntax.componentCollection.customComponents.add(name);
     syntax.propCollection.set(name, childProps(definition));
   }
-  for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
-    syntax.componentCollection.customComponents.add(name);
-    syntax.propCollection.set(name, childProps(child, name));
-    const pageSlots=readerPageBuilderSlots(child,name);
-    if(pageSlots)syntax.builderParamObjectCollection.set(name,pageSlots);
-  }
-  const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
-  // The full SDK frontend collects declared method names before transforming
-  // @Watch. Preserve that prepass for fixtures that include real decorated fields.
-  syntax.classMethodCollection.set(file.fileName, new Map([['ReaderBuilderProbe', new Set(
-    file.statements[0].members.filter(node => ts.isMethodDeclaration(node)).map(node => node.name.getText(file)),
-  )]]));
-  const properties = file.statements[0].members.filter(node => ts.isPropertyDeclaration(node));
-  syntax.regularCollection.set('ReaderBuilderProbe', new Set(properties.filter(node =>
-    ts.getAllDecorators(node).length === 0).map(node => node.name.getText(file))));
-  syntax.componentCollection.currentClassName = 'ReaderBuilderProbe';
-  require(`${sdkRoot}/lib/process_ui_syntax.js`).transformLog.sourceFile = file;
-  const calledNames = new Set();
-  const collectCalls = node => { if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) &&
-    ts.isIdentifier(node.expression)) calledNames.add(node.expression.text); ts.forEachChild(node, collectCalls); };
-  collectCalls(file);
-  const schema = [...calledNames].sort().map(name => [name, syntax.componentCollection.customComponents.has(name),
-    ...['propCollection','builderParamObjectCollection','regularCollection','propertyCollection'].map(key => [...(syntax[key]?.get(name) ?? [])].sort())]);
-  const childSources = Object.entries(hooks.childSources ?? {}).sort(([a],[b])=>a.localeCompare(b)).map(([name,text])=>[name,digest(text)]);
-  const cacheKey = digest(JSON.stringify([sdkRoot, ts.version, file.text, schema, childSources, hooks.allowEmptyBranchAdmission === true]));
-  let lowered = sdkLoweringCache.get(cacheKey), output;
-  if (lowered === undefined) {
-    const diagnostics = [];
-    let transformed;
-    const result = ts.transform(file, [context => node => {
-      require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
-      transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
-      const visit = child => ts.visitEachChild(child, visit, context);
-      transformed = ts.visitNode(transformed, visit);
-      return node;
-    }]);
-    result.dispose();
-    assert.deepEqual(diagnostics, [], 'real SDK Builder/member transform has no diagnostics');
-    output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
-    sdkLoweringCompiles++;
-    if (sdkLoweringCache.size >= 256) sdkLoweringCache.delete(sdkLoweringCache.keys().next().value);
-    lowered = { output, javascript: stripTypeScriptTypes(output) };
-    sdkLoweringCache.set(cacheKey, lowered);
-  } else { sdkLoweringHits++; output = lowered.output; }
-  assert.match(output, /observeComponentCreation2/, 'exercise real SDK observer closures');
-  let activeOwner, activeId;
-  // The SDK lowers a component .animation modifier to Context start/reset
-  // instructions surrounding its native attributes. Record those unmodified
-  // instructions on the active observer; never pretend to render their frames.
-  const nativeContext = { animation(value) {
-    if (activeOwner === undefined) return;
-    const record = activeOwner.nodes.get(activeId);
-    activeOwner.attributeCalls.push({ id: activeId, property: 'contextAnimation', args: [value] });
-    if (value !== null && value !== undefined) record.animation = value;
-  } };
-  const native = name => { const instance = new Proxy({ name }, { get(target, property) {
-    if (property === 'name') return name;
-    return (...args) => {
-      if (property === 'canRetake') return false; // Fresh native tree: no retained id may skip creation.
-      if (property === 'pop' || activeOwner === undefined) return;
-      const record = activeOwner.nodes.get(activeId);
-      activeOwner.attributeCalls.push({ id: activeId, property, args });
-      if (property === 'attributeModifier') { args[0].applyNormalAttribute(instance); return instance; }
-      if (property === 'create') record.type = name;
-      // ArkUI TextInput.type() is an input attribute, not the native node kind.
-      // Keep the actual call in attributeCalls and preserve both identities.
-      record[property === 'type' ? 'nativeInputType' : property] = args.length === 1 ? args[0] : args;
-      return instance;
-    };
-  } }); return instance; };
-  class ViewPU {
-    constructor(parent, _storage, id = -1) {
-      this.owner = parent; this.id = id;
-      this.observers = []; this.nodes = new Map(); this.children = new Map(); this.keys = new Map(); this.attributeCalls = [];
-      this.watches = new Map();
-    }
-    finalizeConstruction() {}
-    createStorageLink(_key, value, name) {
-      return new dependencies.ObservedPropertySimplePU(value, this, name);
-    }
-    getUIContext() { return dependencies.uiContext?.getFont ? dependencies.uiContext : { ...dependencies.uiContext, getFont: () => ({}) }; }
-    declareWatch(name, callback) { this.watches.set(name, callback); }
-    observeComponentCreation2(callback, component) {
-      const id = this.observers.length;
-      this.observers.push(callback);
-      this.nodes.set(id, { type: component.name, id });
-      this.runObserver(id, true);
-    }
-    runObserver(id, initial) {
-      activeOwner = this; activeId = id;
-      const previousContext = globalThis.Context;
-      globalThis.Context = nativeContext;
-      hooks.onObserverEnter?.(this, id);
-      try { this.observers[id](id, initial); }
-      finally {
-        try { hooks.onObserverExit?.(this, id); }
-        finally { globalThis.Context = previousContext; activeOwner = undefined; }
-      }
-    }
-    replayOnly(ids) { for (const id of ids) this.runObserver(id, false); }
-    replay() {
-      const before = this.observers.length;
-      for (let id = 0; id < before; id++) this.runObserver(id, false);
-      if (!hooks.allowEmptyBranchAdmission) assert.equal(this.observers.length, before, 'state update does not remount Builder actors');
-    }
-    forEachUpdateFunction(id, data, generator, key) {
-      const seen = this.keys.get(id) ?? new Set(); this.keys.set(id, seen);
-      data.forEach((item, index) => {
-        const identity = key(item, index);
-        if (!seen.has(identity)) { seen.add(identity); generator(item, index); }
-      });
-    }
-    ifElseBranchUpdateFunction(id, generator) {
-      const key = `if-${activeId}`;
-      if (!this.keys.has(key)) {
-        this.keys.set(key, id); const before = this.observers.length; generator();
-        this.keys.set(`${key}-empty`, before === this.observers.length);
-      } else if (hooks.allowEmptyBranchAdmission && this.keys.get(key) !== id) {
-        assert.equal(this.keys.get(`${key}-empty`), true, 'probe only admits previously empty branches; it does not model removal');
-        this.keys.set(key, id); const before = this.observers.length; generator();
-        this.keys.set(`${key}-empty`, before === this.observers.length);
-      }
-    }
-    updateStateVarsOfChildByElmtId(id, params) {
-      const record = this.children.get(id); assert.ok(record, 'native child retained');
-      hooks.onChildUpdate?.(record, params);
-      if (typeof record.updateStateVars === 'function') record.updateStateVars(params);
-      else Object.assign(record.params, params);
-      hooks.onChildUpdated?.(record, params);
-    }
-    static create(child) {
-      child.owner.children.set(child.id, child);
-      if (hooks.lifecycleChildren) child.aboutToAppear?.();
-      if (hooks.mountChildren && typeof child.initialRender === 'function') child.initialRender();
-    }
-  }
-  class Child {
-    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
-  }
-  // Geometry/property probes do not register physical platform fonts. The
-  // actual registrar has a separate demand/failure/retry test.
-  const globals = { readerRegisteredFontFamily: (_font, family) => family,
-    readerFontFamilyReady: () => true, MangaDirectoryCurrentFooter: Child,
-    // Constructor arguments cross the platform seam unchanged; native color
-    // parsing and focus-box rasterization remain target evidence.
-    LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, ColorMetrics: { resourceColor: color => ({ color }) },
-    readerAppColor, readerThemeDefinition, readerRecoveryView, EMPTY_READABLE_ADMISSION, readerContentSafeTop, ViewPU, ReaderControlSwitchTrack: Child,
-    ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
-    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
-      .map(name => [name, native(name)])),
-    ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
-      'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign',
-      'SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
-    ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
-    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
-    // Actual production surface/inset policy, including all finite variants.
-    ...actualReaderPageShell(),
-    // Constructor identity is the native seam; movement requires an explicit
-    // focused Scroller fixture. Render probes do not simulate scroll physics.
-    Scroller: class {},
-    ReaderWindowCoordinator: { metrics: () => {
-      const metrics = createDefaultReaderWindowMetrics();
-      metrics.windowRect.width = 393; metrics.windowRect.height = 852;
-      return metrics;
-    } },
-    readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
-    ...dependencies };
-  globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
-  globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
-    { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });
-  const Component = new Function(...Object.keys(globals), `${lowered.javascript}; return ReaderBuilderProbe;`)(...Object.values(globals));
-  return { owner: new Component(undefined, hooks.initialParams ?? {}), Component, output };
+  return { names, dependencies, hooks };
+}
+export function createReaderBuilderProbe(source, names, dependencies = {}, hooks = {}) {
+  return createEtsBuilderProbe(source, names, dependencies, { ...hooks,
+    createGlobals: hooks.createGlobals ?? readerProbeGlobals, prepareComponent: prepareReaderFixture });
 }

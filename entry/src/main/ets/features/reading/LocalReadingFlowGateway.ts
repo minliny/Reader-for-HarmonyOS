@@ -1,4 +1,5 @@
 import { decodeReaderDirectoryDisplayMetadata } from './ReaderDirectoryDisplayMetadata.ts';
+import { classifyRemoteReadingCommandFailure } from './RemoteReadingContract';
 import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from './ReadingOperationIntents';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
@@ -215,7 +216,8 @@ export class LocalReadingFlowGateway {
 
   async loadToc(bookId: string, isCurrent?: LocalReadingRequestGuard): Promise<LocalReadingToc> {
     this.assertNonBlankString(bookId, 'bookId');
-    const result = await this.runtimeOwner.request('local_book.toc', { bookId }, this.requestOptions(isCurrent));
+    const result = await this.runtimeOwner.request('local_book.toc', { bookId }, this.requestOptions(isCurrent))
+      .catch((error: Error): never => { throw classifyRemoteReadingCommandFailure('local_book.toc', error); });
     this.assertLocalSource(result.data, 'local_book.toc');
     this.assertMatchingBookId(result.data, bookId, 'local_book.toc');
 
@@ -570,7 +572,8 @@ export class LocalReadingFlowGateway {
     this.assertNonNegativeInteger(chapterIndex, 'chapterIndex');
     const params: JsonObject = { bookId, chapterIndex };
     if (directoryTargetProof !== undefined) params['directoryTargetProof'] = directoryTargetProof;
-    const result = await this.runtimeOwner.request('local_book.chapter.content', params, this.requestOptions(isCurrent));
+    const result = await this.runtimeOwner.request('local_book.chapter.content', params, this.requestOptions(isCurrent))
+      .catch((error: Error): never => { throw classifyRemoteReadingCommandFailure('local_book.chapter.content', error); });
     this.assertLocalSource(result.data, 'local_book.chapter.content');
     this.assertMatchingBookId(result.data, bookId, 'local_book.chapter.content');
     const returnedIndex = this.requireNonNegativeInteger(
@@ -620,7 +623,7 @@ export class LocalReadingFlowGateway {
       'local_book.content.metrics',
       { bookId },
       this.requestOptions(isCurrent),
-    );
+    ).catch((error: Error): never => { throw classifyRemoteReadingCommandFailure('local_book.content.metrics', error); });
     this.assertLocalSource(result.data, 'local_book.content.metrics');
     this.assertMatchingBookId(result.data, bookId, 'local_book.content.metrics');
     const totalScalarLength = this.requireNonNegativeInteger(
@@ -686,7 +689,8 @@ export class LocalReadingFlowGateway {
     const result = await this.runtimeOwner.request('reading.progress.get', {
       bookId,
       sourceId: LOCAL_SOURCE_ID,
-    }, this.requestOptions(isCurrent));
+    }, this.requestOptions(isCurrent))
+      .catch((error: Error): never => { throw classifyRemoteReadingCommandFailure('reading.progress.get', error); });
     const found = result.data['found'];
     if (typeof found !== 'boolean') {
       throw new Error('reading.progress.get returned invalid found');

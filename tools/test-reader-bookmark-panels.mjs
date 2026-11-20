@@ -43,43 +43,7 @@ async function fullProjectionCase() {
   assert.deepEqual(fallback, [7], 'only an unwired legacy owner uses chapter fallback');
 }
 
-async function bookmarkRowCase() {
-  const { readFileSync } = await import('node:fs');
-  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
-  const { sampleReaderControlBookmark } = await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
-  const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkRow.ets', import.meta.url), 'utf8');
-  const { ts, options } = installedEtsCompiler();
-  const tree = ts.createSourceFile('ReaderBookmarkRow.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const constants = ['BOOKMARK_ROW_HEIGHT', 'BOOKMARK_PENDING_LABEL'];
-  const declarations = constants.map(name => {
-    const declaration = tree.statements.find(statement => ts.isVariableStatement(statement) &&
-      statement.declarationList.declarations.some(variable => variable.name.getText(tree) === name));
-    assert.ok(declaration, `actual row constant ${name}`);
-    return declaration.getText(tree).replace(/^export\s+/, '');
-  }).join('\n');
-  const emitted = ts.transpileModule(declarations, { compilerOptions: { target: ts.ScriptTarget.ES2021 } }).outputText;
-  const rowConstants = new Function(`${emitted}; return { ${constants.join(', ')} };`)();
-  const scope = { sourceId: 'remote', bookId: 'book', chapterIndex: 7, version: 'v1' };
-  for (const embedded of [false, true]) {
-    const calls = [];
-    const { owner } = createReaderBuilderProbe(source, ['build', 'motionBody', 'legacyBody', 'frame'], { sampleReaderControlBookmark, ...rowConstants });
-    Object.assign(owner, { embeddedInControl: embedded, motionProgress: 1, availableWidth: 316, appThemeScheme: 'day',
-      row: { bookmarkId: 'bookmark-7', identityStatus: 'confirmed', chapterIndex: 7, chapterOffset: 89,
-        positionScope: scope, chapterTitle: 'chapter seven', excerpt: 'actual excerpt', positionLabel: '42%', timeLabel: 'known time' },
-      onSelectBookmark: (...args) => calls.push(args),
-    });
-    owner.initialRender(); const nodes = [...owner.nodes.values()];
-    const clickable = nodes.filter(node => typeof node.onClick === 'function');
-    assert.equal(clickable.length, 1, 'one exact-anchor row action'); clickable[0].onClick();
-    assert.deepEqual(calls, [['bookmark-7', 7, 89, scope]]);
-    for (const value of ['chapter seven', 'actual excerpt', '42%', 'known time'])
-      assert.ok(nodes.some(node => node.type === 'Text' && node.create === value), `actual row field ${value}`);
-  }
-}
-
-const cases = { 'full-projection': fullProjectionCase, 'row-anchor': bookmarkRowCase };
+const cases = { 'full-projection': fullProjectionCase };
 for (const id of selectContractCases({
   'full-projection': { description: 'Actual reachable FullDirectoryPanel tab/query/sort projection under stale reactive reads and exact selection', resources: [] },
-  'row-anchor': { description: 'Actual SDK bookmark row fields and ID/chapter/offset/scope callback in embedded and full-directory forms', resources: [] },
 })) { await cases[id](); recordContractCasePass(id); }

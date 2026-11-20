@@ -1,3 +1,5 @@
+import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderLabeledIconActionSpecId, resolveReaderLabeledIconActionSpec } from './ReaderLabeledIconActionSpecs';
 import { ReaderPressFeedback } from './ReaderPressFeedback';
 import { readerAppColor } from './ReaderThemeRegistry';
@@ -7,16 +9,22 @@ class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute>
   private id: ReaderLabeledIconActionSpecId;
   private danger: boolean;
   private scheme: string;
-  constructor(id: ReaderLabeledIconActionSpecId, danger: boolean, scheme: string) {
+  private scale: number;
+  constructor(id: ReaderLabeledIconActionSpecId, danger: boolean, scheme: string, scale: number = 1) {
     this.id = id;
     this.danger = danger;
     this.scheme = scheme;
+    this.scale = scale;
   }
   applyNormalAttribute(instance: TextAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id), text = spec.text;
     if (text.fontFamily !== undefined) instance.fontFamily(text.fontFamily);
     if (text.fontWeight !== undefined) instance.fontWeight(text.fontWeight);
     instance.fontSize(text.fontSizeFp);
+    if (this.id === 'source-management-add') {
+      instance.minFontScale(1);
+      instance.maxFontScale(readerReadableFontScale(this.scale));
+    }
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     if (spec.labelMarginLeft !== undefined) instance.margin({ left: spec.labelMarginLeft });
@@ -28,15 +36,18 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   private divider: boolean;
   private scheme: string;
   private enabled: boolean;
-  constructor(id: ReaderLabeledIconActionSpecId, divider: boolean, scheme: string, enabled: boolean) {
+  private scale: number;
+  constructor(id: ReaderLabeledIconActionSpecId, divider: boolean, scheme: string, enabled: boolean, scale: number = 1) {
     this.id = id;
     this.divider = divider;
     this.scheme = scheme;
     this.enabled = enabled;
+    this.scale = scale;
   }
   applyNormalAttribute(instance: RowAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
-    if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
+    if (spec.scaleHeight) instance.height(readerScaledControlHeight(spec.rowHeight ?? 44, spec.text.lineHeightFp ?? 20, this.scale));
+    else if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
     instance.alignItems(VerticalAlign.Center);
     if (spec.rowWidth !== undefined) instance.width(spec.rowWidth);
     if (spec.horizontalPadding !== undefined) {
@@ -74,14 +85,16 @@ class ReaderLabeledIconHitModifier implements AttributeModifier<StackAttribute> 
   private id: ReaderLabeledIconActionSpecId;
   private scheme: string;
   private enabled: boolean;
-  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean) {
+  private scale: number;
+  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean, scale: number = 1) {
     this.id = id;
     this.scheme = scheme;
     this.enabled = enabled;
+    this.scale = scale;
   }
   applyNormalAttribute(instance: StackAttribute): void {
-    instance.height(44);
     const spec = resolveReaderLabeledIconActionSpec(this.id);
+    instance.height(spec.scaleHeight ? readerScaledControlHeight(spec.rowHeight ?? 44, spec.text.lineHeightFp ?? 20, this.scale) : 44);
     if (spec.equalLayout) instance.layoutWeight(1);
     if (spec.surfaceOnHit) this.feedback().applyNormalAttribute(instance);
   }
@@ -98,6 +111,7 @@ class ReaderLabeledIconHitModifier implements AttributeModifier<StackAttribute> 
 @Component
 export struct ReaderLabeledIconAction {
   @Prop scheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: ReaderLabeledIconActionSpecId = 'rss-feed';
   @Prop label: string = '';
   @Prop icon: Resource;
@@ -112,24 +126,28 @@ export struct ReaderLabeledIconAction {
   private labelContents() {
     Image(this.icon).width(resolveReaderLabeledIconActionSpec(this.specId).iconSize).height(resolveReaderLabeledIconActionSpec(this.specId).iconSize)
       .objectFit(ImageFit.Contain).opacity(this.actionEnabled ? 1 : 0.45).accessibilityLevel('no');
-    Text(this.label).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme));
+    Text(this.label).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme, this.fontScale()));
   }
   build() {
     if (resolveReaderLabeledIconActionSpec(this.specId).outerHit) {
       Stack({ alignContent: Alignment.Center }) {
         Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
-          .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled));
-      }.attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled))
+          .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()));
+      }.attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled, this.fontScale()))
         .enabled(this.actionEnabled).focusable(this.actionEnabled)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.label).onClick((): void => this.commit());
     } else {
       Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
-        .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled))
+        .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()))
         .enabled(this.actionEnabled).focusable(this.actionEnabled)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.label).onClick((): void => this.commit());
     }
+  }
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
 }

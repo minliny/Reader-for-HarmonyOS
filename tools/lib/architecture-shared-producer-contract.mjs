@@ -1,9 +1,9 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
+import { virtualFilePath } from './tool-environment.mjs';
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
 import { isSharedTypographyExpression, typographyExpressionContext } from './reader-typography-consumer-audit.mjs';
 import { novelSourceSwitchSuccessorPath, sharedSourceSwitchTypographySuccessorPath,
  validateSharedSourceSwitchTypographySuccessor, unifiedActionSheetTypographySuccessorPath,
@@ -13,8 +13,7 @@ import { novelSourceSwitchSuccessorPath, sharedSourceSwitchTypographySuccessorPa
 
 import {fullDirectoryLayoutSuccessorPath,verifyFullDirectoryLayoutSuccession} from './reader-full-directory-layout-successor.mjs';
 import {indexSyncColdLayoutSuccessorPath,verifyIndexSyncColdLayoutSuccession} from './index-sync-cold-layout-successor.mjs';
-const sdk=resolveEtsLoaderRoot();
-const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript'),options=createRequire(import.meta.url)(sdk+'/lib/ets_checker.js').compilerOptions;
+const {root:sdk,ts,options}=installedEtsCompiler();
 const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','colorFilter','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','width','height','constraintSize','opacity','clip','responseRegion']);
 const callerPhysical=new Set([...physical,'minFontScale','maxFontScale']);
 const appearance=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','minFontScale','maxFontScale']);
@@ -75,13 +74,19 @@ function canonicalArgument(expression,file){
 }
 /** Aliases are accepted only inside a registered, exact finite producer.
  * Neither a local name `type` nor a common-directory location is a contract. */
-export function registeredProducerTypographySlots(source,file,contract){
+export function registeredProducerTypographySlots(source,file,contract,{scope='physical'}={}){
+ assert.ok(scope==='physical'||scope==='typography','unknown registered producer query scope');
  const producer=contract.producers.find(p=>p.file===file);
  if(!producer)return{has:()=>false,size:0};
  const shape=sharedProducerShape(source,file);
  const expected=reviewedBookshelfActionShape(file,producer.shape);
+ if(scope==='typography'){
+  const fontShape=value=>value.styles.filter(style=>fontProperties.has(style.property));
+  assert.deepEqual(fontShape(shape),fontShape(expected),'finite shared typography/role bindings changed: '+file);
+ }else{
  const finite=({implementation,...contract})=>contract;
  assert.deepEqual(finite(shape),finite(expected),'finite shared physical inputs/role bindings changed: '+file);
+ }
  const context=typographyExpressionContext(source,file);
  const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  // The Choice modifier's local text alias must come from its actual imported

@@ -103,7 +103,6 @@ export class LocalConfigurationReset {
     LocalConfigurationReset.assertOwner(owner);
     AppStorage.setOrCreate('readerBookshelfViewMode', 'cover');
     AppStorage.setOrCreate('readerBookshelfSelectedGroup', '');
-    AppStorage.setOrCreate('readerBookshelfReadingFilter', 'all');
     AppStorage.setOrCreate('readerBookshelfSourceFilter', 'all');
     await store.delete(RESET_INTENT_KEY);
     try { await store.flush(); }

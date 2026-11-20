@@ -73,15 +73,20 @@ function timestamp(text, utc) {
   if (!Number.isFinite(date.getTime()) || fields.join(',') !== text.slice(0, 19).match(/\d+/g).map(Number).join(',')) throw new Error('VM startup timestamp is invalid');
   return date.getTime();
 }
+function guestEpochMs(query, kind) {
+  // Preserve the target's fractional seconds. Whole-second truncation can
+  // turn a valid sub-second offset into a spurious >1s disagreement.
+  const text = String(query('date -u +%s.%N')).trim();
+  const milliseconds = Number(text) * 1000;
+  if (!/^\d{10,}\.\d{1,9}$/.test(text) || !Number.isFinite(milliseconds) ||
+    milliseconds > Number.MAX_SAFE_INTEGER) throw new Error(`${kind} guest clock is unavailable`);
+  return milliseconds;
+}
 function vmBootSample(query, now, monotonicNow) {
   // OpenHarmony Toybox uptime.c uses sysinfo(); init's GetUptimeInMicroSeconds
   // writes CLOCK_MONOTONIC milestones. No procfs permission change is needed.
   const hostStart = now(), monotonicStart = monotonicNow();
-  const epoch = () => {
-    const text = String(query('date -u +%s')).trim();
-    if (!/^\d{10,}$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error('VM guest clock is unavailable');
-    return Number(text) * 1000;
-  };
+  const epoch = () => guestEpochMs(query, 'VM');
   const guestStart = epoch(), bootStart = timestamp(String(query('TZ=UTC uptime -s')).trim(), true);
   const milestones = BOOT_MILESTONES.map(name => {
     const text = String(query(`param get ohos.boot.time.${name}`)).trim();
@@ -120,11 +125,7 @@ function physicalBootSample(query, now, monotonicNow) {
   // Toybox uptime uses sysinfo(); init exposes CLOCK_MONOTONIC boot milestones.
   // User-build phones can deny procfs without denying these read-only APIs.
   const hostStart = now(), monotonicStart = monotonicNow();
-  const epoch = () => {
-    const text = String(query('date -u +%s')).trim();
-    if (!/^\d{10,}$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error('Physical guest clock is unavailable');
-    return Number(text) * 1000;
-  };
+  const epoch = () => guestEpochMs(query, 'Physical');
   const guestStart = epoch(), startText = String(query('TZ=UTC uptime -s')).trim();
   const bootStart = Date.parse(startText.replace(' ', 'T') + 'Z');
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(startText) || !Number.isFinite(bootStart) ||
@@ -140,7 +141,50 @@ function physicalBootSample(query, now, monotonicNow) {
     Math.abs(hostEnd - hostStart - (monotonicEnd - monotonicStart)) > 1000) throw new Error('Physical guest/host clock or observation is inconsistent');
   if (bootStart > guestStart + 1000 || milestones.some(value => Number(value) > Number(milestones.at(-1))) ||
     milestones.at(-1) / 1000 > guestEnd - bootStart + 1000) throw new Error('Physical boot milestone timing is inconsistent');
-  return { bootStart, milestones, guestStart, guestEnd, monotonicStart, monotonicEnd };
+  return { bootStart, milestones, guestStart, guestEnd, hostStart, hostEnd, monotonicStart, monotonicEnd };
+}
+
+// A physical uptime -s estimate is quantized to seconds. Its digest identifies
+// an observation, not an exact boot UUID; retain the clock witnesses instead.
+export function assertSameTargetBoot(initial, current) {
+  const fail = () => { throw new Error('target boot changed during storage admission'); };
+  if (initial?.status !== 'PASS' || current?.status !== 'PASS' ||
+      !initial.bootCompleted || !current.bootCompleted || !initial.sceneBoardStable || !current.sceneBoardStable ||
+      initial.bootIdentitySource !== current.bootIdentitySource ||
+      !['physical-boot-milestones-v1', 'kernel-boot-id', 'vm-startup-fingerprint-v1'].includes(initial.bootIdentitySource) ||
+      !initial.sceneBoardPidSha256 || initial.sceneBoardPidSha256 !== current.sceneBoardPidSha256) fail();
+  if (initial.bootIdentitySource !== 'physical-boot-milestones-v1') {
+    if (!initial.bootIdSha256 || initial.bootIdSha256 !== current.bootIdSha256) fail();
+    return;
+  }
+  const before = initial.physicalBootWitness, after = current.physicalBootWitness;
+  if (before?.version !== 1 || after?.version !== 1 ||
+      !Array.isArray(before.samples) || !Array.isArray(after.samples) ||
+      before.samples.length !== 2 || after.samples.length !== 2) fail();
+  const samples = [...before.samples, ...after.samples];
+  const first = samples[0];
+  for (const sample of samples) {
+    if (!sample || !['bootStart', 'guestStart', 'guestEnd', 'hostStart', 'hostEnd', 'monotonicStart', 'monotonicEnd'].every(key => Number.isFinite(sample[key])) ||
+        !Array.isArray(sample.milestones) || sample.milestones.length !== 6 ||
+        sample.milestones.some(value => !/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) <= 0) ||
+        digest(JSON.stringify(sample.milestones)) !== before.milestonesSha256 ||
+        before.milestonesSha256 !== after.milestonesSha256 ||
+        Math.abs(sample.bootStart - first.bootStart) > 1000 ||
+        sample.guestEnd < sample.guestStart || sample.hostEnd < sample.hostStart || sample.monotonicEnd < sample.monotonicStart ||
+        sample.monotonicEnd - sample.monotonicStart > 10000 ||
+        sample.guestStart < sample.hostStart - 1000 || sample.guestStart > sample.hostEnd + 1000 ||
+        sample.guestEnd < sample.hostStart - 1000 || sample.guestEnd > sample.hostEnd + 1000 ||
+        Math.abs(sample.hostEnd - sample.hostStart - (sample.monotonicEnd - sample.monotonicStart)) > 1000 ||
+        Math.abs(sample.guestStart - first.guestStart - (sample.monotonicStart - first.monotonicStart)) > 2000 ||
+        Math.abs(sample.hostStart - first.hostStart - (sample.monotonicStart - first.monotonicStart)) > 1000) fail();
+  }
+  for (let i = 1; i < samples.length; i++) {
+    const prior = samples[i - 1], next = samples[i];
+    const elapsed = next.monotonicStart - prior.monotonicEnd;
+    if (elapsed < 0 || next.guestStart <= prior.guestEnd ||
+        Math.abs(next.guestStart - prior.guestEnd - elapsed) > 2000 ||
+        Math.abs(next.hostStart - prior.hostEnd - elapsed) > 1000) fail();
+  }
 }
 
 // Only minimal read-only system queries are allowed until this succeeds.
@@ -155,6 +199,7 @@ export function targetReadiness({ targetKind, query, vmLog, now = Date.now, mono
   const sceneBoard = query('pidof com.ohos.sceneboard').trim();
   if (!/^\d+$/.test(sceneBoard)) throw new Error('SceneBoard is not running as one stable process');
   const physicalSample = physicalFallback ? physicalBootSample(query, now, monotonicNow) : undefined;
+  let physicalSecond;
   let logRecord, firstBytes, firstStat, fallback, firstSample, instance;
   if (targetKind === 'vm') {
     if (!vmLog || !lstatSync(vmLog).isFile()) throw new Error('VM readiness requires --vm-log for the currently confirmed emulator instance');
@@ -178,11 +223,20 @@ export function targetReadiness({ targetKind, query, vmLog, now = Date.now, mono
   if (physicalFallback && (observationMs < 2000 || observationMs > 10_000 || Math.abs(now() - wallStart - observationMs) > 1000)) throw new Error('Physical readiness observation interval or clock is invalid');
   if (physicalFallback) {
     const second = physicalBootSample(query, now, monotonicNow);
+    physicalSecond = second;
     if (JSON.stringify(second.milestones) !== JSON.stringify(physicalSample.milestones) ||
       Math.abs(second.bootStart - physicalSample.bootStart) > 1000 ||
       second.guestStart <= physicalSample.guestEnd ||
       second.guestStart - physicalSample.guestEnd < observationMs - 2000 ||
-      second.guestEnd - physicalSample.guestStart > second.monotonicEnd - physicalSample.monotonicStart + 2000) throw new Error('Physical boot identity or uptime changed during readiness observation');
+      second.guestEnd - physicalSample.guestStart > second.monotonicEnd - physicalSample.monotonicStart + 2000) throw new Error(
+        `Physical boot identity or uptime changed during readiness observation: ${JSON.stringify({
+          milestonesChanged: JSON.stringify(second.milestones) !== JSON.stringify(physicalSample.milestones),
+          bootStartDeltaMs: second.bootStart - physicalSample.bootStart,
+          guestGapMs: second.guestStart - physicalSample.guestEnd,
+          observationMs,
+          guestSpanMs: second.guestEnd - physicalSample.guestStart,
+          monotonicSpanMs: second.monotonicEnd - physicalSample.monotonicStart,
+        })}`);
   }
   if (fallback && (observationMs < 1000 || observationMs > 10_000 || Math.abs(now() - wallStart - observationMs) > 1000)) throw new Error('VM readiness observation interval or clock is invalid');
   if (targetKind === 'vm') {
@@ -205,6 +259,8 @@ export function targetReadiness({ targetKind, query, vmLog, now = Date.now, mono
   return { status: 'PASS', checkedAt: new Date().toISOString(), bootIdSha256: physicalFallback ? digest(JSON.stringify([physicalSample.bootStart, physicalSample.milestones])) :
       bootId.denied ? instance.identity : digest(bootId.text),
     bootIdentitySource: physicalFallback ? 'physical-boot-milestones-v1' : bootId.denied ? 'vm-startup-fingerprint-v1' : 'kernel-boot-id',
+    ...(physicalFallback ? { physicalBootWitness: { version: 1, milestonesSha256: digest(JSON.stringify(physicalSample.milestones)),
+      samples: [physicalSample, physicalSecond] } } : {}),
     ...(physicalFallback || fallback ? { uptimeSource: 'toybox-sysinfo', observationMs } : {}),
     sceneBoardPidSha256: digest(sceneBoard), bootCompleted: true, sceneBoardStable: true, emulatorLog: logRecord };
 }

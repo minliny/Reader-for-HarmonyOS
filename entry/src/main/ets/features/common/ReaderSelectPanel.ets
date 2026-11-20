@@ -2,6 +2,7 @@ import { readerAppColor } from './ReaderThemeRegistry';
 import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from './ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerSurfaceElevation } from './ReaderSurfaceSpecs';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from './ReaderWindowMetrics';
 import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth } from './ReaderSelectGeometry';
 import {
@@ -34,7 +35,7 @@ import {
 // 面板 = 已选行置顶 (panel-soft 高亮 + Bold + chevron 上旋) + 其余选项 (透明 +
 // Regular #41484C), 选项左对齐 px10, 对齐 motion 1506:8807。
 // 默认菜单独立测量选项；长名称受安全宽度/紧凑书源上限约束并原生折行。
-const OPTION_H = 36;
+const OPTION_H = 44;
 const SELECT_PAD = TOK_SPACE_CONTROL_INLINE; // 10
 const CHEVRON_GAP = 8;
 const CHEVRON_W = 12;
@@ -149,7 +150,8 @@ export struct ReaderSelectPanel {
       if (this.wrapsOptions()) {
         Scroll() {
           Column({ space: 0 }) { this.optionContent(); }.width('100%');
-        }.width('100%').layoutWeight(1).scrollBar(BarState.Auto);
+        }.width('100%').layoutWeight(1).scrollBar(BarState.Auto)
+          .borderRadius(this.panelCornerRadius()).clip(this.variant === 'appearanceLibrary');
       } else { this.optionContent(); }
     }
     .position({ x: this.panelX(), y: this.y })
@@ -159,10 +161,14 @@ export struct ReaderSelectPanel {
     .zIndex(10)
     .backgroundColor(this.panelBackgroundColor())
     .border({ width: TOK_BORDER_W, color: this.panelBorderColor() })
-    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? 8 : 6))
-    .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
-      color: this.variant === 'appearanceLibrary' ? readerAppColor('app.shadow.select', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
-    .clip(true).onAppear((): void => this.expandPanel());
+    .borderRadius(this.panelCornerRadius())
+    .clip(this.variant !== 'appearanceLibrary')
+    .shadow(readerSurfaceElevation(this.variant === 'appearanceLibrary' ? 'popover' : 'fixed', this.appThemeScheme))
+    .onAppear((): void => this.expandPanel());
+  }
+
+  private panelCornerRadius(): number {
+    return this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? 8 : 6);
   }
 
   @Builder
@@ -240,8 +246,11 @@ export struct ReaderSelectPanel {
     if (this.variant !== 'default' && this.variant !== 'sourceGroup') return naturalWidth;
     const metrics = ReaderWindowCoordinator.metrics();
     const viewportWidth = this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width;
-    return readerSelectMenuWidth(naturalWidth, viewportWidth, readerSelectAvailableWidth(viewportWidth,
-      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)), this.menuKind);
+    const availableWidth = readerSelectAvailableWidth(viewportWidth,
+      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics));
+    const minimumOuterWidth = 44 + TOK_BORDER_W * 2;
+    const requestedWidth = this.variant === 'sourceGroup' && availableWidth >= minimumOuterWidth ? Math.max(minimumOuterWidth, naturalWidth) : naturalWidth;
+    return readerSelectMenuWidth(requestedWidth, viewportWidth, availableWidth, this.menuKind);
   }
 
   private panelX(): number {

@@ -1,0 +1,103 @@
+--- a/crates/reader-runtime/src/remote/source_supply.rs
++++ b/crates/reader-runtime/src/remote/source_supply.rs
+@@ -184,10 +184,36 @@
+             proposed.book_source["provenance"][*kind]["preserveExploreRules"].as_bool()
+                 == Some(true)
+         });
++    // Distribution metadata owns its absence just like the atomic rule fields.
++    // Keep aligned with Host source-supply-lib.mjs BUNDLED_METADATA_FIELDS;
++    // arbitrary compatibility aliases and user extensions are not in this set.
++    const DISTRIBUTION_FIELDS: &[&str] = &[
++        "builtinId", "builtinVersion", "readerTestBuiltinVersion",
++        "readerBuiltinWithdrawn", "readerTestBuiltinWithdrawn", "ruleFingerprint",
++        "verifiedAt", "verificationSuiteVersion", "capabilities", "provenance",
++        "defaultEnabled", "readerHistoricalTest", "bookSourceName",
++    ];
++    let controlled_fields = proposed.book_source
++        .pointer("/provenance/contentCorrection/previousUnfingerprintedFields")
++        .and_then(|value| value.as_object())
++        .map(|fields| fields.keys().cloned().collect::<Vec<_>>())
++        .unwrap_or_default();
+     let object = proposed
+         .book_source
+         .as_object_mut()
+         .expect("validated candidate");
++    // Only merge absent top-level external fields. Provider rule objects stay
++    // atomic: recursively merging them could resurrect deliberately removed rules.
++    for (field, value) in stored.as_object().expect("marked source object") {
++        if !object.contains_key(field)
++            && !RULE_FIELDS.contains(&field.as_str())
++            && !DISTRIBUTION_FIELDS.contains(&field.as_str())
++            && !["enabled", "enabledExplore", "exploreUrl", "ruleExplore"].contains(&field.as_str())
++            && !controlled_fields.contains(field)
++        {
++            object.insert(field.clone(), value.clone());
++        }
++    }
+     object.remove("readerBuiltinWithdrawn");
+     object.remove("readerTestBuiltinWithdrawn");
+     if preserve_explore {
+@@ -390,6 +416,63 @@
+         value["ruleFingerprint"] = fingerprint(&value).unwrap().into();
+         value
+     }
++    fn parsed_candidate(value: serde_json::Value) -> Source {
++        let document = serde_json::to_string(&value).unwrap();
++        candidate("https://example.org", &document,
++            &hex::encode(Sha256::digest(document.as_bytes()))).unwrap()
++    }
++    #[test]
++    fn source_supply_upgrade_preserves_unknown_and_compatibility_fields() {
++        let mut old = bundled(6);
++        old["customButton"] = serde_json::json!({"nested":{"future":[1,null,"kept"]}});
++        old["eventListener"] = serde_json::json!({"onRead":"synthetic callback"});
++        old["variableComment"] = "synthetic comment".into();
++        old["contentRule"] = ".compat-content".into();
++        old["sourceId"] = "synthetic-compat-id".into();
++        old["bookSourceGroup"] = "synthetic group".into();
++        old["futureNull"] = serde_json::Value::Null;
++        old["candidateWins"] = "old extension".into();
++        old["enabled"] = false.into();
++        old["enabledExplore"] = false.into();
++        old["header"] = serde_json::json!({"synthetic":"old header"});
++        old["ruleContent"]["futureNestedRule"] = "old provider rule".into();
++        old["ruleFingerprint"] = fingerprint(&old).unwrap().into();
++        let stored = parsed_candidate(old.clone());
++        let mut proposed = bundled(7);
++        proposed["ruleContent"] = serde_json::json!({"content":".new-provider-body"});
++        proposed["candidateWins"] = "new extension".into();
++        proposed["ruleFingerprint"] = fingerprint(&proposed).unwrap().into();
++        let upgraded = upgrade(parsed_candidate(proposed.clone()), &stored).unwrap().unwrap();
++        let mut expected = proposed.clone();
++        for field in ["customButton", "eventListener", "variableComment", "contentRule",
++            "sourceId", "bookSourceGroup", "futureNull", "enabled", "enabledExplore"] {
++            expected[field] = old[field].clone();
++        }
++        assert_eq!(upgraded.book_source, expected);
++        assert_eq!(upgraded.book_source["ruleContent"], proposed["ruleContent"], "provider objects are atomic");
++        assert!(upgraded.book_source.get("header").is_none(), "provider may remove its own rule field");
++        assert!(upgrade(parsed_candidate(proposed.clone()), &upgraded).unwrap().is_none(), "same version/fingerprint is read-only");
++        let mut edited = stored;
++        edited.book_source["ruleContent"]["content"] = ".user-edited".into();
++        assert!(upgrade(parsed_candidate(proposed), &edited).unwrap().is_none(), "edited rules reject whole replacement");
++    }
++    #[test]
++    fn source_supply_upgrade_explicit_old_value_controls_removal() {
++        let mut old = bundled(6);
++        old["customButton"] = serde_json::json!({"action":"synthetic old action"});
++        old["variableComment"] = "retained outside explicit control".into();
++        let stored = parsed_candidate(old.clone());
++        let mut proposed = bundled(7);
++        proposed["provenance"] = serde_json::json!({"contentCorrection":{
++            "previousUnfingerprintedFields":{"customButton":old["customButton"]}
++        }});
++        let upgraded = upgrade(parsed_candidate(proposed.clone()), &stored).unwrap().unwrap();
++        assert!(upgraded.book_source.get("customButton").is_none(), "matching explicit old value permits controlled removal");
++        assert_eq!(upgraded.book_source["variableComment"], old["variableComment"]);
++        let mut changed = stored;
++        changed.book_source["customButton"] = serde_json::json!({"action":"user modification"});
++        assert!(upgrade(parsed_candidate(proposed), &changed).unwrap().is_none(), "explicit previous-value mismatch rejects replacement");
++    }
+     fn run(state: &RemoteState, params: serde_json::Value) -> serde_json::Value {
+         execute(
+             &reader_contract::Command::new(80001, "source.supply", params),

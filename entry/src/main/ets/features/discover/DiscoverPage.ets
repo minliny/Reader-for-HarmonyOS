@@ -1,3 +1,4 @@
+import { readerMainViewport } from '../shell/MainNavigationSpec';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../common/ReaderTransientFeedback';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderButton } from '../common/ReaderButton';
@@ -20,6 +21,11 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerFloatingTabContentInset,
 } from '../common/ReaderFloatingBarMetrics';
+import {
+  readerMainNavigationMode,
+  readerMainRailBottomInset,
+  readerMainRailLeading,
+} from '../shell/MainNavigationSpec';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -55,7 +61,9 @@ export struct DiscoverPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
+  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @State private measurementRevision: number = 0;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @Prop @Watch('onPresentationChanged') presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
@@ -64,6 +72,7 @@ export struct DiscoverPage {
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
   onRetryRead: (generation: number) => void = (_generation: number): void => {};
+  onSelectBook: (book: DiscoverBook) => void = (_book: DiscoverBook): void => {};
   onRefresh: () => void = (): void => {};
   onCycleSource: () => void = (): void => {};
   onSelectKind: (index: number) => void = (_index: number): void => {};
@@ -128,7 +137,6 @@ export struct DiscoverPage {
         this.operationFeedback();
         this.currentSourceCard();
         this.categoryChips();
-        this.filterRow();
         this.rankingHeader();
         this.resultList();
       }
@@ -166,14 +174,19 @@ export struct DiscoverPage {
   private pageGeometry(): ReaderPageGeometry {
     const metrics = ReaderWindowCoordinator.metrics();
     const input = new ReaderPageGeometryInput(metrics);
-    input.viewportWidth = metrics.windowRect.width;
+    input.viewportWidth = readerMainViewport(this.mainViewportRevision).width;
     input.measurementRevision = this.measurementRevision;
     input.headerHeight = this.measurements.read('discover:header', readerPageContentStartInset());
     input.contentGap = TOK_SPACE_XS;
     input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
     input.contentHorizontalPadding = TOK_SCREEN_INSET;
-    input.contentEndInset = this.bottomContentInset();
+    input.contentLeadingRail = this.railActive() ? readerMainRailLeading() : 0;
+    input.contentEndInset = this.railActive() ? readerMainRailBottomInset() : this.bottomContentInset();
     return resolveReaderPageGeometry(input);
+  }
+
+  private railActive(): boolean {
+    return readerMainNavigationMode(this.wideNavigationRail, this.mainViewportRevision, this.readerWindowMetricsRevision) === 'rail';
   }
 
   @Builder
@@ -242,48 +255,6 @@ export struct DiscoverPage {
     .height(32)
     .scrollable(ScrollDirection.Horizontal)
     .scrollBar(BarState.Off);
-  }
-
-  @Builder
-  private filterRow() {
-    Row({ space: 7 }) {
-      Row() {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_theme_night') : $r('app.media.discover_filter'))).width(20).height(20);
-        Text('筛选')
-          .fontFamily(TYPE_DISCOVER_FILTER_LABEL.fontFamily)
-          .fontWeight(TYPE_DISCOVER_FILTER_LABEL.fontWeight)
-          .fontSize(TYPE_DISCOVER_FILTER_LABEL.fontSizeFp)
-          .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number)
-          .fontColor(readerAppColor('app.text.filter', this.appThemeScheme))
-          .maxLines(1)
-          .margin({ left: 3 });
-        Text(this.currentFilterText())
-          .layoutWeight(1)
-          .fontFamily(TYPE_DISCOVER_FILTER_VALUE.fontFamily)
-          .fontWeight(TYPE_DISCOVER_FILTER_VALUE.fontWeight)
-          .fontSize(TYPE_DISCOVER_FILTER_VALUE.fontSizeFp)
-          .lineHeight(TYPE_DISCOVER_FILTER_VALUE.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .textAlign(TextAlign.RIGHT)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .padding({ left: 7 });
-        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_chevron_theme_night') : $r('app.media.discover_filter_chevron'))).width(20).height(20);
-      }
-      .layoutWeight(1)
-      .height(34)
-      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: 5 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.filter', this.appThemeScheme) })
-      .borderRadius(8);
-
-      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'discover-apply', label: '应用',
-        icon: $r('app.media.discover_apply'), onAction: (): void => this.onRefresh() });
-    }
-    .width('100%')
-    .height(34)
-    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -403,10 +374,13 @@ export struct DiscoverPage {
       .alignItems(HorizontalAlign.Start);
     }
     .width('100%')
-    .height(98)
+    .constraintSize({ minHeight: 98 })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+    .accessibilityRole(AccessibilityRoleType.BUTTON).focusable(true)
+    .accessibilityText(`${book.name}，${book.author}`)
+    .onClick((): void => this.onSelectBook(book));
   }
 
   private onMainTab(key: string): void {

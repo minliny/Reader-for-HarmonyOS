@@ -1,3 +1,6 @@
+import { ReaderExtendedProductSurface } from '../app/ReaderExtendedProductSurface';
+import { ReaderRssProductPresentation, ReaderDiscoverProductPresentation, ReaderSyncProductPresentation, type RssDetailReturnTarget, type RssSourceFeedReturnTarget } from '../app/ReaderExtendedProductPresentation';
+import type { DiscoverBook } from '../features/discover/DiscoverGateway';
 import { createDefaultSettingsSnapshot, type GeneralSettingsKey } from '../features/settings/SettingsGateway';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../features/common/ReaderTransientFeedback';
 import { readBookAuthorIdentity } from '../features/common/BookAuthorMetadata';
@@ -14,6 +17,7 @@ import { ReaderRecoveryAction } from '../features/common/ReaderRecoveryAction';
 import { MangaBookPresentation } from '../features/manga/MangaBookPresentation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
+import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
 import { BookshelfSettingsPage } from '../features/bookshelf/BookshelfSettingsPage';
 import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSelector';
@@ -25,7 +29,7 @@ import { ReaderLibrarySearchModel } from '../features/search/ReaderLibrarySearch
 import type { SearchPresentation } from '../features/search/SearchPresentation';
 import { resolveBookshelfBook } from '../features/bookshelf/BookshelfBookIdentity';
 import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
-import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { ReaderRuntimeOwner, type ReaderSourceSwitchRecoveryStatus } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupTrace } from '../app/ReaderStartupTrace';
 import { ReaderSystemFileOpenNavigationHost, type SystemFileOpenNavigationView, type SystemFileOpenReaderIdentity } from '../app/ReaderSystemFileOpenNavigationHost';
 import { errorMessageOf, localReadFailureSummary } from '../app/ErrorMessage';
@@ -59,10 +63,9 @@ import {
 import { BookshelfProjectionOwner, type BookshelfProjectionBinding, type BookshelfProjectionSnapshot } from '../features/bookshelf/BookshelfProjectionOwner';
 import { BookshelfCatalogOwner, type BookshelfCatalogBinding, type BookshelfCatalogSnapshot, type BookshelfCatalogSeeds } from '../features/bookshelf/BookshelfCatalogOwner';
 import { bookshelfSourceDisplayName, readableBookshelfSourceName, type BookshelfNamedSource } from '../features/bookshelf/BookshelfSourceNameProjection';
-import { DiscoverPage } from '../features/discover/DiscoverPage';
+
 import {
   DiscoverOrchestrator,
-  EMPTY_DISCOVER_PRESENTATION,
   type DiscoverPresentation,
 } from '../features/discover/DiscoverOrchestrator';
 import { BookshelfEmptyPage } from '../features/bookshelf/BookshelfEmptyPage';
@@ -90,11 +93,10 @@ import { BookDirectoryPage } from '../features/bookshelf/BookDirectoryPage';
 import { ReaderPageScaffold } from '../features/common/ReaderPageScaffold';
 import { ReaderTransientToast } from '../features/common/ReaderTransientToast';
 import { BookshelfNavigationTransition } from '../features/bookshelf/BookshelfNavigationTransition';
-import { BookshelfBookOrigin, BookshelfMotionRect, BookshelfMotionRequest, bookshelfMotionBookKey,
-  bookshelfMotionOriginFits, bookshelfMotionLocalOrigin } from '../features/bookshelf/BookshelfNavigationMotion';
-import { resolveReaderReadingLayout } from '../features/reading/ReaderLayoutGeometry';
-import { readerMeasureSurfaceRect } from '../features/common/ReaderSurfaceRectMeasurement';
-import { ReaderSurfaceRectIdentity, ReaderSurfaceRect, readerSurfaceRectValid } from '../features/common/ReaderSurfaceRect';
+import { BookshelfBookOrigin, BookshelfMotionRect, BookshelfMotionRequest, BookshelfPaperPalette, bookshelfMotionBookKey,
+  bookshelfMotionOriginFits, bookshelfMotionLocalOrigin, shelfMotionWindowRect } from '../features/bookshelf/BookshelfNavigationMotion';
+import { readerAppearanceThemeStyle } from '../features/reading/ReaderAppearanceRenderStyle';
+import { ReaderSurfaceRect, readerSurfaceRectValid } from '../features/common/ReaderSurfaceRect';
 import { backfillRetainedReaderDirectoryNavigation, readerDirectoryObserveMissingNavigation,
   readerDirectoryTakeMissingNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import {
@@ -162,20 +164,11 @@ import {
   type RssSourceImportResult,
   type RssSubscription,
 } from '../features/rss/RssGateway';
+import { type RssFavoritePresentation } from '../features/rss/RssEntryDetailPage';
+
+import { type RssSubscriptionManagementItem } from '../features/rss/RssSubscriptionManagementPage';
+
 import {
-  RssEntryDetailPage,
-  type RssFavoritePresentation,
-} from '../features/rss/RssEntryDetailPage';
-import {
-  RssSourceFeedPage,
-} from '../features/rss/RssSourceFeedPage';
-import {
-  RssSubscriptionManagementPage,
-  type RssSubscriptionManagementItem,
-} from '../features/rss/RssSubscriptionManagementPage';
-import { RssSubscriptionEditorPage } from '../features/rss/RssSubscriptionEditorPage';
-import {
-  EMPTY_RSS_EDITOR_SNAPSHOT,
   RssSubscriptionEditorOrchestrator,
   type RssSourceTextField,
   type RssSubscriptionEditorSnapshot,
@@ -187,11 +180,7 @@ import {
   type RssSourceSnapshot,
 } from '../features/rss/RssOrchestrator';
 import { projectOperationFacts, type OperationFacts } from '../app/ReaderOperationFacts';
-import {
-  RssPage,
-  type RssMode,
-  type RssPresentation,
-} from '../features/rss/RssPage';
+import { type RssMode, type RssPresentation } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
 import { SettingsHost } from '../features/settings/SettingsHost';
 import { SharedDownloadPage, type SharedDownloadUiIntent, type SharedDownloadViewState } from '../features/downloads/SharedDownloadPage';
@@ -214,7 +203,7 @@ import type {
   RuleSubscriptionDraft,
   TxtTocRuleDraft,
 } from '../features/settings/RulesManagementGateway';
-import type { BookSource } from '../features/source/SourceGateway';
+import type { BookSource, SourceExportResult } from '../features/source/SourceGateway';
 import { readBookSearchTiming } from '../features/common/BookSearchTiming';
 import { readerSourceCategoryIsText, readerSourceCategoryLabel } from '../features/source/ReaderSourceCategory';
 import {
@@ -232,7 +221,12 @@ import {
 import { SourceSwitchHost, type SourceSwitchContext, type SourceSwitchSnapshot,
   type SourceSwitchLease, type SourceSwitchEffect, type SourceSwitchAnchor, type SourceSwitchPendingTransaction } from '../features/source/SourceSwitchHost';
 import { SourceManagementPage } from '../features/source/SourceManagementPage';
+import { defaultSourceManagementFilters, copySourceManagementFilters,
+  sourceManagementFilterKey, copySourceManagementScroll,
+  type SourceManagementFilterState, type SourceManagementScrollState } from '../features/source/SourceManagementPresentation';
 import { SourceToolsPage } from '../features/source/SourceToolsPage';
+import { SourceGroupGateway } from '../features/source/SourceGroupGateway';
+import { EMPTY_SOURCE_GROUP_CATALOG, type SourceGroupCatalog } from '../features/source/SourceGroupTypes';
 import {
   EMPTY_SOURCE_TOOLS_SNAPSHOT,
   SourceToolsOrchestrator,
@@ -240,7 +234,7 @@ import {
 } from '../features/source/SourceToolsOrchestrator';
 import { SourceSwitchPanel } from '../features/reading/SourceSwitchPanel';
 import type { SourceSwitchPanelState } from '../features/reading/SourceSwitchPanel';
-import { SyncPage } from '../features/sync/SyncPage';
+
 import type { SyncSnapshot } from '../features/sync/SyncGateway';
 import { SyncOrchestrator } from '../features/sync/SyncOrchestrator';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -265,11 +259,11 @@ type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory'
   'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync' | 'downloads';
 type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
-type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
-type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';
+
+
 type JsonImportContext = 'bookSource' | 'ruleBundle' | 'rssMerge' | 'rssReplace';
 type RulesManagementReturnTarget = 'settings' | 'reader';
-type DetailOriginRoute = 'bookshelf' | 'search';
+type DetailOriginRoute = 'bookshelf' | 'search' | 'discover';
 type DetailReturnRoute = DetailOriginRoute | 'reader';
 type DownloadReturnTarget = 'bookshelf' | 'settings' | 'reading' | 'detail' | 'directory';
 interface ReaderReturnContext {
@@ -296,7 +290,7 @@ interface ReaderBookInfoExitDestination {
 }
 type SourceManagementReturnTarget = 'settings' | 'search';
 
-type TemporaryBackScope = 'bookshelf' | 'settings' | 'source' | 'downloads';
+type TemporaryBackScope = 'bookshelf' | 'settings' | 'source' | 'sourceTools' | 'downloads';
 interface RssFeedPresentationBinding {
   current: () => boolean;
   emit: (subscriptions: RssSubscription[]) => void;
@@ -376,6 +370,10 @@ interface MangaBookIdentity {
 @Entry
 @Component
 struct Index {
+  @State private rssProduct: ReaderRssProductPresentation | undefined = undefined;
+  @State private discoverProduct: ReaderDiscoverProductPresentation | undefined = undefined;
+  @State private syncProduct: ReaderSyncProductPresentation | undefined = undefined;
+
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
@@ -406,6 +404,8 @@ struct Index {
   private indexRecoveryAction: (() => void) | undefined;
   private indexRecoveryCurrent: (() => boolean) | undefined;
   private indexRecoveryRevision: number = 0;
+  /** Identifies which owner currently holds the single index notice slot. */
+  private indexRecoveryTag: string = '';
   private shelfFeedbackKey: string = '';
   private catalogFeedbackKey: string = '';
   @State private editingShelfGroupBook: ShelfBook | undefined = undefined;
@@ -527,57 +527,48 @@ struct Index {
   private shelfMoreHandler: (() => void) | undefined = undefined;
   @State private shelfMoreIdentity: string = '';
   @State private shelfMoreGeneration: number = -1;
-  @State private rssFeedRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
-  @State private rssFeedOriginal: RssOriginalMutationProjection | undefined = undefined;
-  @State private rssSourceOriginal: RssOriginalMutationProjection | undefined = undefined;
-  @State private rssEntryOriginal: RssOriginalMutationProjection | undefined = undefined;
-  @State private rssSourceOperation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
-  @State private rssSourceRead: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
-  @State private rssEntryOperation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
-  @State private rssEntryRead: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
+
+
+
+
+
+
+
+
   private rssEditorNavigationGeneration: number = 0;
-  @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
-  @State private rssManagementOperation: RssManagementOperationProjection | undefined = undefined;
-  @State private rssManagementRead: OperationFacts<RssSubscription[]> =
-    projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
-  @State private selectedRssSubscription: RssSubscription | undefined = undefined;
-  @State private selectedRssItems: RssItem[] = [];
-  @State private selectedRssItem: RssItem | undefined = undefined;
-  @State private selectedRssFavoriteState: RssFavoritePresentation = 'loading';
-  @State private rssDetailReturnTarget: RssDetailReturnTarget = 'rss';
-  @State private rssSourceFeedReturnTarget: RssSourceFeedReturnTarget = 'rss';
-  @State private rssManagementFocusSubscriptionId: string = '';
-  @State private rssEditorSnapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
+
+
+
+
+
+
+
+
+
+
+
   @State private sourceSources: BookSource[] = [];
+  @State private sourceCatalog: SourceGroupCatalog = EMPTY_SOURCE_GROUP_CATALOG;
+  private sourceCatalogRuntime: ReaderRuntimeOwner | undefined;
+  private sourceCatalogRead: number = 0;
   @State private sourceStatusKind: SourceManagementStatusKind = 'idle';
   @State private sourceStatusMessage: string = '';
   @State private sourceImportSearchActionLabel: string = '';
   @State private sourceImportSearchActionRevision: number = 0;
   private sourceImportSearchAction: (() => void) | undefined;
-  @State private rssOperationResultMessage: string = '';
+
   @State private sourceOperation: SourceManagementProjection = { action: 'load', sourceId: '' };
   @State private settingsOperation: SettingsOperationProjection = { action: 'load' };
   @State private settingsCacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private rulesManagementSnapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
-  @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
+
   @State private settingsSection: 'home' | 'general' = 'home';
   @State private settingsSnapshot: SettingsSnapshot = createDefaultSettingsSnapshot();
   private applicationSettingsSnapshot: SettingsSnapshot | undefined = undefined;
   private applicationSettingsUnsubscribe: (() => void) | undefined = undefined;
-  @State private syncSnapshot: SyncSnapshot = {
-    webdavUrl: '',
-    webdavUser: '',
-    webdavPass: '',
-    backupPass: '',
-    webdavPath: '/ReaderBackup/ReaderHarmony',
-    saveLocation: 'WebDAV',
-    backupFrequency: '手动',
-    backupScope: '配置数据（不含离线书籍和正文，AES 加密）',
-    history: [],
-    statusMessage: '',
-  };
-  @State private syncSnapshotReady: boolean = false;
+
+
   /** Source-switch overlay presentation + the gateway that drives it. */
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
@@ -635,6 +626,9 @@ struct Index {
   @State private bookshelfLoadFailed: boolean = false;
   @State private bookshelfReadFacts: OperationFacts<BookshelfDataState> | undefined = undefined;
   private bookshelfReadOwner: ReaderRuntimeOwner | undefined = undefined;
+  private sourceSwitchRecoveryUnsubscribe: (() => void) | undefined = undefined;
+  private sourceSwitchRecoveryStatus: ReaderSourceSwitchRecoveryStatus = {
+    state: 'idle', busy: false, canRetry: false, generation: 0, recovered: 0, message: '' };
   private bookshelfProjectionOwner: BookshelfProjectionOwner | undefined;
   private bookshelfProjectionBinding: BookshelfProjectionBinding | undefined;
   private bookshelfReadNavigation: number = 0;
@@ -725,7 +719,11 @@ struct Index {
   private sourcePresentationIdentity: string = '';
   private sourceHost: SourceHost = new SourceHost(
     (sources: BookSource[]): void => { if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
-      this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) this.sourceSources = sources; },
+      this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) {
+        this.sourceSources = sources;
+        const runtime = this.mountedRuntimeOwner;
+        if (runtime !== undefined) this.publishSourceCatalog(SourceGroupGateway.catalogSnapshot(runtime));
+      } },
     (): boolean => this.route === 'source',
     (kind: SourceManagementStatusKind, message: string): void => {
       if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
@@ -763,6 +761,10 @@ struct Index {
   private detailReturnRoute: DetailReturnRoute = 'bookshelf';
   /** P0 add-source flow: how the Source Management page was entered. */
   private sourceManagementReturnTarget: SourceManagementReturnTarget = 'settings';
+  /** Same-owner Source → Tools → Back view; a fresh entry resets these four fields. */
+  private sourceManagementFilters: SourceManagementFilterState = defaultSourceManagementFilters();
+  private sourceManagementScroll: SourceManagementScrollState | undefined;
+  private sourceManagementFiltersOwner: ReaderRuntimeOwner | undefined;
   /**
    * Keyword of the search that led into Source Management. Survives the trip
    * so the post-import dialog can offer "用新书源搜索「kw」" and the return
@@ -809,12 +811,52 @@ struct Index {
       }
     });
     this.reconcileImportPresentation();
+    // Source-switch recovery never gates the shelf. An unresolved journal is
+    // shown as its own pending fact and only a real rollback refreshes rows.
+    this.sourceSwitchRecoveryUnsubscribe?.();
+    const recoveryOwner = this.mountedRuntimeOwner;
+    if (recoveryOwner !== undefined) {
+      this.applySourceSwitchRecoveryStatus(recoveryOwner.sourceSwitchRecovery(), false);
+      this.sourceSwitchRecoveryUnsubscribe = recoveryOwner.subscribeSourceSwitchRecovery(
+        (status: ReaderSourceSwitchRecoveryStatus): void => this.applySourceSwitchRecoveryStatus(status, true));
+    }
     // Shelf projection is safe to show immediately. Source-switch recovery
     // reconciles in parallel and triggers its own refresh only when it
     // actually rolls a transaction back.
     this.refreshBookshelf();
     void this.reconcilePendingSourceSwitches();
     this.mountSystemFileOpenNavigation(this.mountedRuntimeOwner);
+    this.showLibraryRestoreStartupFeedback();
+  }
+
+  private showLibraryRestoreStartupFeedback(): void {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.searchAppForeground || this.shelfReceiptRetired ||
+      this.route !== 'bookshelf' || !this.isCurrentRuntime(owner)) return;
+    const fact = owner.pendingLibraryRestoreStartupFact();
+    if (fact === undefined) return;
+    const current = (): boolean => this.searchAppForeground && !this.shelfReceiptRetired &&
+      this.route === 'bookshelf' && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      owner.pendingLibraryRestoreStartupFact() === fact;
+    const isLibrarySync = /^library-sync-[0-9a-f]{32}$/.test(fact.operationId);
+    if (fact.status === 'missing') {
+      if (this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true &&
+        this.indexRecoveryTag !== 'library-restore') return;
+      const message = isLibrarySync ? '上次同步未在本机提交，原书库已保留。请到设置继续核对原同步。' :
+        '上次恢复未提交，原书库已保留。请到设置核对原恢复。';
+      this.showIndexRecoveryNotice(message, '打开设置', (): void => {
+        if (current()) this.openSettings();
+      }, current, 'library-restore');
+      // Presenting or dismissing an unresolved fact never acknowledges it.
+      return;
+    }
+    if (this.indexRecoveryTag === 'library-restore') this.clearIndexRecoveryNotice();
+    const message = fact.status === 'committedHistorical' ? '已核对原操作记录，当前保留较新的书库数据' :
+      isLibrarySync ? '书库记录已同步；本机原书状态以书架为准' :
+        '书库记录已恢复；原书状态以书架为准，未核验位置不会自动跳转';
+    const shown = this.transientFeedback.show(() => this.getUIContext(),
+      { message, duration: READER_FEEDBACK_EXTENDED_MS }, current);
+    if (shown && current()) owner.acknowledgeLibraryRestoreStartupFact(fact);
   }
 
   aboutToDisappear(): void {
@@ -865,6 +907,10 @@ struct Index {
     this.systemFileOpenNavigation = undefined;
     this.applicationSettingsUnsubscribe?.();
     this.applicationSettingsUnsubscribe = undefined;
+    this.sourceSwitchRecoveryUnsubscribe?.();
+    this.sourceSwitchRecoveryUnsubscribe = undefined;
+    this.sourceSwitchRecoveryStatus = { state: 'idle', busy: false, canRetry: false, generation: 0,
+      recovered: 0, message: '' };
     this.applicationSettingsSnapshot = undefined;
     this.bookProjectionUnsubscribe?.();
     this.bookProjectionUnsubscribe = undefined;
@@ -882,6 +928,12 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    this.traceShelfMotion('back-entry');
+    if (this.route === 'reading' && this.shelfNavigationMotion?.direction === 'open') {
+      this.requestShelfOpeningReverse();
+      return true;
+    }
+    if (this.shelfNavigationMotion !== undefined) return true;
     if (this.mangaSourceSwitchSelectionVisible) {
       this.cancelMangaSourceSwitchSelection();
       return true;
@@ -1077,10 +1129,14 @@ struct Index {
           if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting))
             this.receiveShelfReturnMotionOrigin(origin);
         },
+        onReturnMotionUnavailable: (presentedNavigation?: number): void => {
+          if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting))
+            this.receiveShelfReturnMotionUnavailable(this.shelfNavigationMotion?.id ?? -1, presentedNavigation ?? generation);
+        },
         onBookSelected: (book: ShelfBook, presentedNavigation?: number, origin?: BookshelfBookOrigin): void => {
           // Native enabled state updates on the next render. Guard only UI
           // taps here; a failed source switch still owns its internal reopen.
-          if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting) && !this.shelfReadingPreparation && !this.readingSessionActive) this.openShelfBookWithMotion(book, origin);
+          if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting) && !this.shelfReadingPreparation && !this.readingSessionActive && this.shelfNavigationMotion === undefined) this.openShelfBookWithMotion(book, origin);
         },
         onVisibleBooksChanged: (books: ShelfBook[], presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.prepareVisibleReadingBooks(books); },
         isCurrentChromeHost: (presentedNavigation?: number): boolean =>
@@ -1102,6 +1158,9 @@ struct Index {
       BookshelfStatusContent({
         headerBottom: this.shelfHeaderHeight,
         failed: this.bookshelfLoadFailed,
+        title: this.bookshelfReadFacts?.title ?? '书架加载失败',
+        message: this.bookshelfReadFacts?.message ?? '无法读取书架内容。书架、阅读进度和书源均已保留，请重试。',
+        canRetry: this.bookshelfReadFacts?.canRetry ?? true,
         reduceMotion: this.settingsSnapshot.reduceMotion,
         onRetry: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.refreshBookshelf(); },
       });
@@ -1233,18 +1292,32 @@ struct Index {
   @Builder
   private discoverPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
     mounting: number, host: DiscoverOrchestrator | undefined) {
-    DiscoverPage({
-      presentation: this.discoverPresentation,
+    ReaderExtendedProductSurface({
+      surface: 'discover',
+      discover: this.discoverUi(),
       expandedLayout: this.expandedLayout(),
-      onBack: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.returnToBookshelf(); },
-      onRssRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openRss(); },
-      onSettingsRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openSettings(); },
-      onRetryRead: (expected: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.retryRead(expected); },
-      onRefresh: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.refresh(); },
-      onCycleSource: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.cycleSource(); },
-      onSelectKind: (index: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.selectKind(index); },
-      onPreviousPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.previousPage(); },
-      onNextPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.nextPage(); },
+      discoverEvents: {
+        onSelectBook: (book: DiscoverBook): void => {
+        if (!this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) return;
+        // @Prop may copy the row. Admit its stable identity, then use current
+        // owner data so an old retained callback cannot supply stale metadata.
+        const current = this.discoverUi().discoverPresentation.books.find((row: DiscoverBook): boolean =>
+          row.sourceId === book.sourceId && row.bookId === book.bookId);
+        if (current === undefined) return;
+        this.openRemoteBookDetail({ sourceId: current.sourceId, bookId: current.bookId, detailUrl: current.bookId,
+          contentKind: current.category === 'comic' ? 'manga' : 'text', title: current.name, author: current.author,
+          coverUrl: current.coverUrl, intro: current.intro }, this.sourceDisplayName(current.sourceId));
+      },
+        onBack: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.returnToBookshelf(); },
+        onRssRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openRss(); },
+        onSettingsRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openSettings(); },
+        onRetryRead: (expected: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.retryRead(expected); },
+        onRefresh: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.refresh(); },
+        onCycleSource: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.cycleSource(); },
+        onSelectKind: (index: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.selectKind(index); },
+        onPreviousPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.previousPage(); },
+        onNextPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.nextPage(); },
+      },
     });
   }
 
@@ -1277,7 +1350,9 @@ struct Index {
       onClearHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.clearSearchHistory(); },
       onRetryHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) host.retryHistory(); },
       onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => {
-        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.onSearchResultSelected(book, variants, displayCoverUrl);
+        // The search route remains mounted during its closing animation.
+        if (this.librarySearchMode === 'results' && this.librarySearchModel.interactive &&
+          this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.onSearchResultSelected(book, variants, displayCoverUrl);
       },
       onVisibleGroups: (groups: SearchBook[][]): void => {
         if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.scheduleSearchDetailWarmups(groups);
@@ -1347,15 +1422,34 @@ struct Index {
       .hitTestBehavior(HitTestMode.Transparent);
   }
 
+  private rssUi(): ReaderRssProductPresentation {
+    if (!isReaderProductSurfaceEnabled('rss')) throw new Error('READER_PRODUCT_SURFACE_CLOSED');
+    if (this.rssProduct === undefined) this.rssProduct = new ReaderRssProductPresentation();
+    return this.rssProduct;
+  }
+
+  private discoverUi(): ReaderDiscoverProductPresentation {
+    if (!isReaderProductSurfaceEnabled('discover')) throw new Error('READER_PRODUCT_SURFACE_CLOSED');
+    if (this.discoverProduct === undefined) this.discoverProduct = new ReaderDiscoverProductPresentation();
+    return this.discoverProduct;
+  }
+
+  private syncUi(): ReaderSyncProductPresentation {
+    if (!isReaderProductSurfaceEnabled('sync')) throw new Error('READER_PRODUCT_SURFACE_CLOSED');
+    if (this.syncProduct === undefined) this.syncProduct = new ReaderSyncProductPresentation();
+    return this.syncProduct;
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.indexContent();
       BookshelfNavigationTransition({
         request: this.shelfNavigationMotion,
+        readCurrentRequest: (): BookshelfMotionRequest | undefined => this.shelfNavigationMotion,
         reduceMotion: this.settingsSnapshot.reduceMotion || !this.searchAppForeground,
         onCovered: (id: number): void => this.onShelfCoverClosed(id),
         onReaderOpacity: (id: number, opacity: number): void => this.receiveShelfOpeningReaderOpacity(id, opacity),
-        onFinished: (id: number): void => this.finishShelfNavigationMotion(id),
+        onFinished: (id: number, reversed: boolean): void => this.finishShelfNavigationMotion(id, reversed),
       });
     }
     .id('reader-bookshelf-motion-host')
@@ -1372,7 +1466,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .padding({ top: this.retainsShelfOpeningBackground() ? this.appContentTopInset() : 0 })
-        .enabled(this.route === 'bookshelf' && !this.shelfReadingPreparation && !this.readingSessionActive)
+        .enabled(this.route === 'bookshelf' && !this.shelfReadingPreparation && !this.readingSessionActive && this.shelfNavigationMotion === undefined)
         .hitTestBehavior(this.route === 'bookshelf' ? HitTestMode.Default : HitTestMode.None)
         .accessibilityLevel(this.route === 'bookshelf' ? 'auto' : 'no-hide-descendants');
       } else if (this.route === 'bookshelfSettings') {
@@ -1394,10 +1488,10 @@ struct Index {
         this.rssSubscriptionManagementContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionEditor') {
         this.rssEditorContent();
-      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSourceFeed' && this.rssUi().selectedRssSubscription !== undefined) {
         this.rssSourceFeedContent();
-      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssEntryDetail' && this.selectedRssSubscription !== undefined &&
-        this.selectedRssItem !== undefined) {
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssEntryDetail' && this.rssUi().selectedRssSubscription !== undefined &&
+        this.rssUi().selectedRssItem !== undefined) {
         this.rssEntryDetailContent();
       } else if (isReaderProductSurfaceEnabled('discover') && this.route === 'discover') {
         this.discoverPageContent();
@@ -1412,7 +1506,7 @@ struct Index {
       } else if (this.route === 'sourceTools') {
         this.sourceToolsContent();
       } else if (isReaderProductSurfaceEnabled('sync') && this.route === 'sync') {
-        if (this.syncSnapshotReady) {
+        if (this.syncUi().syncSnapshotReady) {
           this.syncContent();
         } else {
           ReaderPageScaffold({ frameStyle: this.syncPreparingFrameStyle(), geometry: readerEmptyPageGeometry(),
@@ -1607,30 +1701,33 @@ struct Index {
   @Builder
   private syncSurface(generation: number, owner: ReaderRuntimeOwner | undefined, host: SyncOrchestrator,
     mounting: number, identity: string) {
-    SyncPage({
-      snapshot: this.syncSnapshot,
+    ReaderExtendedProductSurface({
+      surface: 'sync',
+      sync: this.syncUi(),
       expandedLayout: this.expandedLayout(),
-      onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) this.returnToSettings(); },
-      onReconcile: (expected: number): void => {
+      syncEvents: {
+        onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) this.returnToSettings(); },
+        onReconcile: (expected: number): void => {
         if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.reconcile(expected);
       },
-      onSkipBackupRetention: (expected: number): void => {
+        onSkipBackupRetention: (expected: number): void => {
         if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.skipBackupRetention(expected);
       },
-      onContinueConfigSave: (expected: number, url: string, user: string, pass: string, backupPass: string, directory: string): void => {
+        onContinueConfigSave: (expected: number, url: string, user: string, pass: string, backupPass: string, directory: string): void => {
         if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity))
           host.continueConfigSave(expected, url, user, pass, backupPass, directory);
       },
-      onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void => {
+        onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void => {
         if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.saveConfig(url, user, pass, backupPass, path);
       },
-      onTestConnection: (url: string, user: string, pass: string, path: string): void => {
+        onTestConnection: (url: string, user: string, pass: string, path: string): void => {
         if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.testConnection(url, user, pass, path);
       },
-      onTriggerBackup: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.triggerBackup(); },
-      onRestoreLatest: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.restoreLatest(); },
-      onResolveRestore: (overwriteLocal: boolean): void => {
+        onTriggerBackup: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.triggerBackup(); },
+        onRestoreLatest: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.restoreLatest(); },
+        onResolveRestore: (overwriteLocal: boolean): void => {
         if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.resolveRestore(overwriteLocal);
+      },
       },
     });
   }
@@ -1648,28 +1745,28 @@ struct Index {
   @Builder
   private rssPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
     host: RssOrchestrator | undefined, identity: string) {
-    RssPage({
-      presentation: this.rssPresentation,
-      original: this.rssFeedOriginal,
+    ReaderExtendedProductSurface({
+      surface: 'rss',
+      rss: this.rssUi(),
       presentationIdentity: identity,
-      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => {
+      expandedLayout: this.expandedLayout(),
+      rssEvents: {
+        onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => {
         if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss'))
           this.reconcileRssFeedOriginal(expected, generation, owner, mounting, host, identity);
       },
-      readFacts: this.rssFeedRead,
-      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => {
+        onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => {
         if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.loadRss(generation, facts.generation);
       },
-      expandedLayout: this.expandedLayout(),
-      activeMode: 'sources',
-      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.returnToBookshelf(); },
-      onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.refreshRss(); },
-      onManage: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssManage(); },
-      onSelectSubscription: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssSubscriptionSelected(id); },
-      onSelectItem: (subscriptionId: string, guid: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssItemSelected(subscriptionId, guid); },
-      onModeRequested: (mode: RssMode): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssModeRequested(mode); },
-      onSettingsRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openSettings(); },
-      onDiscoverRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openDiscover(); },
+        onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.returnToBookshelf(); },
+        onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.refreshRss(); },
+        onManage: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssManage(); },
+        onSelectSubscription: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssSubscriptionSelected(id); },
+        onSelectItem: (subscriptionId: string, guid: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssItemSelected(subscriptionId, guid); },
+        onModeRequested: (mode: RssMode): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssModeRequested(mode); },
+        onSettingsRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openSettings(); },
+        onDiscoverRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openDiscover(); },
+      },
     });
   }
 
@@ -1686,22 +1783,26 @@ struct Index {
   @Builder
   private rssEditorSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
     identity: string, host: RssSubscriptionEditorOrchestrator | undefined) {
-    RssSubscriptionEditorPage({
+    ReaderExtendedProductSurface({
+      surface: 'rssEditor',
+      rss: this.rssUi(),
       presentationIdentity: identity,
-      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcileOriginal(expected, identity); },
-      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.continueOriginal(expected, identity); },
-      snapshot: this.rssEditorSnapshot,
-      onReconcile: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcile(expectedGeneration); },
-      onRetryRead: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.retryLoad(expectedGeneration); },
-      onBack: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) this.returnToRssSubscriptionManagement(); },
-      onFeedUrlChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateFeedUrl(value); },
-      onTitleChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateTitle(value); },
-      onEnabledChanged: (value: boolean): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateEnabled(value); },
-      onEnabledCookieJarChanged: (value: boolean): void =>
+      expandedLayout: this.expandedLayout(),
+      rssEditorEvents: {
+        onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcileOriginal(expected, identity); },
+        onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.continueOriginal(expected, identity); },
+        onReconcile: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcile(expectedGeneration); },
+        onRetryRead: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.retryLoad(expectedGeneration); },
+        onBack: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) this.returnToRssSubscriptionManagement(); },
+        onFeedUrlChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateFeedUrl(value); },
+        onTitleChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateTitle(value); },
+        onEnabledChanged: (value: boolean): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateEnabled(value); },
+        onEnabledCookieJarChanged: (value: boolean): void =>
         { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateEnabledCookieJar(value); },
-      onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
+        onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
         { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateSourceField(field, value); },
-      onSave: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.save(); },
+        onSave: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.save(); },
+      },
     });
   }
 
@@ -1710,7 +1811,7 @@ struct Index {
     // Only a new navigation replaces this temporary child; updates keep its identity.
     // V1 regular callbacks are constructor inputs and must capture the new entity.
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.rssSourceFeedSurface(generation, this.mountedRuntimeOwner, this.selectedRssSubscription?.subscriptionId ?? '',
+      this.rssSourceFeedSurface(generation, this.mountedRuntimeOwner, this.rssUi().selectedRssSubscription?.subscriptionId ?? '',
         this.detailShelfAdmissionMount, this.rssOrchestrator, this.rssPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
@@ -1718,26 +1819,25 @@ struct Index {
   @Builder
   private rssSourceFeedSurface(generation: number, owner: ReaderRuntimeOwner | undefined, subscriptionId: string,
     mounting: number, host: RssOrchestrator | undefined, identity: string) {
-    RssSourceFeedPage({
-      subscription: this.selectedRssSubscription,
-      items: this.selectedRssItems,
+    ReaderExtendedProductSurface({
+      surface: 'rssSource',
+      rss: this.rssUi(),
       presentationIdentity: identity,
-      original: this.rssSourceOriginal,
-      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) host?.reconcileSourceOriginal(expected, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting), subscriptionId); },
-      operation: this.rssSourceOperation,
-      readFacts: this.rssSourceRead,
-      onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
+      expandedLayout: this.expandedLayout(),
+      rssSourceEvents: {
+        onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) host?.reconcileSourceOriginal(expected, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting), subscriptionId); },
+        onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
         if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId) && operation.subscriptionId === subscriptionId) host?.reconcileSourceOperation(operation, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting));
       },
-      onRetryRead: (facts: OperationFacts<RssSourceSnapshot>): void => {
+        onRetryRead: (facts: OperationFacts<RssSourceSnapshot>): void => {
         if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) host?.retrySourceRead(subscriptionId, facts, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting));
       },
-      expandedLayout: this.expandedLayout(),
-      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.returnFromRssSourceFeed(); },
-      onSelectItem: (item: RssItem): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.onRssSourceItemSelected(item); },
-      onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.refreshRssSourceFeed(); },
-      onEditSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
-      onSourceOperations: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+        onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.returnFromRssSourceFeed(); },
+        onSelectItem: (item: RssItem): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.onRssSourceItemSelected(item); },
+        onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.refreshRssSourceFeed(); },
+        onEditSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+        onSourceOperations: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+      },
     });
   }
 
@@ -1746,7 +1846,7 @@ struct Index {
     // Only a new navigation replaces this temporary child; updates keep its identity.
     // V1 regular callbacks are constructor inputs and must capture the new entity.
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.rssEntryDetailSurface(generation, this.mountedRuntimeOwner, this.selectedRssSubscription?.subscriptionId ?? '', this.selectedRssItem?.guid ?? '',
+      this.rssEntryDetailSurface(generation, this.mountedRuntimeOwner, this.rssUi().selectedRssSubscription?.subscriptionId ?? '', this.rssUi().selectedRssItem?.guid ?? '',
         this.detailShelfAdmissionMount, this.rssOrchestrator, this.rssPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
@@ -1754,28 +1854,26 @@ struct Index {
   @Builder
   private rssEntryDetailSurface(generation: number, owner: ReaderRuntimeOwner | undefined, subscriptionId: string, guid: string,
     mounting: number, host: RssOrchestrator | undefined, identity: string) {
-    RssEntryDetailPage({
-      subscription: this.selectedRssSubscription,
-      item: this.selectedRssItem,
+    ReaderExtendedProductSurface({
+      surface: 'rssEntry',
+      rss: this.rssUi(),
       presentationIdentity: identity,
-      original: this.rssEntryOriginal,
-      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.reconcileEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting), subscriptionId, guid); },
-      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.continueEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting)); },
-      operation: this.rssEntryOperation,
-      readFacts: this.rssEntryRead,
-      onReconcile: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
+      expandedLayout: this.expandedLayout(),
+      rssEntryEvents: {
+        onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.reconcileEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting), subscriptionId, guid); },
+        onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.continueEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting)); },
+        onReconcile: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
         if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid) && operation.subscriptionId === subscriptionId && operation.guid === guid) host?.reconcileEntryOperation(operation, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting));
       },
-      onRetryRead: (facts: OperationFacts<RssEntrySnapshot>): void => {
+        onRetryRead: (facts: OperationFacts<RssEntrySnapshot>): void => {
         if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.retryEntryRead(subscriptionId, guid, facts, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting));
       },
-      expandedLayout: this.expandedLayout(),
-      favoriteState: this.selectedRssFavoriteState,
-      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnFromRssEntryDetail(); },
-      onViewSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnToRssSourceFeed(); },
-      onFavoriteRequested: (favorite: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssEntryFavoriteRequested(favorite); },
-      onSourceSettings: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.openRssManagementForSubscription(subscriptionId); },
-      onOpenOriginal: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssOpenOriginalRequested(); },
+        onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnFromRssEntryDetail(); },
+        onViewSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnToRssSourceFeed(); },
+        onFavoriteRequested: (favorite: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssEntryFavoriteRequested(favorite); },
+        onSourceSettings: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.openRssManagementForSubscription(subscriptionId); },
+        onOpenOriginal: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssOpenOriginalRequested(); },
+      },
     });
   }
 
@@ -1790,27 +1888,27 @@ struct Index {
   @Builder
   private rssSubscriptionManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
     host: RssOrchestrator | undefined, identity: string) {
-    RssSubscriptionManagementPage({
-      items: this.rssSubscriptionManagementItems(),
-      expandedLayout: this.expandedLayout(),
-      focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
-      resultMessage: this.rssOperationResultMessage,
+    ReaderExtendedProductSurface({
+      surface: 'rssManagement',
+      rss: this.rssUi(),
       presentationIdentity: identity,
-      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileOriginal(expected, identity); },
-      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.continueOriginal(expected, identity); },
-      operation: this.rssManagementOperation,
-      readFacts: this.rssManagementRead,
-      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.returnToRss(); },
-      onAdd: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionAddRequested(); },
-      onImport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSourceImport(); },
-      onExport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.exportRssSources(); },
-      onToggle: (id: string, enabled: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.toggleSubscription(id, enabled); },
-      onViewArticles: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssManagementViewArticles(id); },
-      onEditSource: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionEditRequested(id); },
-      onRefresh: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.refreshSubscription(id); },
-      onDelete: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSubscriptionDelete(id); },
-      onReconcile: (operation: RssManagementOperationProjection): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileManagementOperation(operation); },
-      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.retryManagementRead(facts); },
+      managementItems: this.rssSubscriptionManagementItems(),
+      expandedLayout: this.expandedLayout(),
+      rssManagementEvents: {
+        onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileOriginal(expected, identity); },
+        onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.continueOriginal(expected, identity); },
+        onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.returnToRss(); },
+        onAdd: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionAddRequested(); },
+        onImport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSourceImport(); },
+        onExport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.exportRssSources(); },
+        onToggle: (id: string, enabled: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.toggleSubscription(id, enabled); },
+        onViewArticles: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssManagementViewArticles(id); },
+        onEditSource: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionEditRequested(id); },
+        onRefresh: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.refreshSubscription(id); },
+        onDelete: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSubscriptionDelete(id); },
+        onReconcile: (operation: RssManagementOperationProjection): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileManagementOperation(operation); },
+        onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.retryManagementRead(facts); },
+      },
     });
   }
 
@@ -2005,13 +2103,13 @@ struct Index {
     this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.selectedRssSubscription = undefined;
-    this.selectedRssItems = [];
-    this.selectedRssItem = undefined;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssDetailReturnTarget = 'rss';
-    this.rssSourceFeedReturnTarget = 'rss';
-    this.rssManagementFocusSubscriptionId = '';
+    this.rssUi().selectedRssSubscription = undefined;
+    this.rssUi().selectedRssItems = [];
+    this.rssUi().selectedRssItem = undefined;
+    this.rssUi().selectedRssFavoriteState = 'loading';
+    this.rssUi().rssDetailReturnTarget = 'rss';
+    this.rssUi().rssSourceFeedReturnTarget = 'rss';
+    this.rssUi().rssManagementFocusSubscriptionId = '';
     this.route = 'rss';
     void this.loadRss(generation);
   }
@@ -2029,13 +2127,13 @@ struct Index {
     host: RssOrchestrator | undefined, identity: string): RssFeedPresentationBinding {
     const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss');
     return { current,
-      emit: (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+      emit: (subscriptions: RssSubscription[]): void => { if (current()) this.rssUi().rssPresentation = this.feedPresentation(subscriptions, []); },
       emitRead: (facts: OperationFacts<RssSubscription[]>): void => {
         if (!current()) return;
-        this.rssFeedRead = facts;
-        if (facts.value !== undefined) this.rssPresentation = this.feedPresentation(facts.value, []);
+        this.rssUi().rssFeedRead = facts;
+        if (facts.value !== undefined) this.rssUi().rssPresentation = this.feedPresentation(facts.value, []);
       },
-      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssFeedOriginal = original; },
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssUi().rssFeedOriginal = original; },
     };
   }
 
@@ -2081,7 +2179,7 @@ struct Index {
       const current = (): boolean => this.discoverPresentationIdentity === identity &&
         this.isCurrentDiscoverPresentation(generation, owner, mounting, host, false);
       host.attachPresentation(identity, (presentation: DiscoverPresentation): void => {
-        if (current()) this.discoverPresentation = presentation;
+        if (current()) this.discoverUi().discoverPresentation = presentation;
       }, current);
     }
     return host;
@@ -2643,6 +2741,19 @@ struct Index {
   private sourceManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
     mounting: number, host: SourceHost, identity: string) {
     SourceManagementPage({
+      initialFilters: this.sourceManagementInitialFilters(),
+      initialScroll: this.sourceManagementInitialScroll(),
+      onFiltersChange: (filters: SourceManagementFilterState): void => {
+        if (!this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) return;
+        if (sourceManagementFilterKey(filters) !== sourceManagementFilterKey(this.sourceManagementFilters)) this.sourceManagementScroll = undefined;
+        this.sourceManagementFilters = copySourceManagementFilters(filters);
+        this.sourceManagementFiltersOwner = owner;
+      },
+      onScrollChange: (state: SourceManagementScrollState): void => {
+        if (!this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) return;
+        const snapshot = copySourceManagementScroll(state);
+        if (snapshot !== undefined && snapshot.filterKey === sourceManagementFilterKey(this.sourceManagementFilters)) this.sourceManagementScroll = snapshot;
+      },
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
         if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity))
           this.registerTemporaryBackBridge('source', generation, owner, handler, bridgeIdentity);
@@ -2674,6 +2785,28 @@ struct Index {
       onOpenTools: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.openSourceTools(); },
       onRetryLoad: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.retryLoad(identity); },
     });
+  }
+  private sourceManagementInitialFilters(): SourceManagementFilterState {
+    return this.sourceManagementFiltersOwner === this.mountedRuntimeOwner ?
+      copySourceManagementFilters(this.sourceManagementFilters) : defaultSourceManagementFilters();
+  }
+  private sourceManagementInitialScroll(): SourceManagementScrollState | undefined {
+    return this.sourceManagementFiltersOwner === this.mountedRuntimeOwner ? copySourceManagementScroll(this.sourceManagementScroll) : undefined;
+  }
+  private publishSourceCatalog(catalog: SourceGroupCatalog | undefined): void {
+    if (this.sourceCatalogRuntime !== this.mountedRuntimeOwner) { this.sourceCatalogRuntime = this.mountedRuntimeOwner; this.sourceCatalog = EMPTY_SOURCE_GROUP_CATALOG; }
+    if (catalog === undefined || catalog.revision < this.sourceCatalog.revision) return;
+    this.sourceCatalog = catalog;
+    this.searchHost.setSourceGroups(catalog);
+  }
+  private refreshSourceCatalog(): void {
+    const owner = this.mountedRuntimeOwner, read = ++this.sourceCatalogRead;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) return;
+    this.searchHost.setSourceGroupLoadState('loading');
+    const current = (): boolean => read === this.sourceCatalogRead && owner === this.mountedRuntimeOwner && this.isCurrentRuntime(owner);
+    void new SourceGroupGateway(owner).loadCatalog(current).then((catalog: SourceGroupCatalog): void => {
+      if (current()) this.publishSourceCatalog(catalog);
+    }).catch((): void => { if (current()) this.searchHost.setSourceGroupLoadState('error'); });
   }
   private bindSourceManagement(): boolean {
     const owner = this.mountedRuntimeOwner, host = this.sourceHost;
@@ -3052,8 +3185,8 @@ struct Index {
       const current = (): boolean => this.isCurrentSyncPresentation(generation, owner, host, mounting, identity, false);
       host.attachPresentation(identity, (snapshot: SyncSnapshot): void => {
         if (!current()) return;
-        this.syncSnapshot = snapshot; this.syncSnapshotReady = true;
-      }, (): SyncSnapshot => this.syncSnapshot, current);
+        this.syncUi().syncSnapshot = snapshot; this.syncUi().syncSnapshotReady = true;
+      }, (): SyncSnapshot => this.syncUi().syncSnapshot, current);
     }
     return host;
   }
@@ -3061,6 +3194,9 @@ struct Index {
   private openSourceManagement(returnTarget: SourceManagementReturnTarget = 'settings',
     searchKeyword: string = ''): void {
     this.nextNavigationGeneration();
+    this.sourceManagementFilters = defaultSourceManagementFilters();
+    this.sourceManagementScroll = undefined;
+    this.sourceManagementFiltersOwner = this.mountedRuntimeOwner;
     this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
@@ -3161,7 +3297,7 @@ struct Index {
     this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.route = 'search';
+    this.route = 'search'; this.refreshSourceCatalog();
     if (autoSearch && keyword.length > 0) {
       // A fresh entry reloads sources; the search itself re-checks the enabled
       // set, so a still-disabled configuration lands on sourceRequired instead
@@ -3427,7 +3563,9 @@ struct Index {
     if (!current() || sourceIds.length === 0 || host === undefined) {
       return;
     }
-    const selection = host.consumeSelection(sourceIds);
+    const available = new Set<string>(this.sourceToolsSnapshot.sources.map((source: BookSource): string => source.sourceId));
+    const seen = new Set<string>(), selection: string[] = [];
+    for (const id of sourceIds) { if (available.has(id) && !seen.has(id)) { seen.add(id); selection.push(id); } }
     if (selection.length === 0) {
       return;
     }
@@ -3463,7 +3601,7 @@ struct Index {
     this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.syncSnapshotReady = false;
+    this.syncUi().syncSnapshotReady = false;
     this.route = 'sync';
     this.getSyncOrchestrator().open();
   }
@@ -3483,13 +3621,13 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.selectedRssSubscription = undefined;
-    this.selectedRssItems = [];
-    this.selectedRssItem = undefined;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssDetailReturnTarget = 'rss';
-    this.rssSourceFeedReturnTarget = 'rss';
-    this.rssManagementFocusSubscriptionId = '';
+    this.rssUi().selectedRssSubscription = undefined;
+    this.rssUi().selectedRssItems = [];
+    this.rssUi().selectedRssItem = undefined;
+    this.rssUi().selectedRssFavoriteState = 'loading';
+    this.rssUi().rssDetailReturnTarget = 'rss';
+    this.rssUi().rssSourceFeedReturnTarget = 'rss';
+    this.rssUi().rssManagementFocusSubscriptionId = '';
     this.route = 'rssSubscriptionManagement';
     this.getRssOrchestrator().open();
   }
@@ -3510,8 +3648,8 @@ struct Index {
     if (this.rssOrchestrator !== host || this.rssPresentationIdentity !== identity) {
       this.retireRssPresentation();
       if (this.rssOrchestrator !== host) {
-        this.rssManagementOperation = undefined;
-        this.rssManagementRead = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+        this.rssUi().rssManagementOperation = undefined;
+        this.rssUi().rssManagementRead = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
       }
       this.rssOrchestrator = host;
       this.rssPresentationIdentity = identity;
@@ -3520,10 +3658,10 @@ struct Index {
         this.navigationGeneration === generation && this.isCurrentRuntime(owner);
       const current = (): boolean => admitted() && this.route === 'rssSubscriptionManagement';
       if (!host.attachPresentation(identity,
-        (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+        (subscriptions: RssSubscription[]): void => { if (current()) this.rssUi().rssPresentation = this.feedPresentation(subscriptions, []); },
         current,
-        (operation: RssManagementOperationProjection): void => { if (current()) this.rssManagementOperation = operation; },
-        (facts: OperationFacts<RssSubscription[]>): void => { if (current()) this.rssManagementRead = facts; },
+        (operation: RssManagementOperationProjection): void => { if (current()) this.rssUi().rssManagementOperation = operation; },
+        (facts: OperationFacts<RssSubscription[]>): void => { if (current()) this.rssUi().rssManagementRead = facts; },
         admitted)) {
         this.rssPresentationIdentity = '';
         throw new Error('RSS 展示已退役');
@@ -3558,7 +3696,7 @@ struct Index {
       const current = (): boolean => this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host);
       const admitted = (): boolean => this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host, false);
       if (!host.attachPresentation(identity,
-        (snapshot: RssSubscriptionEditorSnapshot): void => { if (current()) this.rssEditorSnapshot = snapshot; },
+        (snapshot: RssSubscriptionEditorSnapshot): void => { if (current()) this.rssUi().rssEditorSnapshot = snapshot; },
         (subscriptionId: string): void => { if (current()) this.finishRssSubscriptionEdit(subscriptionId); }, current, admitted)) {
         this.rssEditorPresentationIdentity = '';
         throw new Error('RSS 编辑展示已退役');
@@ -3590,14 +3728,14 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
-    this.rssSourceOriginal = undefined;
-    this.rssSourceOperation = undefined;
-    this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
-    this.selectedRssSubscription = subscription;
-    this.selectedRssItems = [];
-    this.selectedRssItem = undefined;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssSourceFeedReturnTarget = returnTarget;
+    this.rssUi().rssSourceOriginal = undefined;
+    this.rssUi().rssSourceOperation = undefined;
+    this.rssUi().rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
+    this.rssUi().selectedRssSubscription = subscription;
+    this.rssUi().selectedRssItems = [];
+    this.rssUi().selectedRssItem = undefined;
+    this.rssUi().selectedRssFavoriteState = 'loading';
+    this.rssUi().rssSourceFeedReturnTarget = returnTarget;
     this.route = 'rssSourceFeed';
     this.loadRssSourceItems(generation, subscriptionId);
   }
@@ -3633,7 +3771,7 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.rssManagementFocusSubscriptionId = subscriptionId;
+    this.rssUi().rssManagementFocusSubscriptionId = subscriptionId;
     this.route = 'rssSubscriptionManagement';
     this.getRssOrchestrator().open();
   }
@@ -3743,16 +3881,15 @@ struct Index {
     if (this.route !== 'rssSubscriptionManagement' || this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner)) {
       return;
     }
-    this.rssOperationResultMessage = `${title}：${message}`;
+    this.rssUi().rssOperationResultMessage = `${title}：${message}`;
   }
 
   private confirmRssSubscriptionDelete(subscriptionId: string, generation: number = this.navigationGeneration,
     owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
     host: RssOrchestrator | undefined = this.rssOrchestrator, identity: string = this.rssPresentationIdentity): void {
-    const stillPresent = this.rssSubscriptions().some(
-      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId);
-    if (stillPresent && this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement'))
-      host?.removeSubscription(subscriptionId);
+    if (!this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) return;
+    if (this.rssSubscriptions().some(
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId)) host?.removeSubscription(subscriptionId);
   }
 
   private isCurrentRssHostPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
@@ -3768,8 +3905,8 @@ struct Index {
     if (this.shelfReceiptRetired || !this.isCurrentRoute(generation, route)) return false;
     try {
       if (!this.isCurrentRuntime(owner)) return false;
-      if (route === 'rssSourceFeed') return this.selectedRssSubscription?.subscriptionId === subscriptionId;
-      if (route === 'rssEntryDetail') return this.selectedRssItem?.subscriptionId === subscriptionId && this.selectedRssItem?.guid === guid;
+      if (route === 'rssSourceFeed') return this.rssUi().selectedRssSubscription?.subscriptionId === subscriptionId;
+      if (route === 'rssEntryDetail') return this.rssUi().selectedRssItem?.subscriptionId === subscriptionId && this.rssUi().selectedRssItem?.guid === guid;
       return true;
     } catch (_) { return false; }
   }
@@ -3779,13 +3916,13 @@ struct Index {
     identity: string = this.rssPresentationIdentity, mounting: number = this.detailShelfAdmissionMount): RssRouteBinding<RssSourceSnapshot> {
     const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId);
     return { current,
-      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssSourceOriginal = original; },
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssUi().rssSourceOriginal = original; },
       emit: (snapshot: RssSourceSnapshot): void => { if (current()) this.applyRssSourceSnapshot(snapshot); },
       failed: (error: Error): void => { if (current()) hilog.error(DOMAIN, 'Reader', 'RSS source read failed: %{private}s', error.message); },
       emitOperation: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
-        if (current() && operation.subscriptionId === subscriptionId) this.rssSourceOperation = operation;
+        if (current() && operation.subscriptionId === subscriptionId) this.rssUi().rssSourceOperation = operation;
       },
-      emitRead: (facts: OperationFacts<RssSourceSnapshot>): void => { if (current()) this.rssSourceRead = facts; },
+      emitRead: (facts: OperationFacts<RssSourceSnapshot>): void => { if (current()) this.rssUi().rssSourceRead = facts; },
     };
   }
 
@@ -3794,13 +3931,13 @@ struct Index {
     identity: string = this.rssPresentationIdentity, mounting: number = this.detailShelfAdmissionMount): RssRouteBinding<RssEntrySnapshot> {
     const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid);
     return { current,
-      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssEntryOriginal = original; },
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssUi().rssEntryOriginal = original; },
       emit: (snapshot: RssEntrySnapshot): void => { if (current()) this.applyRssEntrySnapshot(snapshot); },
       failed: (error: Error): void => { if (current()) this.failRssEntryOperation('read', error); },
       emitOperation: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
-        if (current() && operation.subscriptionId === subscriptionId && operation.guid === guid) this.rssEntryOperation = operation;
+        if (current() && operation.subscriptionId === subscriptionId && operation.guid === guid) this.rssUi().rssEntryOperation = operation;
       },
-      emitRead: (facts: OperationFacts<RssEntrySnapshot>): void => { if (current()) this.rssEntryRead = facts; },
+      emitRead: (facts: OperationFacts<RssEntrySnapshot>): void => { if (current()) this.rssUi().rssEntryRead = facts; },
     };
   }
 
@@ -3818,7 +3955,7 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    const subscriptionId = this.selectedRssSubscription?.subscriptionId;
+    const subscriptionId = this.rssUi().selectedRssSubscription?.subscriptionId;
     if (subscriptionId === undefined || this.route !== 'rssSourceFeed') {
       return;
     }
@@ -3831,16 +3968,16 @@ struct Index {
 
   private isCurrentRssSourceFeed(generation: number, subscriptionId: string): boolean {
     return !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'rssSourceFeed') &&
-      this.selectedRssSubscription?.subscriptionId === subscriptionId;
+      this.rssUi().selectedRssSubscription?.subscriptionId === subscriptionId;
   }
 
   private applyRssSourceSnapshot(snapshot: RssSourceSnapshot): void {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
-    this.selectedRssSubscription = snapshot.subscription;
-    this.selectedRssItems = snapshot.items;
+    this.rssUi().rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
+    this.rssUi().selectedRssSubscription = snapshot.subscription;
+    this.rssUi().selectedRssItems = snapshot.items;
   }
 
   private onRssItemSelected(subscriptionId: string, guid: string): void {
@@ -3863,7 +4000,7 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    const selected = this.selectedRssItems.find(
+    const selected = this.rssUi().selectedRssItems.find(
       (candidate: RssItem): boolean => candidate.subscriptionId === item.subscriptionId &&
         candidate.guid === item.guid,
     );
@@ -3876,8 +4013,8 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    const subscription = this.selectedRssSubscription?.subscriptionId === item.subscriptionId
-      ? this.selectedRssSubscription
+    const subscription = this.rssUi().selectedRssSubscription?.subscriptionId === item.subscriptionId
+      ? this.rssUi().selectedRssSubscription
       : this.rssSubscriptions().find(
         (candidate: RssSubscription): boolean => candidate.subscriptionId === item.subscriptionId,
       );
@@ -3887,13 +4024,13 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
-    this.rssEntryOriginal = undefined;
-    this.rssEntryOperation = undefined;
-    this.rssEntryRead = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
-    this.selectedRssSubscription = subscription;
-    this.selectedRssItem = item;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssDetailReturnTarget = returnTarget;
+    this.rssUi().rssEntryOriginal = undefined;
+    this.rssUi().rssEntryOperation = undefined;
+    this.rssUi().rssEntryRead = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
+    this.rssUi().selectedRssSubscription = subscription;
+    this.rssUi().selectedRssItem = item;
+    this.rssUi().selectedRssFavoriteState = 'loading';
+    this.rssUi().rssDetailReturnTarget = returnTarget;
     this.route = 'rssEntryDetail';
     const subscriptionId = item.subscriptionId;
     const guid = item.guid;
@@ -3907,10 +4044,10 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    const item = this.selectedRssItem;
+    const item = this.rssUi().selectedRssItem;
     if (item === undefined || this.route !== 'rssEntryDetail' ||
-      (this.selectedRssFavoriteState !== 'favorited' &&
-        this.selectedRssFavoriteState !== 'notFavorited')) {
+      (this.rssUi().selectedRssFavoriteState !== 'favorited' &&
+        this.rssUi().selectedRssFavoriteState !== 'notFavorited')) {
       return;
     }
     const generation = this.navigationGeneration;
@@ -3928,26 +4065,26 @@ struct Index {
     guid: string,
   ): boolean {
     return !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'rssEntryDetail') &&
-      this.selectedRssItem?.subscriptionId === subscriptionId &&
-      this.selectedRssItem?.guid === guid;
+      this.rssUi().selectedRssItem?.subscriptionId === subscriptionId &&
+      this.rssUi().selectedRssItem?.guid === guid;
   }
 
   private applyRssEntrySnapshot(snapshot: RssEntrySnapshot): void {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
-    this.selectedRssSubscription = snapshot.subscription;
-    this.selectedRssItems = snapshot.items;
-    this.selectedRssItem = snapshot.item;
-    this.selectedRssFavoriteState = snapshot.favorite ? 'favorited' : 'notFavorited';
+    this.rssUi().rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
+    this.rssUi().selectedRssSubscription = snapshot.subscription;
+    this.rssUi().selectedRssItems = snapshot.items;
+    this.rssUi().selectedRssItem = snapshot.item;
+    this.rssUi().selectedRssFavoriteState = snapshot.favorite ? 'favorited' : 'notFavorited';
   }
 
   private failRssEntryOperation(action: string, error: Error): void {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    this.selectedRssFavoriteState = 'unavailable';
+    this.rssUi().selectedRssFavoriteState = 'unavailable';
     hilog.error(DOMAIN, 'Reader',
       'RSS EntryDetail %{private}s failed; no optimistic state applied: %{private}s',
       action, error.message);
@@ -3957,7 +4094,7 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    if (this.rssDetailReturnTarget === 'rssSourceFeed') {
+    if (this.rssUi().rssDetailReturnTarget === 'rssSourceFeed') {
       this.returnToRssSourceFeed();
       return;
     }
@@ -3968,18 +4105,19 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    if (this.selectedRssSubscription === undefined) {
+    const subscription = this.rssUi().selectedRssSubscription;
+    if (subscription === undefined) {
       this.returnToRss();
       return;
     }
-    const subscriptionId = this.selectedRssSubscription.subscriptionId;
+    const subscriptionId = subscription.subscriptionId;
     const generation = this.nextNavigationGeneration();
-    this.rssSourceOriginal = undefined;
-    this.rssSourceOperation = undefined;
-    this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
-    this.selectedRssItem = undefined;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssDetailReturnTarget = 'rssSourceFeed';
+    this.rssUi().rssSourceOriginal = undefined;
+    this.rssUi().rssSourceOperation = undefined;
+    this.rssUi().rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
+    this.rssUi().selectedRssItem = undefined;
+    this.rssUi().selectedRssFavoriteState = 'loading';
+    this.rssUi().rssDetailReturnTarget = 'rssSourceFeed';
     this.route = 'rssSourceFeed';
     this.loadRssSourceItems(generation, subscriptionId);
   }
@@ -3988,16 +4126,16 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    if (this.rssSourceFeedReturnTarget === 'rssSubscriptionManagement') {
-      const focusedSubscriptionId = this.selectedRssSubscription?.subscriptionId ?? '';
+    if (this.rssUi().rssSourceFeedReturnTarget === 'rssSubscriptionManagement') {
+      const focusedSubscriptionId = this.rssUi().selectedRssSubscription?.subscriptionId ?? '';
       this.nextNavigationGeneration();
-      this.selectedRssSubscription = undefined;
-      this.selectedRssItems = [];
-      this.selectedRssItem = undefined;
-      this.selectedRssFavoriteState = 'loading';
-      this.rssDetailReturnTarget = 'rss';
-      this.rssSourceFeedReturnTarget = 'rss';
-      this.rssManagementFocusSubscriptionId = focusedSubscriptionId;
+      this.rssUi().selectedRssSubscription = undefined;
+      this.rssUi().selectedRssItems = [];
+      this.rssUi().selectedRssItem = undefined;
+      this.rssUi().selectedRssFavoriteState = 'loading';
+      this.rssUi().rssDetailReturnTarget = 'rss';
+      this.rssUi().rssSourceFeedReturnTarget = 'rss';
+      this.rssUi().rssManagementFocusSubscriptionId = focusedSubscriptionId;
       this.route = 'rssSubscriptionManagement';
       this.getRssOrchestrator().open();
       return;
@@ -4010,13 +4148,13 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.selectedRssSubscription = undefined;
-    this.selectedRssItems = [];
-    this.selectedRssItem = undefined;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssDetailReturnTarget = 'rss';
-    this.rssSourceFeedReturnTarget = 'rss';
-    this.rssManagementFocusSubscriptionId = '';
+    this.rssUi().selectedRssSubscription = undefined;
+    this.rssUi().selectedRssItems = [];
+    this.rssUi().selectedRssItem = undefined;
+    this.rssUi().selectedRssFavoriteState = 'loading';
+    this.rssUi().rssDetailReturnTarget = 'rss';
+    this.rssUi().rssSourceFeedReturnTarget = 'rss';
+    this.rssUi().rssManagementFocusSubscriptionId = '';
     this.route = 'rss';
     this.loadRss(this.navigationGeneration);
   }
@@ -4031,13 +4169,13 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.rssManagementFocusSubscriptionId = subscriptionId;
-    this.selectedRssSubscription = undefined;
-    this.selectedRssItems = [];
-    this.selectedRssItem = undefined;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssDetailReturnTarget = 'rss';
-    this.rssSourceFeedReturnTarget = 'rss';
+    this.rssUi().rssManagementFocusSubscriptionId = subscriptionId;
+    this.rssUi().selectedRssSubscription = undefined;
+    this.rssUi().selectedRssItems = [];
+    this.rssUi().selectedRssItem = undefined;
+    this.rssUi().selectedRssFavoriteState = 'loading';
+    this.rssUi().rssDetailReturnTarget = 'rss';
+    this.rssUi().rssSourceFeedReturnTarget = 'rss';
     this.route = 'rssSubscriptionManagement';
     this.getRssOrchestrator().open();
   }
@@ -4046,8 +4184,8 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    if (this.selectedRssItem?.link === undefined ||
-      this.selectedRssItem.link.trim().length === 0) {
+    const link = this.rssUi().selectedRssItem?.link;
+    if (link === undefined || link.trim().length === 0) {
       hilog.warn(DOMAIN, 'Reader', 'RSS original link intent ignored because the entry has no link');
       return;
     }
@@ -4074,19 +4212,19 @@ struct Index {
   }
 
   private rssSubscriptions(): RssSubscription[] {
-    return RssPresentationProjection.subscriptions(this.rssPresentation);
+    return RssPresentationProjection.subscriptions(this.rssUi().rssPresentation);
   }
 
   private rssRecentUnread(): RssItem[] {
-    return RssPresentationProjection.recentUnread(this.rssPresentation);
+    return RssPresentationProjection.recentUnread(this.rssUi().rssPresentation);
   }
 
   private rssSubscriptionManagementItems(): RssSubscriptionManagementItem[] {
-    return RssPresentationProjection.managementItems(this.rssPresentation);
+    return RssPresentationProjection.managementItems(this.rssUi().rssPresentation);
   }
 
   private onSearchVisibilityChanged(): void {
-    if (!this.searchAppForeground ||
+    if ((!this.searchAppForeground && this.shelfNavigationMotion?.reversed !== true) ||
       (this.shelfNavigationMotion?.direction === 'open' && this.route !== 'reading') ||
       (this.shelfNavigationMotion?.direction === 'close' && this.route !== this.readingOriginRoute &&
         !(this.route === 'reading' && this.pendingShelfCoverExitId === this.shelfNavigationMotion.id))) {
@@ -4102,6 +4240,7 @@ struct Index {
     this.searchHost.visibilityChanged();
     void this.refreshDetailAcquisitionProjection();
     this.consumeSystemFileOpen();
+    this.showLibraryRestoreStartupFeedback();
   }
 
 
@@ -4127,6 +4266,7 @@ struct Index {
     this.route = 'search';
     this.librarySearchMode = 'input';
     this.refreshSearchShelfMembership();
+    this.refreshSourceCatalog();
     this.searchHost.open();
   }
 
@@ -4373,8 +4513,26 @@ struct Index {
     else if (flushProjection) project?.();
   }
 
-  private finishShelfNavigationMotion(id: number): void {
+  private finishShelfNavigationMotion(id: number, reversed: boolean = false): void {
     if (this.shelfNavigationMotion?.id !== id) return;
+    if (this.shelfNavigationMotion.direction === 'open' &&
+      (this.shelfNavigationMotion.reversed === true) !== reversed) {
+      this.traceShelfMotion('terminal-intent-rejected');
+      return;
+    }
+    if (this.shelfNavigationMotion.reversed) {
+      const project = this.deferredShelfMotionProjection;
+      this.deferredShelfMotionProjection = undefined;
+      this.shelfNavigationMotion = undefined;
+      this.shelfOpeningReaderOpacity = 0;
+      this.returnMotionBookKey = '';
+      this.completeReturnToReadingOrigin();
+      // Navigation cleanup normalizes opacity; keep the completed reverse at
+      // its sampled endpoint after that cleanup has retired the reader.
+      this.shelfOpeningReaderOpacity = 0;
+      project?.();
+      return;
+    }
     if (this.pendingShelfCoverExitId === id) this.onShelfCoverClosed(id);
     this.shelfNavigationMotion = undefined;
     this.shelfOpeningReaderOpacity = 1;
@@ -4382,6 +4540,31 @@ struct Index {
     const project = this.deferredShelfMotionProjection;
     this.deferredShelfMotionProjection = undefined;
     project?.();
+  }
+
+  private traceShelfMotion(phase: string): void {
+    try {
+      const request = this.shelfNavigationMotion;
+      hilog.info(0x5244, 'ReaderShelfMotion', '%{public}s', JSON.stringify({
+        uptimeMs: readerMotionNowMs(), requestId: request?.id ?? -1, route: this.route,
+        direction: request?.direction ?? 'none', reversed: request?.reversed === true,
+        fadeOnly: request?.fadeOnly === true, reduceMotion: this.settingsSnapshot.reduceMotion,
+        phase: phase, terminalGeneration: this.navigationGeneration,
+      }));
+    } catch (_) { /* Diagnostics must not affect navigation. */ }
+  }
+
+  private requestShelfOpeningReverse(): void {
+    const request = this.shelfNavigationMotion;
+    if (request?.direction !== 'open' || request.reversed || request.fadeOnly ||
+      this.settingsSnapshot.reduceMotion || !this.searchAppForeground) {
+      this.traceShelfMotion('reverse-rejected');
+      return;
+    }
+    this.shelfNavigationMotion = { id: request.id, direction: request.direction, origin: request.origin,
+      target: request.target, awaitingOrigin: request.awaitingOrigin, fadeOnly: request.fadeOnly,
+      reversed: true, paperColor: request.paperColor, paperInk: request.paperInk };
+    this.traceShelfMotion('reverse-accepted');
   }
 
   private retainsShelfOpeningBackground(): boolean {
@@ -4437,35 +4620,15 @@ struct Index {
     }));
   }
 
-  private shelfMotionPageFallback(viewport: BookshelfMotionRect): BookshelfMotionRect {
-    const layout = resolveReaderReadingLayout(viewport.width, viewport.height, this.expandedLayout(),
-      ReaderWindowCoordinator.metrics());
-    return { x: layout.contentLeft, y: layout.contentTop, width: layout.bodyWidth(),
-      height: layout.bodyHeight(false) };
-  }
-
-  private shelfMotionPageIdentity(id: number): ReaderSurfaceRectIdentity {
-    return { route: this.route, owner: JSON.stringify([this.detailBook?.sourceId ?? '',
-      this.detailBook?.bookId ?? '', id]), generation: this.navigationGeneration };
-  }
-
-  private measureShelfMotionPage(id: number, identity: ReaderSurfaceRectIdentity): BookshelfMotionRect | undefined {
-    return readerMeasureSurfaceRect(this.getUIContext(), 'reader-bookshelf-page-slot',
-      'reader-bookshelf-motion-host', identity, (): ReaderSurfaceRectIdentity => this.shelfMotionPageIdentity(id));
-  }
-
-  private backfillShelfMotionPage(id: number, identity: ReaderSurfaceRectIdentity, framesRemaining: number): void {
-    this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
-      const request = this.shelfNavigationMotion;
-      if (request?.id !== id || request.direction !== 'open') return;
-      const target = this.measureShelfMotionPage(id, identity);
-      if (target === undefined) {
-        if (framesRemaining > 1) this.backfillShelfMotionPage(id, identity, framesRemaining - 1);
-        return;
-      }
-      this.shelfNavigationMotion = { id: request.id, direction: request.direction, origin: request.origin,
-        target, awaitingTarget: request.awaitingTarget, fadeOnly: request.fadeOnly };
-    }));
+  private shelfPaperPalette(): BookshelfPaperPalette {
+    try {
+      const theme = ReaderRuntimeOwner.current().getAppearanceStore().current().activeTheme;
+      const style = readerAppearanceThemeStyle(theme);
+      return { color: style.paperStart, ink: style.ink };
+    } catch (_error) {
+      return { color: readerAppColor('TOK_PAPER', this.appThemeScheme),
+        ink: readerAppColor('TOK_INK', this.appThemeScheme) };
+    }
   }
 
   private openShelfBookWithMotion(selection: ShelfBook, origin?: BookshelfBookOrigin): void {
@@ -4484,13 +4647,14 @@ struct Index {
     };
     this.shelfMotionOrigin = source;
     this.shelfMotionWindow = viewport;
+    const palette = this.shelfPaperPalette();
     const request: BookshelfMotionRequest = { id: ++this.shelfMotionSequence, direction: 'open',
       origin: bookshelfMotionLocalOrigin(source, viewport),
-      target: this.shelfMotionPageFallback(viewport),
-      fadeOnly: !measured || this.readingContentKind !== 'text' };
+      target: shelfMotionWindowRect(viewport), fadeOnly: !measured || this.readingContentKind !== 'text',
+      paperColor: palette.color, paperInk: palette.ink };
     this.shelfOpeningReaderOpacity = 0;
     this.shelfNavigationMotion = request;
-    this.backfillShelfMotionPage(request.id, this.shelfMotionPageIdentity(request.id), 4);
+    this.traceShelfMotion('open-created');
   }
 
   private beginShelfReturnMotion(origin: BookshelfBookOrigin | undefined): boolean {
@@ -4504,37 +4668,49 @@ struct Index {
     this.pendingShelfCoverExitId = id;
     this.shelfMotionWindow = viewport;
     this.deferredShelfMotionProjection = undefined;
-    const target = this.measureShelfMotionPage(id, this.shelfMotionPageIdentity(id)) ?? this.shelfMotionPageFallback(viewport);
+    const target = shelfMotionWindowRect(viewport);
+    const fadeOnly = origin === undefined || this.readingContentKind !== 'text';
+    const palette = this.shelfPaperPalette();
     this.shelfNavigationMotion = { id, direction: 'close', origin: bookshelfMotionLocalOrigin(source, viewport),
-      target, awaitingTarget: true, fadeOnly: origin === undefined || this.readingContentKind !== 'text' };
+      target, awaitingOrigin: !(fadeOnly || this.settingsSnapshot.reduceMotion), fadeOnly,
+      paperColor: palette.color, paperInk: palette.ink };
     return true;
   }
 
-  private resolveShelfReturnMotionFallback(id: number, generation: number, framesRemaining: number): void {
+  private resolveShelfReturnMotionFallback(id: number, generation: number, deadlineMs: number): void {
     this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
       const request = this.shelfNavigationMotion;
-      if (request?.id !== id || request.direction !== 'close' || !request.awaitingTarget ||
+      if (request?.id !== id || request.direction !== 'close' || !request.awaitingOrigin ||
         generation !== this.navigationGeneration || this.route !== 'bookshelf') return;
-      if (framesRemaining > 1) {
-        this.resolveShelfReturnMotionFallback(id, generation, framesRemaining - 1);
+      if (readerMotionNowMs() < deadlineMs) {
+        this.resolveShelfReturnMotionFallback(id, generation, deadlineMs);
         return;
       }
-      this.returnMotionBookKey = '';
-      this.shelfNavigationMotion = { id, direction: 'close', origin: request.origin,
-        target: request.target, awaitingTarget: false, fadeOnly: true };
+      this.receiveShelfReturnMotionUnavailable(id, generation);
     }));
+  }
+
+  private receiveShelfReturnMotionUnavailable(id: number, generation: number): void {
+    const request = this.shelfNavigationMotion;
+    if (request?.id !== id || request.direction !== 'close' || !request.awaitingOrigin ||
+      generation !== this.navigationGeneration || this.shelfMotionReturnNavigation !== generation ||
+      this.route !== 'bookshelf') return;
+    this.returnMotionBookKey = '';
+    this.shelfNavigationMotion = { id, direction: 'close', origin: request.origin,
+      target: request.target, awaitingOrigin: false, fadeOnly: true,
+      paperColor: request.paperColor, paperInk: request.paperInk };
   }
 
   private receiveShelfReturnMotionOrigin(origin: BookshelfBookOrigin): void {
     const request = this.shelfNavigationMotion;
-    if (request === undefined || request.direction !== 'close' || !request.awaitingTarget ||
+    if (request === undefined || request.direction !== 'close' || !request.awaitingOrigin ||
       this.route !== 'bookshelf' || this.shelfMotionReturnNavigation !== this.navigationGeneration ||
       this.returnMotionBookKey !== bookshelfMotionBookKey(origin.sourceId, origin.bookId)) return;
     const viewport = this.shelfMotionViewport();
     if (viewport === undefined || !this.sameShelfMotionWindow(viewport) || !bookshelfMotionOriginFits(origin, viewport)) return;
     this.shelfNavigationMotion = { id: request.id, direction: 'close',
-      origin: bookshelfMotionLocalOrigin(origin, viewport), target: request.target, awaitingTarget: false,
-      fadeOnly: request.fadeOnly };
+      origin: bookshelfMotionLocalOrigin(origin, viewport), target: request.target, awaitingOrigin: false,
+      fadeOnly: request.fadeOnly, paperColor: request.paperColor, paperInk: request.paperInk };
     this.returnMotionBookKey = '';
   }
 
@@ -4828,7 +5004,7 @@ struct Index {
     if (resumeImmediately && entryRoute === 'bookshelf') this.shelfEntryTraceGeneration = generation;
     this.readingOriginRoute = entryRoute;
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
-    this.detailReturnRoute = retainedParent ?? (originRoute === 'search' ? 'search' : 'bookshelf');
+    this.detailReturnRoute = retainedParent ?? (originRoute === 'search' ? 'search' : originRoute === 'discover' ? 'discover' : 'bookshelf');
     this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.sourceSwitchFailureMessage = '';
     this.readingExitRequest = undefined;
@@ -4874,7 +5050,7 @@ struct Index {
     if (resumeImmediately && entryRoute === 'bookshelf') this.shelfEntryTraceGeneration = generation;
     this.readingOriginRoute = entryRoute;
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
-    this.detailReturnRoute = retainedDetailReturnRoute ?? (originRoute === 'search' ? 'search' : 'bookshelf');
+    this.detailReturnRoute = retainedDetailReturnRoute ?? (originRoute === 'search' ? 'search' : originRoute === 'discover' ? 'discover' : 'bookshelf');
     this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
@@ -5795,12 +5971,15 @@ struct Index {
     const request = this.shelfNavigationMotion;
     if (coveredMotionId >= 0 && request?.id === coveredMotionId) {
       if (this.route === 'bookshelf') {
-        this.shelfMotionReturnNavigation = this.navigationGeneration;
-        this.returnMotionBookKey = bookshelfMotionBookKey(request.origin.sourceId, request.origin.bookId);
-        this.resolveShelfReturnMotionFallback(coveredMotionId, this.navigationGeneration, 4);
+        if (request.awaitingOrigin) {
+          this.shelfMotionReturnNavigation = this.navigationGeneration;
+          this.returnMotionBookKey = bookshelfMotionBookKey(request.origin.sourceId, request.origin.bookId);
+          this.resolveShelfReturnMotionFallback(coveredMotionId, this.navigationGeneration, readerMotionNowMs() + 150);
+        }
       } else {
         this.shelfNavigationMotion = { id: request.id, direction: 'close', origin: request.origin,
-          target: request.target, awaitingTarget: false, fadeOnly: true };
+          target: request.target, awaitingOrigin: false, fadeOnly: true,
+          paperColor: request.paperColor, paperInk: request.paperInk };
       }
     }
   }
@@ -6934,7 +7113,7 @@ struct Index {
   }
 
   private showIndexRecoveryNotice(message: string, actionLabel: string = '', action?: () => void,
-    admitted: () => boolean = (): boolean => true): void {
+    admitted: () => boolean = (): boolean => true, tag: string = ''): void {
     if (this.shelfReceiptRetired || !admitted()) return;
     const generation = this.navigationGeneration, route = this.route;
     const owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
@@ -6945,6 +7124,7 @@ struct Index {
     this.indexRecoveryCurrent = current;
     this.indexRecoveryAction = action;
     this.indexRecoveryActionLabel = actionLabel;
+    this.indexRecoveryTag = tag;
     this.indexRecoveryRevision += 1;
     this.indexRecoveryNotice = { message, visible: true, canRetry: action !== undefined,
       generation: this.indexRecoveryRevision };
@@ -6953,6 +7133,7 @@ struct Index {
   private clearIndexRecoveryNotice(): void {
     this.indexRecoveryAction = undefined;
     this.indexRecoveryCurrent = undefined;
+    this.indexRecoveryTag = '';
     this.remoteCacheRefreshConsent = undefined;
     this.indexRecoveryNotice = { message: '', visible: false, canRetry: false, generation: this.indexRecoveryRevision };
     this.indexRecoveryActionLabel = '';
@@ -6988,6 +7169,36 @@ struct Index {
       .width('100%').padding({ left: 16, right: 16, top: this.messageSafeTop() + 12 })
       .align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent);
     }
+  }
+
+  /** Startup source-switch convergence owns no shelf state: a pending journal
+   * keeps the current rows visible, and only a completed rollback re-reads. */
+  private applySourceSwitchRecoveryStatus(status: ReaderSourceSwitchRecoveryStatus, refreshOnResolve: boolean): void {
+    const previous = this.sourceSwitchRecoveryStatus;
+    this.sourceSwitchRecoveryStatus = status;
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return;
+    if (status.state === 'pending') {
+      if (status.message.length === 0 || (this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true &&
+        this.indexRecoveryTag !== 'source-switch')) return;
+      this.showSourceSwitchRecoveryNotice(status);
+      return;
+    }
+    if (this.indexRecoveryTag === 'source-switch') this.clearIndexRecoveryNotice();
+    if (status.state === 'resolved' && refreshOnResolve && previous.state !== 'resolved' &&
+      status.recovered > 0 && this.route === 'bookshelf') this.refreshBookshelf();
+  }
+
+  private showSourceSwitchRecoveryNotice(status: ReaderSourceSwitchRecoveryStatus): void {
+    const owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const admitted = (): boolean => owner !== undefined && !this.shelfReceiptRetired &&
+      owner === this.mountedRuntimeOwner && mounting === this.detailShelfAdmissionMount &&
+      this.isCurrentRuntime(owner);
+    const retry = (): void => {
+      if (!admitted() || status.generation !== this.sourceSwitchRecoveryStatus.generation) return;
+      if (owner !== undefined) void owner.retrySourceSwitchRecovery();
+    };
+    this.showIndexRecoveryNotice(status.message, status.canRetry ? '重试恢复' : '', retry, admitted, 'source-switch');
   }
 
   /** Startup observes durable pending facts; opening a target resumes its id. */
@@ -7034,6 +7245,10 @@ struct Index {
     if (this.detailReturnRoute === 'reader' && this.detailReaderReturn !== undefined &&
       this.mountedRuntimeOwner === this.detailReaderReturn.owner && this.isCurrentRuntime(this.detailReaderReturn.owner)) {
       this.openReading(undefined);
+      return;
+    }
+    if (this.detailReturnRoute === 'discover') {
+      this.openDiscover();
       return;
     }
     if (this.detailReturnRoute === 'search') {
@@ -7099,13 +7314,15 @@ struct Index {
     // free the global gate before detailBook itself is cleared.
     this.detailBook = undefined;
     this.installRemoteReadingSession(retainedRemoteSession);
-    this.selectedRssSubscription = undefined;
-    this.selectedRssItems = [];
-    this.selectedRssItem = undefined;
-    this.selectedRssFavoriteState = 'loading';
-    this.rssDetailReturnTarget = 'rss';
-    this.rssSourceFeedReturnTarget = 'rss';
-    this.rssManagementFocusSubscriptionId = '';
+    if (this.rssProduct !== undefined) {
+      this.rssProduct.selectedRssSubscription = undefined;
+      this.rssProduct.selectedRssItems = [];
+      this.rssProduct.selectedRssItem = undefined;
+      this.rssProduct.selectedRssFavoriteState = 'loading';
+      this.rssProduct.rssDetailReturnTarget = 'rss';
+      this.rssProduct.rssSourceFeedReturnTarget = 'rss';
+      this.rssProduct.rssManagementFocusSubscriptionId = '';
+    }
     this.sourceManagementReturnTarget = 'settings';
     this.sourceManagementSearchKeyword = '';
     this.bookshelfMultiSelectInitialKey = '';
@@ -7541,7 +7758,7 @@ struct Index {
     this.clearIndexRecoveryNotice();
     this.sourceImportSearchAction = undefined;
     this.sourceImportSearchActionLabel = '';
-    this.rssOperationResultMessage = '';
+    if (this.rssProduct !== undefined) this.rssProduct.rssOperationResultMessage = '';
     this.shelfReadingPreparation = false;
     this.pendingLocalDirectoryProjection = undefined;
     this.navigationGeneration += 1;

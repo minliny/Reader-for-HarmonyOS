@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
+import { createReaderComponentProbe as createReaderBuilderProbe } from './reader-component-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
 import { SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import { builderComponentMembers } from './ets-builder-probe.mjs';
+import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 
 const file=name=>new URL(`../../entry/src/main/ets/features/common/${name}.ets`,import.meta.url);
 export const menuSource=readFileSync(file('ReaderActionMenuSurface'),'utf8');
@@ -15,9 +17,13 @@ export const ReaderMenuActionView=new Function(stripTypeScriptTypes(menuSource.s
 
 export function actionMenuProbe(resolve=resolvePopupSpec) {
   const properties=createArkUIPropertyRuntimeProbe();
+  const surfaceResolvers=pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts',import.meta.url),'utf8'),
+    'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']);
+  const accessibility=pureModuleProbe(readFileSync(file('ReaderActionAccessibility'),'utf8'),'ReaderActionAccessibility.ets',
+    {AccessibilityRoleType:{BUTTON:'AccessibilityRoleType.BUTTON'}},['ReaderActionAccessibility','readerActionTouchRegion']);
   const probe=createReaderBuilderProbe(menuSource,
-    ['appThemeScheme','variant','specId','scheme','actions','availableWidth','viewportHeight','onAction','mounted','aboutToAppear','aboutToDisappear','build','menuActions','actionRow','actionRows','row','actionSheetSpec','spec','action','dividerWidth','effectiveScheme','color','accessibilityLabel','commitAction'],
-    {...properties.sdk,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},properties.hooks);
+    builderComponentMembers(menuSource,'ReaderActionMenuSurface'),
+    {...properties.sdk,...surfaceResolvers,...accessibility,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},properties.hooks);
   return {...probe,properties,dependencies:{ReaderActionMenuSurface:probe.Component,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},
     hooks:{childSources:{ReaderActionMenuSurface:menuSource},mountChildren:true,lifecycleChildren:true},
     nodes(owner) {

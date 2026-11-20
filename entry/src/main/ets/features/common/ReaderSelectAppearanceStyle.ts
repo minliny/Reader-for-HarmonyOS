@@ -5,7 +5,7 @@ export const APPEARANCE_SELECT_SURFACE = '#FFFDF8';
 export const APPEARANCE_SELECT_BORDER = '#479B8466';
 export const APPEARANCE_SELECT_SELECTED = '#B8EEE6DB';
 export const APPEARANCE_SELECT_MENU_WIDTH = 104;
-export const APPEARANCE_SELECT_OPTION_HEIGHT = 25;
+export const APPEARANCE_SELECT_OPTION_HEIGHT = 44;
 
 export function appearanceSelectMenuHeight(optionCount: number): number {
   return Math.max(1, optionCount) * APPEARANCE_SELECT_OPTION_HEIGHT + 8;
@@ -17,7 +17,7 @@ export interface AppearanceSelectMenuPosition { x: number; y: number; }
 export function appearanceSelectMenuPosition(right: number, top: number, optionCount: number,
   viewportWidth: number, viewportHeight: number): AppearanceSelectMenuPosition {
   const height = appearanceSelectMenuHeight(optionCount);
-  const below = top + 30 + 5;
+  const below = top + 44 + 5;
   const requestedY = below + height <= viewportHeight ? below : top - 5 - height;
   return {
     x: Math.max(0, Math.min(right - APPEARANCE_SELECT_MENU_WIDTH, viewportWidth - APPEARANCE_SELECT_MENU_WIDTH)),

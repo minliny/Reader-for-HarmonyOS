@@ -174,6 +174,7 @@ export class SourceToolsOrchestrator {
   private operationTail: Promise<void> = Promise.resolve();
   /** Counts admitted operations, including those queued behind a prior page session. */
   private pendingOperations: number = 0;
+  private initialized: boolean = false;
 
   constructor(
     emit: (snapshot: SourceToolsSnapshot) => void,
@@ -194,6 +195,15 @@ export class SourceToolsOrchestrator {
       this.snapshot.receipt?.receipt.fact === 'confirmedRefreshFailed') {
       this.deliver(); return;
     }
+    if (this.initialized) {
+      // A route change is not a new tools session. Keep selection, editor,
+      // running/result context and settings; only read current library facts.
+      this.deliver();
+      const session = this.session;
+      this.enqueue(async (): Promise<void> => { await this.reloadManagement(session, '已刷新书源'); }, true);
+      return;
+    }
+    this.initialized = true;
     this.session += 1;
     this.batchCheckRun += 1;
     this.batchCheckCancelRequested = false;
@@ -255,6 +265,15 @@ export class SourceToolsOrchestrator {
     return selection;
   }
 
+  /** Called only after an exact Core ACK, including a group action accepted
+   * while this tools presentation is detached. Failed/unrun IDs stay selected. */
+  retireConfirmedSelection(sourceIds: string[]): void {
+    if (!ReaderRuntimeOwner.isCurrent(this.owner)) return;
+    const retired = new Set(sourceIds);
+    const selected = this.snapshot.selectedSourceIds.filter((id: string): boolean => !retired.has(id));
+    this.publish({ selectedSourceIds: selected, selectedSourceCount: selected.length });
+  }
+
   exportSelected(sourceIds: string[]): void {
     const selection = this.normalizeSourceIds(sourceIds);
     if (selection.length === 0) {
@@ -297,6 +316,7 @@ export class SourceToolsOrchestrator {
           await this.gateway.updateSource(sourceId, { enabled });
           const original=this.gateway.originalMutationSnapshot();
           if (original?.blocked) throw new Error(original.message);
+          this.retireConfirmedSelection([sourceId]);
           if (!enabled && !this.gateway.handlesSourceCleanup()) {
             try { await this.owner.clearSourceCookieSession(sourceId); }
             catch (error) { hilog.error(DOMAIN, 'Reader', 'Source cookie cleanup failed: %{private}s', (error as Error).message); }
@@ -331,7 +351,7 @@ export class SourceToolsOrchestrator {
       });
       try {
         for (let index = 0; index < selection.length; index++) {
-          if (!this.isCurrentSession(session) || this.batchCheckRun !== run) {
+          if (!this.isAcceptedCheckSession(session) || this.batchCheckRun !== run) {
             return;
           }
           if (this.batchCheckCancelRequested) {
@@ -352,7 +372,7 @@ export class SourceToolsOrchestrator {
               this.snapshot.checkMode,
               this.selectedCheckLevels(),
             );
-            if (!this.isCurrentSession(session) || this.batchCheckRun !== run) {
+            if (!this.isAcceptedCheckSession(session) || this.batchCheckRun !== run) {
               return;
             }
             const stopping = this.batchCheckCancelRequested;
@@ -369,7 +389,7 @@ export class SourceToolsOrchestrator {
                 `已完成 ${progress.completed}/${selection.length}：${sourceName}${outcome.available ? '所选项通过' : '所选项未通过'}`,
             });
           } catch (error) {
-            if (!this.isCurrentSession(session) || this.batchCheckRun !== run) {
+            if (!this.isAcceptedCheckSession(session) || this.batchCheckRun !== run) {
               return;
             }
             if (this.batchCheckCancelRequested) {
@@ -398,7 +418,7 @@ export class SourceToolsOrchestrator {
             });
           }
         }
-        if (this.isCurrentSession(session) && this.batchCheckRun === run) {
+        if (this.isAcceptedCheckSession(session) && this.batchCheckRun === run) {
           const stopped = this.batchCheckCancelRequested && progress.completed < selection.length;
           progress = stopped ? progress.stop() : progress.complete();
           this.publish({
@@ -410,7 +430,7 @@ export class SourceToolsOrchestrator {
           });
         }
       } catch (error) {
-        if (this.isCurrentSession(session) && this.batchCheckRun === run) {
+        if (this.isAcceptedCheckSession(session) && this.batchCheckRun === run) {
           this.publish({
             batchCheck: progress.fail(),
             busy: false,
@@ -460,6 +480,7 @@ export class SourceToolsOrchestrator {
       if (!this.isCurrentSession(session)) return;
       await this.performManagementWrite(session, async (): Promise<string> => {
         const deleted = await this.gateway.deleteSources(selection);
+        if (this.gateway.originalMutationSnapshot()?.blocked !== true) this.retireConfirmedSelection(selection);
         return `已删除 ${deleted.deletedCount} 个书源` + (deleted.cookieCleanupFailures === 0 ? '' :
           `；${deleted.cookieCleanupFailures} 个 Host 登录会话清理失败`);
       });
@@ -491,6 +512,8 @@ export class SourceToolsOrchestrator {
 
   updateEditorDraft(text: string): void {
     if (!this.isCurrentSession(this.session) || this.snapshot.busy || this.pendingOperations > 0 ||
+      this.snapshot.editorReadback?.confirmation === 'confirmed' || this.snapshot.editorReadback?.confirmation === 'unknown' ||
+      this.snapshot.receipt?.receipt.confirmation === 'unknown' ||
       this.snapshot.editorSourceId.length === 0 || text.length > 16 * 1024 * 1024) {
       return;
     }
@@ -507,7 +530,7 @@ export class SourceToolsOrchestrator {
   }
 
   saveEditor(): void {
-    if (this.gateway.originalMutationSnapshot()?.blocked) return;
+    if (this.gateway.originalMutationSnapshot()?.blocked || this.snapshot.editorReadback?.confirmation === 'confirmed') return;
     const session = this.session;
     const sourceId = this.snapshot.editorSourceId;
     const text = this.snapshot.editorText;
@@ -516,6 +539,7 @@ export class SourceToolsOrchestrator {
     }
     this.enqueue(async (): Promise<void> => {
       if (!this.isCurrentSession(session) || this.snapshot.editorReadback?.confirmation === 'unknown' ||
+        this.snapshot.editorReadback?.confirmation === 'confirmed' ||
         this.snapshot.receipt?.receipt.confirmation === 'unknown') return;
       this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 校验并保存…' });
       // The save and the follow-up reload are two separate facts: once Core
@@ -721,8 +745,12 @@ export class SourceToolsOrchestrator {
     };
   }
 
+  private isAcceptedCheckSession(session: number): boolean {
+    return this.isAcceptedSession(session) && ReaderRuntimeOwner.isCurrent(this.owner);
+  }
+
   private isBatchCheckCurrent(session: number, run: number): boolean {
-    return this.isCurrentSession(session) && this.batchCheckRun === run &&
+    return this.isAcceptedCheckSession(session) && this.batchCheckRun === run &&
       !this.batchCheckCancelRequested;
   }
 
@@ -800,7 +828,13 @@ export class SourceToolsOrchestrator {
     try {
       const sources = await this.gateway.loadSources(undefined, true);
       if (!this.isAcceptedSession(session)) return;
-      this.publish({ sources, busy: false, statusMessage: status, readFacts: projectOperationFacts({ phase: 'succeeded',
+      const selected = this.snapshot.selectedSourceIds.filter((id: string): boolean =>
+        sources.some((source: BookSource): boolean => source.sourceId === id));
+      const selectionChanged = selected.length !== this.snapshot.selectedSourceIds.length;
+      this.publish({ sources, busy: false, statusMessage: status,
+        selectedSourceIds: selectionChanged ? selected : undefined,
+        selectedSourceCount: selectionChanged ? selected.length : undefined,
+        readFacts: projectOperationFacts({ phase: 'succeeded',
         value: sources, generation: ++sourceToolsReceiptGeneration }) });
       const receipt = this.snapshot.receipt;
       if (receipt !== undefined) this.publishManagementReceipt(session, receipt.receipt.confirmation, 'succeeded');

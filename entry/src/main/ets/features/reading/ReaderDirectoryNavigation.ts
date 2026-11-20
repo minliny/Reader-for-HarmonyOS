@@ -268,7 +268,17 @@ function normalizeV2DirectoryNodes(rows: ReaderDirectoryNavigationNode[]): Reade
   return rows.map((item): ReaderDirectoryNavigationNode => ({ ...item, depth: item.depth + 1 }));
 }
 
-export class ReaderDirectoryNavigationGateway {
+/** UI reads depend on this existing public Gateway contract. A caller may
+ * provide a bounded data source without creating a second renderer/algorithm. */
+export interface ReaderDirectoryNavigationPort {
+  open(query: ReaderDirectoryNavigationQuery, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationOpen>;
+  page(bookId: string, viewId: string, offset: number, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationPage>;
+  resolveTarget(bookId: string, viewId: string, nodeId: string,
+    isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationTarget>;
+}
+export type ReaderDirectoryNavigationPortFactory = () => ReaderDirectoryNavigationPort;
+
+export class ReaderDirectoryNavigationGateway implements ReaderDirectoryNavigationPort {
   private readonly runtime: ReadingGatewayRuntime;
   private static views: Map<string, ReaderDirectoryIdentity> = new Map<string, ReaderDirectoryIdentity>();
   constructor(runtime: ReadingGatewayRuntime) { this.runtime = runtime; }
@@ -402,7 +412,7 @@ export function readerDirectoryTakeMissingNavigation(bookId: string): boolean {
   return pendingNavigationBackfill.delete(bookId);
 }
 
-export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavigationGateway,
+export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavigationPort,
   query: ReaderDirectoryNavigationQuery, isCurrent: () => boolean,
   onUnavailable?: (reason: string) => void): Promise<ReaderDirectoryNavigationReady | undefined> {
   const stateKey = readerDirectoryScopeKey(query.sourceId ?? 'local', query.bookId);

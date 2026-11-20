@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-19",
+  "authority": "docs/message-ui/approved-scope-20261019.json",
+  "references": ["task-progress-demo.html", "check-detail-demo.html", "page-state-demo.html", "pending-notice-complex-demo.html"],
+  "scope": ["batchCheckCard", "batchResultRow", "statusCard", "debugCard", "debugLogRow", "originalRecoveryActions"],
+  "roles": {
+    "MESSAGE_TITLE": {"fontSizeFp": 17, "lineHeightFp": 24, "fontWeight": 600},
+    "MESSAGE_BODY": {"fontSizeFp": 13, "lineHeightFp": 21, "fontWeight": 400},
+    "MESSAGE_META": {"fontSizeFp": 12, "lineHeightFp": 18, "fontWeight": 400}
+  },
+  "preserveOriginal": ["sourceRow", "batchCard", "batchCounter", "exportCard", "heading", "smallButton", "actionButton", "fullWidthActionButton", "source-code", "source-debug"]
+}

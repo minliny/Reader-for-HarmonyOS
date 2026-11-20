@@ -1,4 +1,4 @@
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
 import { coreCliPath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
@@ -22,9 +22,8 @@ export const binary=coreCliPath(process.env.READER_RULES_RECEIPT_CORE_ROOT??reso
 export function compile(p,name,deps,official=false,source=read(p)) {
  const body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');
  if(!official)return new Function(...Object.keys(deps),stripTypeScriptTypes(body).replace(/^export /gm,'')+`;return ${name==='*'?'({'+[...source.matchAll(/^export (?:async )?(?:class|const|function) ([A-Za-z0-9_]+)/gm)].map(m=>m[1]).join(',')+'})':name};`)(...Object.values(deps));
- const tree=ts.createSourceFile(p,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);assert.deepEqual(tree.parseDiagnostics,[],p+' installed SDK syntax');
- const emitted=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS,strict:true},reportDiagnostics:true,fileName:p});assert.deepEqual(emitted.diagnostics,[]);
- const exports={};new Function('exports',...Object.keys(deps),emitted.outputText)(exports,...Object.values(deps));return name==='*'?exports:exports[name];
+ const output=emitSdkProbe(body,{parseSource:source,fileName:p,compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS,strict:true}});
+ const exports={};new Function('exports',...Object.keys(deps),output)(exports,...Object.values(deps));return name==='*'?exports:exports[name];
 }
 export const deferred=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 export const until=async check=>{for(let i=0;i<200;i++){if(check())return;await new Promise(r=>setTimeout(r,5));}throw Error('bounded wait failed');};

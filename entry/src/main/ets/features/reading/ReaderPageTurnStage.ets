@@ -20,6 +20,7 @@ import {
 } from './ReadingSurface';
 import { ReaderPageChromeSnapshot } from './ReaderPageChromeModel';
 import { readerAppearanceChromeTone } from './ReaderAppearanceRenderStyle';
+import { ReaderPageBookmarkSnapshot, type ReaderPageBookmarkMode } from './ReaderPageBookmarkModel';
 
 class ReaderPageTurnFrameCallback extends FrameCallback {
   private callback: () => void;
@@ -61,6 +62,7 @@ export class ReaderPageTurnRenderPage {
   chromeSessionVisible: boolean;
   chromeSessionWidth: number;
   chromeSessionHeight: number;
+  bookmark: ReaderPageBookmarkSnapshot;
 
   constructor(
     identity: string,
@@ -72,6 +74,7 @@ export class ReaderPageTurnRenderPage {
     bottomJustifyGap: number = 0,
     chrome: ReaderPageChromeSnapshot = new ReaderPageChromeSnapshot(),
     appearance?: ReaderAppearanceSnapshot,
+    bookmark: ReaderPageBookmarkSnapshot = new ReaderPageBookmarkSnapshot(),
   ) {
     this.identity = identity;
     this.textureIdentity = textureIdentity;
@@ -88,6 +91,7 @@ export class ReaderPageTurnRenderPage {
     this.chromeSessionVisible = chrome.sessionVisible;
     this.chromeSessionWidth = chrome.sessionWidth;
     this.chromeSessionHeight = chrome.sessionHeight;
+    this.bookmark = bookmark;
   }
 }
 
@@ -112,6 +116,7 @@ export const READER_PAGE_TURN_SLOT_B = 'reader-page-slot-b';
  */
 @Component
 struct ReaderPageTurnSurface {
+  @Prop textOpacity: number = 1;
   /** Semantic page identity; retained for diagnostics/content revisions. */
   @Prop pageIdentity: string = '';
   @Prop staticSnapshotId: string = '';
@@ -147,6 +152,12 @@ struct ReaderPageTurnSurface {
   @Prop chromeSessionVisible: boolean = false;
   @Prop chromeSessionWidth: number = 0;
   @Prop chromeSessionHeight: number = 0;
+  @Prop bookmarkMode: ReaderPageBookmarkMode = 'hidden';
+  @Prop bookmarkOpacity: number = 0;
+  @Prop bookmarkTopAccessoryX: number = 0;
+  @Prop bookmarkTopAccessoryY: number = 0;
+  @Prop bookmarkTopAccessoryWidth: number = 0;
+  @Prop bookmarkTopAccessoryHeight: number = 0;
   /** This exact revision reached the resident slot; not a paint/display fence. */
   onContentReady: (revision: number) => void = (_revision: number): void => {};
   /** Scheduling acknowledgement only; never evidence of physical scanout. */
@@ -187,6 +198,7 @@ struct ReaderPageTurnSurface {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
         ReadingSurface({
+          textOpacity: this.textOpacity,
           chapterTitle: this.chapterTitle,
           showChapterTitle: this.showChapterTitle,
           fragmentsProvider: (): ReadingSurfacePageFragment[] => this.pageFragmentsProvider(),
@@ -210,6 +222,12 @@ struct ReaderPageTurnSurface {
           chromeSessionVisible: this.chromeSessionVisible,
           chromeSessionWidth: this.chromeSessionWidth,
           chromeSessionHeight: this.chromeSessionHeight,
+          bookmarkMode: this.bookmarkMode,
+          bookmarkOpacity: this.bookmarkOpacity,
+          bookmarkTopAccessoryX: this.bookmarkTopAccessoryX,
+          bookmarkTopAccessoryY: this.bookmarkTopAccessoryY,
+          bookmarkTopAccessoryWidth: this.bookmarkTopAccessoryWidth,
+          bookmarkTopAccessoryHeight: this.bookmarkTopAccessoryHeight,
         });
       }
       .width('100%')
@@ -255,9 +273,11 @@ struct ReaderPageTurnSurface {
  */
 @Component
 export struct ReaderPageTurnStage {
+  @Prop textOpacity: number = 1;
   // A primitive revision invalidates content. Providers avoid ArkUI V1
   // deep-copying full page arrays every time the gesture offset changes.
   @Prop contentRevision: number = 0;
+  @Prop bookmarkPresentationRevision: number = 0;
   currentPageProvider: () => ReaderPageTurnRenderPage = (): ReaderPageTurnRenderPage => this.emptyPage;
   previousPageProvider: () => ReaderPageTurnRenderPage | undefined = (): ReaderPageTurnRenderPage | undefined => undefined;
   nextPageProvider: () => ReaderPageTurnRenderPage | undefined = (): ReaderPageTurnRenderPage | undefined => undefined;
@@ -270,6 +290,13 @@ export struct ReaderPageTurnStage {
   @Prop offsetX: number = 0;
   @Prop viewportWidth: number = 0;
   @Prop translateY: number = 0;
+  /** When the system status bar is hidden, the authored title/clock row is
+   * page-owned too and must share the page pull transform. */
+  @Prop topInfoMovesWithPage: boolean = false;
+  /** Live current-page preview facts; adjacent pages use their own snapshot. */
+  @Prop bookmarkMode: ReaderPageBookmarkMode = 'hidden';
+  @Prop bookmarkOpacity: number = 0;
+  @Prop bookmarkVisible: boolean = true;
   @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
@@ -284,6 +311,7 @@ export struct ReaderPageTurnStage {
   private slotPageA: ReaderPageTurnRenderPage | undefined = undefined;
   private slotPageB: ReaderPageTurnRenderPage | undefined = undefined;
   private renderPagesRevision: number = -1;
+  private renderPagesBookmarkRevision: number = -1;
   private cachedCurrentPage: ReaderPageTurnRenderPage | undefined = undefined;
   private cachedPreviousPage: ReaderPageTurnRenderPage | undefined = undefined;
   private cachedNextPage: ReaderPageTurnRenderPage | undefined = undefined;
@@ -295,6 +323,7 @@ export struct ReaderPageTurnStage {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ReaderPageTurnSurface({
+        textOpacity: this.textOpacity,
         pageIdentity: this.slotPage('a').identity,
         slotIdentity: this.slotIdentity('a'),
         staticSnapshotId: this.slotSnapshotId('a'),
@@ -308,12 +337,18 @@ export struct ReaderPageTurnStage {
         bottomJustifyGap: this.slotPage('a').bottomJustifyGap,
         chromeTopStartText: this.slotPage('a').chromeTopStartText,
         chromeTopEndText: this.slotPage('a').chromeTopEndText,
-        chromeTopTranslateY: -this.translateY,
+        chromeTopTranslateY: this.topInfoMovesWithPage ? 0 : -this.translateY,
         chromeBottomStartText: this.slotPage('a').chromeBottomStartText,
         chromeBottomEndText: this.slotPage('a').chromeBottomEndText,
         chromeSessionVisible: this.slotPage('a').chromeSessionVisible,
         chromeSessionWidth: this.slotPage('a').chromeSessionWidth,
         chromeSessionHeight: this.slotPage('a').chromeSessionHeight,
+        bookmarkMode: this.bookmarkVisible ? this.slotBookmarkMode('a') : 'hidden',
+        bookmarkOpacity: this.bookmarkVisible ? this.slotBookmarkOpacity('a') : 0,
+        bookmarkTopAccessoryX: this.slotPage('a').bookmark.topAccessoryX,
+        bookmarkTopAccessoryY: this.slotPage('a').bookmark.topAccessoryY,
+        bookmarkTopAccessoryWidth: this.slotPage('a').bookmark.topAccessoryWidth,
+        bookmarkTopAccessoryHeight: this.slotPage('a').bookmark.topAccessoryHeight,
         pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('a').fragments,
         layout: this.layout,
         appearance: this.slotPage('a').appearance ?? this.appearance,
@@ -331,6 +366,7 @@ export struct ReaderPageTurnStage {
         autoPageHighlightEnd: this.currentPageSlot === 'a' ? this.autoPageHighlightEnd : undefined,
       });
       ReaderPageTurnSurface({
+        textOpacity: this.textOpacity,
         pageIdentity: this.slotPage('b').identity,
         slotIdentity: this.slotIdentity('b'),
         staticSnapshotId: this.slotSnapshotId('b'),
@@ -344,12 +380,18 @@ export struct ReaderPageTurnStage {
         bottomJustifyGap: this.slotPage('b').bottomJustifyGap,
         chromeTopStartText: this.slotPage('b').chromeTopStartText,
         chromeTopEndText: this.slotPage('b').chromeTopEndText,
-        chromeTopTranslateY: -this.translateY,
+        chromeTopTranslateY: this.topInfoMovesWithPage ? 0 : -this.translateY,
         chromeBottomStartText: this.slotPage('b').chromeBottomStartText,
         chromeBottomEndText: this.slotPage('b').chromeBottomEndText,
         chromeSessionVisible: this.slotPage('b').chromeSessionVisible,
         chromeSessionWidth: this.slotPage('b').chromeSessionWidth,
         chromeSessionHeight: this.slotPage('b').chromeSessionHeight,
+        bookmarkMode: this.bookmarkVisible ? this.slotBookmarkMode('b') : 'hidden',
+        bookmarkOpacity: this.bookmarkVisible ? this.slotBookmarkOpacity('b') : 0,
+        bookmarkTopAccessoryX: this.slotPage('b').bookmark.topAccessoryX,
+        bookmarkTopAccessoryY: this.slotPage('b').bookmark.topAccessoryY,
+        bookmarkTopAccessoryWidth: this.slotPage('b').bookmark.topAccessoryWidth,
+        bookmarkTopAccessoryHeight: this.slotPage('b').bookmark.topAccessoryHeight,
         pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('b').fragments,
         layout: this.layout,
         appearance: this.slotPage('b').appearance ?? this.appearance,
@@ -368,9 +410,9 @@ export struct ReaderPageTurnStage {
     .width('100%')
     .height('100%')
     .translate({ y: this.translateY })
-    // The top-info child counter-translates during bookmark pull. Clipping
-    // this translated stage would cut that fixed header off at its old edge.
-    // The reading viewport remains the outer clipping boundary.
+    // A system-owned top lane may counter-translate its text during bookmark
+    // pull; a page-owned lane moves with the stage. In either case the
+    // reading viewport remains the outer clipping boundary.
     .clip(this.translateY <= 0);
   }
 
@@ -396,13 +438,23 @@ export struct ReaderPageTurnStage {
     return page ?? this.emptyPage;
   }
 
+  private slotBookmarkMode(slot: ReaderPageTurnSlot): ReaderPageBookmarkMode {
+    return slot === this.currentPageSlot ? this.bookmarkMode : this.slotPage(slot).bookmark.mode;
+  }
+
+  private slotBookmarkOpacity(slot: ReaderPageTurnSlot): number {
+    return slot === this.currentPageSlot ? this.bookmarkOpacity : this.slotPage(slot).bookmark.opacity;
+  }
+
   private refreshRenderPages(): void {
     const revision = this.contentRevision;
-    if (revision === this.renderPagesRevision && this.cachedCurrentPage !== undefined) return;
+    if (revision === this.renderPagesRevision && this.bookmarkPresentationRevision === this.renderPagesBookmarkRevision &&
+      this.cachedCurrentPage !== undefined) return;
     this.cachedCurrentPage = revision >= 0 ? this.currentPageProvider() : this.emptyPage;
     this.cachedPreviousPage = revision >= 0 ? this.previousPageProvider() : undefined;
     this.cachedNextPage = revision >= 0 ? this.nextPageProvider() : undefined;
     this.renderPagesRevision = revision;
+    this.renderPagesBookmarkRevision = this.bookmarkPresentationRevision;
   }
 
   private currentRenderPage(): ReaderPageTurnRenderPage {

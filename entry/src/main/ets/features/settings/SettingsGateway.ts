@@ -71,6 +71,13 @@ export class SettingsGateway {
       accepted: this.current(), saved: SettingsGateway.saved === undefined ? undefined : this.copySnapshot(SettingsGateway.saved) };
   }
 
+  awaitDurableWrites(isAdmitted: () => boolean): Promise<void> {
+    return this.withSettingsAccess(async (): Promise<void> => {
+      this.assertAdmitted(isAdmitted);
+      if (this.writeFacts().pendingReconciliation) throw new Error('LIBRARY_RESTORE_APP_SETTINGS_UNCONFIRMED');
+    });
+  }
+
   async load(isAdmitted?: () => boolean): Promise<SettingsSnapshot> {
     await ReaderThemeHost.prepareUserChange();
     this.assertAdmitted(isAdmitted);
@@ -112,6 +119,7 @@ export class SettingsGateway {
 
   private writeRequested(requested: SettingsSnapshot, changedKey?: GeneralSettingsKey,
     evidence?: ReaderWriteEvidence, isAdmitted?: () => boolean): Promise<SettingsSnapshot> {
+    const settingsGeneration = ReaderThemeHost.settingsWriteGeneration();
     return this.withSettingsAccess(async (): Promise<SettingsSnapshot> => {
       const store = await this.ensureStore();
       const previous = this.current() ?? await this.readSnapshot(store);
@@ -126,6 +134,7 @@ export class SettingsGateway {
       // Actual first platform put is the dispatch boundary. Once dispatched,
       // retirement suppresses publication, not the already accepted flush.
       this.assertAdmitted(isAdmitted);
+      ReaderThemeHost.assertSettingsWritable(settingsGeneration);
       if (SettingsGateway.acceptedRevision >= Number.MAX_SAFE_INTEGER) throw new Error('SETTINGS_REVISION_EXHAUSTED');
       const revision = ++SettingsGateway.acceptedRevision;
       SettingsGateway.accepted = this.copySnapshot(snapshot);

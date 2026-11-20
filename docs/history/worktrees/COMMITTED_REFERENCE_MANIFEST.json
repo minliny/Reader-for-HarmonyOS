@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "status": "INACTIVE_COMMITTED_HISTORY_REFERENCE",
   "files": [
     {
@@ -7,35 +7,40 @@
       "sourcePath": "docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
       "archivePath": "docs/history/worktrees/phase2-dialog-20261002/docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
       "bytes": 2801,
-      "sha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee"
+      "sha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee",
+      "contentObject": "docs/history/worktrees/objects/026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee.txt"
     },
     {
       "sourceCommit": "5f140ec980247c52416d27a02aa2cc0e96207837",
       "sourcePath": "docs/PHASE2_DIALOG_EXECUTION_20261002.md",
       "archivePath": "docs/history/worktrees/phase2-dialog-20261002/docs/PHASE2_DIALOG_EXECUTION_20261002.md",
       "bytes": 5503,
-      "sha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a"
+      "sha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a",
+      "contentObject": "docs/history/worktrees/objects/71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a.txt"
     },
     {
       "sourceCommit": "5f140ec980247c52416d27a02aa2cc0e96207837",
       "sourcePath": "tools/test-dialog-consumer-boundary.mjs",
       "archivePath": "docs/history/worktrees/phase2-dialog-20261002/tools/test-dialog-consumer-boundary.mjs",
       "bytes": 1510,
-      "sha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513"
+      "sha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513",
+      "contentObject": "docs/history/worktrees/objects/e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513.txt"
     },
     {
       "sourceCommit": "151dfb5d71b9d552b302327ddd36f30757ccbd56",
       "sourcePath": "docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
       "archivePath": "docs/history/worktrees/phase2-dialog-schema34-20261002/docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
       "bytes": 2801,
-      "sha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee"
+      "sha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee",
+      "contentObject": "docs/history/worktrees/objects/026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee.txt"
     },
     {
       "sourceCommit": "151dfb5d71b9d552b302327ddd36f30757ccbd56",
       "sourcePath": "docs/PHASE2_DIALOG_EXECUTION_20261002.md",
       "archivePath": "docs/history/worktrees/phase2-dialog-schema34-20261002/docs/PHASE2_DIALOG_EXECUTION_20261002.md",
       "bytes": 5503,
-      "sha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a"
+      "sha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a",
+      "contentObject": "docs/history/worktrees/objects/71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a.txt"
     },
     {
       "sourceCommit": "151dfb5d71b9d552b302327ddd36f30757ccbd56",
@@ -49,7 +54,8 @@
       "sourcePath": "tools/test-dialog-consumer-boundary.mjs",
       "archivePath": "docs/history/worktrees/phase2-dialog-schema34-20261002/tools/test-dialog-consumer-boundary.mjs",
       "bytes": 1510,
-      "sha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513"
+      "sha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513",
+      "contentObject": "docs/history/worktrees/objects/e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513.txt"
     },
     {
       "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
@@ -492,5 +498,6 @@
       "bytes": 6314,
       "sha256": "9a9ea65a4f1381b7b6ad8369c2005c4500b66b401d3b3b096a8dc0f957a61ca3"
     }
-  ]
+  ],
+  "contentStorage": "Exact bytes are at contentObject when present; logical archive/destination paths are inert references. Source hashes/provenance unchanged. See CONTENT_INDEX.json."
 }

@@ -6,6 +6,8 @@ import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTIO
 import { bookAuthorLabel, bookTitleAuthorKey, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
+import { EMPTY_SOURCE_GROUP_CATALOG, type SourceGroupCatalog } from '../source/SourceGroupTypes';
+import { ALL_SEARCH_SOURCE_GROUP, SearchSourceGroupDirectory, SearchResultFilter, searchSourceGroupKey, type SearchFilterStep, type SearchSourceGroupSelection, type SearchSourceGroupLoadState } from './SearchSourceGroups';
 import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
 import { ReaderSearchFilterPanel } from './ReaderSearchFilterPanel';
 import { ReaderSearchTaskPanel } from './ReaderSearchTaskPanel';
@@ -93,6 +95,7 @@ interface SearchScopeEntry {
 
 interface SearchResultSelection {
   queryRevision: number;
+  displayRevision: number;
   book: SearchBook;
   variants: SearchBook[];
   coverUrl: string;
@@ -125,6 +128,7 @@ class SearchBookGroup {
   sourceIds: string[];
   variants: SearchBook[];
   coverUrl: string;
+  displayRevision: number = 0;
   private readonly sourceIdSet: Set<string>;
   private readonly failedCoverUrls: Set<string> = new Set();
 
@@ -228,6 +232,9 @@ class SearchResultDataSource implements IDataSource {
       retained.variants.some((book: SearchBook, index: number): boolean => !this.sameBook(book, next.variants[index]))) {
       retained.variants = next.variants; changed = true;
     }
+    // Publish this marker after every member field. Card Prop/ObjectLink
+    // callbacks can arrive in either order and must capture one coherent row.
+    if (retained.displayRevision !== next.displayRevision) { retained.displayRevision = next.displayRevision; changed = true; }
     if (newRequest) retained.resetCoverFailures();
     retained.refreshCover();
     return changed;
@@ -348,6 +355,15 @@ export struct SearchPage {
   private shelfBooks: ShelfBook[] = [];
   /** The latest source.list snapshot; used by both scope dispatch and result projection. */
   private searchSources: SearchSource[] = [];
+  @State private sourceGroupCatalog: SourceGroupCatalog = EMPTY_SOURCE_GROUP_CATALOG;
+  @State private selectedSourceGroup: SearchSourceGroupSelection = ALL_SEARCH_SOURCE_GROUP;
+  @State private sourceGroupLoadState: SearchSourceGroupLoadState = 'loading';
+  @State private hasSourceGroupCatalog: boolean = false;
+  @State private filterStep: SearchFilterStep = 'filter';
+  @State private sourceGroupQuery: string = '';
+  private filterStepGeneration: number = 0;
+  private sourceGroupDirectoryInput: SourceGroupCatalog | undefined = undefined;
+  private sourceGroupDirectoryValue: SearchSourceGroupDirectory | undefined = undefined;
   viewState: SearchViewState = new SearchViewState();
   private resultScroller: Scroller = new Scroller();
   private restoreKey: string = '';
@@ -368,6 +384,7 @@ export struct SearchPage {
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private filtersExpanded: boolean = false;
   private filterGeneration: number = 0;
+  private pendingSourceManagementPresentation: string = '';
   @State private taskStatusExpanded: boolean = false;
   private taskStatusGeneration: number = 0;
   private queryAtMount: number = -1;
@@ -431,11 +448,16 @@ export struct SearchPage {
     this.presentation = this.publication.presentationAt(this.publicationRevision);
     this.shelfBooks = this.publication.shelfAt(this.publicationRevision);
     this.searchSources = this.publication.sourcesAt(this.publicationRevision);
+    this.sourceGroupCatalog = this.publication.sourceGroupsAt(this.publicationRevision);
+    this.sourceGroupLoadState = this.publication.sourceGroupLoadStateAt(this.publicationRevision);
+    this.hasSourceGroupCatalog = this.publication.hasSourceGroupCatalog();
+    this.selectedSourceGroup = this.viewState.sourceGroup;
     this.refreshVisibleResults();
     this.publishSurface();
   }
 
   aboutToAppear(): void {
+    this.pendingSourceManagementPresentation = '';
     this.pageMounted = true;
     this.pageEpoch = ++this.viewState.pageRevision;
     this.queryAtMount = this.viewState.revision;
@@ -448,9 +470,13 @@ export struct SearchPage {
     this.scrollRestored = false;
     this.selectedGroupName = this.viewState.category;
     this.selectedContentType = this.viewState.contentType;
-    this.filtersExpanded = false;
+    this.selectedSourceGroup = this.viewState.sourceGroup;
+    this.filterStep = this.viewState.filterStep;
+    this.sourceGroupQuery = this.viewState.sourceGroupQuery;
+    const resumeStep = this.viewState.consumeSourceManagementReturn();
+    this.filtersExpanded = resumeStep !== undefined;
+    if (resumeStep !== undefined) { this.filterStep = resumeStep; this.filterGeneration += 1; }
     this.taskStatusExpanded = false;
-    this.viewState.filtersExpanded = false;
     this.focusInputOnAppear = this.viewState.consumeInputFocusRequest();
     this.keyword = this.viewState.keywordDraft;
     this.acceptPublication();
@@ -458,6 +484,7 @@ export struct SearchPage {
   }
 
   aboutToDisappear(): void {
+    this.pendingSourceManagementPresentation = '';
     const current = this.ownsPageQuery();
     this.surfaceModel?.release(this.surfaceOwner);
     if (current) this.rememberAnchorNeighbors();
@@ -596,6 +623,70 @@ export struct SearchPage {
     return `${this.pageEpoch}:${this.viewState.revision}:${this.filterGeneration}`;
   }
 
+  private filterActionIdentity(): string {
+    return `${this.filterPresentationIdentity()}:${this.filterStepGeneration}`;
+  }
+
+  private acceptsFilterAction(identity: string): boolean {
+    return this.ownsPageQuery() && this.filtersExpanded && identity === this.filterActionIdentity();
+  }
+
+  private sourceGroupDirectory(): SearchSourceGroupDirectory {
+    if (this.sourceGroupDirectoryValue === undefined || this.sourceGroupDirectoryInput !== this.sourceGroupCatalog) {
+      this.sourceGroupDirectoryInput = this.sourceGroupCatalog;
+      this.sourceGroupDirectoryValue = new SearchSourceGroupDirectory(this.sourceGroupCatalog);
+    }
+    return this.sourceGroupDirectoryValue;
+  }
+
+  private switchSearchFilterStep(step: SearchFilterStep, identity: string): void {
+    if (!this.acceptsFilterAction(identity) || this.filterStep === step) return;
+    this.getUIContext().getFocusController().clearFocus();
+    this.getUIContext().animateTo({ duration: this.reduceMotion ? 0 : 220, curve: Curve.EaseInOut }, (): void => {
+      this.filterStepGeneration += 1;
+      this.filterStep = step; this.viewState.filterStep = step;
+    });
+  }
+
+  private applySearchFilters(category: string, contentType: SearchContentType,
+    sourceGroup: SearchSourceGroupSelection, identity: string): void {
+    if (!this.acceptsFilterAction(identity) || this.filterStep !== 'filter') return;
+    const normalized = category === '本地' ? ALL_SEARCH_SOURCE_GROUP : sourceGroup;
+    const valid = normalized.kind !== 'group' || (this.hasSourceGroupCatalog ? this.sourceGroupDirectory().valid(normalized) :
+      searchSourceGroupKey(normalized) === searchSourceGroupKey(this.selectedSourceGroup));
+    if (!valid) return;
+    const changed = this.viewState.applyResultFilters(category, contentType, normalized);
+    this.selectedGroupName = this.viewState.category;
+    this.selectedContentType = this.viewState.contentType;
+    this.selectedSourceGroup = this.viewState.sourceGroup;
+    this.getUIContext().getFocusController().clearFocus();
+    this.filtersExpanded = false;
+    if (changed) this.resetFilteredResults();
+    this.publishSurface();
+  }
+
+  private clearSourceGroup(): void {
+    if (!this.ownsPageQuery()) return;
+    this.viewState.sourceGroup = ALL_SEARCH_SOURCE_GROUP;
+    this.selectedSourceGroup = ALL_SEARCH_SOURCE_GROUP;
+    this.viewState.advanceFilterRevision(); this.resetFilteredResults(); this.publishSurface();
+  }
+
+  private manageSourcesFromFilters(identity: string): void {
+    if (!this.acceptsFilterAction(identity) || this.filterStep !== 'groups') return;
+    const presentation = this.filterPresentationIdentity();
+    this.pendingSourceManagementPresentation = presentation;
+    this.dismissSearchFilters(presentation);
+  }
+
+  private finishSearchFilterDismissal(identity: string): void {
+    if (!this.ownsPageQuery() || identity !== this.filterPresentationIdentity() || this.filtersExpanded ||
+      identity !== this.pendingSourceManagementPresentation) return;
+    this.pendingSourceManagementPresentation = '';
+    this.viewState.prepareSourceManagementReturn('groups');
+    this.onManageSources();
+  }
+
   private acceptsFilter(identity: string): boolean {
     return this.ownsPageQuery() && this.filtersExpanded && identity === this.filterPresentationIdentity();
   }
@@ -603,25 +694,21 @@ export struct SearchPage {
   private dismissSearchFilters(identity: string): void {
     if (!this.acceptsFilter(identity)) return;
     this.filtersExpanded = false;
-    this.viewState.filtersExpanded = false;
     this.publishSurface();
   }
 
   private toggleSearchFilters(): void {
     if (!this.ownsPageQuery()) return;
     // Native popup is an overlay, not header content. It never changes the list inset.
-    if (!this.filtersExpanded) { this.filterGeneration += 1; this.taskStatusExpanded = false; }
+    if (!this.filtersExpanded) {
+      this.pendingSourceManagementPresentation = '';
+      this.filterGeneration += 1; this.filterStepGeneration += 1;
+      this.filterStep = 'filter'; this.viewState.filterStep = 'filter';
+      this.sourceGroupQuery = ''; this.viewState.sourceGroupQuery = '';
+      this.taskStatusExpanded = false;
+    }
     this.filtersExpanded = !this.filtersExpanded;
-    this.viewState.filtersExpanded = this.filtersExpanded;
     this.publishSurface();
-  }
-
-  private resetSearchFilters(identity: string): void {
-    if (!this.acceptsFilter(identity)) return;
-    if (this.selectedGroupName === '全部' && this.selectedContentType === '全部类型') return;
-    this.selectedGroupName = '全部'; this.selectedContentType = '全部类型';
-    this.viewState.category = '全部'; this.viewState.contentType = '全部类型';
-    this.resetFilteredResults(); this.publishSurface();
   }
 
   private taskStatusIdentity(): string {
@@ -637,7 +724,7 @@ export struct SearchPage {
     if (!this.ownsPageQuery()) return;
     if (!this.taskStatusExpanded) {
       this.taskStatusGeneration += 1;
-      this.filtersExpanded = false; this.viewState.filtersExpanded = false; this.publishSurface();
+      this.filtersExpanded = false; this.publishSurface();
     }
     this.taskStatusExpanded = !this.taskStatusExpanded;
   }
@@ -776,9 +863,11 @@ export struct SearchPage {
       return;
     }
     // Result filters do not silently restrict the next network query.
+    this.pendingSourceManagementPresentation = '';
     this.viewState.reset(keyword);
     this.selectedGroupName = '全部';
     this.selectedContentType = '全部类型';
+    this.selectedSourceGroup = ALL_SEARCH_SOURCE_GROUP; this.filterStep = 'filter'; this.sourceGroupQuery = '';
     this.filtersExpanded = false;
     this.taskStatusExpanded = false;
     this.taskStatusGeneration += 1;
@@ -846,7 +935,8 @@ export struct SearchPage {
   private selectGroup(name: string): void {
     if (!this.ownsPageQuery() || this.selectedGroupName === name) return;
     this.selectedGroupName = name;
-    this.viewState.category = name;
+    this.viewState.selectOrigin(name);
+    this.selectedSourceGroup = this.viewState.sourceGroup;
     this.resetFilteredResults();
   }
 
@@ -874,12 +964,15 @@ export struct SearchPage {
     if (!this.ownsPageQuery() || this.selectedContentType === contentType) return;
     this.selectedContentType = contentType;
     this.viewState.contentType = contentType;
+    this.viewState.advanceFilterRevision();
     // Reuse scope navigation/anchor handling without changing the query run.
     this.resetFilteredResults();
   }
 
   private filteredEmptyMessage(): string {
-    const selection = `${this.selectedGroupName} · ${this.selectedContentType}`;
+    if (!this.sourceGroupDirectory().valid(this.selectedSourceGroup)) return '原书源分组已删除，请重新选择或清除分组。';
+    const groupLabel = this.selectedSourceGroup.kind === 'all' ? '' : ` · ${this.sourceGroupDirectory().label(this.selectedSourceGroup)}`;
+    const selection = `${this.selectedGroupName} · ${this.selectedContentType}${groupLabel}`;
     if (this.presentation.kind === 'results' && this.presentation.searching) {
       return `当前筛选（${selection}）下暂无结果，搜索仍在继续。`;
     }
@@ -1056,19 +1149,25 @@ export struct SearchPage {
           .layoutWeight(this.searchSummaryStacked() ? 0 : 1);
       }.layoutWeight(1);
       ReaderSearchFilterPanel({ expanded: this.filtersExpanded,
-        presentationIdentity: this.filterPresentationIdentity(),
-        selectedGroup: this.selectedGroupName, selectedType: this.selectedContentType,
-        onToggle: (): void => this.toggleSearchFilters(),
-        onReset: (identity: string): void => this.resetSearchFilters(identity),
-        onDismiss: (identity: string): void => this.dismissSearchFilters(identity),
-        onGroup: (value: string, identity: string): void => {
-          if (!this.acceptsFilter(identity)) return;
-          this.selectGroup(value); this.publishSurface();
+        presentationIdentity: this.filterPresentationIdentity(), actionIdentity: this.filterActionIdentity(),
+        appliedGroup: this.selectedGroupName, appliedType: this.selectedContentType,
+        step: this.filterStep, initialGroupQuery: this.sourceGroupQuery,
+        groupLoadState: this.sourceGroupLoadState, hasGroupCatalog: this.hasSourceGroupCatalog,
+        sourceGroupOptions: this.sourceGroupDirectory().options,
+        appliedSourceGroup: this.selectedSourceGroup,
+        appliedSourceGroupLabel: this.sourceGroupDirectory().label(this.selectedSourceGroup),
+        appliedSourceGroupValid: !this.hasSourceGroupCatalog || this.sourceGroupDirectory().valid(this.selectedSourceGroup),
+        onStep: (step: SearchFilterStep, identity: string): void => this.switchSearchFilterStep(step, identity),
+        onGroupQuery: (value: string, identity: string): void => {
+          if (!this.acceptsFilterAction(identity) || this.filterStep !== 'groups') return;
+          this.sourceGroupQuery = value; this.viewState.sourceGroupQuery = value;
         },
-        onType: (value: SearchContentType, identity: string): void => {
-          if (!this.acceptsFilter(identity)) return;
-          this.selectContentType(value); this.publishSurface();
-        } });
+        onManageSources: (identity: string): void => this.manageSourcesFromFilters(identity),
+        onToggle: (): void => this.toggleSearchFilters(),
+        onDismiss: (identity: string): void => this.dismissSearchFilters(identity),
+        onClosed: (identity: string): void => this.finishSearchFilterDismissal(identity),
+        onApply: (category: string, contentType: SearchContentType, sourceGroup: SearchSourceGroupSelection, identity: string): void =>
+          this.applySearchFilters(category, contentType, sourceGroup, identity) });
     }.width('100%').constraintSize({ minHeight: this.searchSummaryHeight() });
   }
 
@@ -1268,17 +1367,21 @@ export struct SearchPage {
             ListItem() { this.errorContent(this.presentation.searchedSourceCount); }
           } else if (this.visibleGroups.length === 0) {
             ListItem() {
-              ReaderPageState({ message: this.filteredEmptyMessage() });
+              ReaderPageState({ message: this.filteredEmptyMessage(),
+                actionLabel: this.selectedSourceGroup.kind === 'all' ? '调整筛选' : '清除书源分组',
+                onAction: (): void => { if (this.selectedSourceGroup.kind === 'all') this.toggleSearchFilters(); else this.clearSourceGroup(); } });
             }
           }
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
             ListItem() {
               SearchResultCard({ group, viewState: this.viewState, queryRevision: this.viewState.revision,
-                displayIdleRevision: this.displayIdleRevision,
+                displayIdleRevision: this.displayIdleRevision, displayRevision: this.viewState.filterRevision,
                 expandedLayout: this.expandedLayout, cardWidth: this.searchResultWidth(),
                 canRefreshDisplay: (): boolean => !this.userInteracting && !this.userScrolling,
                 onDisplayFactsChange: (): void => this.onCardDisplayFactsChange(),
-                onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => this.onSelectResult(book, variants, displayCoverUrl) });
+                onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => {
+                  if (this.ownsSurface()) this.onSelectResult(book, variants, displayCoverUrl);
+                } });
             }
           }, (group: SearchBookGroup): string =>
             this.resultGroupKey(group.book));
@@ -1312,15 +1415,17 @@ export struct SearchPage {
     if (this.resultProjection === undefined) this.resultProjection = new SearchResultProjection();
     if (this.projectedGroups === undefined) this.projectedGroups = new Map();
     const delta = this.presentation.kind === 'results' ? this.presentation.delta : undefined;
+    const filter = new SearchResultFilter(this.selectedGroupName, this.selectedContentType,
+      this.selectedSourceGroup, this.sourceGroupDirectory(), this.viewState.filterRevision);
     const update = this.resultProjection.update(results, this.shelfBooks, keyword, this.viewState, delta,
-      this.viewState.anchorAtStart && !this.userInteracting && !this.userScrolling);
+      this.viewState.anchorAtStart && !this.userInteracting && !this.userScrolling, filter);
     this.changedGroupKeys = update.changedKeys;
     for (const key of update.changedKeys) {
       const row = update.rows.get(key);
       if (row === undefined) { this.projectedGroups.delete(key); continue; }
       const group = new SearchBookGroup(row.variants[0], 1, row.inBookshelf);
       for (let index = 1; index < row.variants.length; index++) group.admit(row.variants[index], row.inBookshelf);
-      group.book = row.book;
+      group.book = row.book; group.displayRevision = this.viewState.filterRevision;
       this.projectedGroups.set(key, group);
     }
     const contentType = this.selectedContentType ?? '全部类型';
@@ -1328,22 +1433,9 @@ export struct SearchPage {
     const typeChanged = this.groupedContentType !== contentType;
     if (update.orderChanged || categoryChanged || typeChanged ||
       (contentType !== '全部类型' && update.changedKeys.size > 0) || this.projectedGroupKeys === undefined) {
-      this.projectedGroupKeys = update.orderedKeys.filter((key: string): boolean => {
-        const book = (this.projectedGroups.get(key) as SearchBookGroup).book;
-        const scopeIds = this.selectedGroupName === '全部' ? undefined :
-          this.scopeEntries().find((entry: SearchScopeEntry): boolean => entry.name === this.selectedGroupName)?.sourceIds;
-        // Legacy snapshots may not carry source.list yet; retain the previous
-        // identity fallback for the local/online labels until the first source
-        // publication arrives.
-        const scopeMatches = scopeIds !== undefined ? scopeIds.indexOf(book.sourceId) >= 0 :
-          (this.selectedGroupName === '全部' ||
-            (this.selectedGroupName === SEARCH_LOCAL_SCOPE ? book.sourceId === 'local' : book.sourceId !== 'local'));
-        // Facts admitted by the gateway determine type. Unknown declarations
-        // remain visible under All; titles/genres never grant type admission.
-        const typeMatches = contentType === '全部类型' || (contentType === '漫画' ? book.category === 'comic' :
-          book.category === 'novel' || (book.sourceId === 'local' && book.category === undefined));
-        return scopeMatches && typeMatches;
-      });
+      // The projection already filters individual variants and selects a
+      // representative from that exact subset, including disabled discoveries.
+      this.projectedGroupKeys = update.orderedKeys.slice();
       this.groupedResultsCache = this.projectedGroupKeys.map((key: string): SearchBookGroup => this.projectedGroups.get(key) as SearchBookGroup);
       this.projectedGroupIndexes = new Map();
       for (let index = 0; index < this.projectedGroupKeys.length; index++) this.projectedGroupIndexes.set(this.projectedGroupKeys[index], index);
@@ -1703,6 +1795,7 @@ export struct SearchPage {
 
 interface SearchResultDisplayFacts {
   queryRevision: number;
+  displayRevision: number;
   book: SearchBook;
   sourceCount: number;
   inBookshelf: boolean;
@@ -1720,6 +1813,7 @@ struct SearchResultCard {
   viewState: SearchViewState = new SearchViewState();
   @Prop @Watch('acceptDisplayFacts') queryRevision: number = 0;
   @Prop @Watch('acceptDisplayFacts') displayIdleRevision: number = 0;
+  @Prop @Watch('acceptDisplayFacts') displayRevision: number = 0;
   @Prop expandedLayout: boolean = false;
   @Prop cardWidth: number = 0;
   onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string) => void = (): void => {};
@@ -1753,16 +1847,22 @@ struct SearchResultCard {
   }
 
   private captureDisplayFacts(): SearchResultDisplayFacts {
-    return { queryRevision: this.queryRevision, book: searchBookSnapshot(this.group.book),
+    return { queryRevision: this.queryRevision, displayRevision: this.displayRevision ?? 0, book: searchBookSnapshot(this.group.book),
       sourceCount: this.group.sourceCount, inBookshelf: this.group.inBookshelf };
   }
 
   private acceptDisplayFacts(): void {
     if (!this.mounted) return;
+    const display = this.displayRevision ?? 0;
+    if ((this.group.displayRevision ?? 0) !== display || display !== (this.viewState.filterRevision ?? 0)) {
+      this.selectionEpoch += 1; this.pressedSelection = undefined;
+      return;
+    }
     // Prop/ObjectLink callbacks may arrive in either order within one update.
     // The request identity also retires an old-query snapshot, so a new Prop
     // value cannot accidentally pin the preceding query's book while visible.
     const changedQuery = this.displayedFacts?.queryRevision !== this.queryRevision ||
+      this.displayedFacts?.displayRevision !== (this.displayRevision ?? 0) ||
       this.displayedFacts?.book.searchRequestId !== this.group.book.searchRequestId;
     if (changedQuery) {
       this.visibilityEpoch += 1;
@@ -1790,9 +1890,10 @@ struct SearchResultCard {
   private displayVisibilityHandler(): (visible: boolean, ratio: number) => void {
     const epoch = this.visibilityEpoch;
     const query = this.queryRevision;
+    const display = this.displayRevision ?? 0;
     return (visible: boolean, ratio: number): void => {
       if (!this.mounted || epoch !== this.visibilityEpoch || query !== this.queryRevision ||
-        query !== this.viewState.revision) return;
+        query !== this.viewState.revision || display !== (this.viewState.filterRevision ?? 0)) return;
       const nextVisible = visible && ratio > 0;
       if (!nextVisible || !this.displayVisible) {
         this.displayVisible = false;
@@ -1803,7 +1904,8 @@ struct SearchResultCard {
   }
 
   private captureSelection(): SearchResultSelection {
-    return { queryRevision: this.displayedFacts?.queryRevision ?? this.queryRevision, book: searchBookSnapshot(this.displayBook()),
+    return { queryRevision: this.displayedFacts?.queryRevision ?? this.queryRevision,
+      displayRevision: this.displayedFacts?.displayRevision ?? this.displayRevision ?? 0, book: searchBookSnapshot(this.displayBook()),
       variants: this.group.variants.map((book: SearchBook): SearchBook => searchBookSnapshot(book)),
       coverUrl: this.group.coverUrl };
   }
@@ -1836,7 +1938,7 @@ struct SearchResultCard {
     // have no Down and intentionally select the currently presented identity.
     if (source === SourceType.TouchScreen && pressed === undefined) return;
     const selected = pressed ?? this.captureSelection();
-    if (selected.queryRevision !== this.viewState.revision) return;
+    if (selected.queryRevision !== this.viewState.revision || selected.displayRevision !== (this.viewState.filterRevision ?? 0)) return;
     this.onSelectResult(selected.book, selected.variants, selected.coverUrl);
   }
 

@@ -1,0 +1,3328 @@
+{
+  "schemaVersion": "1.0",
+  "revision": 12,
+  "controls": [
+    {
+      "controlId": "page-back",
+      "owner": "PageBackBar",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "backBar"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/PageBackBar.ets",
+          "symbol": "panel"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "PageBackBar.accessibilityText('返回')",
+      "status": "spec",
+      "knownGap": " Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-tools",
+      "owner": "ReaderIconButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "backBar"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "TOOLBAR_COMPACT_ICON"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderIconButton.accessibilityLabel('书源工具')",
+      "status": "spec",
+      "knownGap": " Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-add-inline",
+      "owner": "SourceManagementPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "searchField"
+        },
+        {
+          "path": "tools/test-source-management-layout.mjs"
+        },
+        {
+          "path": "tools/page-structure/test-source-interaction-inventory.mjs"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "searchField.accessibilityText('导入书源')",
+      "status": "manual",
+      "knownGap": "Inner40x40 paint is centered in actual44x44 parent; response(-2,-2,44,44) resolves to carrier(0,0,44,44). HAP9 at1.45 one Native point outside40paint/inside44parent dispatched current intent-add; this is partial counterproof, not all-target/focus acceptance. Current scroll/selection candidate needs its scoped Native regression. Fresh SDK report: .reader-artifacts/source-e2-border-correction-20261103/source-interaction-evidence.json Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-search",
+      "owner": "ReaderSearchField",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "searchField"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSearchField.ets"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "focused",
+        "editing"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderSearchField.accessibilityLabel('搜索书源名称或域名')",
+      "status": "partial",
+      "knownGap": "Native TextInput visual height is 42vp, sourceManagement declares a 44vp responseRegion within a 44vp parent. There is no clear button in this variant. Native edge focus, parent clipping and glyph/caret growth remain unverified. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-filter-chip",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "chip"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_MANAGEMENT_STATUS"
+        },
+        {
+          "path": "tools/test-source-filter-live-selection.mjs"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "selected",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderButton label",
+      "status": "partial",
+      "knownGap": "Current Source-specific minimum44/scaled parent budget and entity/state semantics are SDK tested. Status/category opt into selected RADIO, Toggle retains checked, login/detect use current entity plus busy/unavailable labels; native hit/focus/readout remain OPEN. Current status/category builders read live parent state instead of retained primitive active arguments; sdk-selection preserves12 child/updater instances across5status/4category updates and rejects the old primitive snapshot. Native post-fix selected paint/readout remains pending. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-group-select",
+      "owner": "ReaderSelect",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "groupFilter"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSelect.ets"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSelectPanel.ets"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "expanded",
+        "selected"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderSelect current value",
+      "status": "partial",
+      "knownGap": "Computed width and trigger target need measurement; opening/closing and focus-return remain unverified. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-row",
+      "owner": "SourceManagementPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "sourceRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementLayout.ts",
+          "symbol": "resolveSourceManagementLayout"
+        }
+      ],
+      "states": [
+        "idle"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "source name and base URL content; no row onClick",
+      "status": "manual",
+      "knownGap": "Non-interactive collection unit; feature-local layout switches inline/stacked-actions/stacked-leading, minimum height grows. Native glyph calibration pending."
+    },
+    {
+      "controlId": "source-login",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "loginButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_MANAGEMENT_LOGIN"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderButton label='登录'",
+      "status": "partial",
+      "knownGap": "Current Source-specific minimum44/scaled parent budget and entity/state semantics are SDK tested. Status/category opt into selected RADIO, Toggle retains checked, login/detect use current entity plus busy/unavailable labels; native hit/focus/readout remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-detect",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "detectButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_MANAGEMENT_DETECT"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "sourceDetectEnabled"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderButton label=检测/检测中",
+      "status": "partial",
+      "knownGap": "Current Source-specific minimum44/scaled parent budget and entity/state semantics are SDK tested. Status/category opt into selected RADIO, Toggle retains checked, login/detect use current entity plus busy/unavailable labels; native hit/focus/readout remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-status",
+      "owner": "StatusBadge",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "statusBadge"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/StatusBadge.ets"
+        }
+      ],
+      "states": [
+        "unchecked",
+        "checking",
+        "passed",
+        "failed"
+      ],
+      "hitTarget": {
+        "width": 24,
+        "height": 18,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceManagementPage.statusBadgeLabel(source) passed to statusBadge Row.accessibilityText(label)",
+      "status": "partial",
+      "knownGap": "Four status labels and accessibilityGroup are bound in source. Status is non-interactive content; actual reader announcement/focus and unchanged native geometry remain NOT_RUN."
+    },
+    {
+      "controlId": "source-toggle",
+      "owner": "ReaderToggle",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "sourceSwitch"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderToggle.ets"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSwitchSpecs.ets"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "checked",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderToggle.accessibilityLabel('启用书源')",
+      "status": "partial",
+      "knownGap": "Current Source-specific minimum44/scaled parent budget and entity/state semantics are SDK tested. Status/category opt into selected RADIO, Toggle retains checked, login/detect use current entity plus busy/unavailable labels; native hit/focus/readout remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "footer-batch",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "bottomActionBar"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_MANAGEMENT_MANAGE"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderButton label='批量管理'",
+      "status": "partial",
+      "knownGap": "SDK width allocation and height-growth matrix passes with shared footer parent budget; actual native glyph/system-scale layout and hit dispatch remain unverified. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "footer-add",
+      "owner": "ReaderLabeledIconAction",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "bottomActionBar"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderLabeledIconActionSpecs.ets",
+          "symbol": "SOURCE_ADD"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderLabeledIconAction label='新增书源'",
+      "status": "partial",
+      "knownGap": "SDK width allocation and height-growth matrix passes with shared footer parent budget; actual native glyph/system-scale layout and hit dispatch remain unverified. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-category-chip",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "categoryFilter"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_MANAGEMENT_CATEGORY"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "ReaderButtonFrameModifier"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "selected",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderButton category label (seven values; custom disabled)",
+      "status": "partial",
+      "knownGap": "Current Source-specific minimum44/scaled parent budget and entity/state semantics are SDK tested. Status/category opt into selected RADIO, Toggle retains checked, login/detect use current entity plus busy/unavailable labels; native hit/focus/readout remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-group-option",
+      "owner": "ReaderChoiceRow",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "groupOverlay"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+          "symbol": "selectedRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+          "symbol": "optionRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderChoiceRow.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        },
+        {
+          "path": "tools/test-source-group-border-budget.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "selected",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderChoiceRow option value",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim. sourceGroup outer resolvedWidth now pays46 minimum under its available-width clamp, including two1vp borders; actual inner optionRow/100% response minimum is44. Other panel variants retain previous behavior. Prior12ce outer44-as-inner44 was invalidated by the real panel→Scroll→Column→ChoiceRow chain (inner42); new adapter independently rejects that error and binds real46→44."
+    },
+    {
+      "controlId": "source-group-dismiss",
+      "owner": "SourceManagementPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "groupOverlay"
+        }
+      ],
+      "states": [
+        "expanded",
+        "closing"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Outside-area dismiss gesture; accessible alternatives are current selection/back",
+      "status": "partial",
+      "knownGap": "Full-viewport outside-dismiss region is not a labelled 44vp button; panel and native hit arbitration/Back remain OPEN."
+    },
+    {
+      "controlId": "source-status-action",
+      "owner": "ReaderRecoveryAction",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "statusAction"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "statusActionLabel; captured statusActionGeneration",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-read-refresh",
+      "owner": "ReaderRecoveryAction",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "sourceList"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "刷新列表; current read recovery generation",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-read-retry",
+      "owner": "ReaderPageState",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "sourceList"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderPageState.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "loading"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "重试; reconcile current original or onRetryLoad",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-filter-clear",
+      "owner": "ReaderPageState",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "sourceList"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderPageState.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "清除筛选; local view reset",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-original-reconcile",
+      "owner": "ReaderRecoveryNotice",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "originalRecovery"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "核对; originalActionCurrent + captured original generation",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-original-continue",
+      "owner": "ReaderRecoveryNotice",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "originalRecovery"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "继续/继续清理; current original operation permission",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-original-expand",
+      "owner": "ReaderRecoveryNotice",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "originalRecovery"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "collapsed",
+        "expanded"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "展开/收起; visible current notice generation",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-unknown-reconcile",
+      "owner": "ReaderRecoveryNotice",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "pendingOverlay"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "核对; receipt unknown projection generation",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "source-unknown-expand",
+      "owner": "ReaderRecoveryNotice",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "pendingOverlay"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        },
+        {
+          "path": ".reader-artifacts/source-e2-border-correction-20261103/source-e2-complete-evidence.json"
+        }
+      ],
+      "states": [
+        "collapsed",
+        "expanded"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "展开/收起; visible current receipt notice generation",
+      "status": "partial",
+      "knownGap": "SDK declaration only; actual native hit dispatch, focus and system-font rendering remain OPEN. Complete E2 dimension floor for this reference is bound by source-e2-full-targets-20261103/source-e2-complete-evidence.json; actual native constraint/response/parent evidence is preserved, without a readout/focus/all-font glyph claim."
+    },
+    {
+      "controlId": "directory-full-collapse",
+      "owner": "ReaderFullDirectory",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+          "symbol": "topBar"
+        }
+      ],
+      "states": [
+        "idle",
+        "closing"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderActionAccessibility(收起目录)",
+      "status": "partial",
+      "knownGap": "Actual44-wide carrier and scaled headerControlHeight reserve real parent geometry; authored smaller glyph is paint only. Native Back/hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-full-source-switch",
+      "owner": "ReaderFullDirectory",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+          "symbol": "topBar"
+        }
+      ],
+      "states": [
+        "idle",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 62,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderActionAccessibility(换源)",
+      "status": "partial",
+      "knownGap": "Actual62-wide carrier and scaled headerControlHeight reserve real parent geometry. Local books remain disabled; remote action retains Index owner. Native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-full-offline-menu",
+      "owner": "ReaderFullDirectory",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+          "symbol": "topBar"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled",
+        "open"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "ReaderActionAccessibility(离线管理/离线操作进行中)",
+      "status": "partial",
+      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+    },
+    {
+      "controlId": "directory-full-offline-actions",
+      "owner": "ReaderFullDirectory",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+          "symbol": "offlineBookMenu"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 142,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderActionAccessibility(下载整书/清除本书离线内容)",
+      "status": "partial",
+      "knownGap": "Actual two menu rows each reserve menuRowHeight >=44 with system-scale growth; menu parent pays both rows plus divider. Mounted/blocked/busy admission remains intact. Native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-tabs-full",
+      "owner": "FullDirectoryPanel",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "directoryTab"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "bookmarkTab"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "tabStripHeight"
+        }
+      ],
+      "states": [
+        "idle",
+        "selected"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "目录/书签 + ReaderActionAccessibility selected",
+      "status": "partial",
+      "knownGap": "Actual44 tab plus5 top padding and1 divider consume50 in the real parent/list budget. SDK parent checks pass; native glyph/focus/hit remain OPEN."
+    },
+    {
+      "controlId": "directory-query-full",
+      "owner": "FullDirectoryPanel",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "searchControls"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "queryField"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "searchControlsHeight"
+        }
+      ],
+      "states": [
+        "editing",
+        "submitted"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderSearchField.accessibilityLabel(searchPlaceholder)",
+      "status": "partial",
+      "knownGap": "Actual readerDirectory TextInput grows from44; actor innerWidth, not global window width, chooses inline versus separate query/tools rows. Parent list budget pays the same extra height. SDK pass; native glyph/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-tools-full",
+      "owner": "FullDirectoryPanel",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "controlButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "queryTools"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "queryStacked"
+        }
+      ],
+      "states": [
+        "idle",
+        "ascending",
+        "descending"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "controlButtonLabel(search/top/bottom/sort)",
+      "status": "partial",
+      "knownGap": "Actual44x44 non-overflow action carriers contain original32 paint, with5vp spacing. Actual actor width selects an independent query row when its44 input plus tools cannot fit. SDK carrier/parent checks pass; native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-tabs-control",
+      "owner": "ReaderControlDirectoryContent",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "tabButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "tabHeight"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryGeometry.ts",
+          "symbol": "resolveReaderControlDirectoryGeometry"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "shortHeader"
+        }
+      ],
+      "states": [
+        "idle",
+        "selected",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "章节/书签 + ReaderActionAccessibility selected",
+      "status": "partial",
+      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+    },
+    {
+      "controlId": "directory-query-control",
+      "owner": "ReaderControlDirectoryContent",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "directoryToolbar"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "contentGeometry"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "toolbarInteractive"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "shortHeader"
+        }
+      ],
+      "states": [
+        "editing",
+        "submitted",
+        "deferred",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderSearchField.accessibilityLabel(搜索章节名称/搜索书签内容)",
+      "status": "partial",
+      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+    },
+    {
+      "controlId": "directory-tools-control",
+      "owner": "ReaderControlDirectoryContent",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets",
+          "symbol": "tool"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "deferCatalogAction"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "shortHeader"
+        }
+      ],
+      "states": [
+        "idle",
+        "deferred",
+        "ascending",
+        "descending",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderDirectoryToolbar.tool(title)",
+      "status": "partial",
+      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+    },
+    {
+      "controlId": "directory-control-collapse",
+      "owner": "ReaderControlPanel",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+          "symbol": "controlHeader"
+        }
+      ],
+      "states": [
+        "idle",
+        "closing"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderPanelCollapseButton accessibilityLabel=收起目录/收起书签",
+      "status": "partial",
+      "knownGap": "Actual directory parent passes minimumTarget44 and directoryHeaderScale to the existing collapse component. This is the directory branch only; native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-back-manga",
+      "owner": "BookDirectoryPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "mangaHeader"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/PageBackBar.ets",
+          "symbol": "panel"
+        }
+      ],
+      "states": [
+        "idle",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "PageBackBar返回；选择宿主捕获selection回调",
+      "status": "partial",
+      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+    },
+    {
+      "controlId": "directory-query-manga",
+      "owner": "BookDirectoryPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "mangaToolbar"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "editing",
+        "cleared"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderSearchField(搜索章名或序号)",
+      "status": "partial",
+      "knownGap": "Real readerDirectory TextInput and parent query/toolbar minimum44 with system font growth. Native hit/clipping/focus remain unverified."
+    },
+    {
+      "controlId": "directory-sort-manga",
+      "owner": "BookDirectoryPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "mangaToolbar"
+        }
+      ],
+      "states": [
+        "idle",
+        "ascending",
+        "descending"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "accessibilityText(切换排序)",
+      "status": "partial",
+      "knownGap": "Actual44-wide carrier grows with mangaQueryHeight and retains approved compact glyph/two-state sort action. SDK carrier/parent checks pass; native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-locate-manga",
+      "owner": "BookDirectoryPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "mangaToolbar"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "locateCurrent"
+        }
+      ],
+      "states": [
+        "idle",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "accessibilityText(定位当前条目)",
+      "status": "partial",
+      "knownGap": "Actual44 carrier and growing toolbar preserve locate-current ownership/positioning. SDK declaration/parent checks pass; native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-chapter-text",
+      "owner": "FullDirectoryPanel/ReaderDirectoryChapterRow",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "chapterRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "current",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "readerDirectoryAccessibilityText(entry) + selected",
+      "status": "partial",
+      "knownGap": "Current chapter/ListItem minimum44 and scaled bookmark motion/legacy extents share production font budgets; current Tree renderer retains entity/proof guards. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified."
+    },
+    {
+      "controlId": "directory-bookmark-row",
+      "owner": "ReaderBookmarkRow",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderBookmarkRow.ets",
+          "symbol": "motionBody"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderBookmarkRow.ets",
+          "symbol": "legacyBody"
+        }
+      ],
+      "states": [
+        "idle",
+        "pendingConfirmation"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "打开书签：chapterTitle positionLabel timeLabel，待确认",
+      "status": "partial",
+      "knownGap": "Current chapter/ListItem minimum44 and scaled bookmark motion/legacy extents share production font budgets; current Tree renderer retains entity/proof guards. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified."
+    },
+    {
+      "controlId": "directory-bookmark-marker",
+      "owner": "FullDirectoryPanel/ReaderDirectoryChapterRow",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "bookmarkMarkerHitTarget"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets",
+          "symbol": "marker"
+        }
+      ],
+      "states": [
+        "empty",
+        "bookmarked",
+        "unavailable"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "添加本章章首书签/删除本章已有书签",
+      "status": "partial",
+      "knownGap": "开关依据真实bookmarkTimes/章首请求；完整目录可用态与Host busy/unknown准入是否全部反映到marker尚未验证。"
+    },
+    {
+      "controlId": "directory-download-marker-text",
+      "owner": "FullDirectoryPanel/ReaderDirectoryChapterRow",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "downloadMarkerHitTarget"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "missing",
+        "cached",
+        "running",
+        "completed",
+        "failed",
+        "cancelled",
+        "unknown"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "下载章节/已下载及downloadMarkerLabel",
+      "status": "partial",
+      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+    },
+    {
+      "controlId": "directory-navigation-row",
+      "owner": "ReaderDirectoryNavigationList",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "selectTarget"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "toggleNode"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "row"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "mangaRowBody"
+        }
+      ],
+      "states": [
+        "idle",
+        "current",
+        "group",
+        "expanded",
+        "collapsed",
+        "resolving",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "树节点层级、章节标题、当前/分组/展开状态名称",
+      "status": "partial",
+      "knownGap": "Current chapter/ListItem minimum44 and scaled bookmark motion/legacy extents share production font budgets; current Tree renderer retains entity/proof guards. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified. HAP7 Native chapter-title upper-edge tap failed with natural16vp Text inside44vp Row. Fixed actual text carrier and response to the same parent max(44,rowHeight), with16 scoped SDK samples at1/1.3/1.45/2 and old-carrier negative; actual post-fix Native edge/glyph/focus remains pending. Manga rendering is unchanged by this text-only fix."
+    },
+    {
+      "controlId": "directory-manga-entry",
+      "owner": "MangaDirectoryEntryRow",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+          "symbol": "activateEntry"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+          "symbol": "accessibility"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+          "symbol": "branchToggle"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+          "symbol": "cellHeight"
+        }
+      ],
+      "states": [
+        "idle",
+        "current",
+        "group",
+        "expanded",
+        "collapsed",
+        "unknown",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "accessibility(entry):标题+分组/可读/当前+下载文字",
+      "status": "partial",
+      "knownGap": "Actual Tree renderer retains identity/proof guards. Fallback shared row uses44 fold/read carriers and minimum44-plus-borders cell; three real consumers share the existing public width planner. SDK pass; native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-manga-download",
+      "owner": "MangaDirectoryEntryRow",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+          "symbol": "download"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "mangaNumberCell"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "mangaRowBody"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "mangaCellHeight"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+          "symbol": "mangaAccessoryWidth"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+          "symbol": "cellHeight"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/MangaDirectoryVisual.ts",
+          "symbol": "mangaDirectoryColumns"
+        }
+      ],
+      "states": [
+        "idle",
+        "completed",
+        "unknown",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "管理章节标题下载",
+      "status": "partial",
+      "knownGap": "Tree and shared fallback reserve actual44 download plus independent44 reading lane, padding and borders exactly once. Cell height pays borders above its44 inner target. Same planner checked through all three row consumers; native hit/focus remain OPEN."
+    },
+    {
+      "controlId": "directory-manga-download-menu",
+      "owner": "BookDirectoryPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "mangaDownloadMenuButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "openDownloadActions"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "performDownloadAction"
+        }
+      ],
+      "states": [
+        "closed",
+        "loading",
+        "ready",
+        "error",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "ReaderMangaDownloadPopup action.label；由宿主透传",
+      "status": "partial",
+      "knownGap": "菜单读取generation/identity与onClosed核对已绑定源码；业务动作忙态、全部分支/焦点未执行。"
+    },
+    {
+      "controlId": "directory-recovery-actions",
+      "owner": "ReaderDirectoryRecoverySurface",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryRecoverySurface.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryRecoverySurface.ets",
+          "symbol": "reconcile"
+        }
+      ],
+      "states": [
+        "pending",
+        "busy",
+        "partial",
+        "confirmedRefreshFailed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "原书签/离线事项：核对/继续原操作/只读重读",
+      "status": "partial",
+      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+    },
+    {
+      "controlId": "directory-catalog-retry",
+      "owner": "FullDirectoryPanel/BookDirectoryPage/ReaderDirectoryNavigationSurface",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+          "symbol": "directoryBody"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+          "symbol": "mangaEmptyState"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+          "symbol": "retryOpen"
+        }
+      ],
+      "states": [
+        "loading",
+        "empty",
+        "filteredEmpty",
+        "error",
+        "ready"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "重试加载目录/清除搜索；消息owner决定",
+      "status": "partial",
+      "knownGap": "文字FullDirectoryPanel过滤空无一键清除：手动清空输入再搜索。漫画有清除搜索。加载/读取/写回执不同，不合并状态机。"
+    },
+    {
+      "controlId": "directory-control-load-catalog",
+      "owner": "ReaderControlDirectoryContent",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "catalogStatus"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "flatCatalog"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "shortTool"
+        }
+      ],
+      "states": [
+        "partial",
+        "loading",
+        "failed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "加载完整目录/重试加载目录",
+      "status": "partial",
+      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+    },
+    {
+      "controlId": "directory-bookmark-state-actions",
+      "owner": "ReaderControlDirectoryContent/FullDirectoryPanel",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderBookmarkEmptyState.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderBookmarkErrorState.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "empty",
+        "error",
+        "loading"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "返回目录/重新载入书签",
+      "status": "partial",
+      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+    },
+    {
+      "controlId": "download-back",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "topBar"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "topBar.accessibilityText; root-book context label still says return to book list",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-manage",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "topBar"
+        }
+      ],
+      "states": [
+        "default",
+        "disabled",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible management text; books.length admission",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-search",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "searchField"
+        }
+      ],
+      "states": [
+        "default",
+        "focused",
+        "editing"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "TextInput accessibilityText and placeholder",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-search-clear",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "searchField"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Explicit clear-search accessibilityText",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-type-tab",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "typeTab"
+        }
+      ],
+      "states": [
+        "default",
+        "selected",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Label with selected suffix",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-filter-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "listControls"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "listFilterControl"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible filterLabel",
+      "status": "partial",
+      "knownGap": "Actual44 direction carrier contains approved24 paint; parent budgets direction+3gap+sort field independently from filter/count, switching inline/wrapped at actual width/scale. SDK15 combinations reject former7vp overlap. Native hit/clipping/focus/system-font acceptance remains NOT_RUN."
+    },
+    {
+      "controlId": "download-sort-direction",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "listControls"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "listSortControls"
+        }
+      ],
+      "states": [
+        "default",
+        "ascending",
+        "descending",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Explicit current direction and next action",
+      "status": "partial",
+      "knownGap": "Actual44 direction carrier contains approved24 paint; parent budgets direction+3gap+sort field independently from filter/count, switching inline/wrapped at actual width/scale. SDK15 combinations reject former7vp overlap. Native hit/clipping/focus/system-font acceptance remains NOT_RUN."
+    },
+    {
+      "controlId": "download-sort-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "listControls"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "listSortControls"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible sortLabel",
+      "status": "partial",
+      "knownGap": "Actual44 direction carrier contains approved24 paint; parent budgets direction+3gap+sort field independently from filter/count, switching inline/wrapped at actual width/scale. SDK15 combinations reject former7vp overlap. Native hit/clipping/focus/system-font acceptance remains NOT_RUN."
+    },
+    {
+      "controlId": "download-book-cover-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "openBook"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed",
+        "selection-mode"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Image/title fallback; no explicit control name",
+      "status": "partial",
+      "knownGap": "Stack.onClick owns action; secondary context is inert. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-book-title-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "openBook"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed",
+        "selection-mode"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible book title",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-book-source-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "openBook"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed",
+        "selection-mode"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible author/source text",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-book-count-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "openBook"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed",
+        "selection-mode"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible download count text",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-book-selection",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "toggleBook"
+        }
+      ],
+      "states": [
+        "unchecked",
+        "checked"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Checkbox; no explicit book-name association",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-book-primary-action",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "statusButton"
+        }
+      ],
+      "states": [
+        "default",
+        "running",
+        "failed",
+        "disabled",
+        "unknown"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Explicit book title/state/pause/retry name; downloaded branch is noninteractive Row",
+      "status": "partial",
+      "knownGap": "Queue state/management admission is not a per-submit operation busy projection. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-book-more",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "moreButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookRow"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Book title plus book-actions name",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-chapter-quick-select",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterToolbar"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "quickSelectChapters"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderInlineSelect.ets",
+          "symbol": "ReaderInlineSelect"
+        }
+      ],
+      "states": [
+        "default",
+        "selected",
+        "expanded"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "ReaderInlineSelect quick/current/forward/all",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-chapter-title-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "showReadTarget"
+        }
+      ],
+      "states": [
+        "default",
+        "current",
+        "selection-mode"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible chapter title",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-chapter-selection",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "toggleChapter"
+        }
+      ],
+      "states": [
+        "unchecked",
+        "checked"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Checkbox; no explicit chapter-name association",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-chapter-group-select",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterGroup"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Visible choose-volume label",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-chapter-primary-action",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterButtonLabel"
+        }
+      ],
+      "states": [
+        "default",
+        "running",
+        "local-complete",
+        "disabled",
+        "unknown"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Current chapterButtonLabel text",
+      "status": "partial",
+      "knownGap": "Unknown without local content is disabled; no per-submit busy projection. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-chapter-more",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "moreButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterRow"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Chapter title plus chapter-actions name",
+      "status": "partial",
+      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
+    },
+    {
+      "controlId": "download-storage-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "storageDock"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Explicit storage management accessibilityText",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-selection-all",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "selectionDock"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "toggleAll"
+        }
+      ],
+      "states": [
+        "default",
+        "all-selected",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Select-all / clear-all visible label",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-selection-done",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "selectionDock"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "setManaging"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Explicit finish-management accessibilityText",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-selection-action",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "selectionDock"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "actionButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "locateCurrent"
+        }
+      ],
+      "states": [
+        "default",
+        "disabled",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Current choose/locate/download/pause/more label",
+      "status": "partial",
+      "knownGap": "Existing selectionDock actionButton family includes explicit locate-current intent. It cancels ordinary chapter pending/epoch and management restoration before index3+ordinal positioning; selected SDK owner/retirement checks pass. Native position/hit/focus and business receipts remain NOT_RUN."
+    },
+    {
+      "controlId": "download-sheet-dismiss-region",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "sheetOverlay"
+        }
+      ],
+      "states": [
+        "opening",
+        "ready",
+        "closing"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Scrim outside-dismiss region; alternative close button exists",
+      "status": "partial",
+      "knownGap": "Non-button area; admission requires current animation generation and maskReady. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-sheet-close",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "sheetContent"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "operationsHeader"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+          "symbol": "ReaderBoundedSurfaceHeader"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "Explicit close label / bounded-header onClose",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-inline-select",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "filterSheet"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "settingsSheet"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "rangeSheet"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderInlineSelect.ets",
+          "symbol": "ReaderInlineSelect"
+        }
+      ],
+      "states": [
+        "default",
+        "expanded",
+        "selected"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Visible row label and value for filter/storage/range book",
+      "status": "partial",
+      "knownGap": "Both storage selectors now dispatch existing configureStorage intent. Current sheet/presentation and label/index guard; shared option target behavior/native dispatch remain upstream boundaries."
+    },
+    {
+      "controlId": "download-choice-option",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "choiceRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "sortSheet"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "rangeSheet"
+        }
+      ],
+      "states": [
+        "default",
+        "selected",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Visible label plus selected suffix",
+      "status": "partial",
+      "knownGap": "Outer min44 Button is sole callback/focus owner; inner Radio is hit-test/accessibility inert. Native dispatch/focus not verified."
+    },
+    {
+      "controlId": "download-operation-option",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "operationsSheet"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "performOperationsAction"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderActionSheetContent.ets",
+          "symbol": "ReaderActionSheetContent"
+        }
+      ],
+      "states": [
+        "default",
+        "disabled",
+        "danger",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "ReaderActionSheetAction.label; current operationsActions rechecks enabled",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-range-input",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "rangeSheet"
+        }
+      ],
+      "states": [
+        "default",
+        "focused",
+        "editing"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Start/end ordinal placeholders",
+      "status": "partial",
+      "knownGap": "No explicit accessibilityText; real keyboard layout is unverified. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-sheet-footer-action",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "sheetContent"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "actionButton"
+        }
+      ],
+      "states": [
+        "default",
+        "disabled",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Start download / return / done text",
+      "status": "partial",
+      "knownGap": "Filter/sort Done only dismisses; settings has cleanup footer instead. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-storage-clean",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "clearStorageButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "openStorageCleanup"
+        }
+      ],
+      "states": [
+        "default",
+        "disabled",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Real Button storageCleanLabel; paint sibling hidden from a11y and hitTest None",
+      "status": "partial",
+      "knownGap": "Button matchParent target needs native proof; no submit busy. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-confirmation-action",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "confirmationOverlay"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "handleConfirmationAction"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderDialogSurface.ets",
+          "symbol": "ReaderDialogSurface"
+        }
+      ],
+      "states": [
+        "default",
+        "disabled",
+        "danger",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "DialogActionView cancel/cleanup/cancel-task/delete labels",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-page-read-retry",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookPage"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "chapterPage"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderPageState.ets",
+          "symbol": "ReaderPageState"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "ReaderPageState retry label",
+      "status": "partial",
+      "knownGap": "Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "download-font-retry",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "pageContent"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "prepareFonts"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderPageState.ets",
+          "symbol": "ReaderPageState"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "ReaderPageState font retry label",
+      "status": "partial",
+      "knownGap": "Current mounted identity and font generation only. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
+    },
+    {
+      "controlId": "source-tools-selection",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "batchCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "sourceRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_COMPACT"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "sourceActions"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage.sourceActions supplies selection state/action plus full current source name through ReaderButton.actionAccessibilityLabel.",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-export",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "exportCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "batchCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "confirmExportThen"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_ACTION"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-check",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "batchCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_ACTION"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-stop-check",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "batchCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_ACTION"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-batch-write",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "batchCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "canWriteSources"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_ACTION"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-editor-open",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "sourceRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "smallButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_COMPACT"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "sourceActions"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage.sourceActions supplies selection state/action plus full current source name through ReaderButton.actionAccessibilityLabel.",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-editor-field",
+      "owner": "ReaderFormField",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "editorCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "SourceToolsPage.editorCard -> fieldAccessibilityLabel containing editorSourceId; original canWriteSources guard unchanged.",
+      "status": "partial",
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+    },
+    {
+      "controlId": "source-tools-editor-save",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "editorCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "canWriteSources"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_ACTION"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-editor-cancel",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "editorCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_ACTION"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-editor-reconcile",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "editorCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_ACTION"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-debug-open",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "sourceRow"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "smallButton"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "symbol": "SOURCE_TOOLS_COMPACT"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "sourceActions"
+        },
+        {
+          "path": "tools/test-source-category-minimum.mjs"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage.sourceActions supplies selection state/action plus full current source name through ReaderButton.actionAccessibilityLabel.",
+      "status": "partial",
+      "knownGap": "Tools-only spec has real minimum44 with natural height and no extended responseRegion; page parent wraps from actual width/fontScale. SDK cases pass. Native hit/readout/focus and operation binding remain separately open. Current Tools-only action/compact Text minimum44 is preserved together with prior height constraints; tools-consumer/style-isolation SDK evidence only, Native new-host point remains separate."
+    },
+    {
+      "controlId": "source-tools-debug-key",
+      "owner": "ReaderFormField",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "debugCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage.debugCard -> fieldAccessibilityLabel containing debugSourceId or page context; uses existing form-body44 instead of source-debug40.",
+      "status": "partial",
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+    },
+    {
+      "controlId": "source-tools-debug-options",
+      "owner": "ReaderInlineSelect",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "debugCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderInlineSelect.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+    },
+    {
+      "controlId": "source-tools-original-reconcile",
+      "owner": "ReaderRecoveryNotice",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "originalRecoveryActions"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "reconcileOriginal"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+    },
+    {
+      "controlId": "source-tools-original-continue",
+      "owner": "ReaderRecoveryNotice",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "originalRecoveryActions"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "continueOriginal"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+    },
+    {
+      "controlId": "source-tools-read-recovery",
+      "owner": "ReaderRecoveryAction",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "recoveryAction"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+    },
+    {
+      "controlId": "source-tools-read-retry",
+      "owner": "ReaderPageState",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "statusCard"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderPageState.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "SourceToolsPage current label/placeholder; row entity-specific labels not fully audited",
+      "status": "partial",
+      "knownGap": "Existing shared component/control path retained; native hit/focus/readout and complete operation binding remain separately open. No 30/42vp Tools button remains."
+    },
+    {
+      "controlId": "download-filter-reset",
+      "owner": "SharedDownloadPage.clearFilters",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "clearFilters"
+        },
+        {
+          "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+          "symbol": "bookPage"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderPageState.ets"
+        },
+        {
+          "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets"
+        }
+      ],
+      "states": [
+        "idle",
+        "pressed",
+        "retired"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "ReaderPageState actionLabel=清除筛选",
+      "status": "partial",
+      "knownGap": "Current parent SDK initializer/callback tested; common RecoveryAction minimum target is reused. Native hit routing/parent clipping/focus are not verified."
+    },
+    {
+      "controlId": "directory-query-clear-control",
+      "owner": "ReaderControlDirectoryContent.query",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "shortTool"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+          "symbol": "clearSearch"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+          "symbol": "treePrefixEmptyState"
+        }
+      ],
+      "states": [
+        "idle",
+        "disabled",
+        "filteredEmpty"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "清除搜索; prefix tool and filtered-empty recovery delegate the same current local query owner",
+      "status": "partial",
+      "knownGap": "Actual prefix clear44 and existing PageState recovery use current presentation/source/book/view guards. SDK actions/old-callback retirement pass; native hit/scroll/focus remains NOT_RUN."
+    }
+  ]
+}

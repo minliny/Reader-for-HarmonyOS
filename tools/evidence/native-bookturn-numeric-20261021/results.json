@@ -1,0 +1,97 @@
+{
+  "status": "PASS",
+  "production": {
+    "entry/src/main/cpp/bookturn/bookturn_host.cpp": "8cebfd6ec8a6bd99d52e8f12da802b0b2a22d897dc25bae0aa756e0a81d22d60",
+    "entry/src/main/cpp/bookturn/bookturn_napi.cpp": "815cc677797606087346e76f1ed8846323d8034aef75f0f51a13845856f7897e"
+  },
+  "formerHostSha256": "e911add0d2464727c1e01dbb72eaa47a4887f357960407d09d411953b47200f5",
+  "checks": [
+    {
+      "name": "host-compile",
+      "command": "/usr/bin/clang++",
+      "args": [
+        "-std=c++17",
+        "-O1",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-bookturn-numeric-hTqBOb/numeric.cpp",
+        "-o",
+        "/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-bookturn-numeric-hTqBOb/numeric"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "log": "host-compile.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "numeric-boundaries",
+      "command": "/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-bookturn-numeric-hTqBOb/numeric",
+      "args": [],
+      "exitCode": 0,
+      "signal": null,
+      "log": "numeric-boundaries.log",
+      "logSha256": "103efc74fb5cd0c7108861a3ce325ca0ac9613a739ea3b729273f03871eed1ab"
+    },
+    {
+      "name": "bisheng-host-syntax",
+      "command": "/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/BiSheng/bin/clang++",
+      "args": [
+        "--target=aarch64-linux-ohos",
+        "--gcc-toolchain=/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/BiSheng",
+        "--sysroot=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/sysroot",
+        "-I/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/sysroot/usr/include",
+        "-I/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/cpp/bookturn",
+        "-std=c++17",
+        "-D__MUSL__",
+        "-fPIC",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wno-error=unused-command-line-argument",
+        "-fsyntax-only",
+        "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/cpp/bookturn/bookturn_host.cpp"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "log": "bisheng-host-syntax.log",
+      "logSha256": "b72ddd6988aa15dab9b0d2d411a2fceaef6b5fc1b60716347759a4762a6b7b23"
+    },
+    {
+      "name": "bisheng-napi-syntax",
+      "command": "/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/BiSheng/bin/clang++",
+      "args": [
+        "--target=aarch64-linux-ohos",
+        "--gcc-toolchain=/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/BiSheng",
+        "--sysroot=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/sysroot",
+        "-I/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/sysroot/usr/include",
+        "-I/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/cpp/bookturn",
+        "-std=c++17",
+        "-D__MUSL__",
+        "-fPIC",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wno-error=unused-command-line-argument",
+        "-fsyntax-only",
+        "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/cpp/bookturn/bookturn_napi.cpp"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "log": "bisheng-napi-syntax.log",
+      "logSha256": "b72ddd6988aa15dab9b0d2d411a2fceaef6b5fc1b60716347759a4762a6b7b23"
+    }
+  ],
+  "boundary": "production numeric helper/callback execution with explicit NAPI/host ports; real BiSheng syntax compilation only, no native runtime/state-machine/HAP/device acceptance",
+  "numericReceipts": [
+    "PASS valid safe generation exactness and zero sentinel",
+    "PASS invalid generation rejected before typed conversion",
+    "PASS typed reader failure and negative typed result rejected",
+    "PASS actual programmatic and automatic callbacks retain valid domains",
+    "PASS actual callbacks retain invalid-domain refusal and no host effects",
+    "PASS original percentile rounding differential 3581 cases",
+    "PASS invalid diagnostic inputs rejected without selection"
+  ]
+}

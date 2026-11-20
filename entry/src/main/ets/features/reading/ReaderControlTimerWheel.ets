@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR, TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED } from '../common/ReaderTypography';
 import { TYPE_READER_TIMER_RETAINED_BUILD_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -14,7 +15,7 @@ export struct ReaderControlTimerWheel {
   @Prop minimum: number = 0;
   @Prop maximum: number = 59;
   @Prop wheelWidth: number = 76;
-  @Prop rowHeight: number = 34;
+  @Prop rowHeight: number = 44;
   @Prop neighbours: number = 1;
   @Prop unit: string = '秒';
   @Prop interactionEnabled: boolean = true;
@@ -35,22 +36,24 @@ export struct ReaderControlTimerWheel {
     Column({ space: 4 }) {
       Stack({ alignContent: Alignment.TopStart }) {
         ForEach(this.offsets(), (delta: number) => {
-          Text(this.label(delta)).width(this.wheelWidth).height(this.rowHeight)
+          Text(this.label(delta)).width(this.wheelWidth).height(Math.max(44, this.rowHeight))
             .fontFamily(delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontFamily : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontFamily).fontWeight(delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontWeight : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontWeight)
             .fontSize(delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontSizeFp : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontSizeFp)
             .fontColor(delta === 0 ? readerAppColor('TOK_READ_INK', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .opacity(delta === 0 ? 1 : (Math.abs(delta) === 2 ? 0.2 : 0.56))
             .textAlign(TextAlign.Center)
-            .position({ x: 0, y: (delta + this.neighbours) * this.rowHeight })
+            .position({ x: 0, y: (delta + this.neighbours) * Math.max(44, this.rowHeight) })
             .accessibilityText(this.valid(delta) ? `${this.unit}，${this.value + delta}` : '')
             .enabled(this.interactionEnabled && delta !== 0 && this.valid(delta))
+      .responseRegion( readerActionTouchRegion(this.wheelWidth, Math.max(44, this.rowHeight)))
+      .attributeModifier(new ReaderActionAccessibility(this.valid(delta) ? `${this.unit}，${this.value + delta}` : '', this.interactionEnabled && delta !== 0 && this.valid(delta), delta === 0))
             .onClick((): void => this.step(delta));
         }, (delta: number): string => `timer-wheel-${delta}`);
-        Row().width(this.wheelWidth).height(this.rowHeight)
+        Row().width(this.wheelWidth).height(Math.max(44, this.rowHeight))
           .border({ width: { top: TOK_BORDER_W, bottom: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-          .position({ x: 0, y: this.neighbours * this.rowHeight }).hitTestBehavior(HitTestMode.None);
-      }.width(this.wheelWidth).height(this.rowHeight * (this.neighbours * 2 + 1)).clip(true);
-      Text(this.unit).width(this.wheelWidth).height(8).fontFamily(TYPE_READER_TIMER_RETAINED_BUILD_VALUE.fontFamily)
+          .position({ x: 0, y: this.neighbours * Math.max(44, this.rowHeight) }).hitTestBehavior(HitTestMode.None);
+      }.width(this.wheelWidth).height(Math.max(44, this.rowHeight) * (this.neighbours * 2 + 1)).clip(true);
+      Text(this.unit).width(this.wheelWidth).constraintSize({ minHeight: 8 }).maxFontScale(1.3).fontFamily(TYPE_READER_TIMER_RETAINED_BUILD_VALUE.fontFamily)
         .fontWeight(TYPE_READER_TIMER_RETAINED_BUILD_VALUE.fontWeight).fontSize(TYPE_READER_TIMER_RETAINED_BUILD_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.width(this.wheelWidth).alignItems(HorizontalAlign.Center);
   }

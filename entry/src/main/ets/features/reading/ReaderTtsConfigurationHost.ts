@@ -130,8 +130,8 @@ export class ReaderTtsConfigurationHost {
     } catch (error) {
       if (!this.current(generation) || metadataGeneration !== this.metadataGeneration) return;
       this.metadata = projectOperationFacts({ phase: 'failed', value: this.metadataKnown ? this.engines : undefined, generation,
-        canRetry: true, message: this.message(error) });
-      this.deps.log(`TTS configuration metadata refresh deferred: ${this.message(error)}`);
+        canRetry: true, message: '在线朗读配置读取失败，请稍后重试' });
+      this.deps.log(`TTS configuration metadata refresh deferred: ${this.diagnostic(error)}`);
     }
     this.publish(generation);
   }
@@ -198,10 +198,11 @@ export class ReaderTtsConfigurationHost {
       try {
         saved = await this.deps.http.put(merged, (): void => { dispatched = true; });
       } catch (error) {
+        this.deps.log(`TTS configuration save failed: ${this.diagnostic(error)}`);
         if (!dispatched) {
           if (createdRef !== undefined) await this.removeCredential(createdRef);
           this.durable = projectPersistedReceipt({ confirmation: 'undispatched', readback: 'failed',
-            value: receipt, generation, canRetry: true, message: this.message(error) });
+            value: receipt, generation, canRetry: true, message: '保存失败，请检查网络后重试' });
           this.publish(generation);
           throw error;
         }
@@ -211,7 +212,7 @@ export class ReaderTtsConfigurationHost {
         this.durable = projectPersistedReceipt({ confirmation: 'unknown', readback: 'reading',
           value: receipt, generation, canRetry: true, canCancel: false });
         await this.reconcileHttp(this.pendingHttp, generation);
-        throw new Error(`保存回执未确认，需核对配置，密钥已保留：${this.message(error)}`);
+        throw new Error('保存回执未确认，需核对配置，密钥已保留');
       }
       this.engines = this.engines.filter((item: ReaderHttpTtsConfig): boolean => item.id !== saved.id).concat([saved]);
       this.metadataKnown = true;
@@ -232,7 +233,8 @@ export class ReaderTtsConfigurationHost {
           await this.selectEngine(`http-tts:${saved.id}`, generation);
         } catch (error) {
           if (this.current(generation)) {
-            this.notice = `配置已保存，但启用未完成：${this.message(error)}`;
+            this.deps.log(`TTS configuration activation failed: ${this.diagnostic(error)}`);
+            this.notice = '配置已保存，但启用未完成，可重新选择或重试';
             this.activation = projectOperationFacts({ phase: 'failed', generation, canRetry: true, message: this.notice });
           }
         }
@@ -259,9 +261,10 @@ export class ReaderTtsConfigurationHost {
       try {
         await this.deps.http.delete(id, (): void => { dispatched = true; });
       } catch (error) {
+        this.deps.log(`TTS configuration delete failed: ${this.diagnostic(error)}`);
         if (!dispatched) {
           this.durable = projectPersistedReceipt({ confirmation: 'undispatched', readback: 'failed',
-            value: receipt, generation, canRetry: true, message: this.message(error) });
+            value: receipt, generation, canRetry: true, message: '删除失败，请检查网络后重试' });
           this.publish(generation);
           throw error;
         }
@@ -270,7 +273,7 @@ export class ReaderTtsConfigurationHost {
         // Never remove a credential after an unacknowledged deletion.
         await this.refreshMetadata();
         this.publish(generation);
-        throw new Error(`删除回执未确认，请核对配置：${this.message(error)}`);
+        throw new Error('删除回执未确认，请核对配置');
       }
       this.engines = this.engines.filter((item: ReaderHttpTtsConfig): boolean => item.id !== id);
       this.metadataKnown = true;
@@ -283,7 +286,7 @@ export class ReaderTtsConfigurationHost {
           const alias = readerOnlineTtsProfile(existing.readerProfile).credentialRef;
           if (alias !== undefined && !this.usesCredential(alias)) await this.removeCredential(alias);
         } catch (error) {
-          this.deps.log(`TTS deleted credential cleanup deferred: ${this.message(error)}`);
+          this.deps.log(`TTS deleted credential cleanup deferred: ${this.diagnostic(error)}`);
         }
       }
       await this.probe(generation);
@@ -327,9 +330,10 @@ export class ReaderTtsConfigurationHost {
       this.config = await this.deps.config.putConfig(update, (): void => { dispatched = true; });
       this.selection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded', value: receipt, generation });
     } catch (error) {
+      this.deps.log(`TTS configuration write failed: ${this.diagnostic(error)}`);
       if (!dispatched) {
         this.selection = projectPersistedReceipt({ confirmation: 'undispatched', readback: 'failed',
-          value: receipt, generation, canRetry: true, message: this.message(error) });
+          value: receipt, generation, canRetry: true, message: '保存失败，请重试' });
         this.durable = this.selection;
         this.publish(generation);
         throw error;
@@ -344,11 +348,12 @@ export class ReaderTtsConfigurationHost {
         this.selection = projectPersistedReceipt({ confirmation: 'unknown', readback: 'succeeded', value: receipt,
           generation, canRetry: true, canCancel: false });
       } catch (readError) {
+        this.deps.log(`TTS configuration read-back failed: ${this.diagnostic(readError)}`);
         this.selection = projectPersistedReceipt({ confirmation: 'unknown', readback: 'failed', value: receipt,
-          generation, refreshError: this.message(readError), canRetry: true, canCancel: false });
+          generation, refreshError: '回读失败，请稍后重试', canRetry: true, canCancel: false });
       }
       this.publish(generation);
-      throw new Error(`引擎或语速保存回执未确认，请核对后重试：${this.message(error)}`);
+      throw new Error('引擎或语速保存回执未确认，请核对后重试');
     }
     this.durable = this.selection;
     this.publish(generation);
@@ -377,7 +382,8 @@ export class ReaderTtsConfigurationHost {
       if (!available) this.notice = '配置已保存，当前引擎不可用，可重新选择或重试';
     } catch (error) {
       if (!this.current(generation)) return;
-      this.notice = `配置已保存，但可用性检查失败：${this.message(error)}`;
+      this.deps.log(`TTS configuration availability probe failed: ${this.diagnostic(error)}`);
+      this.notice = '配置已保存，但可用性检查失败，可重新选择或重试';
       this.activation = projectOperationFacts({ phase: 'failed', generation, canRetry: true, message: this.notice });
     }
     this.publish(generation);
@@ -395,11 +401,12 @@ export class ReaderTtsConfigurationHost {
       return true;
     } catch (error) {
       if (!this.current(generation)) return false;
+      this.deps.log(`TTS configuration list refresh failed: ${this.diagnostic(error)}`);
       this.notice = receipt.kind === 'http-delete' ? '配置已删除，列表刷新失败，可关闭后重新打开重试' :
         '配置已保存，列表刷新失败，可关闭后重新打开重试';
-      this.metadata = projectOperationFacts({ phase: 'failed', value: this.engines, generation, canRetry: true, message: this.message(error) });
+      this.metadata = projectOperationFacts({ phase: 'failed', value: this.engines, generation, canRetry: true, message: '列表刷新失败，请稍后重试' });
       this.durable = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed', value: receipt,
-        generation, refreshError: this.message(error), canRetry: true });
+        generation, refreshError: '列表刷新失败', canRetry: true });
       this.publish(generation);
       return false;
     }
@@ -415,8 +422,9 @@ export class ReaderTtsConfigurationHost {
       this.durable = projectPersistedReceipt({ confirmation: 'unknown', readback: 'succeeded',
         value: pending.receipt, generation, canRetry: true, canCancel: false, message: '已核对当前配置，原写入回执仍未确认' });
     } catch (error) {
+      this.deps.log(`TTS configuration reconcile failed: ${this.diagnostic(error)}`);
       this.durable = projectPersistedReceipt({ confirmation: 'unknown', readback: 'failed', value: pending.receipt,
-        generation, refreshError: this.message(error), canRetry: true, canCancel: false });
+        generation, refreshError: '核对失败，请稍后重试', canRetry: true, canCancel: false });
     }
     this.publish(generation);
   }
@@ -431,7 +439,7 @@ export class ReaderTtsConfigurationHost {
 
   private async removeCredential(alias: string): Promise<void> {
     try { await this.deps.credentials.remove(alias); }
-    catch (error) { this.deps.log(`TTS credential cleanup deferred: ${this.message(error)}`); }
+    catch (error) { this.deps.log(`TTS credential cleanup deferred: ${this.diagnostic(error)}`); }
   }
 
   private current(generation: number): boolean {
@@ -446,7 +454,9 @@ export class ReaderTtsConfigurationHost {
     if (this.current(generation)) this.deps.publish(this.snapshot());
   }
 
-  private message(error: unknown): string {
+  /** Raw cause for diagnostics only. Never place this text on a user-visible
+   * receipt: transport/storage messages can carry paths, codes or payloads. */
+  private diagnostic(error: unknown): string {
     return error instanceof Error ? error.message : `${error}`;
   }
 }

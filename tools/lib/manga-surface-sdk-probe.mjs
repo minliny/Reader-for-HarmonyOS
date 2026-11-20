@@ -6,7 +6,7 @@ import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../../e
 import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import * as readerWindowMetrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { isReaderProductSurfaceEnabled, isReaderMainTabEnabled } from '../../entry/src/main/ets/app/ReaderProductScope.ts';
-import { readerWidthClass } from '../../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { readerIsExpandedWidth } from '../../entry/src/main/ets/features/common/ReaderWidthClass.ts';
 import * as mangaDirectoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
@@ -85,7 +85,7 @@ export const mangaSurfaceSdkDependencies = {
   PullToRefresh: ImportedChildBoundary,
   MangaBoundaryTurnFeedback: ImportedChildBoundary,
   MangaBookPresentation,
-  ...readerWindowMetrics, isReaderProductSurfaceEnabled, isReaderMainTabEnabled, readerWidthClass,
+  ...readerWindowMetrics, isReaderProductSurfaceEnabled, isReaderMainTabEnabled, readerIsExpandedWidth,
   readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY,
   // Native window observation is the controlled port; geometry functions are the unchanged production imports.
   ReaderWindowCoordinator: { metrics: () => readerWindowMetrics.createDefaultReaderWindowMetrics() },

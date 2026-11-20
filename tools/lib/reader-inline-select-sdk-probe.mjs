@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
-import {boundedMembers} from './bounded-surface-sdk-probe.mjs';
+import {boundedMembers,readerSurfaceSpecsForProbe} from './bounded-surface-sdk-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './arkui-property-runtime-probe.mjs';
 import {choiceRowProbe,choiceSource,resolveReaderChoiceSpec} from './reader-choice-row-probe.mjs';
 import {readerTypographyRoles} from './reader-typography-probe.mjs';
@@ -11,6 +11,12 @@ import {pureModuleProbe} from './ets-pure-module-probe.mjs';
 import {readerAppColor} from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import * as appearance from '../../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts';
 import * as timing from '../../entry/src/main/ets/features/common/ProductMotionTiming.ts';
+import {SOURCE_SWITCH_VISUAL} from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import {MANGA_DIRECTORY_VISUAL} from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import {readerPanelActorPose} from '../../entry/src/main/ets/features/reading/ReaderPanelMotionContract.ts';
+import * as selectGeometry from '../../entry/src/main/ets/features/common/ReaderSelectGeometry.ts';
+import {readerInteractiveSafeLeft,readerInteractiveSafeRight} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {readerMotionValueDurationMs as collapseMotionDurationMs} from '../../entry/src/main/ets/features/common/ReaderMotionDurationPolicy.ts';
 const file=name=>new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url);
 const read=name=>readFileSync(file(name),'utf8');
 /** Actual finite InlineSelect -> trigger/popup -> choice rows. Platform popup
@@ -18,10 +24,16 @@ const read=name=>readFileSync(file(name),'utf8');
 export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),uiContext,dependencies={}}={}){
  assert.ok(uiContext,'explicit native measurement/animation/font context required');
  const enums=name=>new Proxy({},{get:(_,key)=>name+'.'+String(key)}),curves=new Proxy({},{get:(_,name)=>(...args)=>({nativeCurve:String(name),args})});
- const motion=pureModuleProbe(read('MotionSpec'),'MotionSpec.ets',{...timing,curves,Curve:enums('Curve')},['motionAnimateParam']);
+ const motion=pureModuleProbe(read('MotionSpec'),'MotionSpec.ets',{...timing,SOURCE_SWITCH_VISUAL,MANGA_DIRECTORY_VISUAL,readerPanelActorPose,curves,Curve:enums('Curve')},['motionAnimateParam','motionSpecGet']);
+ const motionPolicy=pureModuleProbe(read('ReaderMotionPolicy'),'ReaderMotionPolicy.ets',
+  {...motion,curves,collapseMotionDurationMs},['readerMotionAnimateParam']);
+ const accessibility=pureModuleProbe(read('ReaderActionAccessibility'),'ReaderActionAccessibility.ets',
+  {AccessibilityRoleType:enums('AccessibilityRoleType')},['ReaderActionAccessibility','readerActionTouchRegion']);
  const choice=choiceRowProbe(resolveReaderChoiceSpec,choiceSource,properties);
  const hooks={...properties.hooks,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:true,childSources:{...choice.hooks.childSources}};
- const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...motion,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
+ const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...readerSurfaceSpecsForProbe(),
+  ...appearance,...motion,...motionPolicy,...accessibility,...selectGeometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,
+  ...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
  for(const name of ['ReaderSelect','ReaderSelectPanel','ReaderInlineSelect']){
   const source=read(name);hooks.childSources[name]=source;
   const moduleNames=name==='ReaderSelect'?['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:name==='ReaderSelectPanel'?['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:[];

@@ -1,0 +1,8 @@
+{
+  "command": "node tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs",
+  "exitCode": 1,
+  "stdout": "PASS fixed header progress uses real native measurement inputs/cache; counts and notices cannot change its height\n",
+  "stderr": "<anonymous_script>:867\n                ViewStackProcessor.StartGetAccessRecordingFor(elmtId);\n                ^\n\nReferenceError: ViewStackProcessor is not defined\n    at itemCreation (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:556:21), <anonymous>:867:17)\n    at deepRenderFunction (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:556:21), <anonymous>:883:17)\n    at fixture (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:214:41)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:272:15\n    at scenario (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:158:32)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:270:1\n\nNode.js v26.0.0\n",
+  "productionSha256": "dbbc7221cec6a08799525cb34434a3f3c245a5b54d27577539722e1142212e39",
+  "probeSha256": "b933c10940bd71427e6185c1747e26dce62fbe1ba75390c39986a37126b83806"
+}

@@ -835,5 +835,205 @@
     "Port logical values through the target platform's native tokens and adapters; do not import Harmony-specific types.",
     "When a completed Harmony effect needs different geometry, register a baseline contract request instead of letting the effect own geometry.",
     "After editing any listed file, rerun the explicit checker with a rationale and update this manifest's fingerprints if the change is accepted."
-  ]
+  ],
+  "wipCandidate20261027": {
+    "status": "provisional-dirty",
+    "capturedAt": "2026-10-27T00:41:05.703Z",
+    "repository": "Reader-for-HarmonyOS",
+    "headCommit": "3b297fdc7e724cf655eca3bac2a8efeda2001c56",
+    "scope": "Search surface and bookshelf opening in the current dirty worktree; this additional WIP snapshot does not replace or reinterpret the 2026-10-25 historical baseline.",
+    "files": [
+      {
+        "path": "entry/src/main/ets/features/common/MotionTimeline.ts",
+        "sha256": "2dd3c6e01f1fd1b8149778be3c983ac0260a5f5ecad18993297856c211357e3f",
+        "role": "Shared reversible elapsed-time player and segment sampler"
+      },
+      {
+        "path": "entry/src/main/ets/features/common/MotionSpec.ets",
+        "sha256": "2cb2b354ed70fca0cc9eedb88b6d05e27cd074693224ee638dfc8a2aad3f1f01",
+        "role": "Search and book-opening timing and curves"
+      },
+      {
+        "path": "entry/src/main/ets/features/common/ReaderSurfaceRect.ts",
+        "sha256": "a345bc38ee4d857b61482afba70cc45323a4f71b511d186a87dfe5a3d2049552",
+        "role": "Measured rectangle, identity and host-coordinate conversion"
+      },
+      {
+        "path": "entry/src/main/ets/features/common/ReaderSurfaceRectMeasurement.ets",
+        "sha256": "f794bc6452777d2dc467e2a49713ec0b88bb1dddc17f205d00d17029a4381ec5",
+        "role": "ArkUI measured rectangle admission"
+      },
+      {
+        "path": "entry/src/main/ets/features/common/ReaderHeaderSpecs.ets",
+        "sha256": "18c03e4f6042c413be40d688942795ee3ddf34a4c8cd8d35af20268208ff6229",
+        "role": "Existing bookshelf and search header specifications"
+      },
+      {
+        "path": "entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets",
+        "sha256": "173559b2e02e9b2a5cfa92de007213bb4b22fd7cf2e0c761f76937b6c724f549",
+        "role": "Single mounted fixed header measurement host"
+      },
+      {
+        "path": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+        "sha256": "179f2851ef04274f0e0c90c88949cbf1c6ecb428c880b8d49f74f5106f0893a1",
+        "role": "Page content frame with conditional header"
+      },
+      {
+        "path": "entry/src/main/ets/features/shell/MainTabShell.ets",
+        "sha256": "6a14a90450dc005f62c2e54749b4e27f7bb26319e0970ba143e4213c6290e942",
+        "role": "Retained bookshelf host with disabled internal header"
+      },
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfShell.ets",
+        "sha256": "d8dde5875e6c60fbc48098f2c16f32b7406c13cbe2de2a89e2cb03db2ce992bb",
+        "role": "Bookshelf content and more-menu identity"
+      },
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+        "sha256": "da90666fb08de795f0ae474af11f053d79f01a64a6453ebf917d95ce571d8999",
+        "role": "Bookshelf content and source cover actor"
+      },
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets",
+        "sha256": "6b9cc6bec01c434cdd48d725fa2fc3922090577fb419409995b9426a8967cb4c",
+        "role": "Shared image-cover visual consumer"
+      },
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfCoverVisual.ts",
+        "sha256": "374acc3896f7aced36cefe7350b18672a1dd08757e86e166aac5f717a757a853",
+        "role": "Shared shelf cover shadow geometry"
+      },
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfNavigationMotion.ts",
+        "sha256": "f63d5686280dc0b2ae7dde5987df1fbba15bebf8b6b45e4697fa10fb0459eadd",
+        "role": "Cover origin and measured-page rectangle interpolation"
+      },
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfNavigationTransition.ets",
+        "sha256": "7ec645d0a1bf2391fb3085f4c383cd42e91c91a36660943b423141c4922b9d1a",
+        "role": "Opening/closing actor, shared clock and reader opacity"
+      },
+      {
+        "path": "entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets",
+        "sha256": "2e4727d7fe2ee6821c3e6e6b27705dbf7a4fdb6dc7cb3b55292a5bac42eccfef",
+        "role": "Persistent search header, geometry and motion owner"
+      },
+      {
+        "path": "entry/src/main/ets/features/search/ReaderLibrarySearchModel.ets",
+        "sha256": "c45d345c1968166a2cac89bb17c237b6b9ec7014ac08bdceff930ec45e0e7051",
+        "role": "Search surface intent and query identity bridge"
+      },
+      {
+        "path": "entry/src/main/ets/features/search/ReaderSearchFilterPanel.ets",
+        "sha256": "fd91234e0128e02134ee3c1403ffdbc20a1baa341d95ee8f7da183d7f06f0edb",
+        "role": "Search filter panel visual consumer"
+      },
+      {
+        "path": "entry/src/main/ets/features/search/ReaderSearchHistoryPanel.ets",
+        "sha256": "f68fcfc59798ba0a8d273d3be772fd23b1892c728d43d58665e020d7412806b8",
+        "role": "Search history visual consumer"
+      },
+      {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "sha256": "a04eaac8359e4fbc45ae041b20eea42a8b640c48bd3b8b577d9399441d7c88e5",
+        "role": "Search facts, recovery and result list/anchor consumer"
+      },
+      {
+        "path": "entry/src/main/ets/features/reading/ReaderOpeningPageState.ets",
+        "sha256": "3bc8c8224e7ad3781a700ff6033c5d2e1e1020d159a9737e915616df1f8c8005",
+        "role": "Reader loading handoff placeholder"
+      },
+      {
+        "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+        "sha256": "388d94d1902db77eee17052129d2ea21468a8c568f22363d40ec6561cec1f196",
+        "role": "Measured page slot and reader loading handoff"
+      },
+      {
+        "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+        "sha256": "6e051398353fc81224c9b4c35fa662c193e6506b6f296108dfdad8c6813f317b",
+        "role": "Reader handoff propagation"
+      },
+      {
+        "path": "entry/src/main/ets/pages/Index.ets",
+        "sha256": "3e71bd9560ab865df83376fe1a14af192796bc7d17be48cd99488304c46a2fcb",
+        "role": "Surface mounting, route identity, reader handoff and geometry receipts"
+      },
+      {
+        "path": "scripts/check-header-geometry.mjs",
+        "sha256": "5ace7005b255d43ccc2854e4b9c697a0353fa199865b680d299b50a4c4a78d4f",
+        "role": "Explicit selected static owner and geometry checks"
+      },
+      {
+        "path": "hvigorfile.ts",
+        "sha256": "1b0f6a2cac5309b42a9cd92b9f5edc078d1f0054a3b9643d62964819e1aa4485",
+        "role": "Scoped ArkTS-only build hook"
+      },
+      {
+        "path": "hvigor/reader-hap-guard.cjs",
+        "sha256": "8fcb4957d882ff3622704fd1c74b9b91326feb0266d4922a37e4b49cb760cc9d",
+        "role": "Compile lease and nested task admission"
+      }
+    ],
+    "ownership": {
+      "sharedClock": "MotionTimeline.ts; ReaderLibrarySearchSurface and BookshelfNavigationTransition each own their own reversible player and consume registered MotionSpec segments.",
+      "searchSurface": "ReaderLibrarySearchSurface owns the persistent bar, fixed-header measurement, mode timeline and filter geometry; SearchPage consumes the received header bottom for results and anchors; Index guards route, runtime, query and navigation identity.",
+      "searchFacts": "SearchHost and SearchPage retain business facts, query lifecycle and result projection; the surface consumes the model and does not own a search operation.",
+      "bookshelfOpening": "Index measures reader-bookshelf-page-slot relative to reader-bookshelf-motion-host with identity guards and provides a reading-layout fallback. BookshelfNavigationTransition interpolates origin to target, hinges around the actor left edge and drives reader opacity without reader scale changes.",
+      "loading": "LocalReadingExperience owns actual page readiness; ReaderOpeningPageState is a visual placeholder only."
+    },
+    "logicalGeometry": {
+      "pageRectangle": "reader-bookshelf-page-slot measured in host-local vp; first-frame fallback comes from resolveReaderReadingLayout.",
+      "spine": "left edge of the current cover actor; during turning the actor is aligned with target.x.",
+      "barIdle": "bookshelfHeaderSpec bar height, scaled by the active font metrics.",
+      "barInput": "SearchHeaderSpec.barHeight(readerSearchControlHeight) with measured history panel and keyboard-inset limit.",
+      "barResults": "SearchHeaderSpec bar plus the measured statistics/filter panel; ReaderFixedHeaderHost reports the presented bottom and results consume it."
+    },
+    "verification": {
+      "arkts": {
+        "status": "PASS",
+        "task": "default@CompileArkTS",
+        "taskDuration": "12.332s",
+        "totalDuration": "15.237s",
+        "log": ".reader-artifacts/search-motion-20261027/compile-arkts.log",
+        "sourceBinding": "Build ran on the then-current dirty worktree; no immutable full-source snapshot was captured before the run.",
+        "warnings": "Present; no warning-baseline comparison."
+      },
+      "selectedStaticChecks": {
+        "status": "PASS",
+        "ids": [
+          "bookshelf-opening-geometry-and-clock",
+          "search-surface-mounted-owner",
+          "search-surface-source-single-owner",
+          "search-filter-motion-registered-and-consumed"
+        ],
+        "scope": "Explicit checks only; not a full gate or device evidence."
+      },
+      "focusedSearchProbes": {
+        "status": "PASS",
+        "paths": [
+          "tools/evidence/search-surface-20261027/probe.mjs",
+          "tools/evidence/search-surface-20261027/source-recovery-probe.mjs",
+          "tools/test-library-search-index.mjs",
+          "tools/test-library-search-page-owner.mjs"
+        ],
+        "scope": "Production methods and SDK builder seams with controlled ports, not native interaction or pixels."
+      },
+      "previousSearchGate": {
+        "status": "REVIEW_NEEDED",
+        "entries": [
+          "H-search-index-action-attachment",
+          "H-search-history-layout-lifecycle#history-feedback"
+        ],
+        "reason": "The reviewed bounded-surface SDK helper definition has drifted; neither case was run or re-approved."
+      },
+      "deviceAndPixels": {
+        "status": "OPEN",
+        "reason": "No VM/physical-device interaction, actual IME, frame-by-frame screenshot comparison or performance measurement was performed."
+      },
+      "packageAndAcceptance": {
+        "status": "OPEN",
+        "reason": "CompileArkTS is not HAP build, signing, installation or user acceptance."
+      }
+    }
+  }
 }

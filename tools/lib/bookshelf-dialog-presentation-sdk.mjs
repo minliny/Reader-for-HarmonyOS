@@ -1,16 +1,22 @@
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
-import { virtualFilePath } from './tool-environment.mjs';
+import { selectedProductionClasses } from './selected-production-methods.mjs';
+import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
+import {builderChildProperties} from './ets-builder-probe.mjs';
+import {readerMessageStyles} from './reader-typography-probe.mjs';
+const {MESSAGE_ACTION,MESSAGE_BODY}=readerMessageStyles;
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
-import {ReaderWindowMetricsSnapshot,ReaderRectVp,readerInteractiveSafeLeft,readerInteractiveSafeRight} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {ReaderWindowMetricsSnapshot,ReaderRectVp,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerVisualSafeTop} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {resolveHorizontalFrame,SurfaceWidthSpec,SurfaceHorizontalFrame} from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import {SOURCE_SWITCH_VISUAL} from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 const read=p=>readFileSync(new URL('../../entry/src/main/ets/'+p,import.meta.url),'utf8');
-const { require, root: loader, ts, options } = installedEtsCompiler();
+const {readerReadableFontScale,readerScaledControlHeight}=pureModuleProbe(read('features/common/ReaderSurfaceResolvers.ts'),
+ 'ReaderSurfaceResolvers.ts',{ReaderWindowMetricsSnapshot,readerVisualSafeTop},['readerReadableFontScale','readerScaledControlHeight']);
+const { require, root: loader, ts } = installedEtsCompiler();
 const syntax=require(loader+'/lib/validate_ui_syntax.js');
 const indexSource=read('pages/Index.ets'),bookSource=read('features/bookshelf/BookRemovalDialog.ets'),surfaceSource=read('features/common/ReaderDialogSurface.ets'),selectorSource=read('features/bookshelf/BookshelfGroupSelector.ets');
 for(const[name,text]of[['BookRemovalDialog',bookSource],['ReaderDialogSurface',surfaceSource],['BookshelfGroupSelector',selectorSource]]){
@@ -18,20 +24,30 @@ for(const[name,text]of[['BookRemovalDialog',bookSource],['ReaderDialogSurface',s
 }
 syntax.componentCollection.customComponents.add('ReaderRecoveryNotice');syntax.propCollection.set('ReaderRecoveryNotice',new Set(['view','actionLabel']));
 syntax.componentCollection.customDialogs.add('BookRemovalDialog');syntax.builderParamObjectCollection.set('ReaderDialogSurface',new Set(['body']));
-function declaration(text,name){const t=ts.createSourceFile(virtualFilePath('dialog-declaration.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);return t.statements.find(n=>n.name?.text===name).getText(t);}
-const model=ts.transpileModule(declaration(surfaceSource,'DialogActionView'),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
-const actionExports={};new Function('exports',model)(actionExports);const DialogActionView=actionExports.DialogActionView;
-const specText=read('features/common/ReaderSurfaceSpecs.ets'),specJs=ts.transpileModule(specText.replace(/^import[^;]+;\s*/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
-const exports={};new Function('exports','TextAlign','SOURCE_SWITCH_VISUAL',specJs)(exports,{Start:'start',Center:'center'},SOURCE_SWITCH_VISUAL);const resolveDialogSpec=exports.resolveDialogSpec;
+// Toast lifetime/delivery belongs to its own message owner. This dialog proof
+// records the actual child contract and boundary inputs without running timers.
+const toastSource=read('features/common/ReaderTransientToast.ets');
+syntax.componentCollection.customComponents.add('ReaderTransientToast');
+syntax.propCollection.set('ReaderTransientToast',builderChildProperties(toastSource,'ReaderTransientToast'));
+class DialogToastPort{
+ constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});assert.equal(params.priority,2);assert.equal(params.bounded,true);}
+ updateStateVars(params){Object.assign(this.params,params);}
+}
+
+const {DialogActionView}=selectedProductionClasses(new URL('../../entry/src/main/ets/features/common/ReaderDialogSurface.ets',import.meta.url),['DialogActionView']);
+const specText=read('features/common/ReaderSurfaceSpecs.ets');
+const {resolveDialogSpec}=pureModuleProbe(specText,'ReaderSurfaceSpecs.ets',
+ {TextAlign:{Start:'start',Center:'center'},SOURCE_SWITCH_VISUAL},['resolveDialogSpec'],
+ {target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS});
 const metrics=new ReaderWindowMetricsSnapshot();metrics.windowRect=new ReaderRectVp(0,0,390,844);
-const surfaceNames=['body','defaultBody','build','header','actionsRow','actionCell','spec','resolvedFrame','frameWidth','framePadding','actionLabelColor','actionSurfaceRole','actionModifier','actionTouchRegion','bodyActionsInnerMargin'];
+const surfaceNames=boundedMembers(surfaceSource);
 function sharedSurface(params){
- const p=createReaderBuilderProbe(surfaceSource,surfaceNames,{ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft,readerInteractiveSafeRight,resolveHorizontalFrame,SurfaceWidthSpec,SurfaceHorizontalFrame,resolveDialogSpec,ButtonType:{Normal:'Normal'}}).owner;
+ const p=createReaderBuilderProbe(surfaceSource,surfaceNames,{...sdk.deps,ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft,readerInteractiveSafeRight,resolveHorizontalFrame,SurfaceWidthSpec,SurfaceHorizontalFrame,resolveDialogSpec,readerReadableFontScale,readerScaledControlHeight,MESSAGE_ACTION,ButtonType:{Normal:'Normal'}},sdk.hooks).owner;
  Object.assign(p,{...params,appThemeScheme:'day',readerWindowMetricsRevision:0,showCloseButton:params.showCloseButton??false});p.initialRender();return p;
 }
 class SurfaceChild{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});params.body?.();}updateStateVars(params){Object.assign(this.params,params);this.params.body?.();}}
 const sdk=boundedSurfaceSdk();
-const Book=createReaderBuilderProbe(bookSource,boundedMembers(bookSource),{...sdk.deps,ReaderWindowCoordinator:{metrics:()=>metrics},ReaderDialogSurface:SurfaceChild,DialogActionView,
+const Book=createReaderBuilderProbe(bookSource,boundedMembers(bookSource),{...sdk.deps,ReaderWindowCoordinator:{metrics:()=>metrics},ReaderDialogSurface:SurfaceChild,ReaderTransientToast:DialogToastPort,MESSAGE_BODY,DialogActionView,
   registerReaderFonts:font=>{assert.ok(font&&typeof font==='object','actual dialog lifecycle receives its platform Font handle');}},sdk.hooks).Component;
 const Group=createReaderBuilderProbe(selectorSource,boundedMembers(selectorSource),sdk.deps,sdk.hooks).Component;
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);

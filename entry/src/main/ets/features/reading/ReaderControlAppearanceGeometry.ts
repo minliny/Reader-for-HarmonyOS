@@ -22,6 +22,7 @@ export interface ReaderControlAppearanceFrame {
   sectionWidth: number;
   contentHeight: number;
   quickContentHeight: number;
+  quickThemeLane: number;
   themeExtraRows: number;
   contentTranslateX: number;
   surfaceOpacity: number;
@@ -62,7 +63,7 @@ export function sampleReaderControlAppearance(progress: number, viewportWidth: n
   const themeShells: ReaderControlAppearanceActor[] = [];
   const count = Number.isFinite(themeCount) ? Math.max(0, Math.floor(themeCount)) : 8;
   const extraRows = Math.max(0, Math.ceil(count / 4) - 2);
-  const quickExtra = extraRows * 28;
+  const quickExtra = extraRows * 48;
   const fullExtra = extraRows * 64.8;
   for (let index = 0; index < count; index += 1) {
     const column = index % 4;
@@ -75,25 +76,26 @@ export function sampleReaderControlAppearance(progress: number, viewportWidth: n
     const fullSwatchX = fullX + (fullThemeWidth - 62.5) / 2;
     const quickSwatchX = 12 + column * quickThemeStride;
     themeSwatches.push(actor(lerp(quickSwatchX, fullSwatchX, p),
-      lerp(34.9 + row * 28, 53.39 + row * 64.8, p), 62.5, 24, 1));
+      lerp(34.9 + row * 48, 53.39 + row * 64.8, p), 62.5, 44, 1));
   }
   const height = Number.isFinite(fullContentHeight) ? Math.max(0, fullContentHeight) : 666;
   return {
     progress: p, fullViewportWidth: fullWidth, sectionWidth: sectionWidth,
-    contentHeight: Math.max(height, 689 + fullExtra),
-    quickContentHeight: 190 + quickExtra + Math.max(0, Math.ceil(fontCount / 4) - 2) * 31,
+    contentHeight: Math.max(height, 729 + fullExtra),
+    quickContentHeight: 264 + quickExtra + Math.max(0, Math.ceil(fontCount / 4) - 2) * 48,
+    quickThemeLane: quickThemeStride,
     themeExtraRows: extraRows,
     // Appearance-only viewport X track. Stage already applies its Y track.
     contentTranslateX: -0.9 * (1 - p),
     surfaceOpacity: p,
     quickThemeHeader: actor(12, 16 + 5 * p, Math.max(0, quickSectionWidth - 2), 15.898, 1 - p),
     fullThemeHeader: actor(13, 21 - 5 * (1 - p), Math.max(0, sectionWidth - 4), 20, p),
-    quickFontHeader: actor(12, 102.9 + quickExtra + 6 * p, Math.max(0, quickSectionWidth - 2), 10, 1 - p),
+    quickFontHeader: actor(12, 142.9 + quickExtra + 6 * p, Math.max(0, quickSectionWidth - 2), 10, 1 - p),
     fullFontHeader: actor(11, 221 + fullExtra, sectionWidth, 16, p),
     divider: actor(11, 220 + fullExtra, sectionWidth, 1, p),
-    themeDayAction: actor(sectionWidth - 145, 183 + fullExtra + 8 * (1 - p), 74, 28, p),
-    themeNightAction: actor(sectionWidth - 65, 183 + fullExtra + 8 * (1 - p), 74, 28, p),
-    layout: actor(11, 367 + fullExtra + 96 * (1 - p), sectionWidth, 322, p),
+    themeDayAction: actor(sectionWidth - 145, 175 + fullExtra + 8 * (1 - p), 74, 44, p),
+    themeNightAction: actor(sectionWidth - 65, 175 + fullExtra + 8 * (1 - p), 74, 44, p),
+    layout: actor(11, 407 + fullExtra + 96 * (1 - p), sectionWidth, 322, p),
     themeSwatches: themeSwatches, themeShells: themeShells,
   };
 }
@@ -108,19 +110,19 @@ export function readerControlAppearanceFontActor(frame: ReaderControlAppearanceF
   const fullColumn = Math.max(0, fullIndex) % 4;
   const fullRow = Math.floor(Math.max(0, fullIndex) / 4);
   const fullX = 11 + fullColumn * (fullWidth + 8);
-  const fullY = 251 + frame.themeExtraRows * 64.8 + fullRow * 38;
+  const fullY = 251 + frame.themeExtraRows * 64.8 + fullRow * 48;
   if (importSlot) {
     // Raw 20807 overlaps System at (11,251). The default ordered slot is the
     // user-approved product overlay, never a claimed original Figma coordinate.
     const importX = importLayout === 'ordered-slot-approved' ? fullX : 11;
     const importY = importLayout === 'ordered-slot-approved' ? fullY : 251 + frame.themeExtraRows * 64.8;
-    return actor(importX, importY + 8 * (1 - p), fullWidth, 30, p);
+    return actor(importX, importY + 8 * (1 - p), fullWidth, 44, p);
   }
   const quickColumn = Math.max(0, quickIndex) % 4;
   const quickRow = Math.floor(Math.max(0, quickIndex) / 4);
   return actor(lerp(12 + quickColumn * (quickWidth + 4), fullX, p),
-    lerp(115.9 + frame.themeExtraRows * 28 + quickRow * 31, fullY, p), lerp(quickWidth, fullWidth, p),
-    lerp(27, 30, p), 1);
+    lerp(155.9 + frame.themeExtraRows * 48 + quickRow * 48, fullY, p), lerp(quickWidth, fullWidth, p),
+    44, 1);
 }
 
 /** Input hit regions are available only on the current stable input surface. */

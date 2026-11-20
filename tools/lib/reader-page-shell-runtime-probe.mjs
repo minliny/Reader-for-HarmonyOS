@@ -1,4 +1,4 @@
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
 import { localFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -8,7 +8,8 @@ const sdkModuleEmits = new Map();
 export const readerPageShellSourceUrl = new URL(
   '../../entry/src/main/ets/features/common/ReaderPageShell.ts', import.meta.url);
 const allowed = new Set(['ReaderPageShell', 'ReaderThemeRegistry', 'ReaderWindowMetrics',
-  'SurfaceHorizontalGeometry', 'ReaderFloatingBarMetrics'].map(name =>
+  'SurfaceHorizontalGeometry', 'ReaderFloatingBarMetrics', 'ReaderLayoutTokens', 'ReaderHeaderMetrics', 'ReaderSurfaceResolvers',
+  'ReaderPageGeometry', 'ReaderFrameStyle', 'ReaderWidthClass'].map(name =>
   new URL(`${name}.ts`, readerPageShellSourceUrl).href));
 allowed.add(new URL('../manga/MangaDirectoryVisual.ts', readerPageShellSourceUrl).href);
 
@@ -24,12 +25,8 @@ export function actualReaderPageShell(source = readFileSync(readerPageShellSourc
     const key = JSON.stringify([url.href, text]);
     let output = sdkModuleEmits.get(key);
     if (output === undefined) {
-      const emitted = ts.transpileModule(text, {
-        fileName: localFilePath(url), reportDiagnostics: true,
-        compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS, strict: true },
-      });
-      assert.deepEqual(emitted.diagnostics, [], 'actual shared page-policy module SDK emit: ' + localFilePath(url));
-      output = emitted.outputText;
+      output = emitSdkProbe(text, { fileName: localFilePath(url),
+        compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS, strict: true } });
       if (sdkModuleEmits.size >= 64) sdkModuleEmits.delete(sdkModuleEmits.keys().next().value);
       sdkModuleEmits.set(key, output);
     }
@@ -42,5 +39,7 @@ export function actualReaderPageShell(source = readFileSync(readerPageShellSourc
     }, { Transparent: 'Color.Transparent' });
     return exports;
   };
-  return load(readerPageShellSourceUrl);
+  return { ...load(readerPageShellSourceUrl),
+    ...load(new URL('ReaderFrameStyle.ts', readerPageShellSourceUrl)),
+    ...load(new URL('ReaderPageGeometry.ts', readerPageShellSourceUrl)) };
 }

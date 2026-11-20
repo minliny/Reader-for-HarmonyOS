@@ -55,20 +55,20 @@ export function sampleReaderControlReplace(progress: number, availableWidth: num
   const listY = readerControlLerp(47.55, 64, p);
   return {
     progress: p,
-    toolbar: sampleReaderControlActor(readerControlActor(14, 60, width - 28, 40, 0),
-      readerControlActor(14, 14, width - 28, 40), p),
+    toolbar: sampleReaderControlActor(readerControlActor(14, 60, width - 28, 44, 0),
+      readerControlActor(14, 14, width - 28, 44), p),
     list: readerControlActor(inset, listY, width - readerControlLerp(36, 28, p),
       Math.max(0, availableHeight - readerControlLerp(106, 77, p))),
-    rowHeight: readerControlLerp(28, 77, p), rowGap: readerControlLerp(0, 7, p),
+    rowHeight: readerControlLerp(44, 77, p), rowGap: readerControlLerp(0, 7, p),
     rowPadding: readerControlLerp(5, 13, p),
-    toggleWidth: readerControlLerp(27, 44, p), toggleHeight: readerControlLerp(16, 24, p),
+    toggleWidth: 44, toggleHeight: readerControlLerp(16, 24, p),
     thumbSize: readerControlLerp(12, 20, p),
     back: sampleReaderControlActor(readerControlActor(10.1, 14.55, 51, 24),
       readerControlActor(10.1, 28.55, 51, 24, 0), p),
     // Existing Quick preview/expand affordances are retained as an explicit
     // business overlay; they are not claimed as actors in this restored cohort.
-    quickFooter: sampleReaderControlActor(readerControlActor(17.55, 145, width - 35.1, 28),
-      readerControlActor(14, 159, width - 28, 28, 0), p),
+    quickFooter: sampleReaderControlActor(readerControlActor(17.55, 145, width - 35.1, 44),
+      readerControlActor(14, 159, width - 28, 44, 0), p),
   };
 }
 

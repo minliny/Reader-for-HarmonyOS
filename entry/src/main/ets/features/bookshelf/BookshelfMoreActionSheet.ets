@@ -15,6 +15,7 @@ export struct BookshelfMoreActionSheet {
   @Prop updateRunning: boolean = false;
   @Prop backgroundUpdateRunning: boolean = false;
   isCurrent: (presentationId: string) => boolean = (_id: string): boolean => false;
+  onDismiss: () => void = (): void => {};
   onBatchManage: () => void = (): void => {};
   onLocalImport: () => void = (): void => {};
   onCheckUpdates: () => void = (): void => {};
@@ -47,6 +48,14 @@ export struct BookshelfMoreActionSheet {
     ];
   }
 
+  private dismissAction(presentationId: string): () => void {
+    return (): void => {
+      if (!this.mounted || presentationId.length === 0 || presentationId !== this.presentationId) return;
+      try { if (!this.isCurrent(presentationId)) return; } catch (_error) { return; }
+      this.onDismiss();
+    };
+  }
+
   build() {
     ReaderBoundedSurface({ specId: 'bookshelf-book-action',
       header: (): void => { this.sheetHeader(); },
@@ -56,7 +65,8 @@ export struct BookshelfMoreActionSheet {
 
   @Builder
   private sheetHeader() {
-    ReaderBoundedSurfaceHeader({ specId: 'bookshelf-book-action', title: '书架操作' });
+    ReaderBoundedSurfaceHeader({ specId: 'bookshelf-book-action', title: '书架操作',
+      onClose: this.dismissAction(this.presentationId) });
   }
 
   @Builder

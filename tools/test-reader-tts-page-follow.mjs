@@ -1,21 +1,26 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
+import { registerReaderTypeScriptImports } from './lib/reader-typescript-imports.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { ReaderTtsPageFollow, readerTtsFollowActive } from '../entry/src/main/ets/features/reading/ReaderTtsPageFollow.ts';
-import { createReaderTtsState } from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
-import { readerRapidPageTurnHasWork, createReaderRapidPageTurnState } from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+
+
+const readerImports = registerReaderTypeScriptImports();
+try {
+const { selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
+
+
+
+const { ReaderTtsPageFollow, readerTtsFollowActive } = await import('../entry/src/main/ets/features/reading/ReaderTtsPageFollow.ts');
+const { createReaderTtsState } = await import('../entry/src/main/ets/features/reading/ReaderTtsState.ts');
+const { readerRapidPageTurnHasWork, createReaderRapidPageTurnState } = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const source = readFileSync(file, 'utf8');
-const require = createRequire(import.meta.url);
-const sdk = resolveEtsLoaderRoot();
-const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('Reading.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
-  require(`${sdk}/lib/ets_checker.js`).compilerOptions);
-const deferred = tree.statements.find(n => n.name?.getText(tree) === 'ReaderDeferredChapterSelection');
-assert.ok(deferred);
-const ReaderDeferredChapterSelection = new Function(`${stripTypeScriptTypes(deferred.getText(tree))}; return ReaderDeferredChapterSelection;`)();
+
+
+
+
+
+
+
+const { ReaderDeferredChapterSelection } = selectedProductionClasses(file, ['ReaderDeferredChapterSelection']);
 const Model = productionMotionMethods(file, ['ttsFollowScope', 'isTtsFollowLeaseCurrent', 'invalidateTtsPageFollow',
   'followTtsPage', 'resumeTtsPageFollow', 'positionTtsFollowTarget', 'selectChapterAnchor', 'stopTts'],
   { readerTtsFollowActive, readerRapidPageTurnHasWork, ReaderDeferredChapterSelection });
@@ -23,7 +28,7 @@ function fixture() {
   const calls = [], selections = [], prepares = [];
   const owner = Object.assign(new Model(), {
     sourceId:'source-a', bookId:'book', lifecycleToken:1, mounted:true, appForeground:true, exitRequested:false,
-    phase:'ready', ttsPageFollow:new ReaderTtsPageFollow(), ttsFollowHighlight:true,
+    phase:'ready', ttsPageFollow:new ReaderTtsPageFollow(), ttsPreferences:{followHighlight:true},
     ttsFollowPositioning:undefined, ttsState:{...createReaderTtsState(true), status:'playing',
       sessionGeneration:1, utteranceGeneration:1, chapterIndex:1, chapterKey:'chapter-1', contentVersion:'v1', charStart:0},
     readerSettingsSnapshot:{navigationMode:'paged'}, visiblePage:{startScalar:0}, chapter:{chapterIndex:1},
@@ -128,3 +133,7 @@ function fixture() {
   f.publish(160,{utteranceGeneration:3}); assert.equal(f.owner.ttsPageFollow.canAttempt(),true);
 }
 console.log('TTS follow production methods: all three baseline defects repaired; latest-target, rejection/retry, unknown-index prepared page, explicit seek, stale callbacks, foreground, source and deferred ownership PASS');
+
+} finally {
+  readerImports.deregister();
+}

@@ -6,7 +6,7 @@
 
 | 业务事实 | 唯一接入方式 | 生命周期 |
 | --- | --- | --- |
-| 已完成、明确失败、旧内容仍可用的普通刷新/读回失败 | `ReaderTransientFeedback`，内部复用系统 Toast | 当次宿主/实体仍有效才显示；同宿主短时重复合并，不跨页面排队 |
+| 已完成、明确失败、旧内容仍可用的普通刷新/读回失败 | `ReaderTransientFeedback` 发布事实，根页面及已登记原生模态层挂载 `ReaderTransientToast` 自绘短反馈 | 当次宿主/实体仍有效才显示；同宿主短时重复合并，不跨页面排队 |
 | 原写入未确认、原记录清理未完成、必须核对/继续原操作 | `ReaderRecoveryNotice` / `ReaderRecoveryAction` | 当前宿主顶部浮层；由原操作事实更新/清除，不定时伪造完成 |
 | 首次加载、确认空、没有可用内容的失败 | `ReaderPageState` | 在原页面或局部内容区；有旧内容时保留内容，不能整体换成错误页 |
 | 用户确认、危险操作、原生预览确认 | `ReaderNativeAlertOwner` 或既定 `ReaderDialogSurface` 变体 | 原宿主负责展示、取消及当前身份；点击一次不等于业务 ACK |
@@ -14,13 +14,13 @@
 | 书签下拉、章末上拉、漫画图片不可用 | 登记的专用阅读/资源组件 | 保留纸面、手势代次、图片单元几何和原结束条件，不改成 Toast |
 | 后台朗读与锁屏媒体控制 | `HarmonyTtsBackgroundSession` / `HarmonyTtsMediaSession` | OS 后台/媒体适配；不混入应用内消息和事务状态 |
 
-消息按事实分类，不按旧组件名、文案长度或异常类名分类。长文不能自动升级成弹窗；短文也不能把未决原操作降为 Toast。普通元信息、来源/类型标签、阅读进度、状态点和无封面继续属于内容，不作为通知迁移。
+消息按事实分类，不按旧组件名、文案长度或异常类名分类。长文不能自动升级成弹窗；短文也不能把未决原操作降为 Toast。胶囊仅保留自动播放和翻页既有用途；全局短反馈不得复用胶囊。普通元信息、来源/类型标签、阅读进度、状态点和无封面继续属于内容，不作为通知迁移。
 
 ## 开发要求
 
-1. 页面不得新增直接 `showToast`、`showAlertDialog` 或另一套同类消息外框。系统 API 仅留在登记的公共适配边界；既有原生 Alert 桥位于 owner 的展示回调中，保留原生几何。
-2. 短反馈每个挂载宿主持有一个 `ReaderTransientFeedback`。适配层同时读取既有`readerAppForeground`事实，后台不弹短反馈。调用必须提供当前准入谓词，已有 route/runtime/session/selection/operation 守卫不能因迁移删除；退出调用 `reset()`，保留挂载的宿主在既有路由/实体退役点重置，或沿用现有实体身份作为key。UIContext 延迟取得并在适配层捕获异常，展示失败不能逆转已完成业务。被阅读覆盖而仍挂载的书架通过`feedbackEnabled`显式停用，不能把mounted等同于当前可见。
-3. 短反馈默认 2000ms，同宿主连续同 key 在2000ms内去重；保留换源等已认可的2200ms时长及已有更严格的业务去重。适配层只保存上一条反馈，key只描述当次消息/实体，不成为持久化身份。平台无法展示时返回 false；不得据此标记已通知成功或取消原任务。
+1. 页面不得新增直接 `showToast`、`showAlertDialog` 或另一套同类消息外框。原生 Toast 不再使用；其他系统消息 API 仅留在登记的公共适配边界；既有原生 Alert 桥位于 owner 的展示回调中，保留原生几何。
+2. 短反馈每个挂载宿主持有一个 `ReaderTransientFeedback`，由 `ReaderTransientToast` 绘制。根页与原生模态层复用同一组件，按 priority/挂载身份仅允许当前层展示；切层或当前层退场会退休旧提示，避免穿透与重播。适配层同时读取既有`readerAppForeground`事实，后台不弹短反馈。调用必须提供当前准入谓词，已有 route/runtime/session/selection/operation 守卫不能因迁移删除；退出调用 `reset()`，保留挂载的宿主在既有路由/实体退役点重置，或沿用现有实体身份作为key。自绘宿主按 generation 保护旧定时器，不把 UIContext 或 Toast 展示当成业务 ACK；展示失败不能逆转已完成业务。被阅读覆盖而仍挂载的书架通过`feedbackEnabled`显式停用，不能把mounted等同于当前可见。
+3. 短反馈默认 `READER_FEEDBACK_BRIEF_MS`（2000ms），同宿主连续同 key 在 `READER_FEEDBACK_DEDUPE_MS`（2000ms）内去重；换源等已认可的较长事实使用 `READER_FEEDBACK_EXTENDED_MS`（2200ms），并保留已有更严格的业务去重。三个窗口只能由 `ReaderTransientFeedback.ts` 导出，调用点不得再写 2000/2200 字面量。适配层只保存上一条反馈，key只描述当次消息/实体，不成为持久化身份。平台无法展示时返回 false；不得据此标记已通知成功或取消原任务。
 4. 原操作的 operationId、完整 DTO、核对/继续权限、写入/读回/清理事实仍归原业务 owner。公共组件只展示投影和转交意图，不建立业务队列、全局 ModalHost 或万能消息对象。
 5. 常驻通知使用标签＋标题、小动作靠右和既有长标题展开规则。操作忙态由原事实显式传入；`canRetry=false`不能自动解释为“正在处理”。
 6. 每个入口明确：当前宿主/实体、消息更新依据、结束或清理条件、旧回调失效条件。原操作未决不因关闭工具面板而被当作完成；页面退出只退役投影和按钮，原业务仍受原 owner 管理。完成后的刷新失败不允许重新派发写入。

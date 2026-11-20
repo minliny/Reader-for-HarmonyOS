@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "scope": "Explicit bounded custom-action source scope; not whole App reachability, physical target or device accessibility acceptance.",
+  "roots": [
+    "common/ReaderSelect.ets",
+    "common/ReaderChoiceRow.ets",
+    "common/ReaderActionMenuSurface.ets",
+    "bookshelf/LocalBookDetail.ets",
+    "reading/ReaderControlPanel.ets",
+    "reading/ReaderFullDirectory.ets",
+    "reading/ReaderTtsConfigOverlay.ets"
+  ],
+  "files": [
+    "common/ReaderSelect.ets",
+    "common/ReaderFonts.ets",
+    "common/ReaderMotionPolicy.ets",
+    "common/MotionSpec.ets",
+    "common/ReaderChoiceRow.ets",
+    "common/ReaderChoiceSpecs.ets",
+    "common/ReaderActionMenuSurface.ets",
+    "common/ReaderSurfaceSpecs.ets",
+    "bookshelf/LocalBookDetail.ets",
+    "common/ReaderHeaderSpecs.ets",
+    "common/ReaderPageScaffold.ets",
+    "common/ReaderFixedHeaderHost.ets",
+    "common/ReaderPageState.ets",
+    "common/ReaderRecoveryAction.ets",
+    "common/PageBackBar.ets",
+    "bookshelf/NoCoverCover.ets",
+    "manga/MangaDirectoryEntryRow.ets",
+    "reading/ReaderControlPanel.ets",
+    "reading/ReaderTtsWaveform.ets",
+    "reading/ReaderControlThemeStyle.ets",
+    "common/ReaderMotionClock.ets",
+    "reading/ReaderSessionLaunchStage.ets",
+    "reading/ReaderSessionCapsule.ets",
+    "reading/ReaderControlAutoPageContent.ets",
+    "reading/ReaderPanelChrome.ets",
+    "reading/ReaderControlTimerWheel.ets",
+    "reading/ReaderControlSwitchTrack.ets",
+    "reading/ReaderControlTtsContent.ets",
+    "reading/ReaderTtsConfigOverlay.ets",
+    "common/ReaderBoundedSurfaceHeader.ets",
+    "common/ReaderBoundedSurface.ets",
+    "common/ReaderTransientToast.ets",
+    "common/ReaderFormField.ets",
+    "common/ReaderControlSpecs.ets",
+    "common/ReaderRecoveryNotice.ets",
+    "common/ReaderBoundedSurfaceActions.ets",
+    "reading/ReaderControlDirectoryContent.ets",
+    "reading/ReaderDirectoryToolbar.ets",
+    "common/ReaderSearchField.ets",
+    "reading/ReaderDirectoryChapterRow.ets",
+    "reading/ReaderBookmarkRow.ets",
+    "reading/ReaderBookmarkErrorState.ets",
+    "reading/ReaderBookmarkLoadingState.ets",
+    "reading/ReaderBookmarkEmptyState.ets",
+    "reading/ReaderDirectoryNavigationSurface.ets",
+    "reading/ReaderDirectoryNavigationList.ets",
+    "reading/ReaderControlAppearanceContent.ets",
+    "common/ReaderSelectPanel.ets",
+    "reading/ReaderControlSearchContent.ets",
+    "reading/ReaderContentSearchDataSource.ets",
+    "reading/ReaderControlSettingsContent.ets",
+    "reading/ReaderControlReplaceContent.ets",
+    "common/ReaderDialogSurface.ets",
+    "reading/ReaderFullDirectory.ets",
+    "reading/ReaderDirectoryRecoverySurface.ets",
+    "reading/FullDirectoryPanel.ets",
+    "reading/ReaderDirectoryList.ets",
+    "reading/ReaderBookmarkList.ets"
+  ],
+  "exceptions": [
+    {
+      "file": "reading/ReaderTtsConfigOverlay.ets",
+      "method": "build",
+      "reason": "dismissal scrim; close header is the accessible action"
+    },
+    {
+      "file": "reading/ReaderControlAppearanceContent.ets",
+      "method": "selectOverlay",
+      "reason": "dismissal scrim; select trigger owns focus"
+    },
+    {
+      "file": "reading/ReaderControlSearchContent.ets",
+      "method": "searchField",
+      "reason": "TextInput container; native input owns semantics"
+    },
+    {
+      "file": "common/ReaderSearchField.ets",
+      "method": "fixedLineHeightField",
+      "reason": "Focus proxy around native TextInput; input owns editing/accessibility, separate clear actions retain their own semantics. Only Row containing TextInput and whose callback solely calls this.focusBookInput is excepted.",
+      "selector": {
+        "actor": "Row",
+        "nativeChild": "TextInput",
+        "delegate": "focusBookInput"
+      }
+    }
+  ]
+}

@@ -6,7 +6,8 @@ import { actualReaderPageShell } from './lib/reader-page-shell-runtime-probe.mjs
 // Retained generic assertions from the withdrawn message framework test.
 const policyA=actualReaderPageShell(),policyB=actualReaderPageShell();
 assert.notEqual(policyA,policyB,'SDK module emit reuse preserves fresh production module exports');
-assert.notEqual(policyA.readerPageInitialHeaderHeight,policyB.readerPageInitialHeaderHeight,'page policy functions bind independent actual module graphs');
+assert.equal(typeof policyA.readerPageContentStartInset,'function','use the actual exported page policy');
+assert.notEqual(policyA.readerPageContentStartInset,policyB.readerPageContentStartInset,'page policy functions bind independent actual module graphs');
 const childSource="@Component export struct SdkCacheChild { @Prop message: string = ''; build() { Text(this.message); } }";
 const parentSource="@Component struct SdkCacheParent { @State message: string = ''; onPress: () => void = () => {}; build() { Column() { Text('实际标题'); SdkCacheChild({ message: this.message }); Button('操作').onClick(() => this.onPress()); } } }";
 function fixture(source=parentSource) {

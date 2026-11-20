@@ -193,6 +193,8 @@
 
 ## 6. 旧测试怎样迁移
 
+> 2026-10-20 更新：下表是历史迁移讨论。其中 appearance-motion-fixture / sampler / state 三项已按用户要求全部退役，不再迁移或恢复为门禁；准确清单见 `tools/retired-contract-tests.json`。其余条目需要按当前 `GATE_INDEX.md` 和逐项方案重新选择，不能从此历史表启动全量。
+
 | 现有测试 | 需要替换的内容 | 应保留的保障 |
 | --- | --- | --- |
 | `tools/test-reader-control-p0.mjs:214` | home → directory；quickReplace → 外部 rulesManagement | 初始页路由正确、所有模块扩展入口有覆盖 |

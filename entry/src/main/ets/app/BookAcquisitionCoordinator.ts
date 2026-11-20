@@ -39,7 +39,8 @@ export interface BookPreparationOpenOptions extends RemoteReadingOpenOptions {
 export interface BookCandidateOpenOptions extends BookPreparationOpenOptions {
   /** Only the explicitly opened new-book group validates bodies. Viewport preparation stays catalog-only. */
   requireReadable?: boolean;
-  /** The visible catalog is available while the bounded body probe continues. */
+  /** Retain the selected catalog while probing; fallback catalogs publish only
+   * after required body/resource admission succeeds. */
   onCatalog?: (session: RemoteReadingSession) => void;
   /** Whole foreground selection budget, including queueing and all candidates. */
   budgetMs?: number;
@@ -534,8 +535,12 @@ export class BookAcquisitionCoordinator {
     const title = normalize(primary?.title ?? '');
     const author = bookAuthorIdentity(primary?.author ?? '', primary?.authorIdentity, primary?.sourceVersion);
     const seen = new Set<string>();
-    const ordered = candidates.slice().sort((a: BookAcquisitionCandidate, b: BookAcquisitionCandidate): number =>
+    const ordered = (priority === 'foreground' ? candidates.slice(1) : candidates.slice())
+      .sort((a: BookAcquisitionCandidate, b: BookAcquisitionCandidate): number =>
       (a.failed ? 2 : a.catalogReady ? 0 : 1) - (b.failed ? 2 : b.catalogReady ? 0 : 1));
+    // Foreground owns the user's actual selection. Readiness may rank its
+    // fallbacks, but must never silently replace that first attempt.
+    if (priority === 'foreground' && candidates.length > 0) ordered.unshift(candidates[0]);
     let unverifiedAttempts = 0;
     let failure: Error = new Error('没有可用的同书候选');
     for (const candidate of ordered) {
@@ -559,11 +564,17 @@ export class BookAcquisitionCoordinator {
           (author.length > 0 && bookAuthorIdentity(admission.session.book.author, admission.session.book.authorIdentity, admission.session.sourceVersion) !== author)) {
           throw new RemoteReadingGatewayError('invalidResponse', '详情书名或作者与所选书籍不一致', 'book.detail');
         }
-        options.onCatalog?.(admission.session);
+        const selected = priority === 'foreground' && primary !== undefined &&
+          candidate.seed.sourceId === primary.sourceId && candidate.seed.bookId === primary.bookId;
+        const publishCatalog = options.requireReadable !== true || selected;
+        if (publishCatalog) options.onCatalog?.(admission.session);
+        this.assertCandidateCurrent(options, deadline);
         if (options.requireReadable === true) {
           const session = await this.waitForCandidate(this.verifyCandidateBody(admission.session, actualOptions, priority), options, deadline);
           admission = { ...admission, session };
         }
+        this.assertCandidateCurrent(options, deadline);
+        if (!publishCatalog) options.onCatalog?.(admission.session);
         this.assertCandidateCurrent(options, deadline);
         return admission;
       } catch (error) {

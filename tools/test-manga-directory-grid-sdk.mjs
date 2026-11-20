@@ -13,9 +13,21 @@ const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
 const layout = await import('../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts');
+const {ReaderScrollLayout}=await import('../entry/src/main/ets/features/common/ReaderScrollLayout.ts');
 const { readerDirectoryScopeKey } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts');
 
 
+const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+const {readerMessageStyles}=await import('./lib/reader-typography-probe.mjs');
+const nativeNodes=owner=>[...[...(owner.nodes?.values()??[])],...[...(owner.children?.values()??[])].flatMap(nativeNodes)];
+const timing=await import('../entry/src/main/ets/features/common/ProductMotionTiming.ts');
+const {SOURCE_SWITCH_VISUAL}=await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const {readerPanelActorPose}=await import('../entry/src/main/ets/features/reading/ReaderPanelMotionContract.ts');
+const curves=new Proxy({},{get:(_,name)=>(...args)=>({nativeCurve:String(name),args})});
+const motion=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/MotionSpec.ets',import.meta.url),'utf8'),
+ 'MotionSpec.ets',{...timing,SOURCE_SWITCH_VISUAL,MANGA_DIRECTORY_VISUAL:mangaGridProbeDependencies.MANGA_DIRECTORY_VISUAL,readerPanelActorPose,curves,Curve:new Proxy({},{get:(_,name)=>String(name)})},['motionAnimateParam']);
+const actionAccessibility=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderActionAccessibility.ets',import.meta.url),'utf8'),
+ 'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'AccessibilityRoleType.BUTTON'}},['ReaderActionAccessibility','readerActionTouchRegion']);
 const path = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
 const source = readFileSync(path, 'utf8');
 class LRUCache {
@@ -51,8 +63,9 @@ const names = [...mangaGridBuilderMembers, 'build', 'row', 'mangaRow', 'mangaNum
   'mangaCellPlacement', 'mangaCellOrdinal', 'mangaCellWidth', 'mangaCellTop', 'mangaCellBottom',
   'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing',
   'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode', 'isCurrentNode', 'rowKey',
-  'captureViewportAnchor', 'positionInitialCurrent', 'positionRowHeight', 'planPosition'];
-names.push('mangaCatalogNarrow', 'canDownloadTarget', 'downloadTarget', 'mangaViewportWidth', 'mangaInitialViewportWidth');
+  'captureViewportAnchor', 'positionInitialCurrent', 'positionRowHeight', 'planPosition',
+  'nativeHeaderCount','nativeDisplayIndex','dataIndex','emptyPrefix','prefixBuilder','emptyBuilder'];
+names.push('mangaEmptyActions','mangaCatalogNarrow', 'canDownloadTarget', 'downloadTarget', 'mangaViewportWidth', 'mangaInitialViewportWidth');
 const sdkGrid = [];
 const Grid = new Proxy({ name: 'Grid' }, { get(target, key) {
   if (key === 'name') return target.name;
@@ -62,7 +75,7 @@ const LazyForEach = new Proxy({}, { get: () => () => {} });
 function probe(scheme = 'day', quick = false, width = 390, fontScale = 1, candidate = source, captureNative = false) {
   const actions = [], scrolls = [], anchors = [];
   const properties = createArkUIPropertyRuntimeProbe();
-  const result = createReaderBuilderProbe(candidate, names, { ...mangaGridProbeDependencies, ...properties.sdk,
+  const result = createReaderBuilderProbe(candidate, names, { ...mangaGridProbeDependencies, ...actionAccessibility,...motion,globalThis:{Context:{animation(_params){}}}, ...properties.sdk,
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: fontScale }) }, ...fonts, ...layout, ...(captureNative ? {} : { Grid }), LazyForEach,
     ScrollAlign: { START: 'start', CENTER: 'center' }, LengthMetrics: { vp: value => ({ value }) },
     readerDirectoryScopeKey, readerDirectoryViewportAnchor: () => undefined,
@@ -72,7 +85,7 @@ function probe(scheme = 'day', quick = false, width = 390, fontScale = 1, candid
     windowMetricsRevision: 0, mangaViewportWidth: width, mangaInitialViewportWidth: 0, mangaGridSpans: new Map(), mangaScheme: scheme, appThemeScheme: 'day',
     currentChapterIndex: 5001, rowHeight: 40, mangaRowMinHeight: 58, interactionEnabled: true,
     listPaddingX: 10, listPaddingRight: -1, listPaddingY: 5, listPaddingTop: -1, listPaddingBottom: -1,
-    contentStartInset: 0, contentEndInset: 0, mangaVisibleTopInset: 0,
+    scrollLayout:new ReaderScrollLayout(0,0,'contentOffset'), mangaVisibleTopInset: 0,
     edgeEffectMode: 'none', chapterByIndex: new Map(), chapterDownloadEnabled: false,
     bookId: 'book', sourceId: 'manga', onFirstLayout() {}, onScrollSettled() {}, onUserScrollIntent() {}, onScrollOffset() {},
     onToggleNode: value => actions.push(['fold', value.nodeId]), captureViewportAnchor() {},
@@ -129,7 +142,7 @@ assert.equal(data.getData(0).node.title, '22上', 'late pages cannot replace a d
   far.replace(farView);
   far.registerDataChangeListener({ onDataReloaded() {}, onDataChanged: index => notifications.push(index) });
   owner = createReaderBuilderProbe(source, ['loadPage', 'admitMangaPages', 'settleMangaScroll', 'captureViewportAnchor',
-    'schedulePosition', 'positionInitialCurrent', 'positionRowHeight', 'planPosition', 'mangaContentStartOffset'], {
+    'schedulePosition', 'positionInitialCurrent', 'positionRowHeight', 'planPosition', 'mangaContentStartOffset', 'nativeHeaderCount', 'nativeDisplayIndex'], {
       ...layout, setTimeout: action => timers.push(action), readerDirectoryScopeKey,
       cacheReaderDirectoryNavigationPage: production.cacheReaderDirectoryNavigationPage,
       readerDirectoryViewportAnchor: () => saved.at(-1), readerDirectorySaveViewportAnchor: anchor => saved.push(anchor),
@@ -139,7 +152,8 @@ assert.equal(data.getData(0).node.title, '22上', 'late pages cannot replace a d
     mounted: true, generation: 11, interactionEnabled: true, mangaDisplay: true, mangaQuickDisplay: false,
     mangaSearchActive: false, mangaDragging: false, initialPositionPending: true, mangaPresentationRevision: 0, pendingPages: [],
     firstVisibleIndex: 6000, mangaRowMinHeight: 58, rowHeight: 40,
-    mangaVisibleTopInset: 0, contentStartInset: 0, listPaddingTop: 0, listPaddingY: 0,
+    mangaVisibleTopInset: 0, scrollLayout: new ReaderScrollLayout(0, 0, 'contentOffset'),
+    listPaddingTop: 0, listPaddingY: 0,
     scroller: { getItemRect(index) { return { y: -11, height: far.loadedNode(index) === undefined ? 58 : 44 }; },
       scrollToIndex: (...args) => scrolls.push(args) }, onScrollSettled() {},
     gateway: { async page(book, id, offset, guard) { requests.push([book, id, offset, guard()]);
@@ -200,7 +214,7 @@ function retainedMangaPaint(candidate = source, numeric = false) {
   const extra = ['view', 'onViewChanged', 'chapterEntries', 'onChapterEntriesChanged', 'chapterByIndex',
     'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex', 'mangaGridSpans'];
   const result = createReaderBuilderProbe(candidate, [...new Set([...names, ...extra])],
-    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
+    { ...mangaGridProbeDependencies, ...fonts, ...actionAccessibility, ...motion, ...properties.sdk }, properties.hooks);
   const owner = result.owner, reads = [], downloads = [];
   Object.assign(owner, { mounted: false, dataSource: retainedData, view: initialView, mangaDisplay: true,
     mangaQuickDisplay: false, mangaSearchActive: true, mangaCatalogDisplay: false, mangaCatalogNarrow: undefined,
@@ -281,8 +295,10 @@ assert.throws(() => retainedMangaPaint(ghostPaint), /withdrawn cached actors can
   const first = { ...view, viewId: 'retained-group-old', visibleTotal: 1, nodes: [oldGroup] };
   const groupData = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('group is resident'));
   groupData.replace(first); const captured = groupData.getData(0), properties = createArkUIPropertyRuntimeProbe();
+  const nativeAnimations = [];
   const result = createReaderBuilderProbe(source, [...new Set([...names, 'view', 'onViewChanged', 'mangaPresentationRevision'])],
-    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
+    { ...mangaGridProbeDependencies, ...fonts, ...actionAccessibility, ...motion, ...properties.sdk,
+      globalThis: { Context: { animation: params => nativeAnimations.push(params) } } }, properties.hooks);
   const owner = result.owner, toggles = [];
   Object.assign(owner, { mounted: false, dataSource: groupData, view: first, mangaDisplay: true,
     mangaQuickDisplay: false, mangaSearchActive: false, mangaPresentationRevision: 0,
@@ -294,15 +310,18 @@ assert.throws(() => retainedMangaPaint(ghostPaint), /withdrawn cached actors can
     schedulePosition() {}, toggleNode: native => toggles.push(native) });
   owner.mangaRow(captured); owner.mounted = true;
   const key = owner.rowKey(captured), count = owner.observers.length;
-  const fold = [...owner.nodes.values()].find(native => native.type === 'Image' && native.onClick);
+  const fold = [...owner.nodes.values()].find(native => native.type === 'Stack' && native.onClick &&
+    native.accessibilityText?.includes('子目录'));
+  const arrow = [...owner.nodes.values()].find(native => native.type === 'Image' && native.rotate);
   const title = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === '旧卷组');
   const metadata = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === '2 个可读条目');
   const next = { ...oldGroup, title: '新卷组', depth: 3, expanded: false, readableDescendantCount: 9 };
   owner.view = { ...view, viewId: 'retained-group-new', visibleTotal: 1, nodes: [next] }; properties.flush();
-  assert.equal(owner.rowKey(groupData.getData(0)), key, 'group folding retains its actual rotating Image actor');
+  assert.equal(owner.rowKey(groupData.getData(0)), key, 'group folding retains the actual 44vp carrier and rotating Image');
   assert.equal(owner.observers.length, count, 'group metadata refresh does not remount native actors');
   assert.equal(title.create, '新卷组'); assert.equal(metadata.create, '9 个可读条目');
-  assert.equal(fold.rotate.angle, -90); assert.ok(fold.accessibilityText.includes('新卷组'));
+  assert.equal(arrow.rotate.angle, -90); assert.ok(fold.accessibilityText.includes('新卷组'));
+  assert.ok(nativeAnimations.some(params => params?.duration > 0), 'SDK forwards the real disclosure animation timing');
   fold.onClick(); assert.equal(toggles.at(-1).title, '新卷组', 'retained fold resolves the current canonical group');
   owner.view = { ...view, viewId: 'retained-group-removed', visibleTotal: 0, nodes: [] }; properties.flush();
   const before = toggles.length; fold.onClick();
@@ -348,8 +367,8 @@ function checkEmpty(candidate = source) {
     const emptyView = { ...gridView, viewId: 'empty-search', visibleTotal: 0, nodes: [] };
     const data = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('empty display never requests a Core item'));
     data.replace(emptyView);
-    Object.assign(owner, { dataSource: data, view: emptyView, mangaSearchActive: true,
-      listPaddingTop: 144, contentStartInset: 29, onClearSearch: () => clears.push('clear') });
+    Object.assign(owner, { mounted:true,dataSource: data, view: emptyView, mangaSearchActive: true,
+      listPaddingTop: 144, scrollLayout:new ReaderScrollLayout(29,0,'contentOffset'), onClearSearch: () => clears.push('clear') });
     const options = owner.mangaGridLayoutOptions();
     assert.deepEqual(options.onGetIrregularSizeByIndex(0), [1, 12]);
     owner.initialRender();
@@ -357,13 +376,14 @@ function checkEmpty(candidate = source) {
     assert.equal(viewport.padding.top, 0, 'empty content retains the original full-height Grid viewport');
     assert.equal(viewport.contentStartOffset, 173, 'empty content shares toolbar clearance in actual scroll content');
     assert.equal(viewport.scrollBar, 'BarState.Auto'); assert.equal(viewport.scrollBarWidth, 4);
-    assert.equal(viewport.scrollBarColor, '#47000000'); assert.equal(viewport.args[0], owner.scroller);
+    assert.equal(viewport.scrollBarColor, mangaGridProbeDependencies.mangaDirectoryColor('scrollbar',scheme)); assert.equal(viewport.args[0], owner.scroller);
     const slot = [...owner.nodes.values()].find(native => native.type === 'GridItem');
     assert.ok(slot, 'empty state is a real scroll-content GridItem, never a fixed Stack overlay');
     if (typeof slot.create[0] === 'function') slot.create[0](slot.id, true);
-    const rendered = [...owner.nodes.values()];
+    const rendered = nativeNodes(owner);
     const message = rendered.find(native => native.type === 'Text' && native.create === '没有匹配的章节');
-    assert.ok(message); assert.deepEqual([message.fontSize, message.lineHeight, message.maxFontScale], [12, 18, scale]);
+    assert.ok(message); assert.deepEqual([message.fontSize, message.lineHeight], [readerMessageStyles.MESSAGE_BODY.fontSizeFp,readerMessageStyles.MESSAGE_BODY.lineHeightFp]);
+    assert.equal(message.maxFontScale,undefined,'public message role inherits platform scaling without a local cap');
     const clear = rendered.find(native => native.type === 'Text' && native.create === '清除搜索');
     clear.onClick(); assert.deepEqual(clears, ['clear']);
     owner.interactionEnabled = false; clear.onClick(); assert.equal(clears.length, 1);
@@ -386,14 +406,34 @@ function checkDownloadBudget(candidate = source) {
   Object.assign(owner, { dataSource: data, view: ready, chapterDownloadEnabled: true,
     chapterByIndex: new Map(numeric.map(native => [native.chapterIndex, { index: native.chapterIndex, title: native.title, navigable: true, downloadState: 'completed' }])) });
   const item = data.getData(0), placement = owner.mangaCellPlacement(item);
-  assert.equal(placement.columns, 2, 'download accessory reserves its own 24vp before responsive column admission');
+  assert.equal(placement.columns, 2, 'download accessory reserves its own 44vp before responsive column admission');
   const cellWidth = owner.mangaCellWidth(item);
   const textBudget = 2 * 13 * .7 * 3.2;
-  assert.ok(cellWidth - 24 - 12 >= textBudget, 'download sibling cannot consume the distinguishing numeric title lane');
+  assert.ok(cellWidth - 44 - 12 >= textBudget, 'download sibling cannot consume the distinguishing numeric title lane');
   owner.mangaNumberCell(item);
-  assert.ok([...owner.nodes.values()].some(native => native.type === 'Stack' && native.width === 24));
+  assert.ok([...owner.nodes.values()].some(native => native.type === 'Stack' && native.width === 44));
 }
 checkDownloadBudget();
+function checkTreeTargets(candidate=source) {
+  for(const scale of [1,1.3,1.6,2]){
+    const {owner}=probe('day',false,320,scale,candidate);
+    Object.assign(owner,{chapterDownloadEnabled:true,chapterDownloadActionsEnabled:true,
+      chapterByIndex:new Map([[5001,{index:5001,title:'02',navigable:true,downloadState:'completed'}]])});
+    owner.mangaNumberCell(gridData.getData(1));
+    const rendered=[...owner.nodes.values()];
+    const download=rendered.find(native=>native.type==='Stack'&&native.width===44&&native.accessibilityText?.includes('下载'));
+    assert(download&&download.height>=44,'actual Tree download carrier fits44 inside its cell borders');
+    assert(owner.mangaCellWidth(gridData.getData(1))-44-12>=44,'actual Tree reserves44 independent reading lane beside download/padding/borders');
+    assert.equal(download.responseRegion.height,download.height);
+  }
+  const {owner}=probe('day',false,320,1,candidate);owner.mangaRow(gridData.getData(7));
+  const fold=[...owner.nodes.values()].find(n=>n.type==='Stack'&&n.accessibilityText?.includes('子目录'));
+  assert.equal(fold.width,44);assert.equal(fold.height,44);
+  assert(![...owner.nodes.values()].some(n=>n.type==='Image'&&n.onClick),'16vp icon is paint under the44vp actor');
+}
+checkTreeTargets();
+const lostBorderBudget=source.replace('44 + MANGA_DIRECTORY_VISUAL.gridBorder * 2,','0,');
+assert.notEqual(lostBorderBudget,source);assert.throws(()=>checkTreeTargets(lostBorderBudget),/fits44/);
 function checkInitialWidth(candidate = source) {
   for (const width of [320, 390, 800]) {
     const contentWidth = Math.min(540, width - 40), inset = (width - contentWidth) / 2;
@@ -407,7 +447,7 @@ function checkInitialWidth(candidate = source) {
     owner.updateStateVars({ mangaInitialViewportWidth: width });
     assert.equal(owner.mangaContentWidth(), contentWidth, 'before first area the shared Grid uses its actual known parent width');
     assert.equal(owner.mangaGridNarrow(), width <= 340);
-    assert.ok(owner.mangaCellWidth(data.getData(0)) >= 2 * 13 * .7 * 3.2 + 12 + 24,
+    assert.ok(owner.mangaCellWidth(data.getData(0)) >= 2 * 13 * .7 * 3.2 + 12 + 44,
       'the initial numeric actor never starts as an arbitrary one-vp cell');
     owner.initialRender(); owner.layoutReady = true;
     sdkGrid.at(-1).onAreaChange({}, {width: width - 23, height: 400});
@@ -420,7 +460,7 @@ assert.notEqual(omittedInitialWidth, source);
 assert.throws(() => checkInitialWidth(omittedInitialWidth), /actual known parent width/);
 const omittedDownloadBudget = source.replaceAll('this.chapterDownloadEnabled ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 0', '0');
 assert.notEqual(omittedDownloadBudget, source);
-assert.throws(() => checkDownloadBudget(omittedDownloadBudget), /reserves its own 24vp/);
+assert.throws(() => checkDownloadBudget(omittedDownloadBudget), /reserves its own 44vp/);
 function checkCurrentWeight(candidate = source) {
   const { owner } = probe('day', false, 390, 1, candidate);
   owner.mangaNumberCell(gridData.getData(1));
@@ -472,9 +512,9 @@ for (const scheme of ['day', 'night']) {
   owner.mangaNumberCell(gridData.getData(1));
   const rendered = [...owner.nodes.values()];
   const cell = rendered.find(item => item.type === 'Stack');
-  assert.equal(cell.height, 44, 'no second current-reading line is reserved');
+  assert.equal(cell.height, 46, '44vp child target plus both one-vp cell border edges');
   assert.equal(cell.borderRadius, 8);
-  assert.equal(cell.backgroundColor, scheme === 'night' ? '#303C2D' : '#E8EDE2');
+  assert.equal(cell.backgroundColor,mangaGridProbeDependencies.mangaDirectoryColor('active',scheme));
   assert.equal(rendered.find(item => item.type === 'Text' && item.create === '02').fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_550);
   assert.deepEqual(rendered.find(item => item.type === 'Text' && item.create === '02').fontWeight, [550, { enableVariableFontWeight: true }]);
   const current = rendered.find(item => item.type === 'Image');
@@ -494,9 +534,9 @@ for (const scheme of ['day', 'night']) {
     onDownloadChapter: index => downloads.push(index), onInvalidated: () => assert.fail('current download proof must remain valid') });
   owner.mangaNumberCell(gridData.getData(1));
   const rendered = [...owner.nodes.values()];
-  const download = rendered.find(item => item.type === 'Stack' && item.width === 24 && item.accessibilityText);
+  const download = rendered.find(item => item.type === 'Stack' && item.width === 44 && item.accessibilityText);
   assert.equal(download.enabled, true);
-  const shield = rendered.find(item => item.type === 'Stack' && item.width === 24 && !item.accessibilityText && item.onClick);
+  const shield = rendered.find(item => item.type === 'Stack' && item.width === 44 && !item.accessibilityText && item.onClick);
   assert.ok(shield, 'download keeps a native inert shield if its enabled inner actor exits touch testing');
   assert.equal(shield.focusable, false); shield.onClick();
   assert.deepEqual(actions, [], 'the inert shield cannot read the chapter');
@@ -515,7 +555,7 @@ for (const scheme of ['day', 'night']) {
   const title = rendered.find(item => item.layoutWeight === 1 && item.onClick);
   const fold = rendered.find(item => item.type === 'Stack' && item.accessibilityText?.includes('子目录'));
   assert.ok(fold, 'a readable parent has its own fold action');
-  assert.equal(fold.width, 32); assert.equal(fold.height, 32);
+  assert.equal(fold.width, 44); assert.equal(fold.height, 44);
   assert.deepEqual(fold.margin, { left: 8, right: 8 });
   assert.ok(rendered.some(item => item.type === 'Image' && item.width === 13), 'the chapter chevron remains separate from its fold action');
   title.onClick(); fold.onClick();
@@ -566,7 +606,7 @@ for (const scheme of ['day', 'night']) {
   assert.equal(native.cachedCount, 4);
   assert.equal(native.enableScrollInteraction, true);
   assert.deepEqual(native.padding, { left: 10, right: 10, top: 0, bottom: 0 });
-  owner.contentStartInset = 97; owner.contentEndInset = 61; owner.replay();
+  owner.scrollLayout=new ReaderScrollLayout(97,61,'contentOffset'); owner.replay();
   assert.deepEqual(sdkGrid.at(-1).padding, { left: 10, right: 10, top: 0, bottom: 0 });
   assert.equal(sdkGrid.at(-1).contentStartOffset, 102);
   assert.equal(sdkGrid.at(-1).contentEndOffset, 66, 'chrome clearance belongs to official scroll content offsets');
@@ -584,7 +624,7 @@ for (const scheme of ['day', 'night']) {
   assert.equal(scrolls[0][0], gridData.displayIndex(1));
   assert.equal(scrolls[0][3].extraOffset.value, 27, 'Quick restore uses the real cell height with the canonical anchor rank');
   owner.firstVisibleIndex = 1;
-  const capture = createReaderBuilderProbe(source, ['captureViewportAnchor'], {
+  const capture = createReaderBuilderProbe(source, ['captureViewportAnchor', 'nativeHeaderCount', 'nativeDisplayIndex'], {
     readerDirectoryScopeKey, readerDirectorySaveViewportAnchor: anchor => scrolls.push(anchor) }).owner;
   Object.assign(capture, owner, { captureViewportAnchor: undefined });
   capture.captureViewportAnchor = Object.getPrototypeOf(capture).captureViewportAnchor;

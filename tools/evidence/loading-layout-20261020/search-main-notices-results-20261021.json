@@ -1,0 +1,138 @@
+{
+  "kind": "issue-local-sdk-execution-record",
+  "recordedDate": "2026-10-21",
+  "command": "node tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs",
+  "status": "PASS",
+  "exitCode": 0,
+  "passedCount": 5,
+  "passedAddedGroups": [
+    "fixed header progress uses real native measurement inputs/cache; counts and notices cannot change its height",
+    "permanent native prefix is first and zero-padding when empty; notices naturally wrap in main list and terminal main Scroll",
+    "native indices map books by plus one; prefix-only clears warmup and stores offset without stale neighbor fallback",
+    "touch and inertia retain latest notice snapshot; idle admission causes one actual displacement check and no scroll for unchanged geometry",
+    "real retry click preserves admission, rejects replaced generation/query/page, and updates disabled state while notice text is frozen"
+  ],
+  "source": "entry/src/main/ets/features/search/SearchPage.ets",
+  "productionSha256": "f4d4b2776d73908b1f894bb91702d2f615c73cebd6fa31d78d697296e7f5416f",
+  "actualLoweredSourceSha256": "f4d4b2776d73908b1f894bb91702d2f615c73cebd6fa31d78d697296e7f5416f",
+  "snapshotHelper": "entry/src/main/ets/features/search/SearchBookSnapshot.ts",
+  "snapshotHelperSha256": "99f3b3d23355b7bbdc473480d67c27f14d4986a62acb79df9272b17f9b1a386f",
+  "probe": "tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs",
+  "probeSha256": "25668a38ddd952b183dbf17075577a487133606d66faf46342056ee15695e46e",
+  "finalExecutionRecord": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-07-20261021.json",
+  "attemptRecords": [
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-01-20261021.json",
+      "sha256": "601f09fc98bc556503ed135f901d3c8552313c5f145681008574549b3afa70e6",
+      "exitCode": 1
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-02-20261021.json",
+      "sha256": "7892e2809cfb50a87dfba84d2532e69027eef4ea6cc44d2ec6b78b8cae1d2876",
+      "exitCode": 1
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-03-20261021.json",
+      "sha256": "d12c0021340f717c604cc01402146ef901ccc43c4cd093eb55b245b3a3aef5e2",
+      "exitCode": 1
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-04-20261021.json",
+      "sha256": "52a301ed887b86ca248da45802e5dfb7639bfab318d76613102a6f8ed2247871",
+      "exitCode": 1
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-05-20261021.json",
+      "sha256": "cccee0f8e11d6530688c1bb8a7d35923462bcae0c7eae91b5f5030789a0165c8",
+      "exitCode": 1
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-06-20261021.json",
+      "sha256": "4e4c46b9cfe629eaf42a285b89061182622829d1d54bd874aed99a06392627c1",
+      "exitCode": 1
+    },
+    {
+      "path": "tools/evidence/loading-layout-20261020/search-main-notices-attempt-07-20261021.json",
+      "sha256": "a7301cc1bab36afa5cdd4960141a1d3190216bf098a985856b29dbae3760bdc0",
+      "exitCode": 0
+    }
+  ],
+  "preparationFailures": [
+    {
+      "attempts": [
+        1,
+        2,
+        3
+      ],
+      "symptom": "Probe expected the permanent ListItem content to be present in the generic recorder immediately. First an adjacency assertion saw If, then the rail Column lookup found no node.",
+      "diagnosis": "Installed SDK lowers this non-Lazy ListItem body to an actual native deferred deep-render callback; the shared recorder retains the create arguments without realizing that callback.",
+      "probeOnlyRepair": "Consume the exact finite fixture ListItem.create callback with its emitted element id and initial flag. Do not replace the Builder, source AST, properties or generated SDK output."
+    },
+    {
+      "attempts": [
+        4
+      ],
+      "symptom": "Actual deferred deep-render callback referenced missing native ViewStackProcessor.StartGetAccessRecordingFor.",
+      "probeOnlyRepair": "Supply only native StartGetAccessRecordingFor/StopGetAccessRecording no-op ports in this issue-local dependency object; actual SDK property observer/subscriber classes remain active."
+    },
+    {
+      "stage": "read-only preparation lookup",
+      "symptom": "Optional tools/lib/reader-message-style-probe.mjs lookup returned ENOENT; no such helper exists.",
+      "probeOnlyRepair": "Use actual ReaderMessageStyle.ets and ReaderFontFamilies.ts definitions for PageState dependencies. This was not a gate or test result."
+    }
+  ],
+  "productionFindings": [
+    {
+      "id": "retry-regular-callback-generation",
+      "failedAttempts": [
+        5,
+        6
+      ],
+      "sourceSha256": "dbbc7221cec6a08799525cb34434a3f3c245a5b54d27577539722e1142212e39",
+      "observedFailure": "After same-query generation 1 to 2 replacement and idle admission, actual ReaderButton actionEnabled became true, but all native clicks still used the exact original generation-one onAction function and were rejected; expected retry count 7 remained 4.",
+      "sdkEvidence": "Actual child update payloads contained only scheme/specId/label/actionEnabled, not the regular onAction callback. Displayed/current generation both equaled 2.",
+      "diagnosticRecord": "tools/evidence/loading-layout-20261020/search-main-notices-retry-lowering-20261021.json",
+      "diagnosticLimit": "The original record has valid update-payload/reference facts. Its two lowering string excerpts used unmatched markers and are incomplete; they are not evidence of emitted code absence.",
+      "rootProductionRepair": "Add the production searchNoticeActionKey and actual single-item ForEach around only the ReaderButton, keyed by displayed query/generation/page/kind. Retain original handler and live permission guards.",
+      "finalEvidence": "Actual SDK ForEach consumed current identity keys and created three fresh ReaderButton instances; current native clicks succeeded, old generation callbacks still failed, same-generation canRetry changes retained instances."
+    },
+    {
+      "id": "progress-fallback-budget-cache",
+      "origin": "Root source review while probe was in progress",
+      "observedInitialBehavior": "Early attempts accepted a valid fallback budget without caching it. No fallback defect assertion was executed then.",
+      "rootProductionRepair": "Route fallback through common progress budget cache assignment.",
+      "finalEvidence": "First native measurement failure produced a cached conservative budget; native recovery under the same geometry key caused no remeasurement or height change; window/font key changes measured again."
+    }
+  ],
+  "actualDependencies": [
+    "Installed ETS SDK component lowering of exact current production source and selected members",
+    "Actual SDK V1 State/Prop/ObjectLink/ObservedObject classes; subscriber delivery instrumented",
+    "Actual SearchPublication/SearchViewState/SearchResultProjection/SearchBookGroup/SearchResultDataSource/SearchBookSnapshot",
+    "Actual ReaderButton specs/modifiers/build/commit and native click closure",
+    "Actual ReaderPageState and production terminal state Builders",
+    "Explicit native ListItem deep-render realization, finite Lazy items, Scroller rect/calls, List callbacks, frame queue and MeasureUtils return-value ports"
+  ],
+  "measurementEvidence": "Native measure options use full bounded production counter templates, 12fp/18fp and constraintWidth vp; px2vp conversion and valid native/fallback budget caching execute actual production methods. The MeasureUtils numeric height is an explicit port and is not a text shaping simulation.",
+  "retainedSdkWarnings": [
+    {
+      "type": "WARN",
+      "message": "The 'regular' property 'group' cannot be assigned to the '@ObjectLink' property 'group'.",
+      "pos": 21041
+    }
+  ],
+  "propertyRuntime": {
+    "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib",
+    "classesSha256": "a7d32ad63c41f9154f959129fdb974e8e399383a0f4c7c52921c33a273a16ba3",
+    "layer": "actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"
+  },
+  "runtimeWarnings": [
+    "Node stripTypeScriptTypes ExperimentalWarning"
+  ],
+  "notExecuted": [
+    "Previous eight Card/key/user-scroll scenarios",
+    "Previous seven list-stability scenarios and their negative modes",
+    "Previous full compact-header probe",
+    "Other business suites/full gates/build/signing/device/network operations"
+  ],
+  "evidenceBoundary": "This proves selected exact-source SDK closures, state updates, emitted native attributes/events, index translation and bounded compensation calls. Empty prefix has no children or vertical padding/border by emitted properties; actual zero pixel height is not measured. The finite fixture admits keyed new children but does not model native removal of old ForEach/Lazy nodes. No native font shaping/wrapping/pixels, full Scroll/List layout/physics, HAP compilation, device interaction or user acceptance is claimed."
+}

@@ -1,0 +1,8 @@
+{
+  "command": "node tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs",
+  "exitCode": 1,
+  "stdout": "PASS fixed header progress uses real native measurement inputs/cache; counts and notices cannot change its height\n",
+  "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: actual mainSearchNotices column carries its native rail/padding/border attributes: [{\"type\":\"Stack\",\"id\":0},{\"type\":\"Stack\",\"id\":1},{\"type\":\"List\",\"id\":2},{\"type\":\"ListItem\",\"id\":\"search-main-notices\"},{\"type\":\"If\",\"id\":4},{\"type\":\"ListItem\",\"id\":5},{\"type\":\"SearchResultCard\",\"id\":6},{\"type\":\"ListItem\",\"id\":7},{\"type\":\"SearchResultCard\",\"id\":8}]\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:268:12\n    at scenario (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:158:32)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:259:1 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: undefined,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n",
+  "productionSha256": "dbbc7221cec6a08799525cb34434a3f3c245a5b54d27577539722e1142212e39",
+  "probeSha256": "865fd8affc3f6fa4ad0705acedeab0fe1cc0fc72be68cdc83a32b9f0ffae9786"
+}

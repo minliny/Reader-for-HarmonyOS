@@ -316,17 +316,13 @@ export function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {
  * and width; the sheet content reads one shared contract for its measured
  * frame, handle, title and action rows.
  */
-export type SheetSpecId = 'bookshelf-book-action' | 'search-result-filter' | 'search-task-status';
+export type SheetSpecId = 'bookshelf-book-action' | 'search-result-filter' | 'search-task-status' | 'source-management-filter' | 'source-management-more';
 
 /** The native book Sheet owns its one opaque frame and safe area. Content
  * flows naturally into FIT_CONTENT; no fixed legacy row offsets or height. */
 export class SheetSurfaceSpec {
   readonly maxWidth: number = SOURCE_SWITCH_VISUAL.drawerMaxWidth;
   readonly horizontalInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;
-  readonly handleWidth: number = SOURCE_SWITCH_VISUAL.gripWidth;
-  readonly handleHeight: number = SOURCE_SWITCH_VISUAL.gripHeight;
-  readonly handleTop: number = SOURCE_SWITCH_VISUAL.gripMarginTop;
-  readonly handleBottom: number = SOURCE_SWITCH_VISUAL.gripMarginBottom;
   readonly titleInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;
   readonly titleHeight: number = SOURCE_SWITCH_VISUAL.headingHeight;
   readonly titleBottom: number = 0;
@@ -336,7 +332,6 @@ export class SheetSurfaceSpec {
   readonly titleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
   readonly contentBottom: number = SOURCE_SWITCH_VISUAL.normalSideInset;
   readonly borderRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;
-  readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';
   readonly titleRole: ReaderAppColorRole = 'TOK_INK';
   readonly hostBackgroundRole: ReaderAppColorRole = 'app.bookshelf.sheetSurface';
   readonly hostMaskRole: ReaderAppColorRole = 'TOK_SS_DRAWER_SCRIM';
@@ -351,8 +346,6 @@ export class SheetSurfaceSpec {
   constructor(compactHeader: boolean = false) {
     this.compactHeader = compactHeader;
     if (compactHeader) {
-      this.handleWidth = 34; this.handleHeight = 4;
-      this.handleTop = 10; this.handleBottom = 7;
       this.titleHeight = 44; this.titleBottom = 12;
       this.titleFontFamily = 'ReaderNotoSansSCUIMedium';
       this.titleFontWeight = 500; this.titleFontSize = 16; this.titleLineHeight = 24;
@@ -361,9 +354,11 @@ export class SheetSurfaceSpec {
 }
 
 const SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {
-  'bookshelf-book-action': new SheetSurfaceSpec(),
+  'bookshelf-book-action': new SheetSurfaceSpec(true),
   'search-result-filter': new SheetSurfaceSpec(true),
   'search-task-status': new SheetSurfaceSpec(true),
+  'source-management-filter': new SheetSurfaceSpec(true),
+  'source-management-more': new SheetSurfaceSpec(true),
 };
 
 export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {

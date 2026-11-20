@@ -10,7 +10,6 @@ import {
 import {
   TOK_BORDER,
   TOK_BORDER_W,
-  TOK_FIELD_SURFACE,
   TOK_LINE,
   TOK_LINE_STRONG,
   TOK_ON_PRIMARY,
@@ -246,7 +245,7 @@ export struct ReaderTtsModulePanel {
       .height(30)
       .padding({ left: 9, right: 5 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
+      .backgroundColor(readerAppColor('app.reader.ttsField', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(6)
       // Figma has only the closed SelectSmall trigger (`750:1053`) and its

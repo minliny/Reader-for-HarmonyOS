@@ -10,14 +10,12 @@ import {
   readerVisualSafeRight,
   readerVisualSafeTop,
 } from '../common/ReaderWindowMetrics.ts';
-
-export type ReaderWidthClass = 'compact' | 'expanded';
+import { ReaderWidthClass, readerWidthClassWithHint } from '../common/ReaderWidthClass.ts';
 
 export const READER_PHONE_REFERENCE_WIDTH = 390;
 export const READER_PHONE_REFERENCE_HEIGHT = 844;
 export const READER_TABLET_REFERENCE_WIDTH = 760;
 export const READER_TABLET_REFERENCE_HEIGHT = 960;
-export const READER_EXPANDED_MIN_WIDTH = 600;
 
 export const READER_TITLE_LINE_HEIGHT_FP = 28.75;
 export const READER_TITLE_TO_BODY_SPACE_VP = 18;
@@ -226,16 +224,6 @@ export class ReaderControlLayoutSnapshot {
   }
 }
 
-export function readerWidthClass(
-  viewportWidth: number,
-  expandedHint: boolean,
-): ReaderWidthClass {
-  if (viewportWidth > 0) {
-    return viewportWidth >= READER_EXPANDED_MIN_WIDTH ? 'expanded' : 'compact';
-  }
-  return expandedHint ? 'expanded' : 'compact';
-}
-
 export function resolveReaderReadingLayout(
   viewportWidth: number,
   viewportHeight: number,
@@ -245,7 +233,7 @@ export function resolveReaderReadingLayout(
   insetProfile?: ReaderContentInsetProfile,
   measuredTopInfoHeightVp: number = 0,
 ): ReaderReadingLayoutSnapshot {
-  const widthClass = readerWidthClass(viewportWidth, expandedHint);
+  const widthClass = readerWidthClassWithHint(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
   const width = viewportWidth > 0 ? viewportWidth : profile.referenceWidth;
   const height = viewportHeight > 0 ? viewportHeight : profile.referenceHeight;
@@ -269,30 +257,22 @@ export function resolveReaderReadingLayout(
   const configuredHorizontal = Number.isFinite(requestedHorizontal) ? Math.max(0, requestedHorizontal) : autoHorizontal;
   const contentHorizontal = Math.max(configuredHorizontal, safeHorizontal,
     widthClass === 'expanded' && insetProfile === undefined ? Math.max(0, (width - 720) / 2) : 0);
-  // The immersive metadata uses the real status-bar origin and a lane that is
-  // at least as high as the measured status region.  Its own text line also
-  // gets measured breathing room, so a small status bar cannot make the
-  // information row look shorter than the system chrome.
-  // `statusBarRect` is the most precise source, but on HarmonyOS it can be
-  // temporarily empty while the visible/hidden system-bar transaction is
-  // settling.  Keep the origin in the window coordinate space and derive the
-  // lane from every platform-provided top boundary so the information row
-  // never falls back to the authored 72/92.44vp height for one frame.
-  const informationTop = Number.isFinite(metrics.statusBarRect.top) ?
+  // Preserve the system-status track even while its glyphs are hidden. The
+  // application information row is a separate lane below that track, so the
+  // hide-status preference never moves labels or changes the body budget.
+  // WindowCoordinator retains the measured status rectangle across hide/show.
+  const statusTop = Number.isFinite(metrics.statusBarRect.top) ?
     Math.max(0, metrics.statusBarRect.top) : 0;
   const measuredInformationHeight = Number.isFinite(measuredTopInfoHeightVp) ? Math.max(0, measuredTopInfoHeightVp) : 0;
   const measuredInformationLane = measuredInformationHeight > 0 ?
     measuredInformationHeight + READER_PAGE_CHROME_TOP_ROW_PADDING_VP * 2 : 0;
-  const cutoutRectBottom = metrics.statusBarCutoutRect.height > 0 ?
-    Math.max(0, metrics.statusBarCutoutRect.top) + Math.max(0, metrics.statusBarCutoutRect.height) - informationTop : 0;
-  const statusBarLane = Math.max(
+  const statusRegionHeight = Math.max(
     Number.isFinite(metrics.statusBarHeight) ? Math.max(0, metrics.statusBarHeight) : 0,
     Number.isFinite(metrics.statusBarRect.height) ? Math.max(0, metrics.statusBarRect.height) : 0,
-    Number.isFinite(metrics.systemInsets.top) ? Math.max(0, metrics.systemInsets.top) : 0,
-    Number.isFinite(metrics.cutoutInsets.top) ? Math.max(0, metrics.cutoutInsets.top) : 0,
-    Math.max(0, cutoutRectBottom),
   );
-  const informationLaneHeight = Math.max(statusBarLane, measuredInformationLane);
+  const informationTop = Math.max(statusTop + statusRegionHeight, cutoutSafeTop,
+    Number.isFinite(metrics.systemInsets.top) ? Math.max(0, metrics.systemInsets.top) : 0);
+  const informationLaneHeight = Math.max(statusRegionHeight, measuredInformationLane);
   const informationBottom = informationTop + informationLaneHeight;
   const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop,
     informationBottom > 0 ? informationBottom + 8 : 0);
@@ -338,7 +318,7 @@ export function resolveReaderControlLayout(
   expandedHint: boolean,
   metrics: ReaderWindowMetricsSnapshot,
 ): ReaderControlLayoutSnapshot {
-  const widthClass = readerWidthClass(viewportWidth, expandedHint);
+  const widthClass = readerWidthClassWithHint(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
   const width = viewportWidth > 0 ? viewportWidth : profile.referenceWidth;
   const height = viewportHeight > 0 ? viewportHeight : profile.referenceHeight;

@@ -1,3 +1,7 @@
+import { ReaderLibrarySyncJournal, type ReaderLibrarySyncIntent } from '../sync/ReaderLibrarySyncJournal';
+import { ReaderLibrarySyncRecoveryDialog } from './ReaderLibrarySyncRecoveryDialog';
+import { ReaderLibrarySyncGateway } from '../sync/ReaderLibrarySyncGateway';
+import { ReaderLibraryLogSyncJournal, type ReaderLibraryLogSyncIntent } from '../sync/ReaderLibraryLogSyncJournal';
 import { createDefaultSettingsSnapshot, type SettingsSnapshot, type GeneralSettingsKey } from './SettingsGateway';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../common/ReaderTransientFeedback';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
@@ -6,7 +10,7 @@ import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from './SettingsHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
-import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
+import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -92,6 +96,10 @@ export struct SettingsPage {
   @State private resetMessage: string = '';
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
+  @State private originalSyncOperationId: string = '';
+  @State private originalSyncReadFailed: boolean = false;
+  private originalSyncDialog: CustomDialogController | undefined;
+  private originalSyncPresentation: number = 0;
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
   @State private temporaryBackIdentity: string = '';
   @State private developerPageId: string = '';
@@ -138,9 +146,12 @@ export struct SettingsPage {
     const identity = `settings-back:${++settingsSelectionGeneration}`;
     this.temporaryBackIdentity = identity;
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
+    void this.loadOriginalSync();
   }
 
   aboutToDisappear(): void {
+    this.originalSyncPresentation += 1;
+    this.originalSyncDialog?.close(); this.originalSyncDialog = undefined;
     this.transientFeedback.reset();
     this.retireDeveloperPages();
     const identity = this.temporaryBackIdentity;
@@ -302,6 +313,15 @@ export struct SettingsPage {
       if (isReaderProductSurfaceEnabled('sync')) {
         this.navRow('同步与备份', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')), (): void => this.onOpenSync());
       }
+      if (this.originalSyncReadFailed) {
+        ReaderRecoveryNotice({ view: { visible: true, message: '原同步记录尚未读出，请保留现有数据并重新核对。',
+          canRetry: true, generation: this.originalSyncPresentation }, actionLabel: '重新核对',
+          onReconcile: (): void => { void this.loadOriginalSync(); } });
+      }
+      if (this.originalSyncOperationId.length > 0) {
+        this.navRow('继续原同步', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')),
+          (): void => { void this.openOriginalSync(); });
+      }
       this.navRow('书架设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_shelf_search_theme_night') : $r('app.media.settings_row_shelf_search')), this.onOpenBookshelfSettings);
       this.navRow('下载管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_download_theme_night') : $r('app.media.settings_row_download')), this.onOpenDownloads);
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
@@ -310,13 +330,45 @@ export struct SettingsPage {
     }
   }
 
+  private async loadOriginalSync(): Promise<void> {
+    const owner = this.themeOwner, identity = this.temporaryBackIdentity;
+    if (owner === undefined || !this.mounted) return;
+    try {
+      const intent = await new ReaderLibrarySyncJournal(owner.getUIAbilityContext().filesDir).load() ??
+        await new ReaderLibraryLogSyncJournal(owner.getUIAbilityContext().filesDir).load();
+      if (this.mounted && this.themeOwner === owner && identity === this.temporaryBackIdentity && ReaderRuntimeOwner.isCurrent(owner))
+        { this.originalSyncOperationId = intent?.operationId ?? ''; this.originalSyncReadFailed = false; }
+    } catch (_) {
+      if (this.mounted && this.themeOwner === owner && identity === this.temporaryBackIdentity && ReaderRuntimeOwner.isCurrent(owner))
+        this.originalSyncReadFailed = true;
+    }
+  }
+  private async openOriginalSync(): Promise<void> {
+    const owner = this.themeOwner, operation = this.originalSyncOperationId;
+    if (owner === undefined || !this.mounted || this.activeSection !== 'home' || operation.length === 0 || !owner.canConfigureBackupStorage()) return;
+    const identity = this.temporaryBackIdentity, presentation = ++this.originalSyncPresentation;
+    const current = (): boolean => this.mounted && this.themeOwner === owner && identity === this.temporaryBackIdentity &&
+      presentation === this.originalSyncPresentation && (ReaderRuntimeOwner.isCurrent(owner) || owner.canRecoverLibraryRestoreFailure());
+    let intent: ReaderLibrarySyncIntent | ReaderLibraryLogSyncIntent | undefined;
+    try { intent = await new ReaderLibrarySyncJournal(owner.getUIAbilityContext().filesDir).load() ??
+        await new ReaderLibraryLogSyncJournal(owner.getUIAbilityContext().filesDir).load(); }
+    catch (_) { if (current()) this.originalSyncReadFailed = true; return; }
+    if (!current() || intent?.operationId !== operation) { await this.loadOriginalSync(); return; }
+    this.originalSyncDialog?.close();
+    const gateway = ReaderLibrarySyncGateway.forRuntime(owner);
+    let controller: CustomDialogController | undefined;
+    controller = new CustomDialogController({ builder: (): void => this.originalSyncContent(gateway, current, controller!),
+      autoCancel: true, customStyle: true, alignment: DialogAlignment.Center });
+    this.originalSyncDialog = controller; controller.open();
+  }
+  @Builder private originalSyncContent(gateway: ReaderLibrarySyncGateway, current: () => boolean, controller: CustomDialogController) {
+    ReaderLibrarySyncRecoveryDialog({ controller, gateway, isCurrent: current });
+  }
+
   @Builder
   private buildGeneral() {
     this.preferenceCard();
     this.behaviorCard();
-    if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-      this.permissionCard();
-    }
     this.dangerRow();
     this.operationFeedback();
   }
@@ -489,16 +541,7 @@ export struct SettingsPage {
     }
   }
 
-  @Builder
-  private permissionCard() {
-    CategorySection({ title: '系统权限' }) {
-      this.permissionRow('文件访问', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.status.goodSoft', this.appThemeScheme), readerAppColor('app.status.good', this.appThemeScheme));
-      this.permissionRow('通知权限', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.status.warningSoft', this.appThemeScheme), readerAppColor('app.status.warning', this.appThemeScheme));
-      this.permissionRow('电池优化', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.status.infoSoft', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
-    }
-  }
 
-  // 导航行: CategoryRow + 尾部 chevron。
   @Builder
   private navRow(label: string, icon: () => Resource, action: () => void) {
     CategoryRow({ icon: icon(), label: label, onRowClick: action }) {
@@ -511,7 +554,8 @@ export struct SettingsPage {
   private switchRow(label: string, icon: () => Resource, key: GeneralSettingsKey,
   ) {
     ForEach([this.temporaryBackIdentity], (identity: string): void => {
-      CategoryRow({ icon: icon(), label,
+      CategoryRow({ icon: icon(), label, actionEnabled: this.settingCanToggle(identity),
+        actionSelected: this.settingValue(key),
         onRowClick: (): void => this.toggleSetting(key, !this.settingValue(key), identity) }) {
         ReaderToggle({ value: this.settingValue(key), specId: 'standard-toggle',
           inputIdentity: `${identity}:${key}`, accessibilityLabel: label,
@@ -756,22 +800,6 @@ export struct SettingsPage {
       snapshot.confirmation === 'unknown' ? '结果未确认' : snapshot.confirmation === 'undispatched' ? '清理失败' : '清理文字缓存';
   }
 
-  @Builder
-  private permissionRow(label: string, icon: () => Resource, badgeBg: string, badgeDot: string) {
-    CategoryRow({ icon: icon(), label: label }) {
-      // Figma Article trailing 是 fit-content 聚簇 (状态徽标 + 去设置 + chevron), 6 间距。
-      Row({ space: 6 }) {
-        this.statusBadge(badgeBg, badgeDot);
-        this.inlineAction('去设置', 55);
-        Stack({ alignContent: Alignment.Center }) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))).width(14).height(14);
-        }
-        .width(16)
-        .height(16);
-      }
-      .alignItems(VerticalAlign.Center);
-    }
-  }
 
   @Builder
   // Resolve inside the retained observer; a preselected Resource freezes the
@@ -862,21 +890,6 @@ export struct SettingsPage {
         onDismiss: (identity?: string): void => this.dismissSelection(identity),
       });
     }
-  }
-
-  @Builder
-  private inlineAction(label: string, width: number) {
-    Stack({ alignContent: Alignment.Center }) {
-      Text(label)
-        .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
-        .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
-        .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
-    }
-    .width(width)
-    .height(34)
-    .borderRadius(6)
-    .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
   }
 
   @Builder

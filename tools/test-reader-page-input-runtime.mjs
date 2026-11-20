@@ -30,6 +30,7 @@ const Pointer = production('ReaderPageInteractionLayer.ets', [
   'pageLocalX', 'pageLocalY', 'systemOwnsPointer', 'finiteInset',
   'eventTargetPosition', 'freezePointerGeometry', 'pointerGeometryMatches', 'onPointerGeometryChanged',
   'reportBookmarkUnavailable', 'onInputRevisionChanged', 'onInteractionEnabledChanged',
+  'armLongPressTimer', 'clearLongPressTimer',
 ], { ...gesture, ReaderPageInputClock, readerMotionNowMs: () => now,
   TouchType: { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' },
   READER_PAGE_POINTER_STALL_TIMEOUT_MS: 15000,
@@ -38,6 +39,7 @@ function pointer({ ready = true, deferred = false, bookmarkReady = true } = {}) 
   const log = [], p = Object.assign(new Pointer(), {
     gestureState: gesture.createReaderPageGestureState(), activePointerId: -1,
     inputClock: new ReaderPageInputClock(), pointerWatchdogTimer: -1,
+    longPressTimer: -1, allowTextSelection: false,
     deferredSegmentReserved: false, interactionEnabled: true, tapOnly: deferred,
     manualInteractionReported: false, lastSampleTimeMs: 0,
     pointerGeometryFrozen: false, bookmarkUnavailableReported: false,
@@ -47,7 +49,6 @@ function pointer({ ready = true, deferred = false, bookmarkReady = true } = {}) 
     onPreparationNeeded: direction => log.push(['prepare', direction]),
     viewportWidth: 390, viewportHeight: 800,
     onPointerEnd: id => log.push(['up', id]),
-    armLongPressTimer: () => {}, clearLongPressTimer: () => {},
     onDeferredSegmentStart: () => true, onDeferredSegmentResolve: intent => log.push(['deferred', intent]),
     onDeferredSegmentPromote: () => log.push(['promote']),
     canStartTurn: direction => { log.push(['admission', direction]); return ready; },
@@ -232,7 +233,7 @@ for (const y of [0, 47.9, 48, 48.1]) {
   assert.deepEqual(outcomes(log), y === 0 ? [['control']] : y >= 48 ? [['bookmark-release', true]] : [],
     'stage scaling cannot change the physical bookmark commit threshold');
 }
-assert.deepEqual(outcomes(replay([[0, 20], [0, 47.9]]).log), [['bookmark-release', false]],
+assert.deepEqual(outcomes(replay([[0, 40], [0, 47.9]]).log), [['bookmark-release', false]],
   'a preview admitted by MOVE rolls back below the commit threshold');
 
 // Tap zones retain the measured stage mapping; system bands are checked first.
@@ -258,7 +259,7 @@ for (const [x, y] of [[30, 40], [195, 40], [360, 40], [30, 400], [195, 400], [36
 // a later UP must not classify the changed coordinates as a fresh tap/turn.
 for (const change of ['target-width', 'target-height', 'target-position', 'stage-width', 'stage-height', 'inset']) {
   const { p, log } = pointer();
-  touch(p, 'down', 195, 200, 1000); touch(p, 'move', 197, 220, 1016);
+  touch(p, 'down', 195, 200, 1000); touch(p, 'move', 197, 240, 1016);
   let area = {};
   if (change === 'target-width') area.width = 420;
   if (change === 'target-height') area.height = 900;
@@ -311,12 +312,12 @@ for (const finish of ['cancel', 'disabled', 'watchdog']) {
   const { p, log } = pointer({ deferred: true });
   touch(p, 'down', 195, 200, 1000); touch(p, 'move', 205, 280, 1016);
   p.tapOnly = false; p.onInteractionModeChanged();
-  assert.equal(p.gestureState.owner, 'undecided'); assert.equal(p.gestureState.inputOffsetY, 0);
+  assert.equal(p.gestureState.owner, 'bookmark'); assert.equal(p.gestureState.inputOffsetY, 80);
   touch(p, 'up', 205, 280, 1032);
-  assert.deepEqual(outcomes(log), [], 'mode completion clears the old pull without turning it into a tap or late bookmark');
-  assert.equal(log.filter(row => row[0] === 'promote').length, 1);
+  assert.deepEqual(outcomes(log), [['deferred', undefined]], 'busy pull retires without a tap or late bookmark');
+  assert.equal(log.filter(row => row[0] === 'promote').length, 0);
   touch(p, 'down', 205, 280, 1048); touch(p, 'up', 205, 340, 1064);
-  assert.deepEqual(outcomes(log), [['bookmark-release', true]], 'the same owner accepts a fresh physical segment without stale candidate state');
+  assert.deepEqual(outcomes(log), [['deferred', undefined], ['bookmark-release', true]], 'the same owner accepts a fresh physical segment without stale candidate state');
 }
 
 // Re-grab preserves a real visible stage pose and its inverse-mapped raw pose.
@@ -349,4 +350,32 @@ for (const style of ['simulation', 'cover', 'slide', 'none', 'scroll']) for (con
   touch(p, 'down', 195, 200, 1000); touch(p, 'up', 219, 320, 1016);
   assert.deepEqual(outcomes(log), enabled ? [['bookmark-release', true]] : [], style + ': actual parent admission is authoritative');
 }
-console.log(`PASS raw 2D input: ${trajectoryCases} dense/sparse/final-UP physical trajectories, actual coordinate/edge/geometry gates, bookmark admission/feedback/cancel, silent settlement, re-grab continuity and real five-mode parent gate`);
+// A busy segment which spans animation completion retains both click and
+// drag history. A real later MOVE may promote it without rebasing the origin.
+for (const delta of [0, -40, 40]) for (const promote of [false, true]) {
+  const { p, log } = pointer({ deferred: true });
+  touch(p, 'down', 300, 200, 1000);
+  if (delta) touch(p, 'move', 300 + delta, 200, 1016);
+  p.tapOnly = false; p.onInteractionModeChanged();
+  assert.equal(p.pointerInputStartX, 300);
+  if (promote && delta) touch(p, 'move', 300 + delta, 200, 1032);
+  touch(p, 'up', 300 + delta, 200, 1048);
+  assert.deepEqual(outcomes(log), [[promote && delta ? 'turn' : 'deferred', delta > 0 ? 'previous' : 'next']]);
+  assert.equal(log.filter(row => row[0] === 'up').length, 1);
+}
+for (const vertical of [-1, 1]) for (const sign of [-1, 1]) {
+  const { log } = replay([[sign * 4, vertical * 18], [sign * 30, vertical * 36], [sign * 80, vertical * 45]]);
+  assert.deepEqual(outcomes(log), [['turn', sign < 0 ? 'next' : 'previous']]);
+}
+{
+  timers = [];
+  const { p, log } = pointer(); p.allowTextSelection = true;
+  touch(p, 'down', 195, 200, 1000);
+  const longPress = timers.find(timer => timer.delay === 500);
+  assert.ok(longPress, 'the actual long-press timer is armed');
+  longPress.fn();
+  assert.equal(p.gestureState.owner, 'longPress');
+  touch(p, 'move', 100, 200, 1600); touch(p, 'up', 100, 200, 1616);
+  assert.deepEqual(outcomes(log), [], 'selection-owned motion cannot turn a page');
+}
+console.log(`PASS raw 2D input: ${trajectoryCases} dense/sparse/final-UP trajectories plus arc, settlement handoff and actual long-press timer regressions`);

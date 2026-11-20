@@ -21,6 +21,7 @@ import {
 } from '../common/ReaderTypography';
 import { BookshelfSectionHeader } from './BookshelfSectionHeader';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
+import { readerShelfListRowHeight } from '../common/ReaderSurfaceBudgets';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
 import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 import { BookshelfViewState } from './BookshelfViewState';
@@ -58,7 +59,8 @@ import {
 import { NoCoverCover } from './NoCoverCover';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
-import { SheetSurfaceSpec, resolveSheetSpec, readerSurfaceElevation } from '../common/ReaderSurfaceSpecs';
+import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
+import { readerSheetWidth, readerSheetChrome } from '../common/ReaderSheetChrome';
 import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerFloatingBarBottomInset,
@@ -217,6 +219,7 @@ export struct BookshelfPage {
   onDiscoverRequested: (navigation?: number) => void = (): void => {};
   onBookSelected: (book: ShelfBook, navigation?: number, origin?: BookshelfBookOrigin) => void = (_book: ShelfBook): void => {};
   onReturnMotionOrigin: (origin: BookshelfBookOrigin, navigation?: number) => void = (_origin: BookshelfBookOrigin): void => {};
+  onReturnMotionUnavailable: (navigation?: number) => void = (): void => {};
   onVisibleBooksChanged: (books: ShelfBook[], navigation?: number) => void = (_books: ShelfBook[]): void => {};
   onHeaderScrolledChanged: (scrolled: boolean, navigation: number) => void =
     (_scrolled: boolean, _navigation: number): void => {};
@@ -417,18 +420,19 @@ export struct BookshelfPage {
 
   private bookActionSheetOptions(presentationId: string = this.actionSheetId,
     book: ShelfBook | undefined = this.actionBook): SheetOptions {
+    const chrome = readerSheetChrome('bookshelf-book-action', this.appThemeScheme, this.bookActionWidth());
     return {
       height: SheetSize.FIT_CONTENT,
-      width: this.bookActionWidth(),
+      width: chrome.width,
       preferType: SheetType.BOTTOM,
       dragBar: false,
       showClose: false,
-      backgroundColor: readerAppColor(this.bookActionSheetSpec().hostBackgroundRole, this.appThemeScheme),
-      radius: { topLeft: this.bookActionSheetSpec().borderRadius, topRight: this.bookActionSheetSpec().borderRadius, bottomLeft: 0, bottomRight: 0 },
-      maskColor: readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme),
-      shadow: readerSurfaceElevation(this.bookActionSheetSpec().hostElevation, this.appThemeScheme),
-      borderWidth: { top: this.bookActionSheetSpec().hostBorderWidth },
-      borderColor: readerAppColor(this.bookActionSheetSpec().hostBorderRole, this.appThemeScheme),
+      backgroundColor: chrome.backgroundColor,
+      radius: chrome.radius,
+      maskColor: chrome.maskColor,
+      shadow: chrome.shadow,
+      borderWidth: chrome.borderWidth,
+      borderColor: chrome.borderColor,
       enableOutsideInteractive: false,
       onWillAppear: (): void => this.claimBookActionChrome(presentationId, book),
       onAppear: (): void => {
@@ -488,6 +492,9 @@ export struct BookshelfPage {
     BookshelfBookActionSheet({
       presentationId,
       isCurrent: (candidate: string): boolean => candidate === presentationId && this.isCurrentBookActionSheet(presentationId, book),
+      onDismiss: (): void => {
+        if (this.isCurrentBookActionSheet(presentationId, book)) this.dismissBookActionSheet(presentationId, book);
+      },
       onMultiSelect: (): void => this.performBookAction(presentationId, book, this.onBookMultiSelectRequested),
       onBookInfo: (): void => this.performBookAction(presentationId, book, this.onBookInfoRequested),
       onEditGroup: (): void => this.performBookAction(presentationId, book, this.onBookGroupRequested),
@@ -1150,7 +1157,7 @@ export struct BookshelfPage {
       .onClick(this.bookActionPresentationHandler(book));
     }
     .width(this.projectionListDetailsWidth(expandedLayout))
-    .height(this.listCoverHeight(expandedLayout))
+    .height(this.listRowHeight(expandedLayout))
     .alignItems(VerticalAlign.Center)
     .translate({ x: this.listCoverWidth(expandedLayout) + TOK_SPACE_CONTROL_INLINE })
     .opacity(this.viewSwitchListContentOpacity)
@@ -1215,8 +1222,9 @@ export struct BookshelfPage {
   }
 
   private bookActionWidth(): number {
-    // Match the source drawer's live width cap, independently of shelf covers.
-    return this.resolveContentFrame(new SurfaceWidthSpec(this.bookActionSheetSpec().maxWidth)).width;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return readerSheetWidth('bookshelf-book-action', this.effectiveViewportWidth(),
+      readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics));
   }
 
   private phoneContentWidth(): number {
@@ -1323,6 +1331,10 @@ export struct BookshelfPage {
 
   private listCoverWidth(expandedLayout: boolean): number {
     return expandedLayout ? TABLET_LIST_COVER_WIDTH : PHONE_LIST_COVER_WIDTH;
+  }
+
+  private listRowHeight(expandedLayout: boolean): number {
+    return readerShelfListRowHeight(this.listCoverHeight(expandedLayout), this.continueCardFontScale());
   }
 
   private listCoverHeight(expandedLayout: boolean): number {
@@ -1526,11 +1538,10 @@ export struct BookshelfPage {
             JSON.stringify([candidate.sourceId, candidate.bookId]) === key);
         }
       }
-      if (book === undefined) return;
-      const origin = this.measureBookOrigin(book, continuing);
-      if (origin === undefined) return;
+      const origin = book === undefined ? undefined : this.measureBookOrigin(book, continuing);
       this.returnMotionReported = request;
-      this.onReturnMotionOrigin(origin, navigation);
+      if (origin === undefined) this.onReturnMotionUnavailable(navigation);
+      else this.onReturnMotionOrigin(origin, navigation);
     }));
   }
 
@@ -1813,7 +1824,7 @@ export struct BookshelfPage {
   private projectionRowHeight(row: ShelfBook[], expandedLayout: boolean, index: number): number {
     let grid = 0;
     for (const book of row) grid = Math.max(grid, this.gridBookCardHeight(book, expandedLayout));
-    const list = row.length * this.listCoverHeight(expandedLayout) +
+    const list = row.length * this.listRowHeight(expandedLayout) +
       Math.max(0, row.length - 1) * TOK_SPACE_CONTROL_INLINE;
     return grid + (list - grid) * this.projectionListProgress(index);
   }
@@ -1825,7 +1836,7 @@ export struct BookshelfPage {
 
   private projectionBookHeight(book: ShelfBook, expandedLayout: boolean, index: number): number {
     const grid = this.gridBookCardHeight(book, expandedLayout);
-    return grid + (this.listCoverHeight(expandedLayout) - grid) * this.projectionListProgress(index);
+    return grid + (this.listRowHeight(expandedLayout) - grid) * this.projectionListProgress(index);
   }
 
   private projectionBookTranslateX(columnIndex: number, expandedLayout: boolean, index: number): number {
@@ -1834,7 +1845,7 @@ export struct BookshelfPage {
   }
 
   private projectionBookTranslateY(columnIndex: number, expandedLayout: boolean, index: number): number {
-    return columnIndex * (this.listCoverHeight(expandedLayout) + TOK_SPACE_CONTROL_INLINE) * this.projectionListProgress(index);
+    return columnIndex * (this.listRowHeight(expandedLayout) + TOK_SPACE_CONTROL_INLINE) * this.projectionListProgress(index);
   }
 
   private projectionCoverScale(expandedLayout: boolean, index: number): number {
@@ -1854,7 +1865,7 @@ export struct BookshelfPage {
 
   private projectionCoverCompensationY(expandedLayout: boolean, index: number): number {
     return -(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout) -
-      this.listCoverHeight(expandedLayout)) / 2 * this.projectionListProgress(index, true);
+      this.listRowHeight(expandedLayout)) / 2 * this.projectionListProgress(index, true);
   }
 
   private projectionListDetailsWidth(expandedLayout: boolean): number {

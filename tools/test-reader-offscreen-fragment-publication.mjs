@@ -39,7 +39,9 @@ const text = (id, nativeTitle) => ({ id, text: id, nativeTitle, imageHeight: 0, 
 const image = (id, nativeTitle) => ({ id, text: '', nativeTitle, imageHeight: 80,
   imageWidthBasisPoints: 10000, fileUri: `file:///${id}.png` });
 const page = (identity, fragments, extra = {}) => ({ identity, textureIdentity: identity, renderRevision: 7,
-  chapterTitle: 'same title', showChapterTitle: true, fragments, bottomJustifyGap: 0, ...extra });
+  chapterTitle: 'same title', showChapterTitle: true, fragments, bottomJustifyGap: 0,
+  bookmark: { mode: 'hidden', opacity: 0, topAccessoryX: 0, topAccessoryY: 0,
+    topAccessoryWidth: 0, topAccessoryHeight: 0 }, ...extra });
 
 function reactiveSurface(params, source = surfaceSource) {
   const runtime = createArkUIPropertyRuntimeProbe();

@@ -9,7 +9,7 @@ async function runSelectedCase() {
 
 const {default: assert} = await import('node:assert/strict');
 const { spawnSync } = await import('node:child_process');
-const { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } = await import('node:fs');
+const { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, chmodSync } = await import('node:fs');
 const { resolve, dirname } = await import('node:path');
 const { tmpdir } = await import('node:os');
 const { assertBuildTools, REQUIRED_PNPM } = await import('./reader-build-tools.mjs');
@@ -36,8 +36,10 @@ try {
   // Exercise the real default lease path under a custom temp directory, with
   // Node standing in for HDC. No actual device operation can occur.
   const env = { ...process.env, TMPDIR: root, TMP: root, TEMP: root }; delete env.READER_HDC_LEASE_ROOT; delete env.READER_LOCK_DIR;
+  const fakeHdc = resolve(root, 'hdc');
+  writeFileSync(fakeHdc, `#!${process.execPath}\nprocess.exit(0);\n`); chmodSync(fakeHdc, 0o700);
   const defaultLease = spawnSync(process.execPath, [resolve('tools/reader-hdc-lease.mjs'),
-    '--target', 'fixture', '--hdc', process.execPath, '--', '-e', 'process.exit(0)'], { encoding: 'utf8', env });
+    '--target', 'fixture', '--hdc', fakeHdc, '--', 'list', 'targets'], { encoding: 'utf8', env });
   assert.equal(defaultLease.status, 0, defaultLease.stderr);
   assert.match(readFileSync(resolve(root, 'reader-hdc-target-leases/events.jsonl'), 'utf8'), /"type":"release"/);
   console.log('PASS build input safety: prepared pnpm identity/release pin and portable Node-only target lease');

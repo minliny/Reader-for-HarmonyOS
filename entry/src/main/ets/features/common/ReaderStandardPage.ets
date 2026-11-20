@@ -10,6 +10,7 @@ import { ReaderFrameStyle, readerFrameStyle } from './ReaderFrameStyle';
 import { ReaderPageScrollHost } from './ReaderPageScrollHost';
 import { ReaderScrollLayout, readerScrollLayout } from './ReaderScrollLayout';
 import { readerAppColor } from './ReaderThemeRegistry';
+import { TOK_SCREEN_INSET } from './ReaderTokens';
 
 /** Standard pages share the resolved page geometry, Scroll body, measured
  * header clearance and footer budget. Pages supply business builders only. */
@@ -18,8 +19,12 @@ export struct ReaderStandardPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop variant: ReaderStandardPageVariant = 'management';
+  @Prop contentLeadingRail: number = 0;
+  /** -1 keeps the variant's resolved clearance; a non-negative value overrides it. */
+  @Prop contentEndInset: number = -1;
   @State private measurementRevision: number = 0;
   @State private viewportWidth: number = 0;
+  onViewportChange: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   scroller: Scroller = new Scroller();
   @BuilderParam content: () => void = this.emptySlot;
   @BuilderParam header: () => void = this.emptySlot;
@@ -50,9 +55,11 @@ export struct ReaderStandardPage {
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.footerHeight = this.footerHeight();
     input.footerBottom = readerStandardPageFooterBottom(this.variant, metrics);
-    input.contentEndInset = readerStandardPageContentEndInset(this.variant, metrics, this.footerHeight());
+    input.contentEndInset = this.contentEndInset >= 0 ? this.contentEndInset :
+      readerStandardPageContentEndInset(this.variant, metrics, this.footerHeight());
     input.contentMaxWidth = readerStandardPageSpec(this.variant).maxWidth;
-    input.contentHorizontalPadding = 19;
+    input.contentLeadingRail = Math.max(0, this.contentLeadingRail);
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     return resolveReaderPageGeometry(input);
   }
 
@@ -80,6 +87,7 @@ export struct ReaderStandardPage {
       },
     }).onAreaChange((_old: Area, next: Area): void => {
       const width = readerPageAreaLength(next.width);
+      this.onViewportChange(width, readerPageAreaLength(next.height));
       if (Number.isFinite(width) && width > 0 && Math.abs(width - this.viewportWidth) > .1) this.viewportWidth = width;
     });
   }

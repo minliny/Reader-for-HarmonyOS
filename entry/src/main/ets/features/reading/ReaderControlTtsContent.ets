@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, TYPE_READER_TTS_QUICK_SETTING_LABEL, TYPE_READER_TTS_SECTION_META, TYPE_READER_TTS_SECTION_SPEED_META } from '../common/ReaderTypography';
 import { TYPE_READER_TTS_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE, TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL, TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS, TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE, TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE, TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_META, TYPE_READER_TTS_RETAINED_SPEED_VALUE, TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_LABEL, TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_META, TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE, TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE, TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL } from '../common/ReaderTypography';
 import { ReaderTtsWaveform } from './ReaderTtsWaveform';
@@ -18,7 +19,7 @@ import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
 import { ReaderTtsConfigOverlay } from './ReaderTtsConfigOverlay';
 import { readerTtsConfigChoices, readerTtsVoiceId, readerTtsLanguageLabel,
   type ReaderTtsConfigChoice, type ReaderTtsConfigField } from './ReaderTtsConfigOptions';
-import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
+import type { ReaderTtsEngineOption } from './ReaderTtsConfigOptions';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
 import { readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
@@ -664,7 +665,10 @@ export struct ReaderControlTtsContent {
       .enabled(this.sharedInput() && !this.serviceBusy && !(this.onlineServicePage() && !this.isHttpEngineSelected()) && (kind === 'toggle' ?
         this.state.status !== 'stopping' : this.hasActiveQueue()))
       .opacity((kind === 'toggle' || this.hasActiveQueue()) ? 1 : 0.42)
-      .accessibilityText(this.controlText(kind)).onClick((): void => {
+      .accessibilityText(this.controlText(kind))
+      .responseRegion( readerActionTouchRegion(this.transport(kind).width, this.transport(kind).height))
+      .attributeModifier(new ReaderActionAccessibility(this.controlText(kind), this.sharedInput() && !this.serviceBusy && !(this.onlineServicePage() && !this.isHttpEngineSelected()) && (kind === 'toggle' ?
+        this.state.status !== 'stopping' : this.hasActiveQueue()), false)).onClick((): void => {
         if (!this.sharedInput() || this.serviceBusy || (this.onlineServicePage() && !this.isHttpEngineSelected())) return;
         if (kind === 'toggle' && this.state.status === 'stopping') return;
         if (kind !== 'toggle' && !this.hasActiveQueue()) return;
@@ -725,13 +729,12 @@ export struct ReaderControlTtsContent {
             Row({ space: 8 }) { this.timerPreset(45); this.timerPreset(60); this.timerPreset('chapterEnd'); }
               .width('100%');
           }.width('100%');
-          Row({ space: 4 }) {
-            Column({ space: 2 }) {
-              Text('自定义时长').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
-              Text('分 · 秒').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme));
-            }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-            this.timerStepper(true); this.timerStepper(false);
-          }.width('100%').height(48).padding({ left: 10, right: 6 }).alignItems(VerticalAlign.Center)
+          Column({ space: 4 }) {
+            Text('自定义时长（分 · 秒）').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontFamily)
+              .fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
+            Row({ space: 4 }) { this.timerStepper(true); this.timerStepper(false); }
+              .width('100%').justifyContent(FlexAlign.SpaceBetween);
+          }.width('100%').height(64).alignItems(HorizontalAlign.Center)
             .border({ width: 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) }).borderRadius(10);
         }.width(this.frame().timer.width).height(this.frame().timerCard.height).padding(14)
           .position({ x: this.frame().timerCard.x, y: this.frame().timerCard.y })
@@ -748,12 +751,14 @@ export struct ReaderControlTtsContent {
   private timerPreset(minutes: number | 'chapterEnd') {
     Text(this.timerPresetLabel(minutes)).fontFamily(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontWeight)
       .fontColor(this.timerPresetIsSelected(minutes) ? readerAppColor('TOK_TTS_PAPER', this.appScheme) : readerAppColor('app.control.paint.5B5046', this.appScheme))
-      .layoutWeight(1).height(36).textAlign(TextAlign.Center)
+      .layoutWeight(1).height(44).textAlign(TextAlign.Center)
       .backgroundColor(this.timerPresetIsSelected(minutes) ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('TOK_TTS_FIELD', this.appScheme))
       .border({ width: this.timerPresetIsSelected(minutes) ? 0 : 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) }).borderRadius(10)
       .shadow({ radius: 7, color: this.timerPresetIsSelected(minutes) ? readerAppColor('app.control.paint.472F6373', this.appScheme) : Color.Transparent, offsetY: 2 })
       .enabled(this.fullInput())
       .accessibilityText(minutes === 'chapterEnd' ? '朗读到本章结束停止' : (minutes === 0 ? '关闭定时停止' : `定时${minutes}分钟`))
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(minutes === 'chapterEnd' ? '朗读到本章结束停止' : (minutes === 0 ? '关闭定时停止' : `定时${minutes}分钟`), this.fullInput(), this.timerPresetIsSelected(minutes)))
       .onClick((): void => this.chooseTimerPreset(minutes));
   }
 
@@ -773,18 +778,22 @@ export struct ReaderControlTtsContent {
         .fontFamily(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontWeight).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme))
         .width(23).height(24).textAlign(TextAlign.Center);
       this.timerStepButton(minutes, 5);
-    }.height(32).alignItems(VerticalAlign.Center)
+    }.height(44).alignItems(VerticalAlign.Center)
       .accessibilityText(minutes ? `${this.timerMinutes}分（每次五分钟）` : `${this.timerSeconds}秒`);
   }
   @Builder
   private timerStepButton(minutes: boolean, delta: number) {
     Stack({ alignContent: Alignment.Center }) {
       Image($r(delta < 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_minus_theme_night' : 'app.media.reader_tts_make_minus') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_plus_theme_night' : 'app.media.reader_tts_make_plus'))).width(12).height(12);
-    }.width(24).height(30).backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).borderRadius(999)
+    }.width(44).height(44).backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).borderRadius(999)
       .enabled(this.fullInput() && (delta > 0 ?
         (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :
         (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)))
       .accessibilityText(`${delta > 0 ? '增加' : '减少'}${minutes ? '五分钟' : '一秒'}`)
+      .responseRegion( readerActionTouchRegion(44, 44))
+      .attributeModifier(new ReaderActionAccessibility(`${delta > 0 ? '增加' : '减少'}${minutes ? '五分钟' : '一秒'}`, this.fullInput() && (delta > 0 ?
+        (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :
+        (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)), false))
       .onClick((): void => { if (this.fullInput()) this.stepTimer(minutes, delta); });
   }
 
@@ -792,8 +801,9 @@ export struct ReaderControlTtsContent {
   private ratePresetWidth(): number {
     // Five presets share the Make 8vp gaps and consume the full responsive
     // row, keeping 0.50x visible at the left edge without horizontal overflow.
-    return Math.max(0, (this.frame().speedPresets.width - 32) / 5);
+    return Math.max(0, (this.frame().speedPresets.width - this.ratePresetGap() * 4) / 5);
   }
+  private ratePresetGap(): number { return Math.max(0, Math.min(8, (this.frame().speedPresets.width - 220) / 4)); }
   private chooseRatePreset(rate: number): void {
     if (!this.fullInput()) return;
     this.ratePreview = -1;
@@ -823,7 +833,7 @@ export struct ReaderControlTtsContent {
           .position({ x: 16, y: 75 }).opacity(this.p());
         Text(READER_TTS_RATE_MAX.toFixed(2) + 'x').fontFamily(TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme))
           .position({ x: this.frame().speed.width - 37, y: 75 }).opacity(this.p());
-        Row({ space: 8 }) {
+        Row({ space: this.ratePresetGap() }) {
           ForEach(this.ratePresets(), (rate: number): void => { this.ratePreset(rate); }, (rate: number): string => rate.toString());
         }.width(this.frame().speedPresets.width).height(this.frame().speedPresets.height)
           .position({ x: this.frame().speedPresets.x, y: this.frame().speedPresets.y })
@@ -848,12 +858,14 @@ export struct ReaderControlTtsContent {
   private ratePreset(rate: number) {
     Text(rate.toFixed(2) + 'x').fontFamily(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontSizeFp)
       .fontColor(this.effectiveRate() === rate ? readerAppColor('TOK_TTS_PAPER', this.appScheme) : readerAppColor('app.control.paint.5B5046', this.appScheme))
-      .width(this.ratePresetWidth()).height(32).textAlign(TextAlign.Center).borderRadius(10)
+      .width(this.ratePresetWidth()).height(44).textAlign(TextAlign.Center).borderRadius(10)
       .backgroundColor(this.effectiveRate() === rate ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('TOK_TTS_FIELD', this.appScheme))
       .border({ width: this.effectiveRate() === rate ? 0 : 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) })
       .shadow({ radius: 7, color: this.effectiveRate() === rate ? readerAppColor('app.control.paint.472F6373', this.appScheme) : Color.Transparent, offsetY: 2 })
       .enabled(this.fullInput())
-      .accessibilityText(`语速${rate.toFixed(2)}倍`).onClick((): void => this.chooseRatePreset(rate));
+      .accessibilityText(`语速${rate.toFixed(2)}倍`)
+      .responseRegion( readerActionTouchRegion(this.ratePresetWidth(), 44))
+      .attributeModifier(new ReaderActionAccessibility(`语速${rate.toFixed(2)}倍`, this.fullInput(), this.effectiveRate() === rate)).onClick((): void => this.chooseRatePreset(rate));
   }
 
   @Builder
@@ -910,6 +922,8 @@ export struct ReaderControlTtsContent {
         color: this.isTtsServiceTabSelected(http) ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.66B4A697', this.appScheme) }).borderRadius(10)
       .enabled(this.fullInput() && !this.serviceBusy)
       .accessibilityText(http ? this.onlineTtsAccessibilityText() : '系统 TTS，使用设备内置语音')
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(http ? this.onlineTtsAccessibilityText() : '系统 TTS，使用设备内置语音', this.fullInput() && !this.serviceBusy, http === this.onlineServicePage()))
       .onClick((): void => this.selectTtsServiceType(http));
   }
 
@@ -968,6 +982,8 @@ export struct ReaderControlTtsContent {
       .border({ width: kind === 'voice' ? 0.5 : 0, color: readerAppColor('TOK_TTS_LINE', this.appScheme) })
       .borderRadius(999).enabled(this.fullInput())
       .accessibilityText(`${this.fieldLabel(kind)}：${this.fieldValue(kind)}，选择配置`)
+      .responseRegion( readerActionTouchRegion(this.fieldWidth(kind), this.fieldHeight(kind)))
+      .attributeModifier(new ReaderActionAccessibility(`${this.fieldLabel(kind)}：${this.fieldValue(kind)}，选择配置`, this.fullInput(), false))
       .onClick((): void => this.openConfiguration(kind));
   }
   @Builder
@@ -981,9 +997,16 @@ export struct ReaderControlTtsContent {
         .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
       ReaderControlSwitchTrack({ value: this.toggleValue(kind), trackWidth: 42,
         activeColor: readerAppColor('TOK_TTS_TEAL', this.appScheme), inactiveColor: readerAppColor('app.control.paint.C6BFB2', this.appScheme), thumbColor: readerAppColor('TOK_TTS_PAPER', this.appScheme) })
-        .enabled(true).opacity(1).onClick((): void => this.changeToggle(kind));
+        .enabled(this.fullInput()).opacity(1);
     }.width('100%').height(48).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
-      .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.2E9B8466', this.appScheme) });
+      .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.2E9B8466', this.appScheme) })
+      .attributeModifier(new ReaderActionAccessibility(this.toggleLabel(kind), this.fullInput(), this.toggleValue(kind)))
+      .onClick((): void => { if (this.fullInput()) this.changeToggle(kind); });
+  }
+
+  private toggleLabel(kind: ReaderControlTtsToggle): string {
+    return kind === 'followHighlight' ? '跟随高亮' : kind === 'pauseOnInterruption' ? '来电自动暂停' :
+      kind === 'allowMixing' ? '允许与其他应用同时播放' : kind === 'backgroundPlayback' ? '后台继续朗读' : '朗读时屏幕常亮';
   }
 
   private fieldLabel(kind: ReaderControlTtsField): string {
@@ -1020,7 +1043,7 @@ export struct ReaderControlTtsContent {
     const measured = context.getMeasureUtils().measureTextSize({ textContent: this.fieldValue(kind) || '字',
       fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight });
     const height = context.px2vp(Number(measured.height));
-    return Math.max(kind === 'voice' ? 30 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
+    return Math.max(kind === 'voice' ? 44 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
   }
 
   private toggleValue(kind: ReaderControlTtsToggle): boolean {
@@ -1151,12 +1174,14 @@ export struct ReaderControlTtsContent {
         Image(this.httpEngines.length === 0 ?
           (this.appScheme === 'night' ? $r('app.media.reader_tts_configure_chevron_theme_night') : $r('app.media.reader_tts_configure_chevron')) :
           (this.appScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12);
-      }.height(30).padding({ left: 11, right: 9 }).borderRadius(999)
+      }.height(44).padding({ left: 11, right: 9 }).borderRadius(999)
         .backgroundColor(this.httpEngines.length > 0 ? readerAppColor('app.control.paint.1A2F6373', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
         .border({ width: this.httpEngines.length > 0 ? .5 : 0, color: readerAppColor('app.control.paint.4D2F6373', this.appScheme) })
         .shadow({ radius: 7, color: this.httpEngines.length > 0 ? Color.Transparent : readerAppColor('app.control.paint.472F6373', this.appScheme), offsetY: 2 })
         .enabled(this.fullInput() && !this.serviceBusy)
         .accessibilityText(this.httpEngines.length > 0 ? '已配置在线 TTS，编辑服务信息' : '立即配置在线 TTS')
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(this.httpEngines.length > 0 ? '已配置在线 TTS，编辑服务信息' : '立即配置在线 TTS', this.fullInput() && !this.serviceBusy, false))
         .onClick((): void => this.openConfiguration('manage'));
     }.width('100%').height(48).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
       .border({ width: { top: 1 }, color: readerAppColor('app.control.paint.299B8466', this.appScheme) });

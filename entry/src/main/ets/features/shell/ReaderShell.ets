@@ -84,6 +84,8 @@ export struct ReaderShell {
   @Prop requestedMangaDirectoryTargetProof: JsonObject | undefined = undefined;
   @Prop expandedLayout: boolean = false;
   @Prop reduceMotion: boolean = false;
+  /** Visual-only state for this bookshelf opening transition. */
+  @Prop openingHandoffActive: boolean = false;
   // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
   @Prop visible: boolean = false;
   @Prop route: PreparedReaderRoute = 'reading';
@@ -231,6 +233,7 @@ export struct ReaderShell {
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
           bookmarkIdentity: this.bookmarkIdentity,
           expandedLayout: this.expandedLayout,
+          openingHandoffActive: this.openingHandoffActive,
           windowChromeActive: this.visible,
           windowChromeOverlayActive: this.visible &&
             (this.route === 'directory' || this.sourceSwitchVisible),

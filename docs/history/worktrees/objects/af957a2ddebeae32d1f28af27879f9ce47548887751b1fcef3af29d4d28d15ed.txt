@@ -1,0 +1,706 @@
+{
+  "schema": 1,
+  "boundary": "Only LocalBookDetail adopts the existing selected shared manga detail typography and adaptive geometry for both novel and manga. Earlier seven-file directory and historical typography fixtures remain byte immutable. All current authored text tuples, occurrence counts, physical font families and native AUTO controls are exact; other actors keep their existing contracts. This source witness does not establish native pixels or user acceptance.",
+  "authorizationBasis": "Root task confirmed user authorization to fix all reported detail defects, sharing the established manga detail visual style with novel detail while preserving adaptation.",
+  "implementationEvidence": "docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
+  "previousFixture": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+  "previousFixtureSha256": "0dc34c8d16cba560c22ec952fb82c2f4d720d858339cd84f2865574a655f6002",
+  "historicalFixture": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+  "historicalFixtureSha256": "87f72cffa795b3565acd03e67cc8a9ae89517dc8975a1a2270f100ab9cf9ca82",
+  "visualSpecSource": "../Reader-UI/design/manga-directory/visual.json",
+  "visualSpecSha256": "c4a5f2dda1598d4651e03e3af95acd8ba107ce769733bb4d3880e5ffde959be4",
+  "generatedVisualSource": "entry/src/main/ets/features/manga/MangaDirectoryVisual.ts",
+  "retainedPreviousCarrierIndices": [
+    0,
+    1,
+    9,
+    11,
+    12,
+    16,
+    20,
+    21,
+    22,
+    23,
+    24,
+    28,
+    31
+  ],
+  "retiredPreviousCarrierIndices": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    10,
+    13,
+    14,
+    15,
+    17,
+    18,
+    19,
+    25,
+    26,
+    27,
+    29,
+    30,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+  ],
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "previousEntrySha256": "be34ea9d7c2c1d711da0da2d3874dd7943dd3549f3eff234647daf39c0f5f52a",
+      "sourceSha256": "a05ce338f6404a586dacaa53a3a5986b0dd739e89944738c96ebd7baebd4a772",
+      "carriers": [
+        {
+          "owner": "LocalBookDetail",
+          "method": "build",
+          "kind": "Text",
+          "text": "'详情暂时无法显示'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_BOOK_DETAIL_EMPTY.fontSizeFp",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "detailPage",
+          "kind": "Text",
+          "text": "this.shelfMessage",
+          "modifiers": {
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "heroMetadata",
+          "kind": "Text",
+          "text": "this.book.title",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.summaryLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.summaryFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.summaryFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SERIF_SC_BOLD",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "heroMetadata",
+          "kind": "Text",
+          "text": "bookAuthorLabel(this.book.author)",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.heroAuthorLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.heroAuthorFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "heroMetadata",
+          "kind": "Text",
+          "text": "this.book.sourceName",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.heroSourceLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.heroSourceFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "heroMetadata",
+          "kind": "Text",
+          "text": "'换源'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.heroSourceLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.heroSourceFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCoverPlaceholder",
+          "kind": "Text",
+          "text": "this.book.contentKind === 'manga' ? 'MANGA / READER' : 'BOOK / READER'",
+          "modifiers": {
+            "letterSpacing": {
+              "expression": "visual.coverTinyTracking",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "visual.coverTinyLine",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.coverTinySize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCoverPlaceholder",
+          "kind": "Text",
+          "text": "this.book.title",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.coverTitleLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.coverTitleFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.summaryFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SERIF_SC_BOLD",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCoverPlaceholder",
+          "kind": "Text",
+          "text": "this.contentLabel()",
+          "modifiers": {
+            "letterSpacing": {
+              "expression": "visual.coverMediumTracking",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "visual.coverMediumLine",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.coverMediumSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCoverPlaceholder",
+          "kind": "Text",
+          "text": "'封面占位'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.coverFooterLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.coverFooterSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaMetadataTag",
+          "kind": "Text",
+          "text": "label",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.heroTagLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.heroTagFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.footerFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_MEDIUM",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "readingFacts",
+          "kind": "Text",
+          "text": "'上次读到'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.metaLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.metaFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaPositionTitle",
+          "kind": "Text",
+          "text": "this.book.mangaPosition?.chapterTitle?.trim() || '尚未开始阅读'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.positionLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.positionFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.footerFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_MEDIUM",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaPositionPage",
+          "kind": "Text",
+          "text": "this.mangaPositionLabel()",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.positionPageLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.positionPageFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaIntro",
+          "kind": "Text",
+          "text": "'简介'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.sectionLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.sectionFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.sectionFontWeight",
+              "extra": [
+                "{ enableVariableFontWeight: true }"
+              ]
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_650",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaIntro",
+          "kind": "Text",
+          "text": "this.displayIntro() || '暂无简介'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.introBodyLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.introBodyFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaIntro",
+          "kind": "Text",
+          "text": "this.introExpanded ? '收起' : '展开'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.sectionActionLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.sectionActionFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "catalog",
+          "kind": "Text",
+          "text": "this.chapterEmptyMessage()",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "22",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCatalogHeading",
+          "kind": "Text",
+          "text": "this.book.contentKind === 'manga' ? '章节目录' : '目录'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.sectionLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.sectionFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.sectionFontWeight",
+              "extra": [
+                "{ enableVariableFontWeight: true }"
+              ]
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_650",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCatalogHeading",
+          "kind": "Text",
+          "text": "this.catalogSummaryLabel()",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.countLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.countFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCatalogHeading",
+          "kind": "Text",
+          "text": "`最新：${this.book.lastChapter}`",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.heroCountLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.heroCountFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "mangaCatalogHeading",
+          "kind": "Text",
+          "text": "'完整目录'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.sectionActionLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.sectionActionFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "visual.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "chapterRow",
+          "kind": "Text",
+          "text": "this.book.contentKind === 'manga' &&\n        (entry.title.trim().length === 0 || entry.title.trim() === '第话' || entry.title.trim() === '第 话') ?\n        `第${Math.max(1, entry.index + 1)}话` : entry.title",
+          "modifiers": {
+            "fontWeight": {
+              "expression": "entry.navigable === false ? FontWeight.Medium : FontWeight.Regular",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "22",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "14",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "entry.navigable === false ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "chapterRow",
+          "kind": "Text",
+          "text": "this.collapsedGroups.includes(entry.index) ? '›' : '⌄'",
+          "modifiers": {
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "18",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "chapterRow",
+          "kind": "Text",
+          "text": "'正在读'",
+          "modifiers": {
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_MEDIUM",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "11",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "actionArea",
+          "kind": "Text",
+          "text": "this.readingActionLabel()",
+          "modifiers": {
+            "fontWeight": {
+              "expression": "visual.groupFontWeight",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "visual.detailPrimaryLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.detailPrimaryFontSize",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_600",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "LocalBookDetail",
+          "method": "actionArea",
+          "kind": "Text",
+          "text": "this.shelfActionLabel()",
+          "modifiers": {
+            "fontWeight": {
+              "expression": "500",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "visual.detailSecondaryLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.detailSecondaryFontSize",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "'ReaderNotoSansSCUIMedium'",
+              "extra": []
+            }
+          }
+        }
+      ],
+      "nativeDefaults": [
+        {
+          "owner": "LocalBookDetail",
+          "method": "build",
+          "kind": "Button",
+          "text": "'重试'",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "onClick": "(): void => this.prepareMangaDetailFonts()"
+          }
+        }
+      ],
+      "roles": {
+        "TYPE_BOOK_DETAIL_EMPTY": {
+          "fontFamily": "ReaderInter",
+          "fontSizeFp": 13,
+          "lineHeightFp": 21.45,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        }
+      },
+      "fontFamilies": {
+        "READER_FONT_NOTO_SERIF_SC_BOLD": "ReaderNotoSerifSCBold",
+        "READER_FONT_NOTO_SANS_SC_UI_REGULAR": "ReaderNotoSansSCUIRegular",
+        "READER_FONT_NOTO_SANS_SC_UI_MEDIUM": "ReaderNotoSansSCUIMedium",
+        "READER_FONT_NOTO_SANS_SC_UI_650": "ReaderMangaSans650",
+        "READER_FONT_NOTO_SANS_SC_UI_600": "ReaderMangaSans600"
+      }
+    }
+  ]
+}

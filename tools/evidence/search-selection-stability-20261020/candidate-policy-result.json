@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "source": "file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BookAcquisitionCoordinator.ts",
+  "sourceSha256": "029a350239eeeaf238e74f9c420bb658d6c29eb7fcbce207c77d0bce44fd1109",
+  "formerSourceSha256": "51ea64d18aa3ad2637e787483a3eeb0e19ad895c6d31b176ea9da7443e865838",
+  "evidence": "actual Coordinator ordinary methods; acquireBook/verifyCandidateBody and virtual clock are explicit ports",
+  "receipts": [
+    "negative-control primary-priority: former production policy rejected",
+    "negative-control provisional-fallback: former production policy rejected",
+    "primary success wins even with a prior failed flag and ready fallback",
+    "fallback publishes only its verified session",
+    "an allowed actual primary failure opens fallback",
+    "fatal primary failure cannot enter fallback",
+    "all body failures leave only the selected primary catalog",
+    "background keeps readiness sorting and catalog-only acquisition",
+    "background preserves exact dedup, failed skip and three-unverified budget",
+    "explicit background forceRefresh still bypasses only the failed skip",
+    "requireReadable=false retains immediate catalog admission without body effects",
+    "cancellation in early primary callback blocks body verification and fallback",
+    "cancellation in verified fallback callback prevents admission and further fallback",
+    "late verification after cancellation cannot publish fallback",
+    "whole foreground deadline includes acquisition waiting and rejects late catalogs"
+  ],
+  "notRun": [
+    "SDK/Index owner",
+    "unselected cases/full suites",
+    "Core/network IO",
+    "build/sign/install",
+    "device/user acceptance"
+  ]
+}

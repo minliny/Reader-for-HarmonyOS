@@ -13,10 +13,14 @@ const source=readFileSync(file('pages/Index.ets'),'utf8');
 const experience=readFileSync(file('features/reading/LocalReadingExperience.ets'),'utf8');
 const anchor=experience.slice(experience.indexOf('export class ReaderBookmarkAnchorRequest {'),experience.indexOf('\nclass ReaderDeferredChapterSelection'));
 const Anchor=new Function(`${stripTypeScriptTypes(anchor.replace('export class','class'))}; return ReaderBookmarkAnchorRequest;`)();
-const Index=productionMotionMethods(file('pages/Index.ets'),['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor});
+const motionTrace=[];
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerMotionNowMs } = pureModuleProbe(readFileSync(file('features/common/ReaderMotionClock.ets'),'utf8'),
+ 'ReaderMotionClock.ets',{systemDateTime:{TimeType:{ACTIVE:'active'},getUptime:(kind,ns)=>{assert.equal(kind,'active');assert.equal(ns,false);return 123;}}},['readerMotionNowMs']);
+const Index=productionMotionMethods(file('pages/Index.ets'),['currentReaderPresentationIdentity','traceShelfMotion','consumeTemporaryBackBridge','isCurrentRuntime','onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor,readerMotionNowMs,hilog:{info:(_domain,tag,_format,payload)=>motionTrace.push({tag,...JSON.parse(payload)})}});
 function index(sourceId='local'){
  const entries=Array.from({length:25},(_,i)=>({index:i,title:`Chapter ${i+1}`,url:`/${i}`,navigable:true,downloadState:'unknown'}));
- const host=Object.assign(new Index(),{hasVisibleImportDialog:()=>false,route:'detail',readingSessionActive:false,detailBook:{sourceId,bookId:'book',title:'Book',author:'Author'},detailToc:entries,remoteReadingSession:sourceId==='local'?undefined:{identity:{sourceId,bookId:'book'},entries},shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},navigationGeneration:1,requestedChapterIndex:undefined,requestedBookmarkAnchor:undefined,directoryCurrentChapterIndex:-1,bookmarkAnchorRequestId:0,preparedReaderRoute:'reading',directoryReturnTarget:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},returnToReadingOrigin(){this.readingSessionActive=false;this.route='detail';},readingExitRequest:undefined});
+ const host=Object.assign(new Index(),{hasVisibleImportDialog:()=>false,route:'detail',readingSessionActive:false,detailBook:{sourceId,bookId:'book',title:'Book',author:'Author'},detailToc:entries,remoteReadingSession:sourceId==='local'?undefined:{identity:{sourceId,bookId:'book'},entries},settingsSnapshot:{reduceMotion:false},shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},navigationGeneration:1,requestedChapterIndex:undefined,requestedBookmarkAnchor:undefined,directoryCurrentChapterIndex:-1,bookmarkAnchorRequestId:0,preparedReaderRoute:'reading',directoryReturnTarget:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},returnToReadingOrigin(){this.readingSessionActive=false;this.route='detail';},readingExitRequest:undefined});
  return host;
 }
 for(const sourceId of ['local','remote']){
@@ -50,6 +54,7 @@ for (const sourceId of ['local', 'remote']) for (const kind of ['chapter', 'book
  assert.equal(host.readerOwnsWindowEdges(),true,'manga external directory applies safe clearance inside its full-viewport list');
  host.closeDirectory();assert.equal(host.readerOwnsWindowEdges(),true,'the retained detail keeps its own single safe inset');
 }
+assert.ok(motionTrace.some(row=>row.tag==='ReaderShelfMotion'&&row.phase==='back-entry'&&row.uptimeMs===123),'actual traceShelfMotion records back navigation through the actual uptime adapter');
 const proof={sourceId:'remote',bookId:'book',chapterIndex:19,bodyVersion:'body',processingVersion:'processing'};
 const localProof={...proof,sourceId:'local'};
 {

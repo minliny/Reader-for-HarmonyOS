@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility } from '../common/ReaderActionAccessibility';
 import { TYPE_APP_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
@@ -21,6 +22,8 @@ export struct CategoryRow {
 
   @Prop icon: Resource = (this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'));
   @Prop label: string = '';
+  @Prop actionEnabled: boolean = true;
+  @Prop actionSelected: boolean = false;
   onRowClick: (() => void) | undefined = undefined;
   @BuilderParam content: () => void;
 
@@ -39,20 +42,18 @@ export struct CategoryRow {
         .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
         .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
         .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
-        .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
 
       this.content();
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })
-    .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
+    .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 8 })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
     .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 14,
       this.onRowClick !== undefined))
+    .attributeModifier(new ReaderActionAccessibility(this.label, this.actionEnabled, this.actionSelected, this.onRowClick !== undefined))
     .onClick((): void => this.onRowClick?.());
   }
 }

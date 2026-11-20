@@ -63,6 +63,7 @@ export struct MangaDirectoryCurrentFooter {
       .padding({ left: visual.footerPaddingX, right: visual.footerPaddingX, top: visual.footerPaddingY, bottom: visual.footerPaddingY })
       .backgroundColor(mangaDirectoryColor('soft', this.scheme))
       .border({ width: visual.borderWidth, color: mangaDirectoryColor('line', this.scheme) }).borderRadius(visual.footerRadius)
+      .clip(true).hitTestBehavior(HitTestMode.None)
       .accessibilityText('当前阅读位置')
       .onAreaChange((_old: Area, area: Area): void => {
         const width = readerPageAreaLength(area.width), height = readerPageAreaLength(area.height);

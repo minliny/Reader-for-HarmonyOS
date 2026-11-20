@@ -6,6 +6,8 @@
 | --- | --- |
 | `node scripts/toolchain-info.mjs` | 只读显示工具发现结果；不会输出签名材料或密码 |
 | `node scripts/check-local.mjs` | 默认只列清单并报告 `NOT_RUN`；旧 `check-local.sh` 仅为 Bash 兼容入口 |
+| `node scripts/check-header-geometry.mjs --rationale '<原因>'` | 显式核对页面几何/Frame style、Scaffold 调用点、断点、滚动契约、动态表面/控件高度、动效/消息时长与固定尺寸分类（32 项）；不进入构建、CI 或默认门禁 |
+| `node scripts/check-ui-parameter-matrix.mjs` | 显式执行纯函数场景矩阵（12 组：宽度/字号/键盘/安全区/表面尺寸/滚动模式/frame style/翻页/启动与控制端点/reduceMotion/消息窗口）；不进入构建、CI 或默认门禁 |
 | `node scripts/deveco-build.mjs` | DevEco 原生增量 debug 构建，复用项目签名准入与产物复验；可透传 Hvigor 参数 |
 | `node scripts/hap-pipeline.mjs --help` | 不可变交付 HAP、复验、精确目标检查与保数据安装的唯一入口 |
 | `node scripts/test-toolchain-portability.mjs` | 不构建 HAP、不访问设备的工具发现与执行策略回归 |
@@ -26,7 +28,7 @@ HAP 构建默认 `--contracts-scope none`，Host 回归为 `NOT_RUN`。普通功
 
 ## 工具配置
 
-优先使用单项工具环境变量，再使用显式安装目录、项目 `local.properties` 中的 `sdk.dir` / `hwsdk.dir`、平台常见安装位置和 `PATH`。显式设置无效会直接报错，不会静默切换 SDK。SDK 可指向 `openharmony`、包含 `openharmony` 的目录、含 `default/openharmony` 的 SDK 安装目录，或版本化 SDK 目录。
+优先使用单项工具环境变量，再使用显式安装目录、项目 `local.properties` 中的 `sdk.dir` / `hwsdk.dir`、平台常见安装位置和 `PATH`。显式设置无效会直接报错，不会静默切换 SDK。SDK 可指向 `openharmony`、包含 `openharmony` 的目录、含 `default/openharmony` 的 SDK 安装目录，或版本化 SDK 目录。`deveco-build.mjs` 和交付构建会将选中的 HarmonyOS SDK 容器传给官方插件使用的 `DEVECO_SDK_HOME`，避免高优先级配置与旧环境变量使用不同的 SDK 安装容器；构建要求容器保留有效的 `sdk-pkg.json`。直接在 IDE 构建且显式设置了 SDK 环境变量时，会先检查 IDE 的 `DEVECO_SDK_HOME` 与选中的 SDK 容器是否一致，失配时在读取私有签名配置前停止，并提示使用统一脚本或对齐 IDE 环境。未显式指定 SDK 时保留官方 IDE 默认发现，不额外要求环境变量。独立 OpenHarmony SDK 仍可用于源码工具检查。
 
 | 环境变量 | 含义 |
 | --- | --- |
@@ -41,19 +43,22 @@ HAP 构建默认 `--contracts-scope none`，Host 回归为 `NOT_RUN`。普通功
 | `OPENSSL`, `UNZIP` | 已安装的 OpenSSL 与 Info-ZIP unzip 命令；默认从 `PATH` 发现 |
 | `HVIGOR_SHARED_TOOLS` / `HVIGOR_USER_HOME` | 已准备的 Hvigor wrapper tools／用户目录 |
 | `CARGO_TARGET_DIR` | Core 构建输出根目录；HAP 构建、IDE preflight 与 `sync-native` 读取同一目录。相对路径以 Core 仓根目录为基准 |
+| `READER_BASH` | IDE 按需刷新 Native 时使用的 Bash 文件或 `PATH` 命令名；默认 `bash` |
 | `READER_LOCK_DIR` | 跨进程锁根目录，默认使用宿主系统临时目录；所有协作进程须使用同一配置 |
-| `READER_HDC_SERVER_KEY` | HDC server 端点；目标仍必须通过 CLI 明确指定 |
+| `READER_HDC_SERVER_KEY` | 显式 HDC server 端点；本地 VM/真机使用 `127.0.0.1:8710`，远程 VM 使用 `192.168.1.10:8710`；目标仍必须通过 CLI 明确指定 |
 | `READER_HARMONY_SIGNING_PROFILE` | 私有签名配置路径；默认仍在本仓忽略的 `.reader-local/signing` 内 |
 
 Windows 的 `.exe`、`.cmd`、`.bat` 按平台发现，工具 Node CLI 直接由配置／发现的 Node 启动，pipeline 内部子脚本继续使用当前 Node。批处理入口仅接受普通构建参数与路径，拒绝 shell 控制／展开语法；需要特殊字符路径时指定工具的 Node `.js` 入口。Windows 私有签名配置和 pipeline 会话检查文件 ACL，Unix 使用原有私有权限检查。证书、包名、Profile、精确目标、保数据与证据门禁保持有效。
 
-平台候选目录只是自动发现的备选，不要求在固定目录安装。脚本可配置不表示所有厂商 SDK 都支持该宿主：缺少相应平台的 DevEco、SDK、原生库或外部工具时会明确报告缺失项。Windows/Linux 的实际构建与安装仍需在对应宿主验证，本机回归不替代这些证据。
+平台候选目录只是自动发现的备选，不要求在固定目录安装。脚本可配置不表示所有厂商 SDK 都支持该宿主：缺少相应平台的 DevEco、SDK、原生库或外部工具时会明确报告缺失项。Core Native 的 Bash 构建入口目前用于 macOS、Linux 或 WSL；Host 的 Windows 工具发现不代表原生 Windows Native 构建已支持。Windows/Linux 的实际构建与安装仍需在对应宿主验证，本机回归不替代这些证据。
 
 SDK priority is `READER_HARMONY_SDK_HOME` → `HARMONY_SDK_HOME` → `DEVECO_SDK_HOME` → `OHOS_SDK_HOME`, then `local.properties` and discovered Studio SDKs. The shared environment contract is generated from Core and checked by workspace sync; this local copy keeps standalone Host source tools independent. HAP/IDE Native admission requires the canonical adjacent Core and Host workspace; Reader-UI is required only by explicitly selected checks that consume it. `READER_CORE_ROOT`, `READER_HARMONY_ROOT`, `READER_UI_ROOT` may identify the same real checkouts but cannot redirect full gates to unrelated repositories.
 
+SDK 构建环境准入核对的是同一安装容器。容器可以同时保留 `default` 与其他版本；官方插件继续按项目 `compileSdkVersion` 选择构建组件，现有 Native provenance 门禁继续检查 Native 输入。容器一致不代表某个具体 SDK 版本已经锁定或构建通过。
+
 Core gate receipts are validated and their stage logs copied only when `--core-gate-receipt <receipt.json>` is explicitly supplied. An absent receipt remains `NOT_RUN`; missing complete Host/Core evidence keeps `acceptanceEligible: false`, including when the requested class is `acceptance`. The build does not generate missing full-suite evidence automatically. HAP resources include an explicit font/license list whose bytes are checked inside each package. Failed build attempts retain redacted stage logs under `.reader-artifacts/hap-attempts/`.
 
-For VM inspect/install, supply `--vm-log <current-emulator.log>` from the operator-confirmed current instance. Before any Bundle Manager operation the pipeline requires completed boot, a current Guest OS boot marker and stable SceneBoard across observations. Physical targets use the boot/SceneBoard checks without an emulator log. These checks do not imply interaction acceptance.
+For VM inspect/install, select `--vm-location local|remote` to bind the appropriate HDC server and supply `--vm-log <current-emulator.log>` from the operator-confirmed current instance. Omitting the location keeps the local default; an explicit `READER_HDC_SERVER_KEY=192.168.1.10:8710` remains compatible for remote VMs. Conflicting selections and remote servers for physical targets are rejected. The server and VM location are recorded with inspect/install evidence; the exact target is still required and must not be inferred from the server address. Before any Bundle Manager operation the pipeline requires completed boot, a current Guest OS boot marker and stable SceneBoard across observations. Physical targets use the boot/SceneBoard checks without an emulator log. These checks do not imply interaction acceptance.
 
 For physical user-build phones that explicitly deny the kernel boot-ID read,
 the controller checks Toybox's UTC boot time and all six init boot milestones

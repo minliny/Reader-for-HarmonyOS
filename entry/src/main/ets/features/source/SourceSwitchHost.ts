@@ -398,7 +398,10 @@ export class SourceSwitchHost {
       } else if (error instanceof SourceSwitchIntentRecoveryError) {
         this.snapshot = { ...this.snapshot, write: { generation, action: 'commit', confirmation: 'undispatched',
           observedPending: [], intentPending: true, message: error.message } };
-        if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: error.message } }; this.publish(); }
+        // The retained original intent still needs recovery even though this
+        // new command was not dispatched; keep its UI in the pending category.
+        if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: error.message,
+          confirmation: 'undispatched', reconcile: true } }; this.publish(); }
       } else if (this.snapshot.write?.generation === generation && this.snapshot.write.confirmation === 'unknown') {
         if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: this.publicFailure(error),
           confirmation: 'unknown', reconcile: true, transactionId: this.snapshot.write.transactionId } }; this.publish(); }
@@ -606,7 +609,22 @@ export class SourceSwitchHost {
     if (force && this.snapshot.state.kind === 'candidates') this.snapshot = { ...this.snapshot,
       state: { ...this.snapshot.state, refreshing: true } };
     this.publish();
-    const knownCandidates = (): SourceSwitchCandidate[] => context.readKnownCandidates?.() ?? context.knownCandidates;
+    const candidateScope = this.snapshot.scopeId;
+    const knownCandidates = (): SourceSwitchCandidate[] => {
+      const seeds = new Map<string, SourceSwitchCandidate>();
+      const external = context.readKnownCandidates?.() ?? context.knownCandidates;
+      const visible = this.snapshot.scopeId === candidateScope && this.snapshot.state.kind === 'candidates' ?
+        this.snapshot.state.candidates : [];
+      // A shelf-origin journey has no Search seeds. Retain this journey's
+      // admitted live discoveries while their durable publication catches up.
+      // Gateway still checks registry, relation membership and confirmed
+      // deletions; a visible seed never authorizes a deleted persistent row.
+      for (const candidate of [...external, ...visible]) {
+        if (this.gateway.admitsCandidate(candidate, context.query))
+          seeds.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), candidate);
+      }
+      return Array.from(seeds.values());
+    };
     let initialKnown = knownCandidates().filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
     let previous = this.snapshot.state.kind === 'candidates' ?
       this.snapshot.state.candidates.filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query)) : [];
@@ -696,7 +714,22 @@ export class SourceSwitchHost {
     try {
       this.fixedIntent = await this.intents.load();
       if (!this.admitted(generation)) return;
-      if (this.fixedIntent !== undefined) { await this.recoverIntent(false); return; }
+      if (this.fixedIntent !== undefined) {
+        // Opening the picker is a new presentation intent. Exact recovery of
+        // the current target must not replay the old journey's close effect:
+        // a pending journal remains durable until its first anchor commits.
+        await this.recoverIntent(false, false);
+        if (!this.admitted(generation)) return;
+        const transaction = this.recoveredTransaction, write = this.snapshot.write;
+        if (transaction === undefined || write?.confirmation !== 'confirmed' ||
+          write.intentPending === true || write.readbackFailed === true) return;
+        if (transaction.phase !== 'rolledBack' && this.sameIdentity(this.identity(), transaction.target)) {
+          await this.discover(forceDiscovery);
+        } else {
+          await this.deliverRecovered(transaction, generation);
+        }
+        return;
+      }
       if (hasUnknown && this.snapshot.write?.action === 'rollback') { await this.reconcileRollback(false); return; }
       if (hasUnknown) { await this.reconcileUnknown(); return; }
       await this.discover(forceDiscovery);
@@ -938,7 +971,8 @@ export class SourceSwitchHost {
     switch (remoteReadingFailureKindOf(error)) {
       case 'SOURCE_AUTH_REQUIRED': return '书源需要登录或验证，请完成验证后重试。';
       case 'SOURCE_PAYWALL': return '此章节需要书源授权，请检查购买或登录状态。';
-      case 'SOURCE_HTTP_FAILED': return '当前网络无法获取书籍，请检查网络连接后重试。';
+      case 'SOURCE_HTTP_FAILED': return '目标书源请求失败，请稍后重试或选择其他书源。';
+      case 'NETWORK_ENVIRONMENT': return '当前网络无法获取书籍，请检查网络连接后重试。';
       case 'SOURCE_PARSE_FAILED': return '书源暂时无法解析本书，请重试或选择其他书源。';
       case 'SOURCE_TOC_EMPTY': return '目标书源暂未获取到目录，请重试或选择其他书源。';
       case 'SOURCE_CONTENT_EMPTY': return '目标书源暂未获取到正文，请重试或选择其他书源。';

@@ -13,15 +13,15 @@ const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
 const tree=ts.createSourceFile('ReaderRuntimeOwner.ts',owner,ts.ScriptTarget.Latest,true);
 const type=tree.statements.find(n=>n.name?.getText(tree)==='ReaderRuntimeOwner');
-const names=new Set(['install','current','waitForPredecessorClose','start','release','close','closeDownloadsAndRuntime','closeRuntime','startAfterPredecessor']);
+const names=new Set(['install','current','waitForPredecessorClose','start','release','close','closeDownloadsAndRuntime','closeRuntime','quiesceHostFilesForLibraryRestore','startAfterPredecessor']);
 const members=type.members.filter(n=>ts.isPropertyDeclaration(n)||ts.isConstructorDeclaration(n)||names.has(n.name?.getText(tree)))
   .map(n=>n.getText(tree)).join('\n');
 let releasePlatform;const teardown=new Promise(resolve=>releasePlatform=resolve);const events=[];
-class PlatformHost {async close(){events.push('host-close');await teardown;}setResponseAssetBridge(){}}
+class PlatformHost {async close(){events.push('host-close');await teardown;}setResponseAssetBridge(){}async quiesceForLibraryRestore(){}}
 const dependencies={MangaOfflineNetworkProbe,MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{}})},LOG_DOMAIN:0x5244,hilog:{info(){},warn(){}},errorMessageOf:String,
   ReaderStartupTrace:{current:()=>undefined},ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,
   HarmonySystemTtsHost:PlatformHost,HarmonyHttpTtsHost:PlatformHost,HarmonyTtsMediaSession:PlatformHost,
-  HarmonyTtsBackgroundSession:PlatformHost,LocalEpubResourceHost:PlatformHost,ReadingImageDiskCache:class{close(){}},
+  HarmonyTtsBackgroundSession:PlatformHost,LocalEpubResourceHost:PlatformHost,ReadingImageDiskCache:class{close(){}async quiesceForLibraryRestore(){}},
   ReadingBodyImageHost:{setDisplayCacheDir(){},instance:{setMangaMetadataInspector(){},releaseAllDisplayFiles(){events.push('display-release');}}}};
 const Runtime=new Function(...Object.keys(dependencies),stripTypeScriptTypes(`class ReaderRuntimeOwner {${members}}`)+
   ';return ReaderRuntimeOwner;')(...Object.values(dependencies));

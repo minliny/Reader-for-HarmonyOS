@@ -1,0 +1,757 @@
+{
+  "schemaVersion": "1.0",
+  "modelVersion": "0.2",
+  "prototypes": [
+    {
+      "id": "ReaderPage",
+      "headerRole": "None",
+      "headerPresentations": [
+        "None"
+      ],
+      "queryPlacements": [
+        "None"
+      ],
+      "depth": "detailed",
+      "when": {
+        "purpose": "read"
+      },
+      "regions": [
+        "canvas",
+        "transientChrome",
+        "overlay"
+      ]
+    },
+    {
+      "id": "RootTabPage",
+      "headerRole": "Home",
+      "headerPresentations": [
+        "Fixed",
+        "Floating",
+        "ScrollAway"
+      ],
+      "queryPlacements": [
+        "Inline",
+        "HeaderSlot",
+        "Overlay",
+        "None"
+      ],
+      "depth": "detailed",
+      "when": {
+        "role": "root"
+      },
+      "regions": [
+        "header",
+        "content",
+        "tabBar",
+        "overlay"
+      ]
+    },
+    {
+      "id": "SelectionPage",
+      "headerRole": "Contextual",
+      "headerPresentations": [
+        "Fixed"
+      ],
+      "queryPlacements": [
+        "Inline",
+        "HeaderSlot",
+        "Overlay",
+        "None"
+      ],
+      "depth": "grammar",
+      "when": {
+        "purpose": "select"
+      },
+      "regions": [
+        "header",
+        "content",
+        "footer",
+        "overlay"
+      ],
+      "compositionVariants": [
+        {
+          "id": "direct-single",
+          "when": {
+            "selectionMode": "single",
+            "primaryActionScope": "perItem"
+          },
+          "headerRole": "Back",
+          "regions": [
+            "header",
+            "content",
+            "optionalFooter",
+            "overlay"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CompoundSearchPage",
+      "headerRole": "Back",
+      "headerPresentations": [
+        "Fixed"
+      ],
+      "queryPlacements": [
+        "HeaderSlot"
+      ],
+      "depth": "grammar",
+      "when": {
+        "purpose": "search"
+      },
+      "regions": [
+        "header",
+        "query",
+        "content",
+        "overlay"
+      ]
+    },
+    {
+      "id": "SecondaryDetailPage",
+      "headerRole": "Back",
+      "headerPresentations": [
+        "Fixed",
+        "Floating"
+      ],
+      "queryPlacements": [
+        "None"
+      ],
+      "depth": "grammar",
+      "when": {
+        "purpose": "inspect"
+      },
+      "regions": [
+        "header",
+        "content",
+        "optionalFooter",
+        "overlay"
+      ]
+    },
+    {
+      "id": "SecondaryCollectionPage",
+      "headerRole": "Back",
+      "headerPresentations": [
+        "Fixed",
+        "Floating",
+        "ScrollAway",
+        "None"
+      ],
+      "queryPlacements": [
+        "Inline",
+        "HeaderSlot",
+        "Overlay",
+        "None"
+      ],
+      "depth": "detailed",
+      "when": {
+        "content": "collection"
+      },
+      "regions": [
+        "header",
+        "content",
+        "optionalFooter",
+        "overlay"
+      ]
+    }
+  ],
+  "layers": [
+    {
+      "id": "route",
+      "index": 1,
+      "requiredFacts": [
+        "parentRoutes",
+        "parentCaptured",
+        "entrySources",
+        "backPolicy",
+        "retention",
+        "restorePolicy",
+        "systemBackOwner",
+        "platformHostRefs",
+        "status",
+        "unresolvedRefs"
+      ]
+    },
+    {
+      "id": "scaffold",
+      "index": 2,
+      "requiredFacts": [
+        "prototype",
+        "regions"
+      ]
+    },
+    {
+      "id": "informationArchitecture",
+      "index": 3,
+      "requiredFacts": [
+        "blockOrder",
+        "firstScreenBudget",
+        "budgetStatus"
+      ]
+    },
+    {
+      "id": "header",
+      "index": 4,
+      "requiredFacts": [
+        "role",
+        "presentation",
+        "composition",
+        "surface",
+        "height",
+        "safeAreaOwner",
+        "actions"
+      ]
+    },
+    {
+      "id": "scroll",
+      "index": 5,
+      "requiredFacts": [
+        "owner",
+        "primaryCount",
+        "headerInset",
+        "footerInset",
+        "underlap",
+        "obscurationCompensation",
+        "restore",
+        "refresh"
+      ]
+    },
+    {
+      "id": "content",
+      "index": 6,
+      "requiredFacts": [
+        "unit",
+        "rowForm",
+        "slots",
+        "density",
+        "truncation",
+        "rowHeight",
+        "availableWidth",
+        "textMinWidth",
+        "trailingMaxWidth",
+        "budgetDeclared",
+        "controlRefs"
+      ]
+    },
+    {
+      "id": "query",
+      "index": 7,
+      "requiredFacts": [
+        "placement",
+        "entryPlacements",
+        "applyTiming",
+        "filteredEmpty",
+        "reset",
+        "normalization",
+        "actions",
+        "filterSemantics"
+      ]
+    },
+    {
+      "id": "footer",
+      "index": 8,
+      "requiredFacts": [
+        "presence",
+        "actions",
+        "safeAreaOwner",
+        "contentEndInset",
+        "controlRefs"
+      ]
+    },
+    {
+      "id": "overlay",
+      "index": 9,
+      "requiredFacts": [
+        "types",
+        "hosts",
+        "zOrder",
+        "backConsumption",
+        "focusRestore"
+      ]
+    },
+    {
+      "id": "states",
+      "index": 10,
+      "requiredFacts": [
+        "required",
+        "implemented",
+        "transitions"
+      ]
+    },
+    {
+      "id": "visual",
+      "index": 11,
+      "requiredFacts": [
+        "typographyRefs",
+        "colorRefs",
+        "surfaceRefs",
+        "contrastRatio",
+        "contrastEvidence"
+      ]
+    },
+    {
+      "id": "interaction",
+      "index": 12,
+      "requiredFacts": [
+        "controlRefs",
+        "statusNonColor",
+        "targets",
+        "focusStatus",
+        "actionStates"
+      ]
+    },
+    {
+      "id": "adaptation",
+      "index": 13,
+      "requiredFacts": [
+        "widthClass",
+        "fontScales",
+        "verifiedFontScales",
+        "orientation",
+        "theme",
+        "reduceMotion",
+        "budgetStatus"
+      ]
+    },
+    {
+      "id": "accessibility",
+      "index": 14,
+      "requiredFacts": [
+        "ruleRefs",
+        "semantics",
+        "focusOrder",
+        "touchTargets",
+        "contrast",
+        "fontScaleMax",
+        "reduceMotion",
+        "screenReaderLabels"
+      ]
+    },
+    {
+      "id": "measurement",
+      "index": 15,
+      "requiredFacts": [
+        "keys",
+        "revisionSource",
+        "cacheOwner",
+        "geometryInputs",
+        "boundaries"
+      ]
+    },
+    {
+      "id": "dataLifecycle",
+      "index": 16,
+      "requiredFacts": [
+        "identity",
+        "generation",
+        "serialization",
+        "stalePolicy",
+        "projectionConsistency",
+        "confirmedRefreshPolicy",
+        "operationIds"
+      ]
+    }
+  ],
+  "decisions": {
+    "header": {
+      "rules": [
+        {
+          "when": {
+            "purpose": "read"
+          },
+          "result": "None"
+        },
+        {
+          "when": {
+            "navigationPersistence": "required"
+          },
+          "result": "Fixed"
+        },
+        {
+          "when": {
+            "navigationPersistence": "optional",
+            "contentImmersive": false,
+            "titleCanExit": true
+          },
+          "result": "ScrollAway"
+        },
+        {
+          "when": {
+            "navigationPersistence": "optional",
+            "contentImmersive": true,
+            "titleCanExit": true
+          },
+          "result": "ScrollAway"
+        },
+        {
+          "when": {
+            "navigationPersistence": "optional",
+            "contentImmersive": true,
+            "titleCanExit": false
+          },
+          "result": "Floating"
+        },
+        {
+          "when": {
+            "navigationPersistence": "none",
+            "alternateNavigation": true
+          },
+          "result": "None"
+        }
+      ],
+      "default": "Fixed"
+    },
+    "query": {
+      "rules": [
+        {
+          "when": {
+            "queryPriority": "none"
+          },
+          "result": "None"
+        },
+        {
+          "when": {
+            "queryPriority": "primary",
+            "queryHeightClass": "constrained"
+          },
+          "result": "Inline"
+        },
+        {
+          "when": {
+            "queryPriority": "primary"
+          },
+          "result": "HeaderSlot"
+        },
+        {
+          "when": {
+            "queryComplexity": "complex",
+            "queryFrequency": "rare"
+          },
+          "result": "Overlay"
+        },
+        {
+          "when": {
+            "queryPriority": "complex"
+          },
+          "result": "Overlay"
+        },
+        {
+          "when": {
+            "queryPriority": "secondary"
+          },
+          "result": "Inline"
+        }
+      ],
+      "default": "UNRESOLVED"
+    },
+    "primaryAction": {
+      "rules": [
+        {
+          "when": {
+            "primaryActionScope": "perItem"
+          },
+          "result": "Row"
+        },
+        {
+          "when": {
+            "primaryActionScope": "global"
+          },
+          "result": "Footer"
+        },
+        {
+          "when": {
+            "primaryActionScope": "navigation"
+          },
+          "result": "Header"
+        },
+        {
+          "when": {
+            "primaryActionScope": "none"
+          },
+          "result": "None"
+        }
+      ],
+      "default": "UNRESOLVED"
+    }
+  },
+  "illegalCombinations": [
+    {
+      "id": "G-01",
+      "layer": "query",
+      "description": "同一查询同时出现HeaderSlot与Inline",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-02",
+      "layer": "footer",
+      "description": "页头与页脚同一语义动作无主次差异",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-03",
+      "layer": "scroll",
+      "description": "浮动或underlap页头未声明遮挡补偿",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-04",
+      "layer": "footer",
+      "description": "固定页脚缺contentEndInset",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-05",
+      "layer": "overlay",
+      "description": "浮层未先于路由消费返回",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-06",
+      "layer": "content",
+      "description": "行超预算且未切换形态",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-07",
+      "layer": "query",
+      "description": "可筛选集合没有filteredEmpty",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-08",
+      "layer": "header",
+      "description": "非选择页使用上下文页头",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-09",
+      "layer": "scroll",
+      "description": "多个主滚动owner",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-10",
+      "layer": "measurement",
+      "description": "固定头尾未参与测量revision",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-11",
+      "layer": "route",
+      "description": "从瞬时route推断父级或回程",
+      "checkMode": "manual"
+    },
+    {
+      "id": "G-12",
+      "layer": "overlay",
+      "description": "平台宿主当应用路由或重复外框",
+      "checkMode": "manual"
+    },
+    {
+      "id": "G-13",
+      "layer": "route",
+      "description": "平台宿主缺发起identity或returnContext",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-14",
+      "layer": "dataLifecycle",
+      "description": "写动作缺operationId或owner",
+      "checkMode": "automatic"
+    },
+    {
+      "id": "G-15",
+      "layer": "dataLifecycle",
+      "description": "已确认写后刷新失败重发写",
+      "checkMode": "manual"
+    },
+    {
+      "id": "G-16",
+      "layer": "interaction",
+      "description": "控件缺状态集或命中区",
+      "checkMode": "automatic"
+    }
+  ],
+  "invariants": [
+    {
+      "id": "S1",
+      "layer": "scroll",
+      "description": "一个主滚动owner",
+      "severity": "Blocker",
+      "exceptionAllowed": false,
+      "checkMode": "automatic"
+    },
+    {
+      "id": "S2",
+      "layer": "scroll",
+      "description": "固定头尾参与inset",
+      "severity": "Blocker",
+      "exceptionAllowed": false,
+      "checkMode": "automatic"
+    },
+    {
+      "id": "S3",
+      "layer": "scroll",
+      "description": "underlap声明补偿",
+      "severity": "Blocker",
+      "exceptionAllowed": true,
+      "checkMode": "automatic"
+    },
+    {
+      "id": "S4",
+      "layer": "overlay",
+      "description": "页面临时层先消费Back",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "S5",
+      "layer": "footer",
+      "description": "固定页脚不遮末行和状态",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "S6",
+      "layer": "route",
+      "description": "使用进入时捕获的父级上下文",
+      "severity": "Blocker",
+      "exceptionAllowed": false,
+      "checkMode": "manual"
+    },
+    {
+      "id": "S7",
+      "layer": "route",
+      "description": "Back顺序与登记一致，平台未知不写通过",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "S8",
+      "layer": "route",
+      "description": "返回保留与RouteContract一致",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "B1",
+      "layer": "footer",
+      "description": "多入口共享语义owner且有主次",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "B2",
+      "layer": "dataLifecycle",
+      "description": "陈旧回调不得影响新实体/世代",
+      "severity": "Blocker",
+      "exceptionAllowed": false,
+      "checkMode": "manual"
+    },
+    {
+      "id": "B3",
+      "layer": "query",
+      "description": "可筛选集合有filteredEmpty和reset",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "automatic"
+    },
+    {
+      "id": "B4",
+      "layer": "interaction",
+      "description": "进行中暴露busy/disabled且不重复提交",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "B5",
+      "layer": "overlay",
+      "description": "消息表面引用上游入口",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "automatic"
+    },
+    {
+      "id": "B6",
+      "layer": "dataLifecycle",
+      "description": "平台结果核对发起identity，拒绝旧session",
+      "severity": "Blocker",
+      "exceptionAllowed": false,
+      "checkMode": "manual"
+    },
+    {
+      "id": "B7",
+      "layer": "dataLifecycle",
+      "description": "写动作引用operation owner及事实",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "automatic"
+    },
+    {
+      "id": "B8",
+      "layer": "dataLifecycle",
+      "description": "确认写后刷新失败只重读",
+      "severity": "Blocker",
+      "exceptionAllowed": false,
+      "checkMode": "manual"
+    },
+    {
+      "id": "E1",
+      "layer": "interaction",
+      "description": "状态具有非颜色表达",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "E2",
+      "layer": "interaction",
+      "description": "命中区至少44vp或等效responseRegion",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "automatic"
+    },
+    {
+      "id": "E3",
+      "layer": "adaptation",
+      "description": "字体放大有增长预算",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "E4",
+      "layer": "visual",
+      "description": "正文元信息对比度至少4.5:1",
+      "severity": "Minor",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "E5",
+      "layer": "accessibility",
+      "description": "控件具有名称角色状态",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    },
+    {
+      "id": "E6",
+      "layer": "accessibility",
+      "description": "模态焦点约束并返回触发源",
+      "severity": "Major",
+      "exceptionAllowed": true,
+      "checkMode": "manual"
+    }
+  ],
+  "results": [
+    "PASS",
+    "FAIL",
+    "EXCEPTION",
+    "NOT_RUN"
+  ]
+}

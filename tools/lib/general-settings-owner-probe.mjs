@@ -1,4 +1,4 @@
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
 // Full unchanged Settings production classes for method-level Index probes.
 // Platform writes require explicit seams; a probe cannot fake successful IO.
 import {bookshelfOperationClass,bookshelfOperationSource} from './bookshelf-operation-owner-probe.mjs';
@@ -35,6 +35,6 @@ export function actualGeneralSettingsHostField(index,SettingsHost) {
 }
 const { ts } = installedEtsCompiler();
 function bookshelfOperationClassText(expression,index,SettingsHost) {
- const code=ts.transpileModule('const value='+expression+';',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const code=emitSdkProbe('const value='+expression+';',{fileName:'module.ts',compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}});
  return new Function('SettingsHost',code+'return value;').call(index,SettingsHost);
 }

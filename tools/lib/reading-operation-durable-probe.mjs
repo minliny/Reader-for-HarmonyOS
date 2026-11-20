@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
 import { coreCliPath } from './tool-environment.mjs';
 import { formatDownloadStorageBytes } from '../../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
@@ -30,9 +30,8 @@ const read=p=>fs.readFileSync(resolve(hostRoot,'entry/src/main/ets',p),'utf8');
 export function compile(p,n,deps,official=false){
  const source=read(p),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export type \{[^\n]+\n/gm,'');
  if(!official)return new Function(...Object.keys(deps),stripTypeScriptTypes(body).replace(/^export /gm,'')+`;return ${n};`)(...Object.values(deps));
- const tree=ts.createSourceFile(p,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);assert.deepEqual(tree.parseDiagnostics,[],p+' installed SDK parses entire source');
- const result=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS,strict:true},reportDiagnostics:true,fileName:p});assert.deepEqual(result.diagnostics,[],p+' official SDK emitter diagnostics');
- const exports={};new Function('exports',...Object.keys(deps),result.outputText)(exports,...Object.values(deps));
+ const output=emitSdkProbe(body,{parseSource:source,fileName:p,compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS,strict:true}});
+ const exports={};new Function('exports',...Object.keys(deps),output)(exports,...Object.values(deps));
  return new Function('exports','return exports.'+n)(exports);
 }
 export const book={sourceId:'local',sourceName:'local',bookId:'book',title:'Book',author:'Author'};
@@ -80,7 +79,7 @@ export async function fixture(official=false,existing,{domain='all'}={}){
  // Each fixture loads the entire production module, resetting only cold JS statics.
  // For SDK mode emit that same whole module once, preserving its two shared lanes.
  let types=classes;
- if(official){const source=read('features/reading/ReadingOperationIntents.ts'),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');const output=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(output.diagnostics,[]);types={};new Function('exports','ReaderRuntimeOwner','fileIo','util','replaceReaderAtomicSnapshot','ReaderCoreRequestError','isReaderCoreTransactionPendingError',output.outputText)(types,Runtime,fileIo,{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sdk.ReaderCoreRequestError,sdk.isReaderCoreTransactionPendingError);}
+ if(official){const source=read('features/reading/ReadingOperationIntents.ts'),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');const output=emitSdkProbe(body,{fileName:'module.ts',parseSource:source,compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}});types={};new Function('exports','ReaderRuntimeOwner','fileIo','util','replaceReaderAtomicSnapshot','ReaderCoreRequestError','isReaderCoreTransactionPendingError',output)(types,Runtime,fileIo,{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sdk.ReaderCoreRequestError,sdk.isReaderCoreTransactionPendingError);}
  async function command(method,params){const result=await run(coreBinary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:16*1024*1024});const event=result.stdout.trim().split('\n').map(v=>JSON.parse(v)).findLast(e=>e.requestId===1);if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event;}
  const runtime={getUIAbilityContext:()=>({filesDir:files}),closed:false,
   supportsCoreCapability:()=>true,async clearOfflineBookImages(s,b){calls.push({platform:[s,b]});if(options.imageFailure)throw Error('image cleanup failed');},

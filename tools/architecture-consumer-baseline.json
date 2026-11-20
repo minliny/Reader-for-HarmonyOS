@@ -485,13 +485,6 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
-      "counts": {
-        "fontSize": 28,
-        "backgroundColor": 17
-      }
-    },
-    {
       "file": "entry/src/main/ets/features/reading/ReaderTtsModulePanel.ets",
       "counts": {
         "fontSize": 5,

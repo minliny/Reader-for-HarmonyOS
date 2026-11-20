@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import type { MeasureOptions } from '@ohos.measure';
@@ -270,12 +271,13 @@ export struct LocalBookDetail {
             .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
             .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.book.sourceId !== 'local') {
-            Text('换源').constraintSize({ minHeight: 30 }).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+            Text('换源').constraintSize({ minHeight: 44, minWidth: 44 }).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
               .fontWeight(visual.bodyFontWeight).fontSize(visual.heroSourceFontSize).lineHeight(visual.heroSourceLineHeight)
               .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
               .fontColor(mangaDirectoryColor('accent', this.appThemeScheme))
               .enabled(this.sourceSwitchEnabled).opacity(this.sourceSwitchEnabled ? 1 : visual.disabledOpacity)
-              .attributeModifier(new MangaDirectoryPressFeedback(this.sourceSwitchEnabled, true, this.appThemeScheme))
+              .attributeModifier(new ReaderActionAccessibility('换源', this.sourceSwitchEnabled, false, true, new MangaDirectoryPressFeedback(this.sourceSwitchEnabled, true, this.appThemeScheme)))
+      .responseRegion( readerActionTouchRegion('100%', 44))
               .onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });
           }
         }.width('100%').margin({ top: visual.heroSourceTop });
@@ -397,10 +399,12 @@ export struct LocalBookDetail {
             .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.book.sourceId !== 'local') {
-            Text('换源').height(32).padding({ left: 12, right: 12 }).fontSize(12)
+            Text('换源').height(44).padding({ left: 12, right: 12 }).fontSize(12)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(10)
               .textAlign(TextAlign.Center).enabled(this.sourceSwitchEnabled).opacity(this.sourceSwitchEnabled ? 1 : 0.4)
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility('换源', this.sourceSwitchEnabled, false))
               .onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });
           }
         }.width('100%');
@@ -466,8 +470,9 @@ export struct LocalBookDetail {
             .fontColor(mangaDirectoryColor('accent', this.appThemeScheme));
           Image(this.appThemeScheme === 'night' ? $r('app.media.manga_directory_chevron_down_accent_theme_night') : $r('app.media.manga_directory_chevron_down_accent'))
             .width(visual.sectionActionIcon).height(visual.sectionActionIcon).rotate({ angle: this.introExpanded ? 180 : 0 });
-        }.constraintSize({ minHeight: visual.sectionActionHeight }).margin({ top: visual.introExpandTop })
-          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.appThemeScheme))
+        }.constraintSize({ minHeight: Math.max(44, visual.sectionActionHeight), minWidth: 44 }).margin({ top: visual.introExpandTop })
+          .attributeModifier(new ReaderActionAccessibility(this.introExpanded ? '收起简介' : '展开简介', true, this.introExpanded, true, new MangaDirectoryPressFeedback(true, true, this.appThemeScheme)))
+      .responseRegion( readerActionTouchRegion('100%', 44))
           .onClick((): void => { this.introExpanded = !this.introExpanded; });
       }
     }.width('100%').alignItems(HorizontalAlign.Start).margin({ top: visual.introMarginTop })
@@ -489,8 +494,10 @@ export struct LocalBookDetail {
           }
         });
       if (this.introOverflow) {
-        Text(this.introExpanded ? '收起' : '展开').height(32).fontSize(12)
+        Text(this.introExpanded ? '收起' : '展开').height(44).constraintSize({ minWidth: 44 }).fontSize(12)
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(this.introExpanded ? '收起简介' : '展开简介', true, this.introExpanded))
           .onClick((): void => { this.introExpanded = !this.introExpanded; });
       }
     }.width('100%').padding({ top: this.book.contentKind === 'manga' ? visual.introTop : 0, bottom: this.book.contentKind === 'manga' ? visual.introBottom : 0 })
@@ -548,8 +555,9 @@ export struct LocalBookDetail {
           .fontColor(mangaDirectoryColor('accent', this.appThemeScheme));
         Image(this.appThemeScheme === 'night' ? $r('app.media.manga_directory_chevron_right_accent_theme_night') : $r('app.media.manga_directory_chevron_right_accent'))
           .width(visual.sectionActionIcon).height(visual.sectionActionIcon);
-      }.constraintSize({ minHeight: visual.sectionActionHeight }).flexShrink(0).enabled(!this.removing)
-        .attributeModifier(new MangaDirectoryPressFeedback(!this.removing, true, this.appThemeScheme))
+      }.constraintSize({ minHeight: Math.max(44, visual.sectionActionHeight), minWidth: 44 }).flexShrink(0).enabled(!this.removing)
+        .attributeModifier(new ReaderActionAccessibility('完整目录', !this.removing, false, true, new MangaDirectoryPressFeedback(!this.removing, true, this.appThemeScheme)))
+      .responseRegion( readerActionTouchRegion('100%', 44))
         .onClick((): void => { if (!this.removing) this.onOpenDirectory(); });
     }.width('100%').margin({ bottom: visual.sectionBottom }).alignItems(VerticalAlign.Center);
   }
@@ -577,6 +585,8 @@ export struct LocalBookDetail {
             .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
             .borderRadius(999).alignItems(VerticalAlign.Center);
         }.width(94).height(44).enabled(!this.removing)
+      .responseRegion( readerActionTouchRegion(94, 44))
+      .attributeModifier(new ReaderActionAccessibility('完整目录', !this.removing, false))
           .onClick((): void => { if (!this.removing) this.onOpenDirectory(); });
       }.width('100%').constraintSize({ minHeight: 44 });
   }
@@ -603,7 +613,9 @@ export struct LocalBookDetail {
       .backgroundColor(this.isCurrentChapter(entry) ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) :
         entry.navigable === false ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
       .borderRadius(this.isCurrentChapter(entry) || entry.navigable === false ? 8 : 0)
-      .enabled(!this.removing && this.detailBookAvailable()).onClick((): void => {
+      .enabled(!this.removing && this.detailBookAvailable())
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(entry.title, !this.removing && this.detailBookAvailable(), this.isCurrentChapter(entry))).onClick((): void => {
         if (this.removing || !this.detailBookAvailable()) return;
         const current = this.toc.find((row: LocalReadingTocEntry): boolean => row.index === entry.index);
         if (current === undefined || current.title !== entry.title || current.level !== entry.level ||
@@ -643,7 +655,8 @@ export struct LocalBookDetail {
           .fontColor(this.detailColor('TOK_ON_PRIMARY', 'onGreen'))
           .textAlign(TextAlign.Center).backgroundColor(this.detailColor('TOK_PRIMARY_DARK', 'green')).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
           .enabled(!this.removing && this.detailBookAvailable()).opacity(this.removing || !this.detailBookAvailable() ? (this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5) : 1)
-          .attributeModifier(new MangaDirectoryPressFeedback(!this.removing && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme))
+          .attributeModifier(new ReaderActionAccessibility(this.readingActionLabel(), !this.removing && this.detailBookAvailable(), false, true, new MangaDirectoryPressFeedback(!this.removing && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme)))
+      .responseRegion( readerActionTouchRegion('100%', 44))
           .onClick((): void => { if (!this.removing && this.detailBookAvailable()) this.onContinue(); });
         ForEach([this.admissionIdentity], (identity: string) => {
         Stack({ alignContent: Alignment.Center }) {
@@ -663,7 +676,8 @@ export struct LocalBookDetail {
           .border({ width: 1, color: this.detailColor('TOK_LINE', 'line') })
           .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable())
           .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.4)
-          .attributeModifier(new MangaDirectoryPressFeedback(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme))
+          .attributeModifier(new ReaderActionAccessibility(this.shelfActionLabel(), this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable(), false, true, new MangaDirectoryPressFeedback(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme)))
+      .responseRegion( readerActionTouchRegion(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94, 44))
           .onClick((): void => {
             if (this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable()) {
               if (this.adding) this.onCancelAdd(identity); else this.onRemove(identity);

@@ -230,7 +230,8 @@ export class RulesMutationOwner {
       const intent = await this.intents.load();
       if (intent === undefined) { this.state.blocked = false; return this.snapshot(); }
       this.admitPending(intent);
-      const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.update' || intent.mutation.method==='source.delete';
+      const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.import' || intent.mutation.method==='source.update' || intent.mutation.method==='source.delete' ||
+        intent.mutation.method==='source.group.mutate' || intent.mutation.method==='source.import.grouped';
       const rssFamily = intent.subscription===undefined &&
         (intent.mutation.method.startsWith('rss.') || intent.mutation.method.startsWith('rss-source.'));
       const directoryFamily = intent.subscription===undefined && intent.mutation.method==='reading.directory.rules.apply.v2';
@@ -342,6 +343,8 @@ export class RulesMutationOwner {
   }
   private requireMethodCapability(method: string): void {
     this.requireCapability();
+    if ((method==='source.group.mutate' || method==='source.import.grouped') && this.runtime.supportsCoreCapability?.('rules.mutation.source-groups.v1') !== true)
+      throw new Error('当前 Core 不支持书源分组操作，已停止派发');
     if (method==='reading.directory.rules.apply.v2' && this.runtime.supportsCoreCapability?.('rules.mutation.directory-rules.v1') !== true)
       throw new Error('当前 Core 不支持本书目录规则原操作回执，已停止派发');
     if ((method==='source.update' || method==='source.delete') && this.runtime.supportsCoreCapability?.('rules.mutation.source-management.v1') !== true)

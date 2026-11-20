@@ -172,7 +172,16 @@ type ReadingImageChapterManifest = {
  * source credentials. A manifest is published only after every resource file
  * exists, so restart can never mistake a partial range for offline-complete.
  */
+class ReadingImageLibraryRestoreRetirement extends Error {}
+
 export class ReadingImageDiskCache {
+  static restoreRetirement(message: string = 'READING_IMAGE_LIBRARY_RESTORE_QUIESCED'): Error {
+    return new ReadingImageLibraryRestoreRetirement(message);
+  }
+  static isRestoreRetirement(error: unknown): boolean {
+    return error instanceof ReadingImageLibraryRestoreRetirement;
+  }
+
   private readonly context: common.UIAbilityContext;
   private readonly freeSpaceProbe: ReadingImageFreeSpaceProbe;
   // Reuse the platform LRU; this contains no pixels or credentials.
@@ -188,6 +197,44 @@ export class ReadingImageDiskCache {
   private readonly bookMutationTails = new Map<string, Promise<void>>();
   private readonly bookClearGenerations = new Map<string, number>();
   private closed: boolean = false;
+  private restoreQuiescing: boolean = false;
+  private restoreDrain: Promise<void> | undefined;
+  // Observe actual entry owners across their pre-write awaits. Per-book and
+  // policy tails remain the only mutation ordering; no second work queue.
+  private readonly physicalOperations = new Set<Promise<unknown>>();
+
+  private observePhysicalOperation<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.restoreQuiescing || this.closed) return Promise.reject(ReadingImageDiskCache.restoreRetirement());
+    const task = operation();
+    this.physicalOperations.add(task);
+    const finish = (): void => { this.physicalOperations.delete(task); };
+    void task.then(finish, finish);
+    return task;
+  }
+
+  quiesceForLibraryRestore(): Promise<void> {
+    this.restoreQuiescing = true;
+    this.mangaStorageEpoch++;
+    this.verifiedDigests.clear();
+    if (this.restoreDrain !== undefined) return this.restoreDrain;
+    const drain = (async (): Promise<void> => {
+      let failure: unknown;
+      let pending = [...this.physicalOperations, ...this.inFlightWrites.values(),
+        ...this.bookMutationTails.values(), this.mangaPolicyTail, this.mangaExpiryTask,
+        this.mangaAuthorityReady, this.storagePolicyReady, this.writeLaneA, this.writeLaneB];
+      do {
+        for (const result of await Promise.allSettled(pending)) {
+          if (result.status === 'rejected' && !ReadingImageDiskCache.isRestoreRetirement(result.reason) && failure === undefined) failure = result.reason;
+        }
+        pending = [...this.physicalOperations, ...this.inFlightWrites.values(), ...this.bookMutationTails.values()];
+      } while (pending.length > 0);
+      if (failure !== undefined) throw failure;
+    })();
+    this.restoreDrain = drain;
+    void drain.then((): void => {}, (): void => { if (this.restoreDrain === drain) this.restoreDrain = undefined; });
+    return drain;
+  }
+
   private writeLaneA: Promise<void> = Promise.resolve();
   private writeLaneB: Promise<void> = Promise.resolve();
   private nextWriteLane: number = 0;
@@ -277,6 +324,15 @@ export class ReadingImageDiskCache {
     priority: 'foreground' | 'background' = 'foreground',
     kind: 'original' | 'derived' = 'original',
   ): Promise<MangaWriteReservation> {
+    return this.observePhysicalOperation(() => this.reserveExternalWriteOwned(chapter, bytes, priority, kind));
+  }
+
+  private async reserveExternalWriteOwned(
+    chapter: MangaStorageChapter,
+    bytes: number,
+    priority: 'foreground' | 'background' = 'foreground',
+    kind: 'original' | 'derived' = 'original',
+  ): Promise<MangaWriteReservation> {
     this.assertMangaStorageChapter(chapter);
     if (!Number.isSafeInteger(bytes) || bytes < 0) throw new Error('invalid manga write reservation');
     const unpin = this.pinMangaChapter(chapter);
@@ -339,6 +395,10 @@ export class ReadingImageDiskCache {
 
   /** Core owns the seven-day read clock and the LRU candidate order. */
   async maintainMangaStorage(reason: MangaStorageReason = 'expiry', scope?: MangaStorageScope): Promise<void> {
+    return this.observePhysicalOperation(() => this.maintainMangaStorageOwned(reason, scope));
+  }
+
+  private async maintainMangaStorageOwned(reason: MangaStorageReason = 'expiry', scope?: MangaStorageScope): Promise<void> {
     if (reason === 'expiry') { await this.maintainMangaExpiry(scope); return; }
     await this.enqueueMangaPolicy(async (): Promise<void> => {
       if (this.mangaRestoreRequests > 0) return;
@@ -391,6 +451,10 @@ export class ReadingImageDiskCache {
 
   /** Actual bytes, including manifests, temporary writes and derived display files. */
   async mangaStorageUsage(): Promise<{ ordinaryBytes: number; reservedBytes: number; }> {
+    return this.observePhysicalOperation(() => this.mangaStorageUsageOwned());
+  }
+
+  private async mangaStorageUsageOwned(): Promise<{ ordinaryBytes: number; reservedBytes: number; }> {
     const inventory = await this.mangaInventory();
     return { ordinaryBytes: await this.mangaOrdinaryBytes(inventory), reservedBytes: this.mangaReservedBytes };
   }
@@ -399,6 +463,13 @@ export class ReadingImageDiskCache {
    * protected originals remain in the automatic bucket conservatively; only
    * Core-confirmed downloads are counted as retained content. */
   async mangaStorageSummary(): Promise<{
+    totalBytes: number; retainedBytes: number; automaticBytes: number;
+    cleanableBytes: number; availableBytes: number;
+  }> {
+    return this.observePhysicalOperation(() => this.mangaStorageSummaryOwned());
+  }
+
+  private async mangaStorageSummaryOwned(): Promise<{
     totalBytes: number; retainedBytes: number; automaticBytes: number;
     cleanableBytes: number; availableBytes: number;
   }> {
@@ -419,6 +490,10 @@ export class ReadingImageDiskCache {
   }
 
   async configureStoragePolicy(limitMb: number, cleanupAfterDays: number): Promise<void> {
+    return this.observePhysicalOperation(() => this.configureStoragePolicyOwned(limitMb, cleanupAfterDays));
+  }
+
+  private async configureStoragePolicyOwned(limitMb: number, cleanupAfterDays: number): Promise<void> {
     if (!Number.isSafeInteger(limitMb) || limitMb < 128 || limitMb > 10 * 1024 ||
       !Number.isSafeInteger(cleanupAfterDays) || cleanupAfterDays < 1 || cleanupAfterDays > 365) {
       throw new Error('MANGA_CACHE_STORAGE_POLICY_INVALID');
@@ -445,12 +520,20 @@ export class ReadingImageDiskCache {
   /** The same durable, volume-bounded policy governs ordinary text and image
    * storage. There is no second preference with a fixed 10 GiB default. */
   async readPolicy(): Promise<SharedDownloadStoragePolicy> {
+    return this.observePhysicalOperation(() => this.readPolicyOwned());
+  }
+
+  private async readPolicyOwned(): Promise<SharedDownloadStoragePolicy> {
     const capacity = await this.mangaStorageCapacity();
     return { capacityBytes: capacity.cacheBudgetBytes,
       expiryDays: (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS) / 86400 };
   }
 
   async configurePolicy(policy: SharedDownloadStoragePolicy): Promise<SharedDownloadStoragePolicy> {
+    return this.observePhysicalOperation(() => this.configurePolicyOwned(policy));
+  }
+
+  private async configurePolicyOwned(policy: SharedDownloadStoragePolicy): Promise<SharedDownloadStoragePolicy> {
     if (!Number.isSafeInteger(policy.expiryDays) || policy.expiryDays < 1 || policy.expiryDays > 365 ||
       !Number.isSafeInteger(policy.capacityBytes) || policy.capacityBytes < 0)
       throw new Error('MANGA_CACHE_STORAGE_POLICY_INVALID');
@@ -474,6 +557,10 @@ export class ReadingImageDiskCache {
   /** One actual file inventory is shared by the global summary, Core's
    * image-only selectors and all book rows. No per-book full disk walks. */
   async captureReadingStorageInventory(): Promise<ReadingImageStorageSnapshot> {
+    return this.observePhysicalOperation(() => this.captureReadingStorageInventoryOwned());
+  }
+
+  private async captureReadingStorageInventoryOwned(): Promise<ReadingImageStorageSnapshot> {
     await this.mangaAuthorityReady;
     const writeRevision = this.inFlightWriteRevision;
     const files = await this.readingInventory();
@@ -516,6 +603,11 @@ export class ReadingImageDiskCache {
   }
 
   async readingStorageSummary(snapshot: ReadingImageStorageSnapshot,
+    textPolicy: (chapter: ReadingTextStorageChapter) => ReadingTextStoragePolicy | undefined): Promise<ReadingImageStorageSummary> {
+    return this.observePhysicalOperation(() => this.readingStorageSummaryOwned(snapshot, textPolicy));
+  }
+
+  private async readingStorageSummaryOwned(snapshot: ReadingImageStorageSnapshot,
     textPolicy: (chapter: ReadingTextStorageChapter) => ReadingTextStoragePolicy | undefined): Promise<ReadingImageStorageSummary> {
     const physical = new Map<string, ReadingInventoryFile[]>();
     const owners = new Map<string, MangaStorageChapter>();
@@ -570,6 +662,10 @@ export class ReadingImageDiskCache {
   /** Book rows read this index built from the same snapshot, including physical
    * manga and text images. Inode aliases count once for each actual owner. */
   async readingStorageBookIndex(snapshot: ReadingImageStorageSnapshot): Promise<Map<string, number | undefined>> {
+    return this.observePhysicalOperation(() => this.readingStorageBookIndexOwned(snapshot));
+  }
+
+  private async readingStorageBookIndexOwned(snapshot: ReadingImageStorageSnapshot): Promise<Map<string, number | undefined>> {
     const byBook = new Map<string, Map<string, number>>();
     for (const file of snapshot.files) {
       const owners: { sourceId: string; bookId: string; }[] = file.textOwner === undefined ? file.owners : [file.textOwner];
@@ -600,6 +696,10 @@ export class ReadingImageDiskCache {
   /** A successful Core image-only cleanup selector is not a disk receipt.
    * Compare actual remaining paths and inodes only after Host unlink settles. */
   async readingStorageCleanupReceipt(before: ReadingImageStorageSnapshot): Promise<MangaStorageCleanup> {
+    return this.observePhysicalOperation(() => this.readingStorageCleanupReceiptOwned(before));
+  }
+
+  private async readingStorageCleanupReceiptOwned(before: ReadingImageStorageSnapshot): Promise<MangaStorageCleanup> {
     const after = await this.readingInventory();
     const retained = new Set(after.map(file => file.physicalKey));
     const released = new Set<string>();
@@ -681,6 +781,10 @@ export class ReadingImageDiskCache {
   /** Physical cleanup receipt, including partial I/O success. Count reclaimed
    * inodes once; unlinking one of several aliases never claims released bytes. */
   async clearMangaRebuildableCache(scope?: MangaStorageScope): Promise<MangaStorageCleanup> {
+    return this.observePhysicalOperation(() => this.clearMangaRebuildableCacheOwned(scope));
+  }
+
+  private async clearMangaRebuildableCacheOwned(scope?: MangaStorageScope): Promise<MangaStorageCleanup> {
     await this.mangaAuthorityReady;
     return this.enqueueMangaPolicy(async (): Promise<MangaStorageCleanup> => {
       if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked || this.closed)
@@ -709,6 +813,10 @@ export class ReadingImageDiskCache {
    * derived-cache cleanup without being able to delete user downloads.
    */
   async mangaStorageCapacity(): Promise<MangaStorageCapacity> {
+    return this.observePhysicalOperation(() => this.mangaStorageCapacityOwned());
+  }
+
+  private async mangaStorageCapacityOwned(): Promise<MangaStorageCapacity> {
     return this.mangaStorageCapacityForPath(this.context.filesDir);
   }
 
@@ -717,6 +825,10 @@ export class ReadingImageDiskCache {
    * manifests, text books and user data are never passed to this entry point.
    */
   async clearMangaDerivedCache(scope?: MangaStorageScope): Promise<void> {
+    return this.observePhysicalOperation(() => this.clearMangaDerivedCacheOwned(scope));
+  }
+
+  private async clearMangaDerivedCacheOwned(scope?: MangaStorageScope): Promise<void> {
     await this.mangaAuthorityReady;
     await this.enqueueMangaPolicy(async (): Promise<void> => {
       if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked || this.closed) return;
@@ -727,6 +839,14 @@ export class ReadingImageDiskCache {
   /** Download management is not limited by today's catalog. Preserve exact
    * historical chapter identities whenever known local bytes are still owned. */
   async listMangaDownloadChapters(
+    sourceId: string,
+    bookId: string,
+    isCurrent?: () => boolean,
+  ): Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>> {
+    return this.observePhysicalOperation(() => this.listMangaDownloadChaptersOwned(sourceId, bookId, isCurrent));
+  }
+
+  private async listMangaDownloadChaptersOwned(
     sourceId: string,
     bookId: string,
     isCurrent?: () => boolean,
@@ -748,6 +868,13 @@ export class ReadingImageDiskCache {
   /** Inventory includes partial originals and display files. Core alone decides
    * which exact versions are owned downloads; unknown history is not guessed. */
   async listMangaDownloadVersions(
+    chapter: { sourceId: string; bookId: string; chapterId: string; },
+    isCurrent?: () => boolean,
+  ): Promise<string[]> {
+    return this.observePhysicalOperation(() => this.listMangaDownloadVersionsOwned(chapter, isCurrent));
+  }
+
+  private async listMangaDownloadVersionsOwned(
     chapter: { sourceId: string; bookId: string; chapterId: string; },
     isCurrent?: () => boolean,
   ): Promise<string[]> {
@@ -788,6 +915,10 @@ export class ReadingImageDiskCache {
   /** The Runtime releases the user's retention separately before this call.
    * A Core transaction must grant this exact version before any bytes move. */
   async deleteMangaVersion(chapter: MangaStorageChapter, isCurrent?: () => boolean): Promise<boolean> {
+    return this.observePhysicalOperation(() => this.deleteMangaVersionOwned(chapter, isCurrent));
+  }
+
+  private async deleteMangaVersionOwned(chapter: MangaStorageChapter, isCurrent?: () => boolean): Promise<boolean> {
     this.assertMangaStorageChapter(chapter);
     const epoch = this.mangaStorageEpoch;
     await this.mangaAuthorityReady;
@@ -824,6 +955,7 @@ export class ReadingImageDiskCache {
   }
 
   private enqueueMangaPolicy<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.restoreQuiescing) return Promise.reject(ReadingImageDiskCache.restoreRetirement());
     const task = this.mangaPolicyTail.catch((): void => {}).then(operation);
     this.mangaPolicyTail = task.then((): void => {}, (): void => {});
     return task;
@@ -1268,7 +1400,7 @@ export class ReadingImageDiskCache {
         for (const file of matching) if (!file.external && file.path.endsWith('/manga-identity.json')) await this.unlinkIfPresent(file.path);
         removed = true;
       });
-    } catch (_) { removed = false; }
+    } catch (error) { if (this.restoreQuiescing) throw error; removed = false; }
     finally {
       await authority.complete(grant, removed);
       if (removed) this.mangaEvicting.delete(key);
@@ -1281,7 +1413,7 @@ export class ReadingImageDiskCache {
     const key = this.bookMutationKey(sourceId, bookId);
     const generation = this.bookClearGenerations.get(key) ?? 0;
     const mangaEpoch = this.mangaStorageEpoch;
-    return (): boolean => !this.closed && (this.bookClearGenerations.get(key) ?? 0) === generation &&
+    return (): boolean => !this.closed && !this.restoreQuiescing && mangaEpoch === this.mangaStorageEpoch && (this.bookClearGenerations.get(key) ?? 0) === generation &&
       (!this.mangaBooks.has(key) || (mangaEpoch === this.mangaStorageEpoch && this.mangaRestoreRequests === 0 && !this.mangaRestoreBlocked)) &&
       (isCurrent === undefined || isCurrent());
   }
@@ -1332,6 +1464,13 @@ export class ReadingImageDiskCache {
   }
 
   async loadResource(
+    identity: ReadingImageCacheIdentity,
+    isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
+  ): Promise<Uint8Array | undefined> {
+    return this.observePhysicalOperation(() => this.loadResourceOwned(identity, isCurrent));
+  }
+
+  private async loadResourceOwned(
     identity: ReadingImageCacheIdentity,
     isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
   ): Promise<Uint8Array | undefined> {
@@ -1441,6 +1580,14 @@ export class ReadingImageDiskCache {
     bytes: Uint8Array,
     isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
   ): Promise<void> {
+    return this.observePhysicalOperation(() => this.storeResourceOwned(identity, bytes, isCurrent));
+  }
+
+  private async storeResourceOwned(
+    identity: ReadingImageCacheIdentity,
+    bytes: Uint8Array,
+    isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
+  ): Promise<void> {
     this.assertResourceIdentity(identity);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`offline reading image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
@@ -1471,6 +1618,13 @@ export class ReadingImageDiskCache {
     identity: ReadingImageCacheIdentity,
     isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
   ): Promise<void> {
+    return this.observePhysicalOperation(() => this.removeResourceOwned(identity, isCurrent));
+  }
+
+  private async removeResourceOwned(
+    identity: ReadingImageCacheIdentity,
+    isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
+  ): Promise<void> {
     this.assertResourceIdentity(identity);
     const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
     const unpin = this.beginMangaOperation(requestedIdentity);
@@ -1494,6 +1648,14 @@ export class ReadingImageDiskCache {
   }
 
   async markChapterComplete(
+    chapter: ReadingImageChapterIdentity,
+    resources: ReadingImageCacheIdentity[],
+    isCurrent: () => boolean = this.captureValidity(chapter.sourceId, chapter.bookId),
+  ): Promise<void> {
+    return this.observePhysicalOperation(() => this.markChapterCompleteOwned(chapter, resources, isCurrent));
+  }
+
+  private async markChapterCompleteOwned(
     chapter: ReadingImageChapterIdentity,
     resources: ReadingImageCacheIdentity[],
     isCurrent: () => boolean = this.captureValidity(chapter.sourceId, chapter.bookId),
@@ -1555,6 +1717,10 @@ export class ReadingImageDiskCache {
   }
 
   async isChapterComplete(chapter: ReadingImageChapterIdentity): Promise<boolean> {
+    return this.observePhysicalOperation(() => this.isChapterCompleteOwned(chapter));
+  }
+
+  private async isChapterCompleteOwned(chapter: ReadingImageChapterIdentity): Promise<boolean> {
     this.assertChapterIdentity(chapter);
     const requestedChapter: ReadingImageChapterIdentity = { ...chapter };
     const isCurrent = this.captureValidity(chapter.sourceId, chapter.bookId);
@@ -1577,6 +1743,10 @@ export class ReadingImageDiskCache {
 
   /** An ordinal without a body version cannot prove the current catalog's assets. */
   async isChapterMaterialized(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean> {
+    return this.observePhysicalOperation(() => this.isChapterMaterializedOwned(sourceId, bookId, chapterIndex));
+  }
+
+  private async isChapterMaterializedOwned(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean> {
     this.assertNonBlank(sourceId, 'sourceId');
     this.assertNonBlank(bookId, 'bookId');
     if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) {
@@ -1638,7 +1808,7 @@ export class ReadingImageDiskCache {
     this.assertCurrent(isCurrent);
     const stat = await fileIo.stat(path);
     if (!stat.isFile() || stat.size <= 0 || stat.size > maximumBytes) throw new Error('MANGA_ATOMIC_PAYLOAD_BUDGET');
-    const bytes = await readMangaAtomicPayload(path, stat.size, maximumBytes, isCurrent, true);
+    const bytes = await readMangaAtomicPayload(path, stat.size, maximumBytes, (): boolean => { this.assertCurrent(isCurrent); return true; }, true);
     this.assertCurrent(isCurrent);
     return bytes;
   }
@@ -1688,6 +1858,10 @@ export class ReadingImageDiskCache {
 
   /** Called only after Core has invalidated the corresponding usable refs. */
   async clearBook(sourceId: string, bookId: string, manga: boolean = false): Promise<void> {
+    return this.observePhysicalOperation(() => this.clearBookOwned(sourceId, bookId, manga));
+  }
+
+  private async clearBookOwned(sourceId: string, bookId: string, manga: boolean = false): Promise<void> {
     this.assertNonBlank(sourceId, 'sourceId');
     this.assertNonBlank(bookId, 'bookId');
     const key = this.bookMutationKey(sourceId, bookId);
@@ -1716,6 +1890,10 @@ export class ReadingImageDiskCache {
   /** Core and the download coordinator revoke the exact text consumer first.
    * A durable chapter intent shares the existing book mutation serialization. */
   async clearChapter(sourceId: string, bookId: string, chapterIndex: number): Promise<void> {
+    return this.observePhysicalOperation(() => this.clearChapterOwned(sourceId, bookId, chapterIndex));
+  }
+
+  private async clearChapterOwned(sourceId: string, bookId: string, chapterIndex: number): Promise<void> {
     this.assertNonBlank(sourceId, 'sourceId'); this.assertNonBlank(bookId, 'bookId');
     if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) throw new Error('invalid chapterIndex');
     const key = this.bookMutationKey(sourceId, bookId);
@@ -1928,12 +2106,13 @@ export class ReadingImageDiskCache {
     key: string,
     operation: () => Promise<void>,
   ): Promise<void> {
+    if (this.restoreQuiescing) return Promise.reject(ReadingImageDiskCache.restoreRetirement());
     const previous = this.bookMutationTails.get(key) ?? Promise.resolve();
     const task = previous.catch((): void => {}).then(operation);
-    const settled = task.catch((): void => {});
-    this.bookMutationTails.set(key, settled);
+    void task.catch((): void => {});
+    this.bookMutationTails.set(key, task);
     return task.finally((): void => {
-      if (this.bookMutationTails.get(key) === settled) {
+      if (this.bookMutationTails.get(key) === task) {
         this.bookMutationTails.delete(key);
       }
     });
@@ -2070,10 +2249,7 @@ export class ReadingImageDiskCache {
       this.assertCurrent(isCurrent);
       await fileIo.rename(tmpPath, path);
     } catch (error) {
-      try {
-        await fileIo.unlink(tmpPath);
-      } catch (_) {
-      }
+      if (await fileIo.access(tmpPath)) await fileIo.unlink(tmpPath);
       if ((error as BusinessError).code === FILE_SYSTEM_NO_SPACE_ERROR) {
         throw new ReadingOfflineMaterializationError(
           'storage_full',
@@ -2148,7 +2324,7 @@ export class ReadingImageDiskCache {
     // recovery semantics, with the bounded full read dispatched by the SDK.
     if (manga) {
       this.assertCurrent(isCurrent);
-      const bytes = await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, isCurrent);
+      const bytes = await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, (): boolean => { this.assertCurrent(isCurrent); return true; });
       this.assertCurrent(isCurrent);
       return bytes;
     }
@@ -2164,7 +2340,8 @@ export class ReadingImageDiskCache {
   }
 
   private assertCurrent(isCurrent?: () => boolean): void {
-    if (isCurrent !== undefined && !isCurrent()) throw new Error('offline reading image operation was superseded');
+    if (this.restoreQuiescing || this.closed) throw ReadingImageDiskCache.restoreRetirement();
+    if (isCurrent !== undefined && !isCurrent()) throw ReadingImageDiskCache.restoreRetirement('offline reading image operation was superseded');
   }
 
   private assertResourceIdentity(identity: ReadingImageCacheIdentity): void {

@@ -11,6 +11,8 @@ const {readFileSync}=await import('node:fs');
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
 const {choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier}=await import('./lib/reader-choice-row-probe.mjs');
+const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
 const {readerControlAppearanceEndpoint}=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
 const {appearanceSelectMenuHeight}=await import('../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts');
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/features/${name}.ets`,import.meta.url),'utf8');
@@ -19,6 +21,7 @@ const library=selectedCase==='legacy-full-compatibility'?'':read('reading/Reader
 const parents={library:selectedCase==='legacy-full-compatibility'?'':read('reading/ReaderControlPanel'),full:selectedCase==='legacy-full-compatibility'?read('reading/ReaderAppearanceMotionStage'):''};
 const common=['chineseConversionIdentity','chineseConversionMode','onChineseConversionChange'];
 const libraryNames=[...common,'appThemeScheme','reduceMotion','motionProgress','interactionEnabled','onMotionChanged','onInputChanged',
+  'feedbackMounted','transientFeedback',
   'openSelect','selectClosing','selectIdentity','selectGeneration','selectAnchorX','selectAnchorY','onTemporaryLayerChange',
   'aboutToAppear','aboutToDisappear','selectOverlay','selectionActorIdentity','selectionCloseAction','conversionSelectionCommit','commitSelect','applySelect','selectOptions','selectValue','fullInput','dismissTemporaryLayer','requestSelectClose'];
 const fullNames=[...common,'appThemeScheme','reduceMotion','interactionEnabled','onInteractionEnabledChanged',
@@ -27,12 +30,19 @@ const fullNames=[...common,'appThemeScheme','reduceMotion','interactionEnabled',
   'aboutToAppear','aboutToDisappear','requestCloseSelect'];
 function harness(kind,parentSource=parents[kind],dispatch){
   const finishes=[],calls=[];
+  const {ReaderTransientFeedback}=transientFeedbackFixture();
+  const accessibility=pureModuleProbe(read('common/ReaderActionAccessibility'),'ReaderActionAccessibility.ets',
+    {AccessibilityRoleType:{BUTTON:'AccessibilityRoleType.BUTTON'}},['ReaderActionAccessibility','readerActionTouchRegion']);
+  const sizing=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts',import.meta.url),'utf8'),
+    'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']);
   const p=boundedSurfaceSdk();Object.assign(p.deps,{resolveReaderChoiceSpec,ReaderChoiceLabelModifier:compileReaderChoiceLabelModifier(),registerReaderFonts(){},
-    OPTION_H:36,SELECT_PAD:10,CHEVRON_GAP:8,CHEVRON_W:12,CHEVRON_H:8,SELECT_CHROME:40,
+    ...accessibility,...sizing,ReaderTransientFeedback,
     APPEARANCE_SELECT_MENU_WIDTH:104,APPEARANCE_SELECT_OPTION_HEIGHT:25,appearanceSelectMenuHeight,readerControlAppearanceEndpoint,
     readerPageTurnStyle:()=> 'slide',motionAnimateParam:(_id,onFinish)=>({onFinish}),
     uiContext:{getFont:()=>({}),animateTo:(param,action)=>{action();if(param.onFinish)finishes.push(param.onFinish);},
       getMeasureUtils:()=>({measureText:()=>90}),px2vp:n=>n}});
+  Object.assign(p.deps,selectedProductionValues(new URL('../entry/src/main/ets/features/common/ReaderSelectPanel.ets',import.meta.url),
+    ['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME'],p.deps));
   p.hooks.lifecycleChildren=true;
   for(const [name,source,names] of [['ReaderChoiceRow',choiceSource,boundedMembers(choiceSource)],
     ['ReaderSelectPanel',panel,boundedMembers(panel)],
@@ -52,6 +62,14 @@ function harness(kind,parentSource=parents[kind],dispatch){
   const row=(selector,label)=>[...selector.children.values()].find(x=>x instanceof p.deps.ReaderChoiceRow&&x.label===label);
   const click=(selector,label)=>{const r=row(selector,label);assert.ok(r,`actual shared row ${label}`);return [...r.nodes.values()].find(n=>n.onClick).onClick;};
   return{p,parent,leaf,calls,finishes,selectors,click,open};
+}
+function transientFeedbackFixture(){
+  const feedbackStorage=new Map();
+  const {ReaderTransientFeedback,READER_TRANSIENT_TOAST_STORAGE_KEY}=pureModuleProbe(
+    readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts',import.meta.url),'utf8'),
+    'ReaderTransientFeedback.ts',{AppStorage:{get:key=>feedbackStorage.get(key),setOrCreate:(key,value)=>feedbackStorage.set(key,value)}},
+    ['ReaderTransientFeedback','READER_TRANSIENT_TOAST_STORAGE_KEY']);
+  return {ReaderTransientFeedback,publishedFeedback:()=>feedbackStorage.get(READER_TRANSIENT_TOAST_STORAGE_KEY)};
 }
 let cases=0;
 for(const kind of selectedCase==='durable-recovery'?[]:selectedCase==='legacy-full-compatibility'?['full']:['library']){
@@ -88,41 +106,68 @@ for(const kind of selectedCase==='durable-recovery'?[]:selectedCase==='legacy-fu
 // Negative control: the old direct callback value + no live forwarding cannot
 // serve a retained child after an actor change. This is why identity is a Prop.
 if(selectedCase==='library-identity'){
-  const broken=parents.library.replace('this.onChineseConversionChange(mode, identity)','this.onChineseConversionChange(mode)');
-  const h=harness('library',broken);h.parent.updateStateVars({chineseConversionIdentity:'reader:2',chineseConversionMode:'none'});h.p.properties.flush();
-  h.click(h.selectors().at(-1),'繁转简')();assert.equal(h.calls[0].identity,undefined);cases++;
+  const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
+  const {ts,options}=installedEtsCompiler(),source=parents.library;
+  const tree=ts.createSourceFile('ReaderControlPanel.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  assert.deepEqual(tree.parseDiagnostics,[]);
+  const owner=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text==='ReaderControlPanel');
+  const method=owner?.members.find(n=>ts.isMethodDeclaration(n)&&n.name?.text==='appearanceContent');
+  assert.ok(method?.body);
+  const calls=[];
+  function visit(node){
+    if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&
+      node.expression.expression.kind===ts.SyntaxKind.ThisKeyword&&node.expression.name.text==='onChineseConversionChange')calls.push(node);
+    ts.forEachChild(node,visit);
+  }
+  visit(method.body);
+  assert.equal(calls.length,1,'one actual conversion forwarding callback');
+  const [call]=calls;
+  assert.equal(call.arguments.length,2);
+  const prefix=source.slice(0,call.getStart(tree)),tail=source.slice(call.end);
+  const target=call.expression.getText(tree),[mode,identity]=call.arguments.map(arg=>arg.getText(tree));
+  for(const [args,expected] of [[`${mode}, (\n${identity}\n)`,'reader:2'],[mode,undefined]]){
+    const h=harness('library',prefix+`${target}(${args})`+tail);
+    h.parent.updateStateVars({chineseConversionIdentity:'reader:2',chineseConversionMode:'none'});
+    h.p.properties.flush();
+    h.click(h.selectors().at(-1),'繁转简')();
+    assert.deepEqual(h.calls,[{mode:'t2s',identity:expected}]);
+    cases++;
+  }
 }
 if(selectedCase==='durable-recovery'){
-  const {fixture,compile,until,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
-  const {createRequire}=await import('node:module');
-  const {resolveEtsLoaderRoot}=await import('./lib/tool-environment.mjs');
-  console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durableFixtureToolEvidence()}));
+  const {fixture,until,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
+  console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));
+  let passed=false;
   try {
-  const f=await fixture(true),require=createRequire(import.meta.url);
-  const sdkPath=resolveEtsLoaderRoot();
-  const ts=require(`${sdkPath}/node_modules/typescript`),options=require(`${sdkPath}/lib/ets_checker.js`).compilerOptions;
-  const source=read('reading/LocalReadingExperience'),tree=ts.createSourceFile('LRE.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  const f=await fixture(true);
+  const capabilities=new Set((await f.readCoreIdentity()).data.capabilities);
+  f.runtime.supportsCoreCapability=capability=>capabilities.has(capability);
   const names=['chineseConversionIdentity','dispatchChineseConversionAction','chineseConversionAction','loadChineseConversionMode','changeChineseConversionMode'];
-  const klass=tree.statements.find(n=>n.members&&names.every(name=>n.members.some(m=>m.name?.getText(tree)===name)));
-  const body=names.map(name=>klass.members.find(m=>m.name?.getText(tree)===name).getText(tree)).join('\n');
-  const Reader=compile('features/reading/LocalReadingExperience.ets','Reader',{},true,`export class Reader{${body}}`);
-  const Gateway=compile('features/reading/ReaderChineseConversionGateway.ts','ReaderChineseConversionGateway',
-    {RulesMutationOwner:f.Owner,RulesManagementGateway:f.Gateway,ReaderRuntimeOwner:f.Runtime},true);
+  const Reader=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',names);
+  const {ReaderChineseConversionGateway}=pureModuleProbe(
+    readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderChineseConversionGateway.ts',import.meta.url),'utf8'),
+    'ReaderChineseConversionGateway.ts',{RulesMutationOwner:f.Owner,RulesManagementGateway:f.Gateway,ReaderRuntimeOwner:f.Runtime},['ReaderChineseConversionGateway']);
+  const {ReaderTransientFeedback,publishedFeedback}=transientFeedbackFixture();
   const r=new Reader();Object.assign(r,{mounted:true,lifecycleToken:1,sourceId:'source',bookId:'book',chineseConversionOperationId:'',
-    chineseConversionMode:'none',chineseConversionLoaded:false,chineseConversionMutationGeneration:0,chineseConversionGateway:new Gateway(f.runtime),
+    chineseConversionMode:'none',chineseConversionLoaded:false,chineseConversionMutationGeneration:0,chineseConversionGateway:new ReaderChineseConversionGateway(f.runtime),
     isSessionActive:t=>r.mounted&&t===r.lifecycleToken,persistBeforeContentMutation:async()=>()=>true,
-    quickSearchPublication:{cancel(){}},publishQuickSearchState(){},phase:'ready',chapter:undefined,notices:[],
-    getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>r.notices.push(message)})})});
+    quickSearchPublication:{cancel(){}},publishQuickSearchState(){},phase:'ready',chapter:undefined,
+    appForeground:true,windowChromeActive:true,transientFeedback:new ReaderTransientFeedback(),getUIContext:()=>({})});
   const h=harness('library',parents.library,(mode,identity)=>r.dispatchChineseConversionAction(mode,identity));
   h.parent.updateStateVars({chineseConversionIdentity:r.chineseConversionIdentity(),chineseConversionMode:r.chineseConversionMode});h.p.properties.flush();
   const original=h.selectors().at(-1),originalClick=h.click(original,'繁转简');f.options.afterMethod='rules.mutation.apply';
-  originalClick();await until(()=>r.notices.length===1);const fixed=JSON.parse(f.disk());assert.equal(fixed.mutation.params.mode,'t2s');
+  originalClick();await until(()=>publishedFeedback()?.visible===true);
+  assert.match(publishedFeedback().message,/原操作尚未确认/);
+  const fixed=JSON.parse(f.disk());assert.equal(fixed.mutation.params.mode,'t2s');
   h.parent.updateStateVars({chineseConversionIdentity:r.chineseConversionIdentity(),chineseConversionMode:r.chineseConversionMode});h.p.properties.flush();
   const before=f.writes().length;originalClick();await new Promise(q=>setTimeout(q,20));assert.equal(f.writes().length,before,'old physical callback cannot replay unknown write');
   h.click(h.selectors().at(-1),'简转繁')();await until(()=>r.chineseConversionLoaded);
   assert.equal(r.chineseConversionMode,'t2s','actual SDK choice recovers original fixed mode, not replacement draft');assert.equal(f.writes().length,1);
-  assert.equal(f.disk(),'');cases++;
-  } finally { await cleanupDurableFixtures(); }
+  assert.equal(f.disk(),'');cases++;passed=true;
+  } finally {
+    const cleanup=await cleanupDurableFixtures({retain:!passed});
+    if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));
+  }
 }
 console.log(`PASS ${selectedCase}: ${cases} actual SDK parent→retained appearance leaf→shared selector/choice physical callback journeys; lifecycle/identity guards and current Props preserved. Native removal/layout remain separate target evidence.`);
 

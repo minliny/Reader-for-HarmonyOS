@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK } from '../common/ReaderTypography';
 import { TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -212,7 +213,8 @@ export struct ReaderControlSettingsContent {
 
   @Builder
   private segmentRow(group: ReaderControlSettingsGroup, row: number) {
-    Text(this.groupLabel(group)).width(this.label(row).width).height(this.label(row).height)
+    Text(this.groupLabel(group)).width(this.label(row).width)
+      .constraintSize({ minHeight: this.label(row).height }).maxFontScale(1.3)
       .fontFamily(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontFamily).fontWeight(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontWeight)
       .fontSize(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p())).lineHeight(this.label(row).height)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)
@@ -289,6 +291,8 @@ export struct ReaderControlSettingsContent {
     .opacity(this.child('row', index).opacity * (isReaderSettingsToggleAvailable(key) ? 1 : .55))
     .enabled(this.interactionEnabled && this.p() > 0 && isReaderSettingsToggleAvailable(key))
     .accessibilityText(this.toggleAccessibilityText(label, key))
+      .responseRegion( readerActionTouchRegion(this.child('row', index).width, this.child('row', index).height))
+      .attributeModifier(new ReaderActionAccessibility(this.toggleAccessibilityText(label, key), this.interactionEnabled && this.p() > 0 && isReaderSettingsToggleAvailable(key), this.toggleValue(key)))
     .onClick((): void => this.handleToggle(key));
   }
 
@@ -304,6 +308,8 @@ export struct ReaderControlSettingsContent {
     .position({ x: this.child('row', 0).x, y: this.child('row', 0).y })
     .opacity(this.child('row', 0).opacity)
     .accessibilityText(`文字两端对齐，${this.justifyText ? '已开启' : '已关闭'}，与阅读样式同步`)
+      .responseRegion( readerActionTouchRegion(this.child('row', 0).width, this.child('row', 0).height))
+      .attributeModifier(new ReaderActionAccessibility(`文字两端对齐，${this.justifyText ? '已开启' : '已关闭'}，与阅读样式同步`, this.interactionEnabled && this.p() > 0, this.justifyText))
     .onClick((): void => this.handleJustify());
   }
 

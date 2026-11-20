@@ -69,6 +69,7 @@ export interface ReadingGatewayRuntime {
   readonly allowSourceContentCorrection?: boolean;
   /** Runtime/content lifetime for already displayed position persistence. */
   captureReadingContentValidity?(sourceId: string, bookId: string): () => boolean;
+  waitForReadingContentIdle?(sourceId: string, bookId: string): Promise<void>;
   /** Accepted explicit downloads outlive page/catalog metadata reads, while
    * source/content/restore mutations revoke their original resource epoch. */
   captureMangaImageContentValidity?(sourceId: string, bookId: string): () => boolean;

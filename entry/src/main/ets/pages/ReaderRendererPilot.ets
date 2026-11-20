@@ -8,6 +8,7 @@ import { ArkWebResourceDiagnostic } from '../app/ArkWebResourceDiagnostic';
 import { ReaderParagraphDiagnostic } from './ReaderParagraphDiagnostic';
 import { ReaderTextNodeDiagnostic } from './ReaderTextNodeDiagnostic';
 import { ReaderMangaPlatformDiagnostic } from './ReaderMangaPlatformDiagnostic';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 
 @Entry
 @Component
@@ -23,6 +24,12 @@ struct ReaderRendererPilot {
 
   aboutToDisappear(): void {
     this.resourceDiagnostic.dispose();
+  }
+
+  private openPageStructureVerification(): void {
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug') {
+      router.pushUrl({ url: 'pages/ReaderPageStructureVerification' });
+    }
   }
 
   private async runResourceDiagnostic(scenario: 'early' | 'cancel'): Promise<void> {
@@ -67,6 +74,10 @@ struct ReaderRendererPilot {
           ArkWebExecutionHost({ diagnosticResourceProvider: this.resourceDiagnostic.provide });
         }.width('100%').layoutWeight(1);
       } else {
+      if (DEBUG === true && BUILD_MODE_NAME === 'debug') {
+        Button('页面结构 · 原生组件夹具').id('reader-page-structure-open')
+          .onClick((): void => this.openPageStructureVerification());
+      }
       Button('漫画平台图像诊断').id('reader-manga-probe-open').onClick((): void => { this.mangaMode = true; });
       Button('原生 Text 同节点诊断').id('reader-textnode-open').onClick((): void => {
         this.textNodeMode = true;

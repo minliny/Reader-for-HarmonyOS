@@ -18,47 +18,47 @@ const selected = selectContractCases({
 for (const id of selected) {
   const { default: assert } = await import('node:assert/strict');
   const { readFileSync } = await import('node:fs');
-  const { stripTypeScriptTypes } = await import('node:module');
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
   const { virtualFilePath } = await import('./lib/tool-environment.mjs');
+  const { createReaderComponentProbe } = await import('./lib/reader-component-probe.mjs');
+  const { builderComponentMembers } = await import('./lib/ets-builder-probe.mjs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
   const { ts, options, require, root } = installedEtsCompiler();
-  const compiler = require(`${root}/lib/process_component_class.js`);
-  const utils = require(`${root}/lib/utils.js`);
-  const main = require(`${root}/main.js`);
-  const syntax = require(`${root}/lib/validate_ui_syntax.js`);
-  const ui = require(`${root}/lib/process_ui_syntax.js`);
-  const componentMap = require(`${root}/lib/component_map.js`);
+  const componentMap = require(root + '/lib/component_map.js');
   const parse = source => ts.createSourceFile(virtualFilePath('SearchSurfaceBindingProbe.ets'), source,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  function sdkProbe(source, names, dependencies, hooks = {}) {
+    const saved = new Map(componentMap.ID_ATTRS); componentMap.ID_ATTRS.clear();
+    try { return createReaderComponentProbe(source, names, dependencies, hooks); }
+    finally { componentMap.ID_ATTRS.clear(); for (const [key,value] of saved) componentMap.ID_ATTRS.set(key,value); }
+  }
+  function editSource(source, select) {
+    const tree = parse(source); assert.equal(tree.parseDiagnostics.length, 0);
+    const edits = select(tree); assert.ok(edits.length > 0, 'counterexample changes actual selected source');
+    let result = source, end = source.length;
+    for (const edit of edits.sort((a,b) => b.start-a.start)) { assert.ok(edit.end <= end, 'non-overlapping AST edits'); result = result.slice(0,edit.start)+edit.text+result.slice(edit.end); end=edit.start; }
+    return result;
+  }
+  function editMembers(body, select) {
+    const prefix = '@Component struct BindingEdits {\n', suffix = '\nbuild() { Column() {} }\n}';
+    const result = editSource(prefix+body+suffix, select);
+    assert.ok(result.startsWith(prefix)&&result.endsWith(suffix)); return result.slice(prefix.length,-suffix.length);
+  }
+  function calls(tree, name, predicate = () => true) {
+    const nodes = []; const visit = node => { if (ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.name.text===name&&predicate(node)) nodes.push(node); ts.forEachChild(node,visit); }; visit(tree); return nodes;
+  }
   if (id === 'measured-shadow') {
     const surfaceTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8'));
     const surface = surfaceTree.statements.find(node => node.name?.text === 'ReaderLibrarySearchSurface');
     const method = name => surface.members.find(node => node.name?.getText(surfaceTree) === name).getText(surfaceTree);
     const header = method('header');
-    const raisedTree = parse(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderRaisedSurface.ets', import.meta.url), 'utf8'));
-    const raised = raisedTree.statements.find(node => node.name?.text === 'ReaderRaisedSurface');
-    const raisedFields = raised.members.filter(ts.isPropertyDeclaration);
-    syntax.componentCollection.customComponents.add('ReaderRaisedSurface');
-    syntax.propertyCollection.set('ReaderRaisedSurface', new Set(raisedFields.map(node => node.name.getText(raisedTree))));
-    syntax.regularCollection.set('ReaderRaisedSurface', new Set(raisedFields.filter(node => ts.getAllDecorators(node).length === 0)
-      .map(node => node.name.getText(raisedTree))));
-    syntax.propCollection.set('ReaderRaisedSurface', new Set(raisedFields.filter(node => ts.getAllDecorators(node).some(tag =>
-      tag.expression.getText(raisedTree) === 'Prop')).map(node => node.name.getText(raisedTree))));
-    const historyTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ReaderSearchHistoryPanel.ets', import.meta.url), 'utf8'));
-    const history = historyTree.statements.find(node => node.name?.text === 'ReaderSearchHistoryPanel');
-    const historyFields = history.members.filter(ts.isPropertyDeclaration);
-    syntax.componentCollection.customComponents.add('ReaderSearchHistoryPanel');
-    syntax.propertyCollection.set('ReaderSearchHistoryPanel', new Set(historyFields.map(node => node.name.getText(historyTree))));
-    syntax.propCollection.set('ReaderSearchHistoryPanel', new Set(historyFields.filter(node => ts.getAllDecorators(node).some(tag =>
-      tag.expression.getText(historyTree) === 'Prop')).map(node => node.name.getText(historyTree))));
-    syntax.regularCollection.set('ReaderSearchHistoryPanel', new Set(historyFields.filter(node => ts.getAllDecorators(node).length === 0)
-      .map(node => node.name.getText(historyTree))));
-    componentMap.CUSTOM_BUILDER_METHOD.add('header');
-    componentMap.CUSTOM_BUILDER_METHOD.add('bar');
-    main.partialUpdateConfig.partialUpdateMode = true;
+    const headerChildSources = {
+      ReaderRaisedSurface: readFileSync(new URL('../entry/src/main/ets/features/common/ReaderRaisedSurface.ets', import.meta.url), 'utf8'),
+      ReaderSearchHistoryPanel: readFileSync(new URL('../entry/src/main/ets/features/search/ReaderSearchHistoryPanel.ets', import.meta.url), 'utf8'),
+    };
     const areaTree = parse(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderPageShell.ts', import.meta.url), 'utf8'));
     const areaNode = areaTree.statements.find(node => node.name?.text === 'readerPageAreaLength');
-    const areaLength = new Function(`${stripTypeScriptTypes(areaNode.getText(areaTree).replace(/^export\s+/, ''))}; return readerPageAreaLength;`)();
+    const { readerPageAreaLength: areaLength } = pureModuleProbe(areaNode.getText(areaTree), 'ReaderPageAreaLength.ts', {}, ['readerPageAreaLength']);
     function compileHeader(builder) {
       const fixture = parse(`@Component struct MeasuredHeaderProbe {
         ${builder}
@@ -71,18 +71,6 @@ for (const id of selected) {
         @Builder private bar() {}
         build() { Stack() { this.header(); } }
       }`);
-      utils.storedFileInfo.setCurrentArkTsFile();
-      ui.transformLog.sourceFile = fixture;
-      const diagnostics = [];
-      let emittedNode;
-      const transformed = ts.transform(fixture, [context => file => {
-        ui.contextGlobal = context;
-        emittedNode = compiler.processComponentClass(file.statements[0], context, diagnostics, false);
-        return file;
-      }]);
-      transformed.dispose();
-      assert.deepEqual(diagnostics, [], 'measured production header lowers with the actual SDK');
-      const emitted = ts.createPrinter().printNode(ts.EmitHint.Unspecified, emittedNode, fixture);
       const panels = [];
       class ProbeView {
         constructor() { this.observers = []; this.children = new Map(); }
@@ -102,12 +90,12 @@ for (const id of selected) {
       const Column = attributes({ create() { panels.push({}); }, onAreaChange(callback) { panels.at(-1).onAreaChange = callback; } });
       const empty = attributes({});
       const metrics = { windowRect: { width: 1280 / 3.5 }, densityPixels: 3.5 };
-      const Owner = new Function('ViewPU', 'ReaderRaisedSurface', 'Stack', 'Column', 'If', '__Common__',
-        'Alignment', 'HitTestMode', 'Color', 'readerSurfaceElevation', 'readerHeaderVeilMaterial',
-        'readerHeaderVeilBorder', 'readerAppColor', 'readerPageAreaLength', 'ReaderWindowCoordinator',
-        `${stripTypeScriptTypes(emitted)}; return MeasuredHeaderProbe;`)(ProbeView, Shadow, empty, Column, empty, empty,
-        { TopStart: 0 }, { Default: 0 }, { Transparent: 0 }, () => ({}), () => ({}), () => '', () => '', areaLength,
-        { metrics: () => metrics });
+      const { Component: Owner } = sdkProbe(fixture.text, builderComponentMembers(fixture.text), {
+        ViewPU: ProbeView, ReaderRaisedSurface: Shadow, Stack: empty, Column, If: empty, __Common__: empty,
+        Alignment: { TopStart: 0 }, HitTestMode: { Default: 0 }, Color: { Transparent: 0 },
+        readerSurfaceElevation: () => ({}), readerHeaderVeilMaterial: () => ({}), readerHeaderVeilBorder: () => '',
+        readerAppColor: () => '', readerPageAreaLength: areaLength, ReaderWindowCoordinator: { metrics: () => metrics },
+      }, { childSources: headerChildSources, createGlobals: () => ({}) });
       return { Owner, panels, metrics };
     }
     function checkMeasured(builder) {
@@ -179,12 +167,15 @@ for (const id of selected) {
       assert.deepEqual([owner.headerSurfaceWidth, owner.headerSurfaceHeight], [568, 71], 'unmounted callback cannot mutate geometry');
     }
     checkMeasured(header);
-    const missing = header.replace(/\s*\.onAreaChange\(this\.headerSurfaceAreaChange\(\)\)/, '');
-    assert.notEqual(missing, header, 'negative control removes the painted panel binding');
+    const equivalentHeader = editMembers(header, tree => {
+      const edits=[]; const visit=node=>{ if(ts.isPropertyAssignment(node)&&['surfaceWidth','surfaceHeight'].includes(node.name.getText(tree))) edits.push({start:node.initializer.getStart(tree),end:node.initializer.end,text:'('+node.initializer.getText(tree)+')'}); ts.forEachChild(node,visit); };visit(tree);return edits;
+    });
+    checkMeasured(equivalentHeader);
+    const missing = editMembers(header, tree => calls(tree,'onAreaChange',node=>node.arguments.some(arg=>ts.isCallExpression(arg)&&ts.isPropertyAccessExpression(arg.expression)&&arg.expression.name.text==='headerSurfaceAreaChange')).map(node=>({start:node.expression.expression.end,end:node.end,text:''})));
     assert.throws(() => checkMeasured(missing), /painted panel must expose/, 'missing measurement is rejected');
-    const formula = header.replace('surfaceWidth: this.headerSurfaceWidth', 'surfaceWidth: this.cardContentWidth() + 2 * this.spec.borderWidth')
-      .replace('surfaceHeight: this.headerSurfaceHeight', 'surfaceHeight: this.barHeight() + 2 * this.spec.borderWidth');
-    assert.notEqual(formula, header, 'negative control reinstates the approximate geometry');
+    const formula = editMembers(header, tree => {
+      const edits=[]; const visit=node=>{if(ts.isPropertyAssignment(node)&&['surfaceWidth','surfaceHeight'].includes(node.name.getText(tree)))edits.push({start:node.initializer.getStart(tree),end:node.initializer.end,text:node.name.getText(tree)==='surfaceWidth'?'this.cardContentWidth() + 2 * this.spec.borderWidth':'this.barHeight() + 2 * this.spec.borderWidth'});ts.forEachChild(node,visit);};visit(tree);return edits;
+    });
     assert.throws(() => checkMeasured(formula), /actual fractional-density/, 'the installed one-pixel mismatch is rejected');
     recordContractCasePass(id);
     continue;
@@ -194,23 +185,7 @@ for (const id of selected) {
   const index = tree.statements.find(node => node.name?.text === 'Index');
   const names = ['librarySearchSurface', 'isCurrentSearchPresentation', 'isCurrentBookshelfPresentation'];
   const methods = names.map(name => index.members.find(node => node.name?.getText(tree) === name).getText(tree)).join('\n');
-  const childTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8'));
-  const child = childTree.statements.find(node => node.name?.text === 'ReaderLibrarySearchSurface');
-  const fields = child.members.filter(ts.isPropertyDeclaration);
-  const childName = child.name.text;
-  syntax.componentCollection.customComponents.add(childName);
-  syntax.propertyCollection.set(childName, new Set(fields.map(node => node.name.getText(childTree))));
-  syntax.regularCollection.set(childName, new Set(fields.filter(node => ts.getAllDecorators(node).length === 0)
-    .map(node => node.name.getText(childTree))));
-  for (const [decorator, collection] of [['BuilderParam', syntax.builderParamObjectCollection],
-    ['Prop', syntax.propCollection], ['ObjectLink', syntax.objectLinkCollection]]) {
-    collection.set(childName, new Set(fields.filter(node => ts.getAllDecorators(node).some(tag =>
-      tag.expression.getText(childTree) === decorator)).map(node => node.name.getText(childTree))));
-  }
-  componentMap.CUSTOM_BUILDER_METHOD.add('librarySearchSurface');
-  componentMap.CUSTOM_BUILDER_METHOD.add('librarySearchResults');
-  main.partialUpdateConfig.partialUpdateMode = true;
-
+  const childSource = readFileSync(new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8');
   class View {
     constructor() { this.observers = []; this.children = new Map(); }
     finalizeConstruction() {}
@@ -226,27 +201,15 @@ for (const id of selected) {
     constructor(parent, params, storage, element) { this.params = params; parent.children.set(element, this); }
   }
   function compile(body) {
-    const fixture = parse(`@Component struct SearchSurfaceBindingProbe { ${body}\nbuild() { Column() {} } }`);
-    utils.storedFileInfo.setCurrentArkTsFile();
-    ui.transformLog.sourceFile = fixture;
-    const diagnostics = [];
-    let emittedNode;
-    const transformed = ts.transform(fixture, [context => file => {
-      ui.contextGlobal = context;
-      emittedNode = compiler.processComponentClass(file.statements[0], context, diagnostics, false);
-      return file;
-    }]);
-    transformed.dispose();
-    assert.deepEqual(diagnostics, [], 'actual persistent surface Builder lowers without diagnostics');
-    const emitted = ts.createPrinter().printNode(ts.EmitHint.Unspecified, emittedNode, fixture);
-    const commonCalls = [];
-    const Owner = new Function('ViewPU', 'ReaderLibrarySearchSurface', '__Common__', 'HitTestMode',
-      `${stripTypeScriptTypes(emitted)}; return SearchSurfaceBindingProbe;`)(View, Surface,
-      { create() { commonCalls.push({}); }, enabled(value) { commonCalls.at(-1).enabled=value; },
+    const source = '@Component struct SearchSurfaceBindingProbe { ' + body + '\n@Builder private librarySearchResults() {}\nbuild() { Column() {} } }';
+    const commonCalls=[];
+    const { Component: Owner } = sdkProbe(source, builderComponentMembers(source), {
+      ViewPU: View, ReaderLibrarySearchSurface: Surface,
+      __Common__: { create() { commonCalls.push({}); }, enabled(value) { commonCalls.at(-1).enabled=value; },
         hitTestBehavior(value) { commonCalls.at(-1).hitTestBehavior=value; }, pop() {} },
-      { Transparent: 'HitTestMode.Transparent' });
-    Owner.commonCalls = commonCalls;
-    return Owner;
+      HitTestMode: { Transparent: 'HitTestMode.Transparent' },
+    }, { childSources: { ReaderLibrarySearchSurface: childSource }, createGlobals: () => ({}) });
+    Owner.commonCalls=commonCalls;return Owner;
   }
   function fixture(Owner, oldParameters = false) {
     const runtime = {}, host = {};
@@ -276,10 +239,57 @@ for (const id of selected) {
       assert.equal(value.owner.children.size, 1, 'route updates retain the same search actor');
     }
     checkCommon(compile(methods));
-    const withoutHitTest=methods.replace(/\s*\.hitTestBehavior\(HitTestMode\.Transparent\)/, '');
+    const withoutHitTest=editMembers(methods,tree=>calls(tree,'hitTestBehavior',node=>node.arguments.some(arg=>ts.isPropertyAccessExpression(arg)&&arg.name.text==='Transparent')).map(node=>({start:node.expression.expression.end,end:node.end,text:''})));
     assert.notEqual(withoutHitTest,methods,'negative control removes only the explicit Common hit-test policy');
     assert.throws(()=>checkCommon(compile(withoutHitTest)),/generated enabled Common host/,
       'the installed regression has an implicit Default Common host and is rejected');
+    // Actual Surface SDK build and completeTransition. The local branch port
+    // models native removal by retiring only observers/nodes created by that If.
+    const surfaceSource=readFileSync(new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets',import.meta.url),'utf8');
+    function checkResultsLifetime(definition) {
+      class HeaderPort { constructor(parent,params,_storage,id){this.owner=parent;this.params=params;this.id=id;} initialRender(){} }
+      const childSources = { ReaderFixedHeaderHost: readFileSync(new URL('../entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets', import.meta.url),'utf8') };
+      const probe=sdkProbe(definition,['results','build','resultsInteractive','inputInteractive','completeTransition'],
+        {ReaderFixedHeaderHost:HeaderPort,ReaderHeaderFrameStyle:class{},bookshelfHeaderSpec:()=>({topInset:0}),readerAppColor:()=>''},
+        {childSources});
+      const o=probe.owner,branches=new Map();let activeObserver=-1,slotBuilds=0;
+      o.replay=()=>{for(let id=0;id<o.observers.length;id++)o.runObserver(id,false);};
+      const nativeObserve=o.observeComponentCreation2.bind(o);
+      o.observeComponentCreation2=(callback,component)=>nativeObserve((id,initial)=>{activeObserver=id;callback(id,initial);},component);
+      o.ifElseBranchUpdateFunction=(branch,generator)=>{
+        const key=activeObserver,old=branches.get(key);if(old?.branch===branch)return;
+        if(old)for(const id of old.ids){o.nodes.delete(id);o.observers[id]=()=>{};}
+        const first=o.observers.length;generator();branches.set(key,{branch,ids:Array.from({length:o.observers.length-first},(_,i)=>first+i)});
+      };
+      Object.assign(o,{mode:'results',searchMounted:true,model:{interactive:true,sourceRecoveryVisible:false},
+        generation:1,transitionKind:'none',activeIdentity:-1,identity:1,activeNavigation:1,navigationGeneration:1,activeMounting:1,mounting:1,
+        resultsProgress:()=>1,surfaceProgress:()=>1,historyProgress:()=>1,surfaceHeight:()=>700,contentHeight:()=>640,headerBottom:60,
+        resultClip:()=>undefined,scrimProgress:()=>0,backAction:()=>()=>{},horizontalInset:()=>0,
+        captureHeader(){},header(){},surfaceAreaChanged(){},results(){slotBuilds++;},scheduleInputFocus(){},onSettled(){}});
+      o.initialRender();assert.equal(slotBuilds,1,'mounted results slot constructed');
+      const enabledNodes=()=>[...o.nodes.values()].filter(n=>Object.hasOwn(n,'enabled'));
+      assert.equal(enabledNodes().length,2,'content and host both own hard admission');
+      assert.ok(enabledNodes().every(n=>n.enabled===true));
+      o.mode='input';o.replay();assert.ok(enabledNodes().every(n=>n.enabled===false),'history input cannot interact with retained results');
+      o.model.sourceRecoveryVisible=true;o.replay();assert.ok(enabledNodes().every(n=>n.enabled===true),'input recovery retains its established interactive path');
+      o.model.interactive=false;o.replay();assert.ok(enabledNodes().every(n=>n.enabled===false));
+      o.model.interactive=true;o.model.sourceRecoveryVisible=false;o.mode='idle';o.transitionKind='close';o.replay();
+      assert.equal(slotBuilds,1,'closing animation retains original result slot and scroll owner');
+      assert.ok(enabledNodes().every(n=>n.enabled===false),'closing idle cannot receive hits');
+      o.completeTransition();o.replay();
+      assert.equal(o.searchMounted,false);assert.equal(enabledNodes().length,1,'settled idle removes native result content branch');
+      const builds=slotBuilds;o.replay();assert.equal(slotBuilds,builds,'settled idle does not reconstruct results');
+      o.mode='results';o.searchMounted=true;o.replay();assert.equal(slotBuilds,builds+1,'reopening reconstructs result slot');
+      assert.ok(enabledNodes().every(n=>n.enabled===true),'reopened results recover interaction');
+    }
+    checkResultsLifetime(surfaceSource);
+    const oldContent=editSource(surfaceSource,tree=>{
+      const edits=[];const visit=node=>{if(ts.isIfStatement(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.expression.kind===ts.SyntaxKind.ThisKeyword&&node.expression.name.text==='searchMounted'&&ts.isBlock(node.thenStatement))edits.push({start:node.getStart(tree),end:node.end,text:node.thenStatement.statements.map(statement=>statement.getText(tree)).join('\n')});ts.forEachChild(node,visit);};const component=tree.statements.find(node=>node.name?.text==='ReaderLibrarySearchSurface');const build=component.members.find(node=>node.name?.getText(tree)==='build');assert.ok(build);visit(build);return edits;
+    });
+    assert.notEqual(oldContent,surfaceSource);
+    assert.throws(()=>checkResultsLifetime(oldContent),/settled idle removes native result content branch/,'old unconditional slot fails retirement');
+    const noAdmission=editSource(surfaceSource,tree=>calls(tree,'enabled',node=>node.arguments.some(arg=>ts.isCallExpression(arg)&&ts.isPropertyAccessExpression(arg.expression)&&arg.expression.name.text==='resultsInteractive')).map(node=>({start:node.expression.expression.end,end:node.end,text:''})));
+    assert.throws(()=>checkResultsLifetime(noAdmission),/content and host both own hard admission/,'missing hard enabled guards rejected');
     recordContractCasePass(id);
     continue;
   }
@@ -302,13 +312,13 @@ for (const id of selected) {
   callbacks.onBack(6, 9, 5);
   assert.equal(live.owner.backCount, 1, 'old callback cannot switch to a replacement search host');
 
-  const previous = methods
-    .replace('librarySearchSurface(owner: ReaderRuntimeOwner | undefined, host: SearchHost)',
-      'librarySearchSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number, host: SearchHost, identity: number, moreIdentity: string)')
-    .replace('identity: this.librarySearchIdentity,', 'identity,')
-    .replace('navigationGeneration: this.navigationGeneration, mounting: this.detailShelfAdmissionMount,',
-      'navigationGeneration: generation, mounting,')
-    .replace('moreIdentity: this.shelfMoreIdentity,', 'moreIdentity,');
+  const previous = editMembers(methods,tree=>{
+    const component=tree.statements.find(node=>node.members),method=component.members.find(node=>node.name?.getText(tree)==='librarySearchSurface');
+    assert.equal(method.parameters.length,2);
+    const edits=[{start:method.parameters[0].getStart(tree),end:method.parameters.at(-1).end,text:'generation: number, '+method.parameters[0].getText(tree)+', mounting: number, '+method.parameters[1].getText(tree)+', identity: number, moreIdentity: string'}];
+    const replacements={identity:'identity',navigationGeneration:'generation',mounting:'mounting',moreIdentity:'moreIdentity'};
+    const visit=node=>{if((ts.isCallExpression(node)||ts.isEtsComponentExpression?.(node))&&node.expression?.getText(tree)==='ReaderLibrarySearchSurface')for(const property of node.arguments[0].properties){const key=property.name?.getText(tree);if(Object.hasOwn(replacements,key))edits.push({start:property.initializer.getStart(tree),end:property.initializer.end,text:replacements[key]});}ts.forEachChild(node,visit);};visit(method);assert.equal(edits.length,5);return edits;
+  });
   assert.notEqual(previous, methods, 'negative control reinstates the old captured parameters');
   const old = fixture(compile(previous), true);
   Object.assign(old.owner, { navigationGeneration: 9, detailShelfAdmissionMount: 5,

@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "status": "INACTIVE_RECOVERABLE_CONTENT_ARCHIVE",
+  "policy": "Logical paths are inert references. sourceSha256/sourceBytes describe exact payload; pointerSha256 describes the current reference. Existing source provenance is retained in each original manifest. --export recreates original bytes in a new directory only.",
+  "objects": {
+    "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee": {
+      "path": "docs/history/worktrees/objects/026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee.txt",
+      "bytes": 2801
+    },
+    "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1": {
+      "path": "docs/history/worktrees/objects/1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1.txt",
+      "bytes": 2527
+    },
+    "1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f": {
+      "path": "docs/history/worktrees/objects/1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f.txt",
+      "bytes": 20208
+    },
+    "4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148": {
+      "path": "docs/history/worktrees/objects/4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148.txt",
+      "bytes": 9416
+    },
+    "694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64": {
+      "path": "docs/history/worktrees/objects/694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64.txt",
+      "bytes": 295
+    },
+    "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a": {
+      "path": "docs/history/worktrees/objects/71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a.txt",
+      "bytes": 5503
+    },
+    "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa": {
+      "path": "docs/history/worktrees/objects/8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa.txt",
+      "bytes": 2373
+    },
+    "af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed": {
+      "path": "docs/history/worktrees/objects/af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed.txt",
+      "bytes": 21368
+    },
+    "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513": {
+      "path": "docs/history/worktrees/objects/e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513.txt",
+      "bytes": 1510
+    },
+    "c731bd9700082c6774dba21a99f9c96644fbc75774eb7116af4914dd8ba69e1d": {
+      "path": "docs/history/worktrees/objects/c731bd9700082c6774dba21a99f9c96644fbc75774eb7116af4914dd8ba69e1d.txt",
+      "bytes": 41736
+    },
+    "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897": {
+      "path": "docs/history/worktrees/objects/0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897.txt",
+      "bytes": 101068
+    },
+    "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba": {
+      "path": "docs/history/worktrees/objects/ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba.txt",
+      "bytes": 24844
+    },
+    "0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5": {
+      "path": "docs/history/worktrees/objects/0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5.txt",
+      "bytes": 335378
+    },
+    "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448": {
+      "path": "docs/history/worktrees/objects/f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448.txt",
+      "bytes": 104797
+    }
+  },
+  "aliases": {
+    "docs/history/worktrees/phase2-dialog-20261002/docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md": {
+      "sourceSha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee",
+      "sourceBytes": 2801,
+      "contentObject": "docs/history/worktrees/objects/026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee.txt",
+      "pointerSha256": "4079adcd04eca26748395e1f826e6b2dbd871a7bef6380b56a2d707d2834ec9f"
+    },
+    "docs/history/worktrees/phase2-dialog-schema34-20261002/docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md": {
+      "sourceSha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee",
+      "sourceBytes": 2801,
+      "contentObject": "docs/history/worktrees/objects/026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee.txt",
+      "pointerSha256": "4079adcd04eca26748395e1f826e6b2dbd871a7bef6380b56a2d707d2834ec9f"
+    },
+    "docs/history/worktrees/manga-directory-rules-20261007/docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md": {
+      "sourceSha256": "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1",
+      "sourceBytes": 2527,
+      "contentObject": "docs/history/worktrees/objects/1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1.txt",
+      "pointerSha256": "898d1dd97018a07ecfa71fcd61dffbefadf77afda54b1bdd8a3a0a8afb744c71"
+    },
+    "docs/history/worktrees/manga-three-agent-20261009/docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md": {
+      "sourceSha256": "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1",
+      "sourceBytes": 2527,
+      "contentObject": "docs/history/worktrees/objects/1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1.txt",
+      "pointerSha256": "898d1dd97018a07ecfa71fcd61dffbefadf77afda54b1bdd8a3a0a8afb744c71"
+    },
+    "docs/history/worktrees/manga-directory-rules-20261007/tools/fixtures/icon-button-family/approved-search-layout-20261008.json": {
+      "sourceSha256": "1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f",
+      "sourceBytes": 20208,
+      "contentObject": "docs/history/worktrees/objects/1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f.txt",
+      "pointerSha256": "bc60879d2a5c0778ef35cbb3a75197cf4e7822a831a8a4f68bae0bb205d11d56"
+    },
+    "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/icon-button-family/approved-search-layout-20261008.json": {
+      "sourceSha256": "1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f",
+      "sourceBytes": 20208,
+      "contentObject": "docs/history/worktrees/objects/1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f.txt",
+      "pointerSha256": "bc60879d2a5c0778ef35cbb3a75197cf4e7822a831a8a4f68bae0bb205d11d56"
+    },
+    "docs/history/worktrees/manga-directory-rules-20261007/tools/test-book-detail-intro-measurement-sdk.mjs": {
+      "sourceSha256": "4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148",
+      "sourceBytes": 9416,
+      "contentObject": "docs/history/worktrees/objects/4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148.txt",
+      "pointerSha256": "81eb49262d041070bfc996cf308dc8163deb8bb570ea6ce321668aeeac5f26c6"
+    },
+    "docs/history/worktrees/manga-three-agent-20261009/tools/test-book-detail-intro-measurement-sdk.mjs": {
+      "sourceSha256": "4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148",
+      "sourceBytes": 9416,
+      "contentObject": "docs/history/worktrees/objects/4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148.txt",
+      "pointerSha256": "81eb49262d041070bfc996cf308dc8163deb8bb570ea6ce321668aeeac5f26c6"
+    },
+    "docs/history/worktrees/dialog-surface-20261001/README.md": {
+      "sourceSha256": "694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64",
+      "sourceBytes": 295,
+      "contentObject": "docs/history/worktrees/objects/694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64.txt",
+      "pointerSha256": "7c116bfc51591647da07fc5391feb1ff705afd64dc408c8c0b38ad954985af39"
+    },
+    "docs/history/worktrees/phase2-dialog-20261002/README.md": {
+      "sourceSha256": "694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64",
+      "sourceBytes": 295,
+      "contentObject": "docs/history/worktrees/objects/694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64.txt",
+      "pointerSha256": "7c116bfc51591647da07fc5391feb1ff705afd64dc408c8c0b38ad954985af39"
+    },
+    "docs/history/worktrees/phase2-dialog-schema34-20261002/README.md": {
+      "sourceSha256": "694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64",
+      "sourceBytes": 295,
+      "contentObject": "docs/history/worktrees/objects/694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64.txt",
+      "pointerSha256": "7c116bfc51591647da07fc5391feb1ff705afd64dc408c8c0b38ad954985af39"
+    },
+    "docs/history/worktrees/source-switch-demo-20260930/README.md": {
+      "sourceSha256": "694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64",
+      "sourceBytes": 295,
+      "contentObject": "docs/history/worktrees/objects/694a4f87b79e3c78dc1b8dbbd6d0592bb6ce76afd3cda70dca59fc9487ddcf64.txt",
+      "pointerSha256": "7c116bfc51591647da07fc5391feb1ff705afd64dc408c8c0b38ad954985af39"
+    },
+    "docs/history/worktrees/phase2-dialog-20261002/docs/PHASE2_DIALOG_EXECUTION_20261002.md": {
+      "sourceSha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a",
+      "sourceBytes": 5503,
+      "contentObject": "docs/history/worktrees/objects/71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a.txt",
+      "pointerSha256": "01a1d11b34d8b0a840f9e54da8bf303daf20e42434b55330913fe6e9da498700"
+    },
+    "docs/history/worktrees/phase2-dialog-schema34-20261002/docs/PHASE2_DIALOG_EXECUTION_20261002.md": {
+      "sourceSha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a",
+      "sourceBytes": 5503,
+      "contentObject": "docs/history/worktrees/objects/71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a.txt",
+      "pointerSha256": "01a1d11b34d8b0a840f9e54da8bf303daf20e42434b55330913fe6e9da498700"
+    },
+    "docs/history/worktrees/manga-directory-rules-20261007/docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md": {
+      "sourceSha256": "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa",
+      "sourceBytes": 2373,
+      "contentObject": "docs/history/worktrees/objects/8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa.txt",
+      "pointerSha256": "0c5714bec412f8661879eef7fbf3ca8d7e26dfc374c85915425e70a8fa9ab177"
+    },
+    "docs/history/worktrees/manga-three-agent-20261009/docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md": {
+      "sourceSha256": "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa",
+      "sourceBytes": 2373,
+      "contentObject": "docs/history/worktrees/objects/8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa.txt",
+      "pointerSha256": "0c5714bec412f8661879eef7fbf3ca8d7e26dfc374c85915425e70a8fa9ab177"
+    },
+    "docs/history/worktrees/manga-directory-rules-20261007/tools/fixtures/design/shared-book-detail-typography-successor-20261008.json": {
+      "sourceSha256": "af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed",
+      "sourceBytes": 21368,
+      "contentObject": "docs/history/worktrees/objects/af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed.txt",
+      "pointerSha256": "44806acf0f2fd671a4fa4579c6664c057c559271b93ed258de40bf85a35e15be"
+    },
+    "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/design/shared-book-detail-typography-successor-20261008.json": {
+      "sourceSha256": "af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed",
+      "sourceBytes": 21368,
+      "contentObject": "docs/history/worktrees/objects/af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed.txt",
+      "pointerSha256": "44806acf0f2fd671a4fa4579c6664c057c559271b93ed258de40bf85a35e15be"
+    },
+    "docs/history/worktrees/phase2-dialog-20261002/tools/test-dialog-consumer-boundary.mjs": {
+      "sourceSha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513",
+      "sourceBytes": 1510,
+      "contentObject": "docs/history/worktrees/objects/e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513.txt",
+      "pointerSha256": "ae2c78ec488c5e800dd7e7c9095cb74c6637351352b8af855b8a6ab2f1d0cccf"
+    },
+    "docs/history/worktrees/phase2-dialog-schema34-20261002/tools/test-dialog-consumer-boundary.mjs": {
+      "sourceSha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513",
+      "sourceBytes": 1510,
+      "contentObject": "docs/history/worktrees/objects/e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513.txt",
+      "pointerSha256": "ae2c78ec488c5e800dd7e7c9095cb74c6637351352b8af855b8a6ab2f1d0cccf"
+    },
+    "docs/history/worktrees/source-ownership-20261118/entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets": {
+      "sourceSha256": "c731bd9700082c6774dba21a99f9c96644fbc75774eb7116af4914dd8ba69e1d",
+      "sourceBytes": 41736,
+      "contentObject": "docs/history/worktrees/objects/c731bd9700082c6774dba21a99f9c96644fbc75774eb7116af4914dd8ba69e1d.txt",
+      "pointerSha256": "c776f997b59313a846e09a572f00cd4fb5681a0bad1b0dcd2042e385415085aa"
+    },
+    "docs/history/worktrees/source-ownership-20261118/tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets": {
+      "sourceSha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897",
+      "sourceBytes": 101068,
+      "contentObject": "docs/history/worktrees/objects/0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897.txt",
+      "pointerSha256": "86cf2cc5937634c8f7b8232325cedbfe8642e7327da356d73a5f6ba6dd6aef82"
+    },
+    "docs/history/worktrees/source-ownership-20261118/tools/fixtures/manga-system-bars-r5/ReaderShell.ets": {
+      "sourceSha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba",
+      "sourceBytes": 24844,
+      "contentObject": "docs/history/worktrees/objects/ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba.txt",
+      "pointerSha256": "126f2ceb76e245bff153b1ffa038e350c271b85d7b5cbfb7065d5a40c265974d"
+    },
+    "docs/history/worktrees/source-ownership-20261118/tools/fixtures/manga-viewport-r6/Index.ets": {
+      "sourceSha256": "0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5",
+      "sourceBytes": 335378,
+      "contentObject": "docs/history/worktrees/objects/0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5.txt",
+      "pointerSha256": "af634c350cf3b1c2d95421f4c7f4441b8a080765e0e336d5ec8e0f2e2e42c0af"
+    },
+    "docs/history/worktrees/source-ownership-20261118/tools/fixtures/manga-viewport-r6/MangaReadingSurface.ets": {
+      "sourceSha256": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448",
+      "sourceBytes": 104797,
+      "contentObject": "docs/history/worktrees/objects/f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448.txt",
+      "pointerSha256": "53e405f7823ef97cc6e5f6e1824089bd22c5b2b2e199fd8e1cb78b2157fa504a"
+    }
+  }
+}

@@ -9,6 +9,15 @@ const { fileURLToPath }=await import('node:url');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts');
 
+async function directoryRowAccessibility() {
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const source = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderActionAccessibility.ets', import.meta.url), 'utf8');
+  return pureModuleProbe(source, 'ReaderActionAccessibility.ets', { AccessibilityRoleType: { BUTTON: 'button' } },
+    ['readerActionTouchRegion', 'ReaderActionAccessibility']);
+}
+const surfaceMembers = ['build', 'fallbackBuilder', 'prefixBuilder', 'emptyPrefix',
+  'hasRetainedContent', 'hasPrefix', 'treePrefixEmptyState', 'prefixClearAction', 'prefixRetryAction'];
+const quickListMembers = ['listBody', 'headerCount', 'prefixHeight'];
 
 
 
@@ -16,6 +25,7 @@ const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets
 
 
 
+const nativeNodes=owner=>[...[...(owner.nodes?.values()??[])],...[...(owner.children?.values()??[])].flatMap(nativeNodes)];
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 
 const detailPath = fileURLToPath(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets', import.meta.url));
@@ -115,7 +125,8 @@ if(selectedCase==="actions")
 }
 
 
-const List = productionMotionMethods(listPath, ['marker', 'selectTarget', 'planPosition', 'positionInitialCurrent'], {
+const List = productionMotionMethods(listPath,
+  ['marker', 'selectTarget', 'planPosition', 'positionInitialCurrent', 'nativeDisplayIndex', 'nativeHeaderCount'], {
   readerDirectoryBookmarkMarkerState, ScrollAlign: { START: 'start', CENTER: 'center' },
   ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => undefined, LengthMetrics: { vp: value => ({ value }) },
@@ -158,7 +169,8 @@ if(selectedCase==="actions")
   const selections = [], invalidations = [], scrolls = [];
   const list = Object.assign(new List(), {
     mounted: true, generation: 1, selectionGeneration: 0, bookId: 'book',
-    view: { viewId: 'view', currentVisibleIndex: 6010 }, initialPositionPending: true,
+    view: { viewId: 'view', currentVisibleIndex: 6010, visibleTotal: 10000 }, initialPositionPending: true,
+    dataSource: { currentView: () => undefined },
     scroller: { scrollToIndex: (...args) => scrolls.push(args) },
     gateway: { resolveTarget: (_bookId, _viewId, _nodeId, _guard) => new Promise(resolve => { complete = resolve; }) },
     onSelectTarget: (index, scalar, positionScope) => selections.push([index, scalar, positionScope]),
@@ -166,6 +178,10 @@ if(selectedCase==="actions")
   });
   list.positionInitialCurrent();
   assert.deepEqual(scrolls, [[6010, false, 'center']], '10k-node view centers without Host traversal');
+  list.initialPositionPending = true;
+  list.headerCount = 1;
+  list.positionInitialCurrent();
+  assert.deepEqual(scrolls.at(-1), [6011, false, 'center'], 'the native prefix shifts only the display rank');
   list.selectTarget({ nodeId: 'linked', kind: 'target', chapterIndex: 4, chapterOffsetScalar: 9 });
   assert.deepEqual(selections, [], 'rendered scalar never jumps before Core revalidation');
   const scope = { sourceId: 'local', bookId: 'book', chapterIndex: 4,
@@ -198,7 +214,8 @@ let visibleAnchorNodeId;
 const Surface = productionMotionMethods(surfacePath,
   ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
     'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages',
-    'retryOpen', 'onIdentityChanged'], {
+    'retryOpen', 'onIdentityChanged','notifyReadFailure','hasRetainedContent','feedback'], {
+  ReaderTransientFeedback:class{show(_context,_message,_current){}reset(){}},
   cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
   openReaderDirectoryNavigation: (_gateway, query) => new Promise((resolve, reject) => pending.push({ query, resolve, reject })),
   readerDirectoryNoteMissingNavigation: () => {},
@@ -545,6 +562,7 @@ if(selectedCase==="query-disclosure")
 // the expand presentation identity replaces only the affected mounted row.
 {
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const accessibility = await directoryRowAccessibility();
   const Keys = productionMotionMethods(listPath, ['rowKey']);
   const keys = new Keys();
   let mounted = new Map();
@@ -560,7 +578,7 @@ if(selectedCase==="query-disclosure")
       const key = keys.rowKey(item);
       let row = mounted.get(key);
       if (row === undefined) {
-        row = createReaderBuilderProbe(listSource, ['row', 'displayLevel']).owner;
+        row = createReaderBuilderProbe(listSource, ['row', 'displayLevel'], accessibility).owner;
         Object.assign(row, { rowHeight:40, appThemeScheme:'day', view:{viewId},
           chapterByIndex:new Map(), isCurrentNode:()=>false,
           toggleNode: value=>toggles.push(value), selectTarget() {} });
@@ -621,7 +639,7 @@ if(selectedCase==="query-disclosure")
       constructor(owner, params, _storage, id) {Object.assign(this,{owner,params,id});}
       updateStateVars(params) {Object.assign(this.params,params);}
     }
-    const {owner} = createReaderBuilderProbe(source,['query','draft','ascending','listBody','search'],
+    const {owner} = createReaderBuilderProbe(source,['query', 'draft', 'ascending', 'search', ...quickListMembers],
       {...runtime.sdk,ReaderDirectoryNavigationSurface:Surface,Edge:{Top:'top'}},runtime.hooks);
     let refreshes=0;
     Object.assign(owner,{tab:'directory',bookmarkLoadFailed:false,snapshot:{loading:false,rows:[{}]},
@@ -664,30 +682,31 @@ if(selectedCase==="surface-admission")
   syntax.componentCollection.customComponents.add('ReaderRecoveryAction');
   class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
   for (const total of [0, 1]) {
-    const { owner } = createReaderBuilderProbe(surfaceSource, ['fallbackBuilder', 'build'], { ReaderDirectoryNavigationList: Child });
+    const { owner } = createReaderBuilderProbe(surfaceSource, surfaceMembers, { ReaderDirectoryNavigationList: Child });
     Object.assign(owner, { appThemeScheme: 'day', view: { visibleTotal: total }, sourceId: 'local', bookId: 'fixture',
+      query: '', chapterEntries: [],
       fallbackBuilder: () => assert.fail('a ready tree must not call the flat fallback') });
     owner.initialRender();
     assert.equal([...owner.children.values()].filter(child => child instanceof Child).length, 1,
       'empty result retains list lifecycle');
-    const messages = [...owner.nodes.values()].filter(node => node.type === 'Text' && node.create === '没有匹配的目录项');
+    const messages = nativeNodes(owner).filter(node => node.type === 'Text' && node.create === '没有匹配的目录项');
     assert.equal(messages.length, total === 0 ? 1 : 0, 'ready empty navigation shows an explicit empty result');
   }
   class Recovery { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
   for (const [failed, pending, showStatus] of [[true, false, true], [false, true, true], [true, false, false]]) {
     let fallbackCalls = 0, retryCalls = 0;
-    const { owner } = createReaderBuilderProbe(surfaceSource, ['fallbackBuilder', 'build'],
+    const { owner } = createReaderBuilderProbe(surfaceSource, surfaceMembers,
       { ReaderDirectoryNavigationList: Child, ReaderRecoveryAction: Recovery });
     Object.assign(owner, { appThemeScheme: 'day', view: undefined, mangaDisplay: false,
       sourceId: 'local', bookId: 'fixture', loadFailed: failed, loadPending: pending,
-      showLoadStatus: showStatus, interactionEnabled: true,
+      showLoadStatus: showStatus, interactionEnabled: true,query:'',chapterEntries:[{index:1,title:'retained',downloadState:'missing'}],
       fallbackBuilder: () => fallbackCalls++, retryOpen: () => retryCalls++ });
     owner.initialRender();
     assert.equal(fallbackCalls, 1, 'status presentation preserves the existing chapter fallback');
-    const messages = [...owner.nodes.values()].filter(node => node.type === 'Text' &&
-      ['目录加载失败，已保留当前条目', '正在加载目录'].includes(node.create));
-    assert.equal(messages.length, showStatus ? 1 : 0,
-      'current request state is explicit and the partial-catalog owner may suppress duplicate status');
+    const messages = nativeNodes(owner).filter(node => node.type === 'Text' &&
+      ['正在加载目录'].includes(node.create));
+    assert.equal(messages.length, showStatus && pending ? 1 : 0,
+      'pending has its current loading message; retained failure offers retry and its owner handles short feedback');
     const recovery = [...owner.children.values()].find(child => child instanceof Recovery);
     assert.equal(recovery !== undefined, failed && showStatus, 'only a failed visible request offers the retry action');
     if (recovery !== undefined) {
@@ -731,6 +750,7 @@ if(selectedCase==="target-download")
 // chapter identity or download authority from their displayed rank.
 {
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const accessibility = await directoryRowAccessibility();
   const Download = productionMotionMethods(listPath, ['canDownloadTarget', 'downloadTarget', 'onChapterEntriesChanged']);
   const target = { nodeId: 'target', kind: 'target', title: 'Chapter', depth: 1,
     chapterIndex: 7, hasChildren: false, expanded: false };
@@ -740,7 +760,7 @@ if(selectedCase==="target-download")
   const baseline = listSource.slice(0, markerStart) + listSource.slice(markerEnd);
   function render(source, node, state, enabled, scheme = 'day', navigable = true) {
     const calls = [];
-    const owner = createReaderBuilderProbe(source, ['row', 'displayLevel']).owner;
+    const owner = createReaderBuilderProbe(source, ['row', 'displayLevel'], accessibility).owner;
     Object.assign(owner, { appThemeScheme: scheme, view: {viewId:'view'}, rowHeight:40,
       interactionEnabled: true, chapterDownloadEnabled: enabled, chapterByIndex: new Map([[7,
         {index:7,title:'Chapter',downloadState:state,navigable}]]), isCurrentNode:()=>false,
@@ -805,7 +825,7 @@ if(selectedCase==="target-download")
   const calls=[];
   const shared={chapterDownloadEnabled:true,onDownloadChapter:index=>calls.push(index),
     bookmarkIdentity:{sourceId:'remote',bookId:'book'},currentChapterIndex:7,chapterStartBookmarkCreationEnabled:false};
-  const quick=createReaderBuilderProbe(controlSource,['listBody'],{ReaderDirectoryNavigationSurface:Child}).owner;
+  const quick=createReaderBuilderProbe(controlSource,quickListMembers,{ReaderDirectoryNavigationSurface:Child}).owner;
   Object.assign(quick,shared,{tab:'directory',snapshot:{loading:false,rows:[{}]},navigationActive:true,rowHeight:()=>40,rowPadding:()=>10});
   quick.listBody();const quickTree=[...quick.children.values()][0];
   assert.equal(quickTree.params.chapterDownloadEnabled,true);quickTree.params.onDownloadChapter(7);
@@ -815,8 +835,8 @@ if(selectedCase==="target-download")
     directoryListRowHeight:()=>40,directoryListPaddingX:()=>10,directoryListWidth:()=>300,directoryListViewportHeight:()=>300,chapterListHeight:()=>300});
   full.chapterList();const fullTree=[...full.children.values()][0];
   assert.equal(fullTree.params.chapterDownloadEnabled,true);fullTree.params.onDownloadChapter(8);
-  const surface=createReaderBuilderProbe(surfaceSource,['build','fallbackBuilder'],{ReaderDirectoryNavigationList:Child}).owner;
-  Object.assign(surface,shared,{view:{visibleTotal:1},sourceId:'remote',bookId:'book'});
+  const surface=createReaderBuilderProbe(surfaceSource,surfaceMembers,{ReaderDirectoryNavigationList:Child}).owner;
+  Object.assign(surface,shared,{view:{visibleTotal:1},sourceId:'remote',bookId:'book',query:''});
   surface.initialRender();const list=[...surface.children.values()][0];
   assert.equal(list.params.chapterDownloadEnabled,true);list.params.onDownloadChapter(9);
   assert.deepEqual(calls,[7,8,9],'Quick, Full and Surface preserve the existing owner callback');

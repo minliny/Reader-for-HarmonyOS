@@ -38,6 +38,7 @@ import { ReaderSessionLaunchController, type ReaderSessionLaunchTransaction,
 import { ReaderPageChrome } from './ReaderPageChrome';
 import { ReaderStatusBarPaper } from './ReaderStatusBarPaper';
 import { ReaderChapterLoadingState } from './ReaderChapterLoadingState';
+import { ReaderOpeningPageState } from './ReaderOpeningPageState';
 import { measureReaderPageChromeText, readerPageChromeTopTextStyle } from './ReaderPageChromeTextMeasurement';
 import { readerAppColor, readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import { readerVisualSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft,
@@ -266,6 +267,7 @@ import {
 import { registerReaderFonts, readerRegisteredFontFamily, prepareReaderFontFamily, readerFontFamilyReady } from '../common/ReaderFonts';
 import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
 import { motionAnimateParam } from '../common/MotionSpec';
+import { readerMotionAnimateParam } from '../common/ReaderMotionPolicy';
 import { ComponentContent, FrameCallback, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import {
@@ -289,7 +291,7 @@ import {
   type ReaderHttpTtsConfig,
 } from './ReaderHttpTtsGateway';
 import { ReaderTtsConfigurationHost, type ReaderTtsConfigurationSnapshot } from './ReaderTtsConfigurationHost';
-import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
+import type { ReaderTtsEngineOption } from './ReaderTtsConfigOptions';
 import {
   ReaderTtsSessionCoordinator,
   type ReaderTtsChapterAdvanceInput,
@@ -309,6 +311,8 @@ import {
 } from './ReaderTtsState';
 import { ReaderTtsPreferencesGateway } from './ReaderTtsPreferencesGateway';
 import {
+  createDefaultReaderTtsPreferencesSnapshot,
+  copyReaderTtsPreferencesSnapshot,
   type ReaderTtsPreferencesSnapshot,
   type ReaderTtsVoiceOption,
 } from './ReaderTtsPreferencesState';
@@ -994,6 +998,7 @@ export struct ReadingExperience {
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeActive: boolean = false;
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeOverlayActive: boolean = false;
   @Prop @Watch('onSessionLaunchReduceMotionChanged') reduceMotion: boolean = false;
+  @Prop @Watch('openingHandoffChanged') openingHandoffActive: boolean = false;
   /**
    * The host owns the system Back event. It receives this guarded request
    * function and must invoke it instead of changing the route directly.
@@ -1044,7 +1049,11 @@ export struct ReadingExperience {
   onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest) => void =
     (_request: ReaderPageBookmarkToggleRequest): void => {};
 
-  @State @Watch('sourceSwitchCompletionChanged') private phase: ReadingPhase = 'loading';
+  @State @Watch('readingPhaseChanged') private phase: ReadingPhase = 'loading';
+  @State private openingSkeletonPending: boolean = false;
+  @State private openingTextOpacity: number = 1;
+  private openingHandoffConsumed: boolean = false;
+  private openingRevealGeneration: number = 0;
   @State private sourceSwitchRevealOpacity: number = 0;
   @State private sourceSwitchVisualSelectionToken: number = -1;
   private sourceSwitchCompletionEpoch: number = 0;
@@ -1254,20 +1263,14 @@ export struct ReadingExperience {
   private pageTurnSettlementOrigin: ReaderPageTurnOrigin = 'manual';
   private pageTurnSettlementTtsOwner: ReaderTtsFollowLease | undefined = undefined;
   private pageTurnAutomaticStart: ReaderAutomaticPageStart | undefined = undefined;
+  /** Published as a whole after the original intent/native admission. */
+  @State private ttsPreferences: ReaderTtsPreferencesSnapshot = createDefaultReaderTtsPreferencesSnapshot();
   @State private ttsTimerMode: ReaderTtsTimerMode = 'duration';
   @State private ttsTimerMinutes: number = READER_TTS_TIMER_DEFAULT_MINUTES;
   @State private ttsTimerSeconds: number = 0;
-  @State private ttsFollowHighlight: boolean = true;
-  @State private ttsPauseOnInterruption: boolean = true;
-  @State private ttsAllowMixing: boolean = false;
-  @State private ttsBackgroundPlayback: boolean = true;
-  @State private ttsKeepScreenOn: boolean = false;
-  @State private ttsFailurePolicy: 'skip' | 'stop' = 'stop';
   @State private ttsEngine: string = 'system';
   @State private ttsHttpEngines: ReaderHttpTtsConfig[] = [];
   @State private ttsVoiceOptions: ReaderTtsVoiceOption[] = [];
-  @State private ttsLanguage: string = 'zh-CN';
-  @State private ttsPerson: number = 0;
   /** Latest user-intent generation for transactional TTS preference writes. */
   private ttsPreferenceMutationGeneration: number = 0;
   /** A late initial config must not replace a newer rate/engine choice. */
@@ -1607,6 +1610,7 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     this.captureStartupEntryTrace?.();
     this.mounted = true;
+    this.openingHandoffChanged();
     this.restoreEntryPresentation();
     this.admitInitialWindowGeometry();
     this.controlSession = createReaderControlSessionState();
@@ -2036,6 +2040,7 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.openingRevealGeneration += 1;
     this.transientFeedback.reset();
     this.retainedReadingRecencyReceipt = undefined;
     this.retainedReadingRecencyVisible = false;
@@ -2187,6 +2192,7 @@ export struct ReadingExperience {
       // The normal paper and controls own loading and recoverable errors too.
       if (readerRenderStageKind(this.readerSettingsSnapshot.navigationMode, this.hasContinuousRenderContent()) === 'continuous') {
         ReaderContinuousReadingStage({
+          textOpacity: this.openingTextOpacity,
           chapterIdentity: this.continuousRenderChapterIdentity,
           chapterTitle: this.continuousRenderChapterTitle,
           geometryKey: this.continuousRenderGeometryKey,
@@ -2202,8 +2208,8 @@ export struct ReadingExperience {
           },
           layout: this.readingLayout(),
           appearance: this.visibleReadingAppearance(),
-          ttsHighlightStart: this.ttsFollowHighlight ? this.ttsState.charStart : undefined,
-          ttsHighlightEnd: this.ttsFollowHighlight ? this.ttsState.charEnd : undefined,
+          ttsHighlightStart: this.ttsPreferences.followHighlight ? this.ttsState.charStart : undefined,
+          ttsHighlightEnd: this.ttsPreferences.followHighlight ? this.ttsState.charEnd : undefined,
           autoPageHighlightStart: this.autoPageHighlightStart(),
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
@@ -2230,6 +2236,7 @@ export struct ReadingExperience {
         this.continuousPageChromeContent();
       } else {
         ReaderPageTurnStage({
+          textOpacity: this.openingTextOpacity,
           contentRevision: this.pageTurnRenderRevision,
           bookmarkPresentationRevision: this.bookmarkPresentationRevision,
           currentPageProvider: (): ReaderPageTurnRenderPage => this.currentPageTurnRenderPage(),
@@ -2248,8 +2255,8 @@ export struct ReadingExperience {
           bookmarkMode: this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision),
           bookmarkOpacity: this.pageBookmarkFeedbackOpacity(),
           bookmarkVisible: !this.usesBookTurnSimulation(),
-          ttsHighlightStart: this.ttsFollowHighlight ? this.ttsState.charStart : undefined,
-          ttsHighlightEnd: this.ttsFollowHighlight ? this.ttsState.charEnd : undefined,
+          ttsHighlightStart: this.ttsPreferences.followHighlight ? this.ttsState.charStart : undefined,
+          ttsHighlightEnd: this.ttsPreferences.followHighlight ? this.ttsState.charEnd : undefined,
           autoPageHighlightStart: this.autoPageHighlightStart(),
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
@@ -2363,20 +2370,13 @@ export struct ReadingExperience {
         settingsSnapshot: this.readerSettingsSnapshot,
         pageTurnSimulationAvailable: !this.bookTurnRuntimeFailed,
         ttsState: this.ttsState,
+        ttsPreferences: this.ttsPreferences,
         ttsTimerMode: this.ttsTimerMode,
         ttsTimerMinutes: this.ttsTimerMinutes,
         ttsTimerSeconds: this.ttsTimerSeconds,
-        ttsFollowHighlight: this.ttsFollowHighlight,
-        ttsPauseOnInterruption: this.ttsPauseOnInterruption,
-        ttsAllowMixing: this.ttsAllowMixing,
-        ttsBackgroundPlayback: this.ttsBackgroundPlayback,
-        ttsKeepScreenOn: this.ttsKeepScreenOn,
-        ttsFailurePolicy: this.ttsFailurePolicy,
         ttsEngine: this.ttsEngine,
         ttsHttpEngines: this.ttsHttpEngines,
         ttsVoiceOptions: this.ttsVoiceOptions,
-        ttsLanguage: this.ttsLanguage,
-        ttsPerson: this.ttsPerson,
         reduceMotion: this.reduceMotion,
         onSessionMorphSourceMeasured: (measurement: ReaderSessionMorphSourceMeasurement): void =>
           this.admitSessionMorphSourceMeasurement(measurement),
@@ -2549,6 +2549,15 @@ export struct ReadingExperience {
       });
       this.bookmarkCornerFeedback();
       this.readerStatusBarUnderlay();
+      // A layout-only measurement target for the bookshelf transition. It
+      // shares the reading layout's actual content track and owns no input.
+      Column() {}
+        .id('reader-bookshelf-page-slot')
+        .width(this.readingLayout().bodyWidth())
+        .height(this.readingLayout().bodyHeight(false))
+        .position({ x: this.readingLayout().contentLeft, y: this.readingLayout().contentTop })
+        .hitTestBehavior(HitTestMode.None)
+        .accessibilityLevel('no-hide-descendants');
       this.chapterLoadingContent();
       if (this.phase === 'failed' || this.sourceSwitchFailureMessage.length > 0) {
         this.readingFailureContent();
@@ -2778,18 +2787,71 @@ export struct ReadingExperience {
 
   @Builder
   private chapterLoadingContent() {
-    if (this.shouldShowChapterLoading()) {
-      ReaderChapterLoadingState({
-        theme: this.appearanceSnapshot.activeTheme,
-        expanded: this.expandedLayout,
-        chapterTitle: this.loadingChapterTitle(),
-        active: this.appForeground,
-        reduceMotion: this.reduceMotion,
-        topInset: readerVisualSafeTop(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
-        leftInset: readerInteractiveSafeLeft(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
-        onBack: (): void => this.beginExit(),
-      }).zIndex(9);
+    if (this.openingSkeletonPending && this.isReaderIdentityCurrent() && this.phase !== 'failed' &&
+      this.sourceSwitchFailureMessage.length === 0 && this.windowChromeActive) {
+        ReaderOpeningPageState({
+          theme: this.appearanceSnapshot.activeTheme,
+          expanded: this.expandedLayout,
+          layout: this.readingLayout(),
+          topInset: readerVisualSafeTop(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+          leftInset: readerInteractiveSafeLeft(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+          onBack: (): void => this.beginExit(),
+        }).zIndex(9);
+    } else if (this.shouldShowChapterLoading()) {
+        ReaderChapterLoadingState({
+          theme: this.appearanceSnapshot.activeTheme,
+          expanded: this.expandedLayout,
+          chapterTitle: this.loadingChapterTitle(),
+          active: this.appForeground,
+          reduceMotion: this.reduceMotion,
+          topInset: readerVisualSafeTop(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+          leftInset: readerInteractiveSafeLeft(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+          onBack: (): void => this.beginExit(),
+        }).zIndex(9);
     }
+  }
+
+  private openingHandoffChanged(): void {
+    if (!this.mounted || !this.openingHandoffActive || this.openingHandoffConsumed ||
+      !this.isReaderIdentityCurrent()) return;
+    this.openingHandoffConsumed = true;
+    this.openingSkeletonPending = true;
+    this.openingTextOpacity = 0;
+    if (this.phase === 'ready' && this.visiblePage !== undefined && this.readingReadyPage === this.visiblePage &&
+      this.readingReadySelection === this.chapterSelectionToken) this.finishOpeningHandoff();
+  }
+
+  private readingPhaseChanged(): void {
+    this.sourceSwitchCompletionChanged();
+    if (this.phase === 'failed' && this.openingSkeletonPending) {
+      this.openingRevealGeneration += 1;
+      this.openingSkeletonPending = false;
+      this.openingTextOpacity = 1;
+    }
+  }
+
+  /** Called only after the existing owner admits the actual visible page. */
+  private finishOpeningHandoff(): void {
+    if (!this.openingSkeletonPending || !this.isReaderIdentityCurrent()) return;
+    this.openingSkeletonPending = false;
+    const lifecycle = this.lifecycleToken;
+    const selection = this.chapterSelectionToken;
+    const generation = ++this.openingRevealGeneration;
+    try {
+      this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+        if (!this.isMountedToken(lifecycle) || !this.isReaderIdentityCurrent() ||
+          generation !== this.openingRevealGeneration) return;
+        if (!this.isSessionActive(lifecycle) || selection !== this.chapterSelectionToken || this.phase !== 'ready') {
+          this.openingTextOpacity = 1;
+          return;
+        }
+        try {
+          this.getUIContext().animateTo(readerMotionAnimateParam('bookshelf.open.fade', this.reduceMotion), (): void => {
+            this.openingTextOpacity = 1;
+          });
+        } catch (_error) { this.openingTextOpacity = 1; }
+      }));
+    } catch (_error) { this.openingTextOpacity = 1; }
   }
 
   @Builder
@@ -3593,7 +3655,7 @@ export struct ReadingExperience {
 
   private resumeTtsPageFollow(): void {
     const target = this.ttsPageFollow.pending();
-    if (target === undefined || !this.isTtsFollowLeaseCurrent(target) || !this.ttsPageFollow.canAttempt() || !this.ttsFollowHighlight ||
+    if (target === undefined || !this.isTtsFollowLeaseCurrent(target) || !this.ttsPageFollow.canAttempt() || !this.ttsPreferences.followHighlight ||
       !this.appForeground || this.readerSettingsSnapshot.navigationMode === 'continuous' ||
       this.phase !== 'ready' || this.visiblePage === undefined || this.chapter === undefined ||
       this.controlVisible() || this.controlObscured || this.interactionBlocked ||
@@ -8322,14 +8384,10 @@ export struct ReadingExperience {
       repairedVoice = true;
     }
     this.ttsVoiceOptions = voiceOptions;
-    this.ttsLanguage = language;
-    this.ttsPerson = person;
-    this.ttsPauseOnInterruption = preferences.pauseOnInterruption;
-    this.ttsAllowMixing = preferences.allowMixing;
-    this.ttsBackgroundPlayback = preferences.backgroundPlayback;
-    this.ttsKeepScreenOn = preferences.keepScreenOn;
-    this.ttsFailurePolicy = preferences.failurePolicy;
-    this.ttsFollowHighlight = preferences.followHighlight;
+    const admitted = this.copyTtsPreferencesSnapshot(preferences);
+    admitted.language = language;
+    admitted.person = person;
+    this.ttsPreferences = admitted;
     this.ttsCoordinator?.setPauseOnInterruption(preferences.pauseOnInterruption);
     void this.ttsCoordinator?.setAllowMixing(preferences.allowMixing)
       .catch((error: Error): void => this.logTtsFailure('audio-session', error));
@@ -8385,36 +8443,11 @@ export struct ReadingExperience {
   }
 
   private ttsPreferencesSnapshot(): ReaderTtsPreferencesSnapshot {
-    return {
-      version: 1,
-      language: this.ttsLanguage,
-      person: this.ttsPerson,
-      pauseOnInterruption: this.ttsPauseOnInterruption,
-      allowMixing: this.ttsAllowMixing,
-      failurePolicy: this.ttsFailurePolicy,
-      followHighlight: this.ttsFollowHighlight,
-      backgroundPlayback: this.ttsBackgroundPlayback,
-      keepScreenOn: this.ttsKeepScreenOn,
-    };
+    return this.copyTtsPreferencesSnapshot(this.ttsPreferences);
   }
 
-  /**
-   * ArkTS does not accept object spread on imported structural aliases. Keep
-   * preference updates explicitly typed so accepted candidates retain the
-   * same value semantics without widening to an untyped object.
-   */
   private copyTtsPreferencesSnapshot(value: ReaderTtsPreferencesSnapshot): ReaderTtsPreferencesSnapshot {
-    return {
-      version: 1,
-      language: value.language,
-      person: value.person,
-      pauseOnInterruption: value.pauseOnInterruption,
-      allowMixing: value.allowMixing,
-      failurePolicy: value.failurePolicy,
-      followHighlight: value.followHighlight,
-      backgroundPlayback: value.backgroundPlayback,
-      keepScreenOn: value.keepScreenOn,
-    };
+    return copyReaderTtsPreferencesSnapshot(value);
   }
 
   private async persistTtsPreferencesSnapshot(snapshot: ReaderTtsPreferencesSnapshot,
@@ -8520,12 +8553,12 @@ export struct ReadingExperience {
       scalarPosition: page.startScalar,
       rate: this.ttsState.rate,
       pitch: 1,
-      language: this.ttsLanguage,
-      person: this.ttsPerson,
-      pauseOnInterruption: this.ttsPauseOnInterruption,
-      allowMixing: this.ttsAllowMixing,
-      backgroundPlayback: this.ttsBackgroundPlayback,
-      failurePolicy: this.ttsFailurePolicy,
+      language: this.ttsPreferences.language,
+      person: this.ttsPreferences.person,
+      pauseOnInterruption: this.ttsPreferences.pauseOnInterruption,
+      allowMixing: this.ttsPreferences.allowMixing,
+      backgroundPlayback: this.ttsPreferences.backgroundPlayback,
+      failurePolicy: this.ttsPreferences.failurePolicy,
       timerDurationMs: this.ttsTimerDurationMs(),
     }, this.sessionLaunch?.geometry.type === 'tts' ? this.sessionLaunch.desiredPlaying : true).then((): void => {
       if (!this.isTtsPlayIntentCurrent(intent) || this.ttsCoordinator !== coordinator) return;
@@ -8706,7 +8739,7 @@ export struct ReadingExperience {
     const apply = async (): Promise<void> => {
       if (coordinator !== undefined) await coordinator.setAllowMixing(enabled);
       if (!current()) return;
-      this.ttsAllowMixing = enabled;
+      this.ttsPreferences = candidate;
       try {
         await this.persistTtsPreferencesSnapshot(candidate, current);
       } catch (error) {
@@ -8723,7 +8756,7 @@ export struct ReadingExperience {
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.backgroundPlayback = enabled;
-    this.ttsBackgroundPlayback = enabled;
+    this.ttsPreferences = candidate;
     const host = this.ttsCoordinator === undefined ? undefined : ReaderRuntimeOwner.current().getTtsHost();
     host?.setBackgroundPlaybackEnabled?.(enabled);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
@@ -8738,7 +8771,7 @@ export struct ReadingExperience {
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.keepScreenOn = enabled;
-    this.ttsKeepScreenOn = enabled;
+    this.ttsPreferences = candidate;
     void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlsPresentedForWindow())
       .then(async (): Promise<void> => {
         if (!current()) return;
@@ -8756,7 +8789,7 @@ export struct ReadingExperience {
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.failurePolicy = policy;
-    this.ttsFailurePolicy = policy;
+    this.ttsPreferences = candidate;
     coordinator?.setFailurePolicy(policy);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
       this.notifyTtsPreferencePending(error, current);
@@ -8770,7 +8803,7 @@ export struct ReadingExperience {
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.followHighlight = enabled;
-    this.ttsFollowHighlight = enabled;
+    this.ttsPreferences = candidate;
     if (!enabled) this.invalidateTtsPageFollow?.();
     else this.followTtsPage?.(this.ttsState);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
@@ -8786,7 +8819,7 @@ export struct ReadingExperience {
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.pauseOnInterruption = enabled;
-    this.ttsPauseOnInterruption = enabled;
+    this.ttsPreferences = candidate;
     coordinator?.setPauseOnInterruption(enabled);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
       this.notifyTtsPreferencePending(error, current);
@@ -8808,8 +8841,7 @@ export struct ReadingExperience {
     void (coordinator === undefined ? Promise.resolve() : coordinator.setVoice(option.language, option.person))
       .then(async (): Promise<void> => {
         if (!current()) return;
-        this.ttsLanguage = option.language;
-        this.ttsPerson = option.person;
+        this.ttsPreferences = candidate;
         try {
           await this.persistTtsPreferencesSnapshot(candidate, current);
         } catch (error) {
@@ -9180,12 +9212,12 @@ export struct ReadingExperience {
             .catch((error: Error): void => this.logTtsFailure('background pause', error));
         };
         const host = ReaderRuntimeOwner.current().getTtsHost();
-        if (!this.ttsBackgroundPlayback) pause();
+        if (!this.ttsPreferences.backgroundPlayback) pause();
         else if (!host.isBackgroundPlaybackActive()) {
           // Optional platform admission is off the speech-critical path. A
           // quick lock-screen transition must observe its bounded result.
           void host.waitForBackgroundPlaybackAdmission().then((admitted: boolean): void => {
-            if (!this.ttsBackgroundPlayback || !admitted) pause();
+            if (!this.ttsPreferences.backgroundPlayback || !admitted) pause();
           }).catch((error: Error): void => {
             this.logTtsFailure('background admission', error);
             pause();
@@ -9847,7 +9879,7 @@ export struct ReadingExperience {
     forceStatusBarVisible: boolean = false): ReaderWindowPolicy {
     return new ReaderWindowPolicy(
       snapshot.screenDirection,
-      this.screenAwakeKeepScreenOn || this.ttsKeepScreenOn,
+      this.screenAwakeKeepScreenOn || this.ttsPreferences.keepScreenOn,
       // Only the explicit status preference enables immersive hiding.
       // Controls always expose system chrome; cutout owns content geometry.
       snapshot.hideStatusBar === true && !forceStatusBarVisible,
@@ -12120,6 +12152,7 @@ export struct ReadingExperience {
     const isCurrent = (): boolean => this.phase === 'ready' &&
       this.isStableVisiblePageOwner(page, chapter, selectionToken, lifecycleToken);
     if (!isCurrent()) return false;
+    this.finishOpeningHandoff();
     this.resolvePageImagePixels(chapter, page.fragments);
     if (this.readingReadyPage === page && this.readingReadySelection === selectionToken) return true;
     this.readingReadyPage = page;
@@ -14808,7 +14841,7 @@ export struct ReadingExperience {
     // (user-confirmed switch/retry) from local pagination/layout/storage ones.
     const failureKind: RemoteReadingFailureKind = remoteReadingFailureKindOf(error);
     const gatewayFacts = error instanceof RemoteReadingGatewayError ?
-      ` code=${error.code} command=${error.command ?? ''} category=${error.category}` : '';
+      ` code=${error.code} command=${error.command ?? ''} category=${error.category} storageReason=${error.diagnostic?.storageReason ?? ''}` : '';
     const stableCode = /^[A-Z][A-Z0-9_]{0,95}$/.test(this.failureCode) ? this.failureCode : 'UNCLASSIFIED';
     // Public diagnostics contain only bounded internal codes, never book
     // identity, URLs, body text or the potentially sensitive raw message.

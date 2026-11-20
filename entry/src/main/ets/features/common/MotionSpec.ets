@@ -166,16 +166,15 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'bookshelf.filter.collapse', durationMs: 180, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
   { id: 'bookshelf.filter.content.in', durationMs: 160, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   { id: 'bookshelf.filter.content.out', durationMs: 100, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
-  { id: 'bookshelf.open.carry', durationMs: 320, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
-  { id: 'bookshelf.open.turn', durationMs: 300, curve: curves.cubicBezierCurve(0.3, 0, 0.2, 1) },
-  { id: 'bookshelf.open.handoff', durationMs: 160, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
+  // Keep the 660ms envelope: the cover grows for 520ms and its latter half
+  // overlaps the 260ms turn. A symmetric curve makes that overlap visible.
+  { id: 'bookshelf.open.carry', durationMs: 520, curve: curves.cubicBezierCurve(0.4, 0, 0.6, 1) },
+  { id: 'bookshelf.open.turn', durationMs: 260, curve: curves.cubicBezierCurve(0.3, 0, 0.2, 1) },
+  { id: 'bookshelf.open.handoff', durationMs: 140, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
   { id: 'bookshelf.open.fade', durationMs: 180, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
   { id: 'search.surface.open', durationMs: 650, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
   { id: 'search.surface.submit', durationMs: 700, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
   { id: 'search.surface.back', durationMs: 390, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
-  // Search filter disclosure: the header panel and its result clearance change
-  // in one native layout pass, so both directions share this timing.
-  { id: 'search.filters.toggle', durationMs: 180, curve: curves.cubicBezierCurve(0.42, 0, 0.58, 1) },
   // Keyboard/window insets change the measured history viewport. The panel
   // follows the new limit instead of collapsing and re-measuring from zero.
   { id: 'search.history.resize', durationMs: 180, curve: curves.cubicBezierCurve(0.2, 0, 0.2, 1) },

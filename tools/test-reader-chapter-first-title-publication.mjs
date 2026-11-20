@@ -129,14 +129,20 @@ assert.deepEqual([firstOrigin, secondOrigin], [158.5, 191.75]);
 const StageMethods = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url),
   ['slotPage', 'refreshRenderPages', 'currentRenderPage', 'adjacentRenderPage']);
 const stageOnly = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
-const stage = createReaderBuilderProbe(stageOnly, ['build'], { ReaderPageTurnSurface: Child }).owner;
-let currentPage = { identity: 'origin', renderRevision: 10, fragments: [], showChapterTitle: false };
+const stage = createReaderBuilderProbe(stageOnly, ['build', 'slotBookmarkMode', 'slotBookmarkOpacity'], { ReaderPageTurnSurface: Child }).owner;
+const emptyBookmark = { mode: 'hidden', opacity: 0, topAccessoryX: 0, topAccessoryY: 0,
+  topAccessoryWidth: 0, topAccessoryHeight: 0 };
+let currentPage = { identity: 'origin', renderRevision: 10, fragments: [], showChapterTitle: false, bookmark: emptyBookmark };
 const preparedFragments = fragments(title('prepared next chapter', 2));
 let nextPage = { identity: 'prepared-next', renderRevision: 10, fragments: preparedFragments,
-  chapterTitle: 'prepared next chapter', showChapterTitle: true };
+  chapterTitle: 'prepared next chapter', showChapterTitle: true, bookmark: emptyBookmark };
 Object.assign(stage, { contentRevision: 10, renderPagesRevision: -1, currentPageSlot: 'a', turnDirection: 'next',
   currentPageProvider: () => currentPage, previousPageProvider: () => undefined, nextPageProvider: () => nextPage,
-  emptyPage: { fragments: [] }, layout, appearance: { activeTheme: 'paper', paragraphSpacing: 16 },
+  emptyPage: { fragments: [], bookmark: emptyBookmark }, bookmarkPresentationRevision: 0,
+  bookmarkVisible: true, bookmarkMode: 'hidden', bookmarkOpacity: 0, bookmarkHintText: '', bookmarkHintVisible: false,
+  bookmarkHintX: 0, bookmarkHintY: 0, bookmarkHintWidth: 0, bookmarkHintHeight: 0,
+  bookmarkHintArrowVisible: false, bookmarkHintArrowRotation: 0,
+  layout, appearance: { activeTheme: 'paper', paragraphSpacing: 16 },
   slotIdentity: value => value, slotSnapshotId: () => '', slotX: () => 0, slotLayer: () => 0,
   slotVisible: () => true, slotShadow: () => 0, hasActiveTurn: () => true, hasLiveTurnWidth: () => true });
 for (const name of ['slotPage', 'refreshRenderPages', 'currentRenderPage', 'adjacentRenderPage']) stage[name] = StageMethods.prototype[name];

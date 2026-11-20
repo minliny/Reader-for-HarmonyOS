@@ -22,18 +22,18 @@ for (const [nodes, id] of [[searchNodes, '1938:5075'], [playback.autoPage.motion
   assert.match(css, /0% \{ translate: 0px 18px;/);
   assert.match(css, /100% \{ translate: 0px 0px;/);
 }
-const fileSource = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
-const source = fileSource.slice(fileSource.indexOf('@Component\nexport struct ReaderControlPanel'));
+const collapseSource=read('entry/src/main/ets/features/reading/ReaderPanelChrome.ets');
+class CollapseCapture{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}initialRender(){}updateStateVars(params){Object.assign(this.params,params);}}
+const source = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
 const members = ['contentLocation', 'controlHeader', 'replaceHeader', 'replaceHeaderFrame',
-  ...(source.includes('private headerFrame(') ? ['headerFrame'] : []),
-  ...(source.includes('private headerIcon(') ? ['headerIcon', 'headerInter', 'contentTitle'] : [])];
+  'headerFrame', 'directoryHeaderScale', 'headerIcon', 'headerInter', 'contentTitle'];
 const near = (a, b, reason) => assert.ok(Math.abs(a - b) < 1e-8, `${reason}: ${a} != ${b}`);
 for (const [module, tab, expectedTitle] of [['search', 'toc', '内容搜索'], ['autoPage', 'toc', '自动翻页'],
   ['directory', 'toc', '目录'], ['directory', 'bookmarks', '书签'], ['tts', 'toc', '朗读'],
   ['appearance', 'toc', '界面'], ['settings', 'toc', '设置']]) {
   const { owner } = createReaderBuilderProbe(source, members, {
-    readerControlContentLocation: session => ({ module: session.module, directoryTab: session.tab }), readerControlHeaderFrame,
-  });
+    readerControlContentLocation: session => ({ module: session.module, directoryTab: session.tab }), readerControlHeaderFrame,ReaderPanelCollapseButton:CollapseCapture,
+  },{componentName:'ReaderControlPanel',childSources:{ReaderPanelCollapseButton:collapseSource}});
   owner.visualSession = { module, tab };
   owner.controlSession = { module, tab };
   owner.lastVisibleContentLocation = { module, directoryTab:tab, level:'secondary', form:'quick' };
@@ -52,7 +52,7 @@ for (const [module, tab, expectedTitle] of [['search', 'toc', '内容搜索'], [
     const title = [...owner.nodes.values()].find(n => n.type === 'Text' && n.fontSize === 14);
     assert.equal(title.create, expectedTitle, 'actual module/tab source title is retained');
     assert.equal(title.position.x, 24);
-    assert.equal(title.position.y, module === 'search' || module === 'autoPage' ? 6.5 : 5);
+    assert.equal(title.position.y, module === 'directory' ? 12 : module === 'search' || module === 'autoPage' ? 6.5 : 5);
     assert.equal(title.fontFamily, module === 'search' || module === 'autoPage' ? 'ReaderInter' : 'ReaderNotoSansSCUIBold');
     const special = module === 'search' || module === 'autoPage';
     // Independent source chain: shared shell+header slot -> local source offset.

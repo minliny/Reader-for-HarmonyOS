@@ -27,7 +27,11 @@ class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
     const weight = this.primary ? (spec.selectedWeight ?? text.fontWeight) : text.fontWeight;
     if (weight !== undefined) instance.fontWeight(weight);
     instance.fontSize(text.fontSizeFp);
-    if (this.id.startsWith('search-')) {
+    const maxFontScale = spec.maxFontScale;
+    if (maxFontScale !== undefined) {
+      instance.minFontScale(Math.min(1, this.fontScale));
+      instance.maxFontScale(Math.max(1, maxFontScale));
+    } else if (this.id.startsWith('search-') || this.id === 'filter-action' || this.id === 'source-filter-option' || this.id.startsWith('source-management-') || this.id === 'source-tools-action' || this.id === 'source-tools-compact') {
       instance.minFontScale(Math.min(1, this.fontScale));
       instance.maxFontScale(Math.max(1, this.fontScale));
     }
@@ -66,13 +70,20 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     const lineHeight = spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5;
     if (this.layout === 'equal') instance.layoutWeight(1);
     if (this.layout === 'full') instance.width('100%');
-    if (spec.height !== undefined) instance.height(readerScaledControlHeight(spec.height, lineHeight, this.fontScale));
+    if (spec.height !== undefined) {
+      const height = readerScaledControlHeight(spec.height, lineHeight, this.fontScale);
+      if (this.id === 'source-tools-action' || this.id === 'source-tools-compact') instance.constraintSize({ minWidth: 44, minHeight: height });
+      else if (this.id === 'source-filter-option' || this.id === 'filter-action') instance.constraintSize({ minHeight: height });
+      else instance.height(height);
+    }
+    if (this.id === 'source-management-category') instance.constraintSize({ minWidth: 44 });
     if (this.id === 'search-field-phone' || this.id === 'search-field-wide') {
       instance.width(readerSearchActionWidth(this.id === 'search-field-wide', this.fontScale));
       instance.height(readerSearchControlHeight(this.fontScale));
     }
     if (this.id === 'search-history-keyword') instance.height(readerSearchHistoryControlHeight(this.fontScale));
-    if (spec.fixedWidth > 0) instance.width(spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth);
+    if (spec.fixedWidth > 0) instance.width(spec.scaleWidth ? spec.fixedWidth * this.fontScale :
+      spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth);
     if (spec.maxWidthKind === 'scope') instance.constraintSize({ maxWidth: 160 });
     else if (spec.maxWidthKind === 'history') instance.constraintSize({ maxWidth: this.availableWidth > 0 ? Math.max(0, this.availableWidth - TOK_SPACE_XS) : '100%' });
     if (spec.outerMargin !== undefined) instance.margin(spec.outerMargin);
@@ -80,7 +91,7 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     else if (spec.verticalOnlyPadding) instance.padding({ top: spec.verticalPadding, bottom: spec.verticalPadding });
     else if (spec.verticalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding, top: spec.verticalPadding, bottom: spec.verticalPadding });
     else if (spec.horizontalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
-    if (spec.hasBorder && (!this.primary || spec.primaryHasBorder)) instance.border({ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });
+    if (spec.hasBorder && (!this.primary || spec.primaryHasBorder)) instance.border({ width: this.id === 'source-filter-option' && this.primary ? TOK_BORDER_W * 2 : TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });
     const disabledOpacity = this.primary ? (spec.primaryDisabledOpacity ?? spec.disabledOpacity) : spec.disabledOpacity;
     if (disabledOpacity < 1) instance.opacity(this.enabled ? 1 : disabledOpacity);
     if (spec.busyOpacity < 1) instance.opacity(this.busy ? spec.busyOpacity : 1);
@@ -142,6 +153,9 @@ export struct ReaderButton {
   // admitted 58/72 design widths and existing 318vp shrink formula.
   @Prop availableWidth: number = 0;
   @Prop actionAccessibilityLabel: string = '';
+  // Explicit opt-in for caller-owned single-choice controls; ordinary actions
+  // retain BUTTON semantics even when their visual treatment is primary.
+  @Prop selectionSemantic: boolean = false;
   @BuilderParam leading: () => void = this.emptyLeading;
   onAction: () => void = (): void => {};
   private mounted: boolean = false;
@@ -150,7 +164,7 @@ export struct ReaderButton {
   @Builder
   private emptyLeading() {}
   build() {
-    if (this.specId === 'search-scope' || this.specId === 'search-filter-option') {
+    if (this.specId === 'search-scope') {
       // The capsule keeps its compact visual size inside a separate native
       // target. Its 44vp slot belongs to layout instead of an outer response
       // region, so adjacent filter targets never overlap.
@@ -164,6 +178,11 @@ export struct ReaderButton {
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label)
         .onClick((): void => this.commit());
+    } else if (this.specId === 'source-filter-option' || this.selectionSemantic) {
+      Text(this.label).attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
+        .enabled(this.actionEnabled).focusable(this.actionEnabled)
+        .accessibilityRole(AccessibilityRoleType.RADIO).accessibilitySelected(this.primary)
+        .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     } else if (resolveReaderButtonSpec(this.specId).stacked) {
       Stack({ alignContent: resolveReaderButtonSpec(this.specId).leadingSlot ? Alignment.End : Alignment.Center }) {
         if (resolveReaderButtonSpec(this.specId).leadingSlot) {
@@ -185,7 +204,9 @@ export struct ReaderButton {
   }
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    const spec = resolveReaderButtonSpec(this.specId);
+    const scale = readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return spec.maxFontScale === undefined ? scale : Math.min(spec.maxFontScale, scale);
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
 }

@@ -133,6 +133,24 @@ export function isPrivateNetworkTarget(hostname: string): boolean {
   return false;
 }
 
+/** A saved user Provider may explicitly own RFC1918/ULA NAS addresses only.
+ * Reuse the same literal parsers; malformed, loopback and link-local remain denied.
+ */
+export function isUserStoragePrivateTarget(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase().replace(/^\[/, '').replace(/\]$/, '');
+  if (host.includes('%')) return false;
+  if (host.includes(':')) {
+    const groups = parseIpv6Hextets(host);
+    return groups !== null && (groups[0] & 0xfe00) === 0xfc00;
+  }
+  const parts = host.split('.');
+  if (parts.length !== 4) return false;
+  const bytes = parts.map((part: string): number => ipv4OctetValue(part));
+  return bytes.every((part: number): boolean => part >= 0) &&
+    (bytes[0] === 10 || bytes[0] === 172 && bytes[1] >= 16 && bytes[1] <= 31 ||
+      bytes[0] === 192 && bytes[1] === 168);
+}
+
 /**
  * Extracts the hostname of an http(s) URL without platform URL APIs, so the
  * import-time gate stays pure and node-executable. Returns undefined for

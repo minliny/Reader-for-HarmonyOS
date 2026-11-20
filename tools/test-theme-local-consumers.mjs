@@ -98,7 +98,10 @@ function captureSharedConsumer(file, methods, render) {
   sharedBindings.set(file, new Set([...witnesses].filter(([, schemes]) => schemes.size === 2).map(([role]) => role)));
 }
 if(selectedCase==='source') captureSharedConsumer('features/source/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
-  owner.chip('未检测', 58, false, true); owner.bottomActionBar();
+  // Finite measured geometry port at this palette fixture's scale1. The
+  // selected case proves live colors; Source layout has its separate probe.
+  owner.layoutBudget = () => ({ footerHeight: 44 });
+  owner.statusValue = '全部'; owner.chip('未检测', 58, true); owner.bottomActionBar();
 });
 if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
 if(selectedCase==='rss') captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {

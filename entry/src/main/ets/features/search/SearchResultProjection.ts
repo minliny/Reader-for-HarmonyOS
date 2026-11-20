@@ -6,6 +6,7 @@ import { SearchViewState } from './SearchViewState';
 import { SearchResultRelevance } from './SearchResultRelevance';
 import { searchCandidateRank } from './SearchCandidatePolicy';
 import { bookshelfWorkKey } from '../bookshelf/BookshelfBookIdentity';
+import type { SearchResultFilter } from './SearchSourceGroups';
 
 export interface SearchGroupProjection {
   key: string;
@@ -39,6 +40,7 @@ export class SearchResultProjection {
   private shelfTitles: Set<string> = new Set();
   private revision: number = -1;
   private queryRevision: number = -1;
+  private filterKey: string = '';
 
   private identity(book: SearchBook): string { return `${book.sourceId}\u0000${book.bookId}`; }
   private titleKey(title: string, author: string, proof?: BookAuthorIdentityProof, sourceVersion?: string): string {
@@ -54,8 +56,15 @@ export class SearchResultProjection {
   }
 
   update(results: SearchBook[], shelf: ShelfBook[], keyword: string, navigation: SearchViewState,
-    delta?: SearchResultDelta, allowReorder: boolean = false): SearchProjectionUpdate {
+    delta?: SearchResultDelta, allowReorder: boolean = false, filter?: SearchResultFilter): SearchProjectionUpdate {
     const affected = new Set<string>();
+    const nextFilterKey = filter?.key ?? '';
+    const filterChanged = this.filterKey !== nextFilterKey;
+    if (filterChanged) {
+      for (const key of this.members.keys()) affected.add(key);
+      for (const key of this.rows.keys()) affected.add(key);
+      this.filterKey = nextFilterKey;
+    }
     const reset = this.input === undefined || keyword !== this.keyword || navigation.revision !== this.queryRevision ||
       (delta?.reset === true && delta.revision !== this.revision);
     if (reset) {
@@ -140,11 +149,13 @@ export class SearchResultProjection {
       // Discovery and availability are separate facts. A confirmed detail or
       // catalog failure remains a discovered source with its original state;
       // hide neither its count nor the candidate needed for explicit retry.
-      const variants = Array.from(this.members.get(key)?.values() ?? []);
+      const rawVariants = Array.from(this.members.get(key)?.values() ?? []);
+      const variants = filter === undefined ? rawVariants : rawVariants.filter((book: SearchBook): boolean => filter.matches(book));
       const previous = this.rows.get(key);
       if (variants.length === 0) {
         if (this.rows.delete(key)) { changedKeys.add(key); membershipChanged = true; }
-        this.members.delete(key); continue;
+        if (rawVariants.length === 0) this.members.delete(key);
+        continue;
       }
       // Arrival sequence is query-owned, independent of source completion/filter order.
       variants.sort((a: SearchBook, b: SearchBook): number => (a.admittedOrder ?? 0) - (b.admittedOrder ?? 0));
@@ -169,6 +180,9 @@ export class SearchResultProjection {
       changedKeys.add(key);
       if (previous === undefined) membershipChanged = true;
     }
+    // Even an unchanged subset receives a fresh presentation identity. This
+    // lets retained native rows retire an old filter's pressed snapshot.
+    if (filterChanged) for (const key of this.rows.keys()) changedKeys.add(key);
     let orderChanged = false;
     if (allowReorder) {
       // Only the idle top boundary permits global relevance publication. The

@@ -1,10 +1,19 @@
+import { registerReaderTypeScriptImports } from './lib/reader-typescript-imports.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { stripTypeScriptTypes } from 'node:module';
-import * as state from '../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+const readerImports = registerReaderTypeScriptImports();
+try {
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerThemeWriteBarrierProbe } = await import('./lib/reader-theme-write-barrier-probe.mjs');
+
+
+
+
+
+const state = await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const source = readFileSync(new URL('ReaderTtsPreferencesGateway.ts', dir), 'utf8');
@@ -22,9 +31,11 @@ function fixture(productionSource = source) {
   };
   // Full production gateway; only real SDK Preferences delivery and Runtime
   // identity are controlled. No copied preference state machine or IO queue.
-  const Gateway=new Function(...Object.keys(state),'ReaderThemeHost','ReaderRuntimeOwner','preferences',
-    `${stripTypeScriptTypes(productionSource.slice(productionSource.indexOf('const READER_TTS_PREFERENCES_NAME'))).replace('export class ','class ')};return ReaderTtsPreferencesGateway;`)
-    (...Object.values(state),{prepareUserChange:()=>barrier()},{isCurrent:owner=>owner===active},{getPreferences:async()=>store});
+  const Theme=readerThemeWriteBarrierProbe({isCurrent:owner=>owner===active});
+  Theme.setRecoveryBarrier(()=>barrier());
+  const Gateway = pureModuleProbe(productionSource, 'ReaderTtsPreferencesGateway.ts',
+  { ...state, ReaderThemeHost: Theme, ReaderRuntimeOwner: {isCurrent:owner=>owner===active}, preferences: {getPreferences:async()=>store} },
+  ['ReaderTtsPreferencesGateway']).ReaderTtsPreferencesGateway;
   const owner=new Gateway(runtime);
   return {owner,Gateway,runtime,store,events,cache,durable,failFlush:when=>{failure=when;},failPut:()=>{putFailure=true;},
     hangFlush:gate=>{flushGate=gate;},hangRead:gate=>{readGate=gate;},setBarrier:value=>{barrier=value;},
@@ -73,10 +84,10 @@ for(const failure of ['before','after','put']) {
   assert.equal(f.events.filter(e=>e[0]==='put').length,1,'revision exhaustion cannot reset and dispatch');
 }
 
-const mutations=[['changeTtsAllowMixing',[true],'ttsAllowMixing',true],['changeTtsBackgroundPlayback',[false],'ttsBackgroundPlayback',false],
-  ['changeTtsKeepScreenOn',[true],'ttsKeepScreenOn',true],['changeTtsFailurePolicy',['skip'],'ttsFailurePolicy','skip'],
-  ['changeTtsFollowHighlight',[false],'ttsFollowHighlight',false],['changeTtsPauseOnInterruption',[false],'ttsPauseOnInterruption',false],
-  ['changeTtsVoice',['en-US',7],'ttsLanguage','en-US']];
+const mutations=[['changeTtsAllowMixing',[true],'allowMixing',true],['changeTtsBackgroundPlayback',[false],'backgroundPlayback',false],
+  ['changeTtsKeepScreenOn',[true],'keepScreenOn',true],['changeTtsFailurePolicy',['skip'],'failurePolicy','skip'],
+  ['changeTtsFollowHighlight',[false],'followHighlight',false],['changeTtsPauseOnInterruption',[false],'pauseOnInterruption',false],
+  ['changeTtsVoice',['en-US',7],'language','en-US']];
 function reader(f,file=new URL('LocalReadingExperience.ets',dir)) {
   const events=[];
   const coordinator={setAllowMixing:async value=>events.push(['mixing',value]),setVoice:async(...value)=>events.push(['voice',...value]),
@@ -84,11 +95,10 @@ function reader(f,file=new URL('LocalReadingExperience.ets',dir)) {
   const Reader=productionMotionMethods(file,['nextTtsPreferenceMutationGeneration','captureTtsPreferenceAdmission','isSessionActive',
     'ttsPreferencesSnapshot','copyTtsPreferencesSnapshot','persistTtsPreferencesSnapshot','persistTtsPreferences','notifyTtsPreferencePending',
     'retryPendingTtsPreferences','loadTtsPresentationMetadata','admitTtsPreferences',
-    ...mutations.map(e=>e[0])],{hilog:{error(){}},ReaderRuntimeOwner:{current:()=>({getTtsHost:()=>({setBackgroundPlaybackEnabled:value=>events.push(['background',value])})})}});
+    ...mutations.map(e=>e[0])],{...state,hilog:{error(){}},ReaderRuntimeOwner:{current:()=>({getTtsHost:()=>({setBackgroundPlaybackEnabled:value=>events.push(['background',value])})})}});
   const owner=Object.assign(new Reader(),{mounted:true,lifecycleToken:1,sourceId:'source',bookId:'book',exitRequested:false,
     ttsPreferenceMutationGeneration:0,ttsCoordinator:coordinator,ttsPreferencesGateway:f.owner,
-    ttsLanguage:'zh-CN',ttsPerson:0,ttsPauseOnInterruption:true,ttsAllowMixing:false,ttsFailurePolicy:'stop',ttsFollowHighlight:true,
-    ttsBackgroundPlayback:true,ttsKeepScreenOn:false,ttsVoiceOptions:[{language:'en-US',person:7}],
+    ttsPreferences: {version:1,language:'zh-CN',person:0,pauseOnInterruption:true,allowMixing:false,failurePolicy:'stop',followHighlight:true,backgroundPlayback:true,keepScreenOn:false},ttsVoiceOptions:[{language:'en-US',person:7}],
     readerSettingsSnapshot:{},controlsPresentedForWindow:()=>false,applyReaderWindowPolicy:async()=>events.push(['window']),
     requireTtsConfigurationHost:()=>({refreshMetadata:async()=>{}}),
     getUIContext:()=>({getPromptAction:()=>({showToast:spec=>events.push(['notice',spec.message])})}),
@@ -98,7 +108,7 @@ function reader(f,file=new URL('LocalReadingExperience.ets',dir)) {
 async function runUiCases(file) {
   for(const [method,args,field,value] of mutations) {
     const f=fixture();await f.owner.update(initial);f.failFlush('after');const ui=reader(f,file);ui.owner[method](...args);await settle();
-    assert.equal(ui.owner[field],value,`${method}: unknown preference flush keeps the current accepted choice`);
+    assert.equal(ui.owner.ttsPreferences[field],value,`${method}: unknown preference flush keeps the current accepted choice`);
     assert.equal(f.owner.writeFacts().pendingReconciliation,true);assert.equal(f.owner.writeFacts().savedRevision,1);
     assert.equal(ui.events.filter(e=>e[0]==='notice').length,0,'unconfirmed durable preferences use a persistent notice');
     assert.equal(ui.owner.ttsPreferencesRecovery.visible,true);assert.equal(ui.owner.ttsPreferencesRecovery.canRetry,true);
@@ -115,10 +125,10 @@ for (const retired of [false,true]) {
   const f=fixture(),gate=deferred();await f.owner.update(initial);f.hangFlush(gate);const old=f.owner.update(choice);await settle();
   const warm=f.remount(),ui=reader({...f,owner:warm});
   await ui.owner.loadTtsPresentationMetadata({getTtsHost:()=>({listSystemVoices:async()=>[]})},ui.owner.ttsCoordinator,1);
-  assert.equal(ui.owner.ttsAllowMixing,true,'real warm metadata load projects accepted choice while old flush is unreturned');
+  assert.equal(ui.owner.ttsPreferences.allowMixing,true,'real warm metadata load projects accepted choice while old flush is unreturned');
   assert.equal(warm.writeFacts().pendingReconciliation,true,'metadata does not infer durable from the loaded value');
   assert.equal(f.events.filter(e=>e[0]==='put').length,2,'metadata recovery does not bypass the still-held file IO lane');
-  if(retired){ui.owner.ttsPreferenceMutationGeneration++;ui.owner.ttsAllowMixing=false;
+  if(retired){ui.owner.ttsPreferenceMutationGeneration++;ui.owner.ttsPreferences.allowMixing=false;
     ui.owner.setReaderPreferenceNotice('tts','后续设置保存状态',false);}
   gate.resolve();await old;await settle();
   assert.equal(f.events.filter(e=>e[0]==='put').length,retired?2:3,
@@ -145,8 +155,12 @@ try {
   const file=join(scratch,'LocalReadingExperience.ets'),lre=readFileSync(new URL('LocalReadingExperience.ets',dir),'utf8');
   const start=lre.indexOf('  private changeTtsAllowMixing('),end=lre.indexOf('  private changeTtsBackgroundPlayback(',start);
   const old=lre.slice(start,end).replace('this.notifyTtsPreferencePending(error as Error, current);',
-    'if (current()) { this.ttsAllowMixing = previous.allowMixing; await coordinator?.setAllowMixing(previous.allowMixing); }');
+    'if (current()) { this.ttsPreferences = previous; await coordinator?.setAllowMixing(previous.allowMixing); }');
   writeFileSync(file,lre.slice(0,start)+old+lre.slice(end));
   await assert.rejects(runUiCases(file),/keeps the current accepted choice/,'old real LRE rollback is the required negative control');
 } finally {rmSync(scratch,{recursive:true,force:true});}
 console.log('PASS actual TTS Preferences full Gateway→seven real LRE mutations: accepted/saved facts, put-before-effect and flush-lost-ACK, no old compensation or playback rollback, warm Runtime, one file IO lane, exact finite retry, stale retry rejection, overflow and native policy separation; OS durability/target remains separate.');
+
+} finally {
+  readerImports.deregister();
+}

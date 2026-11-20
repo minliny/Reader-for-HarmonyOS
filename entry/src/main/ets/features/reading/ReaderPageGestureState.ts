@@ -44,6 +44,9 @@ export type ReaderPageGestureState = {
   currentLocalY: number;
   maxDistance2D: number;
   progress: number;
+  turnPeakDistance: number;
+  turnReturnDistance: number;
+  turnCommitArmed: boolean;
   bookmarkPeakDistance: number;
   bookmarkOffsetY: number;
   bookmarkPreviewChanged: boolean;
@@ -59,10 +62,14 @@ export type ReaderPageGestureDecision = {
 
 export const READER_PAGE_GESTURE_TOUCH_SLOP = 8;
 export const READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP = 16;
+export const READER_PAGE_GESTURE_VERTICAL_CONFIRM_SLOP = 32;
+export const READER_PAGE_GESTURE_TURN_RETRACT_SLOP = 24;
+export const READER_PAGE_GESTURE_TURN_REARM_SLOP = 16;
 export const READER_PAGE_GESTURE_AXIS_DOMINANCE = 1.5;
 export const READER_PAGE_GESTURE_LONG_PRESS_MS = 500;
 export const READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP = 24;
 export const READER_PAGE_GESTURE_BOOKMARK_SLOP = 48;
+export const READER_PAGE_GESTURE_BOOKMARK_RELEASE_SLOP = 32;
 
 export function readerPagePointerCoordinate(
   coordinate: number,
@@ -254,12 +261,11 @@ export function cancelReaderPagePan(state: ReaderPageGestureState): ReaderPageGe
 function committedDirection(state: ReaderPageGestureState): ReaderPageTurnDirection | undefined {
   if (state.owner === 'horizontalPage' && state.direction !== undefined) {
     const signedDistance = directionSign(state.direction) * state.inputOffsetX;
-    const verticalDominates = Math.abs(state.inputOffsetY) >=
-      Math.abs(state.inputOffsetX) * READER_PAGE_GESTURE_AXIS_DOMINANCE;
-    return signedDistance >= READER_PAGE_GESTURE_TOUCH_SLOP && !verticalDominates ?
-      state.direction : undefined;
+    // Once the page follows this pointer, a thumb arc must not revoke it just
+    // because Y grows. Returning horizontally to P0 still rolls the page back.
+    return state.turnCommitArmed && signedDistance >= READER_PAGE_GESTURE_TOUCH_SLOP ? state.direction : undefined;
   }
-  if (state.owner === 'verticalPrevious' &&
+  if (state.owner === 'verticalPrevious' && state.turnCommitArmed &&
     -state.inputOffsetY >= READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP) {
     return 'previous';
   }
@@ -302,19 +308,22 @@ function applyReaderPageGestureSample(
   let axis = state.axis;
   let phase = state.phase;
 
-  // Movement outside tap slop stays provisional until one axis is clear.
-  // Confirmation is spatial: a large first MOVE can claim immediately, while
-  // an early small horizontal wobble cannot pre-empt the later downward pull.
-  // UP consumes the same directional rule with each action's commit distance.
+  // Reserve the clearly vertical sector for upward/back and downward/bookmark
+  // gestures. The remaining diagonal sector belongs to paging, so thumb arcs
+  // cannot remain unclaimed between two symmetric dominance tests.
+  // A thumb's initial vertical tangent remains provisional until 32vp. This
+  // leaves room for the arc to reveal its horizontal intent before any page
+  // or bookmark visual is owned. No timer or sample-count delay is involved.
+  // UP uses the same sectors with each action's commit distance.
   if (owner === 'undecided') {
     const horizontalSlop = finalSample ? READER_PAGE_GESTURE_TOUCH_SLOP :
       READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
     const upwardSlop = finalSample ? READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP :
-      READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
+      READER_PAGE_GESTURE_VERTICAL_CONFIRM_SLOP;
     const downwardSlop = finalSample ? READER_PAGE_GESTURE_BOOKMARK_SLOP :
-      READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
+      READER_PAGE_GESTURE_VERTICAL_CONFIRM_SLOP;
     if (absoluteX >= horizontalSlop &&
-      absoluteX >= absoluteY * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
+      absoluteY < absoluteX * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
       owner = 'horizontalPage';
       direction = directionForOffset(inputX);
       axis = 'horizontal';
@@ -338,6 +347,33 @@ function applyReaderPageGestureSample(
     }
   }
 
+  let turnPeak = state.turnPeakDistance;
+  let turnReturn = state.turnReturnDistance;
+  let turnArmed = state.turnCommitArmed;
+  if (owner === 'horizontalPage' || owner === 'verticalPrevious') {
+    const distance = owner === 'verticalPrevious' ? -inputY :
+      (direction === 'next' ? -inputX : inputX);
+    const minimum = owner === 'verticalPrevious' ? READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP :
+      READER_PAGE_GESTURE_TOUCH_SLOP;
+    if (state.owner !== owner || turnPeak < minimum) {
+      turnPeak = Math.max(0, distance);
+      turnReturn = distance;
+      turnArmed = distance >= minimum;
+    } else if (turnArmed) {
+      turnPeak = Math.max(turnPeak, distance);
+      if (distance < minimum || turnPeak - distance >= READER_PAGE_GESTURE_TURN_RETRACT_SLOP) {
+        turnArmed = false;
+        turnReturn = distance;
+      }
+    } else {
+      turnReturn = Math.min(turnReturn, distance);
+      if (distance >= minimum && distance - turnReturn >= READER_PAGE_GESTURE_TURN_REARM_SLOP) {
+        turnArmed = true;
+        turnPeak = distance;
+      }
+    }
+  }
+
   let bookmarkPeak = state.bookmarkPeakDistance;
   let bookmarkOffsetY = state.bookmarkOffsetY;
   let bookmarkPreviewChanged = state.bookmarkPreviewChanged;
@@ -346,9 +382,10 @@ function applyReaderPageGestureSample(
     bookmarkPeak = Math.max(bookmarkPeak, downward);
     bookmarkOffsetY = Math.min(state.viewportHeight / 2,
       Math.max(0, downward - READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP) / 2);
-    bookmarkPreviewChanged = bookmarkPeak >= READER_PAGE_GESTURE_BOOKMARK_SLOP &&
-      downward >= bookmarkPeak / 2 &&
-      absoluteX < absoluteY * READER_PAGE_GESTURE_AXIS_DOMINANCE;
+    bookmarkPreviewChanged = bookmarkPreviewChanged ?
+      downward >= READER_PAGE_GESTURE_BOOKMARK_RELEASE_SLOP &&
+        absoluteX < downward * READER_PAGE_GESTURE_AXIS_DOMINANCE :
+      downward >= READER_PAGE_GESTURE_BOOKMARK_SLOP && absoluteX <= downward;
   }
 
   const currentDirection = owner === 'bookmark' ? undefined : directionForOffset(inputX);
@@ -378,6 +415,9 @@ function applyReaderPageGestureSample(
     state.currentLocalY = currentY;
     state.maxDistance2D = maxDistance;
     state.progress = progress;
+    state.turnPeakDistance = turnPeak;
+    state.turnReturnDistance = turnReturn;
+    state.turnCommitArmed = turnArmed;
     state.bookmarkPeakDistance = bookmarkPeak;
     state.bookmarkOffsetY = bookmarkOffsetY;
     state.bookmarkPreviewChanged = bookmarkPreviewChanged;
@@ -408,6 +448,9 @@ function applyReaderPageGestureSample(
     currentLocalY: currentY,
     maxDistance2D: maxDistance,
     progress,
+    turnPeakDistance: turnPeak,
+    turnReturnDistance: turnReturn,
+    turnCommitArmed: turnArmed,
     bookmarkPeakDistance: bookmarkPeak,
     bookmarkOffsetY,
     bookmarkPreviewChanged,
@@ -425,6 +468,7 @@ function idleReaderPageGestureState(consumed: boolean): ReaderPageGestureState {
     lastOffsetX: 0, lastOffsetY: 0, velocityX: 0, velocityY: 0,
     startEventTimeMs: 0, eventTimeMs: 0, startLocalX: 0, startLocalY: 0,
     currentLocalX: 0, currentLocalY: 0, maxDistance2D: 0, progress: 0,
+    turnPeakDistance: 0, turnReturnDistance: 0, turnCommitArmed: false,
     bookmarkPeakDistance: 0, bookmarkOffsetY: 0, bookmarkPreviewChanged: false,
     settleTarget: undefined, reversed: false,
   };

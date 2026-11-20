@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { motionAnimateParam } from '../common/MotionSpec';
@@ -54,7 +55,7 @@ export struct MangaDirectoryEntryRow {
   }
 
   private cellHeight(): number {
-    return Math.max(MANGA_DIRECTORY_VISUAL.gridHeight,
+    return Math.max(44 + MANGA_DIRECTORY_VISUAL.gridBorder * 2, MANGA_DIRECTORY_VISUAL.gridHeight,
       MANGA_DIRECTORY_VISUAL.gridPaddingY * 2 + MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale() +
       MANGA_DIRECTORY_VISUAL.gridBorder * 2);
   }
@@ -120,16 +121,19 @@ export struct MangaDirectoryEntryRow {
           (this.scheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
           (this.scheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
           .width(grid ? 12 : 15).height(grid ? 12 : 15);
-      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 28).height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
-        Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
+      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44).height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
+        Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
         .accessibilityText(`管理${this.title(entry)}下载`)
         .enabled(this.interactionEnabled)
+      .responseRegion( readerActionTouchRegion(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44, grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
+        Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale())))
+      .attributeModifier(new ReaderActionAccessibility(`管理${this.title(entry)}下载`, this.interactionEnabled, false))
         .onClick((): void => {
           const current = this.liveEntry(entry);
           if (current !== undefined && this.interactionEnabled && this.downloadable(current)) this.onDownloadEntry(current);
         });
-      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 28)
-        .height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 : Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
+      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44)
+        .height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 : Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
         // Native child clicks win the default exclusive arena. If the child
         // is disabled, this inert actor prevents a chapter click behind it.
         .focusable(false).accessibilityLevel('no').onClick((): void => {});
@@ -171,8 +175,9 @@ export struct MangaDirectoryEntryRow {
     }.layoutWeight(1).constraintSize({ minWidth: 0, minHeight: this.cellHeight() })
       .border({ width: MANGA_DIRECTORY_VISUAL.gridBorder, color: this.color('line') }).borderRadius(MANGA_DIRECTORY_VISUAL.gridRadius)
       .backgroundColor(this.color(this.current(entry) ? 'active' : 'soft'))
-      .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.scheme))
+      .attributeModifier(new ReaderActionAccessibility(this.accessibility(entry), this.interactionEnabled, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.scheme)))
       .enabled(this.interactionEnabled).accessibilityText(this.accessibility(entry))
+      .responseRegion( readerActionTouchRegion('100%', 44))
       .onClick((): void => this.activateEntry(entry));
   }
 
@@ -183,14 +188,12 @@ export struct MangaDirectoryEntryRow {
         Image(this.scheme === 'night' ? $r('app.media.manga_sheet_chevron_down_theme_night') :
           $r('app.media.manga_sheet_chevron_down')).width(16).height(16)
           .rotate({ angle: this.expanded(entry) ? 0 : -90 }).animation(motionAnimateParam('manga.directory.fold'));
-      }.width(this.facts(entry)?.group === true ? 16 : 32).height(this.facts(entry)?.group === true ? 16 : 32)
+      }.width(44).height(44)
         .margin({ left: this.facts(entry)?.group === true ? 0 : 8, right: this.facts(entry)?.group === true ? 0 : 8 })
-        .responseRegion({ x: this.facts(entry)?.group === true ? -10 : 0,
-          y: this.facts(entry)?.group === true ? -14 : 0,
-          width: this.facts(entry)?.group === true ? 36 : 32, height: this.facts(entry)?.group === true ? 44 : 32 })
+        .responseRegion({ x: 0, y: 0, width: 44, height: 44 })
         .enabled(this.interactionEnabled && this.query.trim().length === 0)
-        .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled && this.query.trim().length === 0,
-          this.facts(entry)?.group !== true, this.scheme))
+        .attributeModifier(new ReaderActionAccessibility(`${this.title(entry)}，${this.expanded(entry) ? '收起' : '展开'}子目录`, this.interactionEnabled && this.query.trim().length === 0, this.expanded(entry), true, new MangaDirectoryPressFeedback(this.interactionEnabled && this.query.trim().length === 0,
+          this.facts(entry)?.group !== true, this.scheme)))
         .accessibilityText(`${this.title(entry)}，${this.expanded(entry) ? '收起' : '展开'}子目录`)
         .onClick((): void => {
           const current = this.liveEntry(entry);
@@ -276,11 +279,12 @@ export struct MangaDirectoryEntryRow {
         this.branchControlsEnabled && this.facts(entry)?.readableParent === true ? 0 : MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.color('line') })
       .backgroundColor(this.current(entry) ? this.color('active') : this.facts(entry)?.group === true ? this.color('soft') : Color.Transparent)
       .opacity(this.liveEntry(entry)?.navigable === false && this.facts(entry)?.group !== true ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1)
-      .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled &&
+      .attributeModifier(new ReaderActionAccessibility(this.accessibility(entry), this.interactionEnabled && (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false), false, true, new MangaDirectoryPressFeedback(this.interactionEnabled &&
         (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false),
-        this.facts(entry)?.group !== true || this.interactionEnabled && this.branchControlsEnabled && this.query.trim().length === 0, this.scheme))
+        this.facts(entry)?.group !== true || this.interactionEnabled && this.branchControlsEnabled && this.query.trim().length === 0, this.scheme)))
       .enabled(this.interactionEnabled && (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false))
-      .accessibilityText(this.accessibility(entry)).onClick((): void => this.activateEntry(entry));
+      .accessibilityText(this.accessibility(entry))
+      .responseRegion( readerActionTouchRegion('100%', 44)).onClick((): void => this.activateEntry(entry));
   }
 
   private emptySlots(): number[] {
@@ -313,6 +317,7 @@ export struct MangaDirectoryEntryRow {
           bottom: this.row.runEnd === false ? MANGA_DIRECTORY_VISUAL.gridGap : MANGA_DIRECTORY_VISUAL.gridRunMargin });
       }
     }.width('100%').alignItems(HorizontalAlign.Start)
+      .id(`reader-verify-manga-row-${this.row.startIndex}`)
       .border({ width: { top: this.row.startIndex === 0 ? MANGA_DIRECTORY_VISUAL.gridBorder : 0 }, color: this.color('line') });
   }
 }

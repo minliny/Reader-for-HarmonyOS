@@ -1,0 +1,758 @@
+{
+  "attempts": [
+    {
+      "timestamp": "2026-10-21T16:00:49.095Z",
+      "result": "PASS",
+      "exitCode": 0,
+      "passed": [
+        "actual phone/wide actions retain width, leading call and end alignment in both busy states",
+        "actual bookPanel has 16/24 input and separate 44vp clear target; bookPage remains 14/21",
+        "actual notice Builders expose a single recovery action and retain result identities",
+        "busy retry admission and old page/query/operation/fact callbacks reject before business dispatch",
+        "the actual page leading slot keeps native LoadingProgress geometry while idle and busy"
+      ],
+      "selectedPageMembers": [
+        "appThemeScheme",
+        "readerWindowMetricsRevision",
+        "presentation",
+        "viewState",
+        "resultNoticeFacts",
+        "pageEpoch",
+        "pageMounted",
+        "isTablet",
+        "reduceMotion",
+        "spinnerRunKey",
+        "onRetry",
+        "onManageSources",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "searchControlHeight",
+        "searchFontScale",
+        "captureSearchNoticeFacts",
+        "displayedSearchNoticeFacts",
+        "hasDisplayedSearchNotice",
+        "hasAnySearchNotice",
+        "searchNoticeText",
+        "searchNoticeActionEnabled",
+        "searchNoticeOffersRetry",
+        "hasSearchNoticeRetry",
+        "searchProgressRetryHandler",
+        "searchNoticeActionKey",
+        "searchProgressDetails",
+        "searchProgressNotice",
+        "partialSearchFailure",
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "searchErrorActions",
+        "searchActionLeading"
+      ],
+      "dimensions": [
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "wide": false,
+          "action": [
+            72,
+            44
+          ]
+        },
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "wide": true,
+          "action": [
+            74,
+            44
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "wide": false,
+          "action": [
+            87.6,
+            58.400000000000006
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "wide": true,
+          "action": [
+            90.80000000000001,
+            58.400000000000006
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "wide": false,
+          "action": [
+            129.2,
+            96.80000000000001
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "wide": true,
+          "action": [
+            135.60000000000002,
+            96.80000000000001
+          ]
+        },
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "variant": "bookPanel",
+          "input": [
+            16,
+            24,
+            44
+          ],
+          "clear": [
+            44,
+            44
+          ]
+        },
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "variant": "bookPage",
+          "input": [
+            14,
+            21,
+            42
+          ],
+          "clear": [
+            14,
+            14
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "variant": "bookPanel",
+          "input": [
+            16,
+            24,
+            58.400000000000006
+          ],
+          "clear": [
+            44,
+            58.400000000000006
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "variant": "bookPage",
+          "input": [
+            14,
+            21,
+            54.6
+          ],
+          "clear": [
+            14,
+            14
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "variant": "bookPanel",
+          "input": [
+            16,
+            24,
+            96.80000000000001
+          ],
+          "clear": [
+            44,
+            96.80000000000001
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "variant": "bookPage",
+          "input": [
+            14,
+            21,
+            88.2
+          ],
+          "clear": [
+            14,
+            14
+          ]
+        }
+      ],
+      "sourceSha256": {
+        "entry/src/main/ets/features/search/SearchPage.ets": "e00ce6df86bc4d633d8f71d4ecf6bf4dc065669321ccadd7f141310bee3a8669",
+        "entry/src/main/ets/features/search/SearchSpinner.ets": "0114264e98bac75e43d4536be03c22f3e7f2e4c03595be629152f8ce4d4602a7",
+        "entry/src/main/ets/features/common/ReaderButton.ets": "5081d42a28327af9d7af77a1ceed2ec185d2d032e09fe797343eab0f85e564f2",
+        "entry/src/main/ets/features/common/ReaderSearchField.ets": "7e4e964d49e6c1960b94b1b2b6d9567dd461e76c2635339a54da4de91ca8f777",
+        "entry/src/main/ets/features/common/ReaderControlSpecs.ets": "8d796b79669495dfb744a36f26d114394f0b494c56ac4c84172e53c9765f38ba",
+        "entry/src/main/ets/features/common/ReaderTypography.ets": "0408e5950500f784cb1edc0d19ef7d04c5939e980b6f3053cc16412dc72330f1",
+        "tools/lib/reader-foundation-control-probe.mjs": "d658c694ec3f8e5c4004df0df94a8fdfefc7fbeec6c0b11593c5e2a0fe9688c2"
+      },
+      "probeSha256": "c5423f66991f1626dd80ce7bdc6e438caefd47fcb39c11330560b13032cdb6dc",
+      "evidence": "actual installed ETS SDK lowering, shared modifiers, selected production methods and explicit business callbacks",
+      "notProven": "native text measurement or pixel layout, physical overlap at viewport widths, animation, scrolling, HAP, device or user acceptance"
+    },
+    {
+      "timestamp": "2026-10-21T16:01:38.676Z",
+      "result": "FAIL",
+      "exitCode": 1,
+      "stage": "actual phone/wide actions retain width, leading call and end alignment in both busy states",
+      "passed": [],
+      "error": {
+        "name": "AssertionError",
+        "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Alignment.End'\n- 'Alignment.CenterEnd'\n             ^\n",
+        "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Alignment.End'\n- 'Alignment.CenterEnd'\n             ^\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-aligned-controls-probe.mjs:92:18\n    at scenario (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-aligned-controls-probe.mjs:71:51)\n    at main (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-aligned-controls-probe.mjs:73:3)\n    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-aligned-controls-probe.mjs:278:18"
+      },
+      "sourceSha256": {
+        "entry/src/main/ets/features/search/SearchPage.ets": "a782f951e8f41c58afdb3f38f2c366553fd26f581dbc65c7cb9b511f59e4d135",
+        "entry/src/main/ets/features/search/SearchSpinner.ets": "0114264e98bac75e43d4536be03c22f3e7f2e4c03595be629152f8ce4d4602a7",
+        "entry/src/main/ets/features/common/ReaderButton.ets": "036b8342bd8ba37d401823eda739ea18d0f73399a4316974e6d321aa99d1d2a1",
+        "entry/src/main/ets/features/common/ReaderSearchField.ets": "7e4e964d49e6c1960b94b1b2b6d9567dd461e76c2635339a54da4de91ca8f777",
+        "entry/src/main/ets/features/common/ReaderControlSpecs.ets": "8d796b79669495dfb744a36f26d114394f0b494c56ac4c84172e53c9765f38ba",
+        "entry/src/main/ets/features/common/ReaderTypography.ets": "0408e5950500f784cb1edc0d19ef7d04c5939e980b6f3053cc16412dc72330f1",
+        "tools/lib/reader-foundation-control-probe.mjs": "d658c694ec3f8e5c4004df0df94a8fdfefc7fbeec6c0b11593c5e2a0fe9688c2"
+      },
+      "probeSha256": "1970a1cb478717b465f9368ae30198a4d0905f0ba87e241dc287c93768776de0",
+      "evidence": "actual installed ETS SDK lowering, shared modifiers, selected production methods and explicit business callbacks",
+      "notProven": "native text measurement or pixel layout, physical overlap at viewport widths, animation, scrolling, HAP, device or user acceptance"
+    },
+    {
+      "timestamp": "2026-10-21T16:02:16.361Z",
+      "result": "FAIL",
+      "exitCode": 1,
+      "stage": "compile actual shared controls",
+      "passed": [],
+      "error": {
+        "name": "AssertionError",
+        "message": "End comes from the installed SDK instead of the permissive native proxy",
+        "stack": "AssertionError [ERR_ASSERTION]: End comes from the installed SDK instead of the permissive native proxy\n    at main (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-aligned-controls-probe.mjs:60:10)\n    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-aligned-controls-probe.mjs:288:18"
+      },
+      "sourceSha256": {
+        "entry/src/main/ets/features/search/SearchPage.ets": "b4d5beef4f6f20515e074d04269dabf6f0e330397f55da992d2696235c49d317",
+        "entry/src/main/ets/features/search/SearchSpinner.ets": "0114264e98bac75e43d4536be03c22f3e7f2e4c03595be629152f8ce4d4602a7",
+        "entry/src/main/ets/features/common/ReaderButton.ets": "036b8342bd8ba37d401823eda739ea18d0f73399a4316974e6d321aa99d1d2a1",
+        "entry/src/main/ets/features/common/ReaderSearchField.ets": "7e4e964d49e6c1960b94b1b2b6d9567dd461e76c2635339a54da4de91ca8f777",
+        "entry/src/main/ets/features/common/ReaderControlSpecs.ets": "8d796b79669495dfb744a36f26d114394f0b494c56ac4c84172e53c9765f38ba",
+        "entry/src/main/ets/features/common/ReaderTypography.ets": "0408e5950500f784cb1edc0d19ef7d04c5939e980b6f3053cc16412dc72330f1",
+        "tools/lib/reader-foundation-control-probe.mjs": "d658c694ec3f8e5c4004df0df94a8fdfefc7fbeec6c0b11593c5e2a0fe9688c2"
+      },
+      "probeSha256": "6148f15dde442d3c75f7f70395b49acfacf0892a2ed35f21f8453a976b23ea7d",
+      "evidence": "actual installed ETS SDK lowering, shared modifiers, selected production methods and explicit business callbacks",
+      "notProven": "native text measurement or pixel layout, physical overlap at viewport widths, animation, scrolling, HAP, device or user acceptance"
+    },
+    {
+      "timestamp": "2026-10-21T16:02:34.628Z",
+      "result": "FAIL",
+      "exitCode": 1,
+      "stage": "only expanded options get a bounded native Scroll using actual window/safe-area/keyboard policy",
+      "passed": [
+        "actual phone/wide actions retain width, leading call and end alignment in both busy states",
+        "actual bookPanel has 16/24 input and separate 44vp clear target; bookPage remains 14/21",
+        "actual notice Builders expose a single recovery action and retain result identities",
+        "busy retry admission and old page/query/operation/fact callbacks reject before business dispatch",
+        "the actual page leading slot keeps native LoadingProgress geometry while idle and busy"
+      ],
+      "error": {
+        "name": "TypeError",
+        "message": "this.searchResultWidth is not a function",
+        "stack": "TypeError: this.searchResultWidth is not a function\n    at ReaderBuilderProbe.searchStatsHeight (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:556:21), <anonymous>:172:41)\n    at ReaderBuilderProbe.searchFilterMaxHeight (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:556:21), <anonymous>:161:52)\n    at Array.eval (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:556:21), <anonymous>:117:77)\n    at ReaderBuilderProbe.runObserver (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:479:31)\n    at ReaderBuilderProbe.observeComponentCreation2 (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:472:12)\n    at eval (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:556:21), <anonymous>:114:38)\n    at ReaderBuilderProbe.ifElseBranchUpdateFunction (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:501:71)\n    at Array.eval (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:556:21), <anonymous>:113:34)\n    at ReaderBuilderProbe.runObserver (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:479:31)\n    at ReaderBuilderProbe.observeComponentCreation2 (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:472:12)"
+      },
+      "sourceSha256": {
+        "entry/src/main/ets/features/search/SearchPage.ets": "b4d5beef4f6f20515e074d04269dabf6f0e330397f55da992d2696235c49d317",
+        "entry/src/main/ets/features/search/SearchSpinner.ets": "0114264e98bac75e43d4536be03c22f3e7f2e4c03595be629152f8ce4d4602a7",
+        "entry/src/main/ets/features/common/ReaderButton.ets": "036b8342bd8ba37d401823eda739ea18d0f73399a4316974e6d321aa99d1d2a1",
+        "entry/src/main/ets/features/common/ReaderSearchField.ets": "7e4e964d49e6c1960b94b1b2b6d9567dd461e76c2635339a54da4de91ca8f777",
+        "entry/src/main/ets/features/common/ReaderControlSpecs.ets": "8d796b79669495dfb744a36f26d114394f0b494c56ac4c84172e53c9765f38ba",
+        "entry/src/main/ets/features/common/ReaderTypography.ets": "0408e5950500f784cb1edc0d19ef7d04c5939e980b6f3053cc16412dc72330f1",
+        "tools/lib/reader-foundation-control-probe.mjs": "d658c694ec3f8e5c4004df0df94a8fdfefc7fbeec6c0b11593c5e2a0fe9688c2"
+      },
+      "probeSha256": "af6d2c9dfffc8b3f29e4a683316747184acca618ee5efd0090a691806d66f4c6",
+      "evidence": "actual installed ETS SDK lowering, shared modifiers, selected production methods and explicit business callbacks",
+      "notProven": "native text measurement or pixel layout, physical overlap at viewport widths, animation, scrolling, HAP, device or user acceptance"
+    },
+    {
+      "timestamp": "2026-10-21T16:02:42.023Z",
+      "result": "PASS",
+      "exitCode": 0,
+      "passed": [
+        "actual phone/wide actions retain width, leading call and end alignment in both busy states",
+        "actual bookPanel has 16/24 input and separate 44vp clear target; bookPage remains 14/21",
+        "actual notice Builders expose a single recovery action and retain result identities",
+        "busy retry admission and old page/query/operation/fact callbacks reject before business dispatch",
+        "the actual page leading slot keeps native LoadingProgress geometry while idle and busy",
+        "only expanded options get a bounded native Scroll using actual window/safe-area/keyboard policy"
+      ],
+      "selectedPageMembers": [
+        "appThemeScheme",
+        "readerWindowMetricsRevision",
+        "presentation",
+        "viewState",
+        "resultNoticeFacts",
+        "pageEpoch",
+        "pageMounted",
+        "isTablet",
+        "reduceMotion",
+        "spinnerRunKey",
+        "onRetry",
+        "onManageSources",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "searchControlHeight",
+        "searchFontScale",
+        "captureSearchNoticeFacts",
+        "displayedSearchNoticeFacts",
+        "hasDisplayedSearchNotice",
+        "hasAnySearchNotice",
+        "searchNoticeText",
+        "searchNoticeActionEnabled",
+        "searchNoticeOffersRetry",
+        "hasSearchNoticeRetry",
+        "searchProgressRetryHandler",
+        "searchNoticeActionKey",
+        "searchProgressDetails",
+        "searchProgressNotice",
+        "partialSearchFailure",
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "searchErrorActions",
+        "searchActionLeading"
+      ],
+      "headerMembers": [
+        "appThemeScheme",
+        "readerWindowMetricsRevision",
+        "presentation",
+        "isTablet",
+        "filtersExpanded",
+        "searchHeader",
+        "hasSearchSession",
+        "searchFilterMaxHeight",
+        "searchBarHeight",
+        "searchControlHeight",
+        "searchStatsHeight",
+        "searchFontScale",
+        "searchOuterInset",
+        "searchResultWidth",
+        "searchActionWidth"
+      ],
+      "dimensions": [
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "wide": false,
+          "action": [
+            72,
+            44
+          ]
+        },
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "wide": true,
+          "action": [
+            74,
+            44
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "wide": false,
+          "action": [
+            87.6,
+            58.400000000000006
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "wide": true,
+          "action": [
+            90.80000000000001,
+            58.400000000000006
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "wide": false,
+          "action": [
+            129.2,
+            96.80000000000001
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "wide": true,
+          "action": [
+            135.60000000000002,
+            96.80000000000001
+          ]
+        },
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "variant": "bookPanel",
+          "input": [
+            16,
+            24,
+            44
+          ],
+          "clear": [
+            44,
+            44
+          ]
+        },
+        {
+          "viewportWidth": 390,
+          "fontScale": 1,
+          "variant": "bookPage",
+          "input": [
+            14,
+            21,
+            42
+          ],
+          "clear": [
+            14,
+            14
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "variant": "bookPanel",
+          "input": [
+            16,
+            24,
+            58.400000000000006
+          ],
+          "clear": [
+            44,
+            58.400000000000006
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 1.6,
+          "variant": "bookPage",
+          "input": [
+            14,
+            21,
+            54.6
+          ],
+          "clear": [
+            14,
+            14
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "variant": "bookPanel",
+          "input": [
+            16,
+            24,
+            96.80000000000001
+          ],
+          "clear": [
+            44,
+            96.80000000000001
+          ]
+        },
+        {
+          "viewportWidth": 320,
+          "fontScale": 3.2,
+          "variant": "bookPage",
+          "input": [
+            14,
+            21,
+            88.2
+          ],
+          "clear": [
+            14,
+            14
+          ]
+        },
+        {
+          "viewportHeight": 790,
+          "keyboard": 0,
+          "fontScale": 1,
+          "expandedOptionsMaxHeight": 457
+        },
+        {
+          "viewportHeight": 650,
+          "keyboard": 300,
+          "fontScale": 1.6,
+          "expandedOptionsMaxHeight": 88
+        },
+        {
+          "viewportHeight": 480,
+          "keyboard": 200,
+          "fontScale": 3.2,
+          "expandedOptionsMaxHeight": 88
+        }
+      ],
+      "sdkAlignmentSha256": "617b64850440a44dfc6a776d5e3b6005038c87d207a88536511be3e0a648d1e9",
+      "sdkAlignmentEnd": 5,
+      "sourceSha256": {
+        "entry/src/main/ets/features/search/SearchPage.ets": "b4d5beef4f6f20515e074d04269dabf6f0e330397f55da992d2696235c49d317",
+        "entry/src/main/ets/features/search/SearchSpinner.ets": "0114264e98bac75e43d4536be03c22f3e7f2e4c03595be629152f8ce4d4602a7",
+        "entry/src/main/ets/features/common/ReaderButton.ets": "036b8342bd8ba37d401823eda739ea18d0f73399a4316974e6d321aa99d1d2a1",
+        "entry/src/main/ets/features/common/ReaderSearchField.ets": "7e4e964d49e6c1960b94b1b2b6d9567dd461e76c2635339a54da4de91ca8f777",
+        "entry/src/main/ets/features/common/ReaderControlSpecs.ets": "8d796b79669495dfb744a36f26d114394f0b494c56ac4c84172e53c9765f38ba",
+        "entry/src/main/ets/features/common/ReaderTypography.ets": "0408e5950500f784cb1edc0d19ef7d04c5939e980b6f3053cc16412dc72330f1",
+        "tools/lib/reader-foundation-control-probe.mjs": "d658c694ec3f8e5c4004df0df94a8fdfefc7fbeec6c0b11593c5e2a0fe9688c2"
+      },
+      "probeSha256": "3ed863a97ae1f0bd7a2208794ff1b794bfe46ec65fdb2d0231a7c0d9d124a601",
+      "evidence": "actual installed ETS SDK lowering, shared modifiers, selected production methods and explicit business callbacks",
+      "notProven": "native text measurement or pixel layout, physical overlap at viewport widths, animation, scrolling, HAP, device or user acceptance"
+    }
+  ],
+  "latest": {
+    "timestamp": "2026-10-21T16:02:42.023Z",
+    "result": "PASS",
+    "exitCode": 0,
+    "passed": [
+      "actual phone/wide actions retain width, leading call and end alignment in both busy states",
+      "actual bookPanel has 16/24 input and separate 44vp clear target; bookPage remains 14/21",
+      "actual notice Builders expose a single recovery action and retain result identities",
+      "busy retry admission and old page/query/operation/fact callbacks reject before business dispatch",
+      "the actual page leading slot keeps native LoadingProgress geometry while idle and busy",
+      "only expanded options get a bounded native Scroll using actual window/safe-area/keyboard policy"
+    ],
+    "selectedPageMembers": [
+      "appThemeScheme",
+      "readerWindowMetricsRevision",
+      "presentation",
+      "viewState",
+      "resultNoticeFacts",
+      "pageEpoch",
+      "pageMounted",
+      "isTablet",
+      "reduceMotion",
+      "spinnerRunKey",
+      "onRetry",
+      "onManageSources",
+      "operation",
+      "retryOperation",
+      "isSweeping",
+      "searchControlHeight",
+      "searchFontScale",
+      "captureSearchNoticeFacts",
+      "displayedSearchNoticeFacts",
+      "hasDisplayedSearchNotice",
+      "hasAnySearchNotice",
+      "searchNoticeText",
+      "searchNoticeActionEnabled",
+      "searchNoticeOffersRetry",
+      "hasSearchNoticeRetry",
+      "searchProgressRetryHandler",
+      "searchNoticeActionKey",
+      "searchProgressDetails",
+      "searchProgressNotice",
+      "partialSearchFailure",
+      "searchFailureTitle",
+      "searchFailureMessage",
+      "searchErrorActions",
+      "searchActionLeading"
+    ],
+    "headerMembers": [
+      "appThemeScheme",
+      "readerWindowMetricsRevision",
+      "presentation",
+      "isTablet",
+      "filtersExpanded",
+      "searchHeader",
+      "hasSearchSession",
+      "searchFilterMaxHeight",
+      "searchBarHeight",
+      "searchControlHeight",
+      "searchStatsHeight",
+      "searchFontScale",
+      "searchOuterInset",
+      "searchResultWidth",
+      "searchActionWidth"
+    ],
+    "dimensions": [
+      {
+        "viewportWidth": 390,
+        "fontScale": 1,
+        "wide": false,
+        "action": [
+          72,
+          44
+        ]
+      },
+      {
+        "viewportWidth": 390,
+        "fontScale": 1,
+        "wide": true,
+        "action": [
+          74,
+          44
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 1.6,
+        "wide": false,
+        "action": [
+          87.6,
+          58.400000000000006
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 1.6,
+        "wide": true,
+        "action": [
+          90.80000000000001,
+          58.400000000000006
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 3.2,
+        "wide": false,
+        "action": [
+          129.2,
+          96.80000000000001
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 3.2,
+        "wide": true,
+        "action": [
+          135.60000000000002,
+          96.80000000000001
+        ]
+      },
+      {
+        "viewportWidth": 390,
+        "fontScale": 1,
+        "variant": "bookPanel",
+        "input": [
+          16,
+          24,
+          44
+        ],
+        "clear": [
+          44,
+          44
+        ]
+      },
+      {
+        "viewportWidth": 390,
+        "fontScale": 1,
+        "variant": "bookPage",
+        "input": [
+          14,
+          21,
+          42
+        ],
+        "clear": [
+          14,
+          14
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 1.6,
+        "variant": "bookPanel",
+        "input": [
+          16,
+          24,
+          58.400000000000006
+        ],
+        "clear": [
+          44,
+          58.400000000000006
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 1.6,
+        "variant": "bookPage",
+        "input": [
+          14,
+          21,
+          54.6
+        ],
+        "clear": [
+          14,
+          14
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 3.2,
+        "variant": "bookPanel",
+        "input": [
+          16,
+          24,
+          96.80000000000001
+        ],
+        "clear": [
+          44,
+          96.80000000000001
+        ]
+      },
+      {
+        "viewportWidth": 320,
+        "fontScale": 3.2,
+        "variant": "bookPage",
+        "input": [
+          14,
+          21,
+          88.2
+        ],
+        "clear": [
+          14,
+          14
+        ]
+      },
+      {
+        "viewportHeight": 790,
+        "keyboard": 0,
+        "fontScale": 1,
+        "expandedOptionsMaxHeight": 457
+      },
+      {
+        "viewportHeight": 650,
+        "keyboard": 300,
+        "fontScale": 1.6,
+        "expandedOptionsMaxHeight": 88
+      },
+      {
+        "viewportHeight": 480,
+        "keyboard": 200,
+        "fontScale": 3.2,
+        "expandedOptionsMaxHeight": 88
+      }
+    ],
+    "sdkAlignmentSha256": "617b64850440a44dfc6a776d5e3b6005038c87d207a88536511be3e0a648d1e9",
+    "sdkAlignmentEnd": 5,
+    "sourceSha256": {
+      "entry/src/main/ets/features/search/SearchPage.ets": "b4d5beef4f6f20515e074d04269dabf6f0e330397f55da992d2696235c49d317",
+      "entry/src/main/ets/features/search/SearchSpinner.ets": "0114264e98bac75e43d4536be03c22f3e7f2e4c03595be629152f8ce4d4602a7",
+      "entry/src/main/ets/features/common/ReaderButton.ets": "036b8342bd8ba37d401823eda739ea18d0f73399a4316974e6d321aa99d1d2a1",
+      "entry/src/main/ets/features/common/ReaderSearchField.ets": "7e4e964d49e6c1960b94b1b2b6d9567dd461e76c2635339a54da4de91ca8f777",
+      "entry/src/main/ets/features/common/ReaderControlSpecs.ets": "8d796b79669495dfb744a36f26d114394f0b494c56ac4c84172e53c9765f38ba",
+      "entry/src/main/ets/features/common/ReaderTypography.ets": "0408e5950500f784cb1edc0d19ef7d04c5939e980b6f3053cc16412dc72330f1",
+      "tools/lib/reader-foundation-control-probe.mjs": "d658c694ec3f8e5c4004df0df94a8fdfefc7fbeec6c0b11593c5e2a0fe9688c2"
+    },
+    "probeSha256": "3ed863a97ae1f0bd7a2208794ff1b794bfe46ec65fdb2d0231a7c0d9d124a601",
+    "evidence": "actual installed ETS SDK lowering, shared modifiers, selected production methods and explicit business callbacks",
+    "notProven": "native text measurement or pixel layout, physical overlap at viewport widths, animation, scrolling, HAP, device or user acceptance"
+  }
+}

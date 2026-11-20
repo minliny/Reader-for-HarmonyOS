@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from './ReaderActionAccessibility';
 import { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActionSheetSpec, type ActionSheetSpecId } from './ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
 import { readerAppColor } from './ReaderThemeRegistry';
@@ -113,6 +114,8 @@ export struct ReaderActionMenuSurface {
       .opacity(this.action(id).enabled || this.action(id).busy || this.spec().actionMutesContent ? 1 : 0.45)
       .enabled(this.action(id).enabled)
       .accessibilityText(this.action(id).accessibilityLabel)
+      .responseRegion( readerActionTouchRegion('100%', this.menuActionHeight()))
+      .attributeModifier(new ReaderActionAccessibility(this.action(id).accessibilityLabel, this.action(id).enabled, false))
       .onClick((): void => this.commitAction(id));
   }
 
@@ -161,12 +164,14 @@ export struct ReaderActionMenuSurface {
           Image(this.effectiveScheme() === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
             .width(this.actionSheetSpec().chevronSize).height(this.actionSheetSpec().chevronSize);
         }
-      }.width('100%').constraintSize({ minHeight: readerScaledControlHeight(this.actionSheetSpec().rowHeight,
+      }.width('100%').constraintSize({ minHeight: readerScaledControlHeight(Math.max(44, this.actionSheetSpec().rowHeight),
         this.actionSheetSpec().labelLineHeight, this.fontScale()) })
         .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight,
           top: this.actionSheetSpec().rowPaddingY, bottom: this.actionSheetSpec().rowPaddingY })
         .opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
-        .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
+        .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id)))
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(this.accessibilityLabel(this.action(id)), this.action(id).enabled, false)).onClick((): void => this.commitAction(id));
       if (index < this.actions.length - 1) {
         Row().width(`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`).height(this.actionSheetSpec().dividerHeight)
           .backgroundColor(readerAppColor('TOK_ROW_DIVIDER', this.effectiveScheme()))
@@ -183,7 +188,7 @@ export struct ReaderActionMenuSurface {
 
   private menuActionHeight(): number {
     const spec = this.spec();
-    return readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, this.fontScale());
+    return readerScaledControlHeight(Math.max(44, spec.actionHeight), spec.actionLineHeight, this.fontScale());
   }
 
   private fontScale(): number {

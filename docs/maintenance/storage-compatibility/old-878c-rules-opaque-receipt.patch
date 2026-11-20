@@ -1,0 +1,48 @@
+--- a/crates/reader-storage/src/rules_mutation_receipts.rs
++++ b/crates/reader-storage/src/rules_mutation_receipts.rs
+@@ -125,15 +125,8 @@
+     }
+     Ok(())
+ }
+-pub(crate) fn decode(
+-    entry: Option<CachedEntry>,
+-) -> Result<Option<RulesMutationReceipt>, StorageError> {
+-    let r: Option<RulesMutationReceipt> = entry
+-        .map(|e| serde_json::from_str(&e.payload).map_err(|_| invalid("corrupt_head")))
+-        .transpose()?;
+-    if let Some(r) = &r {
+-        validate_binding(&r.binding).map_err(|_| invalid("corrupt_head"))?;
+-        if ![
++fn known_method(method: &str) -> bool {
++    [
+             "replace.persist",
+             "txt-toc-rule.create",
+             "txt-toc-rule.update",
+@@ -157,7 +150,18 @@
+             "reader.chinese-conversion.put",
+             "reading.directory.rules.apply.v2",
+         ]
+-        .contains(&r.method.as_str())
++        .contains(&method)
++
++}
++pub(crate) fn decode(
++    entry: Option<CachedEntry>,
++) -> Result<Option<RulesMutationReceipt>, StorageError> {
++    let r: Option<RulesMutationReceipt> = entry
++        .map(|e| serde_json::from_str(&e.payload).map_err(|_| invalid("corrupt_head")))
++        .transpose()?;
++    if let Some(r) = &r {
++        validate_binding(&r.binding).map_err(|_| invalid("corrupt_head"))?;
++        if r.method.trim().is_empty()
+             || r.ack_fingerprint != hash(&(&r.method, r.outcome, &r.data))?
+         {
+             return Err(invalid("corrupt_head"));
+@@ -192,6 +196,7 @@
+     data: serde_json::Value,
+     outcome: RulesMutationOutcome,
+ ) -> Result<RulesMutationReceipt, StorageError> {
++    if !known_method(method) {return Err(invalid("unsupported_method"));}
+     let r = RulesMutationReceipt {
+         binding: b.clone(),
+         method: method.into(),

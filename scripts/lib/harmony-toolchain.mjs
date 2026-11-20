@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'n
 import { dirname, delimiter, isAbsolute, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { sdkSetting, normalizeSdkRoot, ENVIRONMENT_CONTRACT } from './development-environment.mjs';
+import { sdkSetting, normalizeSdkRoot, harmonySdkContainerRoot, ENVIRONMENT_CONTRACT } from './development-environment.mjs';
 
 export { ENVIRONMENT_CONTRACT };
 
@@ -18,6 +18,7 @@ const definitions = {
   java: { env: ['JAVA'], commands: ['java'], studio: ['jbr/Contents/Home/bin/java', 'jbr/bin/java'] },
   openssl: { env: ['OPENSSL'], commands: ['openssl'] },
   unzip: { env: ['UNZIP'], commands: ['unzip'] },
+  python: { env: ['READER_PYTHON', 'PYTHON'], commands: ['python3', 'python'] },
 };
 
 function present(path, directory = false) {
@@ -118,6 +119,38 @@ export function resolveHarmonyTool(name, options = {}) {
   }
   if (!required) return undefined;
   throw new Error(`${name} was not found; set ${definition.env[0]} or configure READER_DEVECO_HOME / READER_HARMONY_SDK_HOME, or install it on PATH.`);
+}
+
+/** Hvigor's HarmonyOS plugin reads DEVECO_SDK_HOME, not Reader's aliases. */
+export function harmonyBuildEnvironment(options = {}) {
+  const env = options.env || process.env;
+  const sdkRoot = resolveHarmonyTool('sdkHome', { ...options, env });
+  const container = harmonySdkContainerRoot(sdkRoot);
+  if (!container) {
+    throw new Error('HarmonyOS builds require the selected SDK to belong to a HarmonyOS SDK container with sdk-pkg.json; a standalone OpenHarmony SDK can only run source tools.');
+  }
+  // The same SDK installation must reach checks and the official plugin.
+  // A higher priority Reader override replaces an older DEVECO_SDK_HOME.
+  // Package versions inside the container remain the plugin's responsibility,
+  // selected from the project's compileSdkVersion rather than our discovery.
+  return { ...env, DEVECO_SDK_HOME: container.containerRoot };
+}
+
+/** A running IDE must already use that container before its signer is read. */
+export function assertHarmonySdkEnvironment(options = {}) {
+  const env = options.env || process.env;
+  // An unconfigured IDE owns its official default discovery. Only explicit
+  // SDK overrides require this additional environment-consistency check.
+  if (!sdkSetting(env)) return;
+  const cwd = options.cwd || process.cwd();
+  const expected = harmonyBuildEnvironment({ ...options, env, cwd });
+  let actual;
+  try {
+    if (env.DEVECO_SDK_HOME) actual = realpathSync(resolve(cwd, env.DEVECO_SDK_HOME));
+  } catch {}
+  if (actual !== expected.DEVECO_SDK_HOME) {
+    throw new Error('The IDE SDK environment differs from the selected HarmonyOS SDK. Use node scripts/deveco-build.mjs or align the IDE DEVECO_SDK_HOME with the selected SDK container before building.');
+  }
 }
 
 /** Avoid POSIX launcher assumptions; execute Node CLIs directly on every host. */

@@ -1,5 +1,7 @@
 import connection from '@ohos.net.connection';
-import { httpUrlHostname, isPrivateNetworkTarget } from './HttpTransportPolicy';
+import { httpUrlHostname, isPrivateNetworkTarget, isUserStoragePrivateTarget } from './HttpTransportPolicy';
+import { assertReaderStorageNetworkUri, requireReaderStorageNetworkAuthority,
+  type ReaderStorageNetworkAuthority } from './ReaderStorageNetworkAuthority';
 
 export type NetworkTarget = {
   host: string;
@@ -120,15 +122,21 @@ async function hasSyntheticSystemRoute(network: connection.NetHandle, addresses:
  * A matching route proves routing delegation, not the proxy's final address.
  * Transports pin this original DNS answer while preserving the URL/Host/TLS.
  */
-export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkTarget> {
+export async function prepareNetworkTarget(requestUrl: string,
+  authority?: ReaderStorageNetworkAuthority): Promise<NetworkTarget> {
+  if (authority !== undefined) await requireReaderStorageNetworkAuthority(authority, requestUrl);
+  const assertCurrent = (): void => { if (authority !== undefined) assertReaderStorageNetworkUri(authority, requestUrl); };
+  assertCurrent();
   const host = httpUrlHostname(requestUrl);
-  if (host === undefined || isPrivateNetworkTarget(host)) {
+  if (host === undefined || isPrivateNetworkTarget(host) &&
+    !(authority !== undefined && isUserStoragePrivateTarget(host))) {
     throw new Error('url targets a private, loopback, link-local or invalid address and is not allowed');
   }
   let bypassSystemProxy = false;
   let operation = 'getDefaultHttpProxy';
   try {
     const proxy = await connection.getDefaultHttpProxy();
+    assertCurrent();
     if (proxy === null || typeof proxy !== 'object' || typeof proxy.host !== 'string' ||
       typeof proxy.port !== 'number' || !Number.isInteger(proxy.port) || proxy.port < 0 || proxy.port > 65535 ||
       !Array.isArray(proxy.exclusionList) || proxy.exclusionList.some((item: string): boolean => typeof item !== 'string')) {
@@ -159,6 +167,8 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
         throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
       }
       if (!pacConfigured || !/^DIRECT(?:\s*;|$)/i.test(pac)) {
+        assertCurrent();
+        if (authority !== undefined) await requireReaderStorageNetworkAuthority(authority, requestUrl);
         return { host, addresses: [], route: 'systemProxy',
           systemProxy: { ...proxy, exclusionList: [...proxy.exclusionList] } };
       }
@@ -167,17 +177,22 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
     if (error instanceof NetworkEnvironmentError) throw error;
     throw NetworkEnvironmentError.fromPlatform('route', '无法读取系统网络代理配置，请检查网络连接后重试', operation, error);
   }
-  if (host.includes(':') || /^[0-9.]+$/.test(host)) return { host, addresses: [host], route: 'direct', bypassSystemProxy };
+  if (host.includes(':') || /^[0-9.]+$/.test(host)) {
+    if (authority !== undefined) await requireReaderStorageNetworkAuthority(authority, requestUrl);
+    return { host, addresses: [host], route: 'direct', bypassSystemProxy };
+  }
   let network: SelectedNetwork;
   try { network = await selectedNetwork(); } catch (error) {
     if (error instanceof NetworkEnvironmentError) throw error;
     throw new NetworkEnvironmentError('route', '无法确定当前系统网络，请检查代理或网络连接后重试');
   }
+  assertCurrent();
   let addresses: string[];
   try {
     // Only an existing app binding selects an explicit DNS network. The global
     // API preserves the OS's UID/VPN DNS policy when the app has no binding.
     const resolved = network.appBound ? await network.handle.getAddressesByName(host) : await connection.getAddressesByName(host);
+    assertCurrent();
     addresses = resolved.map((item: connection.NetAddress): string =>
       item.address.trim().replace(/^\[/, '').replace(/\]$/, '').split('%')[0]);
   } catch (_) {
@@ -187,18 +202,21 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
   const synthetic = addresses.filter((address: string): boolean => isSyntheticDnsAddress(address));
   for (const address of addresses) {
     if (address.length === 0 || (!address.includes(':') && !/^[0-9.]+$/.test(address)) ||
-      (isPrivateNetworkTarget(address) && !isSyntheticDnsAddress(address))) {
+      (isPrivateNetworkTarget(address) && !isSyntheticDnsAddress(address) &&
+        !(authority !== undefined && isUserStoragePrivateTarget(address)))) {
       throw new Error('url resolves to a private, loopback, link-local or invalid address and is not allowed');
     }
   }
   if (synthetic.length > 0) {
     let ownsRoute = false;
     try { ownsRoute = await hasSyntheticSystemRoute(network.handle, synthetic); } catch (_) {}
+    assertCurrent();
     if (!ownsRoute) throw new NetworkEnvironmentError('route', '代理合成地址缺少可用的系统网络路由，请检查代理连接后重试');
   }
   // Do not admit DNS from a network that was replaced while it was resolving.
   try {
     const current = await selectedNetwork();
+    assertCurrent();
     if (current.handle.netId !== network.handle.netId || current.appBound !== network.appBound) {
       throw new NetworkEnvironmentError('route', '系统网络已切换，请稍后重试');
     }
@@ -206,5 +224,7 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
     if (error instanceof NetworkEnvironmentError) throw error;
     throw new NetworkEnvironmentError('route', '系统网络状态已变化，请稍后重试');
   }
+  assertCurrent();
+  if (authority !== undefined) await requireReaderStorageNetworkAuthority(authority, requestUrl);
   return { host, addresses, route: synthetic.length > 0 ? 'systemSynthetic' : 'direct', bypassSystemProxy };
 }

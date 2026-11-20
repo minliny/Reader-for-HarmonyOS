@@ -1,3 +1,5 @@
+import { createIndexProductBuilderProbe, productSurfaceDescendants } from './lib/reader-extended-product-surface-probe.mjs';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
@@ -31,12 +33,14 @@ function rpc(){return{calls:[],fail:undefined,partial:undefined,empty:false,paus
  if(method==='source.explore'){if(this.empty)return{data:{books:[]}};const books=this.partial==='allBooks'?[{bookId:'invalid'}]:[row(p.sourceId,p.url+'-'+p.page),...(this.partial==='books'?[{sourceId:ids.find(x=>x!==p.sourceId),bookId:'foreign',title:'foreign'},null,row(p.sourceId,p.url+'-'+p.page)]:[])];return{data:{books}};}
  throw Error(method);},count(method){return this.calls.filter(c=>c[0]===method).length;}};}
 let indexIdentity=0;
-function fixture(r=rpc(),indexText=source('pages/Index.ets')){currentOwner=r;const {owner:index}=createReaderBuilderProbe(indexText,['isCurrentRuntime','isCurrentDiscoverPresentation','getDiscoverOrchestrator','discoverPageContent','discoverPageSurface'],{DiscoverPage:Child,DiscoverOrchestrator,ReaderRuntimeOwner,deviceInfo:{deviceType:'phone'}});Object.assign(index,{route:'discover',mountedRuntimeOwner:r,shelfReceiptRetired:false,navigationGeneration:1,detailShelfAdmissionMount:1,rssInstanceIdentity:++indexIdentity,discoverPresentation:clone(EMPTY_DISCOVER_PRESENTATION)});const owner=index.getDiscoverOrchestrator();
+function fixture(r=rpc(),indexText=source('pages/Index.ets')){currentOwner=r;const {owner:index}=createIndexProductBuilderProbe(indexText,["discoverProduct","discoverUi","expandedLayout",'isCurrentRuntime','isCurrentDiscoverPresentation','getDiscoverOrchestrator','discoverPageContent','discoverPageSurface'],{DiscoverPage:Child,DiscoverOrchestrator,ReaderRuntimeOwner,isReaderProductSurfaceEnabled:()=>true,deviceInfo:{deviceType:'phone'}});Object.assign(index,{route:'discover',readerWindowMetricsRevision:-1,mountedRuntimeOwner:r,shelfReceiptRetired:false,navigationGeneration:1,detailShelfAdmissionMount:1,rssInstanceIdentity:++indexIdentity,discoverProduct:{discoverPresentation:clone(EMPTY_DISCOVER_PRESENTATION)}});const owner=index.getDiscoverOrchestrator();
  const settle=async()=>{await owner.operationTail;};
- const props=()=>{index.discoverPageContent();return [...index.children.values()].at(-1).params;};
- const page=()=>{const runtime=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),page=runtime.consumer(source('features/discover/DiscoverPage.ets'),['operationFeedback','recovery','resultList','paginationRow','pageAction'],{readerRecoveryView},props());Object.assign(page,props(),{appThemeScheme:'day'});if(page.presentation.books.length===0)page.resultList();else page.operationFeedback();return{view:page.recovery(),nodes:new Map(runtime.nodes(page).map((n,i)=>[i,n]))};};
+ const props=()=>{index.discoverPageContent();return productSurfaceDescendants(index).filter(child=>child instanceof Child).at(-1).params;};
+ const page=()=>{const runtime=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),controls=foundationControls();
+ Object.assign(runtime.deps,controls.dependencies);Object.assign(runtime.hooks,{...controls.hooks,childSources:{...runtime.childSources,...controls.hooks.childSources},allowEmptyBranchAdmission:true});
+ const page=runtime.consumer(source('features/discover/DiscoverPage.ets'),['operationFeedback','recovery','resultList','paginationRow','pageAction'],{readerRecoveryView},props());Object.assign(page,props(),{appThemeScheme:'day'});if(page.presentation.books.length===0)page.resultList();else page.operationFeedback();return{view:page.recovery(),nodes:new Map(runtime.nodes(page).map((n,i)=>[i,n]))};};
  const retry=async p=>{const button=[...p.nodes.values()].find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick);assert.ok(button,'actual public read-only recovery action');button.onClick();button.onClick();await settle();};
- return{r,index,owner,settle,page,retry,props,open:async()=>{owner.open();await settle();},op:()=>index.discoverPresentation.operation,p:()=>index.discoverPresentation};}
+ return{r,index,owner,settle,page,retry,props,open:async()=>{owner.open();await settle();},op:()=>index.discoverProduct.discoverPresentation.operation,p:()=>index.discoverProduct.discoverPresentation};}
 for(const method of ['source.list','source.exploreKinds','source.explore']){
  const f=fixture();f.r.fail=method;await f.open();assert.equal(f.op().fact,'failed');assert.equal(f.op().hasValue,false);assert.ok(f.page().view.canRetry);const before=f.r.count(method);await f.retry(f.page());assert.equal(f.op().fact,'current');assert.equal(f.r.count(method),before+1,'double click schedules one retry chain');assert.equal(f.p().books.length,1);
 }
@@ -64,7 +68,7 @@ assert.match(source('pages/Index.ets'),/isReaderProductSurfaceEnabled\('discover
 function wholePage(f) {
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),metrics=metricsApi.createDefaultReaderWindowMetrics();
  metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
- const page=sdk.consumer(source('features/discover/DiscoverPage.ets'),['presentation','isTablet',
+ const page=sdk.consumer(source('features/discover/DiscoverPage.ets'),['presentation','expandedLayout',
   'onBack','onRssRequested','onSettingsRequested','onRetryRead','onRefresh','onCycleSource','onSelectKind','onPreviousPage','onNextPage',
   'operationFeedback','recovery','onPresentationChanged','readFeedbackIdentity','mounted','lastReadFeedback'],{readerRecoveryView},f.props());
  page.operationFeedback();return{sdk,page,actions:()=>sdk.nodes(page).filter(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick)};

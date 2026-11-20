@@ -6,7 +6,7 @@ import type { MangaChapterIdentity } from './MangaContract';
 export type MangaDownloadOperation = 'pause' | 'resume' | 'cancel';
 export type MangaDownloadActionId = 'downloadChapter' | 'downloadBook' | MangaDownloadOperation |
   'releaseRetention' | 'deleteDownloads' | 'clearCache' | 'updateChapter';
-export interface MangaDownloadAction { id: MangaDownloadActionId; label: string; }
+export interface MangaDownloadAction { id: MangaDownloadActionId; label: string; enabled?: boolean; }
 export type MangaDownloadChapterState = 'missing' | 'queued' | 'paused' | 'inProgress' |
   'cached' | 'completed' | 'failed' | 'cancelled';
 export interface MangaDownloadChapterStatus {
@@ -25,6 +25,7 @@ export interface MangaDownloadSnapshot {
   chapters: MangaDownloadChapterStatus[];
   retentions: MangaDownloadRetention[];
   downloadChapters: MangaChapterIdentity[];
+  directoryComplete?: boolean;
 }
 export interface MangaDownloadDeleteOutcome { removedVersions: number; protectedVersions: number; }
 interface MangaDownloadPreparedDeletion { chapter: MangaChapterIdentity; versions: string[]; }
@@ -86,7 +87,14 @@ export class MangaDownloadActionsGateway {
     const known = downloadChapters.map(raw => {
       const chapter = this.chapter(raw); this.assertBook(session, chapter); return chapter;
     });
-    return { chapters, retentions, downloadChapters: known };
+    const expected = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0);
+    const byIndex: Map<number, MangaDownloadChapterStatus> = new Map();
+    for (const chapter of chapters) byIndex.set(chapter.chapterIndex, chapter);
+    // A nonempty subset of completed receipts cannot certify the whole book.
+    const directoryComplete = expected.length > 0 && expected.length === chapters.length &&
+      new Set(expected.map(entry => entry.index)).size === expected.length &&
+      expected.every(entry => byIndex.get(entry.index)?.chapter.chapterId === entry.url);
+    return { chapters, retentions, downloadChapters: known, directoryComplete };
   }
 
   actions(snapshot: MangaDownloadSnapshot, chapterIndex?: number, hostDownloadActive: boolean = false): MangaDownloadAction[] {
@@ -94,13 +102,24 @@ export class MangaDownloadActionsGateway {
     const rows = selected === undefined ? snapshot.chapters : [selected];
     const actions: MangaDownloadAction[] = [];
     const paused = rows.some(row => row.state === 'paused');
-    if (!hostDownloadActive && !paused && rows.some(row => row.state !== 'completed')) {
-      actions.push({ id: selected === undefined ? 'downloadBook' : 'downloadChapter',
-        label: selected === undefined ? '下载全部章节' : '下载本话' });
+    if (selected === undefined) {
+      if (snapshot.directoryComplete !== true || rows.length === 0) {
+        actions.push({ id: 'downloadBook', label: '下载全部章节', enabled: false });
+      } else if (rows.some(row => row.maxAttempts > 0 && this.operationApplies('cancel', row.state))) {
+        actions.push({ id: 'cancel', label: '取消下载' });
+      } else if (rows.length > 0 && rows.every(row => row.state === 'completed')) {
+        actions.push({ id: 'downloadBook', label: '已下载', enabled: false });
+      } else {
+        actions.push({ id: 'downloadBook', label: '下载全部章节', enabled: !hostDownloadActive });
+      }
+    } else {
+      if (!hostDownloadActive && !paused && rows.some(row => row.state !== 'completed')) {
+        actions.push({ id: 'downloadChapter', label: '下载本话' });
+      }
+      if (rows.some(row => row.state === 'queued' || row.state === 'inProgress')) actions.push({ id: 'pause', label: '暂停下载' });
+      if (paused) actions.push({ id: 'resume', label: '继续下载' });
+      if (rows.some(row => row.maxAttempts > 0 && this.operationApplies('cancel', row.state))) actions.push({ id: 'cancel', label: '取消下载' });
     }
-    if (rows.some(row => row.state === 'queued' || row.state === 'inProgress')) actions.push({ id: 'pause', label: '暂停下载' });
-    if (paused) actions.push({ id: 'resume', label: selected === undefined ? '继续已暂停章节' : '继续下载' });
-    if (rows.some(row => row.maxAttempts > 0 && this.operationApplies('cancel', row.state))) actions.push({ id: 'cancel', label: '取消下载' });
     const retained = selected === undefined ? snapshot.downloadChapters.length > 0 || snapshot.retentions.length > 0 :
       snapshot.downloadChapters.some(chapter => chapter.chapterId === selected.chapter.chapterId) ||
         snapshot.retentions.some(row => row.chapter.chapterId === selected.chapter.chapterId);

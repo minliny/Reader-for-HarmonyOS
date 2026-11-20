@@ -1,10 +1,37 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
- 'current-toolbar':{description:'Current control-only directory SDK authored Toolbar parent/child coordinates, inherited alpha and callbacks',resources:[]},
+ 'current-toolbar':{description:'Actual control directory toolbar layout, gated callbacks and shared chapter row native hit target',resources:[]},
  'legacy-embedded':{description:'Explicit historical FullDirectory embedded implementation diagnostics; excluded from current release',resources:[]}
 };
 const selected=selectContractCases(definitions);
+let readerScaledControlHeight;
+if(selected.length){const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');const{readFileSync}=await import('node:fs');({readerScaledControlHeight}=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts',import.meta.url),'utf8'),'ReaderSurfaceResolvers.ts',{},['readerScaledControlHeight']));}
 async function runCase(selectedCase){
+ if(selectedCase==='current-toolbar') {
+  const {default:assert}=await import('node:assert/strict'); const {readFileSync}=await import('node:fs');
+  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+  const {boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+  const hierarchy=await import('../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts');
+  const read=name=>readFileSync(new URL('../entry/src/main/ets/features/reading/'+name,import.meta.url),'utf8');
+  const source=read('ReaderControlDirectoryContent.ets'), childSource=read('ReaderDirectoryChapterRow.ets');
+  const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
+  const properties=createArkUIPropertyRuntimeProbe();
+  const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+  const accessibility=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderActionAccessibility.ets',import.meta.url),'utf8'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['readerActionTouchRegion','ReaderActionAccessibility']);
+  const Child=createReaderBuilderProbe(childSource,boundedMembers(childSource),{...properties.sdk,...hierarchy,...accessibility},properties.hooks).Component;
+  for(const progress of [0,.5,1]) {
+   const {owner}=createReaderBuilderProbe(source,['chapterRow','rowHeight','value','fontScale'],
+    {ReaderDirectoryChapterRow:Child,readerScaledControlHeight},{childSources:{ReaderDirectoryChapterRow:childSource},mountChildren:true});
+   const selected=[];Object.assign(owner,{progress,tab:'directory',currentChapterIndex:-1,chapterDownloadEnabled:false,
+    onSelectChapter:i=>selected.push(i)});
+   owner.chapterRow({index:7,title:'current row',navigable:true});
+   const child=[...owner.children.values()].find(c=>c instanceof Child);assert.ok(child);
+   assert.equal(child.rowHeight,44,'native List row and child share the 44vp minimum');
+   const hit=[...child.nodes.values()].find(n=>n.responseRegion&&n.onClick);assert.ok(hit);
+   assert.equal(hit.height,44);assert.equal(hit.responseRegion.height,44,'shared chapter row preserves minimum44 hit area');
+   hit.onClick();assert.deepEqual(selected,[7]);
+  }
+ }
  if(selectedCase==='legacy-embedded'){
 const { themeDayDesignSource }=await import('./lib/reader-theme-design-source.mjs');
 const {default:assert}=await import('node:assert/strict');
@@ -201,29 +228,36 @@ console.log('reader control directory content: structural wiring passed (not run
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
  const {readerControlNativeTree}=await import('./fixtures/reader-control-native-tree.mjs');
  const {sampleReaderControlMotionPresentation}=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+ const {resolveReaderControlDirectoryGeometry}=await import('../entry/src/main/ets/features/reading/ReaderControlDirectoryGeometry.ts');
+ const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets',import.meta.url),'utf8');
  const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets',import.meta.url),'utf8');
  for(const tab of ['directory','bookmarks'])for(const p of [0,.25,.5,.75,1]){
   const tree=readerControlNativeTree();
   class Toolbar {constructor(owner,params){this.owner=owner;this.params=params;}initialRender(){}updateStateVars(next){Object.assign(this.params,next);}}
-  const {owner}=createReaderBuilderProbe(source,['build','directoryToolbar','value','presentation'],
-   {...tree.dependencies,ReaderDirectoryToolbar:Toolbar,sampleReaderControlMotionPresentation},
+  const {owner}=createReaderBuilderProbe(source,
+   ['build','directoryToolbar','value','presentation','queryGrowth','fontScale','tabHeight','rowHeight','rowPadding',
+    'rowWidth','contentGeometry','toolbarInteractive','directoryFocusId','listTop','listHeight'],
+   {...tree.dependencies,ReaderDirectoryToolbar:Toolbar,sampleReaderControlMotionPresentation,readerScaledControlHeight,
+    resolveReaderControlDirectoryGeometry,sampleReaderControlBookmark},
    {...tree.hooks,childSources:{ReaderDirectoryToolbar:childSource}});
   const calls=[];Object.assign(owner,{tab,progress:p,availableWidth:286+52*p,availableHeight:190+476*p,appThemeScheme:'day',draft:'词',ascending:true,
-   tabButton(){},listBody(){},listHeight:()=>100,listTop:()=>48,snapshot:{currentTitle:'章',currentPosition:'1/2'},placeholder:()=> '搜索',
+   mounted:true,interactionEnabled:true,sessionKey:'fixture',tabButton(){},listBody(){},
+   snapshot:{currentTitle:'章',currentPosition:'1/2'},placeholder:()=> '搜索',
    search:()=>calls.push('search'),scrollCatalogEdge:end=>calls.push(end?'bottom':'top'),sort:()=>calls.push('sort')});
   owner.initialRender();assert.equal(tree.remaining(),0);
   const divider=[...owner.nodes.entries()].find(([,n])=>n.type==='Row'&&n.position?.x===0&&n.position?.y===63-12*p&&n.opacity===p);
   assert.ok(divider,'actual nested Toolbar divider');
   const inner=owner.nodes.get(divider[1].parentId),outer=owner.nodes.get(inner.parentId);
-  assert.equal(inner.height,52);assert.deepEqual(outer.position,{x:1,y:61-18*p});
+  assert.equal(inner.height,52);assert.deepEqual(outer.position,{x:1,y:61-11*p});
   assert.equal(outer.opacity,p*sampleReaderControlMotionPresentation(p).contentOpacity);
-  assert.equal(outer.position.y+divider[1].position.y,124-30*p,'compose authored parent and local coordinates');
+  assert.equal(outer.position.y+divider[1].position.y,124-23*p,'compose current parent and local coordinates');
   assert.ok(Math.abs(outer.opacity*divider[1].opacity-p*p*sampleReaderControlMotionPresentation(p).contentOpacity)<1e-12,'composed alpha differs only by float association');
   const toolbar=[...owner.children.values()].find(n=>n instanceof Toolbar);assert.ok(toolbar);
-  assert.equal(toolbar.params.showChapterTools,tab==='directory');toolbar.params.onTextChange('新词');assert.equal(owner.draft,'新词');
+  assert.equal(toolbar.params.showChapterTools,tab==='directory');toolbar.params.onTextChange('新词');
+  assert.equal(owner.draft,p===1?'新词':'词','a partially visible toolbar does not accept edits');
   toolbar.params.onSearch();toolbar.params.onTop();toolbar.params.onBottom();toolbar.params.onToggleSort();
-  assert.deepEqual(calls,['search','top','bottom','sort']);
+  assert.deepEqual(calls,p===1?['search','top','bottom','sort']:[]);
  }
 }
 for(const id of selected){await runCase(id);recordContractCasePass(id);}

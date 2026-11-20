@@ -7,6 +7,7 @@ import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
 import { RulesMutationOwner, type RulesMutationSnapshot } from '../settings/RulesMutationOwner';
 import type { RuleSubscriptionStep } from '../settings/RulesMutationIntentStore';
+import { SourceGroupGateway, qualifySourceGroupReceipt, qualifySourceGroupedImport } from './SourceGroupGateway';
 
 export type BookSource = {
   sourceId: string;
@@ -15,6 +16,9 @@ export type BookSource = {
   enabled: boolean;
   enabledExplore: boolean;
   group?: string;
+  /** Stable metadata identity; empty string is explicitly ungrouped. */
+  groupId?: string;
+  sourceVersion?: string;
   /** Stable media category; novel is the only category admitted by the text reader. */
   category: ReaderSourceCategory;
   loginUrl?: string;
@@ -58,6 +62,14 @@ export type SourceCheckOutcome = {
   capabilities?: SourceCapabilityCheck[];
   report?: SourceCheckReport;
 };
+
+/** Source definition at one source.list read boundary, excluding diagnostics. */
+export interface SourceDefinitionSnapshot {
+  sourceId: string;
+  sourceVersion?: string;
+  text: string;
+  identity: string;
+}
 
 export type SourceCheckReportStatus = 'pass' | 'fail' | 'not_requested' | 'not_supported' | 'blocked' | 'cancelled';
 
@@ -138,6 +150,8 @@ const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
 export class SourceGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private writeEvidence: ReaderWriteEvidence | undefined;
+  private editableSourceId: string = '';
+  private editableDefinitionIdentity: string | undefined;
 
   observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
@@ -223,10 +237,28 @@ export class SourceGateway {
         group,
         category: classifyReaderSource({ bookSourceType, name, group, sourceId, baseUrl }),
         loginUrl,
+        sourceVersion: this.optionalString(source, 'sourceVersion'),
       };
       if (checkReports !== undefined) entry.checkReports = checkReports;
       if (lastCheckSummary !== undefined) entry.lastCheckSummary = lastCheckSummary;
+      // Current-rule persisted diagnostics drive the unified status filter.
+      // Expired/cancelled reports do not make a source look freshly checked.
+      if (latest !== undefined && !latest.stale) {
+        const requested = latest.report.steps.filter((step: SourceCheckReportStep): boolean => step.requested);
+        if (requested.length > 0 && requested.every((step: SourceCheckReportStep): boolean => step.status === 'pass')) entry.checkState = 'passed';
+        else if (requested.some((step: SourceCheckReportStep): boolean => step.status === 'fail' || step.status === 'blocked' || step.status === 'not_supported')) entry.checkState = 'failed';
+        else entry.checkState = 'unchecked';
+      }
       sources.push(entry);
+    }
+    if (sourceId === undefined && this.runtimeOwner.supportsCoreCapability('source.group.metadata.v1')) {
+      const catalog = await new SourceGroupGateway(this.runtimeOwner).loadCatalog(current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)));
+      const members = new Map(catalog.memberships.map(member => [member.sourceId, member]));
+      const groups = new Map(catalog.groups.map(group => [group.groupId, group.name]));
+      for (const source of sources) {
+        const member = members.get(source.sourceId);
+        if (member !== undefined) { source.groupId = member.groupId; source.group = member.groupId === '' ? undefined : groups.get(member.groupId); }
+      }
     }
     return sources;
   }
@@ -299,7 +331,8 @@ export class SourceGateway {
     return RulesMutationOwner.forRuntime(this.runtimeOwner).recoverOriginal(current,
       (method: string, params: JsonObject, data: JsonObject): void => this.qualifyOriginalSource(method,params,data),
       retryOriginal,'source-management',
-      (method: string, params: JsonObject): Promise<boolean> => this.finishOriginalSourceCleanup(method,params));
+      (method: string, params: JsonObject): Promise<boolean> => this.finishOriginalSourceCleanup(method,params),
+      undefined, (method: string): boolean => method !== 'source.group.mutate' && method !== 'source.import.grouped');
   }
   handlesSourceCleanup(): boolean { return this.supportsOriginalSourceManagement(); }
   private async finishOriginalSourceCleanup(method: string, params: JsonObject): Promise<boolean> {
@@ -337,7 +370,9 @@ export class SourceGateway {
       failedCount:result.subscription?.failedParts ?? failures.length,failures};
   }
   private qualifyOriginalSource(method: string, params: JsonObject, data: JsonObject): void {
-    if (method==='source.import') {
+    if (method==='source.group.mutate') { qualifySourceGroupReceipt(params, data); }
+    else if (method==='source.import.grouped') { qualifySourceGroupedImport(params, data); }
+    else if (method==='source.import') {
       if (data['imported']!==true || data['sourceId']!==params['sourceId'] ||
         typeof data['name']!=='string' || (data['name'] as string).trim().length===0)
         throw new Error('source.import original ACK does not match its fixed DTO');
@@ -421,12 +456,34 @@ export class SourceGateway {
   }
 
   async loadEditableSource(sourceId: string): Promise<string> {
-    const exported = await this.exportBookSources([sourceId]);
-    const parsed = JSON.parse(exported.data) as unknown[];
-    if (parsed.length !== 1) {
-      throw new Error('source.export did not return exactly one source for editing');
-    }
-    return JSON.stringify(parsed[0], null, 2);
+    const definition = await this.readSourceDefinition(sourceId);
+    if (definition === undefined) throw new Error('原始书源已删除，请重新选择');
+    this.editableSourceId = sourceId;
+    this.editableDefinitionIdentity = definition.identity;
+    return definition.text;
+  }
+
+  async readSourceDefinition(sourceId: string,
+    admitted: () => boolean = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)): Promise<SourceDefinitionSnapshot | undefined> {
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner);
+    const active = (): boolean => current() && admitted();
+    const result = await this.runtimeOwner.request('source.list', { sourceId }, { canDispatch: active, canContinue: active });
+    const rows = result.data['sources'];
+    if (!Array.isArray(rows) || rows.length > 1 || (rows.length === 1 && (rows[0] === null || typeof rows[0] !== 'object' || Array.isArray(rows[0]))))
+      throw new Error('原始书源读取不完整，请重试');
+    if (!active()) throw new Error('原始书源身份已变化');
+    if (rows.length === 0) return undefined;
+    const source = rows[0] as JsonObject;
+    if (source['sourceId'] !== sourceId) throw new Error('原始书源身份已变化');
+    const raw = source['bookSource'];
+    let text: string;
+    if (raw !== undefined && raw !== null) {
+      if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error('原始书源 JSON 无效');
+      text = JSON.stringify(raw, null, 2);
+    } else text = JSON.stringify({ bookSourceName: source['name'], bookSourceUrl: source['baseUrl'] }, null, 2);
+    return { sourceId, sourceVersion: this.optionalString(source, 'sourceVersion'), text,
+      identity: JSON.stringify([sourceId, source['sourceVersion'] ?? null, source['name'] ?? null,
+        source['baseUrl'] ?? null, source['enabled'] ?? null, source['enabledExplore'] ?? null, text]) };
   }
 
   /**
@@ -452,6 +509,14 @@ export class SourceGateway {
     if (editedId !== sourceId) {
       throw new Error('书源地址是主键；编辑器不允许隐式迁移 bookSourceUrl');
     }
+    const baseline = this.editableSourceId === sourceId ? this.editableDefinitionIdentity : undefined;
+    if (baseline === undefined) throw new Error('请先重新读取书源，再保存编辑');
+    const current = await this.readSourceDefinition(sourceId);
+    if (current === undefined || current.identity !== baseline) {
+      throw new Error('书源已被修改或删除；草稿保留，请重新读取后核对');
+    }
+    // This is a fail-closed stale-draft check at a read boundary, not atomic
+    // CAS: the existing source.import protocol has no expected-version field.
     const summary = await this.importBookSourceDocument(JSON.stringify(bookSource));
     if (summary.failedCount > 0) {
       throw new Error(`source.import failed: ${summary.failures[0].message}`);
@@ -459,6 +524,8 @@ export class SourceGateway {
     if (summary.importedCount !== 1 || summary.sourceIds[0] !== sourceId) {
       throw new Error('source.import did not confirm the edited source identity');
     }
+    this.editableSourceId = '';
+    this.editableDefinitionIdentity = undefined;
   }
 
   /** Replay-only compatibility API. Product debug uses real `source.check.run` evidence. */
@@ -636,6 +703,8 @@ export class SourceGateway {
     }
     const result = await this.runtimeOwner.request('source.check.run', params, {
       timeoutMs: timeoutMs + 5000,
+      canDispatch: shouldContinue,
+      canContinue: shouldContinue,
       shouldCancel: (): boolean => !shouldContinue(),
     });
     const diagnostics = this.runtimeOwner.takeSourceHttpDiagnostics(result.requestId);

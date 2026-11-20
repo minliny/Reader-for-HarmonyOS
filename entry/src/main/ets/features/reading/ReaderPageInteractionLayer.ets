@@ -5,6 +5,7 @@ import {
   finishReaderPagePan,
   READER_PAGE_GESTURE_BOOKMARK_SLOP,
   READER_PAGE_GESTURE_LONG_PRESS_MS,
+  READER_PAGE_GESTURE_TOUCH_SLOP,
   readerPageGestureCanTap,
   readerPagePointerCoordinate,
   readerPageTapIntent,
@@ -35,7 +36,7 @@ export const READER_PAGE_POINTER_STALL_TIMEOUT_MS = 15000;
 @Component
 export struct ReaderPageInteractionLayer {
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
-  /** While a commit/preparation is non-interruptible, retain only short taps as queued intent. */
+  /** While settlement is non-interruptible, retain a complete segment as queued intent. */
   @Prop @Watch('onInteractionModeChanged') tapOnly: boolean = false;
   /** Prop delivery can lag a new DOWN; the owner supplies its live transaction gate. */
   currentTapOnly: (() => boolean) | undefined = undefined;
@@ -65,8 +66,10 @@ export struct ReaderPageInteractionLayer {
     (_reason: 'busy' | 'unavailable'): void => {};
   onOpenControl: () => void = (): void => {};
   onManualInteraction: () => void = (): void => {};
-  onRegrab: (width: number, height: number, x: number, y: number, time: number) => ReaderPageGestureState | undefined =
-    (_width: number, _height: number, _x: number, _y: number, _time: number): ReaderPageGestureState | undefined => undefined;
+  onRegrab: (width: number, height: number, x: number, y: number, time: number,
+    direction: ReaderPageTurnDirection) => ReaderPageGestureState | undefined =
+    (_width: number, _height: number, _x: number, _y: number, _time: number,
+      _direction: ReaderPageTurnDirection): ReaderPageGestureState | undefined => undefined;
   /** Every accepted DOWN owns a lease, including undecided and cold pointers. */
   onPointerStart: (pointerId: number) => boolean = (_pointerId: number): boolean => true;
   onPointerEnd: (pointerId: number) => void = (_pointerId: number): void => {};
@@ -90,7 +93,6 @@ export struct ReaderPageInteractionLayer {
   private velocityY: number = 0;
   private tapOnlyPointer: boolean = false;
   private pointerRejected: boolean = false;
-  private coldPointerRebased: boolean = false;
   private deferredSegmentReserved: boolean = false;
   private manualInteractionReported: boolean = false;
   private pointerWatchdogTimer: number = -1;
@@ -123,6 +125,7 @@ export struct ReaderPageInteractionLayer {
     Row()
       .width('100%')
       .height('100%')
+      .id('reader-journey-reading-surface')
       // XComponent composition order is device-dependent; make the sole raw
       // input owner explicitly higher while leaving the capsule at zIndex 8.
       .zIndex(7)
@@ -200,7 +203,6 @@ export struct ReaderPageInteractionLayer {
     this.velocityY = 0;
     this.tapOnlyPointer = this.tapOnlyNow();
     this.pointerRejected = false;
-    this.coldPointerRebased = false;
     if (this.tapOnlyPointer) {
       this.deferredSegmentReserved = this.onDeferredSegmentStart();
       if (!this.deferredSegmentReserved) {
@@ -265,9 +267,10 @@ export struct ReaderPageInteractionLayer {
       // intent on DOWN made every second tap merely re-release the same page.
       // Transfer the visible pose only once a real MOVE claims a page drag;
       // short taps and a sparse final UP remain separate queued requests.
-      if (allowRegrab && priorOwner === 'undecided' && this.isPageOwner(this.gestureState)) {
+      if (allowRegrab && this.tapOnlyNow() && priorOwner === 'undecided' &&
+        this.isPageOwner(this.gestureState) && this.gestureState.direction !== undefined) {
         const regrab = this.onRegrab(this.pageViewportWidth(event), this.pageViewportHeight(event),
-          localX, localY, eventTimeMs);
+          localX, localY, eventTimeMs, this.gestureState.direction);
         if (regrab !== undefined) {
           this.tapOnlyPointer = false;
           if (this.deferredSegmentReserved) {
@@ -284,12 +287,32 @@ export struct ReaderPageInteractionLayer {
           this.pointerInputStartY = pointer.y;
           regrab.inputOffsetX = inputPose;
           regrab.inputOffsetY = 0;
+          const signedPose = regrab.direction === 'next' ? -inputPose : inputPose;
+          regrab.turnPeakDistance = Math.max(0, signedPose);
+          regrab.turnReturnDistance = signedPose;
+          regrab.turnCommitArmed = signedPose >= READER_PAGE_GESTURE_TOUCH_SLOP;
           this.gestureState = regrab;
           this.reportManualInteraction();
           this.clearLongPressTimer();
           this.onGestureStateChange(this.gestureState);
           this.ownPointer(event);
         }
+      }
+      // The old page settled while this finger was held. A page drag can now
+      // follow from its original DOWN; an unclassified tap keeps its complete
+      // history until UP. A busy bookmark pull never becomes a delayed write.
+      if (allowRegrab && this.tapOnlyPointer && !this.tapOnlyNow() &&
+        this.isPageOwner(this.gestureState) && this.gestureState.direction !== undefined &&
+        this.canStartTurn(this.gestureState.direction)) {
+        this.tapOnlyPointer = false;
+        if (this.deferredSegmentReserved) {
+          this.deferredSegmentReserved = false;
+          this.onDeferredSegmentPromote();
+        }
+        this.reportManualInteraction();
+        this.clearLongPressTimer();
+        this.onGestureStateChange(this.gestureState);
+        this.ownPointer(event);
       }
       if (this.tapOnlyPointer) this.reportBookmarkUnavailable('busy');
       this.lastLocalX = localX;
@@ -446,7 +469,7 @@ export struct ReaderPageInteractionLayer {
     this.lastLocalX = localX;
     this.lastLocalY = localY;
     if (this.gestureState.phase === 'tracking') {
-      const tapCandidate = !this.coldPointerRebased && readerPageGestureCanTap(this.gestureState, eventTimeMs);
+      const tapCandidate = readerPageGestureCanTap(this.gestureState, eventTimeMs);
       this.gestureState = abandonReaderPageGestureTracking(this.gestureState);
       this.onGestureStateChange(this.gestureState);
       this.resetRawPointer();
@@ -842,23 +865,8 @@ export struct ReaderPageInteractionLayer {
     if (this.activePointerId < 0) return;
     const tapOnly = this.tapOnlyNow();
     if (this.tapOnlyPointer && !tapOnly) {
-      if (this.deferredSegmentReserved) {
-        this.deferredSegmentReserved = false;
-        this.onDeferredSegmentPromote();
-      }
-      this.tapOnlyPointer = false;
-      this.pointerInputStartX = this.lastInputX;
-      this.pointerInputStartY = this.lastInputY;
-      this.coldPointerRebased = true;
-      this.gestureState = startReaderPagePan(
-        this.pointerStageWidth,
-        this.lastLocalX,
-        this.lastLocalY,
-        this.lastSampleTimeMs,
-        this.pointerStageHeight,
-      );
-      this.onGestureStateChange(this.gestureState);
-      this.armLongPressTimer();
+      // A Prop transition is not a new DOWN. Preserve the pending click/drag;
+      // the next physical MOVE may promote it, or UP resolves it exactly once.
       return;
     }
     if (!this.tapOnlyPointer && tapOnly) {

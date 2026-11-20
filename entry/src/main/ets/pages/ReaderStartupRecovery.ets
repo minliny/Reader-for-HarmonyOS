@@ -24,8 +24,8 @@ struct ReaderStartupRecovery {
     Scroll() {
       Column() {
         ReaderPageState({ title: this.title(), message: this.message(),
-          loading: !this.state.canRetry, actionLabel: this.state.canRetry ? '重试' : '',
-          onAction: (): void => this.owner?.retry(), secondaryActionLabel: this.state.canRetry ? '退出应用' : '',
+          loading: this.busy(), actionLabel: this.retryAdmitted() ? '重试' : '',
+          onAction: (): void => this.owner?.retry(), secondaryActionLabel: this.retryAdmitted() ? '退出应用' : '',
           onSecondaryAction: (): void => { void this.owner?.exit(); } });
       }.width('100%').constraintSize({ minHeight: this.availableHeight() })
         .justifyContent(FlexAlign.Center).padding(24);
@@ -37,6 +37,14 @@ struct ReaderStartupRecovery {
     return Math.max(0, metrics.windowRect.height - metrics.systemInsets.top - metrics.systemInsets.bottom);
   }
 
+  /** Busy is its own phase fact. `canRetry=false` also marks terminal failures
+   * (for example platform-unavailable), which must not render as loading. */
+  private busy(): boolean {
+    return this.state.phase === 'waiting' || this.state.phase === 'loading' ||
+      this.state.phase === 'recovery-loading';
+  }
+  /** Only a loaded recovery receipt admits retry and exit. */
+  private retryAdmitted(): boolean { return this.state.phase === 'recovery'; }
   private title(): string { return this.state.reason === 'admission-pending' ? '启动尚未完成' : '应用启动失败'; }
   private message(): string {
     if (this.state.reason === 'admission-pending') return '初始化或数据恢复仍在等待。可以稍后重试，或退出应用。';

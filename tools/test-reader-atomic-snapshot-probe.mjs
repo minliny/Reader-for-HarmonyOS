@@ -1,3 +1,5 @@
+import { productionEntryDiagnostics } from './lib/reader-entry-diagnostics-probe.mjs';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -53,8 +55,24 @@ for (const brokenRecord of [false, true]) {
   assert.equal(f.events.filter(event => event[0] === 'unlink').length, 0);
   assert.equal(f.files.size, 1, 'unknown actual write keeps only its unique synthetic scratch; no compensation');
 }
-const ability = readFileSync(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
-assert.match(ability, /DEBUG === true && BUILD_MODE_NAME === 'debug' && want\.parameters\?\.readerAtomicSnapshotProbe === true/);
-const warm = ability.slice(ability.indexOf('  onNewWant('), ability.indexOf('  private async prepareSelectedReadingFont'));
-assert.ok(!warm.includes('probeReaderAtomicSnapshot'), 'warm file Wants never start diagnostic IO');
+// Execute the actual cold composition and original IO helper. Admission is a
+// behavior contract; the private location/spelling of its guard is immaterial.
+for(const debug of[false,true])for(const mode of['release','debug'])for(const flag of[undefined,false,'true',1,true]){
+ const f=fixture();let release;
+ const recovery=new Promise(resolve=>{release=resolve;});
+ const Type=productionEntryDiagnostics({ReaderMangaPlatformDiagnostic:{install:()=>undefined},hilog:{info(){},error(){}},
+  probeReaderAtomicSnapshot:(acceptedDebug,acceptedMode,acceptedFlag,_dir,current)=>f.run(acceptedDebug,acceptedMode,acceptedFlag,current)});
+ const cold=Type.forColdStart(debug,mode,{parameters:{readerAtomicSnapshotProbe:flag}},()=>0);
+ cold?.afterRecovery(recovery,'/files',()=>true);
+ assert.deepEqual(f.events,[],'cold diagnostic cannot perform IO before original recovery settles');
+ release();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(f.events.length>0,debug===true&&mode==='debug'&&flag===true,'actual cold composition has strict opt-in');
+ const received=[],Ability=productionMotionMethods(new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url),
+  ['onNewWant','scheduleRebuildableCacheClear'],{ReaderEntryDiagnostics:Type,DEBUG:debug,BUILD_MODE_NAME:mode,
+   ReaderSystemFileOpenHost:{receive:want=>received.push(want)}});
+ const ability=Object.assign(new Ability(),{recoveryReady:Promise.resolve()}),before=f.events.length;
+ const warm={parameters:{readerAtomicSnapshotProbe:true}};ability.onNewWant(warm,{});
+ await new Promise(resolve=>setImmediate(resolve));assert.equal(f.events.length,before,'warm file Want never starts cold diagnostic IO');
+ assert.deepEqual(received,[warm],'original system file receiver still receives the exact Want');
+}
 console.log('PASS actual atomic IO helper and bounded cold-debug scratch probe: real DTO shape, exact opt-in, logger isolation and lost-directory-sync noncompensation. OS/restart acceptance separate.');

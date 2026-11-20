@@ -73,6 +73,14 @@ function integer(value, min, max, name) {
   if (!Number.isInteger(value) || value < min || value > max) fail(`${name} must be an integer in ${min}..${max}`);
   return String(value);
 }
+function verifyScene(value) {
+  if (typeof value !== 'string' || !/^[a-z][a-z0-9-]{0,31}$/.test(value)) fail('verify scene must match ^[a-z][a-z0-9-]{0,31}$');
+  return value;
+}
+function verifyRun(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(value)) fail('verify run must match ^[A-Za-z0-9-]{8,64}$');
+  return value;
+}
 function remotePath(path, extension) {
   if (typeof path !== 'string' || !/^\/data\/local\/tmp\/reader-control-[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(png|json)$/.test(path)) fail('device path must be a reader-control-* png/json file directly in /data/local/tmp');
   if (extension && !path.endsWith(extension)) fail(`operation requires ${extension}`);
@@ -120,7 +128,7 @@ function touchPlanText(events, width, height) {
 }
 function operationPlan(operation, outputDir) {
   exactFields(operation, ['x', 'y', 'fromX', 'fromY', 'toX', 'toY', 'velocity', 'key', 'path', 'text', 'explicitPermit', 'sampleDelaysMs',
-    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs']);
+    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs', 'scene', 'run']);
   if (operation.op === 'quit') {
     exactFields(operation, []);
     return { kind: 'quit' };
@@ -216,6 +224,16 @@ function operationPlan(operation, outputDir) {
     exactFields(operation, []);
     return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry');
   }
+  if (operation.op === 'verifyStart') {
+    exactFields(operation, ['scene', 'width', 'run']);
+    // Debug-only cold route reads these string parameters. Values are already
+    // schema-limited and never reach a shell as caller-composed text.
+    if (operation.width !== 320 && operation.width !== 366) fail('verify width must be 320 or 366');
+    return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
+      '--ps', 'readerVerifyScene', verifyScene(operation.scene),
+      '--ps', 'readerVerifyWidth', String(operation.width),
+      '--ps', 'readerVerifyRun', verifyRun(operation.run));
+  }
   if (operation.op === 'clearRebuildableCache') {
     exactFields(operation, []);
     // The app owns the deletion policy. This Want invokes the debug-only,
@@ -238,6 +256,10 @@ function operationPlan(operation, outputDir) {
   if (operation.op === 'motionLog') {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'ReaderControlMotionProbe');
+  }
+  if (operation.op === 'verifyLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-T', 'ReaderVerify');
   }
   if (operation.op === 'force-stop') {
     exactFields(operation, ['explicitPermit']);
@@ -297,6 +319,8 @@ async function acquireTargetLock(target, hdc, configuredServer) {
 async function probe(options) {
   accessSync(options.hdc, constants.X_OK);
   if (!statSync(options.hdc).isFile()) fail('hdc must be an executable file');
+  const idleMs = Number(process.env.READER_HDC_PROBE_IDLE_MS ?? 60000);
+  if (!Number.isInteger(idleMs) || idleMs < 1 || idleMs > 60000) fail('probe idle timeout must be 1..60000 ms');
   const lock = await acquireTargetLock(options.target, options.hdc, options.server);
   let input;
   let activeChild;
@@ -306,7 +330,11 @@ async function probe(options) {
   // Give every probe a unique namespace; never overwrite earlier evidence.
   const frameRunNonce = randomUUID();
   const abort = new AbortController();
-  const stop = () => { stopping = true; abort.abort(); activeChild?.kill('SIGTERM'); input?.close(); };
+  let idleTimer, stopReason = 'signal';
+  const stop = () => { stopping = true; abort.abort(); activeChild?.kill('SIGKILL'); input?.close(); };
+  const expire = reason => { stopReason = reason; process.exitCode = 1; stop(); };
+  const sessionTimer = setTimeout(() => expire('session-timeout'), 600000);
+  const armIdle = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => expire('idle-timeout'), idleMs); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
   process.on('SIGHUP', stop);
@@ -336,7 +364,7 @@ async function probe(options) {
       const start = performance.now();
       const startedAt = new Date().toISOString();
       const result = spawnSync(options.hdc, [...prefix, ...plan.args], {
-        shell: false, encoding: 'utf8', timeout: TIMEOUT_MS, maxBuffer: MAX_OUTPUT, stdio: ['ignore', 'pipe', 'pipe'],
+        shell: false, encoding: 'utf8', timeout: TIMEOUT_MS, killSignal: 'SIGKILL', maxBuffer: MAX_OUTPUT, stdio: ['ignore', 'pipe', 'pipe'],
       });
       assess(plan.args, result, startedAt, performance.now() - start);
       if (plan.localPath) {
@@ -438,7 +466,7 @@ async function probe(options) {
       record({ event: 'touch-execute-admitted', ticket: ticket.id, requestAuth: true, artifacts: ticket.artifacts,
         meaning: 'fresh caller preflight asserted; helper must obtain its own new authorization, never reuse another owner' });
       activeChild = spawn(options.hdc, [...prefix, ...args], { shell: false,
-        stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS });
+        stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS, killSignal: 'SIGKILL' });
       const child = activeChild;
       const nativeEvents = [];
       const completed = new Promise(resolveDone => {
@@ -513,7 +541,7 @@ async function probe(options) {
       let stderr = '';
       let childError;
       activeChild = spawn(options.hdc, [...prefix, ...plan.args], {
-        shell: false, stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS,
+        shell: false, stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS, killSignal: 'SIGKILL',
       });
       const child = activeChild;
       const completed = new Promise(resolveDone => {
@@ -558,10 +586,12 @@ async function probe(options) {
     };
     record({ event: 'ready', log, warning: 'Lock acquired only; boot readiness/authorization must already be established externally. No retries or service startup.' });
     input = createInterface({ input: process.stdin, crlfDelay: Infinity });
+    armIdle();
     for await (const line of input) {
       if (stopping) break;
       if (line.length > 32768) fail('operation line exceeds limit');
       if (line.trim() === '') continue;
+      clearTimeout(idleTimer);
       const plan = operationPlan(JSON.parse(line), options.outputDir);
       if (plan.kind === 'quit') break;
       if (['sampledDrag', 'sampledClick', 'sampledHeldTouch'].includes(plan.kind)) await sampledDrag(plan);
@@ -569,10 +599,12 @@ async function probe(options) {
       else if (plan.kind === 'dryRunTouchSequence') dryRunTouchSequence(plan);
       else if (plan.kind === 'sampledTouchSequence') await sampledTouchSequence(plan);
       else run(plan);
+      armIdle();
     }
-    record({ event: 'closed', reason: stopping ? 'signal' : 'quit-or-eof' });
+    record({ event: 'closed', reason: stopping ? stopReason : 'quit-or-eof' });
   } finally {
-    input?.close();
+    clearTimeout(idleTimer); clearTimeout(sessionTimer);
+    input?.close(); process.stdin.pause();
     process.off('SIGINT', stop);
     process.off('SIGTERM', stop);
     process.off('SIGHUP', stop);
@@ -639,6 +671,18 @@ function selfTest() {
   assert.deepEqual(plan({ op: 'startNormal' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry']);
   assert.throws(() => plan({ op: 'startNormal', bundle: 'other' }));
+  const verifyStart = { op: 'verifyStart', scene: 'directory-control-expanded', width: 366, run: 'run-20261118-01' };
+  assert.deepEqual(plan(verifyStart).args,
+    ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
+      '--ps', 'readerVerifyScene', 'directory-control-expanded',
+      '--ps', 'readerVerifyWidth', '366', '--ps', 'readerVerifyRun', 'run-20261118-01']);
+  for (const invalid of [{ scene: 'Directory' }, { scene: 'dir_x' }, { scene: 'a'.repeat(33) },
+    { scene: 'x;reboot' }, { width: 320.5 }, { width: '366' }, { width: 200 },
+    { run: 'short' }, { run: 'bad run' }, { run: `${'a'.repeat(64)}b` }, { path: '/tmp/x' }]) {
+    assert.throws(() => plan({ ...verifyStart, ...invalid }));
+  }
+  assert.throws(() => operationPlan({ ...verifyStart, preflightConfirmed: false }, directory));
+  assert.deepEqual(plan({ op: 'verifyLog' }).args, ['shell', 'hilog', '-x', '-T', 'ReaderVerify']);
   assert.deepEqual(plan({ op: 'startColdEntryMemoryMiss' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
       '--pb', 'readerDisableOptionalEntryMemory', 'true']);

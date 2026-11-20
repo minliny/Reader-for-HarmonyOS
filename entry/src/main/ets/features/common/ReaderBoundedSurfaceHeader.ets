@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility } from './ReaderActionAccessibility';
 import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { SheetSurfaceSpec, DrawerSurfaceSpec, resolveSheetSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';
@@ -30,6 +31,7 @@ export struct ReaderBoundedSurfaceHeader {
   @Prop surfaceWidth: number = 300;
   @Prop actionEnabled: boolean = true;
   @Prop placement: 'bottom' | 'side' = 'bottom';
+  @Prop handleDraggable: boolean = false;
   @Prop scheme: 'auto' | 'day' | 'night' = 'auto';
   @BuilderParam leading: () => void = this.emptySlot;
   @BuilderParam accessory: () => void = this.emptySlot;
@@ -53,7 +55,7 @@ export struct ReaderBoundedSurfaceHeader {
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
         this.accessory();
       }.width('100%').height(28);
-    } else if (this.specId === 'bookshelf-book-action') {
+    } else if (this.specId === 'bookshelf-book-action' || this.specId === 'search-result-filter' || this.specId === 'search-task-status' || this.specId === 'source-management-filter' || this.specId === 'source-management-more') {
       this.sheetHeader();
     } else if (this.specId === 'source-switch-window') {
       Column({ space: 0 }) {
@@ -73,7 +75,7 @@ export struct ReaderBoundedSurfaceHeader {
 
   @Builder private actionSheetHeader() {
     Column({ space: 0 }) {
-      if (this.placement === 'bottom') {
+      if (this.placement === 'bottom' && this.handleDraggable) {
         Row() {
           Blank().width(this.drawerSpec().handleWidth).height(this.drawerSpec().handleHeight).borderRadius(3)
             .backgroundColor(readerAppColor(this.drawerSpec().handleRole, this.drawerScheme()));
@@ -105,7 +107,7 @@ export struct ReaderBoundedSurfaceHeader {
         .width(this.drawerSpec().closeIcon).height(this.drawerSpec().closeIcon);
     }.width(this.drawerSpec().closeSize).height(this.drawerSpec().closeSize).justifyContent(FlexAlign.Center)
       .backgroundColor(Color.Transparent).borderRadius(8)
-      .enabled(this.actionEnabled).accessibilityText(this.placement === 'side' ? '关闭宽屏面板' : '关闭面板')
+      .attributeModifier(new ReaderActionAccessibility(this.placement === 'side' ? '关闭宽屏面板' : '关闭面板', this.actionEnabled))
       .onClick((): void => { if (this.actionEnabled) this.onClose(); });
   }
 
@@ -130,23 +132,40 @@ export struct ReaderBoundedSurfaceHeader {
       .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
   }
 
-  private sheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }
+  private sheetSpec(): SheetSurfaceSpec {
+    if (this.specId === 'source-management-filter' || this.specId === 'source-management-more') return resolveSheetSpec(this.specId);
+    return resolveSheetSpec(this.specId === 'search-task-status' ? 'search-task-status' : this.specId === 'search-result-filter' ? 'search-result-filter' : 'bookshelf-book-action');
+  }
 
   @Builder private sheetHeader() {
     Column({ space: 0 }) {
-      Row() {
-        Blank().width(this.sheetSpec().handleWidth).height(this.sheetSpec().handleHeight)
-          .backgroundColor(readerAppColor(this.sheetSpec().handleRole, this.appThemeScheme)).borderRadius(999);
-      }.width('100%').justifyContent(FlexAlign.Center)
-        .margin({ top: this.sheetSpec().handleTop, bottom: this.sheetSpec().handleBottom });
-      Row() {
-        Text(this.title).fontFamily(this.sheetSpec().titleFontFamily).fontWeight(this.sheetSpec().titleFontWeight)
-          .fontSize(this.sheetSpec().titleFontSize).lineHeight(this.sheetSpec().titleLineHeight).halfLeading(true)
-          .fontColor(readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)).maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%');
-      }.width('100%').constraintSize({ minHeight: this.sheetSpec().titleHeight })
-        .padding({ left: this.sheetSpec().titleInset, right: this.sheetSpec().titleInset });
-    }.width('100%').margin({ bottom: this.sheetSpec().titleBottom });
+      if (this.sheetSpec().compactHeader) {
+        Row({ space: this.sheetSpec().titleGap }) {
+          this.leading();
+          Text(this.title).fontFamily(this.sheetSpec().titleFontFamily).fontWeight(this.sheetSpec().titleFontWeight)
+            .fontSize(this.sheetSpec().titleFontSize).lineHeight(this.sheetSpec().titleLineHeight).halfLeading(true)
+            .fontColor(readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
+          this.accessory();
+          Row() {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
+              .width(this.sheetSpec().closeIcon).height(this.sheetSpec().closeIcon).objectFit(ImageFit.Contain);
+          }.width(this.sheetSpec().closeSize).height(this.sheetSpec().closeSize).justifyContent(FlexAlign.Center)
+            .attributeModifier(new ReaderActionAccessibility(this.title.length > 0 ? `关闭${this.title}` : '关闭', this.actionEnabled))
+            .onClick((): void => { if (this.actionEnabled) this.onClose(); });
+        }.width('100%').constraintSize({ minHeight: this.sheetSpec().titleHeight })
+          .padding({ left: this.sheetSpec().titleInset, right: this.sheetSpec().titleInset });
+      } else {
+        Row() {
+          Text(this.title).fontFamily(this.sheetSpec().titleFontFamily).fontWeight(this.sheetSpec().titleFontWeight)
+            .fontSize(this.sheetSpec().titleFontSize).lineHeight(this.sheetSpec().titleLineHeight).halfLeading(true)
+            .fontColor(readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%');
+        }.width('100%').constraintSize({ minHeight: this.sheetSpec().titleHeight })
+          .padding({ left: this.sheetSpec().titleInset, right: this.sheetSpec().titleInset });
+      }
+    }.width('100%').margin({ bottom: this.sheetSpec().titleBottom })
+      .onAreaChange((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));
   }
 
   @Builder private headerRow() {
@@ -177,12 +196,13 @@ export struct ReaderBoundedSurfaceHeader {
         Stack({ alignContent: Alignment.Center }) {
           Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')).width(20).height(20);
         }.width(22).height(22).borderRadius(8).backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));
-      }.width(44).height(44).margin({ left: 1 }).enabled(this.actionEnabled)
+      }.width(44).height(44).margin({ left: 1 })
+        .attributeModifier(new ReaderActionAccessibility('关闭书源切换', this.actionEnabled))
         .onClick((): void => { if (this.actionEnabled) this.onClose(); });
     } else {
       Image(this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close')).width(16).height(16)
         .responseRegion({ x: -6, y: -6, width: 28, height: 28 }).enabled(this.actionEnabled)
-        .accessibilityText('关闭 TTS 配置').onClick((): void => { if (this.actionEnabled) this.onClose(); });
+        .attributeModifier(new ReaderActionAccessibility('关闭 TTS 配置', this.actionEnabled)).onClick((): void => { if (this.actionEnabled) this.onClose(); });
     }
   }
 }

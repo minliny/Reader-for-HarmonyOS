@@ -374,6 +374,15 @@ export const TYPE_APP_INHERITED_BODY = new ReaderInheritedTextStyle(
   undefined, undefined, 12, undefined, undefined, 'system', 'appBaseline');
 export const TYPE_APP_FILTER_OPTION = new ReaderTextStyle(
   READER_FONT_INTER, 500, 12, 18, undefined, 'system', 'appBaseline');
+// Accepted unified source-filter prototype: selection keeps the same metrics.
+export const TYPE_SOURCE_FILTER_OPTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 14, 21, undefined, 'system', 'appBaseline');
+export const TYPE_FILTER_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 14, 21, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_FILTER_GROUP_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 15, 22.5, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_FILTER_GROUP_COUNT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 19.2, undefined, 'system', 'appBaseline');
 // Shelf capsules contain Chinese and Latin text in one physical face. Keep
 // these roles separate from legacy app-wide Inter filter/badge consumers.
 export const TYPE_SHELF_FILTER_LABEL = new ReaderTextStyle(

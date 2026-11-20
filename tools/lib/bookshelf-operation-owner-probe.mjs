@@ -1,4 +1,4 @@
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
 import {BookshelfReadOwner} from '../../entry/src/main/ets/features/bookshelf/BookshelfReadOwner.ts';
 import {projectOperationFacts} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {classifyReaderSource} from '../../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
@@ -10,14 +10,15 @@ import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmo
 const { ts } = installedEtsCompiler();
 export const bookshelfOperationSource=path=>readFileSync(new URL('../../entry/src/main/ets/'+path,import.meta.url),'utf8');
 export function bookshelfOperationClass(path,result,deps={}) {
- const text=bookshelfOperationSource(path).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export (?:type )?\{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
+ const source=bookshelfOperationSource(path);
+ const text=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export (?:type )?\{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
  const declarations=ts.createSourceFile(path,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS).statements;
  const ownNames=new Set(declarations.flatMap(statement=>ts.isVariableStatement(statement)?
    statement.declarationList.declarations.map(node=>node.name.text):statement.name?.text?[statement.name.text]:[]));
  // A complete production declaration supplies its own top-level binding;
  // callers may carry the same real type in their wider dependency bundle.
  deps=Object.fromEntries(Object.entries(deps).filter(([name])=>!ownNames.has(name)));
- const code=ts.transpileModule(text,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const code=emitSdkProbe(text,{fileName:'module.ts',parseSource:source,scriptKind:path.endsWith('.ets')?'ETS':'TS',compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}});
  return new Function(...Object.keys(deps),code+`;return ${result};`)(...Object.values(deps));
 }
 export function actualBookshelfOperationTypes(deps) {
@@ -48,6 +49,6 @@ export function actualBookshelfRemovalTypes(deps) {
 export function actualBookshelfHostField(index,Host,AppStorage) {
  const text=bookshelfOperationSource('pages/Index.ets'),start=text.indexOf('  private bookshelfHost:'),end=text.indexOf('\n  );',start)+6;
  const expression=text.slice(text.indexOf('=',start)+1,end).trim().replace(/;$/,'');
- const code=ts.transpileModule('const value='+expression+';',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const code=emitSdkProbe('const value='+expression+';',{fileName:'module.ts',parseSource:text,scriptKind:'ETS',compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}});
  return new Function('BookshelfHost','AppStorage','IMPORT_PRESENTATION_KEY',code+'return value;').call(index,Host,AppStorage,'reader.bookshelf.import.presentation.v1');
 }

@@ -62,6 +62,12 @@ export function BookTurnTextureBuilder(input: BookTurnTextureBuildInput) {
       chromeSessionVisible: false,
       chromeSessionWidth: 0,
       chromeSessionHeight: 0,
+      bookmarkMode: input.page.bookmark.mode,
+      bookmarkOpacity: input.page.bookmark.opacity,
+      bookmarkTopAccessoryX: input.page.bookmark.topAccessoryX,
+      bookmarkTopAccessoryY: input.page.bookmark.topAccessoryY,
+      bookmarkTopAccessoryWidth: input.page.bookmark.topAccessoryWidth,
+      bookmarkTopAccessoryHeight: input.page.bookmark.topAccessoryHeight,
     });
   }
   .width(input.viewportWidth)

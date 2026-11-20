@@ -79,9 +79,9 @@ function relatedData(books, extra = {}) {
 const cachedAt=Date.now();
 const ownedHosts=[];let sourceOwnerFixture,setCurrentRuntime,productionMotionMethods;
 
-if(['progressive','host-known','host-failed-delta'].includes(id)){const loaded=await import('./lib/source-switch-owner-probe.mjs');setCurrentRuntime=loaded.setCurrentRuntime;sourceOwnerFixture=(...args)=>{const f=loaded.fixture(...args);ownedHosts.push(f.host);return f;};}
+if(['progressive','host-known','host-failed-delta','host-live-retention'].includes(id)){const loaded=await import('./lib/source-switch-owner-probe.mjs');setCurrentRuntime=loaded.setCurrentRuntime;sourceOwnerFixture=(...args)=>{const f=loaded.fixture(...args);ownedHosts.push(f.host);return f;};}
 if(['host-known','candidate-retry'].includes(id))({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
-const clock=['progressive','cancellation'].includes(id)?controlledClock():undefined;try{
+const clock=['progressive','cancellation','host-live-retention'].includes(id)?controlledClock():undefined;try{
 if(id==='identity-family'){
 assert.notEqual(
   sourceSwitchCandidateKey('a', 'bc'),
@@ -731,6 +731,84 @@ if(id==='progressive'){
   }
 }
 }
+if(id==='host-live-retention'){
+ for(const authorKind of ['plain','proof']){
+ const f=sourceOwnerFixture({open:false});const requests=[];
+ const names=Array.from({length:7},(_,i)=>`live-${i}`);
+ let revision=1;const disabled=new Set(),versions=new Map();
+ const row=(sourceId)=>({origin:sourceId,bookUrl:`/${sourceId}`,name:'还不起学贷的我只好兼职猎魔',author:'小夕岁',
+  time:Date.now(),acquisition:{sourceVersion:'v1'},relationKey:'relation',relationRevision:'1'});
+ const proof={schemaVersion:1,sourceVersion:'v1',field:'search',raw:'@小夕岁',label:'小夕岁',rule:'author-nickname-at-v1'};
+ const durable=new Map(names.slice(0,3).map(id=>[id,row(id)]));
+ durable.set('old',{...row('old'),bookUrl:'book',author:authorKind==='proof'?'@小夕岁':'小夕岁',
+  acquisition:{sourceVersion:'v1',...(authorKind==='proof'?{authorIdentity:proof}:{})}});
+ const original=f.runtime.request.bind(f.runtime),oldAcquisition=f.runtime.bookAcquisitions();
+ f.runtime.bookAcquisitions=()=>({...oldAcquisition,sourceRegistryRevision:()=>revision});
+ f.context.query={...f.context.query,bookName:'还不起学贷的我只好兼职猎魔',author:authorKind==='proof'?'@小夕岁':'小夕岁',
+  ...(authorKind==='proof'?{sourceVersion:'old-rules'}:{})};
+ f.context.readKnownCandidates=()=>[];
+ f.runtime.request=async(method,params,options)=>{
+  requests.push({method,params});
+  if(method==='source.list')return{data:{sources:['old',...names].map(sourceId=>({sourceId,name:sourceId,
+   enabled:!disabled.has(sourceId),sourceVersion:versions.get(sourceId)??'v1'}))}};
+  if(method==='search-book.get'&&params.origin==='old'&&params.bookUrl==='book')return{data:{book:durable.get('old')}};
+  if(method==='search-book.related')return{data:relatedData([...durable.values()])};
+  if(method==='search-book.batch.get'){
+   const books=[],missing=[];
+   for(const identity of params.identities){const saved=durable.get(identity.sourceId);
+    if(saved&&saved.bookUrl===identity.bookId)books.push({...saved});else missing.push(identity);}
+   return{data:{books,missing,complete:true}};
+  }
+  if(method==='book.search')return searchResult(params.sourceId,params.sourceId==='old'?[]:[{
+   bookId:`/${params.sourceId}`,title:f.context.query.bookName,author:'小夕岁'}]);
+  if(method==='search-book.put')throw Error('controlled timing persistence unavailable; live result remains admitted');
+  return original(method,params,options);
+ };
+ const wait=async predicate=>{for(let i=0;i<250&&!predicate();i++)await new Promise(setImmediate);
+  assert.ok(predicate(),'actual Host+Gateway state settles');};
+ const alternatives=()=>f.host.current().state.candidates.filter(candidate=>candidate.isCurrent!==true);
+ const ready=()=>f.host.current().state.kind==='candidates'&&f.host.current().state.refreshing===false;
+ assert.equal(f.host.open(f.context,f.lease),true);await wait(ready);
+ assert.equal(f.host.current().state.candidates.filter(c=>c.isCurrent===true).length,1,'the exact current binding remains context, not an alternate row');
+ if(authorKind==='proof')assert.deepEqual(f.host.context.query.authorIdentity,proof,'registry-bound author proof is restored before cache/discovery predicates');
+ assert.equal(alternatives().length,3,'shelf entry starts with its three real durable relations');
+ f.host.refresh(f.host.current().scopeId);
+ await wait(()=>requests.filter(r=>r.method==='book.search').length===8);
+ await clock.advance(150);await wait(ready);
+ assert.equal(alternatives().length,7,'explicit refresh admits all seven same-book source identities');
+ let related=requests.filter(r=>r.method==='search-book.related').length;
+ f.publish({reset:false,identities:[{sourceId:names[0],bookId:`/${names[0]}`}]});
+ await wait(()=>requests.filter(r=>r.method==='search-book.related').length>related);await settleHost();
+ assert.equal(alternatives().length,7,
+  'an acquisition delta cannot discard four live candidates only because shelf-origin known seeds are empty');
+ durable.set(names[3],row(names[3]));
+ f.publish({reset:false,identities:[{sourceId:names[3],bookId:`/${names[3]}`}]});await settleHost();
+ assert.equal(alternatives().length,7);
+ durable.delete(names[3]);
+ f.publish({reset:false,identities:[{sourceId:names[3],bookId:`/${names[3]}`}]});await settleHost();
+ assert.equal(alternatives().length,6);
+ assert.ok(f.host.current().state.candidates.every(c=>c.sourceId!==names[3]),'a confirmed persistent relation that was deleted cannot be revived by its visible seed');
+ disabled.add(names[4]);revision++;
+ f.publish({reset:true,identities:[]});await settleHost();
+ assert.equal(alternatives().length,5);
+ disabled.delete(names[4]);versions.set(names[4],'v2');revision++;
+ f.publish({reset:true,identities:[]});await settleHost();
+ assert.equal(alternatives().length,5,'removed prior-rule seeds are not held permanently for later registry changes');
+ const oldCallbacks=[...f.subscriptions];f.host.retire();
+ f.context.query={...f.context.query,sourceId:'another-binding',bookId:'another-book',author:'小夕岁',authorIdentity:undefined,sourceVersion:'v1'};
+ f.setIdentity({sourceId:'another-binding',bookId:'another-book'});
+ const newLease={...f.lease,isCurrent:()=>true};
+ assert.equal(f.host.open(f.context,newLease),true);await wait(ready);
+ const afterNew=f.host.current();
+ assert.equal(afterNew.state.candidates.length,4,'a new journey starts from its own durable relation, never old live seeds');
+ for(const callback of oldCallbacks)callback({reset:true,identities:[]});await settleHost();
+ assert.equal(f.host.current(),afterNew,'retired journey callbacks cannot replace a same-title differently bound journey');
+ assert.equal(requests.some(r=>['book.detail','book.toc','chapter.content','source.switch.commit','search-book.delete'].includes(r.method)),false,
+  'discovery and seed retention neither pre-acquire a book nor mutate user content or binding');
+ f.host.retire();
+ async function settleHost(){for(let i=0;i<35;i++)await new Promise(setImmediate);}
+ }
+}
 if(id==='transaction'){
 const runtime = {
   async request(method, params) {
@@ -1106,5 +1184,5 @@ if(id==='candidate-retry'){
 }
 }finally{for(const host of ownedHosts)host.retire();clock?.restore();}
 }
-const definitions={"identity-family": "identity-family actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-concurrency": "discovery-concurrency actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "slow-lane": "slow-lane actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "environment": "environment actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "dns": "dns actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "source-failure": "source-failure actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "invalid-search": "invalid-search actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "late-discovery": "late-discovery actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-qualification": "target-qualification actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "author-proof": "author-proof actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-identity": "discovery-identity actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-basic": "cache-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-timing": "cache-timing actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-scope": "relation-scope actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "refresh-basic": "refresh-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "progressive": "progressive actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "transaction": "transaction actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "known-delta": "known-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "missing-only": "missing-only actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-known": "host-known actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-failed-delta": "host-failed-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cancellation": "cancellation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "manga-relation": "manga-relation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-pagination": "relation-pagination actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-session": "target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "direct-target-session": "direct-target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "live-candidate": "live-candidate actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "candidate-retry": "candidate-retry actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases"};
+const definitions={"host-live-retention": "actual Host+Gateway shelf-origin refresh retains unpersisted live candidates across deltas while respecting deletion, registry and journey guards", "identity-family": "identity-family actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-concurrency": "discovery-concurrency actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "slow-lane": "slow-lane actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "environment": "environment actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "dns": "dns actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "source-failure": "source-failure actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "invalid-search": "invalid-search actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "late-discovery": "late-discovery actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-qualification": "target-qualification actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "author-proof": "author-proof actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-identity": "discovery-identity actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-basic": "cache-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-timing": "cache-timing actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-scope": "relation-scope actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "refresh-basic": "refresh-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "progressive": "progressive actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "transaction": "transaction actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "known-delta": "known-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "missing-only": "missing-only actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-known": "host-known actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-failed-delta": "host-failed-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cancellation": "cancellation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "manga-relation": "manga-relation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-pagination": "relation-pagination actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-session": "target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "direct-target-session": "direct-target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "live-candidate": "live-candidate actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "candidate-retry": "candidate-retry actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases"};
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
-import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const definitions = {
@@ -12,12 +11,16 @@ const definitions = {
   'sdk-navigation': { description: 'Actual SDK lowered bottom and rail builders keep focus/selected actions and scale the rail box with its text.' },
   'sdk-followup-actions': { description: 'Actual shelf mode and bounded close builders retain role/focus/selected/disabled facts and guarded callbacks.' },
   'shell-owner': { description: 'Shared navigation builders place one orientation, forward overlay inset, and reject retired navigation callbacks.' },
-  'font-receipt': { description: 'A font-only metrics receipt re-evaluates the real shell mode and every rail consumer subscribes to it.' },
+  'font-receipt': { description: 'A font-only metrics receipt re-evaluates actual shell mode; every scoped ordinary consumer and SDK rail forwards the current receipt, with equivalent syntax and lost-receipt controls.' },
   'detail-frame': { description: 'Actual standard detail dock is inset from its content owner at narrow, wide and asymmetric safe edges.' },
   'action-semantics': { description: 'Production shared modifier preserves disabled and selected facts without hiding child controls in non-action settings rows.' },
 };
 const selected = selectContractCases(definitions);
 if (selected.length > 0) {
+  const { installedEtsCompiler, emitSdkProbe } = await import('./lib/ets-compiler-runtime.mjs');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { createEtsBuilderProbe } = await import('./lib/ets-builder-probe.mjs');
   const { ts, options } = installedEtsCompiler();
   const base = path.resolve(import.meta.dirname, '../entry/src/main/ets');
   function loader(overrides = {}, globals = {}) {
@@ -29,10 +32,9 @@ if (selected.length > 0) {
       if (Object.hasOwn(overrides, key)) return overrides[key];
       if (cache.has(file)) return cache.get(file);
       const source = readFileSync(file, 'utf8');
-      const result = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS }, reportDiagnostics: true });
-      assert.deepEqual(result.diagnostics, [], key);
+      const output = emitSdkProbe(source, { fileName: file, scriptKind: file.endsWith('.ets') ? 'ETS' : 'TS', compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } });
       const module = { exports: {} }; cache.set(file, module.exports);
-      new Function('require', 'module', 'exports', ...Object.keys(globals), result.outputText)(id => {
+      new Function('require', 'module', 'exports', ...Object.keys(globals), output)(id => {
         if (Object.hasOwn(overrides, id)) return overrides[id];
         assert.ok(id.startsWith('.'), `No unlisted platform dependency: ${id}`);
         return load(path.relative(base, path.resolve(path.dirname(file), id)));
@@ -40,6 +42,11 @@ if (selected.length > 0) {
       return module.exports;
     }
     return load;
+  }
+  let commonPolicies;
+  function navigationBuilder(source,names,dependencies={},hooks={}) {
+    if(commonPolicies===undefined) { const load=loader(); commonPolicies={...load('features/common/ReaderTypography.ets'),...load('features/common/ReaderThemeRegistry.ts')}; }
+    return createEtsBuilderProbe(source,names,{...commonPolicies,...dependencies},hooks);
   }
   for (const id of selected) {
     if (id === 'viewport-rail') {
@@ -101,7 +108,7 @@ if (selected.length > 0) {
         const store={get:async(k,d)=>cache.has(k)?cache.get(k):d,put:async(k,v)=>cache.set(k,v),flush:async()=>{
           disk.clear();for(const [k,v]of cache)disk.set(k,v);if(loseAck){loseAck=false;throw Error('lost ACK');}}};
         const load=loader({'@ohos.data.preferences':{default:{getPreferences:async()=>store}},
-          'app/ReaderThemeHost.ts':{ReaderThemeHost:{prepareUserChange:async()=>{}}}});
+          'app/ReaderThemeHost.ts':{ReaderThemeHost:{prepareUserChange:async()=>{},settingsWriteGeneration:()=>0,assertSettingsWritable:()=>{}}}});
         const mod=load('features/settings/SettingsGateway.ts');return {mod,gateway:new mod.SettingsGateway({}),cache,disk,lose:()=>{loseAck=true;}};
       }
       const legacy={autoCheckUpdate:false,tapBottomScrollTop:false,reduceMotion:true,crashLog:false,developerMode:true};
@@ -127,10 +134,9 @@ if (selected.length > 0) {
       }
     }
     if(id==='grid-height') {
-      const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
       const load=loader(),type=load('features/common/ReaderTypography.ets'),grid=load('features/bookshelf/BookshelfGridSpec.ets');
       const metrics={systemFontScale:1};
-      const {owner}=createReaderBuilderProbe(readFileSync(path.join(base,'features/bookshelf/BookshelfPage.ets'),'utf8'),['projectionGridDetails'],
+      const {owner}=navigationBuilder(readFileSync(path.join(base,'features/bookshelf/BookshelfPage.ets'),'utf8'),['projectionGridDetails'],
         {...type,...grid,ReaderWindowCoordinator:{metrics:()=>metrics}});
       Object.assign(owner,{appThemeScheme:'day',shelfBookCardWidth:()=>100,bookCardHeight:()=>150,gridProgressLabel:()=> '第 3 章',viewMode:'cover',viewSwitchGridContentOpacity:1});
       owner.projectionGridDetails({title:'标题',author:'作者'},false);
@@ -149,25 +155,21 @@ if (selected.length > 0) {
       let callback;
       const walk=n=>{if(ts.isPropertyAssignment(n)&&n.name.getText(tree)==='onSelectBook')callback=n.initializer.getText(tree);ts.forEachChild(n,walk);};walk(method);
       assert.ok(callback);
-      const body=ts.transpileModule(`function factory(generation,owner,mounting,host){return ${callback};}`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
-      const factory=new Function(body+';return factory;')();
+      const { factory }=pureModuleProbe(`function factory(generation,owner,mounting,host){return ${callback};}`,'DiscoverCallback.ets',{},['factory']);
       const calls=[],current={sourceId:'source',bookId:'book',name:'current title',author:'author',category:'novel',coverUrl:'cover',intro:'intro'};
       let admitted=true;
-      const owner={discoverPresentation:{books:[current]},isCurrentDiscoverPresentation:()=>admitted,
-        sourceDisplayName:()=> 'source name',openRemoteBookDetail:(...args)=>calls.push(args)};
+      const owner={discoverUi(){return this.discoverProduct;},isCurrentDiscoverPresentation:()=>admitted,sourceDisplayName:()=> 'source name',openRemoteBookDetail:(...args)=>calls.push(args),discoverProduct:{discoverPresentation:{books:[current]}}};
       const click=factory.call(owner,1,{},2,{});
       click({...current,name:'old title'});assert.equal(calls.length,1);assert.equal(calls[0][0].title,'current title');
       admitted=false;click({...current});assert.equal(calls.length,1);
-      admitted=true;owner.discoverPresentation.books=[];click({...current});assert.equal(calls.length,1);
-      const returning=component.members.find(n=>n.name?.getText(tree)==='returnFromDetail').getText(tree);
-      const emitted=ts.transpileModule(`class ReturnProbe { ${returning} }`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
-      const ReturnProbe=new Function(emitted+';return ReturnProbe;')(),parent=new ReturnProbe(),routes=[];
+      admitted=true;owner.discoverProduct.discoverPresentation.books=[];click({...current});assert.equal(calls.length,1);
+      const ReturnProbe=selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'Index',['returnFromDetail']);
+      const parent=new ReturnProbe(),routes=[];
       Object.assign(parent,{openDiscover:()=>routes.push('discover'),returnToSearch:()=>routes.push('search'),returnToBookshelf:()=>routes.push('bookshelf')});
       for(const route of ['discover','search','bookshelf']){parent.detailReturnRoute=route;parent.returnFromDetail();}
       assert.deepEqual(routes,['discover','search','bookshelf']);
     }
     if (id === 'sdk-navigation') {
-      const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
       const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
       const properties = createArkUIPropertyRuntimeProbe();
       const raisedSource = readFileSync(path.join(base,'features/common/ReaderRaisedSurface.ets'),'utf8');
@@ -188,10 +190,10 @@ if (selected.length > 0) {
       const typography = load('features/common/ReaderTypography.ets');
       const tokens = load('features/common/ReaderTokens.ets');
       const surfaces = load('features/common/ReaderSurfaceSpecs.ets');
-      const { owner } = createReaderBuilderProbe(readFileSync(path.join(base,'features/shell/MainTabBar.ets'),'utf8'),
+      const { owner } = navigationBuilder(readFileSync(path.join(base,'features/shell/MainTabBar.ets'),'utf8'),
         ['bottomBar','verticalRail','tabItem','navigationFontScale','recordRaisedSurface','vertical',
           'bottomSurfaceWidth','bottomSurfaceHeight','railSurfaceWidth','railSurfaceHeight'],
-        {...properties.sdk,...nav,...floating,...typography,...tokens,...surfaces,ReaderRaisedSurface:RaisedSurfaceInputs,
+        {...properties.sdk,...nav,...floating,...typography,...tokens,...surfaces,readerPageAreaLength:load('features/common/ReaderPageShell.ts').readerPageAreaLength,ReaderRaisedSurface:RaisedSurfaceInputs,
           ReaderWindowCoordinator:deps['app/ReaderWindowCoordinator.ts'].ReaderWindowCoordinator},
         {...properties.hooks,childSources:{ReaderRaisedSurface:raisedSource}});
       const clicks=[];
@@ -237,19 +239,22 @@ if (selected.length > 0) {
       assert.equal(clicks.filter(x=>x==='settings').length,6);assert.equal(clicks.filter(x=>x==='current:bookshelf').length,6);
     }
     if (id === 'sdk-followup-actions') {
-      const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
       const load=loader({}, {AccessibilityRoleType:{BUTTON:'AccessibilityRoleType.BUTTON'}});
       const access=load('features/common/ReaderActionAccessibility.ets');
       for(const enabled of [true,false]) {
-        const {owner}=createReaderBuilderProbe(readFileSync(path.join(base,'features/bookshelf/BookshelfSettingsPage.ets'),'utf8'),['modeOption'],access);
-        const calls=[];Object.assign(owner,{mode:'cover',appThemeScheme:'day',viewModeSnapshot:{canSave:enabled},viewModeHost:{canSave:snapshot=>snapshot.canSave},selectMode:v=>calls.push(v)});
+        const {owner}=navigationBuilder(readFileSync(path.join(base,'features/bookshelf/BookshelfSettingsPage.ets'),'utf8'),['modeOption','selectMode'],access);
+        let canSave=enabled;const calls=[];
+        Object.assign(owner,{mounted:true,revision:0,mode:'cover',appThemeScheme:'day',viewModeSnapshot:{canSave:enabled},
+          viewModeHost:{canSave:()=>canSave},persistRequestedMode:async value=>{calls.push(value);}});
         owner.modeOption('cover','封面');owner.modeOption('list','列表');
-        const nodes=[...owner.nodes.values()].filter(n=>n.type==='Text');
+        const nodes=[...owner.nodes.values()].filter(n=>n.onClick);
         assert.deepEqual(nodes.map(n=>n.accessibilitySelected),[true,false]);
-        assert.ok(nodes.every(n=>n.focusable===enabled && n.enabled===enabled && n.accessibilityRole==='AccessibilityRoleType.BUTTON'));
-        if(enabled){nodes[1].onClick();assert.deepEqual(calls,['list']);}
+        assert.ok(nodes.every(n=>n.focusable===enabled&&n.enabled===enabled&&n.accessibilityRole==='AccessibilityRoleType.BUTTON'));
+        nodes[1].onClick();assert.deepEqual(calls,enabled?['list']:[]);
+        canSave=false;nodes[0].onClick();assert.equal(calls.length,enabled?1:0,'retained callback cannot bypass current save admission');
+        canSave=true;owner.mounted=false;nodes[0].onClick();assert.equal(calls.length,enabled?1:0,'retired settings owner cannot change mode');
         for(const specId of ['source-switch-window','tts-config-manager','tts-config']) {
-          const {owner:header}=createReaderBuilderProbe(readFileSync(path.join(base,'features/common/ReaderBoundedSurfaceHeader.ets'),'utf8'),['closeAction','drawerClose'],access);
+          const {owner:header}=navigationBuilder(readFileSync(path.join(base,'features/common/ReaderBoundedSurfaceHeader.ets'),'utf8'),['closeAction','drawerClose'],access);
           let closed=0;Object.assign(header,{specId,appThemeScheme:'day',actionEnabled:enabled,placement:'side',
             drawerSpec:()=>({closeIcon:20,closeSize:44}),drawerScheme:()=> 'day',onClose:()=>closed++});
           header.closeAction();header.drawerClose();
@@ -260,58 +265,115 @@ if (selected.length > 0) {
       }
     }
     if(id==='shell-owner') {
-      const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
       const source=readFileSync(path.join(base,'features/shell/MainTabShell.ets'),'utf8');
-      const childSources=Object.fromEntries(['MainTabBar','MainNavigationRail'].map(n=>[n,readFileSync(path.join(base,'features/shell/'+n+'.ets'),'utf8')]));
+      const childSources=Object.fromEntries(['MainTabBar','MainNavigationRail','MainNavigationOverlay'].map(n=>[n,readFileSync(path.join(base,'features/shell/'+n+'.ets'),'utf8')]));
       class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});} updateStateVars(params){Object.assign(this.params,params);}}
       for(const mode of ['bottom','rail']) {
-        const {owner}=createReaderBuilderProbe(source,['bottomNavigation','mainOverlays','requestMainTab','requestCurrentTab'],
-          {MainTabBar:Child,MainNavigationRail:Child},{childSources});
+        const {owner}=navigationBuilder(source,['bottomNavigation','mainOverlays','requestMainTab','requestCurrentTab','overlayContent','scrollOverlayContent','emptySlot','emptyScrollOverlay'],
+          {MainTabBar:Child,MainNavigationRail:Child,MainNavigationOverlay:Child},{childSources});
         const calls=[],insets=[];Object.assign(owner,{mounted:true,navigationGeneration:7,activeTab:'settings',navigationMode:()=>mode,
           onMainTab:(k,g)=>calls.push([k,g]),onCurrentTabTap:(k,g)=>calls.push(['current:'+k,g]),
           overlayContent:()=>{},scrollOverlayContent:v=>insets.push(v)});
         owner.bottomNavigation();owner.mainOverlays(83);
-        assert.equal(owner.children.size,1,'only one navigation orientation mounts');assert.deepEqual(insets,[83]);
-        const child=[...owner.children.values()][0];child.params.onSelect('bookshelf',7);child.params.onCurrentTap('settings',7);
+        const children=[...owner.children.values()];
+        const overlayInputs=children.find(child=>Object.hasOwn(child.params,'railActive'));
+        assert.ok(overlayInputs,'the actual shared overlay owns the rail branch');
+        const {owner:overlay}=navigationBuilder(childSources.MainNavigationOverlay,['build','overlayContent','emptySlot'],
+          {MainNavigationRail:Child},{childSources});
+        Object.assign(overlay,overlayInputs.params);overlay.initialRender();
+        const navigationChildren=[...children.filter(child=>child!==overlayInputs),...overlay.children.values()];
+        assert.equal(owner.children.size,mode==='bottom'?2:1,'shared overlay remains mounted in both orientations');
+        assert.equal(navigationChildren.length,1,'only one navigation orientation mounts');assert.deepEqual(insets,[83]);
+        const child=navigationChildren[0];child.params.onSelect('bookshelf',7);child.params.onCurrentTap('settings',7);
         assert.deepEqual(calls,[['bookshelf',7],['current:settings',7]]);
         owner.navigationGeneration=8;child.params.onSelect('bookshelf',7);owner.mounted=false;owner.requestMainTab('bookshelf',8);
         assert.equal(calls.length,2,'old callbacks cannot navigate');
       }
-      // The home composition must reuse the owner; no independent rail or mode resolver remains.
+      // Resolve imported identities rather than freezing whitespace, comments
+      // or local import names. Only actual component/call ownership is checked.
       const settings=readFileSync(path.join(base,'features/shell/SettingsShell.ets'),'utf8');
-      assert.ok(settings.includes('MainTabShell({'));assert.ok(!/MainNavigationRail|MainTabBar|readerMainNavigationMode/.test(settings.replace(/\/\/[^\n]*/g,'')));
+      function checkSharedOwner(definition){
+        const tree=ts.createSourceFile('SettingsShell.ets',definition,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+        assert.equal(tree.parseDiagnostics.length,0);const aliases=new Map();let sharedImport;
+        for(const declaration of tree.statements.filter(ts.isImportDeclaration))for(const item of declaration.importClause?.namedBindings?.elements??[]) {
+          const original=item.propertyName?.text??item.name.text;aliases.set(item.name.text,original);
+          if(original==='MainTabShell'){assert.ok(declaration.moduleSpecifier.text.endsWith('/MainTabShell'));sharedImport=item;}
+        }
+        assert.ok(sharedImport);const owner=tree.statements.find(node=>node.name?.text==='SettingsShell');
+        const build=owner.members.find(node=>node.name?.getText(tree)==='build');assert.ok(build);let shared=0;
+        const visit=node=>{if((ts.isCallExpression(node)||ts.isEtsComponentExpression?.(node))&&ts.isIdentifier(node.expression)){
+          const identity=aliases.get(node.expression.text)??node.expression.text;
+          if(identity==='MainTabShell')shared++;
+          assert.ok(!['MainTabBar','MainNavigationRail','readerMainNavigationMode'].includes(identity),'settings uses one shared navigation owner');
+        }ts.forEachChild(node,visit);};visit(build);assert.equal(shared,1);return{tree,owner,build,sharedImport};
+      }
+      const shared=checkSharedOwner(settings),edits=[{start:shared.sharedImport.getStart(shared.tree),end:shared.sharedImport.end,text:'MainTabShell as SharedNavigationForProbe'}];
+      const originalName=shared.sharedImport.name.text;
+      const rename=node=>{if(ts.isIdentifier(node)&&node.text===originalName)edits.push({start:node.getStart(shared.tree),end:node.end,text:'SharedNavigationForProbe'});ts.forEachChild(node,rename);};
+      rename(shared.owner);let equivalent=settings;
+      for(const edit of edits.sort((a,b)=>b.start-a.start))equivalent=equivalent.slice(0,edit.start)+edit.text+equivalent.slice(edit.end);
+      checkSharedOwner(equivalent);
+      const start=shared.build.body.getStart(shared.tree)+1;
+      const independent=settings.slice(0,start)+'\n MainTabBar({});\n'+settings.slice(start);
+      assert.throws(()=>checkSharedOwner(independent),/one shared navigation owner/);
     }
     if(id==='font-receipt') {
-      const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
       const plain=loader(),metrics=plain('features/common/ReaderWindowMetrics.ts').createDefaultReaderWindowMetrics();
       metrics.windowRect.width=960;metrics.windowRect.height=1000;metrics.navigationInsets.bottom=24;
-      const store=new Map(),load=loader({'app/ReaderWindowCoordinator.ts':{ReaderWindowCoordinator:{metrics:()=>metrics}},
+      const store=new Map(),coordinator={metrics:()=>metrics};
+      const load=loader({'app/ReaderWindowCoordinator.ts':{ReaderWindowCoordinator:coordinator},
         'app/ReaderProductScope.ts':{isReaderMainTabEnabled:k=>['bookshelf','settings'].includes(k)}},
         {AppStorage:{get:k=>store.get(k),setOrCreate:(k,v)=>store.set(k,v)}});
       const nav=load('features/shell/MainNavigationSpec.ts');nav.publishReaderMainViewport(760,200);
       const source=readFileSync(path.join(base,'features/shell/MainTabShell.ets'),'utf8');
-      const {owner}=createReaderBuilderProbe(source,['navigationMode'],nav);
+      const {owner}=navigationBuilder(source,['navigationMode'],nav);
       let reads=0;Object.assign(owner,{wideNavigationRail:true,mainViewportRevision:1});
       Object.defineProperty(owner,'readerWindowMetricsRevision',{get(){reads++;return reads;}});
       assert.equal(owner.navigationMode(),'rail');metrics.systemFontScale=2;assert.equal(owner.navigationMode(),'bottom');
       assert.equal(reads,2,'font receipt must be observed even if viewport has not changed');
+      const policy={...nav,...load('features/common/ReaderPageGeometry.ts'),...load('features/common/ReaderTokens.ets'),
+        ...load('features/common/ReaderFloatingBarMetrics.ts'),ReaderWindowCoordinator:coordinator};
+      let first;
       for(const rel of ['shell/MainTabShell.ets','bookshelf/BookshelfPage.ets','bookshelf/BookshelfEmptyPage.ets','bookshelf/BookshelfStatusContent.ets','discover/DiscoverPage.ets','rss/RssPage.ets']) {
-        const text=readFileSync(path.join(base,'features',rel),'utf8'),tree=ts.createSourceFile(rel,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
-        let count=0;function visit(n){if(ts.isCallExpression(n)&&n.expression.getText(tree)==='readerMainNavigationMode') {
-          count++;assert.equal(n.arguments[2]?.getText(tree),'this.readerWindowMetricsRevision',rel);
-        }ts.forEachChild(n,visit);}visit(tree);assert.ok(count>0,rel);
+        const full=path.join(base,'features',rel),text=readFileSync(full,'utf8'),tree=ts.createSourceFile(rel,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+        assert.equal(tree.parseDiagnostics.length,0);
+        const aliases=new Set(tree.statements.filter(ts.isImportDeclaration).flatMap(node=>[...(node.importClause?.namedBindings?.elements??[])]
+          .filter(item=>(item.propertyName?.text??item.name.text)==='readerMainNavigationMode').map(item=>item.name.text)));
+        let count=0;
+        for(const component of tree.statements.filter(node=>node.members))for(const method of component.members.filter(ts.isMethodDeclaration)) {
+          const calls=[];
+          const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&aliases.has(node.expression.text))calls.push(node);ts.forEachChild(node,visit);};
+          visit(method);if(!calls.length)continue;count+=calls.length;
+          const observed=[];const dependencies={...policy,...Object.fromEntries([...aliases].map(alias=>[alias,(...args)=>{observed.push(args);return nav.readerMainNavigationMode(...args);}]))};
+          const methodName=method.name.getText(tree),Consumer=selectedProductionMethods(new URL('../entry/src/main/ets/features/'+rel,import.meta.url),component.name.text,[methodName],dependencies);
+          function check(Type){const value=Object.assign(new Type(),{wideNavigationRail:true,mainViewportRevision:11});let currentReads=0;
+            Object.defineProperty(value,'readerWindowMetricsRevision',{get(){currentReads++;return 77;}});observed.length=0;value[methodName]();
+            assert.ok(currentReads>0,rel+' reads current metrics receipt');assert.ok(observed.length>0);
+            assert.ok(observed.every(args=>args[2]===77),rel+' forwards current metrics receipt');}
+          check(Consumer);
+          if(!first)first={text,tree,method,call:calls[0],methodName,dependencies,check};
+        }
+        assert.ok(count>0,rel+' declares current policy consumers');
       }
-      const rail=readFileSync(path.join(base,'features/shell/MainNavigationRail.ets'),'utf8');
-      assert.ok(rail.includes('readerMainRailTop(this.mainViewportRevision, this.readerWindowMetricsRevision)'));
+      assert.ok(first);const arg=first.call.arguments[2];assert.ok(arg);
+      const start=arg.getStart(first.tree)-first.method.getStart(first.tree),end=arg.end-first.method.getStart(first.tree),method=first.method.getText(first.tree);
+      const compileMember=text=>pureModuleProbe('class ReceiptConsumer { '+text+' }','ReceiptConsumer.ets',first.dependencies,['ReceiptConsumer']).ReceiptConsumer;
+      first.check(compileMember(method.slice(0,start)+'('+arg.getText(first.tree)+')'+method.slice(end)));
+      assert.throws(()=>first.check(compileMember(method.slice(0,start)+'0'+method.slice(end))),/metrics receipt/,'lost current receipt must fail');
+      const railFile='features/shell/MainNavigationRail.ets',railSource=readFileSync(path.join(base,railFile),'utf8');
+      const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs'),properties=createArkUIPropertyRuntimeProbe(),topCalls=[];
+      class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+      const rail=navigationBuilder(railSource,['build'],{...properties.sdk,...nav,MainTabBar:Child,
+        readerMainRailLeft:revision=>{assert.equal(revision,77);return nav.readerMainRailLeft(revision);},
+        readerMainRailTop:(...args)=>{topCalls.push(args);return nav.readerMainRailTop(...args);}},
+        {...properties.hooks,childSources:{MainTabBar:readFileSync(path.join(base,'features/shell/MainTabBar.ets'),'utf8')}}).owner;
+      Object.assign(rail,{navigationGeneration:3,mainViewportRevision:11,activeTab:'settings'});
+      Object.defineProperty(rail,'readerWindowMetricsRevision',{get:()=>77});rail.initialRender();
+      assert.deepEqual(topCalls,[[11,77]],'actual SDK rail forwards current viewport and font receipt');
     }
     if(id==='detail-frame') {
       const load=loader(),geometry=load('features/common/SurfaceHorizontalGeometry.ts'),tokens=load('features/common/ReaderTokens.ets');
-      const source=readFileSync(path.join(base,'features/bookshelf/LocalBookDetail.ets'),'utf8');
-      const tree=ts.createSourceFile('LocalBookDetail.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
-      const component=tree.statements.find(n=>n.name?.text==='LocalBookDetail');
-      const method=component.members.find(n=>n.name?.getText(tree)==='dockFrame').getText(tree).replace('private ','');
-      const emitted=ts.transpileModule('class Detail {'+method+'}',{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
-      const Detail=new Function(...Object.keys(geometry),'TOK_SPACE_SM',emitted+';return Detail;')(...Object.values(geometry),tokens.TOK_SPACE_SM);
+      const Detail=selectedProductionMethods(new URL('../entry/src/main/ets/features/bookshelf/LocalBookDetail.ets',import.meta.url),'LocalBookDetail',['dockFrame'],{...geometry,TOK_SPACE_SM:tokens.TOK_SPACE_SM});
       for(const width of [0,20,320,760,1200])for(const safe of [0,48]) {
         const content=geometry.resolveHorizontalFrame(width,safe,0,new geometry.SurfaceWidthSpec(tokens.TOK_CONTENT_MAX_W_TABLET,18,18));
         const owner=new Detail();Object.assign(owner,{book:{contentKind:'text'},contentFrame:()=>content});

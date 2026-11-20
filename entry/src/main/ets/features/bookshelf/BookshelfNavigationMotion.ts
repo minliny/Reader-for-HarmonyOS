@@ -21,11 +21,24 @@ export interface BookshelfMotionRequest {
   direction: 'open' | 'close';
   origin: BookshelfBookOrigin;
   target: BookshelfMotionRect;
-  awaitingTarget?: boolean;
+  awaitingOrigin?: boolean;
   fadeOnly?: boolean;
+  reversed?: boolean;
+  paperColor: string;
+  paperInk: string;
 }
 
-/** The actor and its hinge share this measured page-local rectangle. */
+export interface BookshelfPaperPalette {
+  color: string;
+  ink: string;
+}
+
+/** The full local motion host, used as the open/close target surface. */
+export function shelfMotionWindowRect(viewport: BookshelfMotionRect): BookshelfMotionRect {
+  return { x: 0, y: 0, width: viewport.width, height: viewport.height };
+}
+
+/** The actor and its hinge share this host-local target rectangle. */
 export function bookshelfMotionTarget(request: BookshelfMotionRequest): BookshelfMotionRect {
   return request.target;
 }
@@ -37,6 +50,36 @@ export function bookshelfMotionRectAt(request: BookshelfMotionRequest, progress:
   return { x: source.x + (target.x - source.x) * p, y: source.y + (target.y - source.y) * p,
     width: source.width + (target.width - source.width) * p,
     height: source.height + (target.height - source.height) * p };
+}
+
+export interface BookshelfMotionTransform {
+  rect: BookshelfMotionRect;
+  sx: number;
+  sy: number;
+  imageScaleX: number;
+  imageScaleY: number;
+  radiusX: number;
+  radiusY: number;
+}
+
+/** Fixed target-size layout: compensate the outer scale so a centered Contain
+ * bitmap remains undistorted and covers the current panel, like ObjectFit.Cover.
+ * The request owner supplies valid positive source and target rectangles. */
+export function bookshelfMotionTransformAt(request: BookshelfMotionRequest, carry: number,
+  imageAspect: number): BookshelfMotionTransform {
+  const p = Number.isFinite(carry) ? Math.max(0, Math.min(1, carry)) : 0;
+  const rect = bookshelfMotionRectAt(request, p);
+  const target = bookshelfMotionTarget(request);
+  const sx = rect.width / target.width;
+  const sy = rect.height / target.height;
+  const aspect = Number.isFinite(imageAspect) && imageAspect > 0 ? imageAspect :
+    request.origin.rect.width / request.origin.rect.height;
+  const baseWidth = Math.min(target.width, target.height * aspect);
+  const baseHeight = Math.min(target.height, target.width / aspect);
+  const imageScale = Math.max(rect.width / baseWidth, rect.height / baseHeight);
+  const radius = request.origin.radius * (1 - p);
+  return { rect, sx, sy, imageScaleX: imageScale / sx, imageScaleY: imageScale / sy,
+    radiusX: radius / sx, radiusY: radius / sy };
 }
 
 export function bookshelfMotionBookKey(sourceId: string, bookId: string): string {

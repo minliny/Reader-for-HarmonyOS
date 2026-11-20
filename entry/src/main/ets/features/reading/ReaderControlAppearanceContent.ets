@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE } from '../common/ReaderTypography';
 import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../common/ReaderFonts';
@@ -78,6 +79,7 @@ export struct ReaderControlAppearanceContent {
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
   @Prop fullContentHeight: number = 666;
+  @Prop quickContentHeight: number = 190;
   @Prop expandedLayout: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;
@@ -203,10 +205,17 @@ export struct ReaderControlAppearanceContent {
   private fullInput(): boolean {
     return readerControlAppearanceEndpoint(this.motionProgress, this.interactionEnabled) === 'full';
   }
+  private quickThemeHitWidth(): number {
+    const lane = this.frame().quickThemeLane;
+    return lane >= 44 ? Math.min(62.5, lane) : 62.5;
+  }
+
   private sharedInput(): boolean {
     return readerControlAppearanceEndpoint(this.motionProgress, this.interactionEnabled) !== 'none';
   }
-  private extendedThemes(): boolean { return this.themeIds().length > 8 || this.fontIds().length > 9; }
+  private extendedThemes(): boolean {
+    return this.endpointFrame(false).quickContentHeight > this.quickContentHeight || this.themeIds().length > 8 || this.fontIds().length > 9;
+  }
   private scrollInput(): boolean { return this.extendedThemes() ? this.sharedInput() : this.fullInput(); }
   private scrollContentHeight(): number {
     if (!this.extendedThemes()) return Math.max(this.frame().contentHeight,
@@ -461,22 +470,24 @@ export struct ReaderControlAppearanceContent {
           color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
         .position({ x: 8.25, y: 2 })
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
-    }.width(62.5).height(24).borderRadius(8)
+    }.width(62.5).height(44).borderRadius(8)
       .position(this.actorPosition(this.frame().themeSwatches[index], true))
       .clipShape(this.sharedClip('theme', index))
-      .responseRegion({ x: this.fullInput() ? -(this.frame().themeShells[index].width - 62.5) / 2 : 0,
-        y: this.fullInput() ? -10 : 0,
-        width: this.fullInput() ? this.frame().themeShells[index].width : 62.5,
-        height: this.fullInput() ? 58.8 : 24 })
+      .responseRegion({ x: this.fullInput() ? -(this.frame().themeShells[index].width - 62.5) / 2 :
+          (62.5 - this.quickThemeHitWidth()) / 2,
+        y: 0,
+        width: this.fullInput() ? this.frame().themeShells[index].width : this.quickThemeHitWidth(),
+        height: 44 })
       .enabled(this.sharedInput()).hitTestBehavior(this.sharedInput() ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.sharedInput() ? 'auto' : 'no-hide-descendants')
       .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
+      .attributeModifier(new ReaderActionAccessibility(`切换到${this.themeLabel(theme)}主题`, this.sharedInput(), this.snapshot.activeTheme === theme))
       .onClick((): void => { if (this.sharedInput()) this.onThemeChange(theme); });
   }
 
   @Builder
   private themeAction(day: boolean) {
-    Text(this.defaultThemeActionLabel(day)).width(74).height(28)
+    Text(this.defaultThemeActionLabel(day)).width(74).height(44)
       .fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.lineHeightFp as number).fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontWeight)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center).borderRadius(6)
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
@@ -485,6 +496,8 @@ export struct ReaderControlAppearanceContent {
       .enabled(this.fullInput())
       .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)
+      .responseRegion( readerActionTouchRegion(74, 44))
+      .attributeModifier(new ReaderActionAccessibility(this.defaultThemeActionLabel(day), this.fullInput(), false))
       .onClick((): void => {
         this.requestDefaultTheme(day);
       });
@@ -627,6 +640,10 @@ export struct ReaderControlAppearanceContent {
       .onVisibleAreaChange([0, 0.25], (visible: boolean, ratio: number): void => {
         if (visible && ratio >= 0.25) this.requestVisibleFontPreview(font);
       })
+      .responseRegion( readerActionTouchRegion(this.fontActor(font).width, this.fontActor(font).height))
+      .attributeModifier(new ReaderActionAccessibility(font === 'import' && this.importLayout === 'source-overlap-pending' ?
+        '原始设计重叠位置，仅供对照' : font === 'import' ? '导入自定义字体' :
+        `切换到${readerAppearanceFontSlotLabel(this.snapshot, font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`, this.fontInput(font), this.activeFont(font)))
       .onClick((): void => {
         if (!this.fontInput(font) || this.draggedFontId !== '' || this.suppressFontClick) return;
         if (font === 'import') this.onCustomFontImport();
@@ -718,7 +735,7 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private stepperRow(metric: ReaderAppearanceMetric, y: number) {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.metricLabel(metric)).height(18).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.lineHeightFp as number)
+      Text(this.metricLabel(metric)).constraintSize({ minHeight: 18 }).maxFontScale(1.6).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.lineHeightFp as number)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 13, y: 12 });
       Row().width(98).height(27).backgroundColor(readerAppColor('app.appearance.selectSurface', this.appThemeScheme))
         .border({ width: 1, color: readerAppColor('app.appearance.selectBorder', this.appThemeScheme) }).borderRadius(8)
@@ -739,10 +756,12 @@ export struct ReaderControlAppearanceContent {
     Stack({ alignContent: Alignment.Center }) {
       Text(direction < 0 ? '−' : '+').width(26).height(25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
-    }.width(44).height(42).position({ x: x, y: 0 })
+    }.width(44).height(44).position({ x: x, y: 0 })
       .opacity(readerAppearanceCanStep(this.snapshot, metric, direction) ? 1 : 0.38)
       .enabled(this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction))
       .accessibilityText(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`)
+      .responseRegion( readerActionTouchRegion(44, 44))
+      .attributeModifier(new ReaderActionAccessibility(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`, this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction), false))
       .onClick((): void => {
         if (this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction))
           this.onMetricStep(metric, direction);

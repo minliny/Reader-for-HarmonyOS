@@ -222,9 +222,9 @@ assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four
  const base=cardSdk();assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-config'));
  const changed=originalSpec.replace('radius: TOK_RADIUS_MD','radius: TOK_RADIUS_MD + 2');assert.notEqual(changed,originalSpec);
  const category=parent({specSource:changed}),configuration=parent({method:'webdavSection',specSource:changed}),status=parent({method:'manualActionsSection',specSource:changed});
- assert.equal(category.outer().borderRadius,10);assert.equal(configuration.outer().borderRadius,10);assert.equal(status.outer().borderRadius,13,'status variant isolated');
- const other=originalSpec.replace('radius: 13','radius: 15');assert.notEqual(other,originalSpec);
- for(const method of methods.slice(1))assert.equal(parent({method,specSource:other}).outer().borderRadius,15,'all four real status consumers share changed spec');
+ assert.equal(category.outer().borderRadius,10);assert.equal(configuration.outer().borderRadius,10);assert.equal(status.outer().borderRadius,readerFoundationTokens.TOK_RADIUS_LG,'status uses the shared large radius and stays isolated from the standard variant');
+ const other=originalSpec.replace('radius: TOK_RADIUS_LG','radius: TOK_RADIUS_LG + 2');assert.notEqual(other,originalSpec);
+ for(const method of methods.slice(1))assert.equal(parent({method,specSource:other}).outer().borderRadius,readerFoundationTokens.TOK_RADIUS_LG + 2,'all four real status consumers share changed spec');
  assert.equal(parent({specSource:other}).outer().borderRadius,8);assert.equal(parent({method:'webdavSection',specSource:other}).outer().borderRadius,8);
 }
 // Retained V1 Props update the actual native Card without remounting its body;
@@ -232,11 +232,11 @@ assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four
 {
  const p=parent(),body=p.contentCalls(),count=p.card.observers.length;
  p.card.updateStateVars({specId:'sync-status',cardWidth:280});p.shared.properties.flush();
- assert.equal(p.outer().borderRadius,13);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
+ assert.equal(p.outer().borderRadius,readerFoundationTokens.TOK_RADIUS_LG);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
  p.card.updateStateVars({specId:'settings-category',cardWidth:0});p.shared.properties.flush();assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().width,'100%');
  p.card.radius=99;p.card.bg='private';p.card.cardBorder='private';p.card.replay();
  assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','day'));
- p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('TOK_BORDER','night'),'actual retained StorageLink follows current theme');
+ p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('app.border.contentCard','night'),'actual retained StorageLink follows the embedded-card border in the current theme');
  p.owner.cardWidth=318;p.shared.flush(p.owner);assert.equal(p.outer().width,318,'parent measurement reaches real child Prop');
  assert.equal(p.card.observers.length,count,'parent update retains one Card');
 }
@@ -260,6 +260,10 @@ assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four
 
 }
 if (selectedCase === 'page-measurement') {
+const { pageFrameSdkFixture } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const headerMetrics = await import('../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
 // The new owner is a real SDK page composition, not a normalization of the
 // old Stack into another local layout. Current page slots mount the original
 // four Card sections inside one shared Scroll. Native height/host-width
@@ -270,14 +274,33 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  const shared=cardSdk({scheme}),metrics=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,windowWidth,900),
   undefined,new metricsApi.ReaderInsetsVp(left,47,right,bottom));
  const frameDeps={...metricsApi,...fontFamilies,ReaderWindowCoordinator:{metrics:()=>metrics}};
+ const frameFixture=pageFrameSdkFixture({properties:shared.properties,dependencies:{...shared.deps,...frameDeps}});
+ Object.assign(shared.deps,frameFixture.deps);
+ Object.assign(shared.hooks.childSources,frameFixture.hooks.childSources);
  const backSource=read(common+'PageBackBar.ets');shared.hooks.childSources.PageBackBar=backSource;
- shared.deps.PageBackBar=createReaderBuilderProbe(backSource,boundedMembers(backSource),{...shared.deps,...frameDeps},shared.hooks).Component;
+ shared.hooks.childSources.ReaderRaisedSurface=read(common+'ReaderRaisedSurface.ets');
+ const scale= pureModuleProbe(read(common+'ReaderSurfaceResolvers.ts'),'ReaderSurfaceResolvers.ts',metricsApi,
+  ['readerScaledBarHeight']);
+ const elevation=pureModuleProbe(read(common+'ReaderSurfaceSpecs.ets'),'ReaderSurfaceSpecs.ets',
+  {readerAppColor,SOURCE_SWITCH_VISUAL,TextAlign:{Start:'TextAlign.Start'},
+   ReaderWindowCoordinator:frameDeps.ReaderWindowCoordinator},
+  ['readerSurfaceElevation','readerHeaderVeilMaterial','readerHeaderVeilBorder']);
+ class InactiveRaisedBar { constructor() { assert.fail('the fixed Sync header must not mount a raised surface'); } }
+ shared.deps.PageBackBar=createReaderBuilderProbe(backSource,boundedMembers(backSource),
+  {...shared.deps,...frameDeps,...headerMetrics,...scale,...elevation,ReaderRaisedSurface:InactiveRaisedBar},shared.hooks).Component;
  const owner=shared.consumer(read(sync),boundedMembers(read(sync)),{...frameDeps,DEFAULT_SYNC_SNAPSHOT:syncIndexFixture.DEFAULT_SYNC_SNAPSHOT,
   readerRecoveryView:syncIndexFixture.readerRecoveryView,registerReaderFonts(){}});
  Object.assign(owner,{appThemeScheme:scheme});owner.initialRender();
  const standard=shared.walk(owner).find(actor=>actor.variant==='sync');assert.ok(standard,'actual finite standard page actor');
- const scroll=[...standard.nodes.values()].find(node=>node.type==='Scroll');assert.ok(scroll);assert.equal(scroll.height,'100%');assert.equal(scroll.width,'100%');
- const body=[...standard.nodes.values()].find(node=>node.type==='Column'&&node.padding);assert.ok(body);assert.equal(body.padding.top,66,'shared header fallback plus gap; system top is already consumed by Index');
+ const scrollHost=shared.walk(standard).find(actor=>actor.layout?.mode==='padding'&&
+  [...actor.nodes.values()].some(node=>node.type==='Scroll'));
+ assert.ok(scrollHost,'the shared scroll host mounts once');
+ const scroll=[...scrollHost.nodes.values()].find(node=>node.type==='Scroll');
+ assert.equal(scroll.height,'100%');assert.equal(scroll.width,'100%');
+ const scrollPadding=[...scrollHost.nodes.values()].find(node=>node.type==='Column'&&node.padding);
+ assert.ok(scrollPadding);assert.equal(scrollPadding.padding.top,66,'shared header fallback plus gap; system top is already consumed by Index');
+ const body=[...standard.nodes.values()].find(node=>node.type==='Column'&&node.padding&&Object.hasOwn(node.padding,'left'));
+ assert.ok(body,'standard page owns the horizontal frame around the retained Sync content');
  const sectionCards=shared.cards(owner);assert.equal(sectionCards.length,4,'all four original sections mount once via the public body slot');
  const nativeCounts=sectionCards.map(card=>card.observers.length);
  const pageArea=[...owner.nodes.values()].find(node=>node.type==='__Common__'&&node.onAreaChange);assert.ok(pageArea);
@@ -286,11 +309,12 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  pageArea.onAreaChange({},area);sharedArea.onAreaChange({},area);shared.properties.flush();
  const frame=owner.contentFrame();assert.equal(frame.width,Math.min(720,hostWidth-Math.max(19,left)-Math.max(19,right)));
  assert.deepEqual([body.padding.left,body.padding.right],[frame.left,frame.right],'actual shared Scroll and Card content use the same measured host geometry');
- assert.equal(body.padding.bottom,Math.max(18,bottom),'actual shared trailing clearance preserves the sync minimum and current safe bottom');
+ assert.equal(scrollPadding.padding.bottom,Math.max(18,bottom),'actual shared trailing clearance preserves the sync minimum and current safe bottom');
  for(const card of sectionCards)assert.equal(shared.outer(card).width,frame.width,'measured parent width reaches the original real Card Prop');
  const header=shared.walk(owner).find(actor=>typeof actor.onHeightChange==='function');assert.ok(header);
  const mask=[...header.nodes.values()].find(node=>node.backgroundColor!==undefined);assert.ok(mask);assert.equal(mask.backgroundColor,readerAppColor('TOK_SURFACE_SOLID',scheme));
- assert.equal(typeof mask.onAreaChange,'function');mask.onAreaChange({},{height:'93vp'});shared.properties.flush();assert.equal(body.padding.top,101,'actual vp measurement of the shared header clears the unchanged body');
+ assert.equal(typeof mask.onAreaChange,'function');mask.onAreaChange({},{height:'93vp'});shared.properties.flush();
+ assert.equal(scrollPadding.padding.top,101,'actual vp measurement of the shared header clears the unchanged body');
  assert.deepEqual(shared.cards(owner),sectionCards,'shared measurement retains every original Card actor');
  assert.deepEqual(sectionCards.map(card=>card.observers.length),nativeCounts,'shared measurement retains Card body/native observers');
 }

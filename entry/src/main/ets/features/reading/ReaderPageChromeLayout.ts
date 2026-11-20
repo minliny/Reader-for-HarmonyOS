@@ -129,15 +129,10 @@ export function resolveReaderPageChromeLayout(
     Math.max(visualRightInset, layout.pageChromeInteractiveSafeRight) : visualRightInset;
   const visualRight = Math.max(visualLeft, layout.viewportWidth - visualRightInset);
   const metrics = layout.pageChromeStatusMetrics;
-  // The authored information row occupies the system status-bar origin. A
-  // visible status bar increases the visual safe inset for body content, but
-  // must not push the row down a second time; the native bar covers this same
-  // lane while controls are presented.
-  const informationOrigin = metrics !== undefined && metrics.ready ?
-    Math.max(0, metrics.statusBarRect.top) : layout.pageChromeVisualSafeTop;
-  const statusHeight = metrics !== undefined && metrics.ready &&
-    Number.isFinite(metrics.statusBarRect.height) && metrics.statusBarRect.height > 0 ?
-    metrics.statusBarRect.height : 0;
+  // The information row owns its own fixed lane below the reserved system
+  // track. Never derive its origin from the visible status-bar avoid area.
+  const informationOrigin = layout.pageChromeVisualSafeTop;
+  const statusHeight = Math.max(0, layout.pageChromeTopRegionHeight);
   // The larger information lane reserves body/cutout clearance. Position
   // each label by its measured height relative to the actual status region;
   // neither extra clearance nor a bookmark may shift its vertical centre.
@@ -177,7 +172,7 @@ export function resolveReaderPageChromeLayout(
     result.topEndY + measurements.topEndHeight, accessoryWidth > 0 ? accessoryTop + accessoryHeight : 0) :
     fallbackRowTop + measuredRowHeight;
   const rowHeight = Math.max(0, rowBottom - rowTop);
-  if (metrics !== undefined && statusHeight > 0) {
+  if (metrics !== undefined && metrics.ready && metrics.statusBarRect.width > 0 && statusHeight > 0) {
     // Public Window gives a region, not OEM status-glyph baselines. Use the
     // upstream SystemUI content padding independently of the measured height,
     // then clamp it against this window's physical cutout and rounded corners.
@@ -185,9 +180,9 @@ export function resolveReaderPageChromeLayout(
     // rowTop/rowHeight bound the newly positioned labels and accessory. Use
     // that same interval for physical cutout and corner clearance, including
     // an oversized accessibility line that extends below the status region.
-    const left = Math.max(layout.pageChromeVisualSafeLeft, rect.left + READER_SYSTEM_STATUS_CONTENT_INSET,
+    const left = Math.max(visualLeft, rect.left + READER_SYSTEM_STATUS_CONTENT_INSET,
       cornerEdge(metrics.topLeftCorner, rowTop, true));
-    const right = Math.min(layout.viewportWidth - layout.pageChromeVisualSafeRight,
+    const right = Math.min(visualRight,
       rect.left + rect.width - READER_SYSTEM_STATUS_CONTENT_INSET,
       cornerEdge(metrics.topRightCorner, rowTop, false));
     const cutout = metrics.statusBarCutoutRect;

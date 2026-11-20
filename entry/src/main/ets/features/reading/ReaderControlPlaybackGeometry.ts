@@ -54,14 +54,14 @@ export function sampleReaderControlTts(progress: number, availableWidth: number,
   const seek = Math.max(0, seekHeight) * p;
   const onlineReduction = onlineService ? 48 : 0;
   const childShift = widthDelta * readerControlLerp(1, 0.5, p);
-  const previous = sampleReaderControlActor(readerControlActor(125, 19, 28, 28),
-    readerControlActor(61, 93, 42, 42), p);
-  const toggle = sampleReaderControlActor(readerControlActor(156, 15, 36, 36),
+  const previous = sampleReaderControlActor(readerControlActor(84, 11, 44, 44),
+    readerControlActor(60, 92, 44, 44), p);
+  const toggle = sampleReaderControlActor(readerControlActor(128, 11, 44, 44),
     readerControlActor(127, 85, 58, 58), p);
-  const stop = sampleReaderControlActor(readerControlActor(195, 19, 28, 28),
-    readerControlActor(239, 161, 57, 21), p);
-  const next = sampleReaderControlActor(readerControlActor(226, 19, 28, 28),
-    readerControlActor(209, 93, 42, 42), p);
+  const stop = sampleReaderControlActor(readerControlActor(172, 11, 44, 44),
+    readerControlActor(239, 150, 57, 44), p);
+  const next = sampleReaderControlActor(readerControlActor(216, 11, 44, 44),
+    readerControlActor(208, 92, 44, 44), p);
   previous.x += childShift; toggle.x += childShift; next.x += childShift;
   stop.x += widthDelta;
   const speedTrack = sampleReaderControlActor(readerControlActor(79, 18, 130, 6),
@@ -75,26 +75,26 @@ export function sampleReaderControlTts(progress: number, availableWidth: number,
     playbackCard: readerControlActor(0, 27 * p, innerWidth,
       readerControlLerp(66, 171, p) + seek),
     waveform: readerControlActor(16, 43, Math.max(0, innerWidth - 32), 28, p),
-    voice: readerControlActor(16, 161, Math.max(0, innerWidth - 97), 21, p),
+    voice: readerControlActor(16, 150, Math.max(0, innerWidth - 97), 44, p),
     // Keep a little more width for the Make two-line playback label. The
     // previous 106vp actor left the status row with ~30vp after the 34vp icon
     // and gap, so longer statuses were ellipsized on the quick card. 110vp is
     // the largest width that preserves a small gap before the transport hits
     // even at the narrowest supported quick-card width.
     quickPlaybackLabel: readerControlActor(13, readerControlLerp(16, 24, p),
-      Math.max(44, 110 + Math.min(0, widthDelta)), 34, 1 - p),
+      Math.max(44, 62 + Math.min(0, widthDelta)), 34, 1 - p),
     previous: previous, toggle: toggle, stop: stop, next: next,
     timer: readerControlActor(x, readerControlLerp(87, 401.5, p) + seek, innerWidth,
-      readerControlLerp(42, 194, p)),
+      readerControlLerp(44, 226, p)),
     timerHeader: readerControlActor(0, 0, innerWidth, 17, p),
-    timerCard: readerControlActor(0, 26, fullChildWidth, 168, p),
+    timerCard: readerControlActor(0, 26, fullChildWidth, 200, p),
     quickTimerLabel: readerControlActor(11, 8, 120, 26, 1 - p),
-    quickTimerSelect: readerControlActor(175 + widthDelta, 6, 78, 30, 1 - p),
+    quickTimerSelect: readerControlActor(175 + widthDelta, 0, 78, 44, 1 - p),
     speed: readerControlActor(x, readerControlLerp(137, 234, p) + seek, innerWidth,
       readerControlLerp(42, 147.5, p)),
     speedHeader: readerControlActor(0, 0, innerWidth, 17, p),
     speedCard: readerControlActor(0, 26 * p, innerWidth, readerControlLerp(42, 121.5, p)),
-    speedPresets: readerControlActor(16, 99.5, Math.max(0, innerWidth - 32), 32, p),
+    speedPresets: readerControlActor(16, 99.5, Math.max(0, innerWidth - 32), 44, p),
     speedTrack: speedTrack,
     speedThumb: readerControlActor(speedTrack.x + speedTrack.width * fraction - 9,
       readerControlLerp(12, 44, p), 18, 18),
@@ -102,9 +102,9 @@ export function sampleReaderControlTts(progress: number, availableWidth: number,
     quickSpeedValue: readerControlActor(219 + widthDelta, 12, 34, 18, 1 - p),
     // Make EngineModule: two System rows or one Online service-info row.
     // Audio concurrency remains the existing mixing toggle; failure policy is the fourth config row.
-    config: readerControlActor(x, readerControlLerp(649.5, 615.5, p) + seek, innerWidth, 238 - onlineReduction, p),
-    detail: readerControlActor(x, readerControlLerp(899.5 - onlineReduction, 873.5 - onlineReduction, p) + seek, innerWidth, 270, p),
-    contentHeight: readerControlLerp(190, 1159.5 - onlineReduction, p) + seek,
+    config: readerControlActor(x, readerControlLerp(665.5, 631.5, p) + seek, innerWidth, 238 - onlineReduction, p),
+    detail: readerControlActor(x, readerControlLerp(915.5 - onlineReduction, 889.5 - onlineReduction, p) + seek, innerWidth, 270, p),
+    contentHeight: readerControlLerp(190, 1175.5 - onlineReduction, p) + seek,
   };
 }
 
@@ -180,12 +180,12 @@ export function sampleReaderControlAutoPageSpeed(progress: number,
   width: number): ReaderControlAutoPageSpeedContentFrame {
   const p = readerControlUnit(progress);
   return {
-    title: sampleReaderControlActor(readerControlActor(6, 0, Math.min(140, Math.max(0, width - 108)), 30),
+    title: sampleReaderControlActor(readerControlActor(6, 0, Math.min(140, Math.max(0, width - 124)), 30),
       readerControlActor(11, 25, 80.56, 14), p),
-    current: sampleReaderControlActor(readerControlActor(width - 66, 9.5, 30, 13),
+    current: sampleReaderControlActor(readerControlActor(width - 70, 15.5, 26, 13),
       readerControlActor(99.56, 25, 25, 14), p),
-    minus: readerControlActor(width - 94, readerControlLerp(3, 20, p), 24, 24, 1 - p),
-    plus: readerControlActor(width - 32, readerControlLerp(3, 20, p), 24, 24, 1 - p),
+    minus: readerControlActor(width - 114, readerControlLerp(0, 20, p), 44, 44, 1 - p),
+    plus: readerControlActor(width - 44, readerControlLerp(0, 20, p), 44, 44, 1 - p),
     minimum: readerControlActor(128, readerControlLerp(9.5, 25.5, p), 17.3, 13, p),
     slider: readerControlActor(154.3, readerControlLerp(0, 10, p), Math.max(0, width - 197),
       readerControlLerp(32, 44, p), p),
@@ -201,16 +201,16 @@ export function sampleReaderControlAutoPage(progress: number,
   // common Stage viewport follows 29 -> 57. Compensate the local origin, not
   // the shared clock or shell. Full content x25 - Stage x13 = 12.
   const content = readerControlActor(12, readerControlLerp(40, 12, p),
-    Math.max(0, readerControlLerp(264, 314, p) + widthDelta), 435.173);
-  const speed = sampleReaderControlActor(readerControlActor(-1.45, -175.2324, 264 + widthDelta, 32),
+    Math.max(0, readerControlLerp(264, 314, p) + widthDelta), 473.173);
+  const speed = sampleReaderControlActor(readerControlActor(-1.45, -175.2324, 264 + widthDelta, 44),
     readerControlActor(4, 33.3906, 306 + widthDelta, 64), p);
-  const previous = sampleReaderControlActor(readerControlActor(3.3, -4.841, 62, 52),
-    readerControlActor(9.75, 5, 72, 52), p);
-  const toggle = sampleReaderControlActor(readerControlActor(110.5501875, -2.341, 32, 32),
-    readerControlActor(105.4921875, 5, 95, 52), p);
-  const next = sampleReaderControlActor(readerControlActor(187.85, -4.841, 62, 52),
-    readerControlActor(224.25, 5, 72, 52), p);
-  next.x += widthDelta; toggle.x += widthDelta / 2;
+  const chapterWidth = readerControlLerp(62, 72, p);
+  const toggleWidth = readerControlLerp(44, 72, p);
+  const gap = Math.max(0, (content.width - chapterWidth * 2 - toggleWidth - 44) / 3);
+  const previous = readerControlActor(0, 5, chapterWidth, 52);
+  const toggle = readerControlActor(chapterWidth + gap, 5, toggleWidth, readerControlLerp(44, 52, p));
+  const stopX = toggle.x + toggle.width + gap;
+  const next = readerControlActor(stopX + 44 + gap, 5, chapterWidth, 52);
   return {
     // The original Quick header is a 24vp row above playback. The user removed
     // its Back button, not the row; keep a named module/status header there.
@@ -222,17 +222,15 @@ export function sampleReaderControlAutoPage(progress: number,
     // Exact node 1939:801 (round playback icon), NOT the static 1939:803 label.
     playIcon: sampleReaderControlActor(readerControlActor(0.0001875, 0, 32, 32),
       readerControlActor(31.4921875, 2.5, 32, 32), p),
-    stop: readerControlActor(readerControlLerp(155.55025, 188.65625, p) + widthDelta / 2,
-      readerControlLerp(5.659, 15.5, p), 24, 24),
-    stopLabel: readerControlActor(readerControlLerp(158.55025, 191.65625, p) + widthDelta / 2,
-      readerControlLerp(34.159, 44, p), 18, 9),
-    timer: readerControlActor(0, readerControlLerp(126.391, 104.391, p), content.width, 181.391, p),
-    details: readerControlActor(0, 285.782, content.width, 149.391),
+    stop: readerControlActor(stopX, 5, 44, 44),
+    stopLabel: readerControlActor(stopX + 13, 49, 18, 9),
+    timer: readerControlActor(0, readerControlLerp(126.391, 104.391, p), content.width, 211.391, p),
+    details: readerControlActor(0, 315.782, content.width, 157.391),
     detailsHeader: readerControlActor(4, readerControlLerp(29, 11, p), Math.max(0, content.width - 8), 14.3906, p),
     speed: speed,
     speedContent: sampleReaderControlAutoPageSpeed(p, speed.width),
     follow: readerControlActor(4, readerControlLerp(121.3906, 103.3906, p),
-      Math.max(0, content.width - 8), 36, p),
+      Math.max(0, content.width - 8), 44, p),
     back: readerControlActor(10.44, readerControlLerp(12, 26, p), 58, 24, 1 - p),
     contentHeight: Math.max(190, content.y + content.height + 12),
   };

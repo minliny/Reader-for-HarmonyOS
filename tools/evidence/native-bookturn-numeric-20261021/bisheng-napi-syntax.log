@@ -1,0 +1,1 @@
+clang-15: warning: argument unused during compilation: '--gcc-toolchain=/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/BiSheng' [-Wunused-command-line-argument]

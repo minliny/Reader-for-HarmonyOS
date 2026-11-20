@@ -115,15 +115,17 @@ export function directoryHeaderSpec(): DirectoryHeaderSpec {
  */
 export class SearchHeaderSpec {
   readonly panelInnerInset: number = 12;
-  readonly outerInsetPhone: number = 16;
+  readonly outerInsetPhone: number = 18;
   readonly outerInsetTablet: number = 20;
   readonly panelRadius: number = 18;
   readonly borderWidth: number = TOK_BORDER_W;
   readonly panelBottomGap: number = 6;
   readonly barPaddingLeft: number = 5;
-  readonly barPaddingRight: number = 6;
-  readonly barPaddingTop: number = 8;
-  readonly barPaddingBottom: number = 8;
+  readonly barPaddingRight: number = 5;
+  readonly barPaddingTop: number = 5;
+  readonly barPaddingBottom: number = 5;
+  /** Demo .reader-toolbar min-height. The text-scaled lane may exceed it. */
+  readonly minBarHeight: number = 52;
   readonly barHeightExtra: number;
   readonly filterMinHeight: number = 44;
   readonly filterLabelLineHeight: number = 17;
@@ -155,7 +157,7 @@ export class SearchHeaderSpec {
   }
 
   barHeight(controlHeight: number): number {
-    return controlHeight + this.barHeightExtra;
+    return Math.max(this.minBarHeight, controlHeight + this.barHeightExtra);
   }
 
   filterHeight(fontScale: number): number {

@@ -44,13 +44,15 @@ try {
     visit(directory); return records;
   };
   const emptyCache = cacheFixture('empty');
-  assert.deepEqual(reconcileIdeNativeCache(emptyCache), { removed: [], recoveryDirectory: null });
+  assert.deepEqual(reconcileIdeNativeCache(emptyCache), { status: 'NOT_RUN', removed: [], recoveryDirectory: null });
   assert.equal(lstatSync(join(emptyCache, '.reader-local'), { throwIfNoEntry: false }), undefined,
     'an empty generated cache must not create local recovery state');
   const cleanCache = cacheFixture('canonical-only');
   for (const stage of cacheStages) for (const library of cacheLibraries) put(cachePath(cleanCache, stage, library), `canonical:${stage}:${library}`);
   const cleanBefore = treeSnapshot(cleanCache);
-  assert.deepEqual(reconcileIdeNativeCache(cleanCache), { removed: [], recoveryDirectory: null });
+  const cleanPaths = cacheStages.flatMap(stage => cacheLibraries.map(library => relative(cleanCache, cachePath(cleanCache, stage, library))));
+  const cleanDiagnosis = { status: 'DIAGNOSED', candidates: [], removed: [], recoveryDirectory: null };
+  assert.deepEqual(reconcileIdeNativeCache(cleanCache, { paths: cleanPaths }), cleanDiagnosis);
   assert.deepEqual(treeSnapshot(cleanCache), cleanBefore, 'current canonical caches must remain untouched');
 
   const repairedCache = cacheFixture('all-stages'), copies = new Map(), canonicalBefore = new Map();
@@ -68,8 +70,17 @@ try {
   const authored = put(join(repairedCache, 'entry/libs/arm64-v8a/libreader_core_napi.so'), 'authored Native input');
   const authoredAlias = put(join(dirname(authored), 'libreader_core_napi 2.so'), 'authored numbered input');
   const unrelated = put(join(repairedCache, 'entry/build/default/intermediates/unrelated/default/libunknown.so'), 'other generated input');
-  const preserved = [authored, authoredAlias, unrelated].map(path => ({ path, bytes: readFileSync(path), stat: lstatSync(path) }));
-  const recovery = reconcileIdeNativeCache(repairedCache);
+  const unselected = put(cachePath(repairedCache, cacheStages[0], 'libreader_core_napi 23.so'),
+    readFileSync(cachePath(repairedCache, cacheStages[0], 'libreader_core_napi.so')));
+  const preserved = [authored, authoredAlias, unrelated, unselected].map(path => ({ path, bytes: readFileSync(path), stat: lstatSync(path) }));
+  const selectedCopies = [...copies.keys()].map(path => relative(repairedCache, path));
+  const beforeDiagnosis = treeSnapshot(repairedCache);
+  const diagnosis = reconcileIdeNativeCache(repairedCache, { paths: selectedCopies });
+  assert.equal(diagnosis.status, 'DIAGNOSED');
+  assert.deepEqual(diagnosis.candidates.map(record => record.path), selectedCopies);
+  assert.deepEqual(treeSnapshot(repairedCache), beforeDiagnosis, 'diagnosis leaves every selected and unrelated file intact');
+  const recovery = reconcileIdeNativeCache(repairedCache, { paths: selectedCopies, repair: true });
+  assert.equal(recovery.status, 'RECOVERED');
   assert.equal(recovery.removed.length, copies.size, 'all three generated stages and known library names must be covered');
   assert.equal(isAbsolute(recovery.recoveryDirectory), true);
   assert.equal(dirname(recovery.recoveryDirectory), join(repairedCache, '.reader-local/native-cache-recovery'));
@@ -102,7 +113,7 @@ try {
     assert.equal(lstatSync(before.path).ino, before.stat.ino, 'authored and unrelated Native inputs must remain untouched');
   }
   const recoveredBefore = treeSnapshot(repairedCache);
-  assert.deepEqual(reconcileIdeNativeCache(repairedCache), { removed: [], recoveryDirectory: null });
+  assert.deepEqual(reconcileIdeNativeCache(repairedCache, { paths: cleanPaths, repair: true }), cleanDiagnosis);
   assert.deepEqual(treeSnapshot(repairedCache), recoveredBefore, 'a second admission must make no filesystem changes');
   assert.deepEqual(readFileSync(receiptFile), receiptBytes, 'idempotent admission must preserve the recovery receipt');
 
@@ -128,7 +139,8 @@ try {
     { label: 'alias-directory', canonical: 'regular', alias: 'directory' },
   ];
   for (const test of invalidCacheCases) {
-    const directory = cacheFixture(`invalid-${test.label}`); goodCacheCopy(directory);
+    const directory = cacheFixture(`invalid-${test.label}`);
+    const { alias: validAlias } = goodCacheCopy(directory);
     const canonical = cachePath(directory, cacheStages[2], cacheLibraries[2]);
     const alias = cachePath(directory, cacheStages[2], test.name ?? 'libreader_core_napi 2.so');
     const target = join(directory, 'external-input.so');
@@ -144,7 +156,8 @@ try {
     }
     node(canonical, test.canonical); node(alias, test.alias);
     const before = treeSnapshot(directory);
-    assert.throws(() => reconcileIdeNativeCache(directory), /Native/i, test.label);
+    const paths = [validAlias, alias].map(path => relative(directory, path));
+    assert.throws(() => reconcileIdeNativeCache(directory, { paths, repair: true }), /Native/i, test.label);
     assert.deepEqual(treeSnapshot(directory), before,
       `${test.label}: the full inventory must be validated before backup or removal of an earlier valid copy`);
     assert.equal(lstatSync(join(directory, '.reader-local'), { throwIfNoEntry: false }), undefined,
@@ -160,24 +173,26 @@ try {
     const link = join(directory, linkRelative); mkdirSync(dirname(link), { recursive: true });
     symlinkSync(join(outside, linkRelative), link, 'dir');
     const before = treeSnapshot(directory), outsideBefore = treeSnapshot(outside);
-    assert.throws(() => reconcileIdeNativeCache(directory), /Native/i, `scan parent ${linkRelative}`);
+    const paths = [relative(directory, cachePath(directory, cacheStages[2], 'libreader_core_napi 2.so'))];
+    assert.throws(() => reconcileIdeNativeCache(directory, { paths }), /Native/i, `scan parent ${linkRelative}`);
     assert.deepEqual(treeSnapshot(directory), before); assert.deepEqual(treeSnapshot(outside), outsideBefore,
       'generated cache scanning must reject directory links without editing their outside targets');
   }
   for (const linkRelative of ['.reader-local', '.reader-local/native-cache-recovery']) {
     const label = linkRelative.replaceAll('/', '-'), directory = cacheFixture(`recovery-parent-link-${label}`);
     const outside = cacheFixture(`outside-recovery-parent-${label}`); put(join(outside, 'keep.txt'), 'outside recovery parent');
-    goodCacheCopy(directory);
+    const { alias } = goodCacheCopy(directory);
     const link = join(directory, linkRelative); mkdirSync(dirname(link), { recursive: true }); symlinkSync(outside, link, 'dir');
     const before = treeSnapshot(directory), outsideBefore = treeSnapshot(outside);
-    assert.throws(() => reconcileIdeNativeCache(directory), /Native/i, `recovery parent ${linkRelative}`);
+    assert.throws(() => reconcileIdeNativeCache(directory, { paths: [relative(directory, alias)], repair: true }), /Native/i, `recovery parent ${linkRelative}`);
     assert.deepEqual(treeSnapshot(directory), before); assert.deepEqual(treeSnapshot(outside), outsideBefore,
       'recovery directory links must not redirect backup writes outside the repository');
   }
-  const linkedCacheTarget = cacheFixture('outside-repository-link'); goodCacheCopy(linkedCacheTarget);
+  const linkedCacheTarget = cacheFixture('outside-repository-link');
+  const { alias: linkedAlias } = goodCacheCopy(linkedCacheTarget);
   const linkedCache = join(root, 'native-cache', 'repository-link'); symlinkSync(linkedCacheTarget, linkedCache, 'dir');
   const linkedBefore = treeSnapshot(linkedCacheTarget);
-  assert.throws(() => reconcileIdeNativeCache(linkedCache), /Native/i, 'a symlink repository root must be rejected');
+  assert.throws(() => reconcileIdeNativeCache(linkedCache, { paths: [relative(linkedCacheTarget, linkedAlias)] }), /Native/i, 'a symlink repository root must be rejected');
   assert.deepEqual(treeSnapshot(linkedCacheTarget), linkedBefore);
   const inputFixture = label => {
     const directory = join(root, 'native-input-types', label);
@@ -447,8 +462,8 @@ try {
       }
       if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : 'true';
       if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : '1643';
-      if (command === 'date -u +%s') return options.guestDate ?? String(Math.floor((physicalCheckEpoch + elapsed +
-        (options.clockOffset ?? 0) + (second ? options.secondClockOffset ?? 0 : 0)) / 1000));
+      if (command === 'date -u +%s.%N') return options.guestDate ?? ((physicalCheckEpoch + elapsed +
+        (options.clockOffset ?? 0) + (second ? options.secondClockOffset ?? 0 : 0)) / 1000).toFixed(9);
       if (command === 'TZ=UTC uptime -s') return options.bootTimestamp ?? utcBootStamp(physicalBootEpoch +
         (options.bootOffset ?? 0) + (second ? options.secondBootOffset ?? 1000 : 0));
       if (command === 'cat /proc/uptime') return '155 155';
@@ -494,7 +509,7 @@ try {
     ['unavailable guest clock', { guestDate: 'Permission denied' }, /guest clock is unavailable/],
     ['guest clock disagreement', { clockOffset: 5000 }, /clock or observation is inconsistent/],
     ['guest clock jump', { secondClockOffset: 5000 }, /clock or observation is inconsistent/],
-    ['guest clock frozen', { guestDate: String((physicalCheckEpoch + 1000) / 1000) }, /changed during readiness|clock or observation/],
+    ['guest clock frozen', { guestDate: ((physicalCheckEpoch + 1000) / 1000).toFixed(9) }, /changed during readiness|clock or observation/],
     ['host clock jump', { hostWaitOffset: 5000 }, /observation interval or clock/],
     ['no observation', { waitMs: 0 }, /observation interval/],
     ['short observation', { waitMs: 1000 }, /observation interval/],
@@ -533,7 +548,7 @@ try {
       if (command === 'cat /proc/uptime') return options.procUptime ?? '/bin/sh: cat: /proc/uptime: Permission denied';
       if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : 'true';
       if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : '1643';
-      if (command === 'date -u +%s') return options.guestDate ?? String(Math.floor((sampleCheckEpoch + elapsed + (second ? options.secondClockOffset ?? 0 : 0)) / 1000));
+      if (command === 'date -u +%s.%N') return options.guestDate ?? ((sampleCheckEpoch + elapsed + (second ? options.secondClockOffset ?? 0 : 0)) / 1000).toFixed(9);
       if (command === 'TZ=UTC uptime -s') return options.bootTimestamp ?? utcStamp(sampleBootEpoch + (second ? options.secondBootOffset ?? 1000 : 0));
       const name = command.replace('param get ohos.boot.time.', '');
       if (Object.hasOwn(milestoneValues, name)) return String((second ? options.secondMilestones ?? options.milestones : options.milestones)?.[name] ?? milestoneValues[name]);

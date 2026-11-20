@@ -70,6 +70,7 @@ const startedAt = new Date().toISOString();
 const runId = `${Date.now()}-${targetRef}`;
 const records = [];
 function run(argv) {
+  if (transportFailed) return Promise.resolve({code: 1, stdout: '', stderr: 'transport stopped'});
   return new Promise((resolveRun, rejectRun) => {
     const child = spawn(process.execPath, [lease, '--target', target, '--hdc', hdc, '--server-key', serverKey, '--agent-id', agentId, '--', '-s', serverKey, '-t', target, ...argv], { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
@@ -77,17 +78,25 @@ function run(argv) {
     child.stdout.on('data', chunk => { stdout += chunk.toString(); });
     child.stderr.on('data', chunk => { stderr += chunk.toString(); });
     child.on('error', rejectRun);
-    child.on('close', code => resolveRun({ code, stdout, stderr }));
+    child.on('close', code => {
+      if (/Connect server failed|Device not found|No devices|\bfailed\b|\berror\s*:/i.test(stdout + '\n' + stderr)) code = code || 1;
+      if (code !== 0) transportFailed = true;
+      resolveRun({ code, stdout, stderr });
+    });
   });
 }
+let transportFailed = false;
 async function capture(index, scheduledMs) {
+  if (transportFailed) return;
   const remote = `/data/local/tmp/reader-control-fast-${runId}-${index}.jpeg`;
   const local = resolve(outputDir, `frame-${String(index).padStart(2, '0')}.jpeg`);
   const triggerMs = Date.now();
   const snap = await run(['shell', 'snapshot_display', '-i', String(display), '-f', remote, '-t', 'jpeg']);
   const snapDoneMs = Date.now();
+  if (snap.code !== 0) transportFailed = true;
   const recv = snap.code === 0 ? await run(['file', 'recv', remote, local]) : { code: -1, stdout: '', stderr: 'snapshot failed' };
   const doneMs = Date.now();
+  if (recv.code !== 0) transportFailed = true;
   records.push({ index, scheduledMs, triggerMs, snapDoneMs, doneMs, remote, local,
     snapshotExit: snap.code, receiveExit: recv.code,
     snapshotStdout: snap.stdout.slice(-1200), snapshotStderr: snap.stderr.slice(-1200),
@@ -103,13 +112,14 @@ const click = action === 'custom'
   ? Promise.resolve({ code: 0, stdout: '', stderr: '' })
   : run(['shell', 'uitest', 'uiInput', 'click', String(x), String(y)]);
 const clickResult = await click;
+transportFailed = clickResult.code !== 0;
 const burstStart = Date.now();
 if (serial) {
   // A serialized burst is intentionally slower than the historical parallel
   // sampler, but every JPEG is requested only after the previous request and
   // readback completed. Parallel snapshot_display calls can finish out of
   // order and create an apparent brightness “flicker” when sorted by index.
-  for (let index = 0; index < count; index += 1) {
+  for (let index = 0; index < count && !transportFailed; index += 1) {
     const scheduledMs = index * intervalMs;
     const waitMs = burstStart + scheduledMs - Date.now();
     if (waitMs > 0) await delay(waitMs);
@@ -124,7 +134,7 @@ if (serial) {
     while (true) {
       const index = nextIndex;
       nextIndex += 1;
-      if (index >= count) return;
+      if (index >= count || transportFailed) return;
       const scheduledMs = index * intervalMs;
       const waitMs = burstStart + scheduledMs - Date.now();
       if (waitMs > 0) await delay(waitMs);

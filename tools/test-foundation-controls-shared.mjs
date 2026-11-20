@@ -17,10 +17,10 @@ const { readerAppColor } = await import('../entry/src/main/ets/features/common/R
 
 const source=file=>readFileSync(new URL('../entry/src/main/ets/features/'+file+'.ets',import.meta.url),'utf8');
 function parent(kind,options={}) {
- const shared=foundationControls(options),methods=kind==='source'?['smallButton','actionButton','fullWidthActionButton']:
+ const shared=foundationControls(options),methods=kind==='source'?['smallButton','actionButton','fullWidthActionButton','fontScale','toolsInnerWidth','compactActionWidth','actionWidth']:
   kind==='rules'?['input','actionButton','smallButton']:['manualActionButton','webdavInputRow','canMutate','canEdit'];
  const {owner}=createReaderBuilderProbe(source(kind==='source'?'source/SourceToolsPage':kind==='rules'?'settings/RulesManagementPage':'sync/SyncPage'),methods,shared.dependencies,shared.hooks);
- Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,config:{configured:true},configLoaded:true},busy:false,configSaving:false,operation:{},endpoint:'https://example',username:'name',password:'secret',sourceListRevision:1});
+ Object.assign(owner,{appThemeScheme:'day',cardWidth:300,snapshot:{busy:false,config:{configured:true},configLoaded:true},busy:false,configSaving:false,operation:{},endpoint:'https://example',username:'name',password:'secret',sourceListRevision:1});
  return {shared,owner,nodes:()=>shared.nodes(owner),flush:()=>shared.flush(owner)};
 }
 const updateButton=(child,changes)=>child.updateStateVars(Object.assign({scheme:child.scheme,specId:child.specId,label:child.label,primary:child.primary,actionEnabled:child.actionEnabled,layout:child.layout},changes));
@@ -87,8 +87,17 @@ if(selectedCase==='native-modifier') {
 if(selectedCase==='propagation') {
  const roles={...readerTypographyRoles,TYPE_SOURCE_TOOLS_ACTION:{...readerTypographyRoles.TYPE_SOURCE_TOOLS_ACTION,fontSizeFp:14},TYPE_RULES_MANAGEMENT_ACTION:{...readerTypographyRoles.TYPE_RULES_MANAGEMENT_ACTION,fontSizeFp:14}};
  for(const kind of ['source','rules']){const p=parent(kind,{specs:foundationSpecs(roles)});kind==='source'?p.owner.actionButton('传播',false,true,()=>{}):p.owner.actionButton('传播',false,()=>{});assert.equal(p.nodes().find(n=>n.type==='Text').fontSize,14);}
- const original=foundationSpecs(),specs={...original,resolveReaderButtonSpec:id=>({...original.resolveReaderButtonSpec(id),height:original.resolveReaderButtonSpec(id).height+(id==='source-action'?3:0)})};
- for(const kind of ['source','rules']){const p=parent(kind,{specs});kind==='source'?p.owner.actionButton('变体',false,true,()=>{}):p.owner.actionButton('变体',false,()=>{});assert.equal(p.nodes().find(n=>n.type==='Text').height,original.resolveReaderButtonSpec(kind==='source'?'source-action':'rules-action').height+(kind==='source'?3:0));}
+ const renderVariant=(kind,specs)=>{const p=parent(kind,{specs});kind==='source'?p.owner.actionButton('变体',false,true,()=>{}):p.owner.actionButton('变体',false,()=>{});
+   const child=[...p.owner.children.values()][0],node=p.nodes().find(n=>n.type==='Text');
+   const attribute=Object.hasOwn(node,'height')?'height':'minHeight';
+   const value=attribute==='height'?node.height:node.constraintSize?.minHeight;
+   assert.ok(Number.isFinite(value),'actual variant exposes its fixed height or minimum height');
+   return {specId:child.specId,attribute,value};};
+ const original=foundationSpecs(),baseline=Object.fromEntries(['source','rules'].map(kind=>[kind,renderVariant(kind,original)]));
+ const specs={...original,resolveReaderButtonSpec:id=>({...original.resolveReaderButtonSpec(id),height:original.resolveReaderButtonSpec(id).height+(id===baseline.source.specId?3:0)})};
+ for(const kind of ['source','rules']){const changed=renderVariant(kind,specs);
+   assert.equal(changed.attribute,baseline[kind].attribute,'variant keeps its native fixed/minimum-height contract');
+   assert.equal(changed.value,baseline[kind].value+(kind==='source'?3:0),'one spec change reaches only its actual producer variant');}
 }
 // Actual RSS caller deliberately omits foundation dependencies. The common
 // SDK resolver must mount real production child and flush its actual @Props.
@@ -134,6 +143,6 @@ if(selectedCase==='json') {
  const action=shared.nodes(management).find(n=>n.type==='Text');checkFont(action,readerTypographyRoles.TYPE_FORM_COMPACT_ACTION);assert.equal(action.height,36);assert.equal(action.borderRadius,8);assert.equal(action.layoutWeight,1);
  assert.equal(action.backgroundColor,readerAppColor('TOK_PRIMARY_SOFT','day'));assert.equal(Object.hasOwn(action,'border'),false);assert.equal(Object.hasOwn(action,'opacity'),false);action.onClick();assert.equal(calls.at(-1),'import');
 }
-console.log('PASS foundation controls: three real page consumers, eight bounded buttons/five fields + omitted-dependency actual RSS child, native AUTO/Props/drafts/disabled/unmount and common/variant propagation');
+console.log(`PASS foundation controls selected case: ${selectedCase}; SDK/native recording only`);
 
 }

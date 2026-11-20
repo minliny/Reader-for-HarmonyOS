@@ -3,7 +3,7 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { motionAnimateParam } from '../common/MotionSpec';
 import { readerMotionAnimateParam } from '../common/ReaderMotionPolicy';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
+import { PopupSurfaceSpec, resolvePopupSpec, readerSurfaceElevation } from '../common/ReaderSurfaceSpecs';
 import { readerReadableFontScale } from '../common/ReaderSurfaceResolvers';
 import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -99,7 +99,7 @@ export struct BookshelfMoreMenu {
             .backgroundColor(readerAppColor(this.surfaceSpec().surfaceBackgroundRole, this.appThemeScheme))
             .border({ width: this.surfaceSpec().borderWidth, color: readerAppColor(this.surfaceSpec().surfaceBorderRole, this.appThemeScheme) })
             .borderRadius(this.surfaceSpec().borderRadius)
-            .shadow({ radius: this.surfaceSpec().shadowRadius, color: readerAppColor(this.surfaceSpec().surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.surfaceSpec().shadowOffsetY })
+            .shadow(readerSurfaceElevation('popover', this.appThemeScheme))
             .position({ x: 0, y: this.surfaceSpec().pointerHeight });
 
           Polygon({ width: this.surfaceSpec().pointerWidth, height: this.surfaceSpec().pointerHeight + 1 })

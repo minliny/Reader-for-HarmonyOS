@@ -45,6 +45,11 @@ interface WorkerFailure {
 
 type SearchBranchStatus = 'running' | 'done' | 'failed';
 
+interface SearchPublicationChange {
+  captured: SearchBook | undefined;
+  value: SearchBook | undefined;
+}
+
 /** Query ownership survives stop/retry and is independent of a rendered frame. */
 class SearchQueryRun {
   keyword: string;
@@ -70,6 +75,8 @@ class SearchQueryRun {
   flattened: SearchBook[] = [];
   timer: number = -1;
   pendingSince: number = 0;
+  /** Enrichment joins the same publication batch as network outcomes. */
+  publicationChanges: Map<string, SearchPublicationChange> = new Map();
   skippedSourceCount: number = 0;
   skippedSources: SearchSourceSkip[] = [];
   totalSourceCount: number = 0;
@@ -478,7 +485,8 @@ export class SearchOrchestrator {
       }
     }
     if (this.refreshPending) { this.refreshAgain = true; return; }
-    if (!this.sessionOpen || this.presentation.kind !== 'results' || !this.isCurrent()) return;
+    const run = this.run;
+    if (run === undefined || !this.sessionOpen || this.presentation.kind !== 'results' || !this.isCurrent()) return;
     const delta: BookAcquisitionChange = { reset: this.pendingBookReset || this.pendingBookIdentities.size === 0,
       identities: Array.from(this.pendingBookIdentities.values()) };
     this.pendingBookReset = false;
@@ -486,12 +494,14 @@ export class SearchOrchestrator {
     this.refreshAgain = false;
     this.refreshPending = true;
     const session = this.session;
+    const work = this.work;
     const resultGeneration = this.resultGeneration;
     const current = this.presentation;
     try {
       if (typeof this.gateway.refreshBookDelta === 'function') {
         const patch = await this.gateway.refreshBookDelta(this.resultIndex, delta);
-        if (!this.isCurrentSession(session) || resultGeneration !== this.resultGeneration || this.presentation.kind !== 'results') return;
+        if (!this.isCurrentWork(work, session) || this.run !== run ||
+          resultGeneration !== this.resultGeneration || this.presentation.kind !== 'results') return;
         const accepted: SearchBook[] = []; const removed: string[] = [];
         for (const diagnostic of patch.diagnostics ?? []) hilog.warn(DOMAIN, 'Reader', 'Search projection retained incomplete facts: %{private}s', this.sanitizedLogText(diagnostic));
         for (const identity of patch.retryIdentities) this.pendingBookIdentities.set(`${identity.sourceId}\u0000${identity.bookId}`, identity);
@@ -504,22 +514,16 @@ export class SearchOrchestrator {
         for (const book of patch.upserted) if (accepts(`${book.sourceId}\u0000${book.bookId}`)) accepted.push(book);
         for (const key of patch.removedKeys) if (accepts(key)) removed.push(key);
         if (accepted.length === 0 && removed.length === 0) return;
-        const latest = this.presentation;
-        for (const key of removed) this.resultIndex.delete(key);
-        for (const book of accepted) this.resultIndex.set(`${book.sourceId}\u0000${book.bookId}`, book);
-        const resultDelta: SearchResultDelta = { baseRevision: this.resultRevision, revision: this.resultRevision + 1,
-          reset: false, upserted: accepted, removedKeys: removed };
-        this.present({ kind: 'results', keyword: latest.keyword, results: Array.from(this.resultIndex.values()), delta: resultDelta,
-          searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
-          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
-          skippedSourceCount: latest.skippedSourceCount,
-          skippedSources: latest.skippedSources,
-          localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
-          localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage,
-          operation: latest.operation }, false);
+        for (const key of removed) run.publicationChanges.set(key, { captured: patch.captured.get(key), value: undefined });
+        for (const book of accepted) {
+          const key = `${book.sourceId}\u0000${book.bookId}`;
+          run.publicationChanges.set(key, { captured: patch.captured.get(key), value: book });
+        }
+        this.scheduleRunPublish(run, work, session, false);
       } else {
       const results = await this.gateway.refreshBooks(current.results, delta);
-      if (this.isCurrentSession(session) && resultGeneration === this.resultGeneration && this.presentation.kind === 'results') {
+      if (this.isCurrentWork(work, session) && this.run === run &&
+        resultGeneration === this.resultGeneration && this.presentation.kind === 'results') {
         const latest = this.presentation;
         // Counters and later source arrivals must not invalidate completed
         // canonical facts. Replace only the exact rows captured by this read;
@@ -548,13 +552,20 @@ export class SearchOrchestrator {
         }
         if (merged.length === latest.results.length &&
           merged.every((book: SearchBook, index: number): boolean => book === latest.results[index])) return;
-        this.present({ kind: 'results', keyword: latest.keyword, results: merged,
-          localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
-          localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage,
-          searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
-          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
-          skippedSourceCount: latest.skippedSourceCount, skippedSources: latest.skippedSources,
-          operation: latest.operation }, false);
+        const next = new Map<string, SearchBook>();
+        for (const book of merged) next.set(`${book.sourceId}\u0000${book.bookId}`, book);
+        for (const book of latest.results) {
+          const key = `${book.sourceId}\u0000${book.bookId}`;
+          if (!next.has(key)) run.publicationChanges.set(key, { captured: book, value: undefined });
+        }
+        for (const entry of next) {
+          const key = entry[0];
+          const book = entry[1];
+          if (this.resultIndex.get(key) !== book) {
+            run.publicationChanges.set(key, { captured: this.resultIndex.get(key), value: book });
+          }
+        }
+        this.scheduleRunPublish(run, work, session, false);
       }
       }
 
@@ -562,7 +573,7 @@ export class SearchOrchestrator {
       // Keep the displayed results and retry these exact facts only on a later
       // event/visibility change. Dropping a consumed delta loses it permanently
       // once unrelated changes stop triggering full cache reads.
-      if (this.isCurrentSession(session) && resultGeneration === this.resultGeneration) {
+      if (this.isCurrentWork(work, session) && this.run === run && resultGeneration === this.resultGeneration) {
         this.pendingBookReset = this.pendingBookReset || delta.reset;
         for (const identity of delta.identities) {
           this.pendingBookIdentities.set(`${identity.sourceId}\u0000${identity.bookId}`, identity);
@@ -702,6 +713,7 @@ export class SearchOrchestrator {
 
   private publishRun(run: SearchQueryRun, stopped: boolean = false): void {
     if (this.run !== run || !this.sessionOpen) return;
+    stopped = stopped || run.stopped;
     const results = run.results();
     const searching = !stopped && (run.localStatus === 'running' || run.onlineStatus === 'running');
     const localFailureMessage = this.branchFailureMessage(run.localFailureReason);
@@ -732,14 +744,14 @@ export class SearchOrchestrator {
     }
   }
 
-  private scheduleRunPublish(run: SearchQueryRun, work: number, session: number): void {
+  private scheduleRunPublish(run: SearchQueryRun, work: number, session: number, allowImmediate: boolean = true): void {
     if (!this.isCurrentWork(work, session) || this.run !== run) return;
     const settled = run.localStatus !== 'running' && run.onlineStatus !== 'running';
     let first = this.presentation.kind !== 'results' && run.localResults.length > 0;
     if (!first && this.presentation.kind !== 'results') {
       for (const books of run.sourceResults.values()) if (books.length > 0) { first = true; break; }
     }
-    if (settled || first) {
+    if (allowImmediate && (settled || first)) {
       this.cancelRunTimer();
       this.publishRun(run);
       return;
@@ -1086,9 +1098,12 @@ export class SearchOrchestrator {
       presentation.delta = undefined;
     }
     let newBooks: SearchBook[] = [];
+    let recheckProjection = false;
     if (presentation.kind === 'results') {
       const rawResults = presentation.results;
-      if (retainShared && previous.kind === 'results' && previous.keyword === presentation.keyword && this.rawResultsInput === rawResults) {
+      const changes = this.run?.publicationChanges;
+      if (retainShared && previous.kind === 'results' && previous.keyword === presentation.keyword &&
+        this.rawResultsInput === rawResults && (changes?.size ?? 0) === 0) {
         presentation.results = previous.results;
         presentation.delta = previous.delta;
       } else if (presentation.delta === undefined) {
@@ -1111,6 +1126,27 @@ export class SearchOrchestrator {
               (book.sourceId === 'local' || enabled === undefined || enabled.has(book.sourceId))) next.set(key, book);
           });
         }
+        // Validate again at flush: a later network outcome may have replaced
+        // or removed the exact DTO captured by an asynchronous cache read.
+        for (const entry of changes ?? new Map<string, SearchPublicationChange>()) {
+          const key = entry[0];
+          const change = entry[1];
+          const current = next.get(key);
+          const value = change.value;
+          if (this.resultIndex.get(key) !== change.captured || current !== change.captured ||
+            (value !== undefined && (value.searchRequestId !== this.run?.requestId ||
+              (current !== undefined && value.sourceRuleVersion !== current.sourceRuleVersion)))) {
+            const book = current ?? this.resultIndex.get(key);
+            if (book !== undefined) {
+              this.pendingBookIdentities.set(key, { sourceId: book.sourceId, bookId: book.bookId });
+              recheckProjection = true;
+            }
+            continue;
+          }
+          if (value === undefined) next.delete(key);
+          else next.set(key, value);
+        }
+        changes?.clear();
         const upserted: SearchBook[] = []; const removedKeys: string[] = [];
         next.forEach((book: SearchBook, key: string): void => { if (this.resultIndex.get(key) !== book) upserted.push(book); });
         for (const key of this.resultIndex.keys()) if (!next.has(key)) removedKeys.push(key);
@@ -1133,6 +1169,7 @@ export class SearchOrchestrator {
     }
     this.presentation = presentation;
     this.emitPresentation(presentation);
+    if (recheckProjection) void this.refreshSharedBooks();
     if (retainShared && newBooks.length > 0 && this.unsubscribeBooks !== undefined) {
       void this.refreshSharedBooks({ reset: false, identities: newBooks.map((book: SearchBook): RemoteReadingIdentity =>
         ({ sourceId: book.sourceId, bookId: book.bookId })) });

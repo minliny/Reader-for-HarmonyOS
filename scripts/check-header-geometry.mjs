@@ -7,16 +7,24 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const usage = 'Usage: node scripts/check-header-geometry.mjs --rationale <item-specific reason> [--json]';
+const usage = 'Usage: node scripts/check-header-geometry.mjs --rationale <item-specific reason> [--checks <comma-separated IDs>] [--json]';
 const args = process.argv.slice(2);
 const rationaleIndex = args.indexOf('--rationale');
+const checksIndex = args.indexOf('--checks');
 if (rationaleIndex < 0 || !args[rationaleIndex + 1]?.trim() || args[rationaleIndex + 1].startsWith('--') ||
-    args.length > 3 || args.some((arg, index) => arg !== '--rationale' && arg !== '--json' && index !== rationaleIndex + 1)) {
+    (checksIndex >= 0 && (!args[checksIndex + 1]?.trim() || args[checksIndex + 1].startsWith('--'))) ||
+    args.some((arg, index) => arg !== '--rationale' && arg !== '--checks' && arg !== '--json' &&
+      index !== rationaleIndex + 1 && (checksIndex < 0 || index !== checksIndex + 1))) {
   console.error(usage);
   process.exit(2);
 }
 const rationale = args[rationaleIndex + 1].trim();
 const json = args.includes('--json');
+const selectedChecks = checksIndex < 0 ? undefined : new Set(args[checksIndex + 1].split(',').map((id) => id.trim()).filter(Boolean));
+if (selectedChecks !== undefined && selectedChecks.size === 0) {
+  console.error(usage);
+  process.exit(2);
+}
 
 const file = (path) => readFileSync(resolve(root, path), 'utf8');
 const count = (source, needle) => source.split(needle).length - 1;
@@ -90,6 +98,10 @@ const mangaLayout = file('entry/src/main/ets/features/manga/MangaLayoutPolicy.ts
 
 const results = [];
 function check(id, fn) {
+  if (selectedChecks !== undefined && !selectedChecks.has(id)) {
+    results.push({ id, status: 'NOT_RUN' });
+    return;
+  }
   try {
     fn();
     results.push({ id, status: 'PASS' });
@@ -97,6 +109,91 @@ function check(id, fn) {
     results.push({ id, status: 'FAIL', error: error.message });
   }
 }
+
+check('bookshelf-opening-geometry-and-clock', () => {
+  const geometry = file('entry/src/main/ets/features/bookshelf/BookshelfNavigationMotion.ts');
+  const transition = file('entry/src/main/ets/features/bookshelf/BookshelfNavigationTransition.ets');
+  assert.ok(has(geometry, 'export function bookshelfMotionRectAt('));
+  assert.ok(has(geometry, 'return request.target;'));
+  assert.doesNotMatch(geometry, /bookshelfMotionCanvas|bookshelfMotionPagePose|sourceScale|magnification/);
+  assert.ok(has(transition, 'ReversibleMotionTimeline'));
+  assert.ok(has(transition, 'const pose = bookshelfMotionTransformAt(request, carry, this.imageAspect);'));
+  assert.ok(has(transition, '.width(this.layoutWidth).height(this.layoutHeight)'));
+  assert.doesNotMatch(transition, /\.width\(this\.actorWidth\)|\.height\(this\.actorHeight\)/);
+  assert.ok(has(transition, 'centerX: 0'));
+  assert.ok(has(transition, 'this.coverAngle = -78 * turn - 18 * handoff;'));
+  assert.ok(has(transition, 'this.onReaderOpacity(request.id, carry);'));
+  assert.ok(has(transition, 'this.onReaderOpacity(request.id, openProgress);'));
+  const coverVisual = file('entry/src/main/ets/features/bookshelf/BookshelfCoverVisual.ts');
+  assert.equal(count(coverVisual, 'BOOKSHELF_COVER_SHADOW_RADIUS: number = 26;'), 1);
+  assert.equal(count(coverVisual, 'BOOKSHELF_COVER_SHADOW_OFFSET_Y: number = 8;'), 1);
+  for (const consumer of [transition, shelfPage, multiSelect]) {
+    assert.ok(has(consumer, 'BOOKSHELF_COVER_SHADOW_RADIUS'));
+    assert.ok(has(consumer, 'BOOKSHELF_COVER_SHADOW_OFFSET_Y'));
+    assert.doesNotMatch(consumer, /\.shadow\(\{\s*radius:\s*26/);
+  }
+  assert.doesNotMatch(transition, /animateTo\(|onPagePose/);
+  assert.ok(has(transition, 'const TURN_START = CARRY.durationMs / 2;'));
+  assert.ok(has(transition, 'const COVERED_TIME = CARRY.durationMs;'));
+  for (const name of ['carry', 'turn', 'handoff', 'fade']) {
+    assert.ok(has(motionSpec, `id: 'bookshelf.open.${name}'`));
+  }
+  assert.doesNotMatch(motionSpec, /bookshelf\.(?:open|close)\.(?:flight|reveal)/);
+  assert.ok(has(geometry, 'export function shelfMotionWindowRect('));
+  assert.equal(count(index, 'shelfMotionWindowRect(viewport)'), 2);
+  assert.ok(has(index, 'reversed: true'));
+  assert.ok(has(transition, 'next.reversed && !this.reversed && !this.fading'));
+  assert.ok(has(transition, 'this.timeline.retarget(false, now);'));
+  assert.doesNotMatch(index, /shelfMotionPageFallback|shelfMotionPageIdentity|measureShelfMotionPage|backfillShelfMotionPage/);
+  assert.ok(has(index, '.opacity(this.shelfOpeningReaderOpacity)'));
+  assert.ok(has(index, 'this.receiveShelfOpeningReaderOpacity(id, opacity)'));
+  assert.doesNotMatch(index, /snapshot\.reduceMotion\s*===\s*true\)\s*this\.clearShelfNavigationMotion/);
+  assert.doesNotMatch(index, /shelfOpeningPagePose|onPagePose/);
+});
+
+check('search-surface-mounted-owner', () => {
+  const surface = file('entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets');
+  const scaffoldBuild = block(scaffold, 'build() {', 'Stack({ alignContent: Alignment.Bottom })');
+  const shelfBinding = block(index, 'private bookshelfShellContent(', 'private searchPageContent()');
+  const searchBinding = block(index, 'private searchPageSurface(', 'private isCurrentSearchPresentation(');
+  assert.equal(count(surface, 'ReaderFixedHeaderHost({'), 1);
+  assert.equal(count(surface, 'private transitionKind: SearchSurfaceTransition'), 1);
+  assert.equal(count(surface, 'private readonly historyTrack: SurfaceValueTrack'), 1);
+  assert.equal(count(surface, 'private readonly historyLimitTrack: SurfaceValueTrack'), 1);
+  assert.doesNotMatch(surface, /new ReversibleMotionTimeline/);
+  assert.ok(has(shelfBinding, 'BookshelfShell({'));
+  assert.ok(has(searchBinding, 'SearchPage({'));
+  assert.ok(has(searchBinding, 'externalHeaderHeight: this.librarySearchHeaderBottom'));
+  assert.ok(has(shelfShell, 'headerVisible: false'));
+  assert.ok(has(searchPage, 'headerVisible: false'));
+  assert.ok(has(scaffoldBuild, 'if (this.headerVisible)'));
+  assert.ok(has(index, "this.route === 'bookshelf' || this.route === 'search' || this.retainsShelfOpeningBackground()"));
+  assert.ok(has(surface, 'readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset, height)'));
+  assert.ok(has(surface, 'key !== this.measurementKey'));
+});
+
+check('search-surface-source-single-owner', () => {
+  // The mounted-host check above is weaker than the requested migration:
+  // unmounted legacy production branches and a second filter animator are
+  // still owners in source, even when the main route hides those headers.
+  const surface = file('entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets');
+  const remaining = [];
+  if (has(shelfShell, 'AppTopBar({') || has(shelfShell, 'this.onSearchRequested(')) {
+    remaining.push('BookshelfShell still owns a legacy bar/search rendering branch');
+  }
+  if (has(searchPage, 'private searchHeader()') || has(searchPage, 'private searchBar()')) {
+    remaining.push('SearchPage still owns legacy header/bar builders');
+  }
+  if (has(searchPage, 'private searchHeaderHeight()') || has(searchPage, 'this.searchHeaderHeight()')) {
+    remaining.push('SearchPage still owns an independent header-height fallback');
+  }
+  if (has(searchPage, 'model.statsHeight = this.searchStatsHeight()') ||
+      has(searchPage, 'model.filterMaxHeight = this.searchFilterMaxHeight()')) {
+    remaining.push('SearchPage still derives the surface filter and statistics geometry');
+  }
+  if (!has(surface, 'readerPresentedHeaderBottom(')) remaining.push('surface does not own header-bottom conversion');
+  assert.deepEqual(remaining, [], remaining.join('; '));
+});
 
 check('single-app-bar-constant-owner', () => {
   assert.equal(count(metrics, 'export const APP_FLOATING_HEADER_BAR_HEIGHT = 52;'), 1);
@@ -286,15 +383,18 @@ check('download-header-single-measurement-owner', () => {
 });
 
 check('search-spec-values', () => {
+  // Both BookshelfHeaderSpec and SearchHeaderSpec declare panelRadius; read the
+  // search contract from its own class block so the bookshelf value cannot win.
+  const searchSpec = block(specs, 'export class SearchHeaderSpec {', '\nconst SEARCH_HEADER_SPEC');
   const expected = {
     outerInsetPhone: 16,
     outerInsetTablet: 20,
-    panelRadius: 13,
+    panelRadius: 18,
     panelBottomGap: 6,
-    barPaddingLeft: 6,
-    barPaddingRight: 12,
-    barPaddingTop: 4,
-    barPaddingBottom: 4,
+    barPaddingLeft: 5,
+    barPaddingRight: 6,
+    barPaddingTop: 8,
+    barPaddingBottom: 8,
     filterMinHeight: 44,
     filterLabelLineHeight: 17,
     filterVerticalReserve: 12,
@@ -312,7 +412,7 @@ check('search-spec-values', () => {
     statsPaddingTop: 4,
     statsPaddingBottom: 4,
   };
-  for (const [name, value] of Object.entries(expected)) assert.equal(numericField(specs, name), value, name);
+  for (const [name, value] of Object.entries(expected)) assert.equal(numericField(searchSpec, name), value, name);
   const token = file('entry/src/main/ets/features/common/ReaderTokens.ets').match(/export const TOK_BORDER_W = (\d+);/);
   assert.ok(token, 'TOK_BORDER_W: shared token declaration is missing');
   assert.equal(Number(token[1]), 1);
@@ -328,44 +428,63 @@ check('search-pure-fallback-formula', () => {
   assert.ok(source.includes(compact('if (!hasSession) return panel;')));
   assert.ok(source.includes(compact(`const filters = filtersExpanded ? Math.min(2 * filterHeight + spec.filterGroupBottomPadding, filterMaxHeight) : 0;`)));
   assert.ok(source.includes(compact('return panel + statsHeight + filters + spec.borderWidth;')));
-  assert.equal(count(searchPage, 'readerSearchHeaderHeight('), 4, 'lazy fallback branches and filter cap share the pure formula');
-  assert.ok(has(searchPage, "import { SearchHeaderSpec, readerSearchHeaderHeight, searchHeaderSpec } from '../common/ReaderHeaderSpecs';"));
-  assert.ok(has(searchPage, 'private readonly headerSpec: SearchHeaderSpec = searchHeaderSpec();'));
-  const fallback = block(searchPage, 'private searchHeaderHeight(): number {', '\n  private hasSearchSession');
-  assert.ok(has(fallback, 'if (!this.hasSearchSession())'));
-  assert.ok(has(fallback, 'if (!this.filtersExpanded)'));
-  assert.equal(count(fallback, 'readerSearchHeaderHeight('), 3);
+  // The pure formula stays in ReaderHeaderSpecs; the persistent search surface
+  // is now its only header owner and the only caller of readerSearchHeaderHeight.
+  const surface = file('entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets');
+  assert.equal(count(surface, 'readerSearchHeaderHeight('), 1, 'surface filter cap consumes the pure formula');
+  assert.ok(has(surface, "import { bookshelfHeaderSpec, searchHeaderSpec, readerSearchHeaderHeight, SearchHeaderSpec } from '../common/ReaderHeaderSpecs';"));
+  assert.ok(has(surface, 'private readonly spec: SearchHeaderSpec = searchHeaderSpec();'));
+  const fallback = block(surface, 'private filterMaxHeight(): number {', '\n  private captureHeader(');
+  assert.ok(has(fallback, 'readerSearchHeaderHeight('));
+  assert.ok(has(fallback, 'this.spec.barHeight(this.controlHeight())'));
+  assert.ok(has(fallback, 'this.statsHeight()'));
+  assert.equal(count(searchPage, 'readerSearchHeaderHeight('), 0, 'SearchPage must not regain a second header fallback');
+  assert.doesNotMatch(searchPage, /private searchHeaderHeight/);
 });
 
 check('search-builder-consumes-spec', () => {
+  const surface = file('entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets');
+  const filterPanel = file('entry/src/main/ets/features/search/ReaderSearchFilterPanel.ets');
   for (const fragment of [
-    '.borderRadius(this.headerSpec.panelRadius)',
-    '.border({ width: this.headerSpec.borderWidth,',
-    'bottom: this.headerSpec.panelBottomGap })',
-    '.padding({ bottom: this.headerSpec.filterGroupBottomPadding })',
-    '.border({ width: { top: this.headerSpec.borderWidth },',
-    '.height(this.searchBarHeight())',
-    'left: this.headerSpec.barPaddingLeft, right: this.headerSpec.barPaddingRight,',
-    'top: this.headerSpec.barPaddingTop, bottom: this.headerSpec.barPaddingBottom })',
-  ]) assert.ok(has(searchPage, fragment), `missing spec consumer: ${fragment}`);
-  assert.equal(count(searchPage, '.constraintSize({ minHeight: this.searchFilterHeight() })'), 2);
-  assert.equal(count(searchPage, 'this.headerSpec.filterLabelLineHeight'), 2);
-  assert.equal(count(searchPage, 'this.headerSpec.filterMinHeight'), 4);
+    '.borderRadius(this.spec.panelRadius)',
+    '.border({ width: this.spec.borderWidth, color: this.panelBorderColor() })',
+    'this.spec.barHeight(this.controlHeight())',
+    'this.spec.outerInset(this.expandedLayout)',
+    '.padding({ left: this.spec.panelInnerInset, right: this.spec.panelInnerInset })',
+    'this.spec.filterMinExpandedHeight',
+    'this.spec.filterViewportReserve',
+    'this.spec.statsFallbackHeight',
+    'this.spec.unmeasuredViewportHeight',
+  ]) assert.ok(has(surface, fragment), `surface missing spec consumer: ${fragment}`);
+  for (const fragment of [
+    '.constraintSize({ minHeight: this.spec.filterMinHeight })',
+    '.lineHeight(this.spec.filterLabelLineHeight)',
+    '.padding({ top: this.spec.statsPaddingTop, bottom: this.spec.statsPaddingBottom })',
+    '.padding({ bottom: this.spec.filterGroupBottomPadding })',
+    '.border({ width: { top: this.spec.borderWidth },',
+  ]) assert.ok(has(filterPanel, fragment), `filter panel missing spec consumer: ${fragment}`);
+  assert.equal(count(filterPanel, 'this.spec.filterMinHeight'), 3);
+  assert.equal(count(filterPanel, 'this.spec.filterLabelLineHeight'), 1);
+  assert.equal(count(filterPanel, 'this.spec.filterGroupBottomPadding'), 1);
+  assert.ok(has(searchPage, 'this.headerSpec.summaryHeight('));
   assert.equal(count(searchPage, 'this.headerSpec.summaryPaddingTop'), 1);
   assert.equal(count(searchPage, 'this.headerSpec.summaryPaddingBottom'), 1);
-  assert.equal(count(searchPage, 'this.headerSpec.statsPaddingTop'), 1);
-  assert.equal(count(searchPage, 'this.headerSpec.statsPaddingBottom'), 1);
-  for (const duplicate of ['minHeight: 44', 'lineHeight(17)', 'padding({ top: 4, bottom: 4 })']) {
-    assert.equal(count(searchPage, duplicate), 0, `duplicate header literal returned: ${duplicate}`);
+  for (const source of [searchPage, surface, filterPanel]) {
+    for (const duplicate of ['minHeight: 44', 'lineHeight(17)', 'padding({ top: 4, bottom: 4 })']) {
+      assert.equal(count(source, duplicate), 0, `duplicate header literal returned: ${duplicate}`);
+    }
   }
 });
 
-check('search-filter-motion-registered-and-consumed', () => {
-  const entry = "{ id: 'search.filters.toggle', durationMs: 180, curve: Curve.EaseInOut },";
-  assert.equal(count(motionSpec, entry), 1);
-  const toggle = block(searchPage, 'private toggleSearchFilters(): void {', '\n  private acceptSearchHeaderHeight');
-  assert.ok(has(toggle, "readerMotionAnimateParam('search.filters.toggle', this.reduceMotion)"));
-  assert.doesNotMatch(toggle, /duration:\s*\d+/);
+check('search-filter-sheet-and-history-motion', () => {
+  // Geometry and dismissal behavior are exercised by the current search
+  // sheet cases. Here, distinguish the native sheet from history animation.
+  const filterPanel = file('entry/src/main/ets/features/search/ReaderSearchFilterPanel.ets');
+  assert.match(searchPage, /\bReaderSearchFilterPanel\s*\(/);
+  assert.match(filterPanel, /\.bindSheet\s*\(/);
+  assert.equal(count(motionSpec, "id: 'search.history.resize'"), 1);
+  const surface = file('entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets');
+  assert.ok(has(surface, "motionSpecGet('search.history.resize')"));
 });
 
 check('motion-registry-single-policy', () => {
@@ -382,7 +501,18 @@ check('motion-registry-single-policy', () => {
   assert.ok(has(index, 'READER_REDUCE_MOTION_STORAGE_KEY'));
   assert.ok(has(entryAbility, 'READER_REDUCE_MOTION_STORAGE_KEY'));
   assert.ok(has(toast, 'readerReduceMotionFromStorage()'));
-  assert.ok(has(searchPage, 'readerMotionAnimateParam('));
+  // Search surface exception: its header/results geometry is measured per frame,
+  // so it consumes MotionSpec on an authored reversible timeline instead of
+  // AnimateParam; every track is gated by the reduceMotion prop it receives.
+  const surface = file('entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets');
+  assert.ok(has(surface, "motionSpecGet('search.surface.open')"));
+  assert.ok(has(surface, "motionSpecGet('search.surface.submit')"));
+  assert.ok(has(surface, "motionSpecGet('search.surface.back')"));
+  assert.ok(has(surface, "motionSpecGet('search.history.resize')"));
+  assert.ok(has(surface, 'this.reduceMotion || this.transitionKind'));
+  assert.ok(has(surface, 'if (this.reduceMotion) {'));
+  assert.doesNotMatch(surface, /animateTo\(|readerMotionAnimateParam\(/);
+  assert.ok(has(file('entry/src/main/ets/features/reading/LocalReadingExperience.ets'), 'readerMotionAnimateParam('));
 });
 
 check('control-motion-shares-reduce-motion-policy', () => {
@@ -634,7 +764,7 @@ check('reading-directory-measurement-chain', () => {
   assert.doesNotMatch(fullDirectory, /readerEmptyPageGeometry/);
 });
 
-check('fixed-size-classification', () => {
+function checkFixedSizeClassification(onlyPath) {
   const manifest = JSON.parse(file('docs/architecture/fixed-size-policy-20261025.json'));
   assert.equal(manifest.kind, 'reader-fixed-size-policy');
   const allowedCategories = new Set(['design-token', 'icon', 'touch', 'feature-panel']);
@@ -668,19 +798,28 @@ check('fixed-size-classification', () => {
         `${path}: stale ${label} fixed-height manifest entry ${value}vp (count ${count})`);
     }
   };
-  for (const entry of manifest.files) {
+  const entries = onlyPath === undefined ? manifest.files : manifest.files.filter(entry => entry.path === onlyPath);
+  if (onlyPath !== undefined) assert.equal(entries.length, 1, `${onlyPath}: one fixed-size policy entry`);
+  for (const entry of entries) {
     const actual = heights(file(entry.path));
     compare(entry.path, 'Text', entry.textHeights, actual.text);
     compare(entry.path, 'other', entry.otherHeights ?? [], actual.other);
   }
-  const tts = file('entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets');
-  assert.ok(has(tts, 'constraintSize({ minHeight: 16 })'));
-  assert.ok(has(tts, 'constraintSize({ minHeight: 13 })'));
-  assert.ok(has(tts, 'constraintSize({ minHeight: 31 })'));
-  const ttsControl = file('entry/src/main/ets/features/reading/ReaderControlTtsContent.ets');
+}
+const ttsControlPath = 'entry/src/main/ets/features/reading/ReaderControlTtsContent.ets';
+function checkTtsControlMinimums() {
+  const ttsControl = file(ttsControlPath);
   assert.ok(has(ttsControl, 'constraintSize({ minHeight: 17 })'));
   assert.ok(has(ttsControl, 'constraintSize({ minHeight: 14 })'));
   assert.ok(has(ttsControl, 'constraintSize({ minHeight: 87 })'));
+}
+check('fixed-size-classification', () => {
+  checkFixedSizeClassification();
+  checkTtsControlMinimums();
+});
+check('tts-control-fixed-size-classification', () => {
+  checkFixedSizeClassification(ttsControlPath);
+  checkTtsControlMinimums();
 });
 
 check('dynamic-surface-resolvers-used', () => {
@@ -714,6 +853,11 @@ check('dynamic-control-heights', () => {
     'expandedHeightFor(this.fontScale())'));
 });
 
+if (selectedChecks !== undefined) {
+  for (const id of selectedChecks) {
+    if (!results.some((result) => result.id === id)) results.push({ id, status: 'FAIL', error: 'unknown check ID' });
+  }
+}
 const failures = results.filter((result) => result.status === 'FAIL');
 if (json) {
   console.log(JSON.stringify({ status: failures.length === 0 ? 'PASS' : 'FAIL', rationale, checks: results }, null, 2));

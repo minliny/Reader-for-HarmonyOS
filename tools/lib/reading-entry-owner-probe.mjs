@@ -1,4 +1,4 @@
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {registerHooks} from 'node:module';
@@ -37,12 +37,9 @@ const Runtime={current:()=>currentRuntime,isCurrent:runtime=>currentRuntime===ru
 /** Entire actual production classes go through the installed SDK TS emitter.
  * Runtime identity and Core/OS transport are controlled test seams only. */
 function emit(path,name,deps,source=read(path)){
- const tree=ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
- assert.deepEqual(tree.parseDiagnostics,[],path+' actual SDK parser');
  const body=source.replace(/^import[\s\S]*?;\n/gm,'');
- const result=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true,fileName:path});
- assert.deepEqual(result.diagnostics,[],path+' actual SDK emitter');
- const exports={};new Function('exports',...Object.keys(deps),result.outputText)(exports,...Object.values(deps));return exports[name];
+ const output=emitSdkProbe(body,{fileName:path,parseSource:source,compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}});
+ const exports={};new Function('exports',...Object.keys(deps),output)(exports,...Object.values(deps));return exports[name];
 }
 const common={ReaderRuntimeOwner:Runtime,...sdk,...errors,...receipt,...evidence,...policy,...category,...importFailure,...coverDisplay,...local,...remote,
  ...readingEvidence,...position,...content,...bookmarks,ReadingOfflineGateway,MangaAdmissionGateway,MangaBookPresentation,hilog:{warn(){},error(){},info(){}}};

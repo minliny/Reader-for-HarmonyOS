@@ -12,6 +12,14 @@ export function createArkUIPropertyRuntimeProbe() {
   const binary = readFileSync(path), marker = binary.indexOf(Buffer.from('class SynchedPropertyOneWayPU'));
   assert.ok(marker > 0, 'installed SDK embeds its property runtime');
   const source = binary.subarray(binary.lastIndexOf(0, marker) + 1, binary.indexOf(0, marker)).toString('utf8');
+  // The installed runtime bootstraps this metadata Symbol before the classes.
+  // Execute that exact line in the fixture's own global port: omitting it makes
+  // the proxy treat metadata as a normal `undefined` property and notify during
+  // construction. Keep all SDK warnings strict and avoid process-global state.
+  const observedNameBootstrap = source.match(/^globalThis\.__OBSERVED_OBJECT_NAME = Symbol\('[^']+'\);/m);
+  assert.ok(observedNameBootstrap, 'installed SDK observed-object metadata bootstrap');
+  const runtimeGlobal = {};
+  new Function('globalThis', observedNameBootstrap[0])(runtimeGlobal);
   const classSource = name => {
     const start = source.indexOf(`class ${name} `), end = source.indexOf('\n}', start);
     assert.ok(start >= 0 && end > start, `actual SDK ${name}`);
@@ -73,6 +81,7 @@ export function createArkUIPropertyRuntimeProbe() {
     aboutToBeDeleted() {}
   }
   const nativeBoundary = {
+    globalThis: runtimeGlobal,
     ObservedPropertyAbstractPU, SubscribableAbstract: class {},
     InteropConfigureStateMgmt: { needsInterop: () => false },
     SubscriberManager: { Find: id => subscribers.get(id) },

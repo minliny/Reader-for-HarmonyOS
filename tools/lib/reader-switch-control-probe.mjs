@@ -5,8 +5,8 @@ import { readerAppColor } from '../../entry/src/main/ets/features/common/ReaderT
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
-import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
+import { createReaderComponentProbe as createReaderBuilderProbe } from './reader-component-probe.mjs';
+import { builderComponentMembers as boundedMembers } from './ets-builder-probe.mjs';
 const read=name=>readFileSync(new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url),'utf8');
 export const toggleSource=read('ReaderToggle'),segmentSource=read('ReaderSegmentedControl'),switchSpecSource=read('ReaderSwitchSpecs');
 export function switchSpecs(source=switchSpecSource){return new Function(stripTypeScriptTypes(source).replace(/^export /gm,'')+';return{resolveReaderToggleSpec,resolveReaderSegmentSpec};')();}

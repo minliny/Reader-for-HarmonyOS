@@ -1,5 +1,6 @@
 import type { JsonObject } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
+import { classifyRemoteReadingCommandFailure } from './RemoteReadingContract';
 import type { ReadingSessionChapter, ReadingSessionImage } from './ReadingChapterWindow';
 import { materializeReadingDocument } from './ReadingDocumentProjection';
 import { prepareReadingChapterLayoutMap, ReadingSurfaceLayoutMap } from './ReadingSurfaceLayoutMap';
@@ -46,7 +47,8 @@ export async function readReadingDocumentWindow(runtime: ReadingGatewayRuntime, 
     sourceId: scope.sourceId, bookId: scope.bookId, chapterIndex: scope.chapterIndex, startScalar, scalarLimit,
     positionContext: { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion,
       anchors: [{ id: 'window', offset: startScalar }] },
-  }, { shouldCancel: (): boolean => !current() });
+  }, { shouldCancel: (): boolean => !current() })
+    .catch((error: Error): never => { throw classifyRemoteReadingCommandFailure('reading.document.window', error); });
   if (!current()) throw new Error('reading document window was cancelled');
   const data = result.data;
   if (data['sourceId'] !== scope.sourceId || data['bookId'] !== scope.bookId || data['chapterIndex'] !== scope.chapterIndex)

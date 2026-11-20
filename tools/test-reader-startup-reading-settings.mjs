@@ -1,3 +1,5 @@
+import { readerThemeWriteBarrierProbe } from './lib/reader-theme-write-barrier-probe.mjs';
+import { productionEntryDiagnostics, entryStartupPublicationInputs } from './lib/reader-entry-diagnostics-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -13,8 +15,11 @@ const installMangaAtomicPayloadReader = createMangaAtomicPayloadInstallerFixture
 const source = readFileSync(new URL('features/reading/ReaderSettingsGateway.ts', base), 'utf8');
 const stores = new WeakMap();
 let barrierCalls = 0;
+const ReaderThemeHost=readerThemeWriteBarrierProbe({isCurrent:owner=>stores.has(owner)});
+const prepareUserChange=ReaderThemeHost.prepareUserChange.bind(ReaderThemeHost);
+ReaderThemeHost.prepareUserChange=async()=>{barrierCalls++;await prepareUserChange();};
 const dependencies = { preferences: { getPreferences: async owner => stores.get(owner) },
-  ReaderThemeHost: { prepareUserChange: async () => { barrierCalls++; } }, ReaderRuntimeOwner: { isCurrent: owner => stores.has(owner) }, ...settings };
+  ReaderThemeHost, ReaderRuntimeOwner: { isCurrent: owner => stores.has(owner) }, ...settings };
 const makeGateway = () => new Function(...Object.keys(dependencies),
   `${stripTypeScriptTypes(source.slice(source.indexOf('const READER_SETTINGS_PREFERENCES_NAME'))
     .replace('export class ', 'class '))}; return ReaderSettingsGateway;`)(...Object.values(dependencies));
@@ -132,16 +137,18 @@ for (const failRead of [false, true]) {
   const f = fixture(), recovery = deferred(), read = deferred(), font = deferred(), shelfFont = deferred();
   const trace = [], errors = [];
   f.store.get = () => { trace.push('settings-read'); return read.promise; };
-  const Ability = productionMotionMethods(abilityFile, ['onCreate', 'onWindowStageCreate'], {
+  const Ability = productionMotionMethods(abilityFile, ['onCreate', 'publishConfirmedBookshelfMode', 'onWindowStageCreate'], {
     ReaderStartupTrace, readerMotionNowMs: () => performance.now(),
     errorMessageOf, localReadFailureSummary,
+    ...entryStartupPublicationInputs(), ReaderEntryDiagnostics: productionEntryDiagnostics({hilog:{info(){},error(){}}}),
+    ReaderCrashEvidence:{install:()=>undefined},
     DEBUG: true, BUILD_MODE_NAME: 'debug', DOMAIN: 0x5244,
     installMangaAtomicPayloadReader,
     ReaderMangaPlatformDiagnostic: { install: () => undefined }, // Separate focused production-module probe owns SDK diagnostics.
     readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: { install: () => f.owner },
     ReaderSystemFileOpenHost: { install() {}, receive() {} },
-    AppStorage: { setOrCreate() {} }, WebDavCredentialStore: { instance: { attachContext() {}, loadBookshelfViewMode: async () => null } },
+    AppStorage: { setOrCreate() {} }, WebDavCredentialStore: { instance: { attachContext() {}, currentBookshelfViewMode:()=>undefined,loadBookshelfViewMode: async () => null } },
     prepareReaderShelfFonts: () => shelfFont.promise, ReaderSettingsGateway: f.Gateway,
     ReaderThemeHost: { install: async () => {}, setRecoveryBarrier() {} },
     ConfigurationConstant: { ColorMode: { COLOR_MODE_DARK: 1 } },
@@ -152,7 +159,7 @@ for (const failRead of [false, true]) {
   let mainLoads = 0;
   const ability = Object.assign(new Ability(), { context: { config: { colorMode: 0 } }, windowStageGeneration: 0,
     prepareSelectedReadingFont: async () => { trace.push('selected-font'); await font.promise; },
-    loadMainContent() { mainLoads++; },
+    loadMainContent(_stage, done) { mainLoads++; done(0); },
   });
   ability.onCreate({ parameters: {} }, {});
   ability.onWindowStageCreate({ getMainWindowSync: () => ({}) });
@@ -167,9 +174,11 @@ for (const failRead of [false, true]) {
   assert.equal(mainLoads, 0, 'the bookshelf still waits for its own checked fonts');
   shelfFont.resolve(); await settle();
   assert.equal(mainLoads, 1, 'reader-only font receipt does not withhold the bookshelf');
+  assert.equal(ability.startupContent.snapshot().phase, 'ready', 'the native completion settles the real content owner');
   font.resolve(); await settle();
   if (failRead) { assert.equal(f.gateway.current(), undefined); assert.equal(errors.length, 1); }
   else { assert.deepEqual(f.gateway.current(), saved); assert.equal(errors.length, 0); }
+  ability.startupContent.close();
 }
 const index = readFileSync(new URL('pages/Index.ets', base), 'utf8');
 assert.doesNotMatch(index, /new ReaderSettingsGateway\(\)\.load\(/, 'Index no longer starts the first reading-settings receipt after becoming visible');

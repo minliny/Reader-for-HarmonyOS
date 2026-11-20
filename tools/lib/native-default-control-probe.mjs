@@ -45,17 +45,20 @@ export function nativeDefaultRecoveryBranchContract(previous) {
 /** A named native-default family may have explicit mutually exclusive actors.
  * This is not a larger omission budget: every actual branch, callback and
  * keyed capture must match, and a copied actor is rejected by cardinality. */
-export function verifyNativeDefaultBranches(source, file, contract) {
+export function verifyNativeDefaultBranches(source, file, contract, messageReplacement = false) {
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${contract.id}: actual native default AST`);
   const sites = [];
   const visit = node => {
-    if (ts.isEtsComponentExpression(node) && node.expression.getText(tree) === contract.kind &&
-        normalise(node.arguments[0]?.getText(tree)) === normalise(contract.argument)) {
+    const componentCall=ts.isEtsComponentExpression(node)||messageReplacement&&ts.isCallExpression(node);
+    const props = messageReplacement && componentCall && node.arguments[0] && ts.isObjectLiteralExpression(node.arguments[0])
+      ? new Map(node.arguments[0].properties.map(property => [property.name?.getText(tree), property.initializer?.getText(tree)])) : undefined;
+    if (componentCall && node.expression.getText(tree) === (messageReplacement ? 'ReaderRecoveryAction' : contract.kind) &&
+        normalise(messageReplacement ? props?.get('label') : node.arguments[0]?.getText(tree)) === normalise(contract.argument)) {
       let member = node;
       while (member && !ts.isMethodDeclaration(member)) member = member.parent;
       if (member?.name?.getText(tree) === contract.method) {
-        let branch, loop, callback;
+        let branch, loop, callback = messageReplacement ? props?.get('onReconcile') : undefined;
         const branches = [];
         for (let parent = node.parent; parent && parent !== member; parent = parent.parent) {
           if (ts.isCallExpression(parent) && parent.expression.name?.text === 'onClick') callback = parent.arguments[0]?.getText(tree);

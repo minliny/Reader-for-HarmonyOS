@@ -106,6 +106,7 @@ class ContinuousFragmentDataSource implements IDataSource {
  */
 @Component
 export struct ReaderContinuousReadingStage {
+  @Prop textOpacity: number = 1;
   @Prop @Watch('onChapterIdentityChanged') chapterIdentity: string = '';
   @Prop chapterTitle: string = '';
   @Prop @Watch('onChapterIdentityChanged') geometryKey: string = '';
@@ -237,7 +238,7 @@ export struct ReaderContinuousReadingStage {
                   (recipe: ReaderNativeParagraphRecipe) => {
                   ReaderNativeParagraphView({ recipe,
                     inkColor: readerAppearanceThemeStyle(this.appearance.activeTheme).ink })
-                    .margin({ bottom: this.layout.titleToBodySpacingVp });
+                    .margin({ bottom: this.layout.titleToBodySpacingVp }).opacity(this.textOpacity);
                 }, (recipe: ReaderNativeParagraphRecipe): string => recipe.key);
               } else {
               if ((fragment.continuousSpaceBefore ?? (index > (this.hasTitleItem() ? 1 : 0))) && fragment.isParagraphStart) {
@@ -278,7 +279,7 @@ export struct ReaderContinuousReadingStage {
                     onPositionResolver: (position: ReaderNativeParagraphPosition | undefined): void => {
                       this.acceptParagraphPosition(fragment.id, fragment.nativeParagraph?.key ?? '', position, mountIdentity);
                     },
-                  });
+                  }).opacity(this.textOpacity);
                 }
               }
               }

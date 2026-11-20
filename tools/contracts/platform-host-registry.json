@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "1.0",
+  "revision": 2,
+  "hosts": [
+    {
+      "hostId": "loginWeb",
+      "refId": "platform.loginWeb",
+      "owner": "ArkWebExecutor",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceOrchestrator.ets",
+          "symbol": "loginSource"
+        },
+        {
+          "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+          "symbol": "openSourceLogin"
+        },
+        {
+          "path": "entry/src/main/ets/app/ArkWebExecutor.ts",
+          "symbol": "openInteractive"
+        }
+      ],
+      "intent": "source.login",
+      "identity": "sourceId + SourceOrchestrator.session + ArkWebExecutor.requestId",
+      "returnContext": "source presentation captured by SourceOrchestrator",
+      "resultPolicy": [
+        "completed",
+        "cancelled",
+        "error"
+      ],
+      "backPolicy": "unknown",
+      "stalePolicy": "SourceOrchestrator checks captured session after openSourceLogin; ArkWebExecutor validates active surface/request identity.",
+      "status": "partial",
+      "knownGap": "Platform Web history/IME/Back ordering and focus return have no device evidence. B6 identity checks must be evaluated independently of S7 Back order."
+    },
+    {
+      "refId": "platform.sourceToolsExportConfirm",
+      "hostId": "nativeAlert",
+      "owner": "ReaderNativeAlertOwner",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+          "symbol": "confirmExportThen"
+        },
+        {
+          "path": "entry/src/main/ets/app/ReaderNativeAlertOwner.ets",
+          "symbol": "present"
+        }
+      ],
+      "intent": "sourceTools.export",
+      "identity": "Page exportRevision/sourceListRevision/selectionRevision and Index presentation",
+      "returnContext": "same SourceTools presentation before export",
+      "resultPolicy": [
+        "completed",
+        "cancelled",
+        "error"
+      ],
+      "backPolicy": "unknown",
+      "stalePolicy": "Existing Index/session/native-alert revision guard remains original owner; dismissal does not cancel accepted business writes",
+      "status": "partial",
+      "knownGap": "Real caller/adapter declarations; OS Back/IME/focus, picker cancellation and exact persistence behavior NOT_RUN."
+    },
+    {
+      "refId": "platform.sourceToolsDeleteConfirm",
+      "hostId": "nativeAlert",
+      "owner": "ReaderNativeAlertOwner",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "requestSourceDelete"
+        },
+        {
+          "path": "entry/src/main/ets/app/ReaderNativeAlertOwner.ets",
+          "symbol": "present"
+        }
+      ],
+      "intent": "sourceTools.delete",
+      "identity": "Index captured Runtime/generation/SourceTools presentation and selected payload",
+      "returnContext": "same SourceTools presentation/current batch selection",
+      "resultPolicy": [
+        "completed",
+        "cancelled",
+        "error"
+      ],
+      "backPolicy": "unknown",
+      "stalePolicy": "Existing Index/session/native-alert revision guard remains original owner; dismissal does not cancel accepted business writes",
+      "status": "partial",
+      "knownGap": "Real caller/adapter declarations; OS Back/IME/focus, picker cancellation and exact persistence behavior NOT_RUN."
+    },
+    {
+      "refId": "platform.sourceToolsExportFile",
+      "hostId": "filePicker",
+      "owner": "ReaderHostRegistry",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "symbol": "exportSources"
+        },
+        {
+          "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+          "symbol": "saveBookSourceJson"
+        },
+        {
+          "path": "entry/src/main/ets/app/ReaderHostRegistry.ts",
+          "symbol": "saveBoundedJsonDocument"
+        }
+      ],
+      "intent": "sourceTools.export",
+      "identity": "accepted export session/Core JSON/selected destination URI",
+      "returnContext": "accepted SourceToolsOrchestrator session; current presentation receives valid result",
+      "resultPolicy": [
+        "completed",
+        "cancelled",
+        "error"
+      ],
+      "backPolicy": "unknown",
+      "stalePolicy": "Existing Index/session/native-alert revision guard remains original owner; dismissal does not cancel accepted business writes",
+      "status": "partial",
+      "knownGap": "Real caller/adapter declarations; OS Back/IME/focus, picker cancellation and exact persistence behavior NOT_RUN."
+    }
+  ]
+}

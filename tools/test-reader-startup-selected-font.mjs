@@ -1,3 +1,4 @@
+import { productionEntryDiagnostics, entryStartupPublicationInputs } from './lib/reader-entry-diagnostics-probe.mjs';
 import assert from 'node:assert/strict';
 import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -130,7 +131,9 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
   let registrations = 0, settingsReads = 0, ability;
   const changed = new ReaderCustomFontDescriptor('New', 'ReaderCustom_bbbbbbbbbbbbbbbb',
     '/files/reader-fonts/' + 'b'.repeat(64) + '.ttf', 'b'.repeat(64));
-  const Ability = productionMotionMethods(path, ['onCreate', 'prepareSelectedReadingFont', 'sameSelectedReadingFont'], {
+  const Ability = productionMotionMethods(path, ['onCreate', 'publishConfirmedBookshelfMode', 'prepareSelectedReadingFont', 'sameSelectedReadingFont'], {
+    ...entryStartupPublicationInputs(), ReaderEntryDiagnostics: productionEntryDiagnostics({hilog:{info(){},error(){}}}),
+    ReaderCrashEvidence:{install:()=>undefined},
     DEBUG: false, BUILD_MODE_NAME: 'release', DOMAIN: 0,
     errorMessageOf, localReadFailureSummary,
     installMangaAtomicPayloadReader,
@@ -139,7 +142,7 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
     readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: {install: () => owner},
     ReaderSystemFileOpenHost: {install() {}, receive() {}}, AppStorage: {setOrCreate() {}},
-    WebDavCredentialStore: {instance: {attachContext() {}, loadBookshelfViewMode: async () => 'cover'}},
+    WebDavCredentialStore: {instance: {attachContext() {}, currentBookshelfViewMode:()=>undefined,loadBookshelfViewMode: async () => 'cover'}},
     prepareReaderShelfFonts: async () => {}, prepareReaderFontFamily: async () => {},
     ReaderThemeHost: {install: async () => {}, setRecoveryBarrier() {}},
     ConfigurationConstant: {ColorMode: {COLOR_MODE_DARK: 1}},

@@ -3,6 +3,7 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderDialogSurface, DialogActionView } from '../common/ReaderDialogSurface';
+import { ReaderTransientToast } from '../common/ReaderTransientToast';
 
 /** Figma Library/BookDetail/DeleteDialog 2269:46. The caller owns removal
  * admission and persistence; this native modal owns only confirmation UI.
@@ -22,6 +23,7 @@ export struct BookRemovalDialog {
   }
 
   build() {
+    Stack({ alignContent: Alignment.Bottom }) {
     ReaderDialogSurface({
       specId: 'book-removal',
       title: '移出书架',
@@ -39,7 +41,16 @@ export struct BookRemovalDialog {
       body: (): void => {
         this.messageBody();
       },
-    })
+    });
+      this.transientMessageHost();
+    }
+  }
+
+  @Builder
+  private transientMessageHost() {
+    // Keep the native dialog's measured surface unchanged; this same shared
+    // host lives only for the controller's current presentation.
+    ReaderTransientToast({ priority: 2, bounded: true }).position({ left: 0, bottom: 0 });
   }
 
   @Builder

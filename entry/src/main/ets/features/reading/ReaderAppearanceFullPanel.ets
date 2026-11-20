@@ -21,7 +21,6 @@ import {
   TOK_READ_PRIMARY,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
-  TOK_SURFACE_FIELD,
 } from '../common/ReaderTokens';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -695,7 +694,7 @@ export struct ReaderAppearanceFullPanel {
       Row()
         .width(200)
         .height(36)
-        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+        .backgroundColor(readerAppColor('app.reader.appearanceField', this.appThemeScheme))
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
         .borderRadius(6)
         .position({ x: this.indentRowWidth() - 209, y: 4 });
@@ -791,7 +790,7 @@ export struct ReaderAppearanceFullPanel {
         .height(36)
         .padding({ left: 8, right: 6 })
         .alignItems(VerticalAlign.Center)
-        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+        .backgroundColor(readerAppColor('app.reader.appearanceField', this.appThemeScheme))
         .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.control', this.appThemeScheme) })
         .borderRadius(6)
         .opacity(0.38)

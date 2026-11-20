@@ -1,5 +1,6 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK } from '../common/ReaderTypography';
-import { TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../common/ReaderTypography';
+import { TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -23,6 +24,7 @@ import {
   type ReaderControlAutoPageFrame, type ReaderControlPlaybackMeasuredRect,
 } from './ReaderControlPlaybackGeometry';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
+import { ReaderQuickBackButton } from './ReaderPanelChrome';
 import { ReaderControlTimerWheel } from './ReaderControlTimerWheel';
 
 /** Restored 1938:6245 content-only actor tree. No Full-sheet adapter, local
@@ -282,18 +284,20 @@ export struct ReaderControlAutoPageContent {
 
   @Builder
   private quickBack() {
-    Row({ space: 4 }) {
-      Image($r(this.appScheme === 'night' ? 'app.media.reader_quick_back_theme_night' : 'app.media.reader_quick_back')).width(11).height(11);
-      Text('返回').fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK.fontWeight)
-        .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
-    }.width(this.frame().back.width).height(this.frame().back.height)
-      .padding({ left: 9, right: 9 }).backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme)).borderRadius(8)
-      .alignItems(VerticalAlign.Center).position({ x: this.frame().back.x, y: this.frame().back.y })
-      .translate({ y: readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'quickOnly') })
-      .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
-      .enabled(this.interactionEnabled && this.p() === 0)
-      .accessibilityLevel(this.p() === 0 ? 'auto' : 'no-hide-descendants')
-      .accessibilityText('返回阅读控制首页').onClick((): void => this.onBack());
+    Row() {
+      ReaderQuickBackButton({
+        specId: 'auto-page',
+        frameWidth: this.frame().back.width,
+        frameHeight: this.frame().back.height,
+        actionEnabled: this.interactionEnabled && this.p() === 0,
+        accessibilityLabel: '返回阅读控制首页',
+        onBack: (): void => this.onBack(),
+      });
+    }
+    .position({ x: this.frame().back.x, y: this.frame().back.y })
+    .translate({ y: readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'quickOnly') })
+    .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+    .accessibilityLevel(this.p() === 0 ? 'auto' : 'no-hide-descendants');
   }
 
   private headerActor(kind: 'control' | 'details'): ReaderControlActorFrame {
@@ -359,7 +363,9 @@ export struct ReaderControlAutoPageContent {
       .position({ x: this.chapterActor(previous).x, y: this.chapterActor(previous).y })
       .enabled(this.sharedInput() && (previous ? this.canPreviousChapter : this.canNextChapter))
       .opacity((previous ? this.canPreviousChapter : this.canNextChapter) ? 1 : 0.4)
-      .accessibilityText(previous ? '上一章' : '下一章').onClick((): void => {
+      .accessibilityText(previous ? '上一章' : '下一章')
+      .responseRegion( readerActionTouchRegion(this.chapterActor(previous).width, this.chapterActor(previous).height))
+      .attributeModifier(new ReaderActionAccessibility(previous ? '上一章' : '下一章', this.sharedInput() && (previous ? this.canPreviousChapter : this.canNextChapter), false)).onClick((): void => {
         if (!this.sharedInput()) return;
         if (previous && this.canPreviousChapter) this.onPreviousChapter();
         else if (!previous && this.canNextChapter) this.onNextChapter();
@@ -384,6 +390,9 @@ export struct ReaderControlAutoPageContent {
       .position({ x: this.frame().toggle.x, y: this.frame().toggle.y }).clip(true)
       .enabled(this.sharedInput()).accessibilityText(this.status === 'running' ? '暂停自动翻页' :
         (this.status === 'paused' ? '继续自动翻页' : '开始自动翻页'))
+      .responseRegion( readerActionTouchRegion(this.frame().toggle.width, this.frame().toggle.height))
+      .attributeModifier(new ReaderActionAccessibility(this.status === 'running' ? '暂停自动翻页' :
+        (this.status === 'paused' ? '继续自动翻页' : '开始自动翻页'), this.sharedInput(), this.status === 'running'))
       .onClick((): void => { if (this.sharedInput()) this.onToggleRunning(); });
   }
 
@@ -395,7 +404,9 @@ export struct ReaderControlAutoPageContent {
       .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(12)
       .position({ x: this.frame().stop.x, y: this.frame().stop.y })
       .enabled(this.sharedInput() && this.status !== 'stopped').opacity(this.status === 'stopped' ? 0.4 : 1)
-      .accessibilityText('停止自动翻页').onClick((): void => { if (this.sharedInput() && this.status !== 'stopped') this.onStop(); });
+      .accessibilityText('停止自动翻页')
+      .responseRegion( readerActionTouchRegion(this.frame().stop.width, this.frame().stop.height))
+      .attributeModifier(new ReaderActionAccessibility('停止自动翻页', this.sharedInput() && this.status !== 'stopped', false)).onClick((): void => { if (this.sharedInput() && this.status !== 'stopped') this.onStop(); });
     Text('停止').width(this.frame().stopLabel.width).height(this.frame().stopLabel.height)
       .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.fontWeight).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.lineHeightFp as number)
       .fontColor(readerAppColor('app.control.paint.8C3D36', this.appScheme)).textAlign(TextAlign.Center)
@@ -416,7 +427,7 @@ export struct ReaderControlAutoPageContent {
       value: this.currentTimerValue(minutes),
       minimum: minutes ? READER_AUTO_PAGE_FULL_MIN_MINUTES : READER_AUTO_PAGE_FULL_MIN_SECONDS,
       maximum: minutes ? READER_AUTO_PAGE_FULL_MAX_MINUTES : READER_AUTO_PAGE_FULL_MAX_SECONDS,
-      wheelWidth: this.timerWheelWidth(), rowHeight: 34, neighbours: 1,
+      wheelWidth: this.timerWheelWidth(), rowHeight: 44, neighbours: 1,
       unit: minutes ? '分' : '秒', interactionEnabled: this.fullInput(),
       onStep: (delta: number): void => this.commitTimerStep(minutes, delta),
     }).position({ x: minutes ? 0 : this.timerWheelWidth() + 24, y: 0 });
@@ -485,15 +496,15 @@ export struct ReaderControlAutoPageContent {
             .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
             .textAlign(TextAlign.Center)
-            .position({ x: this.timerWheelWidth() + 8, y: 40.5 });
+            .position({ x: this.timerWheelWidth() + 8, y: 55.5 });
           this.timerWheel(false);
         }
         .width(this.timerWheelWidth() * 2 + 24)
-        .height(114)
+        .height(144)
         .position({ x: 115, y: 12 });
       }
       .width(this.sectionInnerWidth())
-      .height(138)
+      .height(168)
       .backgroundColor(this.sourceOnly === 'full' ? Color.Transparent : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appScheme))
       .border({ width: this.sourceOnly === 'full' ? 0 : TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
       .borderRadius(10)
@@ -528,7 +539,7 @@ export struct ReaderControlAutoPageContent {
     Stack({ alignContent: Alignment.Center }) {
       Text(increase ? '+' : '−').width(18).height(18).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_ICON', this.appScheme)).textAlign(TextAlign.Center);
-    }.width(24).height(24).borderRadius(12)
+    }.width(44).height(44).borderRadius(12)
       .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
       .position({ x: this.speedActor(increase ? 'plus' : 'minus').x, y: this.speedActor(increase ? 'plus' : 'minus').y })
@@ -536,6 +547,8 @@ export struct ReaderControlAutoPageContent {
       .enabled(this.sharedInput() && this.p() === 0)
       .accessibilityLevel(this.p() === 0 ? 'auto' : 'no-hide-descendants')
       .accessibilityText(increase ? '增加翻页间隔' : '减少翻页间隔')
+      .responseRegion( readerActionTouchRegion(44, 44))
+      .attributeModifier(new ReaderActionAccessibility(increase ? '增加翻页间隔' : '减少翻页间隔', this.sharedInput() && this.p() === 0, false))
       .onClick((): void => this.changeSpeedStep(increase));
   }
 
@@ -626,7 +639,7 @@ export struct ReaderControlAutoPageContent {
         .margin({ left: 8 }).accessibilityText(`跟随高亮，${this.followHighlight ? '已开启' : '已关闭'}`);
     }
     .width(this.sectionInnerWidth())
-    .height(36)
+    .height(44)
     .padding({ left: 9, right: 9, top: 6, bottom: 6 })
     .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
@@ -639,6 +652,8 @@ export struct ReaderControlAutoPageContent {
       (this.appScheme === 'night' && !(this.fullInput() && this.status === 'stopped') ? 0.45 : 1))
     .blur(this.presentation().contentBlur)
     .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
+      .responseRegion( readerActionTouchRegion(this.sectionInnerWidth(), 44))
+      .attributeModifier(new ReaderActionAccessibility('自动翻页时跟随高亮', this.fullInput() && this.status === 'stopped', this.followHighlight))
     .onClick((): void => this.onFollowHighlightChange(!this.followHighlight));
   }
 

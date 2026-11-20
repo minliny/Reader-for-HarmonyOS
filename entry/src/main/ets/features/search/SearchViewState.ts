@@ -1,4 +1,5 @@
 import type { SearchResultRelevance } from './SearchResultRelevance';
+import { ALL_SEARCH_SOURCE_GROUP, searchSourceGroupKey, type SearchFilterStep, type SearchSourceGroupSelection } from './SearchSourceGroups';
 
 export type SearchContentType = '全部类型' | '小说' | '漫画';
 
@@ -7,7 +8,11 @@ export class SearchViewState {
   revision: number = 0;
   category: string = '全部';
   contentType: SearchContentType = '全部类型';
-  filtersExpanded: boolean = false;
+  sourceGroup: SearchSourceGroupSelection = ALL_SEARCH_SOURCE_GROUP;
+  filterRevision: number = 0;
+  filterStep: SearchFilterStep = 'filter';
+  sourceGroupQuery: string = '';
+  private sourceManagementReturnStep: SearchFilterStep | undefined = undefined;
   keywordDraft: string = '';
   private inputFocusRequested: boolean = false;
   anchorKey: string = '';
@@ -30,7 +35,11 @@ export class SearchViewState {
     this.revision += 1;
     this.category = '全部';
     this.contentType = '全部类型';
-    this.filtersExpanded = false;
+    this.sourceGroup = ALL_SEARCH_SOURCE_GROUP;
+    this.filterRevision += 1;
+    this.filterStep = 'filter';
+    this.sourceGroupQuery = '';
+    this.sourceManagementReturnStep = undefined;
     this.keywordDraft = keyword;
     this.inputFocusRequested = false;
     this.anchorKey = '';
@@ -69,6 +78,47 @@ export class SearchViewState {
   rememberDisplayedOrder(keyword: string, keys: string[]): void {
     this.displayedKeyword = keyword;
     this.displayedKeys = keys;
+  }
+
+  /** Explicit presentation changes retire native display and pressed callbacks,
+   * independently of the running network query. */
+  advanceFilterRevision(): void { this.filterRevision += 1; }
+
+  selectOrigin(origin: string): void {
+    this.category = origin;
+    if (origin === '本地') this.sourceGroup = ALL_SEARCH_SOURCE_GROUP;
+    this.advanceFilterRevision();
+  }
+
+  applyResultFilters(category: string, contentType: SearchContentType, sourceGroup: SearchSourceGroupSelection): boolean {
+    const normalized = category === '本地' ? ALL_SEARCH_SOURCE_GROUP : sourceGroup;
+    if (this.category === category && this.contentType === contentType &&
+      searchSourceGroupKey(this.sourceGroup) === searchSourceGroupKey(normalized)) return false;
+    this.category = category; this.contentType = contentType; this.sourceGroup = normalized;
+    this.advanceFilterRevision();
+    return true;
+  }
+
+  selectSourceGroup(selection: SearchSourceGroupSelection): boolean {
+    if (this.category === '本地') return false;
+    this.sourceGroup = selection;
+    this.advanceFilterRevision();
+    return true;
+  }
+
+  clearResultFilters(): void {
+    this.category = '全部'; this.contentType = '全部类型';
+    this.sourceGroup = ALL_SEARCH_SOURCE_GROUP;
+    this.advanceFilterRevision();
+  }
+
+  prepareSourceManagementReturn(step: SearchFilterStep = 'groups'): void {
+    this.sourceManagementReturnStep = step;
+  }
+  consumeSourceManagementReturn(): SearchFilterStep | undefined {
+    const step = this.sourceManagementReturnStep;
+    this.sourceManagementReturnStep = undefined;
+    return step;
   }
 
   requestInputFocus(): void { this.inputFocusRequested = true; }

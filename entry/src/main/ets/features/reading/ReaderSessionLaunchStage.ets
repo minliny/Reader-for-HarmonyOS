@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { PathShape } from '@ohos.arkui.shape';
 import { ReaderControlMotionPathCache, readerControlMotionClipPath } from './ReaderControlMotionPresentation';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -112,6 +113,7 @@ export struct ReaderSessionLaunchStage {
     // Transparent overlay ancestors also admit the page's raw touch owner.
     // Consume the whole pointer stream here; the click recognizer still runs.
     .onTouch((event: TouchEvent): void => event.stopPropagation())
+      .attributeModifier(new ReaderActionAccessibility(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying), true, false))
     .onClick((): void => {
       if (this.interactionEnabled && this.sample.pauseOpacity > 0) this.onToggle();
     });

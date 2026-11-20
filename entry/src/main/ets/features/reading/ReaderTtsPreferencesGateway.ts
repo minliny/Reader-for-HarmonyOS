@@ -41,6 +41,14 @@ export class ReaderTtsPreferencesGateway {
       saved: ReaderTtsPreferencesGateway.saved === undefined ? undefined : copyReaderTtsPreferencesSnapshot(ReaderTtsPreferencesGateway.saved) };
   }
 
+  async awaitDurableWrites(): Promise<void> {
+    let tail: Promise<void>;
+    do { tail = ReaderTtsPreferencesGateway.writeTail; await tail; }
+    while (tail !== ReaderTtsPreferencesGateway.writeTail);
+    if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) throw new Error('TTS_PREFERENCE_OWNER_SUPERSEDED');
+    if (this.writeFacts().pendingReconciliation) throw new Error('LIBRARY_RESTORE_TTS_SETTINGS_UNCONFIRMED');
+  }
+
   async load(): Promise<ReaderTtsPreferencesSnapshot> {
     await ReaderThemeHost.prepareUserChange();
     // Warm re-entry consumes the accepted choice without waiting for an old
@@ -74,6 +82,7 @@ export class ReaderTtsPreferencesGateway {
       await store.get(READER_TTS_SNAPSHOT_KEY, '');
       if (isAdmitted?.() === false || !ReaderRuntimeOwner.isCurrent(this.runtimeOwner))
         throw new Error('TTS_PREFERENCE_OWNER_SUPERSEDED');
+      ReaderThemeHost.assertSettingsWritable();
       if (ReaderTtsPreferencesGateway.acceptedRevision >= Number.MAX_SAFE_INTEGER)
         throw new Error('TTS_PREFERENCE_REVISION_EXHAUSTED');
       ReaderTtsPreferencesGateway.acceptedRevision += 1;

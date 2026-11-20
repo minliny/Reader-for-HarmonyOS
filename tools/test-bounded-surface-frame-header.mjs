@@ -5,12 +5,14 @@ for (const id of selectContractCases(definitions)) {
   recordContractCasePass(id);
 }
 async function runSelectedCase(selectedCase) {
-const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { virtualFilePath } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { createRequire } = await import('node:module');
 const { resolve } = await import('node:path');
-const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
 const {readerAppColor} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 
@@ -18,8 +20,7 @@ const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.met
 const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
 // SDK lowering alone does not diagnose incompatible inherited properties.
 // Compare real business callbacks with the installed CustomComponent API.
-const sdk=resolveEtsLoaderRoot();
-const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
+const {root:sdk,ts,options}=installedEtsCompiler();
 const api=ts.createSourceFile(virtualFilePath('common.d.ts'),readFileSync(resolve(sdk,'../../component/common.d.ts'),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
 const declarations=new Map(api.statements.filter(ts.isClassDeclaration).map(node=>[node.name.text,node]));
 const inherited=new Set(),visited=new Set();
@@ -31,7 +32,7 @@ function collectInherited(name){
 collectInherited('CustomComponent');assert.ok(inherited.has('onDragStart')&&inherited.has('onDragEnd'),'installed SDK reserves both native drag APIs');
 const headerSource=read('features/common/ReaderBoundedSurfaceHeader.ets');
 function verifyBusinessCallbacks(candidate){
-  const parsed=ts.createSourceFile(virtualFilePath('ReaderBoundedSurfaceHeader.ets'),candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+  const parsed=ts.createSourceFile(virtualFilePath('ReaderBoundedSurfaceHeader.ets'),candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   const header=parsed.statements.find(node=>node.name?.text==='ReaderBoundedSurfaceHeader');assert.ok(header);
   for(const member of header.members.filter(node=>ts.isPropertyDeclaration(node)&&node.type&&ts.isFunctionTypeNode(node.type)))
     assert.equal(inherited.has(member.name.getText(parsed)),false,'business callback shadows ArkUI CustomComponent API: '+member.name.getText(parsed));
@@ -44,12 +45,23 @@ for(const reserved of ['onDragStart','onDragEnd'])assert.throws(()=>verifyBusine
     if(name==='create')gestures.push({options:args[0]});else if(String(name).startsWith('onAction'))gestures.at(-1)[name]=args[0];
   }});
   const probe=boundedSurfaceSdk({panGesture});
-  const header=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'reader-action-sheet',placement:'bottom',title:'更多',
+  const header=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'reader-action-sheet',placement:'bottom',title:'更多',handleDraggable:true,
     onHandlePanStart:()=>calls.push(['start']),onHandlePanUpdate:offset=>calls.push(['update',offset]),onHandlePanEnd:(offset,velocity)=>calls.push(['end',offset,velocity])});
   header.initialRender();assert.equal(gestures.length,1);const gesture=gestures[0];
   assert.deepEqual(gesture.options,{fingers:1,direction:'vertical',distance:1});
   gesture.onActionStart();gesture.onActionUpdate({offsetY:24});gesture.onActionEnd({offsetY:24,velocityY:80});gesture.onActionCancel();
   assert.deepEqual(calls,[['start'],['update',24],['end',24,80],['end',0,0]],'actual SDK gesture forwards unchanged offset/velocity and cancel semantics through the business callbacks');
+}
+{
+  const gestures=[];
+  const panGesture=new Proxy({}, {get:(_target,name)=>(...args)=>{
+    if(name==='create')gestures.push({options:args[0]});else if(String(name).startsWith('onAction'))gestures.at(-1)[name]=args[0];
+  }});
+  const probe=boundedSurfaceSdk({panGesture});
+  const header=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'reader-action-sheet',placement:'bottom',title:'下载范围'});
+  header.initialRender();
+  assert.equal(gestures.length,0,'a fixed action sheet with no drag owner cannot mount a handle gesture');
+  assert.equal([...header.nodes.values()].some(n=>n.type==='Blank'),false,'a fixed action sheet shows no decorative grip');
 }
 // The live source drawer is a distinct registered frame. Its measured height
 // is supplied by the source owner; the retired popup above retains its own
@@ -92,22 +104,35 @@ for(const scheme of ['day','night']){
   assert.equal(shell.id,id);assert.equal(shell.width,'100%');assert.deepEqual(shell.padding,{bottom:20});
   for(const property of ['height','backgroundColor','border','borderRadius','shadow','clip','position','constraintSize'])
     assert.ok(!f.attributeCalls.some(c=>c.id===id&&c.property===property),`book dimension updates cannot restore legacy ${property}`);
-  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'bookshelf-book-action',title:'书籍操作',surfaceWidth:99,actionEnabled:true,scheme});h.appThemeScheme=scheme;h.initialRender();
-  const nodes=[...h.nodes.values()].filter(n=>n.type!=='If'),header=nodes.find(n=>n.type==='Column'),grip=nodes.find(n=>n.type==='Blank'),rows=nodes.filter(n=>n.type==='Row'),title=nodes.find(n=>n.type==='Text');
+  let closed=0;
+  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'bookshelf-book-action',title:'书籍操作',surfaceWidth:99,actionEnabled:true,scheme,onClose:()=>closed++});h.appThemeScheme=scheme;h.initialRender();
+  const nodes=[...h.nodes.values()].filter(n=>n.type!=='If'),header=nodes.find(n=>n.type==='Column'),rows=nodes.filter(n=>n.type==='Row'),title=nodes.find(n=>n.type==='Text');
   assert.equal(nodes.length,5);assert.equal(rows.length,2);assert.equal(header.width,'100%');assert.deepEqual(header.margin,{bottom:12});
-  assert.equal(grip.width,40);assert.equal(grip.height,5);assert.equal(grip.backgroundColor,readerAppColor('TOK_SS_DRAWER_HANDLE',scheme));
-  assert.equal(rows[0].width,'100%');assert.equal(rows[0].justifyContent,'FlexAlign.Center');assert.deepEqual(rows[0].margin,{top:12,bottom:8});
-  assert.equal(rows[1].width,'100%');assert.deepEqual(rows[1].constraintSize,{minHeight:44});assert.deepEqual(rows[1].padding,{left:20,right:20});
-  assert.equal(title.width,'100%');assert.equal(title.fontFamily,'ReaderNotoSerifSCBold');assert.equal(title.fontWeight,SOURCE_SWITCH_VISUAL.titleFontWeight);
-assert.equal(title.halfLeading,true);assert.equal(title.maxLines,2);assert.equal(title.fontColor,readerAppColor('TOK_INK',scheme));
+  assert.equal(nodes.some(n=>n.type==='Blank'),false,'a fixed native sheet never renders a drag handle');
+  assert.equal(rows[0].width,'100%');assert.deepEqual(rows[0].constraintSize,{minHeight:44});assert.deepEqual(rows[0].padding,{left:20,right:20});
+  assert.equal(rows[1].width,44);assert.equal(rows[1].height,44);
+  assert.equal(title.layoutWeight,1);assert.equal(title.fontFamily,'ReaderNotoSansSCUIMedium');assert.equal(title.fontWeight,500);
+  assert.equal(title.fontSize,16);assert.equal(title.lineHeight,24);
+  assert.equal(title.halfLeading,true);assert.equal(title.maxLines,1);assert.equal(title.fontColor,readerAppColor('TOK_INK',scheme));
   assert.ok(!h.attributeCalls.some(c=>c.property==='position'),'book header and title never use absolute offsets');
-  for(const node of [header,...rows,title])assert.ok(!h.attributeCalls.some(c=>c.id===node.id&&c.property==='height'),'normal-flow book header has no fixed text or row height');
-  assert.equal(nodes.some(n=>n.onClick),false,'sheet header owns no close');
+  for(const node of [header,rows[0],title])assert.ok(!h.attributeCalls.some(c=>c.id===node.id&&c.property==='height'),'normal-flow book header has no fixed text or row height');
+  const close=rows.find(node=>node.onClick),closeIcon=nodes.find(node=>node.type==='Image');
+  assert.equal(close.width,44);assert.equal(close.height,44);assert.equal(closeIcon.width,18);assert.equal(closeIcon.height,18);
+  close.onClick();assert.equal(closed,1,'compact close invokes its business callback');
   const titleId=title.id;h.updateStateVars({specId:'bookshelf-book-action',title:'更新后的书籍操作',surfaceWidth:400,actionEnabled:false,scheme});probe.properties.flush();
   assert.equal(title.id,titleId);assert.equal(title.create,'更新后的书籍操作','normal-flow title remains a live SDK property');
+  close.onClick();assert.equal(closed,1,'disabled close cannot invoke the owner');assert.equal(close.enabled,false);
 }
 for(const specId of ['local-file-selection','local-import-result','tts-manager','replace-editor']){
   const probe=boundedSurfaceSdk(),actions=[];let measured=0;
+  Object.assign(probe.deps,
+    pureModuleProbe(read('features/common/ReaderSurfaceResolvers.ts'),'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']),
+    pureModuleProbe(read('features/common/ReaderActionAccessibility.ets'),'ReaderActionAccessibility.ets',{},['readerActionTouchRegion']),
+    {ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})}});
+  Object.assign(probe.deps, pureModuleProbe(read('features/common/ReaderSurfaceBudgets.ts'), 'ReaderSurfaceBudgets.ts',
+    { readerScaledControlHeight: probe.deps.readerScaledControlHeight }, ['readerTtsManagerFooterHeight']));
+  const actionSource=read('features/common/ReaderBoundedSurfaceActions.ets');
+  probe.deps.ReaderBoundedSurfaceActions=createReaderBuilderProbe(actionSource,boundedMembers(actionSource),probe.deps,probe.hooks).Component;
   const a=new probe.deps.ReaderBoundedSurfaceActions(undefined,{specId,primaryLabel:'保存',primaryEnabled:true,cancelEnabled:true,actionWidth:318,availableHeight:400,onAction:id=>actions.push(id),onAreaChanged:()=>measured++});a.initialRender();
   const primary=[...a.nodes.values()].find(n=>n.onClick&&(n.type==='Text'?n.create==='保存':n.type==='Row'&&n.borderRadius=== (specId==='local-import-result'?20:22)));
   assert.ok(primary);const count=a.nodes.size;primary.onClick();assert.deepEqual(actions,['primary']);

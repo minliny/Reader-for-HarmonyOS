@@ -107,7 +107,7 @@ export class SearchBookProjection {
     const epoch = this.epoch;
     const current = (): void => { if (epoch !== this.epoch || !registryCurrent()) throw new Error('search projection superseded'); };
     const sourceById = new Map<string, SearchSource>();
-    for (const source of sources) if (source.enabled && (source.category === 'novel' || source.category === 'comic')) sourceById.set(source.sourceId, source);
+    for (const source of sources) if (source.category === 'novel' || source.category === 'comic') sourceById.set(source.sourceId, source);
     const requested = new Map<string, RemoteReadingIdentity>();
     if (change.reset || !this.initialized) {
       for (const [key, book] of books) if (book.sourceId !== 'local') requested.set(key, { sourceId: book.sourceId, bookId: book.bookId });
@@ -132,6 +132,12 @@ export class SearchBookProjection {
         if (partition === undefined) { partition = { rows: new Map(), missing: new Set(), valid: true }; partitions.set(sourceId, partition); }
         const source = sourceById.get(sourceId);
         if (source === undefined) { for (const identity of ids) partition.missing.add(this.key(sourceId, identity.bookId)); continue; }
+        // Disabling controls future acquisition, not this query's discovery.
+        // Core cache RPCs may exclude disabled sources, so retain their exact
+        // admitted payload and relation rather than misclassifying it missing.
+        // Deleted sources still follow the missing path above; enabled-source
+        // rule/version validation below remains unchanged.
+        if (!source.enabled) continue;
         try {
           let snapshot: string | undefined = undefined;
           for (let start = 0; start < ids.length; start += 128) {

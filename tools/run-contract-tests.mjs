@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync, spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { randomUUID, createHash } from 'node:crypto';
+import { readContractView } from './lib/contract-registry.mjs';
 
 export const MAX_CONTRACT_TIMEOUT_MS = 110_000;
 export const MAX_CONTRACT_KILL_GRACE_MS = 1_000;
@@ -28,7 +29,7 @@ export function retiredContractTests() {
 
 function activeContractInventory(manifest, discovered) {
   const retired = new Set(retiredContractTests().map(entry => entry.file));
-  const registrations = [...manifest.source, ...manifest.integration,
+  const registrations = [...manifest.source, ...manifest.integration, ...(manifest.pending ?? []),
     ...Object.values(manifest.scopes ?? {}).flat(),
     ...Object.values(manifest.scopePolicies ?? {}).flatMap(policy => policy.layers?.flatMap(layer => layer.tests) ?? [])];
   assert.ok(registrations.every(name => !retired.has(name)), 'retired contract cannot be registered in a tier, scope or evidence layer');
@@ -187,14 +188,15 @@ export function contractSelection(manifest, discovered, tier, scope) {
   assert.ok(['source', 'full'].includes(tier));
   assert.equal(manifest.schemaVersion, 1);
   discovered = activeContractInventory(manifest, discovered);
-  const declared = [...manifest.source, ...manifest.integration];
+  const executable = [...manifest.source, ...manifest.integration];
+  const declared = [...executable, ...(manifest.pending ?? [])];
   assert.equal(new Set(declared).size, declared.length, 'duplicate test classification');
   assert.deepEqual([...declared].sort(), discovered, 'every discovered test must be classified');
   for (const [name, tests] of Object.entries(manifest.scopes ?? {})) {
     assert.match(name, /^[a-z][a-z0-9-]+$/, 'invalid contract scope name');
     assert.ok(Array.isArray(tests) && tests.length > 0, 'empty contract scope is not PASS');
     assert.equal(new Set(tests).size, tests.length, 'duplicate scope test');
-    assert.ok(tests.every(test => discovered.includes(test)), 'unclassified scope test');
+    assert.ok(tests.every(test => executable.includes(test)), 'unclassified scope test or pending review');
     contractScopePolicy(manifest, name);
   }
   assert.ok(Object.keys(manifest.scopePolicies ?? {}).every(name => Object.hasOwn(manifest.scopes ?? {}, name)), 'orphan contract scope policy');
@@ -207,14 +209,14 @@ export function contractSelection(manifest, discovered, tier, scope) {
   // Preserve each scope's direct/consumer/witness ordering from its policy.
   // Full and manga retain their existing alphabetical selection contract.
   const selected = ORDERED_DEVELOPMENT_SCOPES.includes(scope) ? scopePolicy.layers.flatMap(layer => layer.tests) :
-    [...(scope === undefined ? tier === 'source' ? manifest.source : discovered : manifest.scopes[scope])].sort();
+    [...(scope === undefined ? tier === 'source' ? manifest.source : executable : manifest.scopes[scope])].sort();
   assert.ok(selected.length > 0, 'empty test tier is not PASS');
   return { selected, omitted: discovered.filter(test => !selected.includes(test)), inventory: discovered,
     integrationCount: manifest.integration.length, scopePolicy };
 }
 
 export function contractInventory(root) {
-  const manifest = JSON.parse(readFileSync(resolve(root, 'tools/contract-test-tiers.json'), 'utf8'));
+  const manifest = readContractView(root, 'tiers');
   const discovered = readdirSync(resolve(root, 'tools')).filter(name =>
     /^test-.*\.mjs$/.test(name) && !/-server\.mjs$/.test(name)).sort();
   return { manifest, discovered: activeContractInventory(manifest, discovered) };
@@ -242,14 +244,13 @@ export function explicitContractTests(root, names) {
 export function contractCaseSelection(root, names, requested = {}) {
   assert.ok(requested && typeof requested === 'object' && !Array.isArray(requested), 'case selection must be a file-to-IDs object');
   assert.ok(Object.keys(requested).every(name => names.includes(name)), 'cases must belong to an explicitly selected file');
-  let metadata;
-  try { metadata = JSON.parse(readFileSync(resolve(root, 'tools/contract-case-manifest.json'), 'utf8')); }
-  catch { metadata = { schemaVersion: 1, files: {}, legacy: {} }; }
+  const metadata = readContractView(root, 'cases');
   assert.equal(metadata.schemaVersion, 1, 'unsupported contract case manifest');
   const selections = {}, resources = new Set();
   for (const name of names) {
-    const source = readFileSync(resolve(root, 'tools', name), 'utf8');
-    const focused = /from\s+['"]\.\/lib\/contract-case-selection\.mjs['"]/.test(source);
+    // The registry owns dispatch class and review identity. Source formatting
+    // and text in comments have no bearing on whether a file is focused.
+    const focused = Object.hasOwn(metadata.files ?? {}, name);
     const ids = requested[name] ?? [];
     assert.ok(Array.isArray(ids) && new Set(ids).size === ids.length, 'select unique case IDs');
     if (focused) assert.ok(ids.length > 0, `${name}: focused case selection required; a list is NOT_RUN, never PASS`);
@@ -258,6 +259,7 @@ export function contractCaseSelection(root, names, requested = {}) {
       assert.ok(focused && declarations && ids.every(id => typeof id === 'string' && Object.hasOwn(declarations, id)), `${name}: unknown or unpublished case; no whole-file fallback`);
       assert.ok(ids.every(id=>declarations[id].qualification === 'QUALIFIED'), `${name}: selected case is not qualified for dispatch; no broader fallback`);
       const expected = metadata.files[name].sourceSha256;
+      const source = readFileSync(resolve(root, 'tools', name), 'utf8');
       assert.ok(/^[a-f0-9]{64}$/.test(expected ?? '') && createHash('sha256').update(source).digest('hex') === expected, `${name}: reviewed case/resource definition changed; review this file before dispatch`);
       selections[name] = [...ids];
     }

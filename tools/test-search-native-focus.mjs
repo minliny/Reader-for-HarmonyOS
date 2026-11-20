@@ -5,9 +5,18 @@ async function fieldClip(){
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p+'.ets',import.meta.url),'utf8');
 const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');const style=readerTypographyRoles.TYPE_SEARCH_BOOK_INPUT;
+const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+const {readerActionTouchRegion}=pureModuleProbe(read('features/common/ReaderActionAccessibility'),
+  'ReaderActionAccessibility.ets',{},['readerActionTouchRegion']);
+const {selectedProductionClasses}=await import('./lib/selected-production-methods.mjs');
+const fieldFile=new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets',import.meta.url);
+const {ReaderSearchInputTarget}=selectedProductionClasses(fieldFile,['ReaderSearchInputTarget'],{readerActionTouchRegion});
+const {readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 for (const name of ['fixedLineHeightField', 'autoLineHeightField']) {
-  const { owner } = createReaderBuilderProbe(read('features/common/ReaderSearchField'), [name], {
-    TYPE_SEARCH_BOOK_INPUT: style,
+  const { owner } = createReaderBuilderProbe(readFileSync(fieldFile,'utf8'),
+    [name,'bookTextStyle','bookFontScale','nativeInputBackground','nativeFieldBackground'], {
+    ...readerTypographyRoles, ReaderSearchInputTarget, readerAppColor,
+    ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
   });
   Object.assign(owner, { appThemeScheme: 'day', text: '', placeholder: '搜索', clearable: false,
     iconGap: () => 5, searchIcon: () => 'search', iconSize: () => 16, inputHeight: () => 36,

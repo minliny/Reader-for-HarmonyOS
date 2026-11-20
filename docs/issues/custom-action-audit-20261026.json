@@ -1,0 +1,1198 @@
+{
+  "scopeRoots": [
+    "common/ReaderSelect.ets",
+    "common/ReaderChoiceRow.ets",
+    "common/ReaderActionMenuSurface.ets",
+    "bookshelf/LocalBookDetail.ets",
+    "reading/ReaderControlPanel.ets",
+    "reading/ReaderFullDirectory.ets",
+    "reading/ReaderTtsConfigOverlay.ets"
+  ],
+  "files": [
+    "common/ReaderSelect.ets",
+    "common/ReaderFonts.ets",
+    "common/ReaderMotionPolicy.ets",
+    "common/MotionSpec.ets",
+    "common/ReaderChoiceRow.ets",
+    "common/ReaderChoiceSpecs.ets",
+    "common/ReaderActionMenuSurface.ets",
+    "common/ReaderSurfaceSpecs.ets",
+    "bookshelf/LocalBookDetail.ets",
+    "common/ReaderHeaderSpecs.ets",
+    "common/ReaderPageScaffold.ets",
+    "common/ReaderFixedHeaderHost.ets",
+    "common/ReaderPageState.ets",
+    "common/ReaderRecoveryAction.ets",
+    "common/PageBackBar.ets",
+    "bookshelf/NoCoverCover.ets",
+    "manga/MangaDirectoryEntryRow.ets",
+    "reading/ReaderControlPanel.ets",
+    "reading/ReaderTtsWaveform.ets",
+    "reading/ReaderControlThemeStyle.ets",
+    "common/ReaderMotionClock.ets",
+    "reading/ReaderSessionLaunchStage.ets",
+    "reading/ReaderSessionCapsule.ets",
+    "reading/ReaderControlAutoPageContent.ets",
+    "reading/ReaderPanelChrome.ets",
+    "reading/ReaderControlTimerWheel.ets",
+    "reading/ReaderControlSwitchTrack.ets",
+    "reading/ReaderControlTtsContent.ets",
+    "reading/ReaderTtsConfigOverlay.ets",
+    "common/ReaderBoundedSurfaceHeader.ets",
+    "common/ReaderBoundedSurface.ets",
+    "common/ReaderTransientToast.ets",
+    "common/ReaderFormField.ets",
+    "common/ReaderControlSpecs.ets",
+    "common/ReaderRecoveryNotice.ets",
+    "common/ReaderBoundedSurfaceActions.ets",
+    "reading/ReaderControlDirectoryContent.ets",
+    "reading/ReaderDirectoryToolbar.ets",
+    "common/ReaderSearchField.ets",
+    "reading/ReaderDirectoryChapterRow.ets",
+    "reading/ReaderBookmarkRow.ets",
+    "reading/ReaderBookmarkErrorState.ets",
+    "reading/ReaderBookmarkLoadingState.ets",
+    "reading/ReaderBookmarkEmptyState.ets",
+    "reading/ReaderDirectoryNavigationSurface.ets",
+    "reading/ReaderDirectoryNavigationList.ets",
+    "reading/ReaderControlAppearanceContent.ets",
+    "common/ReaderSelectPanel.ets",
+    "reading/ReaderControlSearchContent.ets",
+    "reading/ReaderContentSearchDataSource.ets",
+    "reading/ReaderControlSettingsContent.ets",
+    "reading/ReaderControlReplaceContent.ets",
+    "common/ReaderDialogSurface.ets",
+    "reading/ReaderFullDirectory.ets",
+    "reading/ReaderDirectoryRecoverySurface.ets",
+    "reading/FullDirectoryPanel.ets",
+    "reading/ReaderDirectoryList.ets",
+    "reading/ReaderBookmarkList.ets"
+  ],
+  "actions": [
+    {
+      "file": "common/ReaderSelect.ets",
+      "method": "appearanceLibraryTrigger",
+      "line": 103,
+      "disposition": "shared semantics and target",
+      "currentLine": 105,
+      "semantics": "new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen)",
+      "target": "readerActionTouchRegion('100%', TRIGGER_H)"
+    },
+    {
+      "file": "common/ReaderSelect.ets",
+      "method": "appearanceTrigger",
+      "line": 133,
+      "disposition": "shared semantics and target",
+      "currentLine": 136,
+      "semantics": "new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen)",
+      "target": "readerActionTouchRegion('100%', TRIGGER_H)"
+    },
+    {
+      "file": "common/ReaderSelect.ets",
+      "method": "settingsTrigger",
+      "line": 165,
+      "disposition": "shared semantics and target",
+      "currentLine": 170,
+      "semantics": "new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen)",
+      "target": "readerActionTouchRegion('100%', this.triggerHeight())"
+    },
+    {
+      "file": "common/ReaderSelect.ets",
+      "method": "sourceGroupTrigger",
+      "line": 196,
+      "disposition": "shared semantics and target",
+      "currentLine": 203,
+      "semantics": "new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen)",
+      "target": "readerActionTouchRegion('100%', this.triggerHeight())"
+    },
+    {
+      "file": "common/ReaderSelect.ets",
+      "method": "defaultTrigger",
+      "line": 222,
+      "disposition": "shared semantics and target",
+      "currentLine": 231,
+      "semantics": "new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen)",
+      "target": "readerActionTouchRegion('100%', this.triggerHeight())"
+    },
+    {
+      "file": "common/ReaderChoiceRow.ets",
+      "method": "flowRow",
+      "line": 91,
+      "disposition": "shared semantics and target",
+      "currentLine": 94,
+      "semantics": "new ReaderActionAccessibility(this.accessibilityLabel(), this.actionEnabled, this.selected)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "common/ReaderChoiceRow.ets",
+      "method": "normalRow",
+      "line": 113,
+      "disposition": "shared semantics and target",
+      "currentLine": 118,
+      "semantics": "new ReaderActionAccessibility(this.accessibilityLabel(), this.actionEnabled, this.selected)",
+      "target": "readerActionTouchRegion('100%', this.rowHeight())"
+    },
+    {
+      "file": "common/ReaderChoiceRow.ets",
+      "method": "positionedRow",
+      "line": 130,
+      "disposition": "shared semantics and target",
+      "currentLine": 137,
+      "semantics": "new ReaderActionAccessibility(this.accessibilityLabel(), this.actionEnabled, this.selected)",
+      "target": "readerActionTouchRegion('100%', this.rowHeight())"
+    },
+    {
+      "file": "common/ReaderActionMenuSurface.ets",
+      "method": "actionRow",
+      "line": 116,
+      "disposition": "shared semantics and target",
+      "currentLine": 119,
+      "semantics": "new ReaderActionAccessibility(this.action(id).accessibilityLabel, this.action(id).enabled, false)",
+      "target": "readerActionTouchRegion('100%', this.menuActionHeight())"
+    },
+    {
+      "file": "common/ReaderActionMenuSurface.ets",
+      "method": "row",
+      "line": 169,
+      "disposition": "shared semantics and target",
+      "currentLine": 174,
+      "semantics": "new ReaderActionAccessibility(this.accessibilityLabel(this.action(id)), this.action(id).enabled, false)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "common/ReaderRecoveryAction.ets",
+      "method": "build",
+      "line": 36,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 36,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "{ minHeight: this.variant === 'notice' ? 28 : 44, minWidth: 30, maxWidth: '100%' }"
+    },
+    {
+      "file": "common/PageBackBar.ets",
+      "method": "build",
+      "line": 58,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 58,
+      "semantics": "new MangaDirectoryPressFeedback(true, this.variant === 'mangaDirectory', this.appThemeScheme)",
+      "target": "this.variant === 'mangaDirectory' ? visual.headerSlot : 44"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "mangaHero",
+      "line": 257,
+      "disposition": "shared semantics and target",
+      "currentLine": 259,
+      "semantics": "new ReaderActionAccessibility('换源', this.sourceSwitchEnabled, false, true, new MangaDirectoryPressFeedback(this.sourceSwitchEnabled, true, this.appThemeScheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "readingFacts",
+      "line": 380,
+      "disposition": "shared semantics and target",
+      "currentLine": 384,
+      "semantics": "new ReaderActionAccessibility('换源', this.sourceSwitchEnabled, false)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "mangaIntro",
+      "line": 447,
+      "disposition": "shared semantics and target",
+      "currentLine": 452,
+      "semantics": "new ReaderActionAccessibility(this.introExpanded ? '收起简介' : '展开简介', true, this.introExpanded, true, new MangaDirectoryPressFeedback(true, true, this.appThemeScheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "standardSummary",
+      "line": 470,
+      "disposition": "shared semantics and target",
+      "currentLine": 477,
+      "semantics": "new ReaderActionAccessibility(this.introExpanded ? '收起简介' : '展开简介', true, this.introExpanded)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "manga/MangaDirectoryEntryRow.ets",
+      "method": "download",
+      "line": 135,
+      "disposition": "touch propagation shield, hidden from accessibility",
+      "currentLine": 139,
+      "semantics": "native or non-action",
+      "target": "grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 : Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale())"
+    },
+    {
+      "file": "manga/MangaDirectoryEntryRow.ets",
+      "method": "download",
+      "line": 127,
+      "disposition": "shared semantics and target",
+      "currentLine": 131,
+      "semantics": "new ReaderActionAccessibility(`管理${this.title(entry)}下载`, this.interactionEnabled, false)",
+      "target": "readerActionTouchRegion(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44, grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :\n        Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))"
+    },
+    {
+      "file": "manga/MangaDirectoryEntryRow.ets",
+      "method": "numberCell",
+      "line": 176,
+      "disposition": "shared semantics and target",
+      "currentLine": 181,
+      "semantics": "new ReaderActionAccessibility(this.accessibility(entry), this.interactionEnabled, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.scheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "manga/MangaDirectoryEntryRow.ets",
+      "method": "branchToggle",
+      "line": 195,
+      "disposition": "shared semantics and target",
+      "currentLine": 200,
+      "semantics": "new ReaderActionAccessibility(`${this.title(entry)}，${this.expanded(entry) ? '收起' : '展开'}子目录`, this.interactionEnabled && this.query.trim().length === 0, this.expanded(entry), true, new MangaDirectoryPressFeedback(this.interactionEnabled && this.query.trim().length === 0,\n          this.facts(entry)?.group !== true, this.scheme))",
+      "target": "{ x: this.facts(entry)?.group === true ? -10 : 0,\n          y: this.facts(entry)?.group === true ? -14 : 0,\n          width: 44, height: 44 }"
+    },
+    {
+      "file": "manga/MangaDirectoryEntryRow.ets",
+      "method": "fullWidthEntryBody",
+      "line": 283,
+      "disposition": "shared semantics and target",
+      "currentLine": 289,
+      "semantics": "new ReaderActionAccessibility(this.accessibility(entry), this.interactionEnabled && (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false), false, true, new MangaDirectoryPressFeedback(this.interactionEnabled &&\n        (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false),\n        this.facts(entry)?.group !== true || this.interactionEnabled && this.branchControlsEnabled && this.query.trim().length === 0, this.scheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "mangaCatalogHeading",
+      "line": 529,
+      "disposition": "shared semantics and target",
+      "currentLine": 537,
+      "semantics": "new ReaderActionAccessibility('完整目录', !this.removing, false, true, new MangaDirectoryPressFeedback(!this.removing, true, this.appThemeScheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "standardCatalogHeading",
+      "line": 556,
+      "disposition": "shared semantics and target",
+      "currentLine": 566,
+      "semantics": "new ReaderActionAccessibility('完整目录', !this.removing, false)",
+      "target": "readerActionTouchRegion(94, 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "chapterRow",
+      "line": 582,
+      "disposition": "shared semantics and target",
+      "currentLine": 594,
+      "semantics": "new ReaderActionAccessibility(entry.title, !this.removing && this.detailBookAvailable(), this.isCurrentChapter(entry))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "actionArea",
+      "line": 614,
+      "disposition": "shared semantics and target",
+      "currentLine": 627,
+      "semantics": "new ReaderActionAccessibility(this.readingActionLabel(), !this.removing && this.detailBookAvailable(), false, true, new MangaDirectoryPressFeedback(!this.removing && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "bookshelf/LocalBookDetail.ets",
+      "method": "actionArea",
+      "line": 634,
+      "disposition": "shared semantics and target",
+      "currentLine": 648,
+      "semantics": "new ReaderActionAccessibility(this.shelfActionLabel(), this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable(), false, true, new MangaDirectoryPressFeedback(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme))",
+      "target": "readerActionTouchRegion(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94, 44)"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "accessibleControlActions",
+      "line": 651,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 652,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "1"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "accessibleControlActions",
+      "line": 656,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 657,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "1"
+    },
+    {
+      "file": "reading/ReaderSessionLaunchStage.ets",
+      "method": "build",
+      "line": 115,
+      "disposition": "shared semantics and target",
+      "currentLine": 117,
+      "semantics": "new ReaderActionAccessibility(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying), true, false)",
+      "target": "{ x: 0, y: -10, width: '100%', height: this.sample.proxyHeight + 20 }"
+    },
+    {
+      "file": "reading/ReaderSessionCapsule.ets",
+      "method": "build",
+      "line": 143,
+      "disposition": "shared semantics and target",
+      "currentLine": 145,
+      "semantics": "new ReaderActionAccessibility(readerSessionCapsuleAccessibility(this.type, this.sessionState, this.desiredPlaying), true, false)",
+      "target": "{ x: 0, y: -10, width: '100%', height: 44 }"
+    },
+    {
+      "file": "reading/ReaderPanelChrome.ets",
+      "method": "build",
+      "line": 120,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 120,
+      "semantics": "new ReaderPressFeedback(\n      readerAppColor(resolveReaderPanelCollapseSpec(this.specId).surface, this.appThemeScheme),\n      this.appThemeScheme, 8, 8, this.actionEnabled)",
+      "target": "26"
+    },
+    {
+      "file": "reading/ReaderPanelChrome.ets",
+      "method": "build",
+      "line": 165,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 165,
+      "semantics": "new ReaderPressFeedback(\n      readerAppColor(resolveReaderQuickBackSpec(this.specId).surface, this.appThemeScheme),\n      this.appThemeScheme, 8, 8, this.actionEnabled)",
+      "target": "this.frameHeight"
+    },
+    {
+      "file": "reading/ReaderControlAutoPageContent.ets",
+      "method": "chapterButton",
+      "line": 365,
+      "disposition": "shared semantics and target",
+      "currentLine": 368,
+      "semantics": "new ReaderActionAccessibility(previous ? '上一章' : '下一章', this.sharedInput() && (previous ? this.canPreviousChapter : this.canNextChapter), false)",
+      "target": "readerActionTouchRegion(this.chapterActor(previous).width, this.chapterActor(previous).height)"
+    },
+    {
+      "file": "reading/ReaderControlAutoPageContent.ets",
+      "method": "runningButton",
+      "line": 390,
+      "disposition": "shared semantics and target",
+      "currentLine": 396,
+      "semantics": "new ReaderActionAccessibility(this.status === 'running' ? '暂停自动翻页' :\n        (this.status === 'paused' ? '继续自动翻页' : '开始自动翻页'), this.sharedInput(), this.status === 'running')",
+      "target": "readerActionTouchRegion(this.frame().toggle.width, this.frame().toggle.height)"
+    },
+    {
+      "file": "reading/ReaderControlAutoPageContent.ets",
+      "method": "stopButton",
+      "line": 401,
+      "disposition": "shared semantics and target",
+      "currentLine": 409,
+      "semantics": "new ReaderActionAccessibility('停止自动翻页', this.sharedInput() && this.status !== 'stopped', false)",
+      "target": "readerActionTouchRegion(this.frame().stop.width, this.frame().stop.height)"
+    },
+    {
+      "file": "reading/ReaderControlTimerWheel.ets",
+      "method": "build",
+      "line": 47,
+      "disposition": "shared semantics and target",
+      "currentLine": 50,
+      "semantics": "new ReaderActionAccessibility(this.valid(delta) ? `${this.unit}，${this.value + delta}` : '', this.interactionEnabled && delta !== 0 && this.valid(delta), delta === 0)",
+      "target": "readerActionTouchRegion(this.wheelWidth, Math.max(44, this.rowHeight))"
+    },
+    {
+      "file": "reading/ReaderControlAutoPageContent.ets",
+      "method": "speedStepButton",
+      "line": 542,
+      "disposition": "shared semantics and target",
+      "currentLine": 552,
+      "semantics": "new ReaderActionAccessibility(increase ? '增加翻页间隔' : '减少翻页间隔', this.sharedInput() && this.p() === 0, false)",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/ReaderControlAutoPageContent.ets",
+      "method": "followHighlightRow",
+      "line": 645,
+      "disposition": "shared semantics and target",
+      "currentLine": 657,
+      "semantics": "new ReaderActionAccessibility('自动翻页时跟随高亮', this.fullInput() && this.status === 'stopped', this.followHighlight)",
+      "target": "readerActionTouchRegion(this.sectionInnerWidth(), 44)"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceHeader.ets",
+      "method": "drawerClose",
+      "line": 110,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 110,
+      "semantics": "new ReaderActionAccessibility(this.placement === 'side' ? '关闭宽屏面板' : '关闭面板', this.actionEnabled)",
+      "target": "this.drawerSpec().closeSize"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceHeader.ets",
+      "method": "closeAction",
+      "line": 183,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 183,
+      "semantics": "new ReaderActionAccessibility('关闭书源切换', this.actionEnabled)",
+      "target": "44"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceHeader.ets",
+      "method": "closeAction",
+      "line": 187,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 187,
+      "semantics": "new ReaderActionAccessibility('关闭 TTS 配置', this.actionEnabled)",
+      "target": "{ x: -6, y: -6, width: 28, height: 28 }"
+    },
+    {
+      "file": "reading/ReaderTtsConfigOverlay.ets",
+      "method": "build",
+      "line": 164,
+      "disposition": "dismissal scrim; close header is the accessible action",
+      "currentLine": 165,
+      "semantics": "native or non-action",
+      "target": "'100%'"
+    },
+    {
+      "file": "reading/ReaderTtsConfigOverlay.ets",
+      "method": "boundedContent",
+      "line": 239,
+      "disposition": "shared semantics and target",
+      "currentLine": 242,
+      "semantics": "new ReaderActionAccessibility('管理语音引擎', !this.busy, false)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderTtsConfigOverlay.ets",
+      "method": "choiceRow",
+      "line": 273,
+      "disposition": "shared semantics and target",
+      "currentLine": 279,
+      "semantics": "new ReaderActionAccessibility(choice.label, !this.busy, choice.id === this.selectedId)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderTtsConfigOverlay.ets",
+      "method": "choiceRow",
+      "line": 281,
+      "disposition": "native button semantics retained",
+      "currentLine": 287,
+      "semantics": "native or non-action",
+      "target": "{ minWidth: 44, minHeight: 44 }"
+    },
+    {
+      "file": "reading/ReaderTtsConfigOverlay.ets",
+      "method": "managerForm",
+      "line": 360,
+      "disposition": "shared semantics and target",
+      "currentLine": 369,
+      "semantics": "new ReaderActionAccessibility(this.draftClearApiKey ? '已选择清除已保存密钥' : '清除已保存密钥', !this.busy, this.draftClearApiKey)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceActions.ets",
+      "method": "fileAction",
+      "line": 85,
+      "disposition": "shared semantics and target",
+      "currentLine": 88,
+      "semantics": "new ReaderActionAccessibility('取消', this.cancelEnabled, false)",
+      "target": "readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_FILE_IMPORT_CANCEL.lineHeightFp))"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceActions.ets",
+      "method": "fileAction",
+      "line": 96,
+      "disposition": "shared semantics and target",
+      "currentLine": 100,
+      "semantics": "new ReaderActionAccessibility(this.primaryLabel, this.primaryEnabled, false, true, new ReaderBoundedFileActionModifier(this.specId, this.actionWidth))",
+      "target": "readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_FILE_IMPORT_ACTION.lineHeightFp))"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceActions.ets",
+      "method": "textAction",
+      "line": 107,
+      "disposition": "shared semantics and target",
+      "currentLine": 113,
+      "semantics": "new ReaderActionAccessibility('取消', this.cancelEnabled, false)",
+      "target": "readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.lineHeightFp))"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceActions.ets",
+      "method": "textAction",
+      "line": 114,
+      "disposition": "shared semantics and target",
+      "currentLine": 122,
+      "semantics": "new ReaderActionAccessibility(this.primaryLabel, this.primaryEnabled, false)",
+      "target": "readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp))"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceActions.ets",
+      "method": "textAction",
+      "line": 123,
+      "disposition": "shared semantics and target",
+      "currentLine": 133,
+      "semantics": "new ReaderActionAccessibility('取消', this.cancelEnabled, false)",
+      "target": "readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.lineHeightFp))"
+    },
+    {
+      "file": "common/ReaderBoundedSurfaceActions.ets",
+      "method": "textAction",
+      "line": 130,
+      "disposition": "shared semantics and target",
+      "currentLine": 142,
+      "semantics": "new ReaderActionAccessibility(this.primaryLabel, this.primaryEnabled, false)",
+      "target": "readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp))"
+    },
+    {
+      "file": "reading/ReaderTtsConfigOverlay.ets",
+      "method": "formatChoice",
+      "line": 528,
+      "disposition": "shared semantics and target",
+      "currentLine": 539,
+      "semantics": "new ReaderActionAccessibility(`${label}${this.draftFormat === format ? '，已选择' : ''}`, !this.busy, this.draftFormat === format)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "roundControl",
+      "line": 667,
+      "disposition": "shared semantics and target",
+      "currentLine": 671,
+      "semantics": "new ReaderActionAccessibility(this.controlText(kind), this.sharedInput() && !this.serviceBusy && !(this.onlineServicePage() && !this.isHttpEngineSelected()) && (kind === 'toggle' ?\n        this.state.status !== 'stopping' : this.hasActiveQueue()), false)",
+      "target": "readerActionTouchRegion(this.transport(kind).width, this.transport(kind).height)"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "timer",
+      "line": 720,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 724,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "this.frame().quickTimerSelect.height"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "timerPreset",
+      "line": 757,
+      "disposition": "shared semantics and target",
+      "currentLine": 762,
+      "semantics": "new ReaderActionAccessibility(minutes === 'chapterEnd' ? '朗读到本章结束停止' : (minutes === 0 ? '关闭定时停止' : `定时${minutes}分钟`), this.fullInput(), this.timerPresetIsSelected(minutes))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "timerStepButton",
+      "line": 788,
+      "disposition": "shared semantics and target",
+      "currentLine": 797,
+      "semantics": "new ReaderActionAccessibility(`${delta > 0 ? '增加' : '减少'}${minutes ? '五分钟' : '一秒'}`, this.fullInput() && (delta > 0 ?\n        (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :\n        (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)), false)",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "ratePreset",
+      "line": 856,
+      "disposition": "shared semantics and target",
+      "currentLine": 868,
+      "semantics": "new ReaderActionAccessibility(`语速${rate.toFixed(2)}倍`, this.fullInput(), this.effectiveRate() === rate)",
+      "target": "readerActionTouchRegion(this.ratePresetWidth(), 44)"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "ttsServiceTypeTab",
+      "line": 913,
+      "disposition": "shared semantics and target",
+      "currentLine": 927,
+      "semantics": "new ReaderActionAccessibility(http ? this.onlineTtsAccessibilityText() : '系统 TTS，使用设备内置语音', this.fullInput() && !this.serviceBusy, http === this.onlineServicePage())",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "ttsSelectValueField",
+      "line": 971,
+      "disposition": "shared semantics and target",
+      "currentLine": 987,
+      "semantics": "new ReaderActionAccessibility(`${this.fieldLabel(kind)}：${this.fieldValue(kind)}，选择配置`, this.fullInput(), false)",
+      "target": "readerActionTouchRegion(this.fieldWidth(kind), this.fieldHeight(kind))"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "toggleRow",
+      "line": 984,
+      "disposition": "move action onto full labelled toggle row",
+      "currentLine": 1004,
+      "semantics": "new ReaderActionAccessibility(this.toggleLabel(kind), this.fullInput(), this.toggleValue(kind))",
+      "target": "48"
+    },
+    {
+      "file": "reading/ReaderControlTtsContent.ets",
+      "method": "onlineServiceInfoRow",
+      "line": 1160,
+      "disposition": "shared semantics and target",
+      "currentLine": 1185,
+      "semantics": "new ReaderActionAccessibility(this.httpEngines.length > 0 ? '已配置在线 TTS，编辑服务信息' : '立即配置在线 TTS', this.fullInput() && !this.serviceBusy, false)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "replaceHeader",
+      "line": 1218,
+      "disposition": "shared semantics and target",
+      "currentLine": 1221,
+      "semantics": "new ReaderActionAccessibility('完成替换规则管理，收起到快捷态', this.frame().progress === 1, false)",
+      "target": "readerActionTouchRegion(this.replaceHeaderFrame().action.width, this.replaceHeaderFrame().action.height)"
+    },
+    {
+      "file": "reading/ReaderControlDirectoryContent.ets",
+      "method": "tabButton",
+      "line": 339,
+      "disposition": "shared semantics and target",
+      "currentLine": 342,
+      "semantics": "new ReaderActionAccessibility(title, this.interactionEnabled, this.tab === tab)",
+      "target": "readerActionTouchRegion(Math.max(0, (this.availableWidth - this.value(32, 18)) / 2), 44)"
+    },
+    {
+      "file": "reading/ReaderDirectoryToolbar.ets",
+      "method": "tool",
+      "line": 58,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 58,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "44"
+    },
+    {
+      "file": "common/ReaderSearchField.ets",
+      "method": "mangaLineHeightField",
+      "line": 194,
+      "disposition": "shared semantics and target",
+      "currentLine": 196,
+      "semantics": "new ReaderActionAccessibility('清除目录搜索', true, false, true, new MangaDirectoryPressFeedback(true, true, this.appThemeScheme))",
+      "target": "readerActionTouchRegion(MANGA_DIRECTORY_VISUAL.clearWidth, MANGA_DIRECTORY_VISUAL.clearHeight)"
+    },
+    {
+      "file": "common/ReaderSearchField.ets",
+      "method": "fixedLineHeightField",
+      "line": 258,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 260,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "this.fieldHeight()"
+    },
+    {
+      "file": "common/ReaderSearchField.ets",
+      "method": "fixedLineHeightField",
+      "line": 262,
+      "disposition": "shared semantics and target",
+      "currentLine": 267,
+      "semantics": "new ReaderActionAccessibility('清空搜索内容')",
+      "target": "44"
+    },
+    {
+      "file": "reading/ReaderDirectoryChapterRow.ets",
+      "method": "build",
+      "line": 43,
+      "disposition": "shared semantics and target",
+      "currentLine": 46,
+      "semantics": "new ReaderActionAccessibility(readerDirectoryAccessibilityText(this.entry), this.entry.navigable !== false, this.entry.index === this.currentChapterIndex)",
+      "target": "readerActionTouchRegion('100%', Math.max(44, this.rowHeight))"
+    },
+    {
+      "file": "reading/ReaderDirectoryChapterRow.ets",
+      "method": "build",
+      "line": 51,
+      "disposition": "shared semantics and target",
+      "currentLine": 57,
+      "semantics": "new ReaderActionAccessibility(this.entry.downloadState === 'completed' ? '已下载' : '下载章节', this.entry.downloadState === 'missing' || this.entry.downloadState === 'cached' ||\n            this.entry.downloadState === 'failed' || this.entry.downloadState === 'cancelled', this.entry.downloadState === 'completed')",
+      "target": "readerActionTouchRegion(44, Math.max(44, this.rowHeight))"
+    },
+    {
+      "file": "reading/ReaderDirectoryChapterRow.ets",
+      "method": "build",
+      "line": 58,
+      "disposition": "shared semantics and target",
+      "currentLine": 66,
+      "semantics": "new ReaderActionAccessibility(this.entry.bookmarks.length > 0 ? '删除本章已有书签' : '添加本章章首书签', true, this.entry.bookmarks !== undefined && this.entry.bookmarks.length > 0)",
+      "target": "readerActionTouchRegion(44, Math.max(44, this.rowHeight))"
+    },
+    {
+      "file": "reading/ReaderBookmarkRow.ets",
+      "method": "motionBody",
+      "line": 78,
+      "disposition": "shared semantics and target",
+      "currentLine": 82,
+      "semantics": "new ReaderActionAccessibility(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}` +\n        (this.row.identityStatus === 'pendingConfirmation' ? ` ${BOOKMARK_PENDING_LABEL}` : ''), true, false)",
+      "target": "readerActionTouchRegion(this.frame().card.width, this.frame().card.height)"
+    },
+    {
+      "file": "reading/ReaderBookmarkRow.ets",
+      "method": "legacyBody",
+      "line": 155,
+      "disposition": "shared semantics and target",
+      "currentLine": 161,
+      "semantics": "new ReaderActionAccessibility(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel}`, true, false)",
+      "target": "readerActionTouchRegion('100%', BOOKMARK_ROW_HEIGHT)"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaEmptyActions",
+      "line": 969,
+      "disposition": "shared semantics and target",
+      "currentLine": 971,
+      "semantics": "new ReaderActionAccessibility('清除目录搜索', this.interactionEnabled, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaNumberCell",
+      "line": 1073,
+      "disposition": "shared semantics and target",
+      "currentLine": 1079,
+      "semantics": "new ReaderActionAccessibility(this.mangaRowAccessibility(item, true), this.interactionEnabled, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))",
+      "target": "readerActionTouchRegion(this.mangaCellWidth(item), this.mangaCellHeight())"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaNumberCell",
+      "line": 1055,
+      "disposition": "touch propagation shield, hidden from accessibility",
+      "currentLine": 1060,
+      "semantics": "native or non-action",
+      "target": "this.mangaCellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaNumberCell",
+      "line": 1053,
+      "disposition": "shared semantics and target",
+      "currentLine": 1058,
+      "semantics": "new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? `管理${this.mangaTitle(item.node)}下载` :\n                this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.mangaPaintNode(item.node)), false)",
+      "target": "readerActionTouchRegion(MANGA_DIRECTORY_VISUAL.downloadGridWidth, this.mangaCellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2)"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaRow",
+      "line": 1096,
+      "disposition": "shared semantics and target",
+      "currentLine": 1103,
+      "semantics": "new ReaderActionAccessibility(`${this.mangaPaintNode(item.node).title}，展开或收起子目录`, this.interactionEnabled && !this.mangaSearchActive, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled && !this.mangaSearchActive, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaRowBody",
+      "line": 1213,
+      "disposition": "shared semantics and target",
+      "currentLine": 1226,
+      "semantics": "new ReaderActionAccessibility(this.mangaRowAccessibility(item, false), this.interactionEnabled && item.node?.kind !== 'disabled' && !(item.node?.kind === 'group' && this.mangaSearchActive), false, true, new MangaDirectoryPressFeedback(this.interactionEnabled && item.node?.kind !== 'disabled' &&\n        (item.node?.kind !== 'group' || !this.mangaSearchActive),\n        item.node?.kind !== 'group' || this.interactionEnabled && !this.mangaSearchActive,\n        this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaRowBody",
+      "line": 1169,
+      "disposition": "touch propagation shield, hidden from accessibility",
+      "currentLine": 1179,
+      "semantics": "native or non-action",
+      "target": "Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale())"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaRowBody",
+      "line": 1167,
+      "disposition": "shared semantics and target",
+      "currentLine": 1177,
+      "semantics": "new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :\n              this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.mangaPaintNode(item.node)), false)",
+      "target": "readerActionTouchRegion(44, Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "mangaRowBody",
+      "line": 1177,
+      "disposition": "shared semantics and target",
+      "currentLine": 1189,
+      "semantics": "new ReaderActionAccessibility(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`, true, false)",
+      "target": "readerActionTouchRegion(16, 16)"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "row",
+      "line": 1235,
+      "disposition": "shared semantics and target",
+      "currentLine": 1252,
+      "semantics": "new ReaderActionAccessibility(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?\n            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(item.node)}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :\n            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(item.node)}级，打开${item.node.title}`, this.interactionEnabled && item.node.kind !== 'disabled', false)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "row",
+      "line": 1247,
+      "disposition": "shared semantics and target",
+      "currentLine": 1266,
+      "semantics": "new ReaderActionAccessibility(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`, true, false)",
+      "target": "readerActionTouchRegion(44, Math.max(44, this.rowHeight))"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "row",
+      "line": 1262,
+      "disposition": "shared semantics and target",
+      "currentLine": 1284,
+      "semantics": "new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :\n              this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(item.node), false)",
+      "target": "readerActionTouchRegion(44, Math.max(44, this.rowHeight))"
+    },
+    {
+      "file": "reading/ReaderDirectoryNavigationList.ets",
+      "method": "row",
+      "line": 1274,
+      "disposition": "shared semantics and target",
+      "currentLine": 1299,
+      "semantics": "new ReaderActionAccessibility((this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks?.length ?? 0) > 0 ?\n              '删除本章已有书签' : '添加本章章首书签', true, false)",
+      "target": "readerActionTouchRegion(44, Math.max(44, this.rowHeight))"
+    },
+    {
+      "file": "reading/ReaderControlAppearanceContent.ets",
+      "method": "themeSwatch",
+      "line": 474,
+      "disposition": "shared semantics and target",
+      "currentLine": 479,
+      "semantics": "new ReaderActionAccessibility(`切换到${this.themeLabel(theme)}主题`, this.sharedInput(), this.snapshot.activeTheme === theme)",
+      "target": "{ x: this.fullInput() ? -(this.frame().themeShells[index].width - 62.5) / 2 : 0,\n        y: 0,\n        width: this.fullInput() ? this.frame().themeShells[index].width : 62.5,\n        height: 44 }"
+    },
+    {
+      "file": "reading/ReaderControlAppearanceContent.ets",
+      "method": "themeAction",
+      "line": 488,
+      "disposition": "shared semantics and target",
+      "currentLine": 495,
+      "semantics": "new ReaderActionAccessibility(this.defaultThemeActionLabel(day), this.fullInput(), false)",
+      "target": "readerActionTouchRegion(74, 44)"
+    },
+    {
+      "file": "reading/ReaderControlAppearanceContent.ets",
+      "method": "fontCell",
+      "line": 630,
+      "disposition": "shared semantics and target",
+      "currentLine": 641,
+      "semantics": "new ReaderActionAccessibility(font === 'import' && this.importLayout === 'source-overlap-pending' ?\n        '原始设计重叠位置，仅供对照' : font === 'import' ? '导入自定义字体' :\n        `切换到${readerAppearanceFontSlotLabel(this.snapshot, font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`, this.fontInput(font), this.activeFont(font))",
+      "target": "readerActionTouchRegion(this.fontActor(font).width, this.fontActor(font).height)"
+    },
+    {
+      "file": "reading/ReaderControlAppearanceContent.ets",
+      "method": "selectOverlay",
+      "line": 700,
+      "disposition": "dismissal scrim; select trigger owns focus",
+      "currentLine": 711,
+      "semantics": "native or non-action",
+      "target": "'100%'"
+    },
+    {
+      "file": "reading/ReaderControlAppearanceContent.ets",
+      "method": "stepButton",
+      "line": 746,
+      "disposition": "shared semantics and target",
+      "currentLine": 759,
+      "semantics": "new ReaderActionAccessibility(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`, this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction), false)",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/ReaderControlSearchContent.ets",
+      "method": "searchField",
+      "line": 402,
+      "disposition": "TextInput container; native input owns semantics",
+      "currentLine": 403,
+      "semantics": "native or non-action",
+      "target": "this.frame().field.height"
+    },
+    {
+      "file": "reading/ReaderControlSearchContent.ets",
+      "method": "searchAction",
+      "line": 417,
+      "disposition": "shared semantics and target",
+      "currentLine": 420,
+      "semantics": "new ReaderActionAccessibility('搜索正文', this.canSearch(), false)",
+      "target": "readerActionTouchRegion(this.frame().action.width, this.frame().action.height)"
+    },
+    {
+      "file": "reading/ReaderControlSearchContent.ets",
+      "method": "loadMoreAction",
+      "line": 527,
+      "disposition": "shared semantics and target",
+      "currentLine": 534,
+      "semantics": "new ReaderActionAccessibility(this.state.loadingMore === true ? '正在加载更多搜索结果' :\n        (this.state.loadMoreError === undefined ? '加载更多搜索结果' : '重试加载更多搜索结果'), this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&\n        this.state.loadingMore !== true, false)",
+      "target": "readerActionTouchRegion(112, 44)"
+    },
+    {
+      "file": "reading/ReaderControlSearchContent.ets",
+      "method": "resultRow",
+      "line": 551,
+      "disposition": "shared semantics and target",
+      "currentLine": 560,
+      "semantics": "new ReaderActionAccessibility(`${this.resultTitle(this.currentResult(chapterIndex, chapterOffset))}，搜索结果`, true, false)",
+      "target": "readerActionTouchRegion(this.frame().firstResult.width, this.frame().rowHeight)"
+    },
+    {
+      "file": "reading/ReaderControlSettingsContent.ets",
+      "method": "toggleRow",
+      "line": 292,
+      "disposition": "shared semantics and target",
+      "currentLine": 295,
+      "semantics": "new ReaderActionAccessibility(this.toggleAccessibilityText(label, key), this.interactionEnabled && this.p() > 0 && isReaderSettingsToggleAvailable(key), this.toggleValue(key))",
+      "target": "readerActionTouchRegion(this.child('row', index).width, this.child('row', index).height)"
+    },
+    {
+      "file": "reading/ReaderControlSettingsContent.ets",
+      "method": "justifyToggleRow",
+      "line": 307,
+      "disposition": "shared semantics and target",
+      "currentLine": 312,
+      "semantics": "new ReaderActionAccessibility(`文字两端对齐，${this.justifyText ? '已开启' : '已关闭'}，与阅读样式同步`, this.interactionEnabled && this.p() > 0, this.justifyText)",
+      "target": "readerActionTouchRegion(this.child('row', 0).width, this.child('row', 0).height)"
+    },
+    {
+      "file": "reading/ReaderControlReplaceContent.ets",
+      "method": "quickBack",
+      "line": 389,
+      "disposition": "shared semantics and target",
+      "currentLine": 392,
+      "semantics": "new ReaderActionAccessibility('返回', this.quickInput(), false)",
+      "target": "readerActionTouchRegion(51, 24)"
+    },
+    {
+      "file": "reading/ReaderControlReplaceContent.ets",
+      "method": "toolbarButton",
+      "line": 400,
+      "disposition": "shared semantics and target",
+      "currentLine": 405,
+      "semantics": "new ReaderActionAccessibility(label, this.fullInput() && this.readyInput(), false)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderControlReplaceContent.ets",
+      "method": "ruleRow",
+      "line": 427,
+      "disposition": "shared semantics and target",
+      "currentLine": 434,
+      "semantics": "new ReaderActionAccessibility(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`, this.readyInput() && index() >= 0, rule().isEnabled)",
+      "target": "readerActionTouchRegion(this.frame().toggleWidth, this.frame().rowHeight)"
+    },
+    {
+      "file": "reading/ReaderControlReplaceContent.ets",
+      "method": "ruleIcon",
+      "line": 472,
+      "disposition": "shared semantics and target",
+      "currentLine": 481,
+      "semantics": "new ReaderActionAccessibility(label(), this.fullInput() && this.readyInput() && enabled(), false)",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/ReaderControlReplaceContent.ets",
+      "method": "textAction",
+      "line": 527,
+      "disposition": "shared semantics and target",
+      "currentLine": 538,
+      "semantics": "new ReaderActionAccessibility(label, enabled() && (this.fullInput() || this.quickInput()), false)",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "common/ReaderDialogSurface.ets",
+      "method": "header",
+      "line": 132,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 132,
+      "semantics": "new ReaderActionAccessibility(`关闭${this.title}`)",
+      "target": "readerScaledControlHeight(36, TYPE_SELECT_OPTION.lineHeightFp as number, this.fontScale())"
+    },
+    {
+      "file": "common/ReaderDialogSurface.ets",
+      "method": "actionCell",
+      "line": 194,
+      "disposition": "native button semantics retained",
+      "currentLine": 194,
+      "semantics": "this.actionModifier(action)",
+      "target": "this.actionTouchRegion()"
+    },
+    {
+      "file": "reading/ReaderControlReplaceContent.ets",
+      "method": "temporaryLeading",
+      "line": 599,
+      "disposition": "shared semantics and target",
+      "currentLine": 612,
+      "semantics": "new ReaderActionAccessibility('取消编辑', !this.localPending && !this.state.mutationPending, false)",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/ReaderControlReplaceContent.ets",
+      "method": "editorFlag",
+      "line": 669,
+      "disposition": "shared semantics and target",
+      "currentLine": 684,
+      "semantics": "new ReaderActionAccessibility(`${label}，${value() ? '开启' : '关闭'}`, this.readyInput(), value())",
+      "target": "readerActionTouchRegion('100%', 44)"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "topBar",
+      "line": 1504,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 1508,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "{ x: 0, y: -1, width: 44, height: 44 }"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "topBar",
+      "line": 1555,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 1559,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "{ x: 0, y: -1, width: 62, height: 44 }"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "topBar",
+      "line": 1575,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 1579,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "{ x: -5, y: -1, width: 44, height: 44 }"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "quickAction",
+      "line": 1658,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 1662,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "55.438"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "chapterRow",
+      "line": 1703,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 1707,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "{ x: -5, y: -5, width: 44, height: 44 }"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "chapterRow",
+      "line": 1739,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 1743,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "{ x: -5, y: -5, width: 44, height: 44 }"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "brightnessRail",
+      "line": 1897,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 1901,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE"
+    },
+    {
+      "file": "reading/ReaderControlPanel.ets",
+      "method": "moduleButton",
+      "line": 2040,
+      "disposition": "existing shared or explicit semantics retained",
+      "currentLine": 2044,
+      "semantics": "AccessibilityRoleType.BUTTON",
+      "target": "62"
+    },
+    {
+      "file": "reading/FullDirectoryPanel.ets",
+      "method": "directoryTab",
+      "line": 512,
+      "disposition": "shared semantics and target",
+      "currentLine": 515,
+      "semantics": "new ReaderActionAccessibility('目录', true, this.activeTab === 'directory')",
+      "target": "readerActionTouchRegion('100%', this.tabHeight())"
+    },
+    {
+      "file": "reading/FullDirectoryPanel.ets",
+      "method": "bookmarkTab",
+      "line": 557,
+      "disposition": "shared semantics and target",
+      "currentLine": 562,
+      "semantics": "new ReaderActionAccessibility('书签', true, this.activeTab === 'bookmarks')",
+      "target": "readerActionTouchRegion('100%', this.tabHeight())"
+    },
+    {
+      "file": "reading/FullDirectoryPanel.ets",
+      "method": "controlButton",
+      "line": 635,
+      "disposition": "shared semantics and target",
+      "currentLine": 642,
+      "semantics": "new ReaderActionAccessibility(this.controlButtonLabel(kind), true, false)",
+      "target": "readerActionTouchRegion(32, 32)"
+    },
+    {
+      "file": "reading/FullDirectoryPanel.ets",
+      "method": "chapterRow",
+      "line": 738,
+      "disposition": "shared semantics and target",
+      "currentLine": 747,
+      "semantics": "new ReaderActionAccessibility(readerDirectoryAccessibilityText(repeatItem.item), repeatItem.item.navigable !== false, false)",
+      "target": "readerActionTouchRegion('100%', this.directoryListRowHeight())"
+    },
+    {
+      "file": "reading/FullDirectoryPanel.ets",
+      "method": "downloadMarkerHitTarget",
+      "line": 836,
+      "disposition": "shared semantics and target",
+      "currentLine": 847,
+      "semantics": "new ReaderActionAccessibility(this.downloadMarkerLabel(entry), entry.navigable !== false && this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry), false)",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/FullDirectoryPanel.ets",
+      "method": "bookmarkMarkerHitTarget",
+      "line": 853,
+      "disposition": "shared semantics and target",
+      "currentLine": 866,
+      "semantics": "new ReaderActionAccessibility(this.bookmarkMarkerLabel(readerDirectoryBookmarkMarkerState(entry)), this.bookmarkMarkerEnabled(readerDirectoryBookmarkMarkerState(entry)), false)",
+      "target": "readerActionTouchRegion(44, 44)"
+    },
+    {
+      "file": "reading/ReaderFullDirectory.ets",
+      "method": "topBar",
+      "line": 270,
+      "disposition": "shared semantics and target",
+      "currentLine": 273,
+      "semantics": "new ReaderActionAccessibility('收起目录', true, false)",
+      "target": "readerActionTouchRegion(44, this.headerSpec.controlHeight)"
+    },
+    {
+      "file": "reading/ReaderFullDirectory.ets",
+      "method": "topBar",
+      "line": 319,
+      "disposition": "shared semantics and target",
+      "currentLine": 324,
+      "semantics": "new ReaderActionAccessibility('换源', !this.isLocalBook(), false)",
+      "target": "readerActionTouchRegion(62, this.headerSpec.controlHeight)"
+    },
+    {
+      "file": "reading/ReaderFullDirectory.ets",
+      "method": "topBar",
+      "line": 336,
+      "disposition": "shared semantics and target",
+      "currentLine": 343,
+      "semantics": "new ReaderActionAccessibility(this.offlineBookOperationActive ? '离线操作进行中' : '离线管理', !this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true, false)",
+      "target": "readerActionTouchRegion(34, this.headerSpec.controlHeight)"
+    },
+    {
+      "file": "reading/ReaderFullDirectory.ets",
+      "method": "offlineBookMenu",
+      "line": 368,
+      "disposition": "shared semantics and target",
+      "currentLine": 377,
+      "semantics": "new ReaderActionAccessibility('下载整书', true, false)",
+      "target": "readerActionTouchRegion('100%', this.headerSpec.menuRowHeight)"
+    },
+    {
+      "file": "reading/ReaderFullDirectory.ets",
+      "method": "offlineBookMenu",
+      "line": 385,
+      "disposition": "shared semantics and target",
+      "currentLine": 396,
+      "semantics": "new ReaderActionAccessibility('清除本书离线内容', true, false)",
+      "target": "readerActionTouchRegion('100%', this.headerSpec.menuRowHeight)"
+    }
+  ]
+}

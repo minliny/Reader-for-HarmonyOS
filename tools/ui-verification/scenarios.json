@@ -1,0 +1,394 @@
+{
+  "schema": 1,
+  "scenarios": [
+    {
+      "id": "directory-control-expanded",
+      "scene": "directory-control-expanded",
+      "width": 366,
+      "readyId": "reader-verify-directory-root",
+      "expect": {
+        "nodes": [
+          {
+            "id": "reader-page-structure-fixture-stage",
+            "visible": true,
+            "minWidthVp": 365,
+            "maxWidthVp": 366
+          },
+          {
+            "id": "reader-verify-directory-root",
+            "visible": true,
+            "minWidthVp": 300,
+            "maxWidthVp": 366,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-tab",
+            "visible": true,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-toolbar",
+            "visible": true,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-viewport",
+            "visible": true,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-footer",
+            "visible": true,
+            "minHeightVp": 1
+          },
+          {
+            "id": "reader-verify-directory-row-21",
+            "minHeightVp": 44
+          }
+        ],
+        "order": [
+          [
+            "reader-verify-directory-toolbar",
+            "reader-verify-directory-viewport"
+          ],
+          [
+            "reader-verify-directory-viewport",
+            "reader-verify-directory-footer"
+          ]
+        ]
+      },
+      "actions": []
+    },
+    {
+      "id": "directory-control-compact",
+      "scene": "directory-control-compact",
+      "width": 366,
+      "readyId": "reader-verify-directory-root",
+      "expect": {
+        "nodes": [
+          {
+            "id": "reader-verify-directory-root",
+            "visible": true,
+            "minWidthVp": 250,
+            "maxWidthVp": 300,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-tab",
+            "visible": true,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-viewport",
+            "visible": true,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-row-21",
+            "minHeightVp": 44
+          }
+        ],
+        "order": [
+          [
+            "reader-verify-directory-tab",
+            "reader-verify-directory-viewport"
+          ]
+        ]
+      },
+      "actions": []
+    },
+    {
+      "id": "directory-manga",
+      "scene": "directory-manga",
+      "width": 366,
+      "readyId": "reader-verify-manga-root",
+      "expect": {
+        "nodes": [
+          {
+            "id": "reader-verify-manga-root",
+            "visible": true,
+            "minWidthVp": 300,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-manga-header",
+            "visible": true,
+            "minHeightVp": 1
+          },
+          {
+            "id": "reader-verify-manga-footer",
+            "minHeightVp": 1
+          },
+          {
+            "id": "reader-verify-manga-current-row",
+            "minHeightVp": 44
+          }
+        ],
+        "order": [
+          [
+            "reader-verify-manga-header",
+            "reader-verify-manga-current-row"
+          ]
+        ]
+      },
+      "actions": []
+    },
+    {
+      "id": "directory-control-expanded-negative",
+      "scene": "directory-control-expanded",
+      "width": 320,
+      "readyId": "reader-verify-directory-root",
+      "expect": {
+        "nodes": [
+          {
+            "id": "reader-verify-directory-root",
+            "visible": true,
+            "widthVp": 366,
+            "minHeightVp": 44
+          }
+        ]
+      },
+      "actions": []
+    },
+    {
+      "id": "directory-control-bookmarks",
+      "scene": "directory-control-bookmarks",
+      "width": 366,
+      "readyId": "reader-verify-bookmark-21-141-card",
+      "expect": {
+        "nodes": [
+          {
+            "id": "reader-verify-directory-root",
+            "visible": true,
+            "minWidthVp": 300,
+            "maxWidthVp": 366
+          },
+          {
+            "id": "reader-verify-directory-bookmarks-tab",
+            "visible": true,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-directory-viewport",
+            "visible": true,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-bookmark-21-141-card",
+            "visible": true,
+            "minWidthVp": 250,
+            "maxWidthVp": 366,
+            "minHeightVp": 44
+          },
+          {
+            "id": "reader-verify-bookmark-21-141-title",
+            "visible": true,
+            "textIncludes": "第 22 章"
+          },
+          {
+            "id": "reader-verify-bookmark-21-141-excerpt",
+            "visible": true,
+            "minHeightVp": 1
+          },
+          {
+            "id": "reader-verify-bookmark-0-120-position",
+            "visible": true,
+            "textIncludes": "位置待恢复"
+          },
+          {
+            "id": "reader-verify-bookmark-21-141-time",
+            "visible": true,
+            "textIncludes": "11-03"
+          }
+        ],
+        "order": [
+          [
+            "reader-verify-directory-viewport",
+            "reader-verify-bookmark-21-141-card"
+          ]
+        ]
+      },
+      "actions": [
+        {
+          "op": "click",
+          "id": "reader-verify-bookmark-21-141-card",
+          "observe": {
+            "event": "fixture-action-select-bookmark",
+            "stateIncludes": [
+              "chapter=21 offset=141",
+              "21,141,1793665260000]",
+              "fixture-processing"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "directory-control-bookmarks-negative",
+      "scene": "directory-control-bookmarks",
+      "width": 366,
+      "readyId": "reader-verify-bookmark-21-141-card",
+      "expect": {
+        "nodes": [
+          {
+            "id": "reader-verify-bookmark-21-141-card",
+            "visible": true,
+            "minWidthVp": 250,
+            "maxWidthVp": 366,
+            "minHeightVp": 44
+          }
+        ]
+      },
+      "actions": [
+        {
+          "op": "click",
+          "id": "reader-verify-bookmark-21-141-card",
+          "observe": {
+            "event": "fixture-action-select-bookmark",
+            "stateIncludes": [
+              "chapter=21 offset=999"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "normal-shelf-readiness",
+      "mode": "normal",
+      "scene": "normal-entry",
+      "width": 366,
+      "readyIdPrefix": "reader.bookshelf.cover:",
+      "readyIdIncludes": ":shelf:",
+      "budgetMs": 20000,
+      "expect": {
+        "nodes": [
+          {
+            "idPrefix": "reader.bookshelf.cover:",
+            "idIncludes": ":shelf:",
+            "visible": true,
+            "first": true
+          }
+        ]
+      },
+      "actions": []
+    },
+    {
+      "id": "normal-entry-position",
+      "mode": "normal",
+      "scene": "normal-entry",
+      "width": 366,
+      "readyIdPrefix": "reader.bookshelf.cover:",
+      "readyIdIncludes": ":shelf:",
+      "budgetMs": 30000,
+      "expect": {
+        "nodes": [
+          {
+            "idPrefix": "reader.bookshelf.cover:",
+            "idIncludes": ":shelf:",
+            "visible": true,
+            "first": true
+          }
+        ]
+      },
+      "actions": [
+        {
+          "op": "click",
+          "idPrefix": "reader.bookshelf.cover:",
+          "idIncludes": ":shelf:",
+          "first": true,
+          "waitFor": {
+            "id": "reader-journey-reading-surface",
+            "visible": true
+          }
+        },
+        {
+          "op": "click",
+          "id": "reader-journey-reading-surface",
+          "waitFor": {
+            "id": "reader-journey-chapter-title",
+            "visible": true
+          },
+          "expect": {
+            "nodes": [
+              {
+                "id": "reader-journey-chapter-title",
+                "visible": true,
+                "textNonEmpty": true
+              }
+            ]
+          }
+        },
+        {
+          "op": "capture",
+          "id": "reader-journey-chapter-title",
+          "as": "before"
+        },
+        {
+          "op": "click",
+          "id": "reader-journey-next-chapter",
+          "requireEnabled": true,
+          "waitFor": {
+            "id": "reader-journey-chapter-title",
+            "visible": false
+          }
+        },
+        {
+          "op": "click",
+          "id": "reader-journey-reading-surface",
+          "waitFor": {
+            "id": "reader-journey-chapter-title",
+            "visible": true
+          },
+          "expect": {
+            "nodes": [
+              {
+                "id": "reader-journey-chapter-title",
+                "textNotEqualsCapture": "before"
+              }
+            ]
+          }
+        },
+        {
+          "op": "capture",
+          "id": "reader-journey-chapter-title",
+          "as": "after"
+        },
+        {
+          "op": "click",
+          "id": "reader-journey-exit-reading",
+          "waitFor": {
+            "id": "reader-journey-reading-surface",
+            "absent": true
+          }
+        },
+        {
+          "op": "click",
+          "idPrefix": "reader.bookshelf.cover:",
+          "idIncludes": ":shelf:",
+          "first": true,
+          "waitFor": {
+            "id": "reader-journey-reading-surface",
+            "visible": true
+          }
+        },
+        {
+          "op": "click",
+          "id": "reader-journey-reading-surface",
+          "waitFor": {
+            "id": "reader-journey-chapter-title",
+            "visible": true
+          },
+          "expect": {
+            "nodes": [
+              {
+                "id": "reader-journey-chapter-title",
+                "visible": true,
+                "textEqualsCapture": "after"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,7 @@
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerReadableFontScale } from '../common/ReaderSurfaceResolvers';
+import { readerTtsManagerDesignHeight, readerTtsManagerScrollHeight, readerTtsManagerCompactThreshold } from '../common/ReaderSurfaceBudgets';
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
 import { ReaderBoundedSurface, type ReaderBoundedSurfaceId } from '../common/ReaderBoundedSurface';
@@ -5,18 +9,25 @@ import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader
 import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_VOICE_REGULAR, TYPE_READER_TTS_VOICE_SELECTED } from '../common/ReaderTypography';
 import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
+import type { ReaderTtsEngineOption } from './ReaderTtsConfigOptions';
 import { readerOnlineTtsProfile, type ReaderTtsAudioFormat } from './ReaderOnlineTtsProfile';
 import { KeyboardAvoidMode } from '@kit.ArkUI';
 import type { ReaderTtsConfigChoice } from './ReaderTtsConfigOptions';
 import { TOK_TTS_INK, TOK_TTS_MUTED, TOK_TTS_TEAL, TOK_TTS_TEAL_SOFT,
   TOK_TTS_PAPER, TOK_TTS_LINE } from './ReaderControlTtsStyle';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientToast } from '../common/ReaderTransientToast';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 
 /** Temporary choices/forms live in the viewport, never inside a clipped 48vp row. */
 @Component
 export struct ReaderTtsConfigOverlay {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @State private modalUsableHeight: number = 844;
   private previousKeyboardAvoidMode: KeyboardAvoidMode | undefined = undefined;
@@ -24,6 +35,9 @@ export struct ReaderTtsConfigOverlay {
   @Prop choices: ReaderTtsConfigChoice[] = [];
   @Prop selectedId: string = '';
   @Prop message: string = '';
+  @Prop recoveryView: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @Prop listLoading: boolean = false;
+  @Prop listLoadFailed: boolean = false;
   @Prop manager: boolean = false;
   @Prop windowModal: boolean = false;
   @Prop voicePicker: boolean = false;
@@ -53,8 +67,10 @@ export struct ReaderTtsConfigOverlay {
   @State private draftClearApiKey: boolean = false;
   @State private busy: boolean = false;
   @State private errorText: string = '';
+  @State private choicesContentHeight: number = 0;
   private mounted: boolean = false;
   private generation: number = 0;
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -68,6 +84,7 @@ export struct ReaderTtsConfigOverlay {
     }
   }
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.stopPreview();
     this.mounted = false;
     this.generation += 1;
@@ -78,8 +95,10 @@ export struct ReaderTtsConfigOverlay {
     }
   }
   private onIdentityChanged(): void {
+    this.transientFeedback.reset();
     this.stopPreview();
     this.generation += 1;
+    this.choicesContentHeight = 0;
     this.busy = false;
     // A replaced selection invalidates the previous async operation. Release
     // the parent content-cover gate as well, otherwise its dismiss callback
@@ -96,7 +115,14 @@ export struct ReaderTtsConfigOverlay {
   private managerSurfaceSpec(): PopupSurfaceSpec {
     return resolvePopupSpec('tts-config-manager');
   }
-  private compactManager(): boolean { return this.manager && this.modalUsableHeight <= 166; }
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
+  private managerFooterLineHeight(): number { return TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp ?? 20; }
+  private compactManager(): boolean {
+    return this.manager && this.modalUsableHeight <= readerTtsManagerCompactThreshold(this.fontScale(), this.managerFooterLineHeight());
+  }
   private managerOuterPadding(): number {
     return Math.min(16, Math.max(0, (this.modalUsableHeight - 44) / 2));
   }
@@ -105,9 +131,13 @@ export struct ReaderTtsConfigOverlay {
     // footer must remain visible while the keyboard or a long form body is
     // present; putting it inside the Scroll makes the production sheet drift
     // away from the reference and hides Save on small windows.
-    const content = this.manager ? 58 + 440 + 76 :
-      (this.voicePicker ? 0 : 40) + this.choices.length * (this.voicePicker ? 54 : 44) +
-      (this.message.length > 0 ? 80 : 0) + (this.showManage ? 44 : 0) + (this.errorText.length > 0 ? 48 : 0);
+    // The fixed row budget is only the first-layout fallback. Native flow
+    // measures the complete choice body after wrapping and on size changes.
+    const fallbackBody = this.choices.length * (this.voicePicker ? 54 : 44) +
+      (this.message.length > 0 ? 80 : 0) + (this.showManage ? 44 : 0) + (this.recoveryView.visible ? 100 : 0) +
+      (this.listLoading || this.listLoadFailed ? 120 : 0);
+    const content = this.manager ? readerTtsManagerDesignHeight(this.fontScale(), this.managerFooterLineHeight()) :
+      (this.voicePicker ? 0 : 40) + (this.choicesContentHeight > 0 ? this.choicesContentHeight : fallbackBody);
     if (this.manager) return Math.max(0, Math.min(content,
       this.modalUsableHeight - 2 * this.managerOuterPadding()));
     return Math.max(44, Math.min(content, this.availableHeight - 16));
@@ -118,6 +148,17 @@ export struct ReaderTtsConfigOverlay {
     const below = this.anchorY + 2;
     const desired = below + h <= this.availableHeight - 8 ? below : this.anchorY - 54 - h;
     return Math.max(8, Math.min(desired, this.availableHeight - h - 8));
+  }
+
+  private choiceContentHeightHandler(): (_oldValue: Area, newValue: Area) => void {
+    const identity = this.selectionId;
+    return (_oldValue: Area, newValue: Area): void => {
+      if (!this.mounted || this.manager || identity !== this.selectionId) return;
+      const height = Number(newValue.height);
+      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.choicesContentHeight) > .1) {
+        this.choicesContentHeight = height;
+      }
+    };
   }
 
   private boundedSpecId(): ReaderBoundedSurfaceId { return this.manager ? 'tts-config-manager' : 'tts-config-picker'; }
@@ -143,6 +184,9 @@ export struct ReaderTtsConfigOverlay {
         .position(this.manager ? undefined : {
           x: this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13),
           y: this.panelY() }).hitTestBehavior(HitTestMode.Transparent);
+      if (this.windowModal) {
+        ReaderTransientToast({ priority: 2 });
+      }
     }.width(this.windowModal ? '100%' : this.availableWidth)
       .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
       .onSizeChange((_oldSize: SizeOptions, size: SizeOptions): void => {
@@ -182,10 +226,19 @@ export struct ReaderTtsConfigOverlay {
             if (this.manager) {
               this.managerForm();
             } else {
+              this.configurationRecovery();
+              this.configurationListState();
               if (this.message.length > 0) {
-                Text(this.message).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)
-                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)
-                  .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);
+                if (this.choices.length === 0) {
+                  ReaderPageState({ message: this.message,
+                    inkColor: readerAppColor('TOK_TTS_INK', this.appThemeScheme),
+                    mutedColor: readerAppColor('TOK_TTS_MUTED', this.appThemeScheme) });
+                } else {
+                  // Context for available options is ordinary form content.
+                  Text(this.message).width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+                    .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+                    .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);
+                }
               }
               ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {
                 this.choiceRow(choice);
@@ -195,18 +248,17 @@ export struct ReaderTtsConfigOverlay {
                   .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)
                   .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))
                   .border({ width: { top: .5 }, color: readerAppColor('app.border.readerConfigSoft', this.appThemeScheme) }).enabled(!this.busy)
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility('管理语音引擎', !this.busy, false))
                   .onClick((): void => this.onManage());
-              }
-              if (this.errorText.length > 0) {
-                Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)
-                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight).padding(12)
-                  .fontColor(readerAppColor('TOK_TTS_CLAY', this.appThemeScheme)).accessibilityText(`TTS 配置失败：${this.errorText}`);
               }
             }
           }.width('100%').alignItems(HorizontalAlign.Start)
             .constraintSize({ minHeight: this.manager ? 244 : 0 })
+            .onAreaChange(this.choiceContentHeightHandler())
             .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');
-        }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 + 76 : 40)))
+        }.width('100%').height(this.voicePicker ? this.panelHeight() : this.manager ?
+          readerTtsManagerScrollHeight(this.panelHeight(), this.fontScale(), this.managerFooterLineHeight()) : Math.max(0, this.panelHeight() - 40))
           .align(Alignment.TopStart).scrollBar(BarState.Off);
       }
   }
@@ -216,9 +268,9 @@ export struct ReaderTtsConfigOverlay {
     Row({ space: 10 }) {
       if (this.voicePicker) {
         Text(choice.label.includes('女') ? '女' : choice.label.includes('男') ? '男' : '声')
-          .width(34).height(34).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)
+          .width(34).height(44).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontSizeFp)
-          .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('app.control.paint.212F6373', this.appThemeScheme)).borderRadius(999);
+          .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('app.control.paint.212F6373', this.appThemeScheme)).borderRadius(999).flexShrink(0);
       }
       Column({ space: 0 }) {
         Text(this.voicePicker ? choice.label.split(' · ')[0] : choice.label).width('100%')
@@ -226,25 +278,30 @@ export struct ReaderTtsConfigOverlay {
           .fontWeight(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontWeight : TYPE_READER_TTS_VOICE_REGULAR.fontWeight) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontWeight : TYPE_READER_TTS_CHOICE_REGULAR.fontWeight),
             { enableVariableFontWeight: true })
           .fontColor(choice.id === this.selectedId ? readerAppColor('TOK_TTS_TEAL', this.appThemeScheme) : readerAppColor('TOK_TTS_INK', this.appThemeScheme))
-          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+          .wordBreak(WordBreak.BREAK_WORD);
         if (this.voicePicker && choice.label.includes(' · ')) {
           Text(choice.label.split(' · ').slice(1).join(' · ')).width('100%')
             .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontWeight)
-            .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).maxLines(1);
+            .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).wordBreak(WordBreak.BREAK_WORD);
         }
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .constraintSize({ minHeight: 44 })
+      .attributeModifier(new ReaderActionAccessibility(choice.label, !this.busy, choice.id === this.selectedId))
         .onClick((): void => this.choose(choice.id));
       if (this.voicePicker) {
         Button(this.previewId === choice.id ? '停止' : '试听')
-          .width(44).height(36).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontSizeFp).borderRadius(18)
+          .constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 8, right: 8, top: 6, bottom: 6 })
+          .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontSizeFp).borderRadius(18).flexShrink(0)
           .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))
           .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appThemeScheme))
           .accessibilityText(`${choice.label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
           .onClick((): void => this.preview(choice.id));
       }
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check'))).width(11).height(9)
-        .opacity(choice.id === this.selectedId ? 1 : 0);
-    }.width('100%').height(this.voicePicker ? 54 : 44).padding({ left: 12, right: 12 })
+        .opacity(choice.id === this.selectedId ? 1 : 0).flexShrink(0);
+    }.width('100%').constraintSize({ minHeight: this.voicePicker ? 54 : 44 }).flexShrink(0)
+      .padding({ left: 12, right: 12, top: 10, bottom: 10 })
       .border({ width: { bottom: .5 }, color: readerAppColor('app.border.readerConfigSoft', this.appThemeScheme) })
       .backgroundColor(choice.id === this.selectedId ? readerAppColor('app.reader.choiceHover', this.appThemeScheme) : Color.Transparent)
       .enabled(!this.busy).accessibilityText(`${choice.label}${choice.id === this.selectedId ? '，已选择' : ''}`)
@@ -261,10 +318,13 @@ export struct ReaderTtsConfigOverlay {
     if (this.previewId === id) { this.stopPreview(); return; }
     this.stopPreview();
     const generation = ++this.previewGeneration;
+    const identity = this.selectionId;
     this.previewId = id;
     this.errorText = '';
-    void this.onPreview(id, this.selectionId).catch((error: Error): void => {
-      if (this.mounted && generation === this.previewGeneration) this.errorText = error.message;
+    void this.onPreview(id, identity).catch((_error: Error): void => {
+      this.transientFeedback.show(() => this.getUIContext(), { message: '音色试听失败，请重试',
+        key: `${identity}:${id}:preview-failed` }, (): boolean => this.mounted && identity === this.selectionId &&
+        generation === this.previewGeneration);
     }).finally((): void => {
       if (this.mounted && generation === this.previewGeneration) this.previewId = '';
     });
@@ -279,8 +339,9 @@ export struct ReaderTtsConfigOverlay {
     this.errorText = '';
     void this.onChoose(id, identity).then((): void => {
       if (this.mounted && generation === this.generation) this.onClose(identity);
-    }).catch((error: Error): void => {
-      if (this.mounted && generation === this.generation) this.errorText = error.message;
+    }).catch((_error: Error): void => {
+      // The original configuration host classifies its receipt and owns the
+      // persistent recovery or short failure feedback. Keep this selection.
     }).finally((): void => {
       if (this.mounted && generation === this.generation) this.busy = false;
     });
@@ -288,6 +349,8 @@ export struct ReaderTtsConfigOverlay {
   @Builder
   private managerForm() {
     Column({ space: 14 }) {
+      this.configurationRecovery();
+      this.configurationListState();
       Column({ space: 6 }) {
         Text('服务名称').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
@@ -312,7 +375,10 @@ export struct ReaderTtsConfigOverlay {
           .width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontWeight)
           .fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontSizeFp).fontColor(this.draftClearApiKey ? readerAppColor('TOK_TTS_CLAY', this.appThemeScheme) : readerAppColor('TOK_TTS_MUTED', this.appThemeScheme))
           .accessibilityText(this.draftClearApiKey ? '已选择清除已保存密钥' : '清除已保存密钥')
-          .enabled(!this.busy).onClick((): void => {
+          .enabled(!this.busy)
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .constraintSize({ minHeight: 44 })
+      .attributeModifier(new ReaderActionAccessibility(this.draftClearApiKey ? '已选择清除已保存密钥' : '清除已保存密钥', !this.busy, this.draftClearApiKey)).onClick((): void => {
             this.draftClearApiKey = !this.draftClearApiKey;
             if (this.draftClearApiKey) this.draftApiKey = '';
           });
@@ -333,14 +399,35 @@ export struct ReaderTtsConfigOverlay {
           this.formatChoice('PCM', 'pcm');
         }.width('100%').height(36);
       }.width('100%');
+      // Field validation only, registered as a dedicated in-form exception.
+      // Save/delete/selection receipts are projected by the parent host's
+      // recovery notice or short feedback, never duplicated here.
       if (this.errorText.length > 0) {
         Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontSizeFp)
-          .fontColor(readerAppColor('TOK_TTS_CLAY', this.appThemeScheme)).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);
+          .fontColor(readerAppColor('TOK_TTS_CLAY', this.appThemeScheme))
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number).wordBreak(WordBreak.BREAK_WORD)
+          .accessibilityText(`朗读配置校验：${this.errorText}`);
       }
     }.width('100%').padding({ top: 8, bottom: 16, left: 18, right: 18 })
       .alignItems(HorizontalAlign.Start).constraintSize({ minHeight: 244 }).id('reader-tts-manager-form');
+  }
+
+  @Builder
+  private configurationRecovery() {
+    // A native content cover obscures the page-level notice. Render the same
+    // original receipt inside its scrolling form, without taking action ownership.
+    ReaderRecoveryNotice({ view: this.recoveryView, tag: '朗读配置', actionLabel: '' });
+  }
+
+  @Builder
+  private configurationListState() {
+    if (this.listLoading || this.listLoadFailed) {
+      ReaderPageState({ padded: false, loading: this.listLoading,
+        message: this.listLoading ? '正在读取在线朗读配置' : '在线朗读配置读取失败，请关闭后重新打开',
+        inkColor: readerAppColor('TOK_TTS_INK', this.appThemeScheme),
+        mutedColor: readerAppColor('TOK_TTS_MUTED', this.appThemeScheme) });
+    }
   }
 
   @Builder
@@ -370,9 +457,9 @@ export struct ReaderTtsConfigOverlay {
         const profile = readerOnlineTtsProfile(engine.readerProfile);
         this.draftVoice = profile.voice;
         this.draftFormat = profile.format;
-      } catch (error) {
+      } catch (_) {
         // Do not render the raw profile (it may contain a credential alias).
-        this.errorText = error instanceof Error ? error.message : '在线 TTS 配置格式无效';
+        this.errorText = '在线 TTS 配置格式无效，请检查后重新保存';
       }
     }
   }
@@ -401,8 +488,8 @@ export struct ReaderTtsConfigOverlay {
     this.errorText = '';
     void this.onPut(config)
       .then((): void => { if (this.current(generation)) { this.resetDraft(); this.onClose(this.selectionId); } })
-      .catch((error: Error): void => {
-        if (this.current(generation)) this.errorText = error.message;
+      .catch((_error: Error): void => {
+        // Preserve the draft. Receipt-specific feedback belongs to its host.
       })
       .finally((): void => {
         if (this.current(generation)) this.setBusy(false);
@@ -415,8 +502,8 @@ export struct ReaderTtsConfigOverlay {
     this.setBusy(true);
     this.errorText = '';
     void this.onChoose(engine, this.selectionId)
-      .catch((error: Error): void => {
-        if (this.current(generation)) this.errorText = error.message;
+      .catch((_error: Error): void => {
+        // Selection receipt and recovery remain owned by the parent host.
       })
       .finally((): void => {
         if (this.current(generation)) this.setBusy(false);
@@ -430,8 +517,8 @@ export struct ReaderTtsConfigOverlay {
     this.errorText = '';
     void this.onDelete(id)
       .then((): void => { if (this.current(generation) && this.draftId === id) this.resetDraft(); })
-      .catch((error: Error): void => {
-        if (this.current(generation)) this.errorText = error.message;
+      .catch((_error: Error): void => {
+        // A rejected promise is not proof that the deletion did not commit.
       })
       .finally((): void => {
         if (this.current(generation)) this.setBusy(false);
@@ -456,12 +543,14 @@ export struct ReaderTtsConfigOverlay {
 
   @Builder
   private formatChoice(label: string, format: ReaderTtsAudioFormat) {
-    Text(label).layoutWeight(1).height(34).textAlign(TextAlign.Center)
+    Text(label).layoutWeight(1).height(44).textAlign(TextAlign.Center)
       .fontFamily(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontSizeFp)
       .fontColor(this.draftFormat === format ? readerAppColor('app.control.onPrimary', this.appThemeScheme) : readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
       .backgroundColor(this.draftFormat === format ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.control.paint.1A2F6373', this.appThemeScheme))
       .border({ width: .5, color: readerAppColor('app.border.readerConfig', this.appThemeScheme) }).borderRadius(9)
       .enabled(!this.busy).accessibilityText(`${label}${this.draftFormat === format ? '，已选择' : ''}`)
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(`${label}${this.draftFormat === format ? '，已选择' : ''}`, !this.busy, this.draftFormat === format))
       .onClick((): void => { this.draftFormat = format; });
   }
 }

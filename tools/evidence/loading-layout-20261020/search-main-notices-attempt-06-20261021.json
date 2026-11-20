@@ -1,0 +1,8 @@
+{
+  "command": "node tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs",
+  "exitCode": 1,
+  "stdout": "PASS fixed header progress uses real native measurement inputs/cache; counts and notices cannot change its height\nPASS permanent native prefix is first and zero-padding when empty; notices naturally wrap in main list and terminal main Scroll\nPASS native indices map books by plus one; prefix-only clears warmup and stores offset without stale neighbor fallback\nPASS touch and inertia retain latest notice snapshot; idle admission causes one actual displacement check and no scroll for unchanged geometry\n",
+  "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n4 !== 7\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:415:10\n    at scenario (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:161:32)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:383:1 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 4,\n  expected: 7,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n",
+  "productionSha256": "dbbc7221cec6a08799525cb34434a3f3c245a5b54d27577539722e1142212e39",
+  "probeSha256": "3e17b8afc9295f86705e9e48ed310196f76987c6311a9a6a82d74825f41ece3b"
+}

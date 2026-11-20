@@ -1,0 +1,582 @@
+{
+  "schemaVersion": "1.0",
+  "revision": 3,
+  "routes": [
+    {
+      "routeId": "nav.bookshelf",
+      "route": "bookshelf",
+      "owner": "Index",
+      "parentRoutes": [],
+      "entrySources": [
+        "startup",
+        "settings"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "platform"
+      ],
+      "retention": {
+        "view": true,
+        "query": true,
+        "scroll": true,
+        "selection": false,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "returnToBookshelf"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.settings",
+      "route": "settings",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf"
+      ],
+      "entrySources": [
+        "bookshelf",
+        "bookshelfSettings",
+        "source",
+        "downloads"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": false,
+        "scroll": true,
+        "selection": false,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "openSettings"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.bookshelfSettings",
+      "route": "bookshelfSettings",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf",
+        "settings"
+      ],
+      "entrySources": [
+        "bookshelf",
+        "settings"
+      ],
+      "backPolicy": [
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": false,
+        "scroll": null,
+        "selection": false,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "reconcile",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "openBookshelfSettings"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.bookshelfMultiSelect",
+      "route": "bookshelfMultiSelect",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf"
+      ],
+      "entrySources": [
+        "bookshelf"
+      ],
+      "backPolicy": [
+        "blocked-when-busy",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": false,
+        "query": false,
+        "scroll": null,
+        "selection": false,
+        "draft": "discard",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "fresh",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "openBookshelfMultiSelect"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.search",
+      "route": "search",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf"
+      ],
+      "entrySources": [
+        "bookshelf",
+        "detail",
+        "source"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": true,
+        "scroll": true,
+        "selection": false,
+        "draft": "keep",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "openSearch"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.source",
+      "route": "source",
+      "owner": "Index",
+      "parentRoutes": [
+        "settings",
+        "search"
+      ],
+      "entrySources": [
+        "settings",
+        "search",
+        "sourceTools"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "platform-host",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": true,
+        "scroll": true,
+        "selection": false,
+        "draft": "discard",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [
+        "platform.loginWeb"
+      ],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "returnFromSourceManagement"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "sourceManagementSurface"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "restoreInitialFilters"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPresentation.ts",
+          "symbol": "copySourceManagementFilters"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+          "symbol": "queueScrollRestore"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceManagementPresentation.ts",
+          "symbol": "copySourceManagementScroll"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "openSourceManagement"
+        }
+      ],
+      "evidenceBoundary": "Same-Runtime source/SDK method evidence: four filters and id/offset scroll restoration, fresh defaults, missing anchors, font/width changes, touch cancellation and inter-frame projection changes. Native/system Back and device scroll acceptance remain NOT_RUN.",
+      "knownGap": "No local editor draft. Source-to-Tools-to-Back retains four filter values plus the latest proven source/offset anchor; a fresh entry resets both. loginWeb Back remains unknown in its platform host; no native journey acceptance is inferred."
+    },
+    {
+      "routeId": "nav.sourceTools",
+      "route": "sourceTools",
+      "owner": "Index",
+      "parentRoutes": [
+        "source"
+      ],
+      "entrySources": [
+        "source"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": false,
+        "scroll": false,
+        "selection": true,
+        "draft": "keep",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "reconcile",
+      "platformHostRefs": [
+        "platform.sourceToolsExportConfirm",
+        "platform.sourceToolsDeleteConfirm",
+        "platform.sourceToolsExportFile"
+      ],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "returnToSourceManagement"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "symbol": "open"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "symbol": "reloadManagement"
+        }
+      ],
+      "evidenceBoundary": "SourceToolsOrchestrator same-Runtime session/snapshot retention and method-level tools-retention evidence. No catalog query; component scroll is not retained. Native alert/picker Back, focus, persistence and full business journeys remain NOT_RUN.",
+      "knownGap": "Reopening an initialized same-Runtime Tools owner preserves editor draft/selection/check settings/results and only reloads source facts; retired Runtime creates a new owner. This records existing behavior, not a new cross-Runtime draft/storage policy. Native/system Back remains unknown."
+    },
+    {
+      "routeId": "nav.downloads",
+      "route": "downloads",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf",
+        "settings",
+        "reading",
+        "detail",
+        "directory"
+      ],
+      "entrySources": [
+        "bookshelf",
+        "settings",
+        "reading",
+        "directory",
+        "detail"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": true,
+        "scroll": true,
+        "selection": null,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "returnFromDownloads"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.detail",
+      "route": "detail",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf",
+        "search",
+        "reading"
+      ],
+      "entrySources": [
+        "bookshelf",
+        "search",
+        "reading",
+        "downloads"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": false,
+        "scroll": null,
+        "selection": false,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "returnFromDetail"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.directory",
+      "route": "directory",
+      "owner": "Index",
+      "parentRoutes": [
+        "detail",
+        "reading"
+      ],
+      "entrySources": [
+        "detail",
+        "reading",
+        "downloads"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": null,
+        "scroll": null,
+        "selection": false,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "closeDirectory"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.reading",
+      "route": "reading",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf",
+        "detail",
+        "directory",
+        "search",
+        "downloads"
+      ],
+      "entrySources": [
+        "bookshelf",
+        "detail",
+        "directory",
+        "downloads"
+      ],
+      "backPolicy": [
+        "overlay-first",
+        "platform-host",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": true,
+        "query": false,
+        "scroll": true,
+        "selection": false,
+        "draft": "keep",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "resume",
+      "platformHostRefs": [],
+      "visibility": "visible",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "onReaderExited"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.bookshelfManagement",
+      "route": "bookshelfManagement",
+      "owner": "Index",
+      "parentRoutes": [
+        "bookshelf"
+      ],
+      "entrySources": [],
+      "backPolicy": [
+        "captured-parent"
+      ],
+      "retention": {
+        "view": null,
+        "query": null,
+        "scroll": null,
+        "selection": null,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "reload",
+      "platformHostRefs": [],
+      "visibility": "retained",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "openBookshelfManagement"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    },
+    {
+      "routeId": "nav.rulesManagement",
+      "route": "rulesManagement",
+      "owner": "Index",
+      "parentRoutes": [
+        "settings",
+        "reading"
+      ],
+      "entrySources": [],
+      "backPolicy": [
+        "overlay-first",
+        "captured-parent"
+      ],
+      "retention": {
+        "view": null,
+        "query": null,
+        "scroll": null,
+        "selection": null,
+        "draft": "unknown",
+        "basis": "observed"
+      },
+      "systemBackOwner": "Index",
+      "restorePolicy": "reconcile",
+      "platformHostRefs": [],
+      "visibility": "retained",
+      "status": "resolved",
+      "unresolvedRefs": [],
+      "sources": [
+        {
+          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "symbol": "openRulesManagement"
+        }
+      ],
+      "evidenceBoundary": "Static source and navigation matrix only; resolved does not claim device Back, retention or acceptance PASS."
+    }
+  ]
+}

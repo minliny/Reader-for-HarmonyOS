@@ -79,6 +79,8 @@ try {
   rmSync(join(root, 'tools/test-new.mjs'));
   const fixtureRunner = join(root, 'tools/run-contract-tests.mjs');
   copyFileSync(new URL('./run-contract-tests.mjs', import.meta.url), fixtureRunner);
+  mkdirSync(join(root, 'tools/lib'), { recursive: true });
+  copyFileSync(new URL('./lib/contract-registry.mjs', import.meta.url), join(root, 'tools/lib/contract-registry.mjs'));
   copyFileSync(new URL('./retired-contract-tests.json', import.meta.url), join(root, 'tools/retired-contract-tests.json'));
   const resultsFile = join(root, 'cli-results.json');
   const cli = spawnSync(process.execPath, [fixtureRunner, '--scope', 'manga-image-cache', '--rationale', 'The selected fixture verifies scoped omission and deadline receipts.', '--results-file', resultsFile,

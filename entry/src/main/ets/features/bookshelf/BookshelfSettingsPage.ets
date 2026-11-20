@@ -1,4 +1,6 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderActionAccessibility } from '../common/ReaderActionAccessibility';
+import { TOK_RADIUS_LG, TOK_RADIUS_XL, TOK_RADIUS_PILL } from '../common/ReaderTokens';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderStandardPage } from '../common/ReaderStandardPage';
@@ -12,10 +14,10 @@ import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_LABEL, TYPE_APP_INHERITED_O
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { ReaderToggle } from '../common/ReaderToggle';
 import {
   TOK_INK,
   TOK_MUTED,
-  TOK_GREEN,
   TOK_CARD_BG,
   TOK_PAPER,
   TOK_BORDER,
@@ -90,7 +92,7 @@ export struct BookshelfSettingsPage {
     return this.viewModeSnapshot.receipt?.receipt.confirmation === 'unknown' || this.viewModeSnapshot.receipt?.facts.blocked === true;
   }
   @Builder
-  private pendingOverlay() {
+  private pendingOverlay(contentStartInset: number) {
     Column({ space: 8 }) {
       this.settingsRecovery();
       if (this.modePending()) {
@@ -98,7 +100,7 @@ export struct BookshelfSettingsPage {
           busy: this.modeLoadBusy || this.modeReconcileBusy || this.viewModeSnapshot.receipt?.facts.fact === 'refreshing' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',
           onReconcile: (generation: number): void => this.retryMode(generation) });
       }
-    }.width('100%').padding({ left: 17, right: 17, top: 64 })
+    }.width('100%').padding({ left: 17, right: 17, top: contentStartInset })
       .hitTestBehavior(HitTestMode.Transparent);
   }
   @Builder
@@ -124,7 +126,7 @@ export struct BookshelfSettingsPage {
     if (!view.visible || !view.canRetry) { this.lastSettingsFeedback = ''; return; }
     if (view.message === this.lastSettingsFeedback) return;
     this.lastSettingsFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted); } catch (_) {}
   }
   private lastModeFeedback: string = '';
   @State private modeLoadBusy: boolean = false;
@@ -135,7 +137,7 @@ export struct BookshelfSettingsPage {
     if (!view.visible || this.modePending()) { this.lastModeFeedback = ''; return; }
     if (this.viewModeSnapshot.canonical === undefined || view.message === this.lastModeFeedback) return;
     this.lastModeFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted); } catch (_) {}
   }
 
   build() {
@@ -143,7 +145,7 @@ export struct BookshelfSettingsPage {
       variant: 'settings',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
-      overlayContent: (): void => { this.pendingOverlay(); },
+      overlayContent: (contentStartInset: number): void => { this.pendingOverlay(contentStartInset); },
     });
   }
 
@@ -167,8 +169,13 @@ export struct BookshelfSettingsPage {
       } else {
       Row() {
         Text('自动检查更新').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        Toggle({ type: ToggleType.Switch, isOn: this.autoCheckUpdate })
-          .selectedColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).onChange((enabled: boolean): void => this.onAutoCheckUpdate(enabled));
+        ReaderToggle({
+          value: this.autoCheckUpdate,
+          specId: 'bookshelf-update-toggle',
+          accessibilityLabel: '自动检查更新',
+          inputIdentity: `${this.presentationRevision}:bookshelf-auto-check-update`,
+          onToggle: (enabled: boolean): void => this.onAutoCheckUpdate(enabled),
+        });
       }.width('100%');
       Text('自动检查书架中书籍的最新章节').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
       }
@@ -191,16 +198,23 @@ export struct BookshelfSettingsPage {
       }
 
     }.padding(TOK_SPACE_MD).width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(12);
+      .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(TOK_RADIUS_LG);
   }
 
 
   @Builder
   private modeOption(value: 'cover' | 'list', label: string) {
-    Text(label).fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp).fontColor(this.mode === value ? readerAppColor('app.selection.onMode', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme))
-      .padding({ left: 14, right: 14, top: 10, bottom: 10 }).borderRadius(20)
-      .backgroundColor(this.mode === value ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .onClick((): void => this.selectMode(value));
+    Row() {
+      Text(label).fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp)
+        .fontColor(this.mode === value ? readerAppColor('app.selection.onMode', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme));
+    }
+    .height(44)
+    .padding({ left: 14, right: 14 })
+    .borderRadius(22)
+    .backgroundColor(this.mode === value ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
+    .alignItems(VerticalAlign.Center)
+    .attributeModifier(new ReaderActionAccessibility(label, this.viewModeHost.canSave(this.viewModeSnapshot), this.mode === value))
+    .onClick((): void => this.selectMode(value));
   }
 
   private viewModeRecovery(): ReaderRecoveryView {

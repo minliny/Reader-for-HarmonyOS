@@ -34,4 +34,24 @@ retry.onClick();assert.equal(requests.length,3,'retained old callback cannot dup
 mainDone(17);recoveryDone(0);properties.flush();
 const exit=nodes().find(node=>node.accessibilityText==='退出应用');exit.onClick();await new Promise(resolve=>setImmediate(resolve));assert.equal(exits,1);
 page.owner.aboutToDisappear();owner.close();retry.onClick();assert.equal(requests.length,4,'retired recovery control cannot restart a WindowStage');
-console.log('PASS independent startup recovery surface: actual SDK page and shared actions, native32 wait/no actions and native-receipt recovery actions, one retry and retired callback; native branch removal remains outside CPU proof');
+// A failed recovery load is a terminal fact, not an endless spinner. It carries
+// canRetry=false, so busy must come from the phase, not from !canRetry.
+let failedMainDone,failedRecoveryDone;
+const failedOwner=new ReaderStartupContentOwner(Promise.resolve(),{
+  loadMain(done){failedMainDone=done;},loadRecovery(done){failedRecoveryDone=done;},ready(){},unavailable(){},async exit(){},
+});
+failedOwner.start();await new Promise(resolve=>setImmediate(resolve));failedMainDone(17);
+failedRecoveryDone(17);
+// The probe keeps removed branches, so mount a fresh page once the terminal
+// platform-unavailable fact already exists instead of asserting across a
+// simulated branch removal.
+const failedPage={owner:sdk.consumer(source('pages/ReaderStartupRecovery.ets'),undefined,{
+  ReaderStartupContentOwner,ReaderWindowCoordinator:{metrics:()=>({windowRect:{height:844},systemInsets:{top:48,bottom:34}})},
+})};
+failedPage.owner.aboutToAppear();failedPage.owner.initialRender();properties.flush();
+const failedNodes=sdk.nodes(failedPage.owner);
+assert.equal(failedPage.owner.state.phase,'platform-unavailable');
+assert.equal(failedNodes.filter(node=>node.type==='LoadingProgress').length,0,'terminal recovery failure must not keep a spinner');
+assert.equal(failedNodes.filter(node=>node.onClick).length,0,'terminal recovery failure exposes no retry or exit');
+failedPage.owner.aboutToDisappear();failedOwner.close();
+console.log('PASS independent startup recovery surface: actual SDK page and shared actions, native32 wait/no actions, native-receipt recovery actions and terminal-failure no spinner, one retry and retired callback; native branch removal remains outside CPU proof');

@@ -1,6 +1,7 @@
 import { display, window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { BusinessError } from '@kit.BasicServicesKit';
+import type { Configuration } from '@kit.AbilityKit';
 import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBrightnessWriter';
 import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';
 import { findReaderTheme } from '../features/common/ReaderThemeRegistry';
@@ -113,6 +114,7 @@ export class ReaderWindowCoordinator {
         Promise.resolve(win);
     });
   private static metricsSnapshot: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics();
+  private static configurationFontScale: number | undefined = undefined;
   private static statusBarMeasurement: ReaderStatusBarMeasurement = new ReaderStatusBarMeasurement();
   private static statusBarHiddenApplied: boolean = false;
   // A visibility Promise acknowledges the request, not the visible avoid area.
@@ -143,11 +145,12 @@ export class ReaderWindowCoordinator {
    */
   private static installEpoch: number = 0;
 
-  static async install(win: window.Window): Promise<boolean> {
+  static async install(win: window.Window, configuration?: Configuration): Promise<boolean> {
     ReaderWindowCoordinator.detach();
     ReaderWindowCoordinator.installEpoch += 1;
     const epoch = ReaderWindowCoordinator.installEpoch;
     ReaderWindowCoordinator.mainWindow = win;
+    ReaderWindowCoordinator.configurationFontScale = ReaderWindowCoordinator.validConfigurationFontScale(configuration?.fontSizeScale);
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
     ReaderWindowCoordinator.appOrientation = win.getPreferredOrientation();
     ReaderWindowCoordinator.appKeepScreenOn = win.getWindowProperties().isKeepScreenOn;
@@ -207,6 +210,7 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.displayChangeListener = undefined;
     ReaderWindowCoordinator.installEpoch += 1;
     ReaderWindowCoordinator.mainWindow = undefined;
+    ReaderWindowCoordinator.configurationFontScale = undefined;
     ReaderWindowCoordinator.windowPolicyRevision += 1;
     ReaderWindowCoordinator.windowSizeListener = undefined;
     ReaderWindowCoordinator.avoidAreaListener = undefined;
@@ -310,9 +314,19 @@ export class ReaderWindowCoordinator {
     void ReaderWindowCoordinator.flushChrome();
   }
 
-  /** Refresh density/font-scale facts after an Ability configuration change. */
-  static refreshConfiguration(): void {
+  /** Configuration owns app font scale; Display continues to own px/vp density.
+   * A supplied configuration must identify this exact installed window. */
+  static refreshConfiguration(configuration?: Configuration, expectedWindow?: window.Window): void {
+    const win = ReaderWindowCoordinator.mainWindow;
+    if (win === undefined || (expectedWindow !== undefined && expectedWindow !== win) ||
+      (configuration !== undefined && expectedWindow !== win)) return;
+    const scale = ReaderWindowCoordinator.validConfigurationFontScale(configuration?.fontSizeScale);
+    if (scale !== undefined) ReaderWindowCoordinator.configurationFontScale = scale;
     ReaderWindowCoordinator.refreshMetrics();
+  }
+
+  private static validConfigurationFontScale(value: number | undefined): number | undefined {
+    return value !== undefined && Number.isFinite(value) && value > 0 ? value : undefined;
   }
 
   private static registerWindowListeners(win: window.Window): void {
@@ -442,7 +456,9 @@ export class ReaderWindowCoordinator {
     const navigationInsets =
       ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR, density);
     const keyboardInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_KEYBOARD, density);
-    const systemFontScale = scaledDensity / density;
+    // Display.scaledDensity may remain unchanged on an app font configuration
+    // update. Never let a later geometry callback erase the current app fact.
+    const systemFontScale = ReaderWindowCoordinator.configurationFontScale ?? scaledDensity / density;
     const previous = ReaderWindowCoordinator.metricsSnapshot;
     // The status-bar measurement belongs to the physical display/orientation,
     // not to the app window rectangle.  Full-screen/immersive transitions

@@ -1,11 +1,8 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
+import { virtualFilePath } from './tool-environment.mjs';
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-const sdkRoot = resolveEtsLoaderRoot();
-const ts = require(`${sdkRoot}/node_modules/typescript`);
-const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
+const { ts, options } = installedEtsCompiler();
 export const typographyProperties = ['fontFamily', 'fontWeight', 'fontSize', 'lineHeight', 'letterSpacing'];
 
 /** Parse actual ETS modifier chains, including Marquee/native-input carriers.
@@ -63,7 +60,8 @@ const getterPolicies = {
     'titleMinFontScale', 'titleMaxFontScale',
   ] },
   'ReaderChoiceRow.ets': { owner: 'ReaderChoiceRow', getter: 'spec', resolver: 'resolveReaderChoiceSpec', module: 'ReaderChoiceSpecs', argument: 'this.specId', fields: ['selectedWeight','text','selectedText'], textGetter: 'textStyle' },
-  'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_MANGA_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'] },
+  'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_MANGA_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'],
+    additionalRoleGetters: [{getter:'bookTextStyle',variant:'bookPanel',matchedRole:'TYPE_SEARCH_BOOK_PANEL_INPUT',defaultRole:'TYPE_SEARCH_BOOK_INPUT'}] },
 };
 const roleFields = ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'];
 export function typographyExpressionContext(source, file) {
@@ -82,6 +80,22 @@ export function typographyExpressionContext(source, file) {
   for(const n of tree.statements)if(ts.isImportDeclaration(n)&&ts.isNamedImports(n.importClause?.namedBindings))
     for(const e of n.importClause.namedBindings.elements)imports.set(e.name.text,{ exported:(e.propertyName??e.name).text,module:n.moduleSpecifier.text });
   const bind=(name,fields)=>bindings.set(policy.owner+'#'+name,new Set(fields));
+  // Existing public book input roles have a second finite selector. Compare
+  // its actual variant/role facts, allowing equivalent parentheses/operand
+  // order; a helper name, private return bag or wrong import is insufficient.
+  const unparenthesized=node=>{while(node&&ts.isParenthesizedExpression(node))node=node.expression;return node;};
+  for(const rolePolicy of policy.additionalRoleGetters??[]){
+    const statements=methods.get(rolePolicy.getter)?.body?.statements;
+    const returned=statements?.length===1&&ts.isReturnStatement(statements[0])?unparenthesized(statements[0].expression):undefined;
+    if(!returned||!ts.isConditionalExpression(returned))continue;
+    const condition=unparenthesized(returned.condition);
+    const variant=node=>{node=unparenthesized(node);return ts.isPropertyAccessExpression(node)&&node.expression.kind===ts.SyntaxKind.ThisKeyword&&node.name.text==='variant';};
+    const expected=node=>{node=unparenthesized(node);return ts.isStringLiteral(node)&&node.text===rolePolicy.variant;};
+    const role=(node,name)=>{node=unparenthesized(node);if(!ts.isIdentifier(node))return false;const imported=imports.get(node.text);return imported?.exported===name&&imported.module==='./ReaderTypography';};
+    if(condition&&ts.isBinaryExpression(condition)&&condition.operatorToken.kind===ts.SyntaxKind.EqualsEqualsEqualsToken&&
+      (variant(condition.left)&&expected(condition.right)||expected(condition.left)&&variant(condition.right))&&
+      role(returned.whenTrue,rolePolicy.matchedRole)&&role(returned.whenFalse,rolePolicy.defaultRole))bind(rolePolicy.getter,policy.fields);
+  }
   for (const getterPolicy of policy.additionalGetters ?? []) {
     const imported=imports.get(getterPolicy.resolver),getter=methods.get(getterPolicy.getter),statements=getter?.body?.statements;
     const returned=statements?.length===1&&ts.isReturnStatement(statements[0])?statements[0].expression:undefined;

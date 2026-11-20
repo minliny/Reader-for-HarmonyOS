@@ -1,0 +1,8 @@
+{
+  "command": "node tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs",
+  "exitCode": 1,
+  "stdout": "PASS fixed header progress uses real native measurement inputs/cache; counts and notices cannot change its height\n",
+  "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'If' !== 'Column'\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:268:12\n    at scenario (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:158:32)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-main-notices-probe.mjs:259:1 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 'If',\n  expected: 'Column',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n",
+  "productionSha256": "dbbc7221cec6a08799525cb34434a3f3c245a5b54d27577539722e1142212e39",
+  "probeSha256": "cf4857f7bf6814904d8fba17c62a97e7df43c00dbfbacc8997e3578402d38dbb"
+}

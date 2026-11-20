@@ -122,6 +122,7 @@ export class ReadingOfflineHost {
           state: state === undefined || state === 'unknown' ? chapter.state : state,
           attempts: chapter.attempts, maxAttempts: chapter.maxAttempts };
       }), retentions: snapshot.retentions, downloadChapters: snapshot.downloadChapters,
+      directoryComplete: snapshot.directoryComplete,
     };
     return gateway.actions(presentation, chapterIndex, this.busy());
   }

@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TYPE_READER_SESSION_COUNTDOWN, TYPE_READER_SESSION_LABEL } from '../common/ReaderTypography';
 import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
@@ -46,14 +47,14 @@ export struct ReaderSessionCapsuleLeading {
       }
       Text(this.type === 'autoPage' ? '自动翻页' : '朗读')
         .width(Math.max(42, this.capsuleWidth - readerSessionCapsuleMinimumWidth(this.type) + 42))
-        .height(16)
+        .constraintSize({ minHeight: 16 }).maxFontScale(1.6)
         .fontFamily(TYPE_READER_SESSION_LABEL.fontFamily)
         .fontWeight(TYPE_READER_SESSION_LABEL.fontWeight)
         .fontSize(TYPE_READER_SESSION_LABEL.fontSizeFp)
         .lineHeight(TYPE_READER_SESSION_LABEL.lineHeightFp)
         .fontColor(this.effectiveTextColor()).textAlign(TextAlign.Center).maxLines(1);
     }
-    .width(this.capsuleWidth).height(24).padding({ left: 6, right: 6 })
+    .width(this.capsuleWidth).constraintSize({ minHeight: 24 }).padding({ left: 6, right: 6 })
     .justifyContent(FlexAlign.Start).alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.None);
   }
@@ -131,7 +132,7 @@ export struct ReaderSessionCapsule {
         primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
         .position({ x: this.finalWidth() - 20, y: 4 });
     }
-    .width(this.finalWidth()).height(READER_SESSION_CAPSULE_HEIGHT).clip(true)
+    .width(this.finalWidth()).constraintSize({ minHeight: READER_SESSION_CAPSULE_HEIGHT }).clip(true)
     .backgroundColor(this.effectiveSurfaceColor()).border({ width: 1, color: this.effectiveSurfaceBorderColor() })
     .borderRadius(12).shadow({ radius: 8, color: this.shadowColor, offsetX: 0, offsetY: 3 })
     .responseRegion({ x: 0, y: -10, width: '100%', height: 44 })
@@ -140,6 +141,7 @@ export struct ReaderSessionCapsule {
     // Keep capsule pointers out of the raw page handler, including UP/CANCEL
     // after playback state changes. Click recognition remains independent.
     .onTouch((event: TouchEvent): void => event.stopPropagation())
+      .attributeModifier(new ReaderActionAccessibility(readerSessionCapsuleAccessibility(this.type, this.sessionState, this.desiredPlaying), true, false))
     .onClick((): void => { if (this.interactionEnabled) this.onToggle(); })
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       this.onMeasured(this.numericLength(newValue.width), this.numericLength(newValue.height));

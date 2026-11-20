@@ -6,6 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { coreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
+import { createStorageBuildContract } from '../../Reader-Core/scripts/storage-build-contract.mjs';
+import { storageBootstrapIdentityBytes, STORAGE_BOOTSTRAP_RESOURCE } from '../scripts/lib/storage-delivery-contract.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'reader-native-preflight-'));
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -13,8 +15,9 @@ const put = (path, value) => writeFileSync(path, typeof value === 'string' ? val
 const git = (repo, ...args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 try {
   const core = join(root, 'core'), host = join(root, 'host'), vendor = join(host, 'vendor');
-  for (const dir of [core, host, vendor, ...['crates', 'include', 'third_party', 'scripts'].map(path => join(core, path))]) mkdirSync(dir, { recursive: true });
+  for (const dir of [core, host, vendor, ...['crates', 'include', 'third_party', 'scripts', 'storage'].map(path => join(core, path))]) mkdirSync(dir, { recursive: true });
   put(join(core, 'crates/input.rs'), 'original source');
+  put(join(core, 'storage/storage-contract.v1.json'), readFileSync(new URL('../../Reader-Core/storage/storage-contract.v1.json', import.meta.url), 'utf8'));
   const additionalInputs = ['include/reader_core.h', 'third_party/input.c', 'scripts/check-harmony-napi-host.sh'];
   for (const path of additionalInputs) put(join(core, path), 'original input');
   const readme = join(core, 'README.md');
@@ -33,12 +36,21 @@ try {
   put(identity, { schemaVersion: 1, buildId: '1'.repeat(64), gitCommit: git(core, 'rev-parse', 'HEAD'),
     gitDirty: false, cargoLockSha256: '2'.repeat(64), protocolSha256: '3'.repeat(64), rustProfile: 'release' });
   const manifest = join(root, 'package.sha256'), evidence = join(root, 'build.txt');
+  const storageCompanion = join(vendor, 'storage-contract.v1.json'), bootstrapIdentity = join(host, STORAGE_BOOTSTRAP_RESOURCE);
   const record = (file, path) => `${sha(readFileSync(file))}  ${readFileSync(file).length}  ${path}`;
   put(manifest, record(native, 'libs/arm64-v8a/libreader_core_napi.so') + '\n' + record(join(vendor, 'Index.ts'), 'Index.ts') + '\n');
   const values = { artifact_sha256: sha(readFileSync(native)), artifact_bytes: String(readFileSync(native).length),
     core_build_identity_sha256: sha(readFileSync(identity)), core_input_snapshot_sha256: sha(readFileSync(snapshot)),
     package_manifest_sha256: sha(readFileSync(manifest)), sdk_smoke: 'pass' };
   const writeEvidence = () => put(evidence, Object.entries(values).map(([key, value]) => `${key}=${value}`).join('\n') + '\n');
+  const refreshStorageBinding = () => {
+    put(storageCompanion, createStorageBuildContract({ contractSource: readFileSync(join(core, 'storage/storage-contract.v1.json'), 'utf8'),
+      identityBytes: readFileSync(identity), coreInputSnapshot: JSON.parse(readFileSync(snapshot)), nativeBytes: readFileSync(native) }));
+    writeFileSync(bootstrapIdentity, storageBootstrapIdentityBytes(JSON.parse(readFileSync(storageCompanion))));
+    put(manifest, record(native, 'libs/arm64-v8a/libreader_core_napi.so') + '\n' + record(join(vendor, 'Index.ts'), 'Index.ts') + '\n' + record(storageCompanion, 'storage-contract.v1.json') + '\n');
+    values.storage_contract_sha256 = sha(readFileSync(storageCompanion));
+    values.package_manifest_sha256 = sha(readFileSync(manifest));
+  };
   // Simulate a producer's complete synthetic output, never a real Native build.
   const refreshSyntheticPair = () => {
     const current = coreBuildSnapshot(core);
@@ -47,13 +59,14 @@ try {
     put(identity, data); put(snapshot, current);
     values.core_build_identity_sha256 = sha(readFileSync(identity));
     values.core_input_snapshot_sha256 = sha(readFileSync(snapshot));
+    refreshStorageBinding();
     writeEvidence();
   };
-  writeEvidence();
+  refreshStorageBinding(); writeEvidence();
   const args = [fileURLToPath(new URL('./generate-build-provenance-manifest.mjs', import.meta.url)),
     '--preflight', '--allow-dirty', '--core-repo', core, '--harmony-repo', host, '--core-identity', identity,
     '--core-input-snapshot', snapshot, '--napi-manifest', manifest, '--native-so', native,
-    '--app-native-so', app, '--harmony-vendor', vendor, '--core-build-evidence', evidence, '--output', join(root, 'result.json')];
+    '--app-native-so', app, '--harmony-vendor', vendor, '--storage-bootstrap-identity', bootstrapIdentity, '--core-build-evidence', evidence, '--output', join(root, 'result.json')];
   const run = () => spawnSync(process.execPath, args, { encoding: 'utf8', timeout: 15000 });
   const baseline = run(); assert.equal(baseline.status, 0, baseline.stderr);
   const cleanInputs = coreBuildSnapshot(core);
@@ -99,7 +112,7 @@ try {
   const data = JSON.parse(readFileSync(identity)); data.gitDirty = true; put(identity, data);
   values.core_build_identity_sha256 = sha(readFileSync(identity)); writeEvidence();
   put(join(core, 'crates/input.rs'), 'dirty source one'); put(snapshot, coreBuildSnapshot(core));
-  values.core_input_snapshot_sha256 = sha(readFileSync(snapshot)); writeEvidence(); assert.equal(run().status, 0);
+  values.core_input_snapshot_sha256 = sha(readFileSync(snapshot)); refreshStorageBinding(); writeEvidence(); assert.equal(run().status, 0);
   const savedInclude = join(root, 'include-original');
   renameSync(join(core, 'include'), savedInclude);
   symlinkSync(savedInclude, join(core, 'include'));

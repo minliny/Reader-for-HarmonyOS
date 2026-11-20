@@ -396,6 +396,10 @@ export struct ReaderLibrarySearchSurface {
     }
     return this.toScrim;
   }
+  private resultsInteractive(): boolean {
+    return this.searchMounted && this.inputInteractive() && (this.mode === 'results' ||
+      (this.mode === 'input' && this.model.sourceRecoveryVisible));
+  }
   private inputInteractive(): boolean {
     if (!this.model.interactive) return false;
     if (this.mode === 'input') return this.surfaceProgress() >= 1 && this.historyProgress() >= 1;
@@ -708,10 +712,14 @@ export struct ReaderLibrarySearchSurface {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-        Column() { this.results(); }.width('100%').height(this.surfaceHeight());
+        if (this.searchMounted) {
+          Column() { this.results(); }.width('100%').height(this.surfaceHeight())
+            .enabled(this.resultsInteractive());
+        }
       }.width('100%').height(this.mode === 'input' && this.model.sourceRecoveryVisible ?
         this.surfaceHeight() : this.resultsProgress() > 0 ?
           this.headerBottom + this.contentHeight() * this.resultsProgress() : 0)
+        .enabled(this.resultsInteractive())
         .clipShape(this.resultClip())
         .zIndex(this.mode === 'input' && this.model.sourceRecoveryVisible ? 3 : 2)
         .hitTestBehavior(this.mode === 'input' && this.inputInteractive() && this.model.sourceRecoveryVisible ?

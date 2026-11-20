@@ -1,3 +1,4 @@
+import { readerSheetBodyBudget } from '../common/ReaderSurfaceBudgets';
 import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
@@ -5,8 +6,8 @@ import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader
 import { MESSAGE_META } from '../common/ReaderMessageStyle';
 import { READER_ACTION_MIN_TARGET, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { resolveSheetSpec, readerSurfaceElevation } from '../common/ReaderSurfaceSpecs';
-import { SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
+import { resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
+import { readerSheetWidth, readerSheetChrome } from '../common/ReaderSheetChrome';
 import { readerVisualSafeLeft, readerVisualSafeRight, readerVisualSafeTop, readerVisualSafeBottom } from '../common/ReaderWindowMetrics';
 import { readerScrimmedOpaqueColor } from '../common/ReaderScrimColor';
 import { readerPageAreaLength } from '../common/ReaderPageShell';
@@ -59,16 +60,17 @@ export struct ReaderSearchTaskPanel {
   private triggerHeight(): number { return (MESSAGE_META.lineHeightFp ?? 18) * this.fontScale() + 8; }
   private sheetWidth(): number {
     const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(resolveSheetSpec('search-task-status').maxWidth)).width;
+    return readerSheetWidth('search-task-status', metrics.windowRect.width,
+      readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics));
   }
   private bodyLimit(): number {
     const metrics = ReaderWindowCoordinator.metrics();
     const spec = resolveSheetSpec('search-task-status');
-    const header = this.measuredHeaderHeight > 0 ? this.measuredHeaderHeight : spec.handleTop + spec.handleHeight +
-      spec.handleBottom + Math.max(spec.titleHeight, spec.titleLineHeight * this.fontScale()) + spec.titleBottom;
-    return Math.max(0, metrics.windowRect.height - readerVisualSafeTop(metrics) - readerVisualSafeBottom(metrics) -
-      header - spec.contentBottom);
+    const headerFrame = this.measuredHeaderHeight > 0 ? this.measuredHeaderHeight :
+      Math.max(spec.titleHeight, spec.titleLineHeight * this.fontScale());
+    return readerSheetBodyBudget({ windowHeight: metrics.windowRect.height,
+      safeTop: readerVisualSafeTop(metrics), safeBottom: readerVisualSafeBottom(metrics),
+      headerFrame, titleBottom: spec.titleBottom, contentBottom: spec.contentBottom });
   }
   private claimChrome(identity: string): void {
     if (!this.accepts(identity)) return;
@@ -88,13 +90,11 @@ export struct ReaderSearchTaskPanel {
     ReaderWindowCoordinator.requestAppChrome();
   }
   private sheetOptions(identity: string): SheetOptions {
-    const spec = resolveSheetSpec('search-task-status');
-    return { height: SheetSize.FIT_CONTENT, width: this.sheetWidth(), preferType: SheetType.BOTTOM,
-      dragBar: false, showClose: false, backgroundColor: readerAppColor(spec.hostBackgroundRole, this.scheme),
-      radius: { topLeft: spec.borderRadius, topRight: spec.borderRadius, bottomLeft: 0, bottomRight: 0 },
-      maskColor: readerAppColor(spec.hostMaskRole, this.scheme),
-      shadow: readerSurfaceElevation(spec.hostElevation, this.scheme),
-      borderWidth: { top: spec.hostBorderWidth }, borderColor: readerAppColor(spec.hostBorderRole, this.scheme),
+    const chrome = readerSheetChrome('search-task-status', this.scheme, this.sheetWidth());
+    return { height: SheetSize.FIT_CONTENT, width: chrome.width, preferType: SheetType.BOTTOM,
+      dragBar: false, showClose: false, backgroundColor: chrome.backgroundColor,
+      radius: chrome.radius, maskColor: chrome.maskColor, shadow: chrome.shadow,
+      borderWidth: chrome.borderWidth, borderColor: chrome.borderColor,
       enableOutsideInteractive: false,
       onWillAppear: (): void => this.claimChrome(identity),
       onAppear: (): void => { if (this.accepts(identity)) this.appearedIdentity = identity; },

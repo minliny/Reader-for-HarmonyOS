@@ -1,5 +1,38 @@
 import assert from 'node:assert/strict';
 import {bookshelfDialogPresentationFixture as fixture,indexSource,defer} from './lib/bookshelf-dialog-presentation-sdk.mjs';
+import {installedEtsCompiler} from './lib/ets-compiler-runtime.mjs';
+const {ts,options}=installedEtsCompiler();
+// Target actual ownership edges through the official AST. Private parameter
+// names, comparison operand order and non-null spelling carry no authority.
+function editIndexSource(text,{referenceGuards=[],alwaysCurrent=[],removeCallbackIds=false,removeCloseFence=false,equivalent=false}={}){
+ const tree=ts.createSourceFile('Index.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
+ const owner=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text==='Index');assert.ok(owner);
+ const member=name=>{const found=owner.members.find(n=>n.name?.getText(tree)===name);assert.ok(found,name);return found;};
+ const all=(node,predicate)=>{const out=[];const walk=n=>{if(predicate(n))out.push(n);ts.forEachChild(n,walk);};walk(node);return out;};
+ const edits=[],replace=(node,value)=>edits.push({start:node.getStart(tree),end:node.end,value});
+ const keyCall=node=>ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.name.text==='shelfBookKey'&&node.arguments.length===1;
+ for(const name of equivalent?['isCurrentShelfGroup','isCurrentBookshelfManagement']:referenceGuards){
+  const comparisons=all(member(name),n=>ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.EqualsEqualsEqualsToken&&keyCall(n.left)&&keyCall(n.right));assert.equal(comparisons.length,1);
+  const comparison=comparisons[0],calls=[comparison.left,comparison.right],state=calls.find(n=>n.arguments[0].getText(tree)==='this.editingShelfGroupBook');assert.ok(state);
+  const book=calls.find(n=>n!==state).arguments[0].getText(tree);
+  replace(comparison,equivalent?comparison.right.getText(tree)+' === '+comparison.left.getText(tree):'this.editingShelfGroupBook === '+book);
+ }
+ for(const name of alwaysCurrent)replace(member(name).body,'{ return true; }');
+ if(removeCallbackIds){
+  const calls=all(owner,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&['confirmBookRemovalDialog','dismissBookRemovalDialog'].includes(n.expression.name.text)&&n.arguments.length===1);assert.ok(calls.length>=2);
+  for(const call of calls)replace(call.arguments[0],'');
+ }
+ if(removeCloseFence){
+  const method=member('closeShelfGroup'),parameter=method.parameters[0].name.getText(tree);
+  const guards=all(method,n=>ts.isIfStatement(n)&&ts.isBinaryExpression(n.expression)&&n.expression.operatorToken.kind===ts.SyntaxKind.ExclamationEqualsEqualsToken&&n.expression.left.getText(tree)===parameter&&n.expression.right.getText(tree)==='this.editingShelfGroupPresentation');assert.equal(guards.length,1);replace(guards[0],'');
+ }
+ if(equivalent){
+  const assertions=all(owner,n=>ts.isNonNullExpression(n)&&n.expression.getText(tree)==='this.editingShelfGroupBook');assert.ok(assertions.length>0);
+  for(const assertion of assertions)replace(assertion,assertion.expression.getText(tree));
+ }
+ edits.sort((a,b)=>a.start-b.start);for(let n=1;n<edits.length;n++)assert.ok(edits[n].start>=edits[n-1].end,'independent ownership mutations');
+ let result=text;for(const edit of edits.reverse())result=result.slice(0,edit.start)+edit.value+result.slice(edit.end);assert.notEqual(result,text);return result;
+}
 let cases=0;
 
 {
@@ -35,14 +68,11 @@ for(const fail of[false,true]){
 }
 {
  const f=fixture(),book={sourceId:'s',bookId:'wrapped',group:'old'};f.i.openShelfGroup(book);
- assert.match(f.output,/__editingShelfGroupBook = new ObservedPropertyObjectPU\(undefined, this, "editingShelfGroupBook"\)/);
  assert.notEqual(f.i.editingShelfGroupBook,book,'real V1 State wraps the caller raw object');assert.equal(f.raw(f.i.editingShelfGroupBook),book);
- // The non-null assertion is preserved in this SDK Builder argument. The
- // failing raw/proxy seam is openShelfGroup(raw) -> State -> Host bind closure.
- assert.match(f.output,/shelfGroupSurface\.bind\(this\)[^\n]*this\.editingShelfGroupBook!/);
  assert.deepEqual(f.bindings.map(b=>b.accepted),[true]);assert.deepEqual(f.opens,[f.i.bookshelfManagementPresentationIdentity]);
  assert.equal(f.i.isCurrentShelfGroup(f.i.editingShelfGroupPresentation,1,f.r,1,book),true,'same exact entity admits either raw or State view');
- const live=f.group();live.mask.onClick();assert.equal(f.i.editingShelfGroupBook,undefined);assert.equal(f.writes.length,0);cases++;
+ const live=f.group();assert.equal(live.child.selected,false,'actual selector consumes the current book group');assert.equal(live.child.busy,false);
+ live.mask.onClick();assert.equal(f.i.editingShelfGroupBook,undefined);assert.equal(f.writes.length,0);cases++;
 }
 for(const variant of['same-book','same-id-other-source']){
  const f=fixture(),a={sourceId:'s',bookId:'same'},b={sourceId:variant==='same-book'?'s':'other',bookId:'same'};
@@ -59,40 +89,39 @@ for(const fail of[false,true]){
  assert.equal(f.raw(f.i.editingShelfGroupBook),b);assert.equal(f.i.editingShelfGroupBusy,false);assert.equal(f.refresh(),0);assert.equal(f.toasts.length,0);cases++;
 }
 {
- const stateIdentity='this.editingShelfGroupBook !== undefined &&\n      this.shelfBookKey(this.editingShelfGroupBook) === this.shelfBookKey(book)';
- const managementIdentity='this.editingShelfGroupBook !== undefined && book !== undefined &&\n        this.shelfBookKey(this.editingShelfGroupBook) === this.shelfBookKey(book)';
- assert.ok(indexSource.includes(stateIdentity)&&indexSource.includes(managementIdentity),'both production guards use the existing compound key');
- const original=indexSource.replace(stateIdentity,'this.editingShelfGroupBook === book').replace(managementIdentity,'this.editingShelfGroupBook === book');
+ const original=editIndexSource(indexSource,{referenceGuards:['isCurrentShelfGroup','isCurrentBookshelfManagement']});
  const f=fixture(original),book={sourceId:'s',bookId:'raw-caller'};f.i.openShelfGroup(book);
  assert.notEqual(f.i.editingShelfGroupBook,book);assert.equal(f.raw(f.i.editingShelfGroupBook),book);
  assert.deepEqual(f.bindings.map(b=>b.accepted),[false]);assert.deepEqual(f.opens,[]);assert.equal(f.i.bookshelfManagementPresentationIdentity,'');
  const blocked=f.group();blocked.select.onClick();blocked.mask.onClick();await Promise.resolve();assert.equal(f.writes.length,0);assert.equal(f.raw(f.i.editingShelfGroupBook),book,'original two reference guards reproduce inert group dialog');cases++;
  // Independent group guard negative control: it rejects the captured raw book
  // even after correct Host binding; the current Builder keeps the proxy view.
- const onlyGroup=fixture(indexSource.replace(stateIdentity,'this.editingShelfGroupBook === book'));onlyGroup.i.openShelfGroup(book);
+ const onlyGroup=fixture(editIndexSource(indexSource,{referenceGuards:['isCurrentShelfGroup']}));onlyGroup.i.openShelfGroup(book);
  assert.deepEqual(onlyGroup.bindings.map(b=>b.accepted),[true]);assert.equal(onlyGroup.i.isCurrentShelfGroup(onlyGroup.i.editingShelfGroupPresentation,1,onlyGroup.r,1,book),false);cases++;
 }
 {
- const begin=indexSource.indexOf('  private isCurrentBookRemoval('),end=indexSource.indexOf('\n  private openBookRemovalDialog(',begin);
- const mutant=indexSource.slice(0,begin)+'  private isCurrentBookRemoval(): boolean { return true; }\n'+indexSource.slice(end);
+ const mutant=editIndexSource(indexSource,{alwaysCurrent:['isCurrentBookRemoval']});
  const f=fixture(mutant);let a=0,b=0;f.i.openBookRemovalDialog('A',()=>a++);const old=f.native();f.i.dismissBookRemovalDialog();f.i.openBookRemovalDialog('B',()=>b++);
  // The captured ID at dispatch is independently necessary. Removing only
  // broad runtime/nav admission must not let a wrong-opening native callback act.
  old.confirm.onClick();old.cancel.onClick();assert.equal(a,0);assert.equal(b,0);assert.equal(f.i.bookRemovalDialogOpen,true);cases++;
 }
 {
- const begin=indexSource.indexOf('  private isCurrentBookRemoval('),end=indexSource.indexOf('\n  private openBookRemovalDialog(',begin);
- let mutant=indexSource.slice(0,begin)+'  private isCurrentBookRemoval(): boolean { return true; }\n'+indexSource.slice(end);
- mutant=mutant.replaceAll('this.confirmBookRemovalDialog(presentation)','this.confirmBookRemovalDialog()').replaceAll('this.dismissBookRemovalDialog(presentation)','this.dismissBookRemovalDialog()');
+ const mutant=editIndexSource(indexSource,{alwaysCurrent:['isCurrentBookRemoval'],removeCallbackIds:true});
  const f=fixture(mutant);let a=0,b=0;f.i.openBookRemovalDialog('A',()=>a++);const old=f.native();f.i.dismissBookRemovalDialog();f.i.openBookRemovalDialog('B',()=>b++);
  old.confirm.onClick();assert.equal(a,0);assert.equal(b,1,'original mutable-confirm negative control makes old physical A confirm current B');cases++;
 }
 {
- const begin=indexSource.indexOf('  private isCurrentShelfGroup('),end=indexSource.indexOf('\n  private async assignShelfDefaultGroup(',begin);
- const mutant=indexSource.slice(0,begin)+'  private isCurrentShelfGroup(): boolean { return true; }\n'+indexSource.slice(end);
- const doubleMutant=mutant.replace('if (presentation !== this.editingShelfGroupPresentation) return;', '');
+ const doubleMutant=editIndexSource(indexSource,{alwaysCurrent:['isCurrentShelfGroup'],removeCloseFence:true});
  const f=fixture(doubleMutant),a={sourceId:'s',bookId:'a'},b={sourceId:'s',bookId:'b'};
  f.i.openShelfGroup(a);const old=f.group();f.i.editingShelfGroupBook=undefined;f.i.openShelfGroup(b);old.mask.onClick();
  assert.equal(f.i.editingShelfGroupBook,undefined,'removing both presentation and close-token guards lets old mask close current B');cases++;
+}
+{
+ const equivalent=editIndexSource(indexSource,{equivalent:true}),book={sourceId:'s',bookId:'equivalent',group:'old'},f=fixture(equivalent);
+ f.i.openShelfGroup(book);assert.deepEqual(f.bindings.map(b=>b.accepted),[true]);const live=f.group();assert.equal(live.child.selected,false);
+ live.select.onClick();live.select.onClick();await Promise.resolve();await Promise.resolve();assert.equal(f.writes.length,1);assert.equal(f.raw(f.writes[0]),book);cases++;
+ const originalGuard=fixture(editIndexSource(equivalent,{referenceGuards:['isCurrentShelfGroup','isCurrentBookshelfManagement']}));originalGuard.i.openShelfGroup(book);
+ assert.deepEqual(originalGuard.bindings.map(b=>b.accepted),[false],'AST mutation remains valid under equivalent operand order/non-null spelling');cases++;
 }
 console.log(`PASS ${cases} actual Index native Controller→BookRemovalDialog→shared Dialog Button and group Selector/Mask SDK: opening A/B, current once, old confirm/cancel/late native close, exact runtime/nav/mount, late assignment delivery; original geometry/action order retained.`);

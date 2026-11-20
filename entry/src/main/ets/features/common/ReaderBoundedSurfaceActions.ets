@@ -1,3 +1,5 @@
+import { readerTtsManagerFooterHeight } from './ReaderSurfaceBudgets';
+import { ReaderActionAccessibility, readerActionTouchRegion } from './ReaderActionAccessibility';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -52,11 +54,11 @@ export struct ReaderBoundedSurfaceActions {
       }.width('100%').padding({ left: 20, right: 20 });
     } else if (this.specId === 'tts-manager') {
       Row({ space: 10 }) { this.textAction('cancel'); this.textAction('primary'); }
-        .width('100%').height(this.scaledHeight(76, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp))
+        .width('100%').height(readerTtsManagerFooterHeight(this.fontScale(), TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp ?? 20))
         .padding({ left: 18, right: 18, top: 16, bottom: 16 });
     } else {
       Row({ space: 8 }) { this.textAction('cancel'); this.textAction('primary'); }
-        .width('100%').height(this.scaledHeight(36, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp))
+        .width('100%').height(this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp))
         .flexShrink(0);
     }
   }
@@ -82,7 +84,9 @@ export struct ReaderBoundedSurfaceActions {
           .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       }.height(this.scaledHeight(44, TYPE_FILE_IMPORT_CANCEL.lineHeightFp)).padding({ left: 21, right: 21 }).justifyContent(FlexAlign.Center)
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(22)
-        .enabled(this.cancelEnabled).onClick((): void => this.dispatch(id));
+        .enabled(this.cancelEnabled)
+      .responseRegion( readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_FILE_IMPORT_CANCEL.lineHeightFp)))
+      .attributeModifier(new ReaderActionAccessibility('取消', this.cancelEnabled, false)).onClick((): void => this.dispatch(id));
     } else {
       Row({ space: this.specId === 'local-import-result' ? 6 : TOK_SPACE_XS }) {
         Image(this.specId === 'local-import-result' ? $r('app.media.import_done') : $r('app.media.import_choose_file'))
@@ -90,10 +94,11 @@ export struct ReaderBoundedSurfaceActions {
         Text(this.primaryLabel).fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily).fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)
           .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)
           .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-      }.attributeModifier(new ReaderBoundedFileActionModifier(this.specId, this.actionWidth))
-        .height(this.scaledHeight(this.specId === 'local-import-result' ? 40 : 44, TYPE_FILE_IMPORT_ACTION.lineHeightFp)).justifyContent(FlexAlign.Center)
+      }.attributeModifier(new ReaderActionAccessibility(this.primaryLabel, this.primaryEnabled, false, true, new ReaderBoundedFileActionModifier(this.specId, this.actionWidth)))
+        .height(this.scaledHeight(44, TYPE_FILE_IMPORT_ACTION.lineHeightFp)).justifyContent(FlexAlign.Center)
         .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius(this.specId === 'local-import-result' ? 20 : 22)
-        .enabled(this.primaryEnabled).onClick((): void => this.dispatch(id));
+        .enabled(this.primaryEnabled)
+      .responseRegion( readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_FILE_IMPORT_ACTION.lineHeightFp))).onClick((): void => this.dispatch(id));
     }
   }
 
@@ -104,30 +109,38 @@ export struct ReaderBoundedSurfaceActions {
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center)
           .backgroundColor(readerAppColor('app.reader.secondaryAction', this.appThemeScheme)).borderRadius(12)
-          .enabled(this.cancelEnabled).onClick((): void => this.dispatch(id));
+          .enabled(this.cancelEnabled)
+      .responseRegion( readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.lineHeightFp)))
+      .attributeModifier(new ReaderActionAccessibility('取消', this.cancelEnabled, false)).onClick((): void => this.dispatch(id));
       } else {
         Text(this.primaryLabel).layoutWeight(1).height(this.scaledHeight(44, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp)).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontSizeFp)
           .fontColor(readerAppColor('app.control.onPrimary', this.appThemeScheme)).textAlign(TextAlign.Center)
           .linearGradient({ angle: 155, colors: [[readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme), 0], [readerAppColor('TOK_TTS_PLAY_END', this.appThemeScheme), 1]] }).borderRadius(12)
           .shadow({ radius: 12, color: readerAppColor('app.control.paint.4D2F6373', this.appThemeScheme), offsetY: 4 })
-          .enabled(this.primaryEnabled).opacity(this.primaryEnabled ? 1 : 0.42).onClick((): void => this.dispatch(id));
+          .enabled(this.primaryEnabled).opacity(this.primaryEnabled ? 1 : 0.42)
+      .responseRegion( readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp)))
+      .attributeModifier(new ReaderActionAccessibility(this.primaryLabel, this.primaryEnabled, false)).onClick((): void => this.dispatch(id));
       }
     } else {
       if (id === 'cancel') {
         Text('取消').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontFamily as string)
           .fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-          .layoutWeight(1).height(this.scaledHeight(36, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.lineHeightFp)).textAlign(TextAlign.Center).borderRadius(6)
+          .layoutWeight(1).height(this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.lineHeightFp)).textAlign(TextAlign.Center).borderRadius(6)
           .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-          .enabled(this.cancelEnabled).onClick((): void => this.dispatch(id));
+          .enabled(this.cancelEnabled)
+      .responseRegion( readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.lineHeightFp)))
+      .attributeModifier(new ReaderActionAccessibility('取消', this.cancelEnabled, false)).onClick((): void => this.dispatch(id));
       } else {
         Text(this.primaryLabel).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string)
           .fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp)
           .fontColor(readerAppColor('app.replace.onToolbarAction', this.appThemeScheme))
-          .layoutWeight(1).height(this.scaledHeight(36, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp)).textAlign(TextAlign.Center).borderRadius(6)
+          .layoutWeight(1).height(this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp)).textAlign(TextAlign.Center).borderRadius(6)
           .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
-          .enabled(this.primaryEnabled).onClick((): void => this.dispatch(id));
+          .enabled(this.primaryEnabled)
+      .responseRegion( readerActionTouchRegion('100%', this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp)))
+      .attributeModifier(new ReaderActionAccessibility(this.primaryLabel, this.primaryEnabled, false)).onClick((): void => this.dispatch(id));
       }
     }
   }

@@ -1,468 +1,300 @@
 {
-  "schema": 1,
-  "boundary": "All Index ReaderRoute members, including product-disabled routes; finite actual source entries and common-host delegation, not device acceptance.",
+  "schema": 2,
+  "boundary": "Source architecture only: all route identities, actual imported component/Builder edges, branch-local common frame and finite non-page owners. Literal route/Prop facts restrict paths; other runtime predicates retain both branches. No visual policy, scheduling, runtime reachability or device acceptance.",
+  "entry": "pages/Index.ets#Index",
+  "routeType": "ReaderRoute",
+  "frames": [
+    "features/common/ReaderPageScaffold.ets#ReaderPageScaffold",
+    "features/common/ReaderStandardPage.ets#ReaderStandardPage"
+  ],
   "routes": [
     {
       "route": "bookshelf",
       "category": "mainTab",
-      "bindings": [
-        {
-          "entry": "pages/Index.ets#Index#bookshelfShellContent",
-          "hostMethod": "features/shell/MainTabShell.ets#MainTabShell#build",
-          "host": "ReaderPageScaffold",
-          "variant": "mainTab",
-          "contentEntries": [
-            "features/bookshelf/BookshelfPage.ets#BookshelfPage#build",
-            "features/bookshelf/BookshelfEmptyPage.ets#BookshelfEmptyPage#build",
-            "features/bookshelf/BookshelfStatusContent.ets#BookshelfStatusContent#build"
-          ]
-        }
+      "pages": [
+        "features/bookshelf/BookshelfPage.ets#BookshelfPage",
+        "features/bookshelf/BookshelfEmptyPage.ets#BookshelfEmptyPage",
+        "features/bookshelf/BookshelfStatusContent.ets#BookshelfStatusContent"
       ]
     },
     {
       "route": "discover",
       "category": "mainTab",
-      "bindings": [
-        {
-          "entry": "features/discover/DiscoverPage.ets#DiscoverPage#build",
-          "hostMethod": "features/shell/MainTabShell.ets#MainTabShell#build",
-          "host": "ReaderPageScaffold",
-          "variant": "mainTab"
-        }
+      "pages": [
+        "features/discover/DiscoverPage.ets#DiscoverPage"
       ]
     },
     {
       "route": "rss",
       "category": "mainTab",
-      "bindings": [
-        {
-          "entry": "features/rss/RssPage.ets#RssPage#build",
-          "hostMethod": "features/shell/MainTabShell.ets#MainTabShell#build",
-          "host": "ReaderPageScaffold",
-          "variant": "mainTab"
-        }
+      "pages": [
+        "features/rss/RssPage.ets#RssPage"
       ]
     },
     {
       "route": "detail",
       "category": "detail",
-      "bindings": [
-        {
-          "entry": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#build",
-          "hostMethod": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#detailPage",
-          "host": "ReaderPageScaffold",
-          "variant": "this.book.contentKind === 'manga' ? 'mangaDetail' : 'detail'"
-        }
+      "pages": [
+        "features/bookshelf/LocalBookDetail.ets#LocalBookDetail"
       ]
     },
     {
       "route": "reading",
       "category": "reader",
-      "bindings": [
-        {
-          "entry": "pages/Index.ets#Index#build",
-          "hostMethod": "features/shell/ReaderShell.ets#ReaderShell#build",
-          "host": "ReaderPageScaffold",
-          "variant": "reader",
-          "inputFacts": {
-            "readingContentKind": "this.contentKind",
-            "pageVisible": "this.visible"
-          },
-          "entryPath": [
-            {
-              "from": "pages/Index.ets#Index#build",
-              "condition": "this.readingSessionActive && this.detailBook !== undefined",
-              "branch": "then",
-              "component": "ReaderShell",
-              "inputFacts": {
-                "contentKind": "this.readingContentKind"
-              }
-            }
-          ]
-        }
+      "pages": [
+        "features/shell/ReaderShell.ets#ReaderShell"
       ]
     },
     {
       "route": "directory",
       "category": "directory",
-      "bindings": [
-        {
-          "entry": "pages/Index.ets#Index#detailContent",
-          "entryPath": [
-            {
-              "from": "pages/Index.ets#Index#detailContent",
-              "condition": "this.route === 'directory' && this.directoryReturnTarget === 'detail'",
-              "branch": "then",
-              "method": "externalDirectory"
-            },
-            {
-              "from": "pages/Index.ets#Index#externalDirectory",
-              "condition": "this.detailBook.contentKind === 'manga'",
-              "branch": "else",
-              "component": "ReaderFullDirectory",
-              "inputFacts": {
-                "catalogContext": "'detail'",
-                "currentChapterIndex": "this.directoryCurrentChapterIndex"
-              }
-            }
-          ],
-          "hostMethod": "features/reading/ReaderFullDirectory.ets#ReaderFullDirectory#build",
-          "host": "ReaderPageScaffold",
-          "variant": "this.catalogContext === 'detail' ? 'directory' : 'readerDirectory'",
-          "inputFacts": {
-            "headerKind": "'floating'"
-          }
-        },
-        {
-          "entry": "pages/Index.ets#Index#detailContent",
-          "entryPath": [
-            {
-              "from": "pages/Index.ets#Index#detailContent",
-              "condition": "this.route === 'directory' && this.directoryReturnTarget === 'detail'",
-              "branch": "then",
-              "method": "externalDirectory"
-            },
-            {
-              "from": "pages/Index.ets#Index#externalDirectory",
-              "condition": "this.detailBook.contentKind === 'manga'",
-              "branch": "then",
-              "component": "BookDirectoryPage",
-              "inputFacts": {
-                "contentKind": "this.detailBook.contentKind === 'manga' ? 'manga' : 'text'"
-              }
-            }
-          ],
-          "hostMethod": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaPage",
-          "host": "ReaderPageScaffold",
-          "variant": "mangaDirectory"
-        }
+      "pages": [
+        "features/reading/ReaderFullDirectory.ets#ReaderFullDirectory",
+        "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage"
       ]
     },
     {
       "route": "search",
       "category": "search",
-      "bindings": [
-        {
-          "entry": "features/search/SearchPage.ets#SearchPage#build",
-          "hostMethod": "features/search/SearchPage.ets#SearchPage#build",
-          "host": "ReaderPageScaffold",
-          "variant": "search"
-        }
+      "pages": [
+        "features/search/SearchPage.ets#SearchPage"
       ]
     },
     {
       "route": "bookshelfMultiSelect",
       "category": "selection",
-      "bindings": [
-        {
-          "entry": "features/bookshelf/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage#build",
-          "hostMethod": "features/bookshelf/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage#build",
-          "host": "ReaderPageScaffold",
-          "variant": "selection"
-        }
+      "pages": [
+        "features/bookshelf/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage"
       ]
     },
     {
       "route": "downloads",
       "category": "download",
-      "bindings": [
-        {
-          "entry": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#build",
-          "hostMethod": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#build",
-          "host": "ReaderPageScaffold",
-          "variant": "download"
-        }
+      "pages": [
+        "features/downloads/SharedDownloadPage.ets#SharedDownloadPage"
       ]
     },
     {
       "route": "source",
       "category": "management",
-      "bindings": [
-        {
-          "entry": "features/source/SourceManagementPage.ets#SourceManagementPage#build",
-          "hostMethod": "features/source/SourceManagementPage.ets#SourceManagementPage#build",
-          "host": "ReaderPageScaffold",
-          "variant": "standard"
-        }
+      "pages": [
+        "features/source/SourceManagementPage.ets#SourceManagementPage"
       ]
     },
     {
       "route": "bookshelfManagement",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
-          "hostMethod": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "management"
-        }
+      "pages": [
+        "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage"
       ]
     },
     {
       "route": "bookshelfSettings",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
-          "hostMethod": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "settings"
-        }
+      "pages": [
+        "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage"
       ]
     },
     {
       "route": "rssSubscriptionManagement",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
-          "hostMethod": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "rssManagement"
-        }
+      "pages": [
+        "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage"
       ]
     },
     {
       "route": "rssSubscriptionEditor",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
-          "hostMethod": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "rssEditor"
-        }
+      "pages": [
+        "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage"
       ]
     },
     {
       "route": "rssSourceFeed",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
-          "hostMethod": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "rssFeed"
-        }
+      "pages": [
+        "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage"
       ]
     },
     {
       "route": "rssEntryDetail",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
-          "hostMethod": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "rssDetail"
-        }
+      "pages": [
+        "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage"
       ]
     },
     {
       "route": "rulesManagement",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
-          "hostMethod": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "management"
-        }
+      "pages": [
+        "features/settings/RulesManagementPage.ets#RulesManagementPage"
       ]
     },
     {
       "route": "sourceTools",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
-          "hostMethod": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "tools"
-        }
+      "pages": [
+        "features/source/SourceToolsPage.ets#SourceToolsPage"
       ]
     },
     {
       "route": "sync",
       "category": "standard",
-      "bindings": [
-        {
-          "entry": "pages/Index.ets#Index#build",
-          "hostMethod": "features/sync/SyncPage.ets#SyncPage#build",
-          "host": "ReaderStandardPage",
-          "variant": "sync",
-          "entryPath": [
-            {
-              "from": "pages/Index.ets#Index#build",
-              "guards": [
-                {
-                  "condition": "isReaderProductSurfaceEnabled('sync') && this.route === 'sync'",
-                  "branch": "then"
-                },
-                {
-                  "condition": "this.syncSnapshotReady",
-                  "branch": "then"
-                }
-              ],
-              "method": "syncContent"
-            }
-          ]
-        },
-        {
-          "entry": "pages/Index.ets#Index#build",
-          "entryPath": [
-            {
-              "from": "pages/Index.ets#Index#build",
-              "guards": [
-                {
-                  "condition": "isReaderProductSurfaceEnabled('sync') && this.route === 'sync'",
-                  "branch": "then"
-                },
-                {
-                  "condition": "this.syncSnapshotReady",
-                  "branch": "else"
-                }
-              ],
-              "component": "ReaderPageScaffold",
-              "inputFacts": {
-                "variant": "'standard'"
-              }
-            }
-          ],
-          "hostMethod": "pages/Index.ets#Index#build",
-          "host": "ReaderPageScaffold",
-          "variant": "standard"
-        }
+      "pages": [
+        "features/sync/SyncPage.ets#SyncPage"
       ]
     },
     {
       "route": "settings",
       "category": "settings",
-      "bindings": [
-        {
-          "entry": "features/settings/SettingsPage.ets#SettingsPage#build",
-          "hostMethod": "features/shell/SettingsShell.ets#SettingsShell#build",
-          "host": "ReaderStandardPage",
-          "variant": "settingsHome"
-        },
-        {
-          "entry": "features/settings/SettingsPage.ets#SettingsPage#build",
-          "hostMethod": "features/shell/SettingsShell.ets#SettingsShell#build",
-          "host": "ReaderStandardPage",
-          "variant": "settingsGeneral"
-        }
+      "pages": [
+        "features/settings/SettingsPage.ets#SettingsPage"
       ]
     }
   ],
-  "finiteFallbacks": [
+  "actors": [
     {
-      "kind": "finiteFallback",
-      "reason": "BookDirectoryPage text standard branch remains a bounded fallback; the actual text detail caller mounts ReaderFullDirectory.",
-      "entry": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#build",
-      "entryPath": [
-        {
-          "from": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#build",
-          "condition": "this.contentKind === 'manga'",
-          "branch": "else",
-          "method": "standardPage"
-        }
-      ],
-      "hostMethod": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#standardPage",
-      "host": "ReaderPageScaffold",
-      "variant": "directory"
-    }
-  ],
-  "sideSurfaces": [
-    {
-      "condition": "this.readingSessionActive && this.detailBook !== undefined",
-      "kind": "page",
-      "actor": {
-        "component": "ReaderShell"
-      }
+      "component": "features/common/ReaderDialogSurface.ets#ReaderDialogSurface",
+      "kind": "businessWindow",
+      "reason": "Existing dialogs keep their explicit modal boundary.",
+      "contract": "tools/test-json-import-dialog-real.mjs"
     },
     {
-      "condition": "(this.route === 'detail' || this.route === 'bookshelf') && !this.readingSessionActive && this.sourceSwitchVisible && !this.mangaSourceSwitchSelectionVisible && this.detailBook !== undefined",
+      "component": "features/reading/SourceSwitchPanel.ets#SourceSwitchPanel",
       "kind": "businessWindow",
-      "actor": {
-        "method": "sourceSwitchOverlayContent"
-      },
+      "reason": "Source-switch transaction UI has its own identity/lifecycle contract.",
       "contract": "tools/test-source-switch-index-owner-sdk.mjs"
     },
     {
-      "condition": "this.mangaSourceSwitchSelectionVisible && this.mangaSourceSwitchSelection !== undefined",
-      "kind": "page",
-      "actor": {
-        "method": "mangaSourceSwitchDirectory"
-      }
-    },
-    {
-      "condition": "this.route === 'bookshelf' && this.editingShelfGroupBook !== undefined",
-      "kind": "businessWindow",
-      "actor": {
-        "method": "shelfGroupContent"
-      },
-      "contract": "tools/test-json-import-dialog-real.mjs"
-    },
-    {
-      "condition": "this.route === 'bookshelf' && this.hasVisibleImportDialog()",
-      "kind": "businessWindow",
-      "actor": {
-        "method": "localImportContent"
-      },
-      "contract": "tools/test-bounded-local-import-composition.mjs"
-    },
-    {
-      "condition": "this.jsonImportVisible",
-      "kind": "businessWindow",
-      "actor": {
-        "method": "jsonImportContent"
-      },
-      "contract": "tools/test-json-import-dialog-real.mjs"
-    }
-  ],
-  "nonPageActors": [
-    {
-      "method": "indexRecoveryNoticeContent",
-      "component": "ReaderRecoveryNotice",
+      "component": "features/common/ReaderRecoveryNotice.ets#ReaderRecoveryNotice",
       "kind": "nonmodalFeedback",
-      "contract": "tools/test-index-native-alert-consumers.mjs",
-      "boundary": "One intrinsic-height shared recovery notice, guarded by current route/runtime and visible state; generation-keyed actions preserve source/session identity. No full-screen native page, modal, scrim, or pointer mask."
+      "reason": "One intrinsic recovery notice; route/runtime and generation actions have actual SDK consumer evidence.",
+      "contract": "tools/test-index-native-alert-consumers.mjs"
     },
     {
-      "component": "ReaderLayoutDebugOverlay",
+      "component": "features/common/ReaderLayoutDebugOverlay.ets#ReaderLayoutDebugOverlay",
       "kind": "runtimeDebug",
+      "reason": "Explicit debug geometry guide is not an app page.",
       "contract": "tools/test-developer-mode-settings.mjs"
     },
     {
-      "component": "ArkWebExecutionHost",
+      "component": "app/ArkWebExecutionHost.ets#ArkWebExecutionHost",
       "kind": "executionHost",
+      "reason": "Controller lifecycle host, never reading-body rendering.",
       "contract": "tools/test-arkweb-network-policy.mjs"
+    },
+    {
+      "component": "features/common/ReaderTransientToast.ets#ReaderTransientToast",
+      "kind": "transientFeedback",
+      "reason": "Existing app-owned short-feedback host is not a page frame.",
+      "contract": "tools/test-index-native-alert-consumers.mjs"
+    },
+    {
+      "component": "features/bookshelf/BookshelfNavigationTransition.ets#BookshelfNavigationTransition",
+      "kind": "transition",
+      "reason": "Retained cover transition overlays pages without owning their frame.",
+      "contract": "tools/test-book-cover-handoff.mjs"
+    },
+    {
+      "component": "features/search/ReaderLibrarySearchSurface.ets#ReaderLibrarySearchSurface",
+      "kind": "embeddedSurface",
+      "reason": "Library header/history overlay has an explicit results Builder slot that must remain traversable.",
+      "contract": "tools/test-library-search-surface-binding.mjs",
+      "slots": [
+        "results"
+      ]
+    },
+    {
+      "component": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog",
+      "kind": "businessWindow",
+      "reason": "Existing local-import selection/progress/result dialog retains its specific bounded composition and operation lifecycle.",
+      "contract": "tools/test-bounded-local-import-composition.mjs"
     }
   ],
-  "sideBindings": [
+  "standalone": [
     {
-      "entry": "pages/Index.ets#Index#build",
-      "entryPath": [
+      "component": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage",
+      "props": {
+        "contentKind": "text"
+      },
+      "reason": "The original bounded text fallback and manga page both retain a common frame."
+    },
+    {
+      "component": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage",
+      "props": {
+        "contentKind": "manga"
+      },
+      "reason": "The original bounded text fallback and manga page both retain a common frame."
+    }
+  ],
+  "forwardedInputs": [
+    {
+      "from": "pages/Index.ets#Index",
+      "component": "features/shell/ReaderShell.ets#ReaderShell",
+      "prop": "contentKind",
+      "samples": [
         {
-          "from": "pages/Index.ets#Index#build",
-          "condition": "this.mangaSourceSwitchSelectionVisible && this.mangaSourceSwitchSelection !== undefined",
-          "branch": "then",
-          "method": "mangaSourceSwitchDirectory"
+          "fields": {
+            "readingContentKind": "text"
+          },
+          "expected": "text"
         },
         {
-          "from": "pages/Index.ets#Index#mangaSourceSwitchDirectory",
-          "condition": "this.mangaSourceSwitchSelection !== undefined",
-          "branch": "then",
-          "component": "BookDirectoryPage",
-          "inputFacts": {
-            "contentKind": "'manga'",
-            "currentChapterIndex": "-1"
-          }
+          "fields": {
+            "readingContentKind": "manga"
+          },
+          "expected": "manga"
         }
-      ],
-      "hostMethod": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaPage",
-      "host": "ReaderPageScaffold",
-      "variant": "mangaDirectory"
+      ]
+    },
+    {
+      "from": "features/shell/ReaderShell.ets#ReaderShell",
+      "component": "features/common/ReaderPageScaffold.ets#ReaderPageScaffold",
+      "prop": "pageVisible",
+      "samples": [
+        {
+          "fields": {
+            "visible": false
+          },
+          "expected": false
+        },
+        {
+          "fields": {
+            "visible": true
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "from": "pages/Index.ets#Index",
+      "component": "features/reading/ReaderFullDirectory.ets#ReaderFullDirectory",
+      "prop": "catalogContext",
+      "samples": [
+        {
+          "fields": {},
+          "expected": "detail"
+        }
+      ]
+    },
+    {
+      "from": "pages/Index.ets#Index",
+      "component": "features/reading/ReaderFullDirectory.ets#ReaderFullDirectory",
+      "prop": "currentChapterIndex",
+      "samples": [
+        {
+          "fields": {
+            "directoryCurrentChapterIndex": -1
+          },
+          "expected": -1
+        },
+        {
+          "fields": {
+            "directoryCurrentChapterIndex": 7
+          },
+          "expected": 7
+        }
+      ]
     }
   ]
 }

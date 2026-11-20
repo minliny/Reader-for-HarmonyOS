@@ -25,7 +25,7 @@ export struct ShelfBookListDetails {
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         this.metadataTag(ShelfBookPresentation.contentLabel(this.book));
         this.metadataTag(ShelfBookPresentation.originLabel(this.book));
-      }.width('100%').height(18);
+      }.width('100%').constraintSize({ minHeight: 18 });
       Text(this.book.author).width('100%').constraintSize({ minHeight: 14 }).fontFamily(TYPE_SHELF_LIST_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_LIST_AUTHOR.fontWeight)
           .fontSize(TYPE_SHELF_LIST_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_LIST_AUTHOR.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_AUTHOR.letterSpacingFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
@@ -48,12 +48,12 @@ export struct ShelfBookListDetails {
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .style({ strokeWidth: 3, strokeRadius: 2, enableSmoothEffect: false })
         .hitTestBehavior(HitTestMode.None);
-    }.width('100%').height(72).alignItems(HorizontalAlign.Start);
+    }.width('100%').constraintSize({ minHeight: 72 }).alignItems(HorizontalAlign.Start);
   }
 
   @Builder
   private metadataTag(label: string) {
-    Text(label).constraintSize({ minWidth: 30 }).height(16).padding({ left: 4, right: 4 })
+    Text(label).constraintSize({ minWidth: 30, minHeight: 16 }).padding({ left: 4, right: 4 })
       .fontFamily(TYPE_SHELF_METADATA_TAG.fontFamily).fontWeight(TYPE_SHELF_METADATA_TAG.fontWeight)
           .fontSize(TYPE_SHELF_METADATA_TAG.fontSizeFp).lineHeight(TYPE_SHELF_METADATA_TAG.lineHeightFp as number).letterSpacing(TYPE_SHELF_METADATA_TAG.letterSpacingFp as number).textAlign(TextAlign.Center)
       .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))

@@ -62,7 +62,6 @@ const experience = read('entry/src/main/ets/features/reading/LocalReadingExperie
 const appearance = read('entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets');
 const appearanceStage = read('entry/src/main/ets/features/reading/ReaderAppearanceMotionStage.ets');
 const settings = read('entry/src/main/ets/features/reading/ReaderSettingsFullPanel.ets');
-const tts = read('entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets');
 const autoPage = read('entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets');
 const readerLayout = read('entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
 

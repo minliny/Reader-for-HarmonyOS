@@ -1,5 +1,5 @@
 import { ReaderIconButton } from '../common/ReaderIconButton';
-import { TYPE_READER_READING_FAILURE_DETAIL, TYPE_READER_READING_FAILURE_TITLE } from '../common/ReaderTypography';
+import { ReaderPageState } from '../common/ReaderPageState';
 import type { ReaderAppearanceTheme } from './ReaderAppearanceState';
 import { readerAppearanceChromeTone, readerAppearanceThemeStyle } from './ReaderAppearanceRenderStyle';
 import { ReaderPaperBackground } from './ReaderPaperBackground';
@@ -19,22 +19,11 @@ export struct ReaderChapterLoadingState {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ReaderPaperBackground({ theme: this.theme, expanded: this.expanded });
-      Column({ space: 16 }) {
-        LoadingProgress().width(32).height(32)
-          .color(readerAppearanceThemeStyle(this.theme).ink)
-          .enableLoading(this.active && !this.reduceMotion);
-        if (this.chapterTitle.length > 0) {
-          Text(this.chapterTitle)
-            .fontFamily(TYPE_READER_READING_FAILURE_TITLE.fontFamily)
-            .fontSize(TYPE_READER_READING_FAILURE_TITLE.fontSizeFp)
-            .fontWeight(TYPE_READER_READING_FAILURE_TITLE.fontWeight)
-            .fontColor(readerAppearanceThemeStyle(this.theme).ink)
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Center);
-        }
-        Text('正在加载章节…')
-          .fontFamily(TYPE_READER_READING_FAILURE_DETAIL.fontFamily)
-          .fontSize(TYPE_READER_READING_FAILURE_DETAIL.fontSizeFp)
-          .fontColor(readerAppearanceThemeStyle(this.theme).ink);
+      Column() {
+        ReaderPageState({ title: this.chapterTitle, message: '正在加载章节…', padded: false,
+          loading: true, loadingActive: this.active && !this.reduceMotion,
+          inkColor: readerAppearanceThemeStyle(this.theme).ink,
+          mutedColor: readerAppearanceThemeStyle(this.theme).ink });
       }.width('100%').height('100%').padding(24)
         .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center);
       ReaderIconButton({

@@ -18,6 +18,7 @@ export interface ReaderLabeledIconActionSpec {
   divided: boolean;
   iconSize: number;
   rowHeight: number | undefined;
+  scaleHeight: boolean;
   gap: number;
   surfaceOnHit: boolean;
   rowWidth: number | string | undefined;
@@ -31,13 +32,13 @@ export interface ReaderLabeledIconActionSpec {
 const FEED: ReaderLabeledIconActionSpec = {
   labelMarginLeft: undefined, leftPaddingOnly: false, gradientStart: undefined, gradientEnd: undefined, text: TYPE_APP_SMALL_ACTION, textRole: 'app.text.filter',
   dangerRole: undefined, surfaceRole: 'app.feed.actionSoft', borderRole: undefined,
-  divided: false, iconSize: 18, rowHeight: 32, gap: 5, surfaceOnHit: false, rowWidth: undefined, horizontalPadding: 9,
+  divided: false, iconSize: 18, rowHeight: 32, scaleHeight: false, gap: 5, surfaceOnHit: false, rowWidth: undefined, horizontalPadding: 9,
   radius: 999, centerRow: false, outerHit: true, equalLayout: false, responseOffset: undefined,
 };
 function copyReaderLabeledIconActionSpec(): ReaderLabeledIconActionSpec {
   return { labelMarginLeft: FEED.labelMarginLeft, leftPaddingOnly: FEED.leftPaddingOnly, gradientStart: FEED.gradientStart, gradientEnd: FEED.gradientEnd, text: FEED.text, textRole: FEED.textRole, dangerRole: FEED.dangerRole,
     surfaceRole: FEED.surfaceRole, borderRole: FEED.borderRole, divided: FEED.divided,
-    iconSize: FEED.iconSize, rowHeight: FEED.rowHeight, gap: FEED.gap, surfaceOnHit: FEED.surfaceOnHit, rowWidth: FEED.rowWidth,
+    iconSize: FEED.iconSize, rowHeight: FEED.rowHeight, scaleHeight: FEED.scaleHeight, gap: FEED.gap, surfaceOnHit: FEED.surfaceOnHit, rowWidth: FEED.rowWidth,
     horizontalPadding: FEED.horizontalPadding, radius: FEED.radius, centerRow: FEED.centerRow,
     outerHit: FEED.outerHit, equalLayout: FEED.equalLayout, responseOffset: FEED.responseOffset };
 }
@@ -68,7 +69,7 @@ VIEW_ALL.outerHit = false; VIEW_ALL.responseOffset = -8;
 const SOURCE_ADD: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 SOURCE_ADD.text = TYPE_FORM_LABEL_ACTION; SOURCE_ADD.textRole = 'TOK_ON_PRIMARY';
 SOURCE_ADD.surfaceRole = 'TOK_PRIMARY_DARK'; SOURCE_ADD.iconSize = 18; SOURCE_ADD.gap = 8;
-SOURCE_ADD.rowHeight = undefined; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 8;
+SOURCE_ADD.rowHeight = 44; SOURCE_ADD.scaleHeight = true; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 8;
 SOURCE_ADD.surfaceOnHit = true; SOURCE_ADD.equalLayout = true;
 const DISCOVER_APPLY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 DISCOVER_APPLY.text = TYPE_DISCOVER_FILTER_LABEL; DISCOVER_APPLY.textRole = 'TOK_ON_PRIMARY';

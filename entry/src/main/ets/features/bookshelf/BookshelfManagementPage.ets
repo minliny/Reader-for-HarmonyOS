@@ -1,4 +1,4 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
@@ -7,6 +7,7 @@ import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderSectionCard } from '../common/ReaderSectionCard';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
@@ -29,11 +30,9 @@ import {
   TOK_BORDER_W,
   TOK_INK,
   TOK_MUTED,
-  TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
-  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import type { BookGroup, ShelfReadRecord } from './BookshelfManagementGateway';
@@ -75,7 +74,7 @@ export struct BookshelfManagementPage {
       variant: 'management',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
-      overlayContent: (): void => { this.pendingOverlay(); },
+      overlayContent: (contentStartInset: number): void => { this.pendingOverlay(contentStartInset); },
     });
   }
 
@@ -114,7 +113,7 @@ export struct BookshelfManagementPage {
     return this.snapshot.managementMutation?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown';
   }
   @Builder
-  private pendingOverlay() {
+  private pendingOverlay(contentStartInset: number) {
     if (this.originalPending()) {
       Column() {
         ReaderRecoveryNotice({ view: this.recovery(), tag: '分组待处理', actionLabel: '核对操作结果', busy: this.snapshot.busy,
@@ -122,7 +121,7 @@ export struct BookshelfManagementPage {
           secondaryActionLabel: this.snapshot.managementMutation?.canContinueOriginal === true ? '继续原分组操作' : '',
           onSecondaryAction: this.onContinueOriginal });
       }.width('100%').padding({ left: 17, right: 17,
-        top: 64 }).hitTestBehavior(HitTestMode.Transparent);
+        top: contentStartInset }).hitTestBehavior(HitTestMode.Transparent);
     }
   }
   private lastFeedback: string = '';
@@ -133,7 +132,7 @@ export struct BookshelfManagementPage {
     const message = view.visible ? view.message : this.snapshot.statusMessage;
     if (!message || message === this.lastFeedback) return;
     this.lastFeedback = message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2000 }, (): boolean => this.feedbackMounted); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.feedbackMounted); } catch (_) {}
   }
   private recovery(): ReaderRecoveryView {
     const view = readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts);
@@ -162,7 +161,7 @@ export struct BookshelfManagementPage {
 
   @Builder
   private statisticsCard() {
-    Column({ space: TOK_SPACE_XS }) {
+    ReaderSectionCard({ specId: 'management-section', contentGap: TOK_SPACE_XS }) {
       this.heading('阅读统计');
       Text(`书架 ${this.snapshot.data.books.length} 本 · 分组 ${this.snapshot.data.groups.length} 个 · 阅读记录 ${this.snapshot.data.records.length} 条`)
         .fontFamily(TYPE_SHELF_MANAGEMENT_BODY.fontFamily)
@@ -175,17 +174,11 @@ export struct BookshelfManagementPage {
         .fontSize(TYPE_SHELF_MANAGEMENT_BODY_MUTED.fontSizeFp)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
-    .width('100%')
-    .padding(TOK_SPACE_MD)
-    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(10)
-    .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
   private groupEditorCard() {
-    Column({ space: TOK_SPACE_SM }) {
+    ReaderSectionCard({ specId: 'management-section' }) {
       this.heading(this.snapshot.selectedGroupId === 0 ? '新建分组' : '编辑分组');
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.groupNameDraft, placeholder: '分组名', onTextChange: this.onGroupNameChanged });
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-order', text: this.snapshot.groupOrderDraft, placeholder: '顺序整数', onTextChange: this.onGroupOrderChanged });
@@ -198,14 +191,11 @@ export struct BookshelfManagementPage {
       }
       .width('100%');
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
-    .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
   private groupsCard() {
-    Column({ space: TOK_SPACE_SM }) {
+    ReaderSectionCard({ specId: 'management-section' }) {
       this.heading('Core 分组');
       if (this.snapshot.data.groups.length === 0) {
 ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
@@ -225,9 +215,6 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
         .scrollBar(BarState.Off);
       }
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
-    .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
@@ -260,7 +247,7 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
 
   @Builder
   private assignmentCard() {
-    Column({ space: TOK_SPACE_SM }) {
+    ReaderSectionCard({ specId: 'management-section' }) {
       this.heading('书籍分组');
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'shelf-native', text: this.snapshot.assignmentGroupDraft, placeholder: '分组名；留空清除', onTextChange: this.onAssignmentGroupChanged });
       Scroll() {
@@ -288,9 +275,6 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
       .scrollBar(BarState.Off);
       this.actionButton('应用到所选书籍', true, (): void => this.onAssignBook());
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
-    .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
@@ -316,7 +300,7 @@ ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
 
   @Builder
   private recordsCard() {
-    Column({ space: TOK_SPACE_SM }) {
+    ReaderSectionCard({ specId: 'management-section' }) {
       this.heading('Core 阅读记录');
       if (this.snapshot.data.records.length === 0) {
 ReaderPageState({ title: '暂无阅读记录' }).padding({ top: 24, bottom: 24 });
@@ -337,9 +321,6 @@ ReaderPageState({ title: '暂无阅读记录' }).padding({ top: 24, bottom: 24 }
         .scrollBar(BarState.Off);
       }
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
-    .alignItems(HorizontalAlign.Start);
   }
 
   @Builder

@@ -25,6 +25,10 @@ export type RemoteReadingFailureKind =
   | 'PAGINATION_FAILED'
   | 'LAYOUT_FAILED'
   | 'RENDER_FAILED'
+  | 'CONTENT_LOAD_FAILED'
+  | 'HOST_CAPABILITY_UNSUPPORTED'
+  | 'CACHE_CONTENT_MISSING'
+  | 'CACHE_CONTENT_REJECTED'
   | 'STORAGE_FAILED'
   | 'POSITION_CONTEXT_STALE'
   | 'NETWORK_ENVIRONMENT';
@@ -199,8 +203,9 @@ export function classifyChapterBody(content: string, hasImages: boolean = false)
 
 /**
  * Map any error from the remote reading chain onto the stable taxonomy.
- * Unknown or client-side errors map to RENDER_FAILED (non-source), so they can
- * never trigger a source-switch prompt.
+ * Unknown client-side errors map to RENDER_FAILED. Request lifecycle and
+ * identity changes are recoverable admission failures and must not be shown as
+ * a rendering defect or trigger a source-switch prompt.
  */
 export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailureKind {
   if (error instanceof RemoteReadingSourceError) {
@@ -220,25 +225,59 @@ export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailure
         return 'SOURCE_PARSE_FAILED';
       case 'chapterNotDownloaded':
       case 'cachedSessionUnavailable':
+        return 'CACHE_CONTENT_MISSING';
       case 'cacheDerivedCorrupt':
+        return 'CACHE_CONTENT_REJECTED';
       case 'storageFailure':
         return 'STORAGE_FAILED';
       case 'commandFailed':
+        if (error.command === 'reading.entry.snapshot' || error.command === 'reading.catalog.page' ||
+          error.command === 'reading.document.window' || error.command === 'reading.progress.get' ||
+          error.command === 'cache.book.status' ||
+          error.command?.startsWith('local_book.') === true)
+          return 'CONTENT_LOAD_FAILED';
         switch (error.category) {
           case 'SOURCE_RULE_FAILED': case 'SOURCE_RESPONSE_FORMAT': return 'SOURCE_PARSE_FAILED';
           case 'SOURCE_CONTENT_EMPTY': return 'SOURCE_CONTENT_EMPTY';
           case 'SOURCE_TOC_EMPTY': return 'SOURCE_TOC_EMPTY';
-          default: return 'SOURCE_HTTP_FAILED';
+          case 'SOURCE_HTTP_FAILED': return 'SOURCE_HTTP_FAILED';
+          default: return 'CONTENT_LOAD_FAILED';
         }
       case 'identityMismatch':
+        // The remote endpoint returned another book/source identity. This is
+        // a source contract/parse defect and must remain eligible for the
+        // caller's explicit source recovery path.
+        return 'SOURCE_PARSE_FAILED';
       case 'sourceVersionChanged':
       case 'cancelled':
+        return 'POSITION_CONTEXT_STALE';
       case 'invalidInput':
+        return 'CONTENT_LOAD_FAILED';
       case 'unsupportedHostCapability':
+        return 'HOST_CAPABILITY_UNSUPPORTED';
       default:
         return 'RENDER_FAILED';
     }
   }
+  // Internal guards are not platform rendering failures. Keep their exact
+  // diagnostics, and never relax position/identity checks to hide an error.
+  const code = errorMessageOf(error);
+  if (code === 'READING_CONTENT_EMPTY') return 'SOURCE_CONTENT_EMPTY';
+  if (code === 'LOCAL_TOC_EMPTY') return 'SOURCE_TOC_EMPTY';
+  if (code.startsWith('READING_POSITION_') || code === 'READING_CONTENT_EPOCH_CHANGED' ||
+    code === 'READING_CATALOG_REVISION_CHANGED' || code === 'READING_PROGRESS_REVISION_MISSING' ||
+    code === 'reading entry snapshot was cancelled' || code === 'reading catalog was cancelled' ||
+    code === 'reading document window was cancelled' || code === 'reading paragraph window was cancelled' ||
+    code === 'reading entry progress scope mismatch' || code === 'reading document window scope mismatch')
+    return 'POSITION_CONTEXT_STALE';
+  if (code === 'PAGINATION_FIRST_PAGE_READY_TIMEOUT' || code === 'LOCAL_TOC_CHAPTER_NOT_FOUND')
+    return 'CONTENT_LOAD_FAILED';
+  if (code.startsWith('invalid reading entry') || code.startsWith('reading entry ') ||
+    code.startsWith('invalid reading catalog') || code.startsWith('reading catalog ') ||
+    code.startsWith('invalid document window') || code.startsWith('reading document window ') ||
+    code.startsWith('local_book.')) return 'CONTENT_LOAD_FAILED';
+  if (code.startsWith('PAGINATION_')) return 'PAGINATION_FAILED';
+  if (code.startsWith('NATIVE_TEXT_')) return 'LAYOUT_FAILED';
   return 'RENDER_FAILED';
 }
 

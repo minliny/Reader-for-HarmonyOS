@@ -20,6 +20,14 @@ const definitions={
     "description": "history: history-reopen-clear actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
     "resources": []
   },
+  "history-clear-active-results": {
+    "description": "History clear publishes independently while the actual search keeps its run, result references and live sweep",
+    "resources": []
+  },
+  "history-delete-serial": {
+    "description": "Actual history delete reuses the Core keyword command, serializes with clear and rejects stale readback",
+    "resources": []
+  },
   "worker-concurrency-dedup": {
     "description": "worker-lifecycle: worker-concurrency-dedup actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
     "resources": []
@@ -365,7 +373,13 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
       }
       if (command === 'search.history.add') {
         state.historyWrites += 1;
+        state.historyKeywords = [params.keyword, ...state.historyKeywords.filter(word => word !== params.keyword)];
         return { data: {} };
+      }
+      if (command === 'search-keyword.delete') {
+        const deleted = state.historyKeywords.includes(params.word);
+        state.historyKeywords = state.historyKeywords.filter(word => word !== params.word);
+        return { data: { word: params.word, deleted } };
       }
       if (command !== 'book.search') {
         throw new Error(`unexpected command ${command}`);
@@ -619,6 +633,67 @@ case "history-reopen-clear": {
   assert.equal(last(presentations).historyStatus, 'ready');
   assert.deepEqual(last(presentations).history, []);
   search.close();
+};break;
+case "history-clear-active-results": {
+  const owner = fakeOwner({ sources: makeSources(2),
+    resultsFor: sourceId => [{ bookId: `/${sourceId}`, title: '正在搜索的书', author: '作者' }],
+    delayForSource: sourceId => sourceId === 'source-0' ? 5 : 250 });
+  owner.state.historyKeywords = ['以前的记录'];
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10); search.search('当前查询');
+  await waitUntil(owner.state, () => last(presentations).kind === 'results' && last(presentations).searching);
+  const before = last(presentations), run = search.run, work = search.work;
+  const generation = search.resultGeneration, calls = owner.state.calls.length;
+  search.clearHistory(); await sleep(10);
+  const after = last(presentations);
+  assert.equal(search.run, run); assert.equal(search.work, work);
+  assert.equal(search.resultGeneration, generation); assert.equal(search.sweepAlive, true);
+  assert.equal(owner.state.calls.length, calls);
+  assert.equal(after.kind, 'results'); assert.equal(after.keyword, '当前查询');
+  assert.equal(after.results, before.results); assert.equal(after.delta, before.delta);
+  assert.equal(after.operation, before.operation);
+  assert.equal(after.historyStatus, 'ready'); assert.deepEqual(after.history, []);
+  await settle(owner.state, 2);
+  assert.equal(last(presentations).results.length, 2, 'the admitted sweep still completes after history clear');
+  search.close();
+};break;
+case "history-delete-serial": {
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  owner.state.historyKeywords = ['第一条', '第二条', '第三条'];
+  const request = owner.request, writes = [];
+  let releaseDelete;
+  owner.request = async (method, params, options) => {
+    if (method === 'search-keyword.delete') {
+      writes.push(`delete:${params.word}`);
+      if (params.word === '第一条') await new Promise(resolve => { releaseDelete = resolve; });
+      if (params.word === '失败条目') throw Error('delete rejected');
+    }
+    if (method === 'search.history.clear') writes.push('clear');
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10);
+  const work = search.work;
+  const first = search.deleteHistory('第一条');
+  search.clearHistory();
+  const lastDelete = search.deleteHistory('第三条');
+  await sleep(10);
+  assert.deepEqual(writes, ['delete:第一条'], 'later durable operations wait for the previous write');
+  releaseDelete(); await first; await lastDelete; await sleep(10);
+  assert.deepEqual(writes, ['delete:第一条', 'clear', 'delete:第三条']);
+  assert.deepEqual(owner.state.historyKeywords, []);
+  assert.deepEqual(last(presentations).history, []);
+  assert.equal(last(presentations).historyStatus, 'ready'); assert.equal(search.work, work);
+  owner.state.historyKeywords = ['保留条目'];
+  await assert.rejects(search.deleteHistory('失败条目'), /delete rejected/); await sleep(10);
+  assert.deepEqual(last(presentations).history, ['保留条目'], 'rejected mutation reads facts without replaying the write');
+  assert.equal(writes.filter(value => value === 'delete:失败条目').length, 1);
+  await assert.rejects(search.deleteHistory('  '), /non-blank/);
+  const count = writes.length;
+  search.close(); await search.deleteHistory('保留条目');
+  assert.equal(writes.length, count, 'retired sessions cannot admit delete intents');
 };break;
 case "worker-concurrency-dedup": {
   const sources = makeSources(8);

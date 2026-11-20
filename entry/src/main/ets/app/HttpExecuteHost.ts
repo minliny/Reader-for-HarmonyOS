@@ -2,7 +2,11 @@ import http from '@ohos.net.http';
 import url from '@ohos.url';
 import util from '@ohos.util';
 import connection from '@ohos.net.connection';
+import fileIo from '@ohos.file.fs';
+import { rcp } from '@kit.RemoteCommunicationKit';
 import { prepareNetworkTarget, NetworkEnvironmentError, type NetworkTarget } from './NetworkRoutePolicy';
+import { assertReaderStorageNetworkUri, requireReaderStorageNetworkAuthority,
+  type ReaderStorageNetworkAuthority } from './ReaderStorageNetworkAuthority';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { encodeSharedText, type JsonObject, type ReaderCoreAssetBridge } from '@reader/core-harmony';
 import { CookieSessionStore } from './CookieSessionStore';
@@ -40,6 +44,11 @@ const MAX_MULTIPART_METADATA_CHARS = 64 * 1024;
 // a Core caller that gives up never leaves this Host running in the
 // background beyond its own budget.
 const TOTAL_DEADLINE_MS = 25000;
+const LIBRARY_FILE_MAX_BYTES = 160 * 1024 * 1024;
+const LIBRARY_FILE_DEADLINE_MS = 5 * 60 * 1000;
+const LIBRARY_FILE_MAX_DEADLINE_MS = 10 * 60 * 1000;
+const LIBRARY_FILE_WRITE_CHUNK_BYTES = 4 * 1024 * 1024;
+const LIBRARY_SMALL_UPLOAD_MAX_BYTES = 24 * 1024 * 1024;
 
 type RetryPolicy = {
   maxAttempts: number;
@@ -60,6 +69,26 @@ interface BinaryResponseSink {
   response?: HttpBytesResponse;
 }
 
+export interface HttpLibraryPackagePutResponse {
+  status: number;
+  headers: Record<string, string>;
+  finalUrl: string;
+  responseByteLength: number;
+}
+
+interface LibraryPackageUploadSink {
+  fd: number;
+  expectedBytes: number;
+  isCancelled?: () => boolean;
+  onProgress?: (processed: number) => void;
+  willDispatch?: () => Promise<void>;
+  stop?: () => void;
+  settled?: Promise<void>;
+  transportDrained?: Promise<void>;
+  drained?: Promise<void>;
+  response?: HttpLibraryPackagePutResponse;
+}
+
 /** Optional Core-owned sink for a host.request response body. */
 export interface HttpAssetSink {
   bridge: ReaderCoreAssetBridge;
@@ -68,7 +97,11 @@ export interface HttpAssetSink {
 }
 
 type DeadlineState = {
+  storageAuthority?: ReaderStorageNetworkAuthority;
+  storageUrl?: string;
+  storageMethod?: string;
   binarySink?: BinaryResponseSink;
+  uploadSink?: LibraryPackageUploadSink;
   responseMaxBytes?: number;
   deadlineAt: number;
   cookieGeneration?: number;
@@ -225,11 +258,11 @@ export class HttpExecuteHost {
 
   /** Host-only text/document consumers can set a transport limit before decoding. */
   async executeBounded(params: JsonObject, maxBytes: number, requestId?: number,
-    isCancelled?: () => boolean): Promise<JsonObject> {
+    isCancelled?: () => boolean, authority?: ReaderStorageNetworkAuthority): Promise<JsonObject> {
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_RESPONSE_BYTES) {
       throw new Error('http.execute: invalid response limit');
     }
-    return this.executeRequest(params, requestId, isCancelled, undefined, undefined, maxBytes);
+    return this.executeRequest(params, requestId, isCancelled, undefined, undefined, maxBytes, undefined, authority);
   }
 
   /** Execute a Core host request and stream binary response bytes into its asset store. */
@@ -256,6 +289,55 @@ export class HttpExecuteHost {
     return sink.response;
   }
 
+  /** Conditional create by default; a library-sync owner may supply the exact
+   * strong revision it has read. The caller leases this FD until fetch settles. */
+  async executeLibraryPackagePutFromFile(params: JsonObject, fd: number, expectedBytes: number,
+    isCancelled?: () => boolean, onProgress?: (processed: number) => void,
+    willDispatch?: () => Promise<void>, authority?: ReaderStorageNetworkAuthority,
+    strongRevision?: string): Promise<HttpLibraryPackagePutResponse> {
+    if (!Number.isSafeInteger(fd) || fd < 0 || !Number.isSafeInteger(expectedBytes) ||
+      expectedBytes < 1 || expectedBytes > LIBRARY_FILE_MAX_BYTES) throw new Error('http.execute: invalid library upload');
+    const stat = fileIo.statSync(fd);
+    if (!stat.isFile() || stat.size !== expectedBytes) throw new Error('http.execute: library upload file changed');
+    const requestUrl = typeof params['url'] === 'string' ? this.requireHttpUrl(params['url'] as string) : '';
+    if (this.parseMethod(params['method']).wireMethod !== 'PUT' || !requestUrl.toLowerCase().startsWith('https://') ||
+      (params['body'] !== undefined && params['body'] !== null) || params['followRedirects'] === true ||
+      (params['maxRedirects'] !== undefined && params['maxRedirects'] !== 0))
+      throw new Error('http.execute: library upload requires HTTPS PUT without body or redirects');
+    const headers = this.parseHeaders(params['headers']);
+    const names = new Set<string>();
+    for (const name of Object.keys(headers)) {
+      const normalized = name.toLowerCase();
+      if (names.has(normalized)) throw new Error('http.execute: duplicate library upload header');
+      names.add(normalized);
+    }
+    const conditionMatches = strongRevision === undefined ?
+      this.headerValue(headers, 'if-none-match') === '*' && this.headerValue(headers, 'if-match') === null :
+      /^"[\x21\x23-\x7e\x80-\xff]*"$/.test(strongRevision) && strongRevision.length <= 1024 &&
+      this.headerValue(headers, 'if-match') === strongRevision && this.headerValue(headers, 'if-none-match') === null;
+    if (!conditionMatches ||
+      this.headerValue(headers, 'range') !== null || this.headerValue(headers, 'transfer-encoding') !== null ||
+      (this.headerValue(headers, 'content-length') !== null && this.headerValue(headers, 'content-length') !== `${expectedBytes}`) ||
+      (this.headerValue(headers, 'content-type') !== null && this.headerValue(headers, 'content-type') !== 'application/octet-stream'))
+      throw new Error('http.execute: library upload requires one exact condition and content length');
+    this.setHeader(headers, 'Content-Length', `${expectedBytes}`);
+    this.setHeader(headers, 'Content-Type', 'application/octet-stream');
+    this.setHeader(headers, 'Accept-Encoding', 'identity');
+    const sink: LibraryPackageUploadSink = { fd, expectedBytes, isCancelled, onProgress, willDispatch };
+    const request: JsonObject = { ...params, url: requestUrl, method: 'PUT', headers,
+      httpsOnly: true, followRedirects: false, maxRedirects: 0, retry: null };
+    try {
+      await this.executeRequest(request, undefined, isCancelled, undefined, undefined, undefined, sink, authority);
+      if (sink.response === undefined) throw new Error('http.execute: missing library upload response');
+      return sink.response;
+    } finally {
+      // cancel()/the public deadline may reject before native file reading
+      // ends. Never give the FD back while that original fetch is unsettled.
+      sink.stop?.();
+      await sink.drained;
+    }
+  }
+
   private async executeRequest(
     params: JsonObject,
     requestId?: number,
@@ -263,6 +345,8 @@ export class HttpExecuteHost {
     binarySink?: BinaryResponseSink,
     assetSink?: HttpAssetSink,
     responseMaxBytes?: number,
+    uploadSink?: LibraryPackageUploadSink,
+    authority?: ReaderStorageNetworkAuthority,
   ): Promise<JsonObject> {
     const inputUrl = params['url'];
     if (typeof inputUrl !== 'string' || inputUrl.trim().length === 0) {
@@ -287,13 +371,18 @@ export class HttpExecuteHost {
     // fetch this Host issues enters here or through the redirect chain, both
     // of which run the shared private-target judge before any byte moves.
     const parsedMethod = this.parseMethod(params['method']);
+    if (authority !== undefined) assertReaderStorageNetworkUri(authority, requestUrl, parsedMethod.wireMethod);
     const headers = this.parseHeaders(params['headers']);
     const body = this.parseBody(params['body']);
+    if (authority !== undefined && this.headerValue(headers, 'host') !== null)
+      throw new Error('http.execute: user storage host override is not allowed');
     const requestCharset = this.parseCharset(params['charset']);
     const retry = this.parseRetry(params['retry']);
-    const maxRedirects = this.parseRedirect(params['followRedirects'], params['maxRedirects']);
+    const maxRedirects = authority === undefined ? this.parseRedirect(params['followRedirects'], params['maxRedirects']) : 0;
     const sessionId = this.parseSession(params['session']);
     const useCookieJar = params['usePlatformCookieJar'] === true || sessionId !== null;
+    if (authority !== undefined && (params['followRedirects'] === true || useCookieJar))
+      throw new Error('http.execute: user storage forbids redirects and shared cookies');
     if (params['usePlatformCookieJar'] !== undefined && params['usePlatformCookieJar'] !== null &&
       typeof params['usePlatformCookieJar'] !== 'boolean') {
       throw new Error('http.execute: usePlatformCookieJar must be a boolean');
@@ -310,9 +399,16 @@ export class HttpExecuteHost {
       !Number.isSafeInteger(requestedTimeout) || requestedTimeout <= 0)) {
       throw new Error('http.execute: timeoutMs must be a positive integer');
     }
+    const fileOperation = uploadSink !== undefined;
+    const defaultDeadline = fileOperation ? LIBRARY_FILE_DEADLINE_MS : TOTAL_DEADLINE_MS;
+    const maxDeadline = fileOperation ? LIBRARY_FILE_MAX_DEADLINE_MS : TOTAL_DEADLINE_MS;
     const deadline = this.createDeadline(typeof requestedTimeout === 'number' ?
-      Math.min(TOTAL_DEADLINE_MS, requestedTimeout) : TOTAL_DEADLINE_MS);
+      Math.min(maxDeadline, requestedTimeout) : defaultDeadline);
     deadline.binarySink = binarySink;
+    deadline.uploadSink = uploadSink;
+    deadline.storageAuthority = authority;
+    deadline.storageUrl = authority === undefined ? undefined : requestUrl;
+    deadline.storageMethod = authority === undefined ? undefined : parsedMethod.wireMethod;
     deadline.responseMaxBytes = responseMaxBytes;
     deadline.httpsOnly = httpsOnly === true;
     deadline.sameOriginRedirectsOnly = sameOriginRedirectsOnly === true;
@@ -323,16 +419,18 @@ export class HttpExecuteHost {
     if (requestId !== undefined) {
       this.activeByRequestId.set(requestId, deadline);
     }
-    if (isCancelled !== undefined) {
+    if (isCancelled !== undefined || authority !== undefined) {
       const pollCancellation = (): void => {
         if (deadline.cancelled) {
           return;
         }
         let cancelled = true;
         try {
-          cancelled = isCancelled();
+          cancelled = isCancelled?.() ?? false;
+          if (authority !== undefined) assertReaderStorageNetworkUri(authority, requestUrl, parsedMethod.wireMethod);
         } catch (_) {
           // A failed ownership probe cannot authorize more network work.
+          cancelled = true;
         }
         if (cancelled) {
           this.cancelDeadline(deadline, 'http.execute: cancelled by caller');
@@ -347,14 +445,12 @@ export class HttpExecuteHost {
       // destroy() does not settle request.request() promptly; the shared
       // `cancelled` flag still stops background retries and the post-await
       // check rejects a success that lands after the deadline.
-      const response = await Promise.race([
-        this.requestAfterTargetValidation(
-          requestUrl, parsedMethod, headers, body, requestCharset,
-          maxRedirects, retry, deadline, useCookieJar ? sessionId : null,
-          assetSink,
-        ),
-        deadline.expired,
-      ]);
+      const original = this.requestAfterTargetValidation(requestUrl, parsedMethod, headers, body, requestCharset,
+        maxRedirects, retry, deadline, useCookieJar ? sessionId : null, assetSink);
+      // Upload callers retain their source until the complete route owner,
+      // including DNS-rule cleanup, has finished after a public timeout.
+      if (uploadSink !== undefined) uploadSink.drained = original.then((): void => {}, (): void => {});
+      const response = await Promise.race([original, deadline.expired]);
       this.recordSourceDiagnostic(
         diagnostic,
         parsedMethod.wireMethod,
@@ -548,6 +644,7 @@ export class HttpExecuteHost {
     }
     state.cancelled = true;
     state.failureReason = message;
+    state.uploadSink?.stop?.();
     const active = state.activeRequest;
     if (active !== null) {
       try {
@@ -570,6 +667,33 @@ export class HttpExecuteHost {
     if (state.cancelled || state.deadlineAt - Date.now() <= 0) {
       throw new Error(state.failureReason ?? 'http.execute: exceeded total deadline');
     }
+    if (state.storageAuthority !== undefined && state.storageUrl !== undefined)
+      assertReaderStorageNetworkUri(state.storageAuthority, state.storageUrl, state.storageMethod);
+  }
+
+  private async requireStorageAuthority(state: DeadlineState, requestUrl: string, method: string): Promise<void> {
+    this.assertWithinDeadline(state);
+    if (state.storageAuthority !== undefined)
+      await requireReaderStorageNetworkAuthority(state.storageAuthority, requestUrl, method);
+    this.assertWithinDeadline(state);
+  }
+
+  /** Anonymous observations at the native boundary; diagnostics never change
+   * admission, transport, response validation or the caller's journal. */
+  private storageHttpDiagnostic(deadline: DeadlineState, phase: 'dispatch' | 'response', wireMethod: string,
+    route: NetworkTarget['route'], status?: number, rawHeaders?: Object): void {
+    if (deadline.storageAuthority === undefined) return;
+    try {
+      const methods = ['GET', 'HEAD', 'OPTIONS', 'PROPFIND', 'PUT', 'DELETE', 'MKCOL', 'PATCH', 'POST'];
+      const method = methods.includes(wireMethod) ? wireMethod : 'OTHER';
+      const actualRoute = route === 'systemProxy' ? 'systemProxy' : route === 'systemSynthetic' ? 'systemSynthetic' : 'direct';
+      const numericStatus = typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599 ? status : -1;
+      const allow = rawHeaders === undefined ? [] : (this.headerValue(this.flattenHeaders(rawHeaders), 'allow') ?? '')
+        .split(',').map((value: string): string => value.trim().toUpperCase());
+      const knownAllow = methods.filter((value: string): boolean => allow.includes(value)).join(',');
+      hilog.info(LOG_DOMAIN, 'Reader', 'storage.http phase=%{public}s wireMethod=%{public}s route=%{public}s status=%{public}d allow=%{public}s',
+        phase, method, actualRoute, numericStatus, knownAllow);
+    } catch (_) { /* An unavailable diagnostic sink cannot alter an HTTP operation. */ }
   }
 
   private raceDeadline<T>(operation: Promise<T>, state: DeadlineState): Promise<T> {
@@ -595,7 +719,8 @@ export class HttpExecuteHost {
   ): Promise<JsonObject> {
     this.assertWithinDeadline(deadline);
     this.requireHttpsIfNeeded(url, deadline);
-    this.rejectPrivateNetworkUrl(url);
+    this.rejectPrivateNetworkUrl(url, deadline.storageAuthority, method.wireMethod);
+    await this.requireStorageAuthority(deadline, url, method.wireMethod);
     this.assertWithinDeadline(deadline);
     return this.requestWithPolicy(url, method, headers, body, requestCharset, maxRedirects, retry, deadline, sessionId, assetSink);
   }
@@ -614,8 +739,10 @@ export class HttpExecuteHost {
   ): Promise<JsonObject> {
     const attempts = retry === null ? 1 : Math.max(1, Math.floor(retry.maxAttempts));
     let lastError: Error | null = null;
+    let attempted = 0;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       this.assertWithinDeadline(deadline);
+      attempted = attempt;
       try {
         return await this.requestRedirectChain(
           url, method, headers, body, requestCharset, maxRedirects, deadline, sessionId, assetSink,
@@ -625,19 +752,39 @@ export class HttpExecuteHost {
           throw new Error('http.execute: cancelled');
         }
         lastError = error instanceof Error ? error : new Error(errorMessageOf(error));
-        if (attempt < attempts) {
+        // An explicit retry budget is not permission to replay a write, a
+        // response/persistence failure, or an unclassified native rejection.
+        // Keep one original Core request/owner and its original deadline.
+        if (attempt < attempts && this.canReplayFailure(method, body, error)) {
           const remaining = deadline.deadlineAt - Date.now();
           if (remaining <= 0) {
             throw new Error('http.execute: exceeded total deadline');
           }
-          await this.sleepRetryBackoff(retry, attempt, remaining);
-        }
+          await this.sleepRetryBackoff(retry, attempt, remaining, deadline);
+        } else break;
       }
     }
     this.reportTypeError(lastError, 'request.chain');
     hilog.error(LOG_DOMAIN, 'Reader', 'http.execute failed after %{public}d attempt(s): %{private}s',
-      attempts, lastError === null ? 'unknown' : lastError.message);
+      attempted, lastError === null ? 'unknown' : lastError.message);
     throw lastError ?? new Error('http.execute request failed');
+  }
+
+  private canReplayFailure(method: ParsedMethod, body: EncodedBody, error: unknown): boolean {
+    if (body.kind !== 'none' || !['GET', 'HEAD', 'OPTIONS'].includes(method.wireMethod)) return false;
+    if (error instanceof SourceHttpTransportError) {
+      // A native timeout has no confirmed result. A user may retry the task,
+      // but this Host must not silently issue another request for that result.
+      return error.retryable && error.details['platformCode'] !== 2300028;
+    }
+    if (error instanceof NetworkEnvironmentError && error.retryable) {
+      const phase = error.details.phase;
+      if (phase === 'dns' || phase === 'route') return true;
+      // Only a known proxy setup failure is eligible here. In particular,
+      // proxy authentication and unknown transport failures need user action.
+      return [2300005, 2300007, 2300097].includes(error.details.platformCode ?? 0);
+    }
+    return false;
   }
 
   private reportTypeError(error: unknown, stage: string): void {
@@ -700,6 +847,10 @@ export class HttpExecuteHost {
       const response = await this.singleHop(
         currentUrl, currentMethod, effectiveHeaders, currentBody, requestCharset, deadline,
       );
+      await this.requireStorageAuthority(deadline, currentUrl, currentMethod.wireMethod);
+      if (deadline.storageAuthority !== undefined && this.isRedirectStatus(response.status))
+        throw new Error('http.execute: user storage redirect is not allowed');
+      if (deadline.uploadSink !== undefined) return { status: response.status, headers: response.headers, finalUrl: currentUrl };
       if (sessionId !== null) {
         const setCookies = this.headerValues(response.rawHeaders, 'set-cookie');
         const stored = await CookieSessionStore.instance.storeResponseCookies(
@@ -724,7 +875,7 @@ export class HttpExecuteHost {
       // A public source must not be able to redirect into private address
       // space either: every hop target passes the same byte/DNS gate as the
       // entry URL before the next hop is issued.
-      this.rejectPrivateNetworkUrl(nextUrl);
+      this.rejectPrivateNetworkUrl(nextUrl, deadline.storageAuthority, currentMethod.wireMethod);
       const hop: RedirectHop = {
         status: response.status,
         fromUrl: currentUrl,
@@ -763,12 +914,13 @@ export class HttpExecuteHost {
     deadline: DeadlineState,
   ): Promise<HopResponse> {
     const hostname = httpUrlHostname(requestUrl);
-    if (hostname === undefined || isPrivateNetworkTarget(hostname)) {
+    this.rejectPrivateNetworkUrl(requestUrl, deadline.storageAuthority, method.wireMethod);
+    if (hostname === undefined) {
       throw new Error('url targets a private, loopback, link-local or invalid address and is not allowed');
     }
     this.assertWithinDeadline(deadline);
     if (hostname.includes(':') || /^[0-9.]+$/.test(hostname)) {
-      const target = await this.raceDeadline(prepareNetworkTarget(requestUrl), deadline);
+      const target = await this.raceDeadline(prepareNetworkTarget(requestUrl, deadline.storageAuthority), deadline);
       this.assertWithinDeadline(deadline);
       return this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, target.route, target.systemProxy);
     }
@@ -796,7 +948,7 @@ export class HttpExecuteHost {
       // Read-only native DNS/proxy getters may fail to settle during a network
       // transition. Cancellation must release this lease; their late result
       // cannot install a pin or send a retired request.
-      const admitted = await this.raceDeadline(prepareNetworkTarget(requestUrl), deadline);
+      const admitted = await this.raceDeadline(prepareNetworkTarget(requestUrl, deadline.storageAuthority), deadline);
       this.assertWithinDeadline(deadline);
       if (admitted.route === 'systemProxy') {
         return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route, admitted.systemProxy), deadline);
@@ -814,6 +966,9 @@ export class HttpExecuteHost {
       this.assertWithinDeadline(deadline);
       return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route), deadline);
     } finally {
+      // A public deadline may win the race while native upload is still
+      // reading. Keep this hostname lease and DNS pin until that work drains.
+      if (deadline.uploadSink !== undefined) await deadline.uploadSink.transportDrained;
       if (pinned) {
         try { await this.clearOwnedDnsRule(hostname); } catch (_) {
           // Keep ownership until removal succeeds. The next hop must recover
@@ -846,11 +1001,65 @@ export class HttpExecuteHost {
     route: NetworkTarget['route'] = 'direct',
     systemProxy?: connection.HttpProxy,
   ): Promise<HopResponse> {
+    await this.requireStorageAuthority(deadline, requestUrl, method.wireMethod);
     if (route === 'systemProxy' && systemProxy === undefined) {
       throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', 'proxy.snapshot');
     }
+    if (deadline.uploadSink !== undefined) {
+      const hostname = httpUrlHostname(requestUrl);
+      const literal = hostname !== undefined && (hostname.includes(':') || /^[0-9.]+$/.test(hostname));
+      // Saved Providers share the existing bounded HTTP upload path. Authority
+      // is still checked above and immediately before its native dispatch.
+      const smallDirect = route !== 'systemProxy' && !literal &&
+        deadline.uploadSink.expectedBytes <= LIBRARY_SMALL_UPLOAD_MAX_BYTES;
+      const transfer = smallDirect ? this.singleHopOhosTransport(requestUrl, method, headers, body, requestCharset, deadline, route, systemProxy, deadline.uploadSink) :
+        this.putLibraryPackageFile(requestUrl, headers, deadline, route, systemProxy, deadline.uploadSink);
+      deadline.uploadSink.transportDrained = transfer.then((): void => {}, (): void => {});
+      return transfer;
+    }
+    const transfer = this.singleHopOhosTransport(requestUrl, method, headers, body, requestCharset, deadline, route, systemProxy);
+    return transfer;
+  }
+
+  private async smallLibraryUploadBody(sink: LibraryPackageUploadSink, deadline: DeadlineState): Promise<ArrayBuffer> {
+    const check = (): void => {
+      let cancelled = false; try { cancelled = sink.isCancelled?.() ?? false; } catch (_) { cancelled = true; }
+      if (cancelled) this.cancelDeadline(deadline, 'http.execute: cancelled by caller');
+      this.assertWithinDeadline(deadline);
+    };
+    check();
+    if (!Number.isSafeInteger(sink.expectedBytes) || sink.expectedBytes < 1 || sink.expectedBytes > LIBRARY_SMALL_UPLOAD_MAX_BYTES ||
+      !fileIo.statSync(sink.fd).isFile() || fileIo.statSync(sink.fd).size !== sink.expectedBytes ||
+      fileIo.lseek(sink.fd, 0, fileIo.WhenceType.SEEK_SET) !== 0) throw new Error('http.execute: small library upload source changed');
+    const result = new ArrayBuffer(sink.expectedBytes), bytes = new Uint8Array(result);
+    const buffer = new ArrayBuffer(Math.min(LIBRARY_FILE_WRITE_CHUNK_BYTES, sink.expectedBytes));
+    let offset = 0;
+    while (offset < bytes.byteLength) {
+      check();
+      const count = await fileIo.read(sink.fd, buffer);
+      check();
+      if (!Number.isSafeInteger(count) || count <= 0 || count > buffer.byteLength || count > bytes.byteLength - offset)
+        throw new Error('http.execute: small library upload source truncated or changed');
+      bytes.set(new Uint8Array(buffer, 0, count), offset); offset += count;
+    }
+    if (fileIo.statSync(sink.fd).size !== sink.expectedBytes) throw new Error('http.execute: small library upload source changed');
+    check(); return result;
+  }
+
+  private async singleHopOhosTransport(requestUrl: string, method: ParsedMethod, headers: Record<string, string>, body: EncodedBody,
+    requestCharset: string | undefined, deadline: DeadlineState, route: NetworkTarget['route'], systemProxy?: connection.HttpProxy,
+    smallUpload?: LibraryPackageUploadSink): Promise<HopResponse> {
     const request = http.createHttp();
     deadline.activeRequest = request;
+    let lastSent = 0;
+    const sent = (value: http.DataSendProgressInfo): void => {
+      if (smallUpload === undefined || deadline.cancelled) return;
+      if (!Number.isSafeInteger(value.sendSize) || value.sendSize < lastSent || value.sendSize > smallUpload.expectedBytes) {
+        this.cancelDeadline(deadline, 'http.execute: invalid library upload progress'); return;
+      }
+      lastSent = value.sendSize;
+      try { smallUpload.onProgress?.(value.sendSize); } catch (_) { this.cancelDeadline(deadline, 'http.execute: library upload observer retired'); }
+    };
     let stage = 'request.interceptors';
     try {
       const interceptors = new http.HttpInterceptorChain();
@@ -861,9 +1070,8 @@ export class HttpExecuteHost {
       this.assertWithinDeadline(deadline);
       const effectiveHeaders = this.copyHeaders(headers);
       stage = 'request.payload';
-      const payload: string | ArrayBuffer | undefined = this.requestPayload(
-        body, requestCharset, effectiveHeaders,
-      );
+      const payload: string | ArrayBuffer | undefined = smallUpload === undefined ? this.requestPayload(body, requestCharset, effectiveHeaders) :
+        await this.smallLibraryUploadBody(smallUpload, deadline);
       const remaining = deadline.deadlineAt - Date.now();
       if (remaining <= 0) {
         // The deadline may have elapsed while a (large) payload was built;
@@ -881,7 +1089,8 @@ export class HttpExecuteHost {
         // to unvalidated direct DNS if the proxy was just disabled. Keep the
         // admitted system endpoint for this hop; the next hop reads it afresh.
         usingProxy: route === 'systemProxy' ? systemProxy : false,
-        maxLimit: deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES,
+        maxLimit: smallUpload !== undefined ? 64 * 1024 :
+          deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES,
         // Clamp every per-request timeout to the remaining deadline budget.
         connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),
         readTimeout: Math.min(DEFAULT_READ_TIMEOUT_MS, remaining),
@@ -899,7 +1108,20 @@ export class HttpExecuteHost {
       let response: http.HttpResponse;
       stage = 'request.dispatch';
       try {
-        response = await request.request(requestUrl, options);
+        if (smallUpload !== undefined) {
+          request.on('dataSendProgress', sent);
+          await smallUpload.willDispatch?.();
+          let cancelled = false; try { cancelled = smallUpload.isCancelled?.() ?? false; } catch (_) { cancelled = true; }
+          if (cancelled) this.cancelDeadline(deadline, 'http.execute: cancelled by caller');
+          this.assertWithinDeadline(deadline);
+        }
+        await this.requireStorageAuthority(deadline, requestUrl, method.wireMethod);
+        this.storageHttpDiagnostic(deadline, 'dispatch', method.wireMethod, route);
+        const native = request.request(requestUrl, options);
+        if (smallUpload !== undefined) smallUpload.settled = native.then((): void => {}, (): void => {});
+        response = await native;
+        this.storageHttpDiagnostic(deadline, 'response', method.wireMethod, route, response.responseCode, response.header);
+        await this.requireStorageAuthority(deadline, requestUrl, method.wireMethod);
       } catch (error) {
         // A native rejection caused by our destroy() belongs to cancellation,
         // even when the platform supplies an otherwise valid transport code.
@@ -927,7 +1149,7 @@ export class HttpExecuteHost {
       // A response that lands after the deadline is a stale success: reject
       // it so a cancelled cycle never returns a late result.
       this.assertWithinDeadline(deadline);
-      const maxResponseBytes = deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES;
+      const maxResponseBytes = smallUpload !== undefined ? 64 * 1024 : deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES;
       stage = 'response.headers';
       const responseHeaders = this.flattenHeaders(response.header);
       const declaredLength = this.headerValue(responseHeaders, 'content-length');
@@ -950,6 +1172,8 @@ export class HttpExecuteHost {
         // ArrayBuffer. Keep the Location header flowing to the redirect chain.
         bytes = new Uint8Array(0);
       } else if (response.result === '' ||
+        (smallUpload !== undefined && (response.result === undefined || response.result === null) &&
+          (declaredLength === null || /^\d+$/.test(declaredLength.trim()) && Number(declaredLength) === 0)) ||
         ((method.wireMethod === 'HEAD' || response.responseCode === 204 || response.responseCode === 205 ||
           response.responseCode === 304) && (response.result === undefined || response.result === null))) {
         // Empty strings have an exact zero-byte representation. Missing data
@@ -973,6 +1197,12 @@ export class HttpExecuteHost {
         throw new Error(`http.execute: response exceeds ${maxResponseBytes} byte limit`);
       }
       stage = 'response.headers';
+      if (smallUpload !== undefined) {
+        if (!Number.isInteger(response.responseCode) || response.responseCode < 100 || response.responseCode > 599 || this.isRedirectStatus(response.responseCode))
+          throw new Error('http.execute: library upload redirect or status is not allowed');
+        smallUpload.response = { status: response.responseCode, headers: responseHeaders, finalUrl: requestUrl, responseByteLength: bytes.byteLength };
+        return { status: response.responseCode, headers: responseHeaders, rawHeaders: response.header, bytes: new Uint8Array(0) };
+      }
       return {
         status: response.responseCode,
         headers: responseHeaders,
@@ -983,6 +1213,10 @@ export class HttpExecuteHost {
       this.reportTypeError(error, stage);
       throw error;
     } finally {
+      if (smallUpload !== undefined) {
+        await smallUpload.settled;
+        try { request.off('dataSendProgress', sent); } catch (_) {}
+      }
       if (deadline.activeRequest === request) {
         deadline.activeRequest = null;
       }
@@ -993,6 +1227,105 @@ export class HttpExecuteHost {
       } catch (_) {
         hilog.warn(LOG_DOMAIN, 'Reader', 'http.execute request cleanup failed');
       }
+    }
+  }
+
+  private async putLibraryPackageFile(requestUrl: string, headers: ResponseHeaders, deadline: DeadlineState,
+    route: NetworkTarget['route'], proxy: connection.HttpProxy | undefined,
+    sink: LibraryPackageUploadSink): Promise<HopResponse> {
+    const hostname = httpUrlHostname(requestUrl);
+    const literal = hostname !== undefined && (hostname.includes(':') || /^[0-9.]+$/.test(hostname));
+    // A saved Provider grant trusts this exact origin's normal system DNS
+    // and TLS, after special-address preflight; it does not prove RCP pins
+    // the preflight answer. Untrusted sources still require proxy/literal.
+    await this.requireStorageAuthority(deadline, requestUrl, 'PUT');
+    if (deadline.storageAuthority === undefined && route !== 'systemProxy' && (route !== 'direct' || !literal))
+      throw new NetworkEnvironmentError('route', '当前网络路径暂不支持上传，请使用已配置的系统代理后重试', 'upload.route');
+    let fixedProxy: rcp.ProxyConfiguration = 'no-proxy';
+    if (route === 'systemProxy') {
+      if (proxy === undefined || proxy.host.length === 0 || /[\s/@?#]/.test(proxy.host) ||
+        !Number.isInteger(proxy.port) || proxy.port < 1 || proxy.port > 65535)
+        throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', 'upload.proxy');
+      fixedProxy = { url: `http://${proxy.host.includes(':') ? `[${proxy.host}]` : proxy.host}:${proxy.port}`, createTunnel: 'always' };
+    }
+    this.assertWithinDeadline(deadline);
+    let responseBytes = 0;
+    let receiving = true;
+    let failure: Error | undefined;
+    let session: rcp.Session | undefined;
+    let request: rcp.Request | undefined;
+    const stop = (): void => {
+      receiving = false;
+      if (session !== undefined && request !== undefined) {
+        try { session.cancel(request); } catch (_) {}
+      }
+    };
+    const rejectBody = (message: string): void => { failure = new Error(message); stop(); };
+    const remaining = deadline.deadlineAt - Date.now();
+    const events: rcp.HttpEventsHandler = {
+      onDataReceive: (data: ArrayBuffer): void => {
+        if (!receiving) return;
+        try { this.assertWithinDeadline(deadline); } catch (_) { rejectBody('http.execute: library upload owner retired'); return; }
+        if (!(data instanceof ArrayBuffer) || responseBytes + data.byteLength > 64 * 1024) {
+          rejectBody('http.execute: library upload response exceeds 65536 byte limit'); return;
+        }
+        responseBytes += data.byteLength;
+      },
+      onUploadProgress: (_total: number, processed: number): void => {
+        if (!receiving || deadline.cancelled) return;
+        try { this.assertWithinDeadline(deadline); } catch (_) { rejectBody('http.execute: library upload owner retired'); return; }
+        if (!Number.isSafeInteger(processed) || processed < 0 || processed > sink.expectedBytes) {
+          rejectBody('http.execute: invalid library upload progress'); return;
+        }
+        try { sink.onProgress?.(processed); } catch (_) { rejectBody('http.execute: library upload observer retired'); }
+      },
+    };
+    try {
+      session = rcp.createSession({ requestConfiguration: {
+        transfer: { autoRedirect: false, connectionReusePolicy: 'forbidden',
+          timeout: { connectMs: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining), transferMs: remaining } },
+        proxy: fixedProxy, tracing: { httpEventsHandler: events },
+      } });
+      request = new rcp.Request(requestUrl, 'PUT', headers, new rcp.UploadFromFile(sink.fd));
+      sink.stop = stop;
+      const checkCurrent = (): void => {
+        let cancelled = false;
+        try { cancelled = sink.isCancelled?.() ?? false; } catch (_) { cancelled = true; }
+        if (cancelled) this.cancelDeadline(deadline, 'http.execute: cancelled by caller');
+        this.assertWithinDeadline(deadline);
+      };
+      checkCurrent();
+      const source = fileIo.statSync(sink.fd);
+      if (!source.isFile() || source.size !== sink.expectedBytes) throw new Error('http.execute: library upload file changed');
+      // The owner records its exact may-dispatch intent only after every
+      // preflight admission succeeded. A failed durable ACK never sends PUT.
+      await sink.willDispatch?.();
+      await this.requireStorageAuthority(deadline, requestUrl, 'PUT');
+      checkCurrent();
+      this.assertWithinDeadline(deadline);
+      this.storageHttpDiagnostic(deadline, 'dispatch', 'PUT', route);
+      const fetch = session.fetch(request);
+      sink.settled = fetch.then((): void => {}, (): void => {});
+      const response = await fetch;
+      this.storageHttpDiagnostic(deadline, 'response', 'PUT', route, response.statusCode, response.headers);
+      await this.requireStorageAuthority(deadline, requestUrl, 'PUT');
+      this.assertWithinDeadline(deadline);
+      if (failure !== undefined) throw failure;
+      const finalUrl = response.effectiveUrl === undefined ? requestUrl : response.effectiveUrl.toString();
+      if (finalUrl !== requestUrl || this.isRedirectStatus(response.statusCode)) throw new Error('http.execute: library upload redirect is not allowed');
+      if (!Number.isInteger(response.statusCode) || response.statusCode < 100 || response.statusCode > 599 ||
+        (response.body !== undefined && response.body.byteLength > 0) || fileIo.statSync(sink.fd).size !== sink.expectedBytes)
+        throw new Error('http.execute: invalid library upload response');
+      const responseHeaders = this.flattenHeaders(response.headers);
+      sink.response = { status: response.statusCode, headers: responseHeaders, finalUrl, responseByteLength: responseBytes };
+      return { status: response.statusCode, headers: responseHeaders, rawHeaders: response.headers, bytes: new Uint8Array(0) };
+    } finally {
+      receiving = false;
+      // The original fetch is awaited above even after cancel; this dedicated
+      // session is never reused and cannot continue reading a returned FD.
+      await sink.settled;
+      if (session !== undefined) session.close();
+      if (sink.stop === stop) sink.stop = undefined;
     }
   }
 
@@ -1262,7 +1595,13 @@ export class HttpExecuteHost {
   /** Literal targets are checked at entry and before following a redirect.
    * DNS and the selected system route are validated together in singleHop.
    */
-  private rejectPrivateNetworkUrl(requestUrl: string): void {
+  private rejectPrivateNetworkUrl(requestUrl: string, authority?: ReaderStorageNetworkAuthority, method?: string): void {
+    if (authority !== undefined) {
+      assertReaderStorageNetworkUri(authority, requestUrl, method);
+      // NetworkRoutePolicy still rejects all special addresses except the
+      // explicit RFC1918/ULA subset owned by this saved Provider.
+      return;
+    }
     const hostname = url.URL.parseURL(requestUrl).hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
     if (isPrivateNetworkTarget(hostname)) {
       throw new Error('http.execute: url targets a private, loopback, or link-local address and is not allowed');
@@ -1653,7 +1992,8 @@ export class HttpExecuteHost {
     };
   }
 
-  private async sleepRetryBackoff(retry: RetryPolicy | null, attempt: number, remainingMs: number): Promise<void> {
+  private async sleepRetryBackoff(retry: RetryPolicy | null, attempt: number, remainingMs: number,
+    deadline: DeadlineState): Promise<void> {
     if (retry === null || retry.backoffMillis === null || retry.backoffMillis <= 0) {
       return;
     }
@@ -1666,9 +2006,16 @@ export class HttpExecuteHost {
     if (backoff <= 0) {
       throw new Error('http.execute: exceeded total deadline');
     }
-    await new Promise<void>((resolve: () => void): void => {
-      setTimeout(resolve, backoff);
-    });
+    let timer: number | undefined;
+    try {
+      // The public deadline race must also retire the suspended retry worker,
+      // rather than retaining its owner until an unrelated backoff expires.
+      await this.raceDeadline(new Promise<void>((resolve: () => void): void => {
+        timer = setTimeout(resolve, backoff);
+      }), deadline);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
   }
 
   private flattenHeaders(header: Object): ResponseHeaders {

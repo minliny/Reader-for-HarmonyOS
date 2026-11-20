@@ -9,7 +9,7 @@ import { BookshelfMoreActionSheet } from './BookshelfMoreActionSheet';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { readerScrimmedOpaqueColor } from '../common/ReaderScrimColor';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
-import { SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
+import { readerSheetWidth, readerSheetChrome } from '../common/ReaderSheetChrome';
 import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
 import { bookshelfHeaderSpec } from '../common/ReaderHeaderSpecs';
 
@@ -161,22 +161,24 @@ export struct BookshelfShell {
 
   private moreSheetWidth(): number {
     const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(this.moreSheetSpec().maxWidth)).width;
+    return readerSheetWidth('bookshelf-book-action', metrics.windowRect.width,
+      readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics));
   }
 
   private moreSheetOptions(presentationId: string = this.moreSheetCurrentId): SheetOptions {
-    const spec = this.moreSheetSpec();
+    const chrome = readerSheetChrome('bookshelf-book-action', this.appThemeScheme, this.moreSheetWidth());
     return {
       height: SheetSize.FIT_CONTENT,
-      width: this.moreSheetWidth(),
+      width: chrome.width,
       preferType: SheetType.BOTTOM,
       dragBar: false,
       showClose: false,
-      backgroundColor: readerAppColor(spec.hostBackgroundRole, this.appThemeScheme),
-      radius: { topLeft: spec.borderRadius, topRight: spec.borderRadius, bottomLeft: 0, bottomRight: 0 },
-      maskColor: readerAppColor(spec.hostMaskRole, this.appThemeScheme),
-      shadow: { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 },
+      backgroundColor: chrome.backgroundColor,
+      radius: chrome.radius,
+      maskColor: chrome.maskColor,
+      shadow: chrome.shadow,
+      borderWidth: chrome.borderWidth,
+      borderColor: chrome.borderColor,
       enableOutsideInteractive: false,
       onWillAppear: (): void => this.claimMoreSheetChrome(presentationId),
       onAppear: (): void => { if (this.isCurrentMoreSheet(presentationId)) this.moreSheetAppearedId = presentationId; },
@@ -247,6 +249,10 @@ export struct BookshelfShell {
         updateRunning: this.updateRunning,
         backgroundUpdateRunning: this.backgroundUpdateRunning,
         isCurrent: (candidate: string): boolean => this.isCurrentMoreSheet(candidate),
+        onDismiss: (): void => {
+          if (!this.moreMenuVisible || !this.isCurrentMoreSheet(presentationId)) return;
+          this.dismissMoreMenu();
+        },
         onCheckUpdates: this.moreIntentAction(presentationId, (generation: number): void => {
           this.requestCheckUpdates(generation);
           this.dismissMoreMenu();

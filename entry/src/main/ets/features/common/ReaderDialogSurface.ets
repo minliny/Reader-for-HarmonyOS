@@ -1,7 +1,8 @@
+import { ReaderActionAccessibility } from './ReaderActionAccessibility';
 import { MESSAGE_ACTION } from './ReaderMessageStyle';
 import { TYPE_DIALOG_ACTION, TYPE_SELECT_OPTION } from './ReaderTypography';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from './ReaderWindowMetrics';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from './ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';
 import { readerAppColor } from './ReaderThemeRegistry';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
@@ -58,8 +59,15 @@ export struct ReaderDialogSurface {
   @Prop title: string = '';
   @Prop showCloseButton: boolean = false;
   @Prop actions: DialogActionView[] = [];
+  /** -1 keeps the spec layout; a non-negative value overrides the row/stack gap. */
+  @Prop actionsGap: number = -1;
+  @Prop measureActionsHeight: boolean = false;
+  /** Opt-in: only the body scrolls; existing dialog hosts keep auto height. */
+  @Prop scrollBody: boolean = false;
+  private readonly bodyScroller: Scroller = new Scroller();
   @BuilderParam body: () => void = this.defaultBody;
   onAction: (id: string) => void = (): void => {};
+  onActionsHeightChange: (height: number) => void = (_height: number): void => {};
   onClose: () => void = (): void => {};
 
   @Builder
@@ -68,22 +76,10 @@ export struct ReaderDialogSurface {
 
   build() {
     Column() {
-      if (this.title.length > 0 || this.showCloseButton) {
-        this.header();
-        if (this.spec().headerGap > 0) {
-          Blank().height(this.spec().headerGap);
-        }
-      }
-      Column() {
-        this.body();
-      }
-      .width('100%')
-      .margin(this.bodyActionsInnerMargin());
-      if (this.actions.length > 0) {
-        if (this.spec().bodyActionsGap > 0) {
-          Blank().height(this.spec().bodyActionsGap);
-        }
-        this.actionsRow();
+      if (this.scrollBody) {
+        this.boundedContent();
+      } else {
+        this.autoHeightContent();
       }
     }
     .width(this.frameWidth())
@@ -108,6 +104,68 @@ export struct ReaderDialogSurface {
   }
 
   @Builder
+  private autoHeightContent() {
+    this.headerContent();
+    Column() {
+      this.body();
+    }
+    .width('100%')
+    .margin(this.bodyActionsInnerMargin());
+    this.footerContent();
+  }
+
+  @Builder
+  private boundedContent() {
+    // Flex can shrink the body against a finite maximum while keeping its
+    // natural height for short content and retaining the header and actions.
+    Flex({ direction: FlexDirection.Column }) {
+      Column() {
+        this.headerContent();
+      }.width('100%').flexShrink(0);
+      Scroll(this.bodyScroller) {
+        Column() {
+          this.body();
+        }.width('100%').alignItems(HorizontalAlign.Start);
+      }.width('100%').flexShrink(1).align(Alignment.TopStart)
+        .scrollBar(BarState.Auto).margin(this.bodyActionsInnerMargin());
+      Column() {
+        this.footerContent();
+      }.width('100%').flexShrink(0);
+    }.width('100%').height('auto')
+      .constraintSize({ maxHeight: this.viewportContentHeight() });
+  }
+
+  @Builder
+  private headerContent() {
+    if (this.title.length > 0 || this.showCloseButton) {
+      this.header();
+      if (this.spec().headerGap > 0) {
+        Blank().height(this.spec().headerGap);
+      }
+    }
+  }
+
+  @Builder
+  private footerContent() {
+    if (this.actions.length > 0) {
+      if (this.spec().bodyActionsGap > 0) {
+        Blank().height(this.spec().bodyActionsGap);
+      }
+      this.actionsRow();
+    }
+  }
+
+  private viewportContentHeight(): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    const spec = this.spec();
+    const metrics = ReaderWindowCoordinator.metrics();
+    const frameInset = 2 * spec.edgeGap + 2 * spec.padding + (spec.hasBorder ? 2 : 0);
+    return Math.max(0, metrics.windowRect.height -
+      readerInteractiveSafeTop(metrics, spec.usesKeyboardSafeArea) -
+      readerInteractiveSafeBottom(metrics, spec.usesKeyboardSafeArea) - frameInset);
+  }
+
+  @Builder
   private header() {
     if (this.showCloseButton) {
       Row() {
@@ -123,6 +181,7 @@ export struct ReaderDialogSurface {
           .fontFamily(TYPE_SELECT_OPTION.fontFamily).fontWeight(TYPE_SELECT_OPTION.fontWeight).fontSize(TYPE_SELECT_OPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
+          .attributeModifier(new ReaderActionAccessibility(`关闭${this.title}`))
           .onClick((): void => this.onClose());
       }
       .width('100%')
@@ -140,20 +199,34 @@ export struct ReaderDialogSurface {
   @Builder
   private actionsRow() {
     if (this.spec().actionsLayout === 'stack') {
-      Column({ space: 16 }) {
+      Column({ space: this.resolvedActionsGap() }) {
         ForEach(this.actions, (action: DialogActionView): void => {
           this.actionCell(action);
-        }, (action: DialogActionView): string => action.id);
+        }, (action: DialogActionView): string => `${action.id}:${action.label}:${action.enabled ? 1 : 0}`);
       }
-      .width('100%');
+      .width('100%')
+      .onAreaChange((_old: Area, area: Area): void => this.recordActionsHeight(area));
     } else {
-      Row({ space: 10 }) {
+      Row({ space: this.resolvedActionsGap() }) {
         ForEach(this.actions, (action: DialogActionView): void => {
           this.actionCell(action);
-        }, (action: DialogActionView): string => action.id);
+        }, (action: DialogActionView): string => `${action.id}:${action.label}:${action.enabled ? 1 : 0}`);
       }
-      .width('100%');
+      .width('100%')
+      .onAreaChange((_old: Area, area: Area): void => this.recordActionsHeight(area));
     }
+  }
+
+  private resolvedActionsGap(): number {
+    if (this.actionsGap >= 0) return this.actionsGap;
+    return this.spec().actionsLayout === 'stack' ? 16 : 10;
+  }
+
+  private recordActionsHeight(area: Area): void {
+    if (!this.measureActionsHeight) return;
+    const raw = area.height;
+    const height = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number.parseFloat(raw) : 0;
+    if (Number.isFinite(height) && height > 0) this.onActionsHeightChange(height);
   }
 
   @Builder

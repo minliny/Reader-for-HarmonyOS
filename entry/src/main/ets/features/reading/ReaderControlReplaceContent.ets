@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../common/ReaderActionAccessibility';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
@@ -23,6 +24,12 @@ import { createReaderControlReplaceDraft, createReaderControlReplaceState,
 import { sampleReaderControlReplace, readerControlReplaceEndpoint,
   type ReaderControlReplaceFrame } from './ReaderControlReplaceGeometry';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderDialogSurface, DialogActionView } from '../common/ReaderDialogSurface';
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
+import { ReaderControlReplaceGatewayError } from './ReaderControlReplaceGateway';
 
 /** Restored 1938:11606 content only. One canonical ForEach survives Quick/Full;
  * Quick clips three rows and Full scrolls all rules. No shell, handle, clock or
@@ -64,6 +71,8 @@ export struct ReaderControlReplaceContent {
   @State private localPending: boolean = false;
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   private readonly scroller: Scroller = new Scroller();
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+  private mounted: boolean = false;
   private presentationRevision: number = 0;
   private lastSessionKey: string = '';
   private cachedFrame: ReaderControlReplaceFrame = sampleReaderControlReplace(0, 286, 190);
@@ -75,12 +84,19 @@ export struct ReaderControlReplaceContent {
   private cachedRuleIndices: Map<number, number> = new Map<number, number>();
 
   aboutToAppear(): void {
+    this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.lastSessionKey = this.state.sessionKey;
   }
-  aboutToDisappear(): void { this.dismissTemporaryLayer(); this.presentationRevision += 1; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.transientFeedback.reset();
+    this.dismissTemporaryLayer();
+    this.presentationRevision += 1;
+  }
   private onSourceChanged(): void {
     if (this.lastSessionKey !== this.state.sessionKey) {
+      this.transientFeedback.reset();
       const offset = this.scroller.currentOffset()?.yOffset;
       if (offset === undefined || !Number.isFinite(offset)) return;
       this.lastSessionKey = this.state.sessionKey;
@@ -91,9 +107,12 @@ export struct ReaderControlReplaceContent {
       this.scroller.scrollTo({ xOffset: 0, yOffset: 0, animation: false });
       this.onFullDidScroll();
     }
+    if (!this.localPending && this.state.rules.length > 0 && this.state.errorMessage.length > 0 &&
+      !this.state.writeUncertain && !this.state.writeBlocked) this.showOperationFailure();
   }
   private onMotionChanged(): void {
     this.syncMorphScroll();
+    if (!this.quickInput() && !this.fullInput()) this.transientFeedback.reset();
     // Motion samples arrive on every control-bar frame.  Invalidating the
     // replace transaction when no editor/confirmation is open only writes
     // local state and can cancel an unrelated async callback; keep the
@@ -172,6 +191,7 @@ export struct ReaderControlReplaceContent {
       !this.state.mutationPending && !this.localPending && !this.state.writeBlocked && !this.state.writeUncertain && !this.state.canonicalReloadRequired;
   }
   private setLayer(layer: string): void {
+    this.transientFeedback.reset();
     this.presentationRevision += 1;
     this.layer = layer;
     this.localError = '';
@@ -180,6 +200,7 @@ export struct ReaderControlReplaceContent {
   }
   private dismissTemporaryLayer(): void {
     if (this.layer === '' && !this.localPending) return;
+    this.transientFeedback.reset();
     this.presentationRevision += 1;
     this.localPending = false;
     if (this.layer === '') return;
@@ -220,10 +241,30 @@ export struct ReaderControlReplaceContent {
         this.dismissTemporaryLayer();
       }
     } catch (error) {
-      if (revision === this.presentationRevision && key === this.state.sessionKey) this.localError = errorMessageOf(error);
+      if (revision === this.presentationRevision && key === this.state.sessionKey &&
+        !this.state.writeUncertain && !this.state.writeBlocked &&
+        !(error instanceof ReaderControlReplaceGatewayError && error.writeUncertain)) {
+        // Only known draft validation belongs beside the fields. The owner
+        // retains unknown writes; ordinary failures use short feedback.
+        const message = errorMessageOf(error);
+        if (this.layer === 'editor' && error instanceof ReaderControlReplaceGatewayError &&
+          (message === '排序或超时数值无效' || message === 'Core 拒绝保存：表达式或作用域未通过校验')) {
+          this.localError = message === '排序或超时数值无效' ? message : '表达式或作用域未通过校验，请修改后再保存';
+        } else if (this.state.rules.length > 0 || this.state.status !== 'error') {
+          this.showOperationFailure();
+        }
+      }
     } finally {
       if (revision === this.presentationRevision && key === this.state.sessionKey) this.localPending = false;
     }
+  }
+  private showOperationFailure(): void {
+    const key = this.state.sessionKey;
+    const revision = this.presentationRevision;
+    this.transientFeedback.show(() => this.getUIContext(), {
+      message: '替换规则操作未完成，请重试', key: `${key}:replace-operation-failed`,
+    }, (): boolean => this.mounted && key === this.state.sessionKey && revision === this.presentationRevision &&
+      (this.quickInput() || this.fullInput()) && !this.state.writeUncertain && !this.state.writeBlocked);
   }
   private async preview(): Promise<void> {
     if (!this.readyInput()) return;
@@ -236,7 +277,7 @@ export struct ReaderControlReplaceContent {
       const result = await this.onPreview();
       if (revision === this.presentationRevision && key === this.state.sessionKey) this.previewResult = result;
     } catch (error) {
-      if (revision === this.presentationRevision && key === this.state.sessionKey) this.localError = errorMessageOf(error);
+      if (revision === this.presentationRevision && key === this.state.sessionKey) this.localError = '当前章节预览失败，请重试';
     } finally {
       if (revision === this.presentationRevision && key === this.state.sessionKey) this.localPending = false;
     }
@@ -299,7 +340,7 @@ export struct ReaderControlReplaceContent {
           ForEach(this.state.rules, (rule: ReaderReplaceRule) => {
             this.ruleRow((): ReaderReplaceRule => this.currentRule(rule), (): number => this.currentRuleIndex(rule.id));
           }, (rule: ReaderReplaceRule): string => `control-replace-rule-${rule.id}`);
-          if (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0) {
+          if (this.state.rules.length === 0 && !this.state.writeUncertain && !this.state.writeBlocked) {
             this.statusContent();
           }
           // Complete preview business remains reachable without altering the
@@ -323,11 +364,11 @@ export struct ReaderControlReplaceContent {
         this.nativeScrollDelta(y, source))
       .onDidScroll((): void => this.onFullDidScroll())
       .clip(true);
-      if (this.state.rules.length > 0 && (this.state.errorMessage.length > 0 || this.localError.length > 0)) {
-        Column() { this.statusContent(); }
-          .width(this.frame().list.width).height(Math.min(84, this.frame().list.height))
+      if ((this.state.writeUncertain || this.state.writeBlocked) && this.layer === '') {
+        Scroll() { Column() { this.originalRecoveryNotice(); }.width('100%'); }
+          .width(this.frame().list.width).height(this.frame().list.height)
           .position({ x: this.frame().list.x, y: this.frame().list.y })
-          .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(8);
+          .scrollBar(BarState.Off);
       }
       this.quickFooter();
       if (this.layer !== '') {
@@ -346,6 +387,8 @@ export struct ReaderControlReplaceContent {
       .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .enabled(this.quickInput()).hitTestBehavior(this.quickInput() ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.quickInput() ? 'auto' : 'no-hide-descendants')
+      .responseRegion( readerActionTouchRegion(51, 24))
+      .attributeModifier(new ReaderActionAccessibility('返回', this.quickInput(), false))
       .onClick((): void => { if (this.quickInput()) this.onBack(); });
   }
   @Builder
@@ -354,10 +397,12 @@ export struct ReaderControlReplaceContent {
       Image(icon).width(20).height(20);
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontWeight)
         .fontColor(add ? readerAppColor('app.replace.onToolbarAction', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
-    }.width(0).layoutWeight(add ? 100.66 : 96.67).height(40).justifyContent(FlexAlign.Center)
+    }.width(0).layoutWeight(add ? 100.66 : 96.67).height(44).justifyContent(FlexAlign.Center)
       .backgroundColor(add ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme)).borderRadius(8)
       .border({ width: TOK_BORDER_W, color: add ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
-      .enabled(this.fullInput() && this.readyInput()).onClick((): void => { if (this.fullInput() && this.readyInput()) action(); });
+      .enabled(this.fullInput() && this.readyInput())
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(label, this.fullInput() && this.readyInput(), false)).onClick((): void => { if (this.fullInput() && this.readyInput()) action(); });
   }
   @Builder
   private ruleToolbar() {
@@ -384,6 +429,8 @@ export struct ReaderControlReplaceContent {
       }.width(this.frame().toggleWidth).height(this.frame().rowHeight)
         .position({ x: this.frame().rowPadding, y: 0 }).alignItems(VerticalAlign.Center)
         .enabled(this.readyInput() && index() >= 0).accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)
+      .responseRegion( readerActionTouchRegion(this.frame().toggleWidth, this.frame().rowHeight))
+      .attributeModifier(new ReaderActionAccessibility(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`, this.readyInput() && index() >= 0, rule().isEnabled))
         .onClick((): void => {
           if (this.readyInput() && index() >= 0) {
             const current = rule();
@@ -395,15 +442,16 @@ export struct ReaderControlReplaceContent {
       Text(rule().name).fontFamily(TYPE_READER_REPLACE_RULE_NAME.fontFamily).fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)
         .fontWeight(TYPE_READER_REPLACE_RULE_NAME.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(Math.max(0, this.frame().list.width - this.frame().rowPadding * 2 - this.frame().toggleWidth -
-          10 - 75 * this.frame().progress))
-        .height(17).position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10,
+          10 - 103 * this.frame().progress))
+        .constraintSize({ minHeight: 17 }).maxFontScale(1.1)
+        .position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10,
           y: 5.5 + 5.5 * this.frame().progress });
       Column({ space: 4 }) {
         Text(`${rule().pattern} → ${rule().replacement}`).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.scopeSummary(rule())).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.width(Math.max(0, this.frame().list.width - 155)).height(34).alignItems(HorizontalAlign.Start)
+      }.width(Math.max(0, this.frame().list.width - 183)).height(34).alignItems(HorizontalAlign.Start)
         .position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10, y: 32 })
         .opacity(this.frame().progress).hitTestBehavior(HitTestMode.None);
       Row({ space: 5 }) {
@@ -411,7 +459,7 @@ export struct ReaderControlReplaceContent {
           (): void => this.openEditor(rule()), (): boolean => index() >= 0);
         this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_delete_theme_night') : $r('app.media.reader_control_replace_delete')), (): string => `删除${rule().name}`,
           (): void => this.askDelete(rule()), (): boolean => index() >= 0);
-      }.width(65).height(30).position({ x: Math.max(0, this.frame().list.width - 78), y: (this.frame().rowHeight - 30) / 2 })
+      }.width(93).height(44).position({ x: Math.max(0, this.frame().list.width - 106), y: (this.frame().rowHeight - 44) / 2 })
         .opacity(this.frame().progress).hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)
         .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
       }.width(this.frame().list.width).height(this.frame().rowHeight)
@@ -427,8 +475,10 @@ export struct ReaderControlReplaceContent {
   @Builder
   private ruleIcon(icon: Resource, label: () => string, action: () => void, enabled: () => boolean) {
     Row() { Image(icon).width(20).height(20); }
-      .width(30).height(30).justifyContent(FlexAlign.Center).borderRadius(6)
+      .width(44).height(44).justifyContent(FlexAlign.Center).borderRadius(6)
       .enabled(this.fullInput() && this.readyInput() && enabled()).accessibilityText(label())
+      .responseRegion( readerActionTouchRegion(44, 44))
+      .attributeModifier(new ReaderActionAccessibility(label(), this.fullInput() && this.readyInput() && enabled(), false))
       .onClick((): void => { if (this.fullInput() && this.readyInput() && enabled()) action(); });
   }
   @Builder
@@ -436,28 +486,44 @@ export struct ReaderControlReplaceContent {
     Row({ space: 6 }) {
       this.textAction('预览效果', (): void => { this.preview(); }, (): boolean => this.quickInput() && this.readyInput());
       this.textAction('完整管理', (): void => this.onExpand(), (): boolean => this.quickInput() && !this.state.mutationPending);
-    }.width(this.frame().quickFooter.width).height(28)
+    }.width(this.frame().quickFooter.width).height(44)
       .position({ x: this.frame().quickFooter.x, y: this.frame().quickFooter.y })
       .opacity(this.frame().quickFooter.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .hitTestBehavior(this.quickInput() ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.quickInput() ? 'auto' : 'no-hide-descendants');
   }
+  private recoveryIdentity(): string { return `${this.state.sessionKey}\n${this.state.writeOperationId || ''}`; }
   @Builder
-  private originalRecoveryAction() {
-    ForEach([this.state.writeOperationId || ''], (operationId: string) => {
-      this.textAction(this.state.recoveryLabel || '核对原规则操作', (): void => this.reload(operationId || undefined),
-        (): boolean => !this.state.mutationPending && !this.localPending);
-    }, (operationId: string): string => operationId);
+  private originalRecoveryNotice() {
+    ForEach([this.recoveryIdentity()], (identity: string) => {
+      ReaderRecoveryNotice({ tag: '替换规则',
+        view: { message: this.state.errorMessage || '原规则操作尚未确认，请核对后继续',
+          visible: this.state.writeUncertain || this.state.writeBlocked === true,
+          canRetry: !this.state.mutationPending && !this.localPending && (this.fullInput() || this.quickInput()),
+          generation: this.state.revision },
+        actionLabel: this.state.recoveryLabel || '核对原规则操作',
+        busy: this.state.mutationPending || this.localPending,
+        onReconcile: (generation: number): void => {
+          if (generation === this.state.revision && identity === this.recoveryIdentity()) {
+            this.reload(this.state.writeOperationId);
+          }
+        } });
+    }, (identity: string): string => identity);
   }
   @Builder
   private statusContent() {
-    Column({ space: 4 }) {
-      Text(this.state.errorMessage || this.localError || (this.state.status === 'loading' || this.state.status === 'idle' ?
-        '规则载入中…' : this.emptyStateMessage()))
-        .fontFamily(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(3);
-      if (this.state.errorMessage.length > 0 || this.localError.length > 0 || this.state.status === 'error') {
-        this.originalRecoveryAction();
-      }
+    Column() {
+      ForEach([this.state.sessionKey], (sessionKey: string) => {
+      ReaderPageState({ padded: false,
+        loading: this.state.status === 'loading' || this.state.status === 'idle',
+        message: this.state.status === 'loading' || this.state.status === 'idle' ? '规则载入中…' :
+          this.state.status === 'error' ? '替换规则加载失败，请重试' : this.emptyStateMessage(),
+        actionLabel: this.state.status === 'error' && !this.state.writeUncertain && !this.state.writeBlocked ? '重新加载' : '',
+        actionEnabled: !this.state.mutationPending && !this.localPending && (this.fullInput() || this.quickInput()),
+        inkColor: readerAppColor('TOK_READ_INK', this.appThemeScheme),
+        mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+        onAction: (): void => { if (sessionKey === this.state.sessionKey) this.reload(); } });
+      }, (sessionKey: string): string => sessionKey);
     }.width('100%').constraintSize({ minHeight: 76 }).justifyContent(FlexAlign.Center)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
   }
@@ -466,14 +532,63 @@ export struct ReaderControlReplaceContent {
     // Builder primitive arguments retain their initial value in partial update.
     // Read the supplied state predicate here and again at click dispatch.
     Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme)).textAlign(TextAlign.Center)
-      .layoutWeight(1).height(28).padding({ left: 6, right: 6 }).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme)).borderRadius(6)
+      .layoutWeight(1).height(44).padding({ left: 6, right: 6 }).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme)).borderRadius(6)
       .enabled(enabled() && (this.fullInput() || this.quickInput()))
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(label, enabled() && (this.fullInput() || this.quickInput()), false))
       .onClick((): void => { if (enabled() && (this.fullInput() || this.quickInput())) action(); });
   }
   @Builder
   private temporaryOverlay() {
-    ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
-      header: (): void => { this.temporaryHeader(); }, body: (): void => { this.temporaryBody(); }, actions: (): void => { this.temporaryActions(); } });
+    if (this.layer === 'delete' || this.layer === 'import-confirm') {
+      this.decisionOverlay();
+    } else {
+      ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
+        header: (): void => { this.temporaryHeader(); }, body: (): void => { this.temporaryBody(); }, actions: (): void => { this.temporaryActions(); } });
+    }
+  }
+
+  @Builder
+  private decisionOverlay() {
+    Scroll() {
+      Column({ space: 12 }) {
+        ForEach([this.presentationRevision], (revision: number) => {
+          ReaderDialogSurface({ specId: 'book-removal', title: this.temporaryTitle(),
+            body: (): void => { this.decisionBody(); },
+            actions: [new DialogActionView('cancel', '取消', 'default', !this.localPending && !this.state.mutationPending),
+              new DialogActionView('confirm', this.layer === 'delete' ? '删除规则' : '选择文件',
+                this.layer === 'delete' ? 'danger' : 'primary', this.readyInput())],
+            onAction: (id: string): void => {
+              if (revision !== this.presentationRevision) return;
+              if (id === 'cancel') this.cancelTemporaryLayer();
+              else if (this.layer === 'import-confirm') this.confirmImport();
+              else if (this.layer === 'delete') {
+                const rule = this.deleteCandidate;
+                if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);
+              }
+            } });
+        }, (revision: number): string => revision.toString());
+        this.operationState();
+      }.width('100%').padding({ top: 12, bottom: 12 });
+    }.width(this.availableWidth).height(this.availableHeight)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme));
+  }
+
+  @Builder
+  private decisionBody() {
+    Text(this.layer === 'delete' ? `删除“${this.deleteCandidate?.name ?? ''}”？删除后无法恢复。` :
+      '导入将合并替换规则，相同 ID 会覆盖已有规则。请先保留导出备份。')
+      .width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+      .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+  }
+
+  @Builder
+  private operationState() {
+    if (this.state.writeUncertain || this.state.writeBlocked) {
+      this.originalRecoveryNotice();
+    } else if (this.localPending || this.state.mutationPending) {
+      ReaderPageState({ padded: false, loading: true, message: '正在处理规则操作' });
+    }
   }
 
   private temporaryTitle(): string {
@@ -492,7 +607,9 @@ export struct ReaderControlReplaceContent {
     if (this.layer === 'editor') {
       Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontFamily as string)
         .fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
-        .width(38).height(28).textAlign(TextAlign.Center).enabled(!this.localPending && !this.state.mutationPending)
+        .width(44).height(44).textAlign(TextAlign.Center).enabled(!this.localPending && !this.state.mutationPending)
+      .responseRegion( readerActionTouchRegion(44, 44))
+      .attributeModifier(new ReaderActionAccessibility('取消编辑', !this.localPending && !this.state.mutationPending, false))
         .onClick((): void => this.cancelTemporaryLayer());
     }
   }
@@ -511,29 +628,14 @@ export struct ReaderControlReplaceContent {
         Column({ space: 8 }) {
           if (this.layer === 'editor') {
             this.editorFields();
-          } else if (this.layer === 'delete') {
-            Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)
-              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-            this.textAction('确认删除', (): void => {
-              const rule = this.deleteCandidate;
-              if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);
-            }, (): boolean => this.readyInput());
-          } else if (this.layer === 'import-confirm') {
-            Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')
-              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-            this.textAction('选择文件并导入', (): void => { this.confirmImport(); }, (): boolean => this.readyInput());
           } else {
             this.previewContent();
           }
-          if (this.localError.length > 0 || this.state.errorMessage.length > 0) {
-            Text(this.localError || this.state.errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+          if (this.layer === 'editor' && this.localError.length > 0) {
+            Text(this.localError).fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+              .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
           }
-          if (this.state.writeUncertain || this.state.writeBlocked) {
-            this.originalRecoveryAction();
-          }
-          if (this.localPending || this.state.mutationPending) {
-            Text('正在等待确认…').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-          }
+          if (this.layer !== 'preview') this.operationState();
         }.width('100%').alignItems(HorizontalAlign.Start);
       }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
   }
@@ -577,7 +679,9 @@ export struct ReaderControlReplaceContent {
     Row({ space: 10 }) {
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
       ReaderControlSwitchTrack({ value: value() });
-    }.width('100%').height(32).enabled(this.readyInput()).accessibilityText(`${label}，${value() ? '开启' : '关闭'}`)
+    }.width('100%').height(44).enabled(this.readyInput()).accessibilityText(`${label}，${value() ? '开启' : '关闭'}`)
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(`${label}，${value() ? '开启' : '关闭'}`, this.readyInput(), value()))
       .onClick((): void => this.changeEditorFlag(value, change));
   }
   @Builder
@@ -590,8 +694,13 @@ export struct ReaderControlReplaceContent {
       Text(this.previewResult.before).fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Text('替换后').fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Text(this.previewResult.after).fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-    } else if (!this.localPending) {
-      this.textAction('重试预览', (): void => { this.preview(); }, (): boolean => this.readyInput());
+    } else {
+      ForEach([this.presentationRevision], (revision: number) => {
+      ReaderPageState({ padded: false, loading: this.localPending,
+        message: this.localPending ? '正在加载当前章节预览' : this.localError || '当前章节预览尚未就绪',
+        actionLabel: this.localPending ? '' : '重试预览', actionEnabled: this.readyInput(),
+        onAction: (): void => { if (revision === this.presentationRevision && this.layer === 'preview') this.preview(); } });
+      }, (revision: number): string => revision.toString());
     }
   }
 }

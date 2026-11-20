@@ -6,6 +6,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
+import {labeledIconControls} from './lib/reader-labeled-icon-action-probe.mjs';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const indexSource=source('pages/Index.ets'),pageSource=source('features/source/SourceManagementPage.ets'),jsonSource=source('features/common/JsonImportDialog.ets');
 const ordinary=s=>stripTypeScriptTypes(s.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
@@ -14,18 +15,25 @@ let installed,sequence=0,cases=0;const Runtime=runtimeOwnerIdentityProbe(()=>ins
 const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
 const receipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts),ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence');
 const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource,readerSourceCategoryLabel}')};
+const sourceFilters=load('features/source/SourceManagementPresentation.ts','{defaultSourceManagementFilters,copySourceManagementFilters,sourceManagementFilterKey,copySourceManagementScroll}');
+const scrollOffsets=load('features/common/ReaderScrollLayout.ts','{readerScrollStartOffset,readerScrollEndOffset}');
 const typed=e=>e.typedAdmission===true;
 const Gateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:Runtime,isReaderCoreTransactionPendingError:typed,...helpers});
 const Orchestrator=load('features/source/SourceOrchestrator.ets','SourceOrchestrator',{SourceGateway:Gateway,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,isReaderCoreTransactionPendingError:typed,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt:receipt,...facts,...helpers});
 const Host=load('features/source/SourceHost.ets','SourceHost',{ReaderRuntimeOwner:Runtime,SourceOrchestrator:Orchestrator,SourceGateway:Gateway});
-const sdk=boundedSurfaceSdk();sdk.hooks.lifecycleChildren=true;
+const controls = labeledIconControls();
+const sdk = boundedSurfaceSdk({ properties: controls.properties });
+Object.assign(sdk.deps, controls.dependencies);
+Object.assign(sdk.childSources, controls.hooks.childSources);
 const toggleSource=source('features/common/ReaderToggle.ets');
 sdk.hooks.childSources.ReaderToggle=toggleSource;
 const Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),{...sdk.deps,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},sdk.hooks).Component;
 const badgeSource=source('features/common/StatusBadge.ets');sdk.hooks.childSources.StatusBadge=badgeSource;
 const Badge=createReaderBuilderProbe(badgeSource,boundedMembers(badgeSource),sdk.deps,sdk.hooks).Component;
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-const names=['sourceManagementContent','sourceManagementSurface','bindSourceManagement','isCurrentSourceManagement','retireSourceManagementPresentation','isCurrentRuntime',
+const readerIsExpandedWidth=load('features/common/ReaderWidthClass.ts','readerIsExpandedWidth');
+const readerExpandedLayout=load('features/common/ReaderLayoutCapability.ts','readerExpandedLayout',{readerIsExpandedWidth});
+const names=['expandedLayout','sourceManagementContent','sourceManagementSurface','sourceManagementInitialFilters','sourceManagementInitialScroll','bindSourceManagement','isCurrentSourceManagement','retireSourceManagementPresentation','isCurrentRuntime',
  'onSourceToggled','onSourceDetectionRequested','onSourceLoginRequested','jsonImportContent','jsonImportSurface','isCurrentJsonImportPresentation','openJsonImport','dismissJsonImport','executeJsonImport','jsonImportTitle','jsonImportDescription'];
 const row=()=>({sourceId:'a',name:'A',baseUrl:'https://a.test',enabled:true,enabledExplore:false,category:'text',loginUrl:'https://a.test/login',bookSource:{bookSourceType:0,loginUrl:'https://a.test/login'}});
 const clone=v=>v===undefined?undefined:structuredClone(v),tick=()=>new Promise(r=>setImmediate(r)),defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
@@ -45,7 +53,7 @@ function runtime(){return{rows:[row()],calls:[],lost:false,readFail:0,pause:unde
   throw Error(method);
  },count(m){return this.calls.filter(c=>c.method===m).length;}};}
 function index(r,text=indexSource){
- const i=createReaderBuilderProbe(text,names,{...sdk.deps,ReaderRuntimeOwner:Runtime,SourceManagementPage:Child,JsonImportDialog:Child,deviceInfo:{deviceType:'phone'}},
+ const i=createReaderBuilderProbe(text,names,{...sdk.deps,...sourceFilters,readerExpandedLayout,ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:366,height:844}})},ReaderRuntimeOwner:Runtime,SourceManagementPage:Child,JsonImportDialog:Child,deviceInfo:{deviceType:'phone'}},
   {...sdk.hooks,childSources:{SourceManagementPage:pageSource,JsonImportDialog:jsonSource}}).owner;
  Object.assign(i,{route:'source',navigationGeneration:1,detailShelfAdmissionMount:1,mountedRuntimeOwner:r,shelfReceiptRetired:false,rssInstanceIdentity:++sequence,
   sourceSources:[],sourceOperation:{action:'load',sourceId:''},sourceStatusKind:'idle',sourceStatusMessage:'',sourcePresentationIdentity:'',settingsSnapshot:{reduceMotion:false},
@@ -59,15 +67,33 @@ function index(r,text=indexSource){
  const props=()=>{i.sourceManagementContent();return [...i.children.values()].findLast(c=>c.params.sources)?.params;};
  const page=()=>{
   const params=props(),p=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onOpenTools','onRetryLoad',
-   'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','statusBanner','sourceRow','statusBadgeBackground','statusBadgeDot','statusBadge','detectButton','loginButton','sourceSwitch','sourceToggleBusy','sourceToggleEnabled','bottomActionBar'],{readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
+   'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','sourceList','pendingOverlay','originalRecovery','originalRecoveryView','originalActionIdentities','originalActionCurrent','openTools','captureScroll','sourceRow','sourceLeading','sourceInfo','sourceActions','statusBadgeBackground','statusBadgeDot','statusBadge','statusBadgeLabel','detectButton','sourceDetectEnabled','sourceActionLabel','loginButton','sourceSwitch','sourceToggleBusy','sourceActionEnabled','bottomActionBar'],{...scrollOffsets,ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
   p.sources=params.sources;p.mounted=true;p.temporaryBackIdentity='source-sdk-visit';p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
+  // Layout has a separate real-method/SDK matrix; these finite consumer scenes
+  // retain their operation/session scope while using the actual split builders.
+  p.fontScale=()=>1;p.layoutBudget=()=>({rowForm:'inline',textMinWidth:0,trailingWidth:156,rowMinHeight:76,filterHeight:44,footerHeight:48});
   const switchAction=()=>{p.sourceRow(i.sourceSources[0]);const c=[...p.children.values()].findLast(c=>c instanceof Toggle);c.initialRender();return sdk.nodes(c).find(n=>n.onClick).onClick;};
-  const action=(spec,label)=>{const actor=sdk.walk(p).findLast(c=>c.specId===spec&&(!label||c.label===label));assert.ok(actor,'actual '+spec+' component');
+  const action=(spec,label)=>{const actor=sdk.walk(p).findLast(c=>c.specId===spec&&(!label||c.label===label));assert.ok(actor,'actual '+spec+' component '+JSON.stringify({label,operation:p.operation,actors:sdk.walk(p).map(c=>({label:c.label,spec:c.specId,view:c.view}))}));
    const hit=sdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual '+spec+' native action');return hit.onClick;};
   const login=()=>{p.loginButton(r.rows[0]);return action('source-management-login','登录');};
   const detect=()=>{p.detectButton(r.rows[0]);return action('source-management-detect','检测');};
   const add=()=>{p.bottomActionBar();return action('source-management-add','新增书源');};
-  const recovery=()=>{p.statusBanner();return action('source-management-retry','重试');};
+  // Current page recovery composition, with the real shared notice/action.
+  const recovery=()=>{
+   if(p.operation.original?.blocked||p.operation.receipt?.receipt.confirmation==='unknown'){
+    p.pendingOverlay(0);return action(undefined,'核对');
+   }
+   // Only recovery placement is under test here; current source data and the
+   // actual shared recovery action remain real. Geometry/other drawing slots
+   // are finite ports, not full-page/native layout evidence.
+   p.projectedSources=p.sources;p.sourceDataSource={totalCount:()=>0};
+   p.searchField=()=>{};p.statsRow=()=>{};p.statusAction=()=>{};p.filterArea=()=>{};p.categoryFilter=()=>{};
+   p.scrollLayout=()=>({contentStartOffset:0,contentEndOffset:0});p.sourceList();
+   const header=sdk.nodes(p).find(n=>n.type==='ListItem');assert.ok(header);
+   const deep=Array.isArray(header.create)?header.create[0]:header.create;
+   assert.equal(typeof deep,'function','SDK defers the actual header ListItem factory');deep(header.id,true);
+   return action(undefined,'刷新列表');
+  };
   return{p,params,switchAction,login,detect,add,recovery};
  };
  const json=()=>{i.jsonImportContent();const params=[...i.children.values()].findLast(c=>c.params.onSelectLocal)?.params;
@@ -116,7 +142,7 @@ for(const retirement of['nav','mount','unset']){
 {
  const r=runtime();installed=r;const a=index(r);await a.open();let shown,returned=0;
  const p=createReaderBuilderProbe(indexSource,['showSourceImportResult','showSourceImportResultFromSearch','runSourceImportSearchAction','isCurrentRuntime'],
-  {...sdk.deps,ReaderRuntimeOwner:Runtime},sdk.hooks).owner;
+  {...sdk.deps,readerExpandedLayout,ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:366,height:844}})},ReaderRuntimeOwner:Runtime},sdk.hooks).owner;
  Object.assign(p,{route:'source',navigationGeneration:1,shelfReceiptRetired:false,mountedRuntimeOwner:r,detailShelfAdmissionMount:1,
   sourceManagementSearchKeyword:'original',sourceManagementReturnTarget:'search',returnFromSourceManagement:()=>returned++,
   getUIContext:()=>({showAlertDialog:options=>{shown=options;}})});
@@ -137,4 +163,4 @@ for(const retirement of['nav','mount','unset']){
  const b=index(r);await b.open();old();assert.equal(returned,1,'actual inline result rejects retired Source lease after alive Index replacement');cases++;
 }
 
-console.log(`PASS ${cases} actual Source Host/Gateway/shared runtime→Index scoped Builder→SDK page/ReaderToggle/JSON-local native actions: current/old physical/actual field payload/ACK/read/unknown/remount/getter/late picker/retirement/negative. Cold Core source receipts remain separately required.`);
+console.log(`PASS ${cases} actual Source Host/Gateway/shared runtime→Index scoped Builder→SDK page/ReaderToggle/JSON-local native actions: current/old physical/actual field payload/ACK/read/unknown/remount/getter/late picker/retirement/negative. Recovery handler uses the current pendingOverlay/shared notice/action; native mounting/focus is not proved. Cold Core source receipts remain separately required.`);

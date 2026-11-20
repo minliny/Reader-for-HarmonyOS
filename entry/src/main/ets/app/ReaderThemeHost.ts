@@ -19,6 +19,7 @@ export class ReaderThemeHost {
   private static generation: number = 0;
   private static recoveryBarrier: (() => Promise<void>) | undefined = undefined;
   private static unsubscribe: (() => void) | undefined = undefined;
+  private static settingsSealed: boolean = false;
 
   static async install(owner: ReaderRuntimeOwner, scheme: ReaderThemeScheme): Promise<void> {
     ReaderThemeHost.detach();
@@ -46,6 +47,7 @@ export class ReaderThemeHost {
   }
 
   static detach(): void {
+    ReaderThemeHost.settingsSealed = false;
     ReaderThemeHost.generation += 1;
     ReaderThemeHost.unsubscribe?.();
     ReaderThemeHost.unsubscribe = undefined;
@@ -57,6 +59,23 @@ export class ReaderThemeHost {
     ReaderThemeHost.recoveryBarrier = barrier;
   }
 
+  /** Seal first dispatch before draining the existing local settings owners. */
+  static async sealForLibraryRestore(owner: ReaderRuntimeOwner): Promise<void> {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) throw new Error('THEME_OWNER_CHANGED');
+    ReaderThemeHost.settingsSealed = true;
+    ReaderThemeHost.generation += 1;
+    ReaderThemeHost.unsubscribe?.(); ReaderThemeHost.unsubscribe = undefined;
+    ReaderThemeHost.recoveryBarrier = (): Promise<void> => Promise.reject(new Error('LIBRARY_RESTORE_SETTINGS_SEALED'));
+    await ReaderThemeHost.store?.sealForLibraryRestore();
+  }
+
+  static settingsWriteGeneration(): number { return ReaderThemeHost.generation; }
+
+  static assertSettingsWritable(generation: number = ReaderThemeHost.generation): void {
+    if (ReaderThemeHost.settingsSealed || generation !== ReaderThemeHost.generation)
+      throw new Error('LIBRARY_RESTORE_SETTINGS_SEALED');
+  }
+
   /** Runtime observation only; never part of a theme-selection backup. */
   static observedSystemScheme(): ReaderThemeScheme { return ReaderThemeHost.systemScheme; }
 
@@ -64,6 +83,7 @@ export class ReaderThemeHost {
    * Sync restore itself does not enter this barrier, so it cannot await itself. */
   static async prepareUserChange(): Promise<void> {
     const generation = ReaderThemeHost.generation;
+    ReaderThemeHost.assertSettingsWritable(generation);
     await ReaderThemeHost.recoveryBarrier?.();
     if (generation !== ReaderThemeHost.generation) throw new Error('THEME_OWNER_CHANGED');
   }

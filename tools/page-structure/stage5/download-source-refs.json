@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-03",
+  "status": "REGISTRATION_INPUT_SLICE",
+  "source": {
+    "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+    "sha256": "0c0f14a7b511dd34ac1912997def84d85b7c3cfd890a6904b249afc41477f7b9"
+  },
+  "inputs": [
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "sha256": "0c0f14a7b511dd34ac1912997def84d85b7c3cfd890a6904b249afc41477f7b9"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadHost.ts",
+      "sha256": "c1b0e84889a45ad4fbd57a5a6540aafb0849127e9c2333b423a701fdb51a27df"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadCoordinator.ts",
+      "sha256": "6233c84908e05fe9b8753b021e270f11815db2c5a46fd5c4cfa5860579394511"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadGateway.ts",
+      "sha256": "29aee980dd5b4c2a436df6330f20e1145d28839946a6a40be1408cd6bf8b007b"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadProjection.ts",
+      "sha256": "3fe0c158e5e55e97070ca30211001cf41ebbff0c3e36a4fc68c80f54e5fb33c7"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadStorageGateway.ts",
+      "sha256": "c43edd41276581b4418f89ac73ce3833fced2361f1aacc9e6a66556ee7997903"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadIntentPreferences.ts",
+      "sha256": "e708db82e4d2f499d54bc37d72acadf11a38f5cd5f3805e7643c0dd7b6e95ba5"
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "1eb5eaa041602ce4ab73078930b3a7e3694a4d188550a38cdb6f6c0c67c44bbb"
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+      "sha256": "29e152d3107deb2b4416e1fa855a90fa0f6a7038e1e7b34e0cda75a1d0debae4"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts",
+      "sha256": "608d78f2c13c61e17342e57f75033718c9c24a01af46057d29aa4a065f919b7a"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderTypography.ets",
+      "sha256": "d86fb545ba8ed9549f1000eb998f5ff74e61c67f7e5a23d0cfbfb2d1d077e14d"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+      "sha256": "179f2851ef04274f0e0c90c88949cbf1c6ecb428c880b8d49f74f5106f0893a1"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageGeometry.ts",
+      "sha256": "3376ccbcc0548167a073061515f6cdb91a1dfa50123ab7b3038fd9444d775d60"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderScrollLayout.ts",
+      "sha256": "176469f1e93a6b10a5c4fdb7ce95aed945d79f4990d1b9ea5ebe24a9558ba4f5"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+      "sha256": "1935de05344f920b032ee788931bc0fee5b9cc3bcb1a21f64de9ae1e374ad08b"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderMeasurements.ts",
+      "sha256": "071102bc50c3645dd5b8582e27c5bad44660bfa5c5834f9bafeaacd2b10c20a7"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderWindowMetrics.ts",
+      "sha256": "96ccccd1f68d36a5b50236cf82d7b03912bcea7e9c0da7da40f971a16fdc1cf0"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderInlineSelect.ets",
+      "sha256": "59377556b460b4c086a853c4aad3c8d34a3bce69002625e6c9ca5f1b73a56119"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderActionSheetContent.ets",
+      "sha256": "6c1e306a740de2642f31db6d419bb76a6bd6aee8a268c3b65c3c89bc1ceec47c"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderBoundedSurface.ets",
+      "sha256": "74aba5394a2ecaca887dbed948d3c191818e108b2a3f5b4531175de1ef43febb"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+      "sha256": "794cf74735a406e1d4a1100981953951f6c82c4a395d71dc33e61a99e458cd33"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderDialogSurface.ets",
+      "sha256": "7fb4cc6ae872124109ed14aa28b30fa2937a29b198d19b796a67a29ee0bfb8bd"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageState.ets",
+      "sha256": "4c9108665fa5eb920a1e58d0a33d28b34cdcfcfc85a94347a56ac604e9e0e7bd"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+      "sha256": "4fd6d9380c8cdd964580ac7be7dcbb2698c3481f96e5a5ba12feecfb47bbb6a0"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderTransientFeedback.ts",
+      "sha256": "ed2600df476922ac32269a60cdb4b134440d79279039a83d6b064dd01d508f3f"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderFonts.ets",
+      "sha256": "ad6eafc09e73e3cb1b825e43a54c9c8af65b4c12524cdda1449fdf49043dcd41"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets",
+      "sha256": "aaf108806a6e0c472cc059d4245841207555bd68c7b29dc79450661788cd537e"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts",
+      "sha256": "36bc4ef83f97caa91ed316bc095e7581a804610abdca2750a656c3fd95153fd4"
+    },
+    {
+      "path": "tools/contracts/navigation-registry.json",
+      "sha256": "400f8dce24de592e94735f6096e311055524f55cc712e8c963a2556ef65507ed"
+    },
+    {
+      "path": "tools/message-entrypoints.json",
+      "sha256": "102586d1ad52774fe36d4e0726f34531cafd814635413c76618f837a43c59739"
+    },
+    {
+      "path": "tools/test-shared-download-visual-contract.mjs",
+      "sha256": "55600df5ed5f06359d88cd5efb307f64c935ae66f3319d1faca620a49748ab9c"
+    },
+    {
+      "path": "tools/test-shared-download-ui-sdk.mjs",
+      "sha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e"
+    },
+    {
+      "path": "tools/page-structure/test-download-list-structure.mjs",
+      "sha256": "6a3d20b6a3649d1f53d67df07f52ff099e9d966788da451e912362cccc30b8c9"
+    }
+  ],
+  "evidenceReuse": [
+    {
+      "entry": "tools/test-shared-download-visual-contract.mjs",
+      "cases": [
+        "list-layout",
+        "native-bindings",
+        "management-scroll",
+        "reactive-metrics",
+        "area-receipts"
+      ],
+      "status": "REUSED",
+      "originalResult": "PASS",
+      "evidence": {
+        "path": ".reader-artifacts/download-list-layout-20261103/visual-final.log",
+        "sha256": "38a90401dec197cde71cd6623ffcbed096839fd8beb1cd64cf5c43eefdff578d"
+      },
+      "currentLogHashMatches": true,
+      "observedInputs": 97,
+      "observedInputDrift": []
+    },
+    {
+      "entry": "tools/test-shared-download-ui-sdk.mjs",
+      "cases": [
+        "page-assembly"
+      ],
+      "status": "REUSED",
+      "originalResult": "PASS",
+      "evidence": {
+        "path": ".reader-artifacts/download-list-layout-20261103/page-assembly.log",
+        "sha256": "86d489925875157bba10187bb6ec5ddc8a6092ddf578a6f5aabbcc3b482e595f"
+      },
+      "currentLogHashMatches": true
+    },
+    {
+      "entry": "tools/page-structure/test-download-list-structure.mjs",
+      "cases": [
+        "browse-list"
+      ],
+      "status": "REUSED",
+      "originalResult": "PASS",
+      "evidence": {
+        "path": ".reader-artifacts/download-list-layout-20261103/structure.log",
+        "sha256": "161c1cd3a0eec100a3e3defba52e02076401bdd9cfded404cdb8da02f715c26c"
+      },
+      "currentLogHashMatches": true
+    },
+    {
+      "entry": "tools/page-structure/validate-model.mjs",
+      "cases": [],
+      "status": "REUSED",
+      "originalResult": "PASS",
+      "evidence": {
+        "path": ".reader-artifacts/download-list-layout-20261103/validate-model.json",
+        "sha256": "9bdfc79f3d382fb063099b1d62941fb39ebd02725e884555e5960d7aa1a43336"
+      },
+      "currentLogHashMatches": true
+    },
+    {
+      "entry": "tools/check-message-entrypoints.mjs",
+      "cases": [],
+      "status": "REUSED",
+      "originalResult": "PASS",
+      "evidence": {
+        "path": ".reader-artifacts/download-list-layout-20261103/message-selected.json",
+        "sha256": "0684a8e2865838b31774804c442e1611bd0de2f18d57736e4fa579fa243eaae8"
+      },
+      "currentLogHashMatches": true
+    }
+  ],
+  "native": "NOT_RUN",
+  "boundary": "No tests/build/sign/install/HDC/UI actions by this registration task. Reuse is bounded by captured inputs; it is not native acceptance."
+}

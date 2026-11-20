@@ -1,18 +1,29 @@
+import { registerReaderTypeScriptImports } from './lib/reader-typescript-imports.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { stripTypeScriptTypes } from 'node:module';
-import * as state from '../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+const readerImports = registerReaderTypeScriptImports();
+try {
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerThemeWriteBarrierProbe } = await import('./lib/reader-theme-write-barrier-probe.mjs');
+
+
+
+
+
+const state = await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const lreFile = new URL('LocalReadingExperience.ets', dir);
 const gatewaySource = readFileSync(new URL('ReaderTtsPreferencesGateway.ts', dir), 'utf8');
 let barrier = async () => {}, createStore;
-const Gateway = new Function(...Object.keys(state), 'ReaderThemeHost', 'ReaderRuntimeOwner', 'preferences',
-  `${stripTypeScriptTypes(gatewaySource.slice(gatewaySource.indexOf('const READER_TTS_PREFERENCES_NAME'))).replace('export class ', 'class ')}; return ReaderTtsPreferencesGateway;`)
-  (...Object.values(state), { prepareUserChange: () => barrier() }, { isCurrent: () => true }, { getPreferences: (...args) => createStore(...args) });
+const Theme = readerThemeWriteBarrierProbe();
+Theme.setRecoveryBarrier(() => barrier());
+const Gateway = pureModuleProbe(gatewaySource, 'ReaderTtsPreferencesGateway.ts',
+  { ...state, ReaderThemeHost: Theme, ReaderRuntimeOwner: { isCurrent: () => true }, preferences: { getPreferences: (...args) => createStore(...args) } },
+  ['ReaderTtsPreferencesGateway']).ReaderTtsPreferencesGateway;
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(done => setImmediate(done)); };
 function gatewayFixture() {
@@ -58,13 +69,13 @@ for (const boundary of ['restore', 'store', 'read', 'serialization']) {
 }
 
 const mutations = [
-  ['changeTtsAllowMixing', [true], 'ttsAllowMixing', true, 'setAllowMixing'],
-  ['changeTtsBackgroundPlayback', [false], 'ttsBackgroundPlayback', false],
-  ['changeTtsKeepScreenOn', [true], 'ttsKeepScreenOn', true, 'window'],
-  ['changeTtsFailurePolicy', ['skip'], 'ttsFailurePolicy', 'skip'],
-  ['changeTtsFollowHighlight', [false], 'ttsFollowHighlight', false],
-  ['changeTtsPauseOnInterruption', [false], 'ttsPauseOnInterruption', false],
-  ['changeTtsVoice', ['en-US', 7], 'ttsLanguage', 'en-US', 'setVoice'],
+  ['changeTtsAllowMixing', [true], 'allowMixing', true, 'setAllowMixing'],
+  ['changeTtsBackgroundPlayback', [false], 'backgroundPlayback', false],
+  ['changeTtsKeepScreenOn', [true], 'keepScreenOn', true, 'window'],
+  ['changeTtsFailurePolicy', ['skip'], 'failurePolicy', 'skip'],
+  ['changeTtsFollowHighlight', [false], 'followHighlight', false],
+  ['changeTtsPauseOnInterruption', [false], 'pauseOnInterruption', false],
+  ['changeTtsVoice', ['en-US', 7], 'language', 'en-US', 'setVoice'],
 ];
 function readerFixture(file = lreFile) {
   const events = [], writes = [], nativeGate = deferred(), writeGate = deferred();
@@ -75,13 +86,12 @@ function readerFixture(file = lreFile) {
   const Reader = productionMotionMethods(file, ['nextTtsPreferenceMutationGeneration', 'captureTtsPreferenceAdmission',
     'ttsPreferencesSnapshot', 'copyTtsPreferencesSnapshot', 'persistTtsPreferencesSnapshot', 'persistTtsPreferences', 'notifyTtsPreferencePending',
     'isSessionActive', ...mutations.map(x => x[0])], {
-    ReaderRuntimeOwner: { current: () => ({ getTtsHost: () => ({ setBackgroundPlaybackEnabled: value => events.push(['background', value]) }) }) },
+    ...state, ReaderRuntimeOwner: { current: () => ({ getTtsHost: () => ({ setBackgroundPlaybackEnabled: value => events.push(['background', value]) }) }) },
   });
   const owner = Object.assign(new Reader(), {
     mounted: true, lifecycleToken: 1, sourceId: 'source', bookId: 'book', exitRequested: false,
     ttsPreferenceMutationGeneration: 0, ttsCoordinator: coordinator,
-    ttsLanguage: 'zh-CN', ttsPerson: 0, ttsPauseOnInterruption: true, ttsAllowMixing: false,
-    ttsFailurePolicy: 'stop', ttsFollowHighlight: true, ttsBackgroundPlayback: true, ttsKeepScreenOn: false,
+    ttsPreferences: {version:1,language:'zh-CN',person:0,pauseOnInterruption:true,allowMixing:false,failurePolicy:'stop',followHighlight:true,backgroundPlayback:true,keepScreenOn:false},
     ttsVoiceOptions: [{ language: 'en-US', person: 7 }],
     ttsPreferencesRecovery: { message: '', visible: false, canRetry: false, generation: 0 },
     controlsPresentedForWindow: () => false,
@@ -105,26 +115,26 @@ async function runReaderCases(file = lreFile) {
     const f = readerFixture(file);
     f.owner[method](...args); await settle();
     if (native) {
-      retire(f, boundary); f.owner[field] = 'new-owner-value';
+      retire(f, boundary); f.owner.ttsPreferences[field] = 'new-owner-value';
       f.nativeGate.resolve(); await settle();
       assert.equal(f.writes.length, 0, `${method}/${boundary}: late native admission cannot dispatch preferences`);
-      assert.equal(f.owner[field], 'new-owner-value');
+      assert.equal(f.owner.ttsPreferences[field], 'new-owner-value');
     } else {
       assert.equal(f.writes.length, 1);
       assert.equal(f.writes[0].admission(), true);
-      retire(f, boundary); f.owner[field] = 'new-owner-value';
+      retire(f, boundary); f.owner.ttsPreferences[field] = 'new-owner-value';
       assert.equal(f.writes[0].admission(), false, `${method}/${boundary}: queued gateway admission retires`);
       const before = f.events.length;
       f.writeGate.reject(Error('old failed write')); await settle();
       assert.equal(f.events.length, before, `${method}/${boundary}: no late rollback/policy/error for a new owner`);
-      assert.equal(f.owner[field], 'new-owner-value');
+      assert.equal(f.owner.ttsPreferences[field], 'new-owner-value');
     }
   }
   for (const [method, args, field, value, native] of mutations) {
     const f = readerFixture(file); f.owner[method](...args); f.nativeGate.resolve(); await settle();
     assert.equal(f.writes.length, 1, `${method}: active request reaches existing gateway`);
     assert.equal(f.writes[0].resetOwned, false); assert.equal(f.writes[0].admission(), true);
-    assert.equal(f.owner[field], value); assert.equal(f.owner.ttsPreferencesRecovery.visible, false,'ordinary in-flight preference save stays quiet');
+    assert.equal(f.owner.ttsPreferences[field], value); assert.equal(f.owner.ttsPreferencesRecovery.visible, false,'ordinary in-flight preference save stays quiet');
     assert.equal(f.owner.ttsPreferencesRecovery.canRetry, false, 'quiet in-flight save has no duplicate retry');
     f.writeGate.resolve(); await settle(); assert.equal(f.owner.ttsPreferencesRecovery.visible, false);
   }
@@ -134,7 +144,7 @@ async function runReaderCases(file = lreFile) {
     f.setPending(pending);f.writeGate.reject(Error('current preference write failed'));await settle();
     assert.equal(f.owner.ttsPreferencesRecovery.visible,true);assert.equal(f.owner.ttsPreferencesRecovery.canRetry,true);
     assert.match(f.owner.ttsPreferencesRecovery.message,pending?/保存尚未确认/:/未能保存/);
-    assert.equal(f.owner[field],value,'failed save retains the current accepted selection');
+    assert.equal(f.owner.ttsPreferences[field],value,'failed save retains the current accepted selection');
     assert.equal(f.writes.length,1,'feedback cannot replay a preference write');
   }
 }
@@ -151,3 +161,7 @@ try {
     'old generation-only implementation is a real production-method negative control');
 } finally { rmSync(scratch, { recursive: true, force: true }); }
 console.log('PASS actual TTS preference gateway and seven LRE mutations: restore/serial/store/read predispatch guard, dispatched durable completion, lifecycle/book/coordinator/operation admission, native late ACK and rollback isolation, generation-only negative control. Native preference durability receipt remains separate.');
+
+} finally {
+  readerImports.deregister();
+}

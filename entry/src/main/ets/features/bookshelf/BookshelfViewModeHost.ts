@@ -33,7 +33,9 @@ export class BookshelfViewModeHost {
   }
 
   current(): BookshelfViewModeSnapshot { return this.snapshot; }
-  canSave(): boolean { return this.snapshot.receipt?.receipt.confirmation !== 'unknown'; }
+  canSave(snapshot: BookshelfViewModeSnapshot = this.snapshot): boolean {
+    return snapshot.receipt?.receipt.confirmation !== 'unknown';
+  }
 
   async load(isCurrent: () => boolean): Promise<BookshelfViewModeSnapshot | undefined> {
     const pending = this.pendingWrite;

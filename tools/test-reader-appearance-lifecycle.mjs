@@ -8,12 +8,13 @@ export const CONTRACT_CASES = {
 };
 
 async function case_retained_lifecycle() {
-const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { virtualFilePath } = await import('./lib/tool-environment.mjs');
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { createRequire } = await import('node:module');
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const appearance = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
 const render = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
 const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
@@ -25,12 +26,19 @@ const { MotionPointTrack } = await import('../entry/src/main/ets/features/common
 // Full, unchanged production component: SDK constructors, fields, @Watch,
 // lifecycle and every Builder. Only platform layout/Scroller/font services and
 // child view rendering are instrumented. This does not simulate device pixels.
-const sdkRoot = resolveEtsLoaderRoot();
-const require = createRequire(import.meta.url);
-const ts = require(`${sdkRoot}/node_modules/typescript`);
-const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
-const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
+const { ts, options } = installedEtsCompiler();
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
+// Keep the production feedback owner and accessibility modifier. The retained
+// appearance lifecycle does not publish feedback; AppStorage is its finite
+// platform storage seam, not a replacement for the message owner.
+const feedbackStorage = new Map();
+const { ReaderTransientFeedback } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts', import.meta.url), 'utf8'),
+  'ReaderTransientFeedback.ts', { AppStorage: {
+    get: key => feedbackStorage.get(key),
+    setOrCreate: (key, value) => feedbackStorage.set(key, value),
+  } }, ['ReaderTransientFeedback']);
+const accessibility = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderActionAccessibility.ets', import.meta.url), 'utf8'),
+  'ReaderActionAccessibility.ets', { AccessibilityRoleType: { BUTTON: 'AccessibilityRoleType.BUTTON' } }, ['ReaderActionAccessibility', 'readerActionTouchRegion']);
 const parsed = ts.createSourceFile(virtualFilePath('ReaderControlAppearanceContent.ets'), source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const component = parsed.statements.find(node => node.name?.getText(parsed) === 'ReaderControlAppearanceContent');
@@ -38,11 +46,9 @@ const members = component.members.map(node => node.name?.getText(parsed)).filter
 assert.ok(component.members.filter(node => !node.name).every(node =>
   ts.isConstructorDeclaration(node) && node.getText(parsed) === ''),
   'only omit the ETS parser synthetic empty constructor; retain every production member');
-for (const name of ['ReaderSelect', 'ReaderSelectPanel']) {
-  const child = readFileSync(new URL(`../entry/src/main/ets/features/common/${name}.ets`, import.meta.url), 'utf8');
-  syntax.componentCollection.customComponents.add(name);
-  syntax.propCollection.set(name, new Set([...child.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
-}
+const childSources = Object.fromEntries(['ReaderSelect', 'ReaderSelectPanel'].map(name => [name,
+  readFileSync(new URL(`../entry/src/main/ets/features/common/${name}.ets`, import.meta.url), 'utf8'),
+]));
 class NativeChild {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
 }
@@ -56,6 +62,15 @@ const observedScrollState = owner => JSON.stringify({
   extendedScrollEndpoint: owner.extendedScrollEndpoint,
 });
 const results = [];
+// This lifecycle case deliberately covers both production scroll paths. The
+// default catalog must fit Quick; inserting a custom face adds the next font
+// row. The component's historical 190vp Prop default no longer fits today's
+// 264vp default catalog and would put both fixtures on the extended path.
+const baselineSnapshot = appearance.createDefaultReaderAppearanceSnapshot();
+const fullContentHeight = 666;
+const quickContentHeight = geometry.sampleReaderControlAppearance(0, 286, fullContentHeight,
+  style.READER_CONTROL_APPEARANCE_THEMES.length,
+  appearance.normalizeReaderAppearanceFontOrder(baselineSnapshot.fontOrder).length - 1).quickContentHeight;
 for (const custom of [false, true]) for (const endpoint of [0, 1]) {
   const runtime = createArkUIPropertyRuntimeProbe();
   const native = { offset: undefined, reads: 0, writes: [], fontRegistrations: 0 };
@@ -65,7 +80,7 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
     new appearance.ReaderCustomFontDescriptor('测试字体', 'ReaderCustom_aaaaaaaaaaaaaaaa', '/fonts/a.ttf', 'a'.repeat(64)));
   const { owner } = createReaderBuilderProbe(source, members, {
     ...appearance, ...render, ...geometry, ...style, ...presentation, ...scroll, ...select,
-    ...runtime.sdk, MotionPointTrack,
+    ...runtime.sdk, ...accessibility, ReaderTransientFeedback, MotionPointTrack,
     Scroller: class {
       currentOffset() { native.reads++; return native.offset; }
       scrollTo(value) { native.writes.push(value); native.offset = { xOffset: value.xOffset, yOffset: value.yOffset }; }
@@ -79,12 +94,15 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
     ReaderSelect: NativeChild, ReaderSelectPanel: NativeChild,
     BorderStyle: enums, GesturePriority: enums, TouchType: enums, ScrollSource: enums,
     Gesture: gesture, LongPressGesture: gesture, globalThis: { Gesture: gesture, LongPressGesture: gesture },
-  }, { ...runtime.hooks, initialParams: {
-    snapshot, motionProgress: endpoint,
+  }, { ...runtime.hooks, childSources, initialParams: {
+    snapshot, motionProgress: endpoint, quickContentHeight, fullContentHeight,
+    availableHeight: endpoint === 0 ? quickContentHeight : fullContentHeight,
     onFontChange: font => actions.push(font), onCustomFontImport: () => actions.push('import'),
   } });
 
   assert.equal(native.reads, 0, 'component construction must not access the unbound Scroller');
+  assert.equal(owner.extendedThemes(), custom,
+    `fixture scroll path custom=${custom} endpoint=${endpoint}: default catalog fits Quick, custom insertion extends it`);
   owner.aboutToAppear();
   assert.equal(native.fontRegistrations, 1);
   assert.equal(native.reads, 0, 'aboutToAppear precedes native Scroll binding');
@@ -125,11 +143,11 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
   scrollNode.onAppear();
   assert.ok(native.reads > readsBeforeBinding, 'actual SDK-emitted Scroll.onAppear resumes synchronization');
   if (custom) {
-    assert.equal(owner.extendedScrollOffset, 96);
-    assert.equal(owner.extendedScrollEndpoint, endpoint);
+    assert.equal(owner.extendedScrollOffset, 96, `extended native offset custom=${custom} endpoint=${endpoint}`);
+    assert.equal(owner.extendedScrollEndpoint, endpoint, `extended endpoint custom=${custom} endpoint=${endpoint}`);
   } else {
-    assert.equal(owner.scrollMotion.nativeScrollOffset, 96);
-    assert.equal(owner.scrollMotion.fullScrollActive, endpoint === 1);
+    assert.equal(owner.scrollMotion.nativeScrollOffset, 96, `canonical native offset custom=${custom} endpoint=${endpoint}`);
+    assert.equal(owner.scrollMotion.fullScrollActive, endpoint === 1, `canonical endpoint custom=${custom} endpoint=${endpoint}`);
   }
   owner.replay();
   assert.equal(owner.nodes.size, initialNodes, 'binding changes attributes without replacing font actors');
@@ -147,7 +165,8 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
 
   owner.aboutToDisappear();
   unknownOffsetChecks('after native detach', scrollNode.onDidScroll);
-  results.push({ custom, endpoint, status: 'PASS', mountedNodes: initialNodes });
+  results.push({ custom, endpoint, scrollPath: custom ? 'extended' : 'canonical', quickContentHeight,
+    status: 'PASS', mountedNodes: initialNodes });
 }
 console.log(JSON.stringify({ contract: 'PH110 full production appearance lifecycle', memberCount: members.length,
   boundary: 'actual SDK compiler and property runtime; native Scroller, font service and child rendering instrumented; no device pixels', results }, null, 2));

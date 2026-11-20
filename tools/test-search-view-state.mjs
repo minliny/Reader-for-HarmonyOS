@@ -1,18 +1,20 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"rows": {"description": "实际DataSource保留ObjectLink元数据、候选与结构增删移动", "resources": []}, "stream-batch": {"description": "4000→8000→2500实际行无locale/indexOf扫描及legacy alias", "resources": []}, "navigation": {"description": "实际SearchViewState首次顺序/草稿/anchor/reset", "resources": []}, "relevance": {"description": "实际SearchPage relevance/同组代表/本地在线scope/cache", "resources": []}, "progressive-anchor": {"description": "进度插入保留相同row与实测anchor/重挂恢复key", "resources": []}, "incremental-row": {"description": "4000行一变一新增只结构ADD，重复发布无通知", "resources": []}, "bounded-normalization": {"description": "实际grouping只新payload做locale，shelf title identity分离", "resources": []}, "locale-remount": {"description": "原平台Unicode/tr/az/lt ranks与8000variant/400title查询归属缓存", "resources": []}, "candidate-version": {"description": "当前sourceVersion目录证明胜过失败/旧版/stale", "resources": []}, "query-delta": {"description": "实际1000query delta只触1行且无结构通知/排序/locale", "resources": []}, "native-batch": {"description": "实际SDK batch旧index语义与单group MOVE不重复CHANGE", "resources": []}, "broad-reorder": {"description": "4000任意重排委托一次native keyed reload而非重复扫描", "resources": []}, "layout-restoration": {"description": "受控frame+key/neighbor/signed offset/query/page/user失效", "resources": []}, "candidate-facts": {"description": "实际schema2 whole-book rank与章节/刷新失败事实边界", "resources": []}, "safe-failure-text": {"description": "实际分类消息保留安全文本而不泄露原query错误", "resources": []}, "media-identity": {"description": "实际同名小说/漫画分组和shelf/virtual identity分离", "resources": []}, "content-filter": {"description": "实际SDK type chip→当前projection本地在线组合/late/resume/reset，不重搜", "resources": []}};
-for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+import {registerReaderTypeScriptImports} from './lib/reader-typescript-imports.mjs';
+const definitions={"visible-source-count": {"description": "实际SDK可见卡片3→7实时发现数且冻结正文/封面/选择及旧query回调安全", "resources": []}, "rows": {"description": "实际DataSource保留ObjectLink元数据、候选与结构增删移动", "resources": []}, "stream-batch": {"description": "4000→8000→2500实际行无locale/indexOf扫描及legacy alias", "resources": []}, "navigation": {"description": "实际SearchViewState首次顺序/草稿/anchor/reset", "resources": []}, "relevance": {"description": "实际SearchPage relevance/同组代表/本地在线scope/cache", "resources": []}, "progressive-anchor": {"description": "进度插入保留相同row与实测anchor/重挂恢复key", "resources": []}, "incremental-row": {"description": "4000行一变一新增只结构ADD，重复发布无通知", "resources": []}, "bounded-normalization": {"description": "实际grouping只新payload做locale，shelf title identity分离", "resources": []}, "locale-remount": {"description": "原平台Unicode/tr/az/lt ranks与8000variant/400title查询归属缓存", "resources": []}, "candidate-version": {"description": "当前sourceVersion目录证明胜过失败/旧版/stale", "resources": []}, "query-delta": {"description": "实际1000query delta只触1行且无结构通知/排序/locale", "resources": []}, "native-batch": {"description": "实际SDK batch旧index语义与单group MOVE不重复CHANGE", "resources": []}, "broad-reorder": {"description": "4000任意重排委托一次native keyed reload而非重复扫描", "resources": []}, "layout-restoration": {"description": "受控frame+key/neighbor/signed offset/query/page/user失效", "resources": []}, "candidate-facts": {"description": "实际schema2 whole-book rank与章节/刷新失败事实边界", "resources": []}, "safe-failure-text": {"description": "实际分类消息保留安全文本而不泄露原query错误", "resources": []}, "media-identity": {"description": "实际同名小说/漫画分组和shelf/virtual identity分离", "resources": []}, "content-filter": {"description": "实际SDK type chip→当前projection本地在线组合/late/resume/reset，不重搜", "resources": []}};
+const selected=selectContractCases(definitions);
+if(selected.length){
+ const imports=registerReaderTypeScriptImports();
+ try{for(const id of selected){await runSelectedCase(id);recordContractCasePass(id);}}
+ finally{imports.deregister();}
+}
 async function runSelectedCase(selectedCase){
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const {selectedProductionMethods,selectedProductionClasses} = await import('./lib/selected-production-methods.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { dirname, resolve } = await import('node:path');
 const { fileURLToPath } = await import('node:url');
 
-
-registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
-  catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
 const { searchResultRelevance, SearchResultRelevance } = await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
 const authorMetadata = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
@@ -24,6 +26,8 @@ const {SearchBookGroup,SearchResultDataSource}=selectedProductionClasses(new URL
 // Keep the production module graph intact, including bookshelf identity and
 // candidate policy. Stripping every import hides new real dependencies.
 const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
+const { ALL_SEARCH_SOURCE_GROUP, SearchSourceGroupDirectory, SearchResultFilter, searchSourceGroupKey } = await import('../entry/src/main/ets/features/search/SearchSourceGroups.ts');
+const { EMPTY_SOURCE_GROUP_CATALOG } = await import('../entry/src/main/ets/features/source/SourceGroupTypes.ts');
 function listen(ds, listener) {
   ds.registerDataChangeListener({ ...listener, onDatasetChange(operations) {
     for (const op of operations) {
@@ -38,22 +42,46 @@ function listen(ds, listener) {
 }
 const group = (key, title = key) => new SearchBookGroup({ sourceId: 'source-a', bookId: key,
   title, author: '作者', groupKey: key }, 1, false);
+const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
 
 const originalLower=String.prototype.toLocaleLowerCase,originalIndexOf=Array.prototype.indexOf;
 
-if(!['rows', 'stream-batch', 'navigation', 'incremental-row', 'native-batch', 'broad-reorder', 'media-identity'].includes(selectedCase)){
-const {actualReaderPageShell}=await import('./lib/reader-page-shell-runtime-probe.mjs');
-const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',
-  ['searchContentStartInset','searchHeaderLayoutKey','searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'submitSearch', 'scopeSourceIds', 'scopeEntries', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
-  {...actualReaderPageShell(),...authorMetadata,...mediaIdentity,ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, SEARCH_LOCAL_SCOPE: '本地', SEARCH_ONLINE_SCOPE: '在线', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
-    SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } },
-    ScrollAlign: { START: 0 }, Edge: { Top: 'top' } });
-const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
-  viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
-const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
+if(['relevance','progressive-anchor','bounded-normalization','locale-remount','candidate-version','query-delta','layout-restoration','candidate-facts','safe-failure-text','content-filter'].includes(selectedCase)){
+const pageFile=new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url);
+const grouping=['groupResults','sourceGroupDirectory'];
+const restoration=['ownsPageQuery','ownsList','scheduleScrollRestore','restoreMeasuredAnchor','resultNativeIndex',
+  'saveScrollAnchor','searchContentStartInset','resultGroupKey','normalizedBookKey'];
+const publication=['refreshVisibleResults','rememberAnchorNeighbors','publishVisibleGroups'];
+const pageMethods={
+  relevance:grouping,'bounded-normalization':grouping,'candidate-version':grouping,'query-delta':grouping,
+  'progressive-anchor':[...grouping,...restoration,...publication],
+  'layout-restoration':[...restoration,'cancelScrollRestoreForUser','onResultScrollIndex'],
+  'content-filter':[...grouping,...restoration,...publication,'submitSearch','applySearchFilters','acceptsFilterAction',
+    'filterActionIdentity','filterPresentationIdentity','resetFilteredResults','filteredEmptyMessage','publishSurface'],
+}[selectedCase];
+const Page=pageMethods&&selectedProductionMethods(pageFile,'SearchPage',pageMethods,{
+  ...authorMetadata,...mediaIdentity,SearchBookGroup,SearchResultProjection,SearchSourceGroupDirectory,SearchResultFilter,
+  ALL_SEARCH_SOURCE_GROUP,searchSourceGroupKey,
+  SearchLayoutFrame:class{constructor(action){this.action=action;}onIdle(){this.action();}},
+  ScrollAlign:{START:0},Edge:{Top:'top'},
+});
+function searchOwner(overrides={}){
+  const state=overrides.viewState??new SearchViewState();
+  return Object.assign(new Page(),{
+    presentation:{kind:'results',keyword:'诡秘之主'},viewState:state,shelfBooks:[],selectedGroupName:'全部',selectedContentType:'全部类型',
+    sourceGroupCatalog:EMPTY_SOURCE_GROUP_CATALOG,selectedSourceGroup:ALL_SEARCH_SOURCE_GROUP,visibleGroups:[],
+    pageMounted:true,isPresentationCurrent:()=>true,pageEpoch:state.pageRevision,queryAtMount:state.revision,
+    resultFlushEpoch:0,restoreEpoch:0,listEpoch:0,startPositionedQuery:-1,headerAnchorPending:false,
+    filterGeneration:0,filterStepGeneration:0,filterStep:'filter',taskStatusGeneration:0,restoreKey:'',
+    // These cases exercise the result owner with the notice lane absent and
+    // a known native start inset. Notice and header measurement have their own probes.
+    acceptResultNoticeFacts(){},scrollLayout:()=>({startInset:0}),getUIContext:()=>({getFocusController:()=>({clearFocus(){}})}),
+  },overrides);
+}
 const early = [book('fan1', '诡秘之主同人'), book('fan2', '我在诡秘之主'), book('other', '随笔')];
 const exact=book('original','诡秘之主','爱潜水的乌贼');const late=[...early,exact,book('other-copy','诡秘之主','爱潜水的乌贼')];const aliases=[book('alias','诡秘之主小说','爱潜水的乌贼',{groupKey:'canonical-original'}),book('alias-exact','诡秘之主','爱潜水的乌贼',{groupKey:'canonical-original'})];
 if(selectedCase==='relevance'){
+const p=searchOwner();
 assert.deepEqual(p.groupResults(early).map(g => g.book.sourceId), ['fan1', 'fan2', 'other']);
 const ranked = p.groupResults(late);
 assert.equal(ranked[0].book, exact, 'late exact title moves before first-arriving fan fiction');
@@ -76,17 +104,20 @@ assert.equal(p.groupResults(aliases)[0].variants.length, 2);
 if(selectedCase==='progressive-anchor'){
 // The precise old progressive-order guarantee applies within equal relevance.
 // Reversed later source buckets and enriched source counts must not shuffle ties.
-const t = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
-  viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部',
+const frames=[],moves=[];
+const t = searchOwner({listMounted:true,scrollRestored:true,
   visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) { this.publishedGroups = groups; },
-  resultDataSource: new SearchResultDataSource() });
+  resultDataSource:new SearchResultDataSource(),getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)})});
 const tieA = book('tie-a', '诡秘之主·甲');
 const tieB = book('tie-b', '诡秘之主·乙');
 const ordered = t.groupResults([tieA, tieB]);
 t.resultDataSource.replace(ordered);
+t.visibleGroups=ordered;t.acceptedVisibleGroups=ordered;
 const retainedB = t.resultDataSource.getData(1);
 t.viewState.anchorIndex = 1; t.viewState.anchorKey = t.resultGroupKey(tieB);
-t.resultScroller = { currentOffset: () => ({ yOffset: 137 }), getItemRect: () => ({ y: -23 }) };
+t.resultScroller = { currentOffset: () => ({ yOffset: 137 }),
+  getItemRect:index=>({y:index===0?0:-23,height:index===0?0:100}),
+  scrollToIndex:index=>moves.push(['index',index]),scrollBy:(_x,y)=>moves.push(['by',y]) };
 t.saveScrollAnchor();
 assert.equal(t.viewState.anchorOffset, 137); assert.equal(t.viewState.anchorItemY, -23);
 const anchorBefore = [t.viewState.anchorKey, t.viewState.anchorOffset, t.viewState.anchorItemY];
@@ -100,7 +131,11 @@ assert.deepEqual(t.visibleGroups.map(g => g.book.sourceId), ['original', 'tie-a'
 assert.equal(t.resultDataSource.getData(2), retainedB, 'rank insertion retains the observed anchored row');
 assert.equal(retainedB.sourceCount, 2, 'source enrichment keeps the same first-seen tie');
 assert.deepEqual([t.viewState.anchorKey, t.viewState.anchorOffset, t.viewState.anchorItemY], anchorBefore);
-assert.equal(t.scrollRestored, true, 'streaming refresh does not restart navigation restoration');
+assert.equal(frames.length,1,'streaming refresh verifies the retained anchor geometry once');
+frames.shift().onIdle();
+assert.deepEqual(moves,[],'an already measured anchor at the saved offset needs no jump or correction');
+assert.equal(t.viewState.anchorIndex,2);
+assert.equal(t.scrollRestored,true);
 // A genuine remount/revision applies the saved key plus actual item offset;
 // it does not substitute the old numerical index after relevance reordered rows.
 t.viewStateRevision = -1; t.refreshVisibleResults();
@@ -113,8 +148,7 @@ assert.equal(t.scrollRestored, false);
 if(selectedCase==='bounded-normalization'){
 // PH65: locale/relevance work is limited to new identity payloads, not all retained cards.
 {
-  const owner = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '书' },
-    viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
+  const owner=searchOwner({presentation:{kind:'results',keyword:'书'}});
   const old = Array.from({ length: 4000 }, (_, i) => book(`source-${i}`, `书${i}`));
   owner.groupResults(old);
   let lowerCalls = 0;
@@ -127,6 +161,7 @@ if(selectedCase==='bounded-normalization'){
   } finally { String.prototype.toLocaleLowerCase = originalLower; }
 }
 // A canonical navigation key is not the shelf title/author matching key.
+const p=searchOwner();
 p.shelfBooks = [book('shelf-other-source', '诡秘之主', '爱潜水的乌贼')];
 p.presentation = { kind: 'results', keyword: '诡秘之主' }; p.selectedGroupName = '全部';
 assert.equal(p.groupResults(aliases)[0].inBookshelf, true);
@@ -245,13 +280,26 @@ if(selectedCase==='candidate-version'){
   const unknown = candidate('unknown', undefined);
   const stale = candidate('stale', { sourceVersion: 'current', catalogAt: now - 1000, catalogCount: 20, stale: true });
   const oldVersion = candidate('old-version', { sourceVersion: 'previous', catalogAt: now - 1000, catalogCount: 20 });
-  const owner = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '鸣龙' },
-    viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
+  const owner=searchOwner({presentation:{kind:'results',keyword:'鸣龙'}});
   assert.equal(owner.groupResults([failed, catalog])[0].book, catalog,
     'a current verified catalog represents the group instead of a recently failed source');
   assert.equal(owner.groupResults([unknown, stale])[0].book, unknown, 'stale facts do not outrank unverified candidates');
   assert.equal(owner.groupResults([unknown, oldVersion])[0].book, unknown, 'other source versions do not outrank unverified candidates');
   assert.equal(owner.groupResults([stale, oldVersion, catalog])[0].book, catalog);
+  const discovered = Array.from({length:7}, (_, index) => candidate(`discovered-${index}`,
+    index < 4 ? { schemaVersion:2,sourceVersion:'current',failureCurrent:true,failureConfirmed:true,
+      failure:{schemaVersion:2,sourceVersion:'current',stage:'failed',failureStage:'catalog',
+        failureCategory:'SOURCE_TOC_EMPTY',checkedAt:now} } : undefined));
+  // The failed exact title is a stronger relevance match than this admitted
+  // same-work alias. Availability still owns the representative selection.
+  for (const row of discovered.slice(4)) row.title = '鸣龙小说';
+  const discoveredGroup = owner.groupResults(discovered)[0];
+  assert.equal(discoveredGroup.sourceCount, 7, 'the card counts every distinct discovered source, including failed attempts');
+  assert.equal(discoveredGroup.variants.length, 7, 'explicit retry/source selection keeps all discovered identities');
+  assert.equal(discoveredGroup.variants[0], discovered[0], 'candidate arrival order is not replaced by health sorting');
+  assert.equal(discoveredGroup.book, discovered[4], 'actual SearchPage forwards the healthy representative instead of variants[0]');
+  assert.equal(discoveredGroup.variants.filter(row => row.acquisition?.failureCurrent === true).length, 4,
+    'retaining discovery never manufactures healthy acquisition facts');
 }
 
 
@@ -260,8 +308,7 @@ if(selectedCase==='candidate-version'){
 if(selectedCase==='query-delta'){
 // End-to-end query delta reaches one row. Pure counters reuse all projection objects.
 {
-  const owner=Object.assign(new Page(),{presentation:{kind:'results',keyword:'书'},viewState:new SearchViewState(),
-    shelfBooks:[],selectedGroupName:'全部'});
+  const owner=searchOwner({presentation:{kind:'results',keyword:'书'}});
   const results=Array.from({length:1000},(_,i)=>book(`s${i}`,`书${i}`,'作者',{groupKey:`g${i}`,admittedOrder:i}));
   owner.presentation.delta={baseRevision:0,revision:1,reset:true,upserted:results,removedKeys:[]};
   const groups=owner.groupResults(results);const before=new Map(owner.projectedGroups);
@@ -290,25 +337,25 @@ if(selectedCase==='query-delta'){
 if(selectedCase==='layout-restoration'){
 function restoration() {
   const frames=[],moves=[];const state=new SearchViewState();state.pageRevision=1;state.anchorKey='online:b';state.anchorItemY=-23;
-  const p=Object.assign(new Page(),{viewState:state,pageEpoch:1,listEpoch:1,restoreEpoch:0,pageMounted:true,listMounted:true,
-    presentation:{kind:'results'},isTablet:false,groupNames:()=>[],resultStatsHeight:28.5,
+  const p=searchOwner({viewState:state,listEpoch:1,listMounted:true,
+    presentation:{kind:'results'},
     restoreCancelled:false,restoreScheduled:false,scrollRestored:false,restoreKey:state.anchorKey,restoreOffset:137,restoreItemY:-23,
     visibleGroups:['a','b','c'].map(k=>group(k)),getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),publishVisibleGroups(){}});
-  let y=0,height=100;
-  p.resultScroller={scrollToIndex:i=>{moves.push(['index',i]);y=0;},scrollTo:offset=>moves.push(['offset',offset.yOffset]),
-    scrollEdge:edge=>moves.push(['edge',edge]),
-    scrollBy:(_x,offset)=>{moves.push(['by',offset]);y-=offset;},getItemRect:()=>({y,height}),currentOffset:()=>({yOffset:137})};
+  let y=0,height=100,offset=0;
+  p.resultScroller={scrollToIndex:i=>{moves.push(['index',i]);y=0;},scrollTo:target=>{offset=target.yOffset;moves.push(['offset',offset]);},
+    scrollBy:(_x,distance)=>{moves.push(['by',distance]);y-=distance;},getItemRect:i=>i===0?{y:-100,height:40}:{y,height},
+    currentOffset:()=>({yOffset:offset})};
   return {p,frames,moves,setHeight:v=>height=v,tick(){const f=frames.shift();assert.ok(f,'expected layout callback');f.onIdle();}};
 }
 {
-  const f=restoration();f.p.scheduleScrollRestore();assert.equal(f.moves.length,0);
+  const f=restoration();f.setHeight(0);f.p.scheduleScrollRestore();assert.equal(f.moves.length,0);
   f.p.visibleGroups=[group('x'),...f.p.visibleGroups];f.p.listEpoch++;f.p.restoreEpoch++;f.p.restoreScheduled=false;f.p.scheduleScrollRestore();
-  f.tick();assert.equal(f.moves.length,0,'old list frame is inert');f.tick();assert.deepEqual(f.moves,[['index',2]]);
-  f.p.onResultScrollIndex(2,2);assert.equal(f.p.restoreCancelled,false,'programmatic scroll does not masquerade as user input');
-  f.tick();assert.deepEqual(f.moves,[['index',2],['by',23]]);assert.equal(f.p.viewState.anchorIndex,2);assert.equal(f.p.viewState.anchorItemY,-23);
+  f.tick();assert.equal(f.moves.length,0,'old list frame is inert');f.tick();assert.deepEqual(f.moves,[['index',3]]);
+  f.p.onResultScrollIndex(3,3);assert.equal(f.p.restoreCancelled,false,'programmatic scroll does not masquerade as user input');
+  f.setHeight(100);f.tick();assert.deepEqual(f.moves,[['index',3],['by',23]]);assert.equal(f.p.viewState.anchorIndex,2);assert.equal(f.p.viewState.anchorItemY,-23);
 }
 for(const boundary of ['query','page','user']) {
-  const f=restoration();f.p.scheduleScrollRestore();f.tick();
+  const f=restoration();f.setHeight(0);f.p.scheduleScrollRestore();f.tick();f.setHeight(100);
   if(boundary==='query')f.p.viewState.reset('new query');
   if(boundary==='page'){f.p.pageMounted=false;f.p.viewState.pageRevision++;}
   if(boundary==='user')f.p.cancelScrollRestoreForUser();
@@ -317,22 +364,25 @@ for(const boundary of ['query','page','user']) {
   assert.deepEqual([f.p.viewState.anchorKey,f.p.viewState.anchorIndex,f.p.viewState.anchorItemY],before);
 }
 {
-  const f=restoration();f.p.restoreKey='online:merged';f.p.viewState.redirects.set('online:merged','online:b');f.p.scheduleScrollRestore();f.tick();f.tick();
+  const f=restoration();f.p.restoreKey='online:merged';f.p.viewState.redirects.set('online:merged','online:b');f.p.scheduleScrollRestore();f.tick();
+  assert.deepEqual(f.moves,[['by',23]],'already measured anchor needs no jump to native START');
   assert.equal(f.p.viewState.anchorKey,'online:b');
   const neighbor=restoration();neighbor.p.restoreKey='online:removed';neighbor.p.viewState.anchorNeighbors=['online:gone','online:c','online:a'];
-  neighbor.p.scheduleScrollRestore();neighbor.tick();neighbor.tick();assert.equal(neighbor.p.viewState.anchorKey,'online:c');
+  neighbor.p.scheduleScrollRestore();neighbor.tick();assert.equal(neighbor.p.viewState.anchorKey,'online:c');
   const late=restoration();late.setHeight(0);late.p.scheduleScrollRestore();late.tick();late.tick();
-  assert.equal(late.p.scrollRestored,false);late.setHeight(100);late.tick();late.tick();assert.equal(late.p.scrollRestored,true);
+  assert.equal(late.p.scrollRestored,false);late.setHeight(100);late.tick();assert.equal(late.p.scrollRestored,true);
+  assert.deepEqual(late.moves,[['index',2],['by',23]],'retry frames do not repeat the offscreen reveal');
 }
 for (const offset of [0, -30, -80.5, 137]) {
-  const f=restoration();f.p.restoreKey='';f.p.restoreOffset=offset;f.p.scheduleScrollRestore();f.tick();
-  assert.deepEqual(f.moves,offset!==0?[['offset',offset]]:[['edge','top']],
+  const f=restoration();f.p.restoreKey='';f.p.viewState.anchorKey='';f.p.viewState.anchorAtStart=offset===0;
+  f.p.restoreOffset=offset;f.p.scheduleScrollRestore();f.tick();
+  assert.deepEqual(f.moves,offset!==0?[['offset',offset]]:[['index',0]],
     'fresh zero restores native top clearance, while saved signed offsets retain their position within the clearance');
   assert.equal(f.p.scrollRestored,true);
 }
 {
   const removed=restoration();removed.p.restoreKey='online:removed';removed.p.scheduleScrollRestore();removed.tick();
-  assert.deepEqual(removed.moves,[['edge','top']], 'a removed key without surviving neighbors resets to the native top edge');
+  assert.deepEqual(removed.moves,[['index',0]], 'a removed key without surviving neighbors resets to the native top edge');
 }
 
 
@@ -363,18 +413,20 @@ if(selectedCase==='candidate-facts'){
 
 }
 if(selectedCase==='safe-failure-text'){
-// R3 safe branch explanations are rendered on both partial and stopped-empty
-// surfaces; raw query-owned errors are never rendered by these methods.
+// One notice owns the safe explanation across results, empty, and error.
 {
   const FailurePage=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',
-    ['partialSearchFailure','searchFailureMessage'],{});
+    ['partialSearchFailure','searchFailureMessage','hasAnySearchNotice','hasDisplayedSearchNotice','displayedSearchNoticeFacts',
+      'captureSearchNoticeFacts','searchNoticeText','searchProgressText','searchStopped','isSweeping','operation']);
   for(const kind of ['results','empty','error']) {
-    const owner=Object.assign(new FailurePage(),{presentation:{kind,localSearchFailed:true,sourceListFailed:true,
+    const owner=Object.assign(new FailurePage(),{viewState:new SearchViewState(),presentation:{kind,localSearchFailed:true,sourceListFailed:true,
       localFailureMessage:'读取超时，请重试',sourceListFailureMessage:'本地数据暂时无法读取，请稍后重试',
       localFailureReason:'secret raw response',sourceListFailureReason:'https://private.example/token'}});
     const text=owner.partialSearchFailure();assert.ok(text.includes('本地检索：读取超时'));
     assert.ok(text.includes('书源列表：本地数据暂时无法读取'));assert.ok(!text.includes('secret')&&!text.includes('private.example'));
-    if(kind==='error')assert.equal(owner.searchFailureMessage(),text);
+    assert.equal(owner.hasAnySearchNotice(),true);
+    assert.equal(owner.searchNoticeText('partial'),text);
+    if(kind==='error')assert.equal(owner.searchFailureMessage(),'','page state does not repeat its notice explanation');
   }
   
 }
@@ -383,7 +435,26 @@ if(selectedCase==='safe-failure-text'){
 
 }
 if(selectedCase==='content-filter'){
-// H1: same-session content filtering consumes already admitted category facts.
+// Atomic owner rules and the actual sheet Apply share this published scope.
+{
+const state = new SearchViewState();
+const group = { kind: 'group', groupId: 'stable-group', name: '甲组' };
+const revision = state.filterRevision, query = state.revision;
+assert.equal(state.applyResultFilters('在线', '漫画', group), true);
+assert.equal(state.filterRevision, revision + 1, 'three facts commit in one filter revision');
+assert.equal(state.revision, query, 'result filtering preserves the running query');
+assert.deepEqual([state.category, state.contentType, state.sourceGroup], ['在线', '漫画', group]);
+assert.equal(state.applyResultFilters('在线', '漫画', { ...group, name: '已重命名' }), false,
+  'stable group key, rather than reference or label, determines semantic equality');
+assert.equal(state.filterRevision, revision + 1);
+assert.equal(state.applyResultFilters('本地', '漫画', group), true);
+assert.equal(state.sourceGroup.kind, 'all'); assert.equal(state.filterRevision, revision + 2);
+assert.equal(state.applyResultFilters('本地', '漫画', { ...group }), false);
+assert.equal(state.filterRevision, revision + 2, 'local normalization precedes the no-op comparison');
+assert.equal(state.applyResultFilters('全部', '全部类型', { kind: 'all', groupId: '', name: '全部分组' }), true);
+assert.equal(state.filterRevision, revision + 3);
+}
+
 const filterState = new SearchViewState();
 filterState.reset('一人之下');
 const remoteNovel = book('novel-a', '一人之下', '作者', { category: 'novel' });
@@ -395,7 +466,7 @@ const allBooks = [remoteNovel, remoteManga, remoteMangaVariant, localNovel, unsu
 const queryPresentation = { kind: 'results', keyword: '一人之下', results: allBooks,
   searching: true, completedSourceCount: 4, totalSourceCount: 6 };
 let searches = 0, retries = 0, warmups = 0, scrollResets = 0;
-const filtered = Object.assign(new Page(), {
+const filtered = searchOwner({
   presentation: queryPresentation, viewState: filterState, shelfBooks: [], selectedGroupName: '全部',
   selectedContentType: '全部类型', keyword: '一人之下',
   visibleStart: 0, visibleEnd: 5, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
@@ -405,45 +476,74 @@ const filtered = Object.assign(new Page(), {
 filtered.refreshVisibleResults();
 const originalOrder = filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book));
 assert.equal(originalOrder.length, 4, 'same-title novel and manga retain separate existing groups');
-const mangaGroup = filtered.visibleGroups.find(group => group.book.category === 'comic');
-assert.deepEqual(mangaGroup.variants, [remoteManga, remoteMangaVariant]);
+assert.deepEqual(filtered.visibleGroups.find(group => group.book.category === 'comic').variants, [remoteManga, remoteMangaVariant]);
 const projection = filtered.resultProjection;
 const queryRevision = filterState.revision;
-const { owner: chips } = createReaderBuilderProbe(page, ['contentTypeRow', 'contentTypeChip'],
-  { TOK_SPACE_XS: 8, TOK_BORDER_W: 1, ScrollDirection: { Horizontal: 'horizontal' } });
-Object.assign(chips, { appThemeScheme: 'day', selectedContentType: filtered.selectedContentType,
-  selectContentType(label) { filtered.selectContentType(label); this.selectedContentType = filtered.selectedContentType; } });
-chips.contentTypeRow();
-const chip = label => [...chips.nodes.values()].find(node => node.type === 'Text' && node.create === label);
-assert.deepEqual(['全部类型', '小说', '漫画'].map(label => chip(label).create), ['全部类型', '小说', '漫画']);
-chip('漫画').onClick(); chips.replay();
-assert.deepEqual(filtered.visibleGroups, [mangaGroup], 'actual SDK chip dispatch filters real projection without regrouping');
-assert.equal(chip('漫画').accessibilityText, '当前内容类型:漫画');
+const {foundationControls}=await import('./lib/reader-foundation-control-probe.mjs');
+const {createReaderComponentProbe}=await import('./lib/reader-component-probe.mjs');
+const {searchFilterSdkDeclarations}=await import('./lib/search-sheet-sdk-probe.mjs');
+const options=foundationControls();
+const filterSource=read('entry/src/main/ets/features/search/ReaderSearchFilterPanel.ets');
+const {Component:Filter}=createReaderComponentProbe(filterSource,[
+  'expanded','presentationIdentity','actionIdentity','step','appliedGroup','appliedType','appliedSourceGroup',
+  'draftPresentationIdentity','draftGroup','draftType','draftSourceGroup','draftValid','applyingDraft','mounted',
+  'beginDraft','validateDraft','accepts','acceptsAction','acceptsDraftAction','selectDraftType','selectDraftGroup','applyDraft',
+  'onApply','choiceRows','scheme',
+],{...options.dependencies,...searchFilterSdkDeclarations(filterSource),ALL_SEARCH_SOURCE_GROUP,searchSourceGroupKey},
+  {...options.hooks,allowEmptyBranchAdmission:true});
+function openFilter(){
+  filtered.filterGeneration++;filtered.filtersExpanded=true;
+  const opening=filtered.filterPresentationIdentity(),action=filtered.filterActionIdentity();
+  const panel=new Filter(undefined,{expanded:true,presentationIdentity:opening,actionIdentity:action,step:'filter',
+    appliedGroup:filtered.selectedGroupName,appliedType:filtered.selectedContentType,appliedSourceGroup:filtered.selectedSourceGroup,
+    onApply:(...proposal)=>filtered.applySearchFilters(...proposal)});
+  panel.mounted=true;panel.beginDraft(opening);
+  panel.choiceRows(true,action);panel.choiceRows(false,action);options.properties.flush();
+  const buttons=[...panel.children.values()].filter(child=>child instanceof options.button.Component);
+  assert.deepEqual(buttons.map(button=>button.label),['全部','小说','漫画','全部','本地','在线']);
+  const option=(label,lane)=>options.nodes(buttons.slice(lane*3,lane*3+3).find(button=>button.label===label))
+    .find(node=>node.create===label&&typeof node.onClick==='function');
+  return{panel,choose(label,lane){
+    const node=option(label,lane);
+    assert.ok(node,'actual SDK filter option');
+    node.onClick();options.properties.flush();
+    assert.equal(node.accessibilitySelected,true);
+  },apply:()=>panel.applyDraft(action)};
+}
+function applyType(label){const draft=openFilter();draft.choose(label,0);draft.apply();}
+function applyOrigin(label){const draft=openFilter();draft.choose(label,1);draft.apply();}
+const firstDraft=openFilter();
+firstDraft.choose('漫画',0);
+assert.equal(filterState.contentType,'全部类型','draft does not change the owner projection');
+firstDraft.apply();
+assert.deepEqual(filtered.visibleGroups.map(group=>group.book),[remoteManga],'actual SDK option and Apply filter the retained query');
+const afterApply=filterState.filterRevision;
+firstDraft.apply();assert.equal(filterState.filterRevision,afterApply,'closed option callback cannot reapply the same action');
 assert.equal(filterState.contentType, '漫画');
 assert.equal(filtered.resultProjection, projection);
 assert.equal(filtered.presentation, queryPresentation);
 assert.equal(filtered.presentation.results, allBooks);
 assert.equal(filterState.revision, queryRevision);
 assert.deepEqual(filtered.visibleGroups[0].variants, [remoteManga, remoteMangaVariant], 'filter keeps all same-type source candidates');
-filtered.selectGroup('本地');
+applyOrigin('本地');
 assert.equal(filtered.visibleGroups.length, 0);
 assert.match(filtered.filteredEmptyMessage(), /本地 · 漫画.*搜索仍在继续/);
 filtered.presentation = { ...queryPresentation, searching: false, stopped: true };
 assert.match(filtered.filteredEmptyMessage(), /搜索已停止.*已返回的结果/);
 filtered.presentation = { ...queryPresentation, searching: false, stopped: false };
 assert.match(filtered.filteredEmptyMessage(), /已返回的结果.*可切换范围或内容类型/);
-chip('小说').onClick(); chips.replay();
+applyType('小说');
 assert.deepEqual(filtered.visibleGroups.map(group => group.book), [localNovel]);
-filtered.selectGroup('在线');
+applyOrigin('在线');
 assert.deepEqual(filtered.visibleGroups.map(group => group.book), [remoteNovel]);
-chip('全部类型').onClick(); chips.replay();
+applyType('全部');
 assert.ok(filtered.visibleGroups.some(group => group.book === unsupported), 'All retains existing unknown-type admission without relabeling');
-filtered.selectGroup('全部');
+applyOrigin('全部');
 assert.deepEqual(filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book)), originalOrder, 'existing ordering is restored exactly');
 assert.equal(searches, 0); assert.equal(retries, 0); assert.equal(filterState.revision, queryRevision);
 assert.ok(warmups > 0, 'existing visible-item warmup lifecycle remains active; zero total HTTP is not asserted');
 assert.ok(scrollResets > 0);
-chip('漫画').onClick();
+applyType('漫画');
 const lateManga = book('manga-c', '一人之下番外', '作者', { category: 'comic' });
 filtered.presentation = { ...queryPresentation, results: [...allBooks, lateManga] };
 filtered.refreshVisibleResults();
@@ -466,8 +566,7 @@ assert.equal(filtered.selectedContentType, '全部类型');
 assert.equal(filterState.category, '全部');
 // A fixed canonical group whose admitted metadata changes must enter/leave
 // the derived view even when its order and key remain unchanged.
-const changing = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '' },
-  viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部', selectedContentType: '小说' });
+const changing = searchOwner({presentation:{kind:'results',keyword:''},selectedContentType:'小说'});
 const unknownFact = book('metadata', '漫画不是类型证据', '作者', { groupKey: 'unchanged-key', category: 'other' });
 assert.equal(changing.groupResults([unknownFact]).length, 0);
 const textFact = { ...unknownFact, category: 'novel' };
@@ -616,6 +715,101 @@ if(selectedCase==='broad-reorder'){
   assert.equal(data.getData(3999),rows[0]);
 }
 
+}
+if(selectedCase==='visible-source-count'){
+ const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+ const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+ const { createReaderComponentProbe } = await import('./lib/reader-component-probe.mjs');
+ const { builderComponentMembers } = await import('./lib/ets-builder-probe.mjs');
+ const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+ const { readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
+ const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+ const { SEARCH_RESULT_GEOMETRY } = await import('../entry/src/main/ets/features/search/SearchResultGeometry.ts');
+ const { bookIntroText } = await import('../entry/src/main/ets/features/common/BookIntroText.ts');
+ const { searchBookSnapshot } = await import('../entry/src/main/ets/features/search/SearchBookSnapshot.ts');
+ const runtime=createArkUIPropertyRuntimeProbe();
+ const {ts,options,root:sdkRoot,require}=installedEtsCompiler();
+ const searchTree=ts.createSourceFile('SearchPage.ets',page,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ assert.deepEqual(searchTree.parseDiagnostics,[]);
+ const groupDeclaration=searchTree.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.text==='SearchBookGroup');
+ assert.ok(groupDeclaration&&ts.getAllDecorators(groupDeclaration).some(decorator=>
+   ts.isIdentifier(decorator.expression)&&decorator.expression.text==='Observed'));
+ const observedClasses=require(sdkRoot+'/lib/validate_ui_syntax.js').observedClassCollection;
+ const rows=Array.from({length:7},(_,i)=>({sourceId:`source-${i}`,bookId:`/book-${i}`,groupKey:'same-book',
+  sourceName:`源${i}`,title:'原书名',author:'作者',intro:'原简介',category:'novel',
+  coverUrl:`https://example.invalid/${i}.jpg`,searchRequestId:'query-1',variables:[]}));
+ const viewState=new SearchViewState();viewState.reset('原书名');
+ const grouped=(variants,representative=variants[0])=>{
+  const group=new SearchBookGroup(variants[0],1,false);
+  for(const variant of variants.slice(1))group.admit(variant,false);
+  group.book=representative;group.displayRevision=viewState.filterRevision;return group;
+ };
+ const observed=runtime.sdk.ObservedObject.createNew(grouped(rows.slice(0,3)),undefined);
+ const data=new SearchResultDataSource();data.replace([observed]);
+ const changes=[];data.registerDataChangeListener({onDatasetChange:ops=>changes.push(ops)});
+ const frames=[];let layoutInvalidations=0,selected;
+ const wasRegistered=observedClasses.has(groupDeclaration.name.text);
+ let owner;
+ observedClasses.add(groupDeclaration.name.text);
+ try{
+  ({owner}=createReaderComponentProbe(page,builderComponentMembers(page,'SearchResultCard'),{
+   ...runtime.sdk,SynchedPropertyNesedObjectPU:runtime.sdk.SynchedPropertyNestedObjectPU,SearchViewState,
+   ...readerTypographyRoles,...readerFoundationTokens,readerAppColor,SEARCH_RESULT_GEOMETRY,
+   ImageFit:{Cover:'Cover'},LengthMetrics:{vp:value=>value},ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
+   searchBookSnapshot,bookIntroText,...authorMetadata,TouchType:{Down:0,Up:1,Cancel:3},SourceType:{TouchScreen:0},
+   SearchLayoutFrame:class{constructor(action){this.action=action;}onFrame(){this.action();}},
+  },{...runtime.hooks,componentName:'SearchResultCard'}));
+ }finally{if(!wasRegistered)observedClasses.delete(groupDeclaration.name.text);}
+ Object.assign(owner,{viewState,queryRevision:viewState.revision,displayRevision:viewState.filterRevision,cardWidth:390,expandedLayout:false,
+  canRefreshDisplay:()=>true,onDisplayFactsChange:()=>layoutInvalidations++,
+  onSelectResult:(chosen,variants,coverUrl)=>{selected={chosen,variants,coverUrl};},
+  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)})});
+ owner.updateStateVars({group:observed});owner.aboutToAppear();owner.initialRender();
+ const root=[...owner.nodes.values()].find(node=>node.type==='Row'&&node.onClick);
+ const image=[...owner.nodes.values()].find(node=>node.type==='Image');
+ const counter=[...owner.nodes.values()].find(node=>node.type==='Text'&&node.create==='发现 3 个来源');
+ assert.ok(root&&image&&counter,'actual Card Builder has native row, image and source count Text');
+ const originalNodes=new Map(owner.nodes),originalDisplay=owner.displayBook(),originalCover=image.create;
+ const originalGeometry={coverWidth:image.width,coverHeight:image.height,rowWidth:root.width,rowPadding:root.padding,
+  columns:[...owner.nodes.values()].filter(node=>node.type==='Column').map(node=>({constraintSize:node.constraintSize,width:node.width}))};
+ const oldVisibility=root.onVisibleAreaChange[1],oldCoverError=image.onError;
+ assert.equal(typeof oldVisibility,'function');
+ oldVisibility(true,1);assert.equal(owner.displayVisible,true);
+ owner.onCardTouch(0);
+ const enriched={...rows[4],title:'补全后的不同标题',intro:'后到的超长简介'.repeat(100)};
+ const updatedGroup=grouped(rows,enriched);updatedGroup.inBookshelf=true;
+ data.replace([updatedGroup],new Set(['online:same-book']));runtime.flush();
+ assert.equal(observed.sourceCount,7);
+ assert.equal(counter.create,'发现 7 个来源','a visible card reports newly discovered sources without scrolling away');
+ assert.equal(owner.displayBook(),originalDisplay,'book metadata remains frozen while the card is visible');
+ assert.equal(owner.displayIntro(),'原简介');assert.equal(image.create,originalCover);
+ assert.equal(owner.displayInBookshelf(),false,'source discovery alone does not unfreeze the admitted shelf label');
+ for(const count of [6,7,6,7]){
+  const update=grouped(rows.slice(0,count),enriched);update.inBookshelf=true;
+  data.replace([update],new Set(['online:same-book']));runtime.flush();
+  assert.equal(counter.create,`发现 ${count} 个来源`,'repeated ObjectLink publications update the same native Text actor while visible');
+ }
+ assert.equal(owner.nodes.size,originalNodes.size);
+ for(const[id,node]of originalNodes)assert.equal(owner.nodes.get(id),node,'enrichment retains every native actor');
+ assert.deepEqual({coverWidth:image.width,coverHeight:image.height,rowWidth:root.width,rowPadding:root.padding,
+  columns:[...owner.nodes.values()].filter(node=>node.type==='Column').map(node=>({constraintSize:node.constraintSize,width:node.width}))},originalGeometry,
+  'count changes preserve authored cover/row geometry; native pixel height remains device evidence');
+ assert.equal(layoutInvalidations,0,'live count cannot request the metadata/row-height refresh owner');
+ assert.deepEqual(changes,[],'same-query enrichment does not replace or reorder the lazy row');
+ owner.onCardTouch(1);const oldUpFrame=frames.at(-1);owner.selectResult(0);
+ assert.equal(selected.chosen.sourceId,'source-0');assert.equal(selected.variants.length,3,
+  'an already pressed result retains its admitted identity and variants despite the live count');
+ const nextRows=rows.slice(0,3).map(row=>({...row,searchRequestId:'query-2'}));
+ viewState.reset('原书名');owner.updateStateVars({group:observed,queryRevision:viewState.revision,displayRevision:viewState.filterRevision});
+ data.replace([grouped(nextRows)],new Set(['online:same-book']));runtime.flush();
+ const epoch=owner.visibilityEpoch,visibility=owner.displayVisible;
+ oldVisibility(false,0);assert.equal(owner.visibilityEpoch,epoch);assert.equal(owner.displayVisible,visibility,
+  'old-query visibility callbacks cannot retire current display facts');
+ const currentCover=observed.coverUrl;oldCoverError({});runtime.flush();assert.equal(observed.coverUrl,currentCover,
+  'old-query image failures cannot reject the current cover');
+ owner.onCardTouch(0);const pressed=owner.pressedSelection;oldUpFrame.onFrame();
+ assert.equal(owner.pressedSelection,pressed,'a prior Up frame cannot clear a new-query press');
+ owner.aboutToDisappear();oldVisibility(true,1);assert.equal(owner.displayedFacts,undefined);
 }
 if(selectedCase==='media-identity'){
 {

@@ -12,6 +12,24 @@ function isBuildResourceTask(name) {
   return isPackageTask(name) || /(?:^|[:@])(?:compileArkTS|compileTS|compileJS|compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|ProcessLibs|DoNativeStrip|CacheNativeLibs|cleanNative|clean)$/i.test(name);
 }
 
+// Only the explicitly selected single ArkTS task may omit the unrelated
+// Native refresh. Mixed commands retain the complete existing admission path.
+function isSingleArkTsCompile(tasks) {
+  return tasks.length === 1 && /^(?::?entry:)?default@CompileArkTS$/i.test(tasks[0]);
+}
+
+function needsIdeNativePreflight(tasks) {
+  return !isSingleArkTsCompile(tasks) && tasks.some(isBuildResourceTask);
+}
+
+function assertArkTsOnlyTaskAllowed(entryTasks, task) {
+  if (!isSingleArkTsCompile(entryTasks)) return;
+  const compileSource = /(?:^|[:@])(?:compileArkTS|compileTS|compileJS)$/i.test(task);
+  if (isBuildResourceTask(task) && !compileSource) {
+    throw new Error(`Standalone CompileArkTS cannot run Native, clean, packaging or signing task: ${task}`);
+  }
+}
+
 // An accidental IDE Run must fail before deployment can uninstall the app.
 // This is an invocation guard, not an authentication/security boundary.
 function assertCanonicalHapInvocation(tasks, cwd = process.cwd(), env = process.env) {
@@ -35,6 +53,7 @@ async function configureIdeSigning(context, cwd = process.cwd(), env = process.e
     return undefined;
   }
   const pipeline = await import(pathToFileURL(resolve(cwd, 'scripts/hap-pipeline.mjs')).href);
+  pipeline.assertIdeSdkEnvironment(env);
   const session = pipeline.prepareIdeSigningProfile(context.getBuildProfileOpt());
   context.setBuildProfileOpt(session.profile);
   return { pipeline, session };
@@ -56,7 +75,7 @@ function verifyIdeOutput(ide, cwd = process.cwd()) {
 }
 
 module.exports = { assertCanonicalHapInvocation, isPackageTask, isBuildResourceTask, configureIdeSigning,
-  assertReaderHapInvocation, verifyIdeOutput };
+  assertReaderHapInvocation, verifyIdeOutput, isSingleArkTsCompile, needsIdeNativePreflight, assertArkTsOnlyTaskAllowed };
 
 let buildLease, buildLeaseReady, buildEnvironmentBefore, buildGeneration = 0;
 async function beginIdeBuild(ide) {

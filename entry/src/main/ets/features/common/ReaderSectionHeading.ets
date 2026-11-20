@@ -15,7 +15,7 @@ export struct ReaderSectionHeading {
   build() {
     Text(this.title)
       .width('100%')
-      .height(16)
+      .constraintSize({ minHeight: 16 })
       .fontFamily(TYPE_SECTION_HEADING.fontFamily)
       .fontWeight(TYPE_SECTION_HEADING.fontWeight)
       .fontSize(TYPE_SECTION_HEADING.fontSizeFp)

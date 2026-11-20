@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from './ReaderActionAccessibility';
 import { ReaderChoiceSpec, ReaderChoiceSpecId, resolveReaderChoiceSpec } from './ReaderChoiceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
 import { readerAppColor } from './ReaderThemeRegistry';
@@ -88,7 +89,9 @@ export struct ReaderChoiceRow {
         top: this.specId === 'appearance-library' ? 6 : 10, bottom: this.specId === 'appearance-library' ? 6 : 10 })
       .alignItems(VerticalAlign.Center).borderRadius(this.spec().radius).flexShrink(0)
       .backgroundColor(this.rowBackground()).enabled(this.actionEnabled)
-      .accessibilityText(this.accessibilityLabel()).onClick((): void => this.choose())
+      .accessibilityText(this.accessibilityLabel())
+      .responseRegion( readerActionTouchRegion('100%', 44))
+      .attributeModifier(new ReaderActionAccessibility(this.accessibilityLabel(), this.actionEnabled, this.selected)).onClick((): void => this.choose())
       .onAreaChange((_old: Area, next: Area): void => {
         const height = typeof next.height === 'number' ? next.height : Number.parseFloat(next.height as string);
         if (Number.isFinite(height) && height > 0) this.onHeightChange(height);
@@ -110,6 +113,8 @@ export struct ReaderChoiceRow {
       .alignItems(VerticalAlign.Center).borderRadius(this.spec().radius)
       .backgroundColor(this.rowBackground())
       .enabled(this.actionEnabled).accessibilityText(this.accessibilityLabel())
+      .responseRegion( readerActionTouchRegion('100%', this.rowHeight()))
+      .attributeModifier(new ReaderActionAccessibility(this.accessibilityLabel(), this.actionEnabled, this.selected))
       .onClick((): void => this.choose());
   }
 
@@ -127,14 +132,16 @@ export struct ReaderChoiceRow {
         .position({ x: this.availableWidth - this.spec().iconRight, y: this.spec().iconTop });
     }.width('100%').height(this.rowHeight())
       .backgroundColor(this.rowBackground()).enabled(this.actionEnabled)
-      .accessibilityText(this.accessibilityLabel()).onClick((): void => this.choose());
+      .accessibilityText(this.accessibilityLabel())
+      .responseRegion( readerActionTouchRegion('100%', this.rowHeight()))
+      .attributeModifier(new ReaderActionAccessibility(this.accessibilityLabel(), this.actionEnabled, this.selected)).onClick((): void => this.choose());
   }
 
   private spec(): ReaderChoiceSpec { return resolveReaderChoiceSpec(this.specId); }
   private textStyle(): ReaderTextStyle { return this.selected ? this.spec().selectedText : this.spec().text; }
   private rowHeight(): number {
     const divider = this.showDivider ? this.spec().dividerHeight : 0;
-    return readerScaledControlHeight(this.spec().height - divider,
+    return readerScaledControlHeight(Math.max(44, this.spec().height - divider),
       this.spec().text.lineHeightFp ?? this.spec().text.fontSizeFp * 1.5, this.fontScale());
   }
   private outerHeight(): number {

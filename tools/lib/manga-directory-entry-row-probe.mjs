@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
+import { createReaderComponentProbe as createReaderBuilderProbe } from './reader-component-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
+import { builderComponentMembers as boundedMembers } from './ets-builder-probe.mjs';
 import * as visual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import * as layout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
 import * as presentation from '../../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';

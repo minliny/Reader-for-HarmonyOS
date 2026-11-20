@@ -26,6 +26,7 @@ import {
 
 import { measureReaderPageChromeText, readerPageChromeTextMeasurements,
   readerPageChromeTopTextStyle } from './ReaderPageChromeTextMeasurement';
+import type { ReaderPageBookmarkMode } from './ReaderPageBookmarkModel';
 
 /**
  * Figma `Reader/ImmersiveInfo` + the page-owned part of
@@ -54,6 +55,13 @@ export struct ReaderPageChrome {
   @Prop sessionVisible: boolean = false;
   @Prop sessionWidth: number = 0;
   @Prop sessionHeight: number = 0;
+  /** Page-owned bookmark marker. Host owns the business state and supplies facts. */
+  @Prop bookmarkMode: ReaderPageBookmarkMode = 'hidden';
+  @Prop bookmarkOpacity: number = 0;
+  @Prop bookmarkTopAccessoryX: number = 0;
+  @Prop bookmarkTopAccessoryY: number = 0;
+  @Prop bookmarkTopAccessoryWidth: number = 0;
+  @Prop bookmarkTopAccessoryHeight: number = 0;
   @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   // Geometry expressions request the same four labels repeatedly in one update.
@@ -125,6 +133,20 @@ export struct ReaderPageChrome {
           .position({ x: this.chromeLayout().bottomEndX, y: this.chromeLayout().bottomEndY })
           .translate({ x: this.footerTranslateX + this.footerExitX(), y: this.footerExitY() }).opacity(this.footerOpacity);
       }
+
+      if (this.bookmarkMode !== 'hidden' && this.bookmarkTopAccessoryWidth > 0 &&
+        this.bookmarkTopAccessoryHeight > 0) {
+        Image(this.bookmarkMode === 'filled' ? this.filledBookmarkAsset() : this.outlineBookmarkAsset())
+          .width(this.bookmarkTopAccessoryWidth)
+          .height(this.bookmarkTopAccessoryHeight)
+          .position({ x: this.bookmarkTopAccessoryX, y: this.bookmarkTopAccessoryY })
+          .visibility(Visibility.Visible)
+          .opacity(this.bookmarkOpacity)
+          .accessibilityText(this.bookmarkMode === 'filled' ? '本页已添加书签' : '本页书签预览')
+          .zIndex(2).hitTestBehavior(HitTestMode.None);
+      }
+
+
     }
     .width('100%')
     .height('100%')
@@ -202,6 +224,17 @@ export struct ReaderPageChrome {
 
   private metaColor(): string {
     return readerThemeDefinition(this.appearance.activeTheme).chromeMeta;
+  }
+
+  private filledBookmarkAsset(): Resource {
+    return readerAppearanceChromeTone(this.appearance.activeTheme) === 'light' ?
+      $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled');
+  }
+
+  private outlineBookmarkAsset(): Resource {
+    return readerAppearanceChromeTone(this.appearance.activeTheme) === 'light' ?
+      $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
+      $r('app.media.reader_directory_marker_bookmark_active');
   }
 
 }

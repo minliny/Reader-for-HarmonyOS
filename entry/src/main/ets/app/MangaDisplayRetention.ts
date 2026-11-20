@@ -1,7 +1,7 @@
 import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import type { ReadingBodyImagePayload } from './ReadingBodyImageHost';
-import type { MangaStorageChapter } from './ReadingImageDiskCache';
+import { ReadingImageDiskCache, type MangaStorageChapter } from './ReadingImageDiskCache';
 import { readMangaAtomicPayload } from './MangaAtomicPayloadPort';
 
 interface MangaDisplayRecord {
@@ -19,6 +19,38 @@ export interface MangaDisplayInventoryFile { path: string; owners: MangaStorageC
  * The shared disk owner decides retention and eviction. This adapter only
  * validates immutable display files and their geometry for subsequent reads. */
 export class MangaDisplayRetention {
+  private restoreQuiescing: boolean = false;
+  private restoreDrain: Promise<void> | undefined;
+  private readonly pendingIo = new Set<Promise<unknown>>();
+
+  private observeIo<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.restoreQuiescing) return Promise.reject(ReadingImageDiskCache.restoreRetirement('MANGA_DISPLAY_LIBRARY_RESTORE_QUIESCED'));
+    const task = operation();
+    this.pendingIo.add(task);
+    const finish = (): void => { this.pendingIo.delete(task); };
+    void task.then(finish, finish);
+    return task;
+  }
+
+  quiesceForLibraryRestore(): Promise<void> {
+    this.restoreQuiescing = true;
+    if (this.restoreDrain !== undefined) return this.restoreDrain;
+    const drain = (async (): Promise<void> => {
+      let failure: unknown;
+      let pending = [...this.pendingIo, ...this.recordWrites.values()];
+      do {
+        for (const result of await Promise.allSettled(pending)) {
+          if (result.status === 'rejected' && !ReadingImageDiskCache.isRestoreRetirement(result.reason) && failure === undefined) failure = result.reason;
+        }
+        pending = [...this.pendingIo, ...this.recordWrites.values()];
+      } while (pending.length > 0);
+      if (failure !== undefined) throw failure;
+    })();
+    this.restoreDrain = drain;
+    void drain.then((): void => {}, (): void => { if (this.restoreDrain === drain) this.restoreDrain = undefined; });
+    return drain;
+  }
+
   private readonly records: util.LRUCache<string, MangaDisplayRecord> = new util.LRUCache<string, MangaDisplayRecord>(256);
   private readonly recordFingerprints: util.LRUCache<string, string> = new util.LRUCache<string, string>(256);
   private readonly knownFiles = new Set<string>();
@@ -51,8 +83,13 @@ export class MangaDisplayRetention {
 
   isRetained(path: string): boolean { return this.knownFiles.has(path); }
 
-  async lookup(key: string, owner: MangaStorageChapter, current: () => boolean,
+  async lookup(key: string, owner: MangaStorageChapter, current: () => boolean, acquire?: (payload: ReadingBodyImagePayload) => void): Promise<ReadingBodyImagePayload | undefined> {
+    return this.observeIo(() => this.lookupOwned(key, owner, current, acquire));
+  }
+
+  private async lookupOwned(key: string, owner: MangaStorageChapter, current: () => boolean,
     acquire?: (payload: ReadingBodyImagePayload) => void): Promise<ReadingBodyImagePayload | undefined> {
+    if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED');
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
     const recordPath = `${this.directory}/manga-display-${key}.json`;
     if (this.removals.has(recordPath)) return undefined;
@@ -81,9 +118,11 @@ export class MangaDisplayRetention {
     if (!(await fs.access(path))) return undefined;
     const stat = await fs.stat(path);
     if (stat.isDirectory() || stat.size !== record.fileBytes || stat.size > 32 * 1024 * 1024) return undefined;
-    const bytes = await readMangaAtomicPayload(path, stat.size, 32 * 1024 * 1024, current);
+    const bytes = await readMangaAtomicPayload(path, stat.size, 32 * 1024 * 1024, (): boolean => { if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED'); return current(); });
+    if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED');
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
     if (bytes.byteLength !== record.fileBytes || await this.hash(bytes) !== record.fileHash) return undefined;
+    if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED');
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
     this.records.put(key, record); this.knownFiles.add(path); this.validatedFiles.add(path);
     const payload = { ...record.payload, pixelMap: undefined };
@@ -115,23 +154,26 @@ export class MangaDisplayRetention {
     // Let the current interaction settle before doing the proof. The delay
     // keeps the caller's scroll burst free of a competing checksum while still
     // surfacing an externally replaced file promptly on the next frame.
-    setTimeout((): void => { void (async (): Promise<void> => {
+    const validation = this.observeIo(() => new Promise<void>((resolve, reject): void => {
+      setTimeout((): void => { void (async (): Promise<void> => {
       try {
-        if (!current() || !(await fs.access(path))) { this.validatedFiles.delete(path); return; }
+        if (this.restoreQuiescing || !current() || !(await fs.access(path))) { this.validatedFiles.delete(path); return; }
         const stat = await fs.stat(path);
         if (stat.isDirectory() || stat.size !== record.fileBytes || stat.size > 32 * 1024 * 1024) {
           this.validatedFiles.delete(path); return;
         }
-        const bytes = await readMangaAtomicPayload(path, stat.size, 32 * 1024 * 1024, current);
+        const bytes = await readMangaAtomicPayload(path, stat.size, 32 * 1024 * 1024, (): boolean => { if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED'); return current(); });
         if (current() && (bytes.byteLength !== record.fileBytes || await this.hash(bytes) !== record.fileHash)) {
           this.validatedFiles.delete(path);
         }
-      } catch (_) { this.validatedFiles.delete(path); }
+      } catch (error) { this.validatedFiles.delete(path); if (this.restoreQuiescing) throw error; }
       finally {
         this.releaseRead(path);
         this.validationTasks.delete(path);
       }
-    })(); }, 10);
+      })().then(resolve, reject); }, 10);
+    }));
+    void validation.catch((): void => {});
   }
 
   private fileBusy(path: string): boolean {
@@ -139,6 +181,10 @@ export class MangaDisplayRetention {
   }
 
   async store(key: string, owner: MangaStorageChapter, payload: ReadingBodyImagePayload, current: () => boolean): Promise<void> {
+    return this.observeIo(() => this.storeOwned(key, owner, payload, current));
+  }
+
+  private async storeOwned(key: string, owner: MangaStorageChapter, payload: ReadingBodyImagePayload, current: () => boolean): Promise<void> {
     const recordPath = `${this.directory}/manga-display-${key}.json`;
     const previous = this.recordWrites.get(recordPath) ?? Promise.resolve();
     const work = previous.catch((): void => {}).then((): Promise<void> => this.storeRecord(key, owner, payload, current));
@@ -152,6 +198,7 @@ export class MangaDisplayRetention {
     if (path === undefined) throw new Error('MANGA_DISPLAY_IDENTITY');
     const recordPath = `${this.directory}/manga-display-${key}.json`;
     const temp = `${this.directory}/.manga-display-${key}.tmp`;
+    if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED');
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
     if (this.removals.has(path) || this.removals.has(recordPath) || this.removals.has(temp)) throw new Error('MANGA_CACHE_EVICTING');
     this.writes.add(path); this.writes.add(recordPath); this.writes.add(temp);
@@ -159,11 +206,13 @@ export class MangaDisplayRetention {
     try {
       const stat = await fs.stat(path);
       if (stat.size <= 0 || stat.size > 32 * 1024 * 1024) throw new Error('MANGA_DISPLAY_BUDGET');
-      const bytes = await readMangaAtomicPayload(path, stat.size, 32 * 1024 * 1024, current);
-      if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
+      const bytes = await readMangaAtomicPayload(path, stat.size, 32 * 1024 * 1024, (): boolean => { if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED'); return current(); });
+      if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED');
+    if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
       const record: MangaDisplayRecord = { format: 1, key, owner: { ...owner }, payload: { ...payload, pixelMap: undefined },
         fileHash: await this.hash(bytes), fileBytes: bytes.byteLength };
-      if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
+      if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED');
+    if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
       const encoded = new util.TextEncoder().encodeInto(JSON.stringify(record));
       const file = await fs.open(temp, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
       ownsTemp = true; this.temporaryOwners.set(temp, { ...owner });
@@ -176,7 +225,8 @@ export class MangaDisplayRetention {
           offset += written;
         }
       } finally { await fs.close(file); }
-      if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
+      if (this.restoreQuiescing) throw ReadingImageDiskCache.restoreRetirement('MANGA_RESOURCE_CANCELLED');
+    if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
       await fs.rename(temp, recordPath);
       ownsTemp = false; this.temporaryOwners.delete(temp);
       this.records.put(key, record); this.knownFiles.add(path); this.validatedFiles.add(path);
@@ -186,13 +236,17 @@ export class MangaDisplayRetention {
       // inventoried; cold unknown leftovers are counted without invented ownership.
       if (ownsTemp) {
         try { if (await fs.access(temp)) await fs.unlink(temp); this.temporaryOwners.delete(temp); }
-        catch (_) { /* Disk policy can retry a still-owned temporary file. */ }
+        catch (error) { if (this.restoreQuiescing) throw error; /* Disk policy can retry a still-owned temporary file. */ }
       }
       this.writes.delete(path); this.writes.delete(recordPath); this.writes.delete(temp);
     }
   }
 
   async inventory(): Promise<MangaDisplayInventoryFile[]> {
+    return this.observeIo(() => this.inventoryOwned());
+  }
+
+  private async inventoryOwned(): Promise<MangaDisplayInventoryFile[]> {
     const result: MangaDisplayInventoryFile[] = [];
     if (!(await fs.access(this.directory))) return result;
     const owners = new Map<string, MangaStorageChapter[]>();
@@ -213,7 +267,11 @@ export class MangaDisplayRetention {
     return result;
   }
 
-  async remove(owner: MangaStorageChapter, files: MangaDisplayInventoryFile[],
+  async remove(owner: MangaStorageChapter, files: MangaDisplayInventoryFile[], current?: () => Promise<boolean>): Promise<boolean> {
+    return this.observeIo(() => this.removeOwned(owner, files, current));
+  }
+
+  private async removeOwned(owner: MangaStorageChapter, files: MangaDisplayInventoryFile[],
     current?: () => Promise<boolean>): Promise<boolean> {
     const selected = files.filter(file => file.owners.some(candidate => this.sameOwner(candidate, owner)))
       .sort((a, b): number => Number(a.path.endsWith('.json')) - Number(b.path.endsWith('.json')));
@@ -250,6 +308,10 @@ export class MangaDisplayRetention {
    * maintenance request cannot invalidate an on-screen image.
    */
   async clearRebuildable(current: () => boolean = (): boolean => true): Promise<number> {
+    return this.observeIo(() => this.clearRebuildableOwned(current));
+  }
+
+  private async clearRebuildableOwned(current: () => boolean = (): boolean => true): Promise<number> {
     const files = await this.inventory();
     // A cold/partial sidecar has no proven chapter owner. Keep it for the
     // normal inventory/recovery path rather than inferring that an unknown
@@ -308,7 +370,7 @@ export class MangaDisplayRetention {
       if (fingerprint !== undefined) this.recordFingerprints.put(key, fingerprint);
       else this.recordFingerprints.remove(key);
       return record;
-    } catch (_) { return undefined; }
+    } catch (error) { if (this.restoreQuiescing) throw error; return undefined; }
   }
 
   /** Reuse the existing platform metadata LRU only for an unchanged inode and

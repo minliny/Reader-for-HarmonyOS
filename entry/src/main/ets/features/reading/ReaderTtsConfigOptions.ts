@@ -1,4 +1,20 @@
+import type { ReaderTtsAudioFormat } from './ReaderOnlineTtsProfile';
 import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
+
+export interface ReaderTtsEngineOption {
+  readerProfile?: string;
+  /** Ephemeral password field; never spread into a Core request. */
+  apiKey?: string;
+  /** Ephemeral form fields; LocalReadingExperience serializes them into the
+   * versioned readerProfile while keeping credentials out of Core. */
+  voice?: string;
+  format?: ReaderTtsAudioFormat;
+  clearApiKey?: boolean;
+  id: number;
+  name: string;
+  url: string;
+  lastUpdateTime: number;
+}
 
 export type ReaderTtsConfigField = 'voice' | 'engine' | 'language' | 'session' | 'failure';
 export interface ReaderTtsConfigChoice { id: string; label: string; }

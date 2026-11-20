@@ -1,0 +1,256 @@
+{
+  "result": "PASS",
+  "evidence": "SDK-lowered production builders and real page-policy property emission; no native layout or pixel acceptance",
+  "inputs": {
+    "entry/src/main/ets/features/search/SearchPage.ets": "40d4768099bd795f377cc4a568e144c7b90908eff43b33a5193b100d7f6de166",
+    "entry/src/main/ets/features/common/ReaderPageScaffold.ets": "3516819b84ac46a4ba4484fec422d08d0286c4578f1f131036638e60b1ee939d",
+    "entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets": "ebf1db63d15077469949cd8e6dd1f4b1aebdd7b174560c0cd0f7b3eaa337249c",
+    "entry/src/main/ets/features/common/ReaderPageShell.ts": "37157b9f65552ca88dd815b6397498cf7bf6346538de3ec37a5e508d4482de45"
+  },
+  "checks": [
+    {
+      "scheme": "day",
+      "kind": "initial",
+      "expanded": false,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "day",
+      "kind": "initial",
+      "expanded": false,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "day",
+      "kind": "initial",
+      "expanded": true,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "day",
+      "kind": "initial",
+      "expanded": true,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "day",
+      "kind": "results",
+      "expanded": false,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "day",
+      "kind": "results",
+      "expanded": false,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "day",
+      "kind": "results",
+      "expanded": true,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "day",
+      "kind": "results",
+      "expanded": true,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FFFFFCF8",
+      "border": {
+        "width": 1,
+        "color": "#FFB6B1A5"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "initial",
+      "expanded": false,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "initial",
+      "expanded": false,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "initial",
+      "expanded": true,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "initial",
+      "expanded": true,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "results",
+      "expanded": false,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "results",
+      "expanded": false,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "results",
+      "expanded": true,
+      "tablet": false,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    },
+    {
+      "scheme": "night",
+      "kind": "results",
+      "expanded": true,
+      "tablet": true,
+      "hostBackground": "Color.Transparent",
+      "cardBackground": "#FF30342D",
+      "border": {
+        "width": 1,
+        "color": "#FF6C7364"
+      },
+      "cardRadius": 13,
+      "cardClip": true,
+      "preservedHeightCallback": true
+    }
+  ],
+  "negativeControl": {
+    "rejected": true,
+    "oldHostBackground": "#FFF8F4EC"
+  }
+}

@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from './ReaderActionAccessibility';
 import type { MeasureOptions } from '@ohos.measure';
 import { TYPE_SELECT_LIBRARY_VALUE } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
@@ -30,7 +31,7 @@ import {
 // 原因: ArkUI 把溢出父容器边界的子组件命中测试裁到父边界 — 固定高行(58/50/36)内的
 // 下拉面板下层选项渲染可见但不可点, 所以面板必须挂在全高容器, 不能留在行内。
 // 默认紧凑按钮只测当前值；菜单独立测量全部选项，不借最长选项撑大闭合按钮。
-const TRIGGER_H = 36;
+const TRIGGER_H = 44;
 const SELECT_PAD = TOK_SPACE_CONTROL_INLINE; // 10
 const CHEVRON_GAP = 8;
 const CHEVRON_W = 12;
@@ -97,9 +98,10 @@ export struct ReaderSelect {
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12)
         .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());
-    }.width('100%').height(30).padding({ left: 11, right: 9 }).borderRadius(999)
+    }.width('100%').height(TRIGGER_H).padding({ left: 11, right: 9 }).borderRadius(999)
       .backgroundColor(this.isOpen ? readerAppColor('app.appearance.selectOpenFill', this.appThemeScheme) : readerAppColor('app.appearance.selectFill', this.appThemeScheme))
-      .responseRegion({ x: 0, y: -6, width: '100%', height: 42 })
+      .responseRegion( readerActionTouchRegion('100%', TRIGGER_H))
+      .attributeModifier(new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen))
       .onClick((): void => this.onToggle());
   }
 
@@ -129,7 +131,8 @@ export struct ReaderSelect {
     .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.control', this.appThemeScheme) })
     .borderRadius(6)
-    .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
+    .responseRegion( readerActionTouchRegion('100%', TRIGGER_H))
+      .attributeModifier(new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen))
     .onClick((): void => this.onToggle());
   }
 
@@ -162,6 +165,8 @@ export struct ReaderSelect {
     .backgroundColor(readerAppColor('app.selection.subtle', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
     .borderRadius(7)
+      .responseRegion( readerActionTouchRegion('100%', this.triggerHeight()))
+      .attributeModifier(new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen))
     .onClick((): void => this.onToggle());
   }
 
@@ -193,6 +198,8 @@ export struct ReaderSelect {
     .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.sourceGroup', this.appThemeScheme) })
     .borderRadius(8)
+      .responseRegion( readerActionTouchRegion('100%', this.triggerHeight()))
+      .attributeModifier(new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen))
     .onClick((): void => this.onToggle());
   }
 
@@ -219,6 +226,8 @@ export struct ReaderSelect {
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(6)
     .alignItems(VerticalAlign.Center)
+      .responseRegion( readerActionTouchRegion('100%', this.triggerHeight()))
+      .attributeModifier(new ReaderActionAccessibility(`${this.value}，${this.isOpen ? '收起选项' : '展开选项'}`, true, this.isOpen))
     .onClick((): void => this.onToggle());
   }
 
@@ -265,11 +274,11 @@ export struct ReaderSelect {
       const style = TYPE_SELECT_DEFAULT_VALUE;
       return Math.max(TRIGGER_H, this.measuredValueHeight(style.fontSizeFp, style.fontFamily, style.fontWeight, style.lineHeightFp) + 16);
     }
-    if (this.variant === 'appearanceLibrary') return 30;
+    if (this.variant === 'appearanceLibrary') return TRIGGER_H;
     if (this.variant === 'sourceGroup') return Math.max(TRIGGER_H,
       this.measuredValueHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp, TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily,
         TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight, TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp) + 20);
-    if (this.isSettingsVariant()) return Math.max(34,
+    if (this.isSettingsVariant()) return Math.max(TRIGGER_H,
       this.measuredValueHeight(TYPE_SELECT_SETTINGS_VALUE.fontSizeFp, TYPE_SELECT_SETTINGS_VALUE.fontFamily,
         TYPE_SELECT_SETTINGS_VALUE.fontWeight, TYPE_SELECT_SETTINGS_VALUE.lineHeightFp) + 18);
     return TRIGGER_H;

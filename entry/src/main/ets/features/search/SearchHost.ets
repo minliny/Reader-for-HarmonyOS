@@ -4,6 +4,8 @@ import { SearchOrchestrator } from './SearchOrchestrator';
 import type { SearchSource } from './SearchGateway';
 import type { SearchPresentation } from './SearchPage';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import type { SourceGroupCatalog } from '../source/SourceGroupTypes';
+import type { SearchFilterStep, SearchSourceGroupLoadState } from './SearchSourceGroups';
 
 /**
  * Entry-owned Search surface.
@@ -56,6 +58,24 @@ export class SearchHost {
 
   presentation(): SearchPresentation { return this.publication.presentationAt(this.revision); }
   sources(): SearchSource[] { return this.publication.sourcesAt(this.revision); }
+  setSourceGroups(catalog: SourceGroupCatalog): void {
+    if (this.publication.sourceGroupsAt(this.revision) === catalog && this.publication.sourceGroupLoadStateAt(this.revision) === 'ready') return;
+    const selected = this.viewState.sourceGroup;
+    if (selected.kind === 'group') {
+      const current = catalog.groups.find((group): boolean => group.groupId === selected.groupId);
+      if (current !== undefined) this.viewState.sourceGroup = { kind: 'group', groupId: current.groupId, name: current.name };
+    }
+    this.publication.updateSourceGroups(catalog);
+    this.viewState.advanceFilterRevision();
+    this.advanceRevision();
+  }
+  setSourceGroupLoadState(state: SearchSourceGroupLoadState): void {
+    if (this.publication.sourceGroupLoadStateAt(this.revision) === state) return;
+    this.publication.updateSourceGroupLoadState(state); this.advanceRevision();
+  }
+  prepareSourceManagementReturn(step: SearchFilterStep = 'groups'): void {
+    this.viewState.prepareSourceManagementReturn(step);
+  }
 
   updateShelf(books: ShelfBook[]): void {
     this.publication.updateShelf(books);

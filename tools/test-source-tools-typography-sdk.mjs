@@ -1,8 +1,8 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"carrier-propagation": {"description": "当前SourceTools具体标题/计数/书源角色与描述角色变更传播", "resources": []}, "input-selection": {"description": "实际输入回调与实际InlineSelect/trigger/Panel/ChoiceRow选择、旧identity/disabled/retired拒绝", "resources": []}, "guard-admission": {"description": "busy/unknown实际Builder变更按钮拒绝与可用按钮接纳", "resources": []}, "raw-debug": {"description": "原始错误完整多行与独立序号/当前语义色", "resources": []}};
+const definitions={"layout-matrix":{"description":"Tools actual SDK controls and parent row/list budgets at 320/366/720 x 1/1.3/1.6/2/3.2; no native claim","resources":[]},"entity-admission":{"description":"Actual entity labels and readonly/confirmed/unknown guards retained through Tools actions and fields","resources":[]},"legacy-isolation":{"description":"All old button specs/modifier tuples and ReaderButton a11y bytes unchanged outside two Tools opt-ins","resources":[]},"carrier-propagation": {"description": "当前SourceTools具体标题/计数/书源角色与描述角色变更传播", "resources": []}, "input-selection": {"description": "实际输入回调与实际InlineSelect/trigger/Panel/ChoiceRow选择、旧identity/disabled/retired拒绝", "resources": []}, "guard-admission": {"description": "busy/unknown实际Builder变更按钮拒绝与可用按钮接纳", "resources": []}, "raw-debug": {"description": "原始错误完整多行与独立序号/当前语义色", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
-const { foundationControls, foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
+const { foundationControls, foundationSpecs, foundationModifiers } = await import('./lib/reader-foundation-control-probe.mjs');
 const { readerRecoveryView } = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
@@ -10,34 +10,67 @@ const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const {ReaderWindowMetricsSnapshot,ReaderRectVp,readerVisualSafeLeft,readerVisualSafeRight}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {readerReadableFontScale,readerScaledControlHeight}=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts',import.meta.url),'utf8'),'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']);
 
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), 'utf8');
 const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');
+const raisedSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderRaisedSurface.ets', import.meta.url), 'utf8');
+const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets', import.meta.url), 'utf8');
+const raisedSpecEnd = surfaceSource.indexOf('\n', surfaceSource.indexOf('export function readerRaisedSurfaceSpec'));
+assert.ok(raisedSpecEnd > 0, 'retain the actual shared raised-surface specification and its declarations');
+const { readerRaisedSurfaceSpec } = pureModuleProbe(surfaceSource.slice(0, raisedSpecEnd),
+  'ReaderSurfaceSpecs.ets', { readerAppColor }, ['readerRaisedSurfaceSpec']);
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
-methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources');
+methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources', 'fontScale','toolsInnerWidth','compactActionWidth','actionWidth','sourceActionsWidth','sourceRowStacked','sourceRowMinHeight','resultRowMinHeight','debugRowMinHeight','counterWidth','debugSelectWidth');
 const bookSource={name:'测试书源',sourceId:'https://source.example',baseUrl:'https://source.example',lastCheckSummary:'上次检测已完成'};
 const nodes=owner=>[...owner.nodes.values(),...[...owner.children.values()].flatMap(child=>nodes(child))];
 const awaitInline=await import('./lib/reader-inline-select-sdk-probe.mjs');
 const inlineSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderInlineSelect.ets',import.meta.url),'utf8');
-const make = (overrides = {}) => {
-  const controls=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...overrides})});
+const make = (overrides = {}, {width=366,scale=1,scheme='day'}={}) => {
+  const metrics=new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,width,844));metrics.systemFontScale=scale;
+  const controls=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...overrides}),windowMetrics:()=>metrics});
   const messages=boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true});
   controls.hooks.childSources={...messages.childSources,...controls.hooks.childSources};
-  controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource};
+  // PageBackBar's complete current tree includes a real raised-surface child.
+  // Keep that component and its shipping Prop metadata in SDK lowering even
+  // though this selected input case never mounts the page header. Canvas is a
+  // finite platform recording port here, not shadow/raster acceptance.
+  class CanvasContextPort {
+    constructor(settings) { this.settings = settings; this.width = 0; this.height = 0; this.calls = []; }
+    beginPath(...args) { this.calls.push(['beginPath', ...args]); }
+    moveTo(...args) { this.calls.push(['moveTo', ...args]); }
+    lineTo(...args) { this.calls.push(['lineTo', ...args]); }
+    arcTo(...args) { this.calls.push(['arcTo', ...args]); }
+    closePath(...args) { this.calls.push(['closePath', ...args]); }
+    fill(...args) { this.calls.push(['fill', ...args]); }
+    clearRect(...args) { this.calls.push(['clearRect', ...args]); }
+    save(...args) { this.calls.push(['save', ...args]); }
+    restore(...args) { this.calls.push(['restore', ...args]); }
+  }
+  controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource, ReaderRaisedSurface: raisedSource};
+  controls.dependencies.ReaderRaisedSurface = createReaderBuilderProbe(raisedSource, boundedMembers(raisedSource), {
+    ...controls.dependencies, readerRaisedSurfaceSpec,
+    CanvasRenderingContext2D: CanvasContextPort,
+    RenderingContextSettings: class { constructor(antialias) { this.antialias = antialias; } },
+  }, controls.hooks).Component;
   const PageBackBar = createReaderBuilderProbe(headerSource, boundedMembers(headerSource), controls.dependencies, controls.hooks).Component;
   const {inlineSelectSdk}=awaitInline;
-  const inline=inlineSelectSdk({properties:controls.properties,uiContext:{getFont:()=>({}),getMeasureUtils:()=>({measureText:()=>150}),px2vp:x=>x/3,animateTo(_o,action){action();}}});
+  // Finite native measurement replies in px. This case proves actor callbacks,
+  // not text shaping or physical trigger geometry.
+  const inline=inlineSelectSdk({properties:controls.properties,uiContext:{getFont:()=>({}),getMeasureUtils:()=>({measureText:()=>150,measureTextSize:()=>({width:150,height:60})}),px2vp:x=>x/3,animateTo(_o,action){action();}}});
   controls.hooks.childSources={...controls.hooks.childSources,...inline.hooks.childSources};controls.hooks.lifecycleChildren=true;
   const { owner } = createReaderBuilderProbe(source, methods, {
     // Virtual list painting is outside this typography probe. The actual row
     // Builders run separately below, with their real SDK observer closures.
-    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...messages.deps,...controls.dependencies, PageBackBar, ...inline.dependencies, ...overrides,
+    LazyForEach: { create() {}, pop() {} }, readerRecoveryView,readerVisualSafeLeft,readerVisualSafeRight,readerReadableFontScale,readerScaledControlHeight, ...messages.deps,...controls.dependencies, PageBackBar, ...inline.dependencies, ...overrides,
   },controls.hooks);
   const replay=owner.replay.bind(owner);owner.replay=()=>{replay();controls.properties.flush();};
   const calls = [];
   Object.assign(owner, {
-    appThemeScheme: 'day',
+    appThemeScheme: scheme,readerWindowMetricsRevision:0,cardWidth:width-40,
     snapshot: {
       busy: false, sources: [bookSource], selectedSourceIds: [bookSource.sourceId], selectedSourceCount: 1,
       statusMessage: '最近的操作已经完成', editorSourceId: bookSource.sourceId, editorText: '{}',
@@ -59,6 +92,87 @@ const make = (overrides = {}) => {
   });
   return { owner, calls, inline };
 };
+
+
+if(selectedCase==='layout-matrix'){
+ const samples=[];
+ for(const width of [320,366,720])for(const scale of [1,1.3,1.6,2,3.2])for(const summary of [false,true]){
+  const {owner}=make({}, {width,scale});owner.snapshot.editorSourceId='';
+  const entity={...bookSource,...(!summary?{lastCheckSummary:undefined}:{})};
+  owner.sourceRow({source:entity,selected:true,actionsEnabled:true});
+  const actual=nodes(owner),buttons=actual.filter(n=>typeof n.onClick==='function'&&['已选','编辑','调试'].includes(n.create));
+  assert.equal(buttons.length,3,'three real SDK action carriers');
+  for(const b of buttons){assert.ok(b.width>=44);assert.ok(b.constraintSize.minHeight>=44);assert.equal(b.height,undefined,'natural height is not capped');assert.equal(b.responseRegion,undefined,'no overlapping response extension');assert.equal(b.maxFontScale,scale);}
+  const texts=actual.filter(n=>[entity.name,entity.baseUrl,entity.lastCheckSummary].filter(Boolean).includes(n.create));
+  assert.equal(texts.length,summary?3:2);for(const t of texts)assert.equal(t.maxFontScale,scale);
+  const row=actual.find(n=>n.type==='Column'&&n.constraintSize?.minHeight>0);assert.ok(row,'actual parent row budget');assert.equal(row.height,undefined);
+  const available=owner.toolsInnerWidth()-16,span=buttons[0].width+8,stacked=owner.sourceRowStacked();
+  const columns=Math.max(1,Math.floor(available/span)),actionRows=stacked?Math.ceil(3/columns):1;
+  const textHeight=texts.reduce((sum,n)=>sum+n.lineHeight*n.maxFontScale,0)+(summary?6:3);
+  const required=16+(stacked?Math.ceil(textHeight)+8+actionRows*(buttons[0].constraintSize.minHeight+8):Math.max(Math.ceil(textHeight),buttons[0].constraintSize.minHeight+8));
+  assert.ok(row.constraintSize.minHeight>=required,'actual text lines and action rows fit minimum row');
+  assert.ok(buttons[0].width+8<=available,'at least one nonoverlapping action fits');
+  if(!stacked)assert.ok(3*span+8+7*readerTypographyRoles.TYPE_SOURCE_TOOLS_ACTION.fontSizeFp*scale<=available,'inline text minimum retained');
+  const parent=make({}, {width,scale}).owner;parent.sourceCard();
+  const list=nodes(parent).find(n=>n.type==='List');assert.ok(list);assert.equal(list.height,Math.min(420,parent.sourceRowMinHeight(true)),'one-item parent viewport grows with row, within scrolling cap');
+  const measured=nodes(parent).find(n=>typeof n.onAreaChange==='function');assert.ok(measured);measured.onAreaChange({}, {width:width-64});assert.equal(parent.toolsInnerWidth(),width-88,'actual card width is layout authority');
+  const resultOwner=make({}, {width,scale}).owner;
+  resultOwner.batchResultRow({sourceName:'Result source',sourceId:'result-id',message:'Result message',state:'passed'});
+  const resultNodes=nodes(resultOwner),resultFrame=resultNodes.find(n=>n.type==='Flex'&&n.constraintSize?.minHeight);
+  const resultLines=resultNodes.filter(n=>n.type==='Text');
+  assert.ok(resultFrame.constraintSize.minHeight>=Math.ceil(resultLines.reduce((sum,n)=>sum+n.lineHeight*scale,0))+32,'result row accounts for three content lines and separate status line');
+  resultOwner.snapshot.batchCheck.results=[{sourceId:'result-id',traceId:'trace',state:'passed'}];resultOwner.batchCheckCard();
+  assert.equal(nodes(resultOwner).find(n=>n.type==='List').height,Math.min(320,resultFrame.constraintSize.minHeight),'result List parent uses current minimum extent');
+  const logOwner=make({}, {width,scale}).owner;logOwner.snapshot.debugLogs=[{message:'Error details',state:-1}];logOwner.debugCard();
+  assert.equal(nodes(logOwner).find(n=>n.type==='List').height,Math.min(360,logOwner.debugRowMinHeight()),'debug parent reserves error/meta/body line budget');
+  samples.push({width,scale,summary,form:stacked?'stacked':'inline',rowMinimum:row.constraintSize.minHeight,actionRows,viewport:list.height});
+ }
+ for(const width of [320,366,720])for(const scale of [1,2,3.2]){
+  const {owner}=make({}, {width,scale});owner.batchCard();const actual=nodes(owner);
+  assert.ok(actual.filter(n=>n.type==='Flex').length>=2,'both batch action groups can wrap');
+  const buttonActors=[...owner.children.values()].filter(n=>n.specId==='source-tools-action');assert.equal(buttonActors.length,7);
+  const widths=[...owner.nodes.values()].filter(n=>typeof n.width==='number').map(n=>n.width);
+  for(const b of buttonActors){assert.ok(widths.includes(owner.actionWidth(b.label)),'actual custom component owns explicit action width');const target=nodes(b).find(n=>n.onClick);assert.ok(target.constraintSize.minHeight>=44);assert.equal(target.maxFontScale,scale);assert.equal(target.maxLines,undefined,'long actions may wrap');assert.equal(target.textOverflow,undefined);}
+  const counters=make({}, {width,scale}).owner;counters.batchCheckCard();
+  const cs=nodes(counters).filter(n=>n.type==='Text'&&n.backgroundColor&&n.constraintSize?.minHeight);
+  assert.equal(cs.length,4);const avail=counters.toolsInnerWidth(17);for(const n of cs){assert.ok(n.width+8<=avail);assert.equal(n.height,undefined);assert.equal(n.maxFontScale,scale);}
+ }
+ const {owner:long}=make({}, {width:320,scale:3.2});long.actionButton('Re-read previously saved source with a long label',false,true,()=>{});
+ const longTarget=nodes(long).find(n=>n.onClick);assert.ok(longTarget.constraintSize.minHeight>44);assert.equal(longTarget.height,undefined);assert.equal(longTarget.maxLines,undefined);
+ console.log(JSON.stringify({rows:samples.length,controls:'actual SDK ReaderButton and parent Builders',forms:[...new Set(samples.map(x=>x.form))],boundary:'SDK attributes and parent inequalities only; no native shaping, pointer or system-setting evidence',samples}));
+}
+if(selectedCase==='entity-admission'){
+ for(const selected of [false,true])for(const state of ['ready','blocked','unknown','confirmed']){
+  const {owner,calls}=make();owner.snapshot.editorSourceId=bookSource.sourceId;
+  if(state==='blocked')owner.snapshot.original={blocked:true};
+  if(state==='unknown')owner.snapshot.editorReadback={confirmation:'unknown'};
+  if(state==='confirmed')owner.snapshot.editorReadback={confirmation:'confirmed',fact:'confirmedRefreshFailed'};
+  owner.sourceRow({source:bookSource,selected,actionsEnabled:true});owner.editorCard();
+  const actual=nodes(owner),selection=actual.find(n=>n.create===(selected?'已选':'选择')&&n.onClick),edit=actual.find(n=>n.create==='编辑'&&n.onClick),debug=actual.find(n=>n.create==='调试'&&n.onClick);
+  assert.ok(selection.accessibilityText.includes(bookSource.name));assert.ok(selection.accessibilityText.includes(selected?'已选':'未选'));
+  assert.equal(edit.accessibilityText,'编辑书源：'+bookSource.name);assert.equal(debug.accessibilityText,'调试书源：'+bookSource.name);
+  selection.onClick();debug.onClick();assert.deepEqual(calls.slice(0,2),['toggle','debugSource'],'readonly selection/debug remain permitted');
+  edit.onClick();const input=actual.find(n=>n.type==='TextArea');assert.equal(input.accessibilityText,'书源 JSON：'+bookSource.sourceId);input.onChange('changed');
+  const save=actual.find(n=>n.create==='校验并保存'&&n.onClick);save.onClick();
+  if(state==='ready')assert.deepEqual(calls.slice(2),['openEditor',['editor','changed'],'save']);else assert.equal(calls.length,2,'blocked/unknown/confirmed UI does not dispatch replacement writes');
+ }
+ const {owner}=make();owner.debugCard();const input=nodes(owner).find(n=>n.type==='TextInput');assert.ok(input.height>=44);assert.equal(input.accessibilityText,'检测关键词：'+bookSource.sourceId);
+}
+if(selectedCase==='legacy-isolation'){
+ const baseline=new URL('../.reader-artifacts/source-tools-accessibility-20261103/baseline/',import.meta.url);
+ const beforeButton=readFileSync(new URL('entry/src/main/ets/features/common/ReaderButton.ets',baseline),'utf8');
+ const afterButton=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderButton.ets',import.meta.url),'utf8');
+ const removed=afterButton.replace(" || this.id === 'source-tools-action' || this.id === 'source-tools-compact'",'').replace(" || this.id === 'source-tools-action' || this.id === 'source-tools-compact'",'');
+ assert.equal(removed,beforeButton,'only two opt-in predicate extensions; Source a11y and all other branches byte-identical');
+ const beforeSource=readFileSync(new URL('entry/src/main/ets/features/common/ReaderControlSpecs.ets',baseline),'utf8');
+ const before=foundationSpecs(readerTypographyRoles,beforeSource),after=foundationSpecs();
+ const ids=[...beforeSource.match(/export type ReaderButtonSpecId = ([^;]+);/)[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);
+ const old=foundationModifiers(before,undefined,{buttonSource:beforeButton}),current=foundationModifiers(after);
+ function capture(Modifier,id,scale,primary){const values=[];const port=new Proxy({},{get(_target,key){return(...args)=>{values.push([key,...args]);return port;};}});new Modifier(id,primary,true,'intrinsic','day',false,366,scale).applyNormalAttribute(port);return values;}
+ for(const id of ids){assert.deepEqual(after.resolveReaderButtonSpec(id),before.resolveReaderButtonSpec(id));for(const scale of [1,2,3.2])for(const primary of [false,true])assert.deepEqual(capture(current.ReaderButtonTextModifier,id,scale,primary),capture(old.ReaderButtonTextModifier,id,scale,primary),id+' unchanged actual modifier attributes');}
+ for(const id of ['source-tools-action','source-tools-compact']){const spec=after.resolveReaderButtonSpec(id);assert.equal(spec.height,44);assert.equal(spec.responseOffset,undefined);assert.equal(spec.maxFontScale,undefined);assert.equal(spec.maxLines,0);assert.equal(spec.textEllipsis,false);}
+ console.log(JSON.stringify({unchangedOldSpecs:ids.length,modifierContexts:ids.length*6,sourceA11y:'byte-identical outside Tools predicate additions'}));
+}
 
 if(selectedCase==='carrier-propagation'){
  const assertions=[['heading',['工具标题'],'工具标题','TYPE_SOURCE_TOOLS_HEADING'],['batchCounter',['计数','#status-color'],'计数','TYPE_SOURCE_TOOLS_COMPACT_ACTION'],['sourceRow',[{source:bookSource,selected:true,actionsEnabled:true}],bookSource.name,'TYPE_SOURCE_TOOLS_ACTION']];
