@@ -73,6 +73,7 @@ const effectsSource = readFileSync(new URL('../../entry/src/main/ets/app/ReaderR
 const readerRuleMutationEffects = new Function('RULES_MUTATION_METHODS',
   stripTypeScriptTypes(effectsSource.replace(/^import[\s\S]*?;\n/gm, '')).replace(/\bexport /g, '') + ';return readerRuleMutationEffects;')(RULES_MUTATION_METHODS);
 import {bookshelfSourceDisplayName} from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
+import { RemoteReadingGatewayError } from '../../entry/src/main/ets/features/reading/RemoteReadingContract.ts';
 import {actualBookshelfOperationTypes} from './bookshelf-operation-owner-probe.mjs';
 import {actualSourceManagementTypes} from './source-management-owner-probe.mjs';
 import {actualGeneralSettingsTypes} from './general-settings-owner-probe.mjs';
@@ -101,6 +102,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     motionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
     FrameCallback: class { onFrame() {} cancel() {} },
     ReaderActionAccessibility: class { constructor() {} applyNormalAttribute() {} },
+    RemoteReadingGatewayError,
     // Execute the current complete page-shell policy through its finite import seam.
     ...actualReaderPageShell(),
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,

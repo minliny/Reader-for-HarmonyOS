@@ -10,6 +10,8 @@ import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
 import { readerContentSafeTop, createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import { ReaderMeasurementStore } from '../../entry/src/main/ets/features/common/ReaderMeasurements.ts';
+import { RemoteReadingGatewayError } from '../../entry/src/main/ets/features/reading/RemoteReadingContract.ts';
+import * as localImportMotion from '../../entry/src/main/ets/features/bookshelf/LocalImportMotion.ts';
 
 const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
   .match(/export const EMPTY_READABLE_ADMISSION:[\s\S]*?= \{[\s\S]*?\n\};/)[0];
@@ -46,7 +48,10 @@ export function readerProbeGlobals({ source, dependencies, platform, Child }) {
       const width = metrics?.windowRect?.width;
       return Number.isFinite(width) && width > 0 && width >= 600;
     },
+    ...localImportMotion,
     readerMotionDurationMs: (_id, reduceMotion) => reduceMotion === true ? 0 : 200,
+    motionAnimateParamDelayed: (_id, delay) => ({ duration: 200, curve: 'ease-in-out', delay }),
+    RemoteReadingGatewayError,
     defaultSourceManagementFilters: () => ({ searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '全部分组' }),
     TextInputController: class { caretPosition() {} },
     FrameCallback: class { onFrame() {} cancel() {} },

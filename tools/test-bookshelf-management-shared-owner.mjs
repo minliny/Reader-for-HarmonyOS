@@ -110,7 +110,8 @@ function managementIndex(f){
  const actualPage=()=>{
   i.bookshelfManagementContent();const props=[...i.children.values()].at(-1).params;
   const page=sdk.consumer(pageSource,boundedMembers(pageSource),{EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:i.bookshelfManagementSnapshot,readerRecoveryView,InputType:{Number:1}},props);
-  const toasts=[];page.getUIContext=()=>({getPromptAction:()=>({showToast:value=>toasts.push(value.message)})});
+  const toasts=[];page.getUIContext=()=>({getPromptAction:()=>({showToast(){}})});
+  page.transientFeedback={show(_context,options){toasts.push(options.message);return true;}};
   page.onSnapshotChanged();page.groupEditorCard();page.pendingOverlay();
   return{page,props,toasts,save:nativeAction(page,'创建')};
  };

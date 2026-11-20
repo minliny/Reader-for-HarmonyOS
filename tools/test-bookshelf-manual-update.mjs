@@ -70,7 +70,8 @@ function fixture(books=[book('/one')]) {
   const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',bookshelfHost:bookshelfCatalogHost(Flow,()=>installedOwner),shelfReceiptRetired:false,shelfProjectionRevision:'',navigationGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
     applicationSettingsSnapshot:{autoCheckUpdate:true},searchAppForeground:true,readingSessionActive:false,
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
-    getUIContext:()=>({getPromptAction:()=>({showToast:value=>toasts.push(value.message)})}),
+    getUIContext:()=>({getPromptAction:()=>({showToast(){}})}),
+    transientFeedback:{show(_context,options){toasts.push(options.message);return true;}},
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),invalidateBookshelfProjection(){this.bookshelfLoadGeneration++;},applyBookshelfState(){}});
   return {runtime,owner,page,toasts,currentOwner:()=>installedOwner,calls,projectionAdmissions,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;}, diagnosticThrows:v=>{diagnosticThrows=v;},
     cacheGate:g=>{cacheGate=g;},tocGate:g=>{tocGate=g;},targetsGate:g=>{targetsGate=g;}, projectionGate:g=>{projectionGate=g;}, failProjection:v=>{failProjection=v;},failTargets:v=>{failTargets=v;}, setOwner:v=>{installedOwner=v;},peak:()=>peak,projections:()=>projections,fullScans:()=>fullScans};
