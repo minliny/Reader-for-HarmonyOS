@@ -164,7 +164,8 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
  const importRender=()=>{const props=renderIndex('localImportContent'),{composition,factory}=importRenderSdk(),p=freshActor(factory),feedback=[];
  Object.assign(p,props,{mounted:true,appThemeScheme:'day',panelFrame:()=>({left:20,right:20,width:350}),
   resultButtonWidth:()=>100,availableHeight:()=>400,
-  getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>feedback.push(message)})})});p.initialRender();p.onRecoveryChanged();
+  transientFeedback:{show(_context,options){feedback.push(options.message);return true;}},
+  getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});p.initialRender();p.onRecoveryChanged();
  const notice=composition.walk(p).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);
  const generation=index.shelfOperation.generation;
  assert.ok(composition.walk(p).some(owner=>owner instanceof composition.deps.ReaderBoundedSurface&&owner.specId==='local-import-result-content'),
@@ -172,8 +173,8 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
  return{view:notice?.view??props.recovery,pending:notice!==undefined,feedback,nodes:new Map(composition.nodes(p).map((node,id)=>[id,node])),
   readOnly:()=>props.onReconcile(generation)};};
  const retry=async p=>{
-  const action=p.pending?[...p.nodes.values()].find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===28&&n.onClick):undefined;
-  if(p.pending)assert.ok(action,'actual SDK pending read action uses a stable 28vp Stack');
+  const action=p.pending?[...p.nodes.values()].find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick):undefined;
+  if(p.pending)assert.ok(action,'actual SDK pending read action uses a stable 44vp Stack');
   const start=reconciliationCalls.length;
   if(action){action.onClick();action.onClick();}else{p.readOnly();p.readOnly();}
   await Promise.all(reconciliationCalls.slice(start));
