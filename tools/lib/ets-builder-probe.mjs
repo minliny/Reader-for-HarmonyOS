@@ -115,6 +115,11 @@ export function createEtsBuilderProbe(source, names, dependencies = {}, hooks = 
     assert.ok(member, `production member ${name}`);
     return member.getText(original);
   });
+  // Selected methods call these owners but their declarations are not part of
+  // the member slice. Keep the same names with an inert, overridable host.
+  const hostFields = ['transientFeedback', 'feedback']
+    .filter(name => !names.includes(name) && struct.members.some(member => member.name?.getText(original) === name))
+    .map(name => `${name} = { show() { return true; }, reset() {} };`).join('\n');
   main.partialUpdateConfig.partialUpdateMode = true;
   utils.storedFileInfo.setCurrentArkTsFile();
   for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
@@ -125,7 +130,7 @@ export function createEtsBuilderProbe(source, names, dependencies = {}, hooks = 
       .some(decorator => decorator.getText(childTree) === '@BuilderParam')).map(member => member.name.getText(childTree));
     if (slots.length) syntax.builderParamObjectCollection.set(name, new Set(slots));
   }
-  const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
+  const file = parse(`@Component struct ReaderBuilderProbe {\n${hostFields}\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
   // The full SDK frontend collects declared method names before transforming
   // @Watch. Preserve that prepass for fixtures that include real decorated fields.
   syntax.classMethodCollection.set(file.fileName, new Map([['ReaderBuilderProbe', new Set(

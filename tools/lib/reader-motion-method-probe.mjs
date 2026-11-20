@@ -218,7 +218,9 @@ if (names.includes('traceBoundary')) capturedOwnerFields += '\n' + ordinaryField
     paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
     progressProducers = new ReaderProgressProducerHost();
     nativeAlertOwner = new ReaderNativeAlertOwner();
-    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${fields ?? ''} ${mangaMessageFields} ${pageChromeFields} ${indexFeedbackFields} ${panelFields} ${completionFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
+    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} };
+    transientFeedback = { show() { return true; }, reset() {} };
+    feedback = { show() { return true; }, reset() {} }; ${fields ?? ''} ${mangaMessageFields} ${pageChromeFields} ${indexFeedbackFields} ${panelFields} ${completionFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
   // Existing probes describe pre-refactor component fields. Route those fixture
   // assignments to the real production owners; no production struct accessors
   // or duplicated batching/index-admission algorithm is introduced.
