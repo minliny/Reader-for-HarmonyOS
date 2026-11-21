@@ -1,126 +1,214 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
+// Actual Index search-surface wiring and the shared library bar's 44vp leading
+// actor. Method extraction uses the current owners; native hit/layout remain a
+// separate device contract.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { createHash } from 'node:crypto';
+import { createReaderComponentProbe } from './lib/reader-component-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { builderComponentMembers } from './lib/ets-builder-probe.mjs';
+import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
+import { virtualFilePath } from './lib/tool-environment.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
-import { foundationControls, readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { createDefaultReaderWindowMetrics, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
-const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
-const originalIndexProof = JSON.parse(readFileSync(new URL('./fixtures/icon-button-family/bookshelf-search-owner-before.json', import.meta.url), 'utf8'));
-const originalIndexFixture = readFileSync(new URL('./fixtures/icon-button-family/bookshelfShellContent.before.ets', import.meta.url), 'utf8');
-assert.equal(createHash('sha256').update(originalIndexFixture).digest('hex'), originalIndexProof.fixtureSha256, 'frozen actual original Index member cannot drift');
-const sdk = resolveEtsLoaderRoot();
-const require = createRequire(import.meta.url), syntax = require(sdk + '/lib/validate_ui_syntax.js');
-syntax.builderParamObjectCollection.set('BookshelfShell', new Set(['content']));
-syntax.builderParamObjectCollection.set('AppTopBar', new Set(['trailing']));
-syntax.builderParamObjectCollection.set('MainTabShell', new Set(['content']));
-require(sdk + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
-class ShellCarrier {
-  constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+const root = new URL('../entry/src/main/ets/', import.meta.url);
+const indexUrl = new URL('pages/Index.ets', root);
+const surfaceUrl = new URL('features/search/ReaderLibrarySearchSurface.ets', root);
+const fieldSource = readFileSync(new URL('features/common/ReaderSearchField.ets', root), 'utf8');
+const { ts, options, require, root: sdkRoot } = installedEtsCompiler();
+const componentMap = require(sdkRoot + '/lib/component_map.js');
+const parse = (source, name) => ts.createSourceFile(virtualFilePath(name), source,
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+function sdkProbe(source, names, dependencies, hooks = {}) {
+  const saved = new Map(componentMap.ID_ATTRS);
+  componentMap.ID_ATTRS.clear();
+  try {
+    return createReaderComponentProbe(source, names, dependencies, hooks);
+  } finally {
+    componentMap.ID_ATTRS.clear();
+    for (const [key, value] of saved) componentMap.ID_ATTRS.set(key, value);
+  }
 }
+
+const indexSource = readFileSync(indexUrl, 'utf8');
+const indexTree = parse(indexSource, 'BookshelfSearchActionIndex.ets');
+assert.deepEqual(indexTree.parseDiagnostics, []);
+const index = indexTree.statements.find(node => node.name?.text === 'Index');
+assert.ok(index);
+const wiringNames = ['librarySearchSurface', 'isCurrentSearchPresentation',
+  'isCurrentBookshelfPresentation', 'isCurrentRuntime'];
+const wiringBody = wiringNames.map(name => {
+  const member = index.members.find(candidate => candidate.name?.getText(indexTree) === name);
+  assert.ok(member, `production Index member ${name}`);
+  return member.getText(indexTree);
+}).join('\n');
+const wiringSource = `@Component struct BookshelfSearchActionWiringProbe {
+${wiringBody}
+@Builder private librarySearchResults() {}
+build() { Column() {} }
+}`;
+class View {
+  constructor() { this.observers = []; this.children = new Map(); }
+  finalizeConstruction() {}
+  observeComponentCreation2(callback) {
+    const element = this.observers.length + 1;
+    this.observers.push([element, callback]);
+    callback(element, true);
+  }
+  updateStateVarsOfChildByElmtId(element, params) {
+    Object.assign(this.children.get(element).params, params);
+  }
+  static create() {}
+}
+class SurfacePort {
+  constructor(parent, params, _storage, element) {
+    Object.assign(this, { parent, params, element });
+    parent.children.set(element, this);
+  }
+  enabled() { return this; }
+  hitTestBehavior() { return this; }
+}
+const wiringFixture = sdkProbe(wiringSource, builderComponentMembers(wiringSource), {
+  ViewPU: View, ReaderLibrarySearchSurface: SurfacePort,
+  __Common__: { create() {}, enabled() {}, hitTestBehavior() {}, pop() {} },
+}, {
+  childSources: { ReaderLibrarySearchSurface: readFileSync(surfaceUrl, 'utf8') },
+  createGlobals: () => ({}),
+});
+
+function createSurface(params) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  const fixture = sdkProbe(readFileSync(surfaceUrl, 'utf8'),
+    ['bar', 'presentedSearch', 'leadingAction'], {
+      ...properties.sdk,
+      ReaderSearchField: class FieldPort {},
+      readerAppColor,
+      READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold',
+      bookshelfHeaderSpec: () => ({ titleFontSize: 19, titleLineHeight: 28 }),
+    }, {
+      ...properties.hooks,
+      childSources: { ReaderSearchField: fieldSource },
+    });
+  const surface = fixture.owner;
+  Object.assign(surface, params, {
+    mounted: true, mode: 'idle', transitionKind: 'none', scheme: 'day', searchMounted: false,
+    identity: params.identity, navigationGeneration: params.navigationGeneration,
+    mounting: params.mounting, moreIdentity: params.moreIdentity,
+    model: { currentOwner: () => 0 },
+    titleOpacity: () => 1, surfaceValue: () => 0, cardContentWidth: () => 358, barHeight: () => 52,
+    moreAction: () => () => {},
+  });
+  surface.bar();
+  return surface;
+}
+
+function actor(surface) {
+  const nodes = [...surface.nodes.values()];
+  const leading = nodes.find(node => node.type === 'Stack' && node.width === 44 && node.height === 44 &&
+    node.accessibilityText === '搜索书籍');
+  assert.ok(leading, 'actual shared library bar owns the native leading Search Stack');
+  assert.equal(leading.borderRadius, 14);
+  assert.deepEqual(leading.position, { x: 4, y: 4 });
+  assert.equal(typeof leading.onClick, 'function');
+  return leading.onClick;
+}
+
+const IndexBehavior = productionMotionMethods(indexUrl, ['openSearch'], {
+  ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => undefined),
+});
+const productionOpenSearch = IndexBehavior.prototype.openSearch;
+assert.equal(typeof productionOpenSearch, 'function');
 
 function fixture() {
   const runtime = {}, calls = [];
   let current = runtime;
   const ReaderRuntimeOwner = runtimeOwnerIdentityProbe(() => current);
-  const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-    ['isCurrentBookshelfPresentation', 'openSearch', 'registerTemporaryBackBridge'], { ReaderRuntimeOwner });
-  // These are the navigation/Host side-effect seams. The production entry
-  // method and owner guard run unchanged; no admission predicate is replaced.
-  const index = Object.assign(new Index(), {
+  const parent = Object.assign(new wiringFixture.Component(undefined, {}), {
     mountedRuntimeOwner: runtime, shelfReceiptRetired: false, route: 'bookshelf', navigationGeneration: 7,
-    detailShelfAdmissionMount: 3, readingSessionActive: false, readingExitRequest: 'prior', exitToDetailOriginAfterReader: true,
+    detailShelfAdmissionMount: 3, readingSessionActive: false, readingExitRequest: 'prior',
+    exitToDetailOriginAfterReader: true, librarySearchIdentity: 5, librarySearchMode: 'idle',
+    librarySearchAnimateOnAppear: false, librarySearchModel: { currentOwner: () => 0 },
+    settingsSnapshot: { reduceMotion: false }, expandedLayout: () => false,
     searchHost: { prepareEntry: () => calls.push('prepare'), open: () => calls.push('open') },
+    shelfMoreIdentity: 'more', shelfMoreGeneration: 7, shelfMoreHandler() {},
+    shelfHeaderScrolled: false, isBookshelfVisualAdmitted: true, shelfHeaderHeight: 0,
+    libraryContinueCardNavigation: 0, libraryContinueCardRect: undefined,
     nextNavigationGeneration() { calls.push('navigation'); return ++this.navigationGeneration; },
-    resetSearchDetailWarmups: () => calls.push('warmup'), refreshSearchShelfMembership: () => calls.push('membership'),
-    shelfRecovery: () => ({ visible: false }), shelfReadRecovery: () => ({ visible: false }), canContinueShelfRemoval: () => false,
-    shelfOperation: {}, settingsSnapshot: {}, shelfBooks: [], shelfProjectionRevision: '', isBookshelfVisualAdmitted: true,
+    resetSearchDetailWarmups: () => calls.push('warmup'),
+    refreshSearchShelfMembership: () => calls.push('membership'),
+    refreshSourceCatalog() {},
   });
-  const parentSource = process.env.READER_SHELF_SEARCH_INDEX_SOURCE ? readFileSync(process.env.READER_SHELF_SEARCH_INDEX_SOURCE, 'utf8') : read('pages/Index.ets');
-  const parent = createReaderBuilderProbe(parentSource, ['bookshelfShellContent'],
-    { BookshelfShell: ShellCarrier }, { childSources: { BookshelfShell: read('features/bookshelf/BookshelfShell.ets') } }).owner;
-  Object.assign(parent, index);
-  for (const name of ['isCurrentBookshelfPresentation', 'openSearch', 'registerTemporaryBackBridge']) parent[name] = index[name].bind(index);
-  parent.bookshelfShellContent();
-  const props = [...parent.children.values()].find(child => child instanceof ShellCarrier).params;
-  const controls = iconButtonControls(), foundation = foundationControls();
-  // The SDK carrier admits a new keyed actor and retains the old actor for
-  // the negative callback check; native removal/layout are not simulated.
-  controls.hooks.allowEmptyBranchAdmission = true;
-  Object.assign(controls.dependencies, foundation.dependencies, readerFoundationTokens, readerTypographyRoles, fontFamilies, {
-    ReaderIconButton: controls.icon.Component, readerAppColor, ReaderWindowCoordinator: { metrics: createDefaultReaderWindowMetrics },
-    readerInteractiveSafeLeft, readerInteractiveSafeRight, bookshelfTemporaryGeneration: 0,
-  });
-  const header = read('features/common/AppTopBar.ets');
-  Object.assign(controls.hooks.childSources, foundation.hooks.childSources, {
-    AppTopBar: header, MainTabShell: read('features/shell/MainTabShell.ets'),
-    BookshelfMoreMenu: read('features/bookshelf/BookshelfMoreMenu.ets'),
-  });
-  controls.dependencies.AppTopBar = controls.consumer(header, boundedMembers(header)).constructor;
-  for (const name of ['MainTabShell', 'BookshelfMoreMenu']) {
-    const child = controls.hooks.childSources[name];
-    controls.dependencies[name] = controls.consumer(child, [...new Set([...boundedMembers(child), 'build'])]).constructor;
-  }
-  const source = read('features/bookshelf/BookshelfShell.ets');
-  const shell = controls.consumer(source, [...new Set([...boundedMembers(source), 'build'])], {}, props);
-  shell.mounted = true; shell.temporaryBackIdentity = 'bookshelf:7'; shell.moreMenuVisible = false;
-  // The shell no longer exposes topBar(); render the whole shell so the
- // AppTopBar child mounts at its real position.
- shell.initialRender();
-  const actors = () => controls.walk(shell).filter(child => child instanceof controls.dependencies.AppTopBar && child.showLeadingSearch);
-  const event = actor => {
-    const native = [...actor.nodes.values()].find(node => node.type === 'Stack' && node.width === 44 && node.height === 44 && node.onClick);
-    assert.ok(native, 'actual AppTopBar owns the native leading Search Stack');
-    return native.onClick;
+  parent.openSearch = function () { return productionOpenSearch.call(this); };
+  parent.isCurrentRuntime = owner => owner !== undefined && ReaderRuntimeOwner.isCurrent(owner);
+  parent.librarySearchSurface(runtime, parent.searchHost);
+  const port = [...parent.children.values()].find(child => child instanceof SurfacePort);
+  assert.ok(port, 'Index mounts the current ReaderLibrarySearchSurface');
+  return {
+    parent, params: port.params, calls,
+    setRuntime(value) { current = value; },
   };
-  return { index, props, shell, controls, actors, event, calls, setRuntime(value) { current = value; } };
 }
 
 let cases = 0;
 {
-  const f = fixture(), click = f.event(f.actors()[0]);
+  const f = fixture();
+  const surface = createSurface(f.params);
+  const click = actor(surface);
   click();
   assert.deepEqual(f.calls, ['prepare', 'navigation', 'warmup', 'membership', 'open']);
-  assert.equal(f.index.route, 'search'); assert.equal(f.index.readingSessionActive, false);
-  assert.equal(f.index.readingExitRequest, undefined); assert.equal(f.index.exitToDetailOriginAfterReader, false);
-  click(); assert.equal(f.calls.length, 5, 'retained physical click cannot open search twice after navigation'); cases++;
-}
-for (const retirement of ['route', 'navigation', 'mount', 'retired', 'runtime', 'mounted-owner']) {
-  const f = fixture(), click = f.event(f.actors()[0]);
-  f.index.readingSessionActive = true;
-  if (retirement === 'route') f.index.route = 'reading';
-  if (retirement === 'navigation') f.index.navigationGeneration++;
-  if (retirement === 'mount') f.index.detailShelfAdmissionMount++;
-  if (retirement === 'retired') f.index.shelfReceiptRetired = true;
-  if (retirement === 'runtime') f.setRuntime({});
-  if (retirement === 'mounted-owner') f.index.mountedRuntimeOwner = {};
-  const before = { route: f.index.route, navigation: f.index.navigationGeneration, exit: f.index.readingExitRequest };
+  assert.equal(f.parent.route, 'search');
+  assert.equal(f.parent.librarySearchMode, 'input');
+  assert.equal(f.parent.readingSessionActive, false);
+  assert.equal(f.parent.readingExitRequest, undefined);
+  assert.equal(f.parent.exitToDetailOriginAfterReader, false);
   click();
-  // Independently exercise the actual Index callback too, so a leaf guard
-  // cannot conceal a missing owner guard in the parent production closure.
-  f.props.onSearchRequested(7);
+  assert.equal(f.calls.length, 5, 'retained physical click cannot open search twice after navigation');
+  cases++;
+}
+for (const retirement of ['route', 'navigation', 'mount', 'identity', 'retired', 'runtime', 'mounted-owner']) {
+  const f = fixture();
+  const surface = createSurface(f.params);
+  const click = actor(surface);
+  f.parent.readingSessionActive = true;
+  if (retirement === 'route') f.parent.route = 'reading';
+  if (retirement === 'navigation') f.parent.navigationGeneration++;
+  if (retirement === 'mount') f.parent.detailShelfAdmissionMount++;
+  if (retirement === 'identity') f.parent.librarySearchIdentity++;
+  if (retirement === 'retired') f.parent.shelfReceiptRetired = true;
+  if (retirement === 'runtime') f.setRuntime({});
+  if (retirement === 'mounted-owner') f.parent.mountedRuntimeOwner = {};
+  const before = {
+    route: f.parent.route, navigation: f.parent.navigationGeneration,
+    exit: f.parent.readingExitRequest,
+  };
+  click();
+  // Independently exercise the parent closure so a surface-local guard cannot
+  // conceal a missing Index owner/generation/runtime admission.
+  f.params.onOpen(5, 7, 3);
   assert.deepEqual(f.calls, [], retirement + ': no Host/navigation side effect');
-  assert.equal(f.index.readingSessionActive, true, retirement + ': preserve active reader');
-  assert.deepEqual({ route: f.index.route, navigation: f.index.navigationGeneration, exit: f.index.readingExitRequest }, before); cases++;
+  assert.equal(f.parent.readingSessionActive, true, retirement + ': preserve active reader');
+  assert.deepEqual({
+    route: f.parent.route, navigation: f.parent.navigationGeneration,
+    exit: f.parent.readingExitRequest,
+  }, before);
+  cases++;
 }
 {
-  const f = fixture(), first = f.actors()[0], oldClick = f.event(first), owner = f.shell;
-  f.index.navigationGeneration = 8;
-  f.controls.update(f.shell, { navigationGeneration: 8 });
-  f.shell.replay(); f.controls.properties.flush();
-  oldClick(); assert.deepEqual(f.calls, [], 'old physical generation cannot be upgraded by a Prop update');
-  const next = f.actors().find(actor => actor !== first);
-  assert.ok(next, 'new action generation gets its own native actor');
-  assert.equal(f.shell, owner, 'persistent bookshelf shell is retained');
-  f.event(next)(); assert.equal(f.index.route, 'search'); assert.equal(f.calls.at(-1), 'open'); cases++;
+  const f = fixture();
+  const surface = createSurface(f.params);
+  const oldClick = actor(surface);
+  f.parent.navigationGeneration = 8;
+  surface.navigationGeneration = 8;
+  surface.replay();
+  const newClick = actor(surface);
+  oldClick();
+  assert.deepEqual(f.calls, [], 'old physical generation cannot be upgraded by a Prop update');
+  newClick();
+  assert.equal(f.parent.route, 'search');
+  assert.equal(f.calls.at(-1), 'open');
+  cases++;
 }
-console.log(`PASS ${cases} actual Index→Shell→AppTopBar SDK search admission groups: current entry, duplicate, route/navigation/mount/runtime retirement, reader preservation and retained-shell fresh actor. Native dispatch is separate.`);
+console.log(`PASS ${cases} actual Index→ReaderLibrarySearchSurface 44vp leading search admission groups: ` +
+  'current entry, duplicate, route/navigation/mount/identity/retirement/runtime rejection and retained-surface fresh actor. ' +
+  'Native dispatch and device hit proof remain separate.');

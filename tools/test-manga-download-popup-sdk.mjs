@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {boundedMembers,boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {READER_MANGA_DOWNLOAD_POPUP} from '../entry/src/main/ets/features/common/ReaderMangaDownloadPopupSpec.ts';
-import {READER_FONT_NOTO_SANS_SC_UI_REGULAR} from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import {READER_FONT_NOTO_SANS_SC_UI_MEDIUM} from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 
 const read=file=>readFileSync(new URL('../entry/src/main/ets/'+file,import.meta.url),'utf8');
 const popupSource=read('features/common/ReaderMangaDownloadPopup.ets');
@@ -11,7 +11,7 @@ const panelSource=read('features/manga/MangaDownloadOperationsPanel.ets');
 const pageSource=read('features/bookshelf/BookDirectoryPage.ets');
 const sdk=boundedSurfaceSdk();
 sdk.hooks.lifecycleChildren=true;
-const deps={...sdk.deps,READER_MANGA_DOWNLOAD_POPUP,READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+const deps={...sdk.deps,READER_MANGA_DOWNLOAD_POPUP,READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   Placement:{BottomLeft:'Placement.BottomLeft'}};
 sdk.hooks.childSources.MangaDownloadOperationsPanel=panelSource;
 deps.MangaDownloadOperationsPanel=createReaderBuilderProbe(panelSource,boundedMembers(panelSource),deps,sdk.hooks).Component;
@@ -25,8 +25,11 @@ function panel(owner){
   return panels[0];
 }
 const panelNodes=owner=>sdk.nodes(panel(owner));
+const sectionOf=(owner,label)=>panel(owner).sheetActions().find(item=>item.label===label)?.section;
 const actionButton=(owner,label)=>panelNodes(owner).find(node=>
-  (node.type==='Button'&&buttonLabel(node)===label)||(node.type==='Row'&&node.accessibilityText===label));
+  (node.type==='Button'&&buttonLabel(node)===label)||
+  (node.type==='Row'&&node.accessibilityText===label)||
+  (node.type==='Stack'&&node.accessibilityText===label&&node.constraintSize?.minHeight===44&&typeof node.onClick==='function'));
 const action={id:'downloadChapter',label:'下载本章'};
 function popup(params){return createReaderBuilderProbe(popupSource,boundedMembers(popupSource),deps,
   {...sdk.hooks,initialParams:{specId:'manga-download',visible:true,generation:7,actions:[action],...params}}).owner;}
@@ -48,8 +51,8 @@ for(const availableWidth of [180,240,400]){
   assert.ok(button,'actual shared grouped action row is mounted inside the existing manga panel');
   assert.equal(button.constraintSize.minHeight,50,'the action exposes the shared minimum touch row while allowing larger text');
   const label=panelNodes(owner).find(n=>n.type==='Text'&&n.create===action.label);
-  assert.deepEqual([label.fontSize,label.fontFamily],[14,READER_FONT_NOTO_SANS_SC_UI_REGULAR]);
-  assert.ok(panelNodes(owner).some(n=>n.type==='Text'&&n.create==='下载任务'),'the download category is visible');
+  assert.deepEqual([label.fontSize,label.fontFamily],[14,READER_FONT_NOTO_SANS_SC_UI_MEDIUM]);
+  assert.equal(sectionOf(owner,action.label),'下载任务','the download category remains the action DTO contract');
   button.onClick();native.onStateChange({isVisible:false});
   assert.deepEqual(calls,['open',['action',action.id,7],['closed',7]],'native popup callbacks retain their opening generation');
 }
@@ -71,7 +74,9 @@ assert.deepEqual(revokedCalls,[],'loading, failed and revoked rows cannot dispat
 const cleanup=popup({actions:[action,{id:'deleteDownloads',label:'删除下载'},{id:'clearCache',label:'清除普通阅读缓存'}]});
 cleanup.popupContent(7);
 const cleanupTexts=panelNodes(cleanup).filter(n=>n.type==='Text');
-assert.deepEqual(cleanupTexts.filter(n=>['下载任务','存储清理'].includes(n.create)).map(n=>n.create),['下载任务','存储清理']);
+assert.equal(sectionOf(cleanup,action.label),'下载任务');
+assert.equal(sectionOf(cleanup,'删除下载'),'存储清理');
+assert.equal(sectionOf(cleanup,'清除普通阅读缓存'),'存储清理');
 const deleteLabel=cleanupTexts.find(n=>n.create==='删除下载');
 assert.notEqual(deleteLabel.fontColor,cleanupTexts.find(n=>n.create===action.label).fontColor,'storage deletion has a distinct danger tone');
 assert.equal(panelNodes(loading).some(n=>n.type==='Row'&&n.accessibilityText===action.label),false,'loading does not expose stale actions');

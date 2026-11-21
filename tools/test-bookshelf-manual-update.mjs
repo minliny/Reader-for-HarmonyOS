@@ -10,6 +10,7 @@ import { projectOperationFacts } from '../entry/src/main/ets/app/ReaderOperation
 import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
+import { READER_FEEDBACK_BRIEF_MS, READER_FEEDBACK_EXTENDED_MS } from '../entry/src/main/ets/features/common/ReaderTransientFeedback.ts';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
@@ -64,7 +65,7 @@ function fixture(books=[book('/one')]) {
   const Index=productionMotionMethods(indexFile,catalogIndexMethods,{
     ReaderRuntimeOwner:{current:()=>{if(!installedOwner)throw Error('runtime unavailable');return installedOwner;}},RemoteReadingFlowGateway,projectOperationFacts,readerRecoveryView,
     BookshelfFlowGateway:Flow,
-    LOCAL_SOURCE_ID:'local',CATALOG_REFRESH_INTERVAL_MS:600000,DOMAIN:0,
+    LOCAL_SOURCE_ID:'local',CATALOG_REFRESH_INTERVAL_MS:600000,DOMAIN:0,READER_FEEDBACK_BRIEF_MS,READER_FEEDBACK_EXTENDED_MS,
     hilog:{info:(...args)=>log.push(args),warn:(...args)=>{if(diagnosticThrows)throw Error('diagnostic unavailable');log.push(args);}}
   });
   const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',bookshelfHost:bookshelfCatalogHost(Flow,()=>installedOwner),shelfReceiptRetired:false,shelfProjectionRevision:'',navigationGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
@@ -86,7 +87,7 @@ function actualFeedbackShell(composition, shellSource, props) {
  Object.assign(composition.childSources,{MainTabShell:mainSource,MainTabBar:barSource,BookshelfMoreMenu:ets('features/bookshelf/BookshelfMoreMenu.ets')});
  const platform={...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},MainTabBar:Child};
  const MainTabShell=createReaderBuilderProbe(mainSource,boundedMembers(mainSource),{...composition.deps,...platform},composition.hooks).Component;
- const shell=composition.consumer(shellSource,['onNoticeHeightChange','onReadRecoveryChanged','onRecoveryChanged','lastReadFeedback','noticeHeight','build','shellHeader','shellOverlay','headerHeight','onHeaderHeightChange','showBottomNav','numericAreaLength','recovery','readRecovery','populated','reduceMotion','onReconcile','onRetryRead','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','onTemporaryBackBridge','temporaryBackGeneration','temporaryBackIdentity','mounted','moreMenuVisible','dismissMoreMenu','requestMainTab','content','recoveryNoticeContent'],
+ const shell=composition.consumer(shellSource,['onNoticeHeightChange','onReadRecoveryChanged','onRecoveryChanged','lastReadFeedback','noticeHeight','build','shellOverlay','moreSheetContent','numericAreaLength','recovery','readRecovery','populated','reduceMotion','onReconcile','onRetryRead','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','onTemporaryBackBridge','temporaryBackGeneration','temporaryBackIdentity','mounted','moreMenuVisible','dismissMoreMenu','requestMainTab','content','recoveryNoticeContent'],
   {MainTabShell,BookshelfMoreMenu:Child,bookshelfTemporaryGeneration:0,BOOKSHELF_WIDE_BREAKPOINT:600,...platform},props);
  Object.assign(shell,{topBar(){},content(){},moreMenuVisible:false});shell.initialRender();
  assert.ok(composition.nodes(shell).some(node=>node.type==='Stack'&&node.backgroundColor),'the production Scaffold owns the page surface');

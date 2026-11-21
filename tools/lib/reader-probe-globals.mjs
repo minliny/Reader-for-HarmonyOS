@@ -14,12 +14,27 @@ import { RemoteReadingGatewayError } from '../../entry/src/main/ets/features/rea
 import * as localImportMotion from '../../entry/src/main/ets/features/bookshelf/LocalImportMotion.ts';
 import * as readerScrollLayoutModule from '../../entry/src/main/ets/features/common/ReaderScrollLayout.ts';
 import * as headerMetrics from '../../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts';
+import * as sourceManagementPresentation from '../../entry/src/main/ets/features/source/SourceManagementPresentation.ts';
+import { foundationModifiers, foundationSpecs } from './reader-foundation-control-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
 
 const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
   .match(/export const EMPTY_READABLE_ADMISSION:[\s\S]*?= \{[\s\S]*?\n\};/)[0];
 const EMPTY_READABLE_ADMISSION = new Function(stripTypeScriptTypes(readableAdmissionInitializer.replace('export ', '')) + ';return EMPTY_READABLE_ADMISSION;')();
 
 const recoveryChildren = ['ReaderRecoveryAction', 'ReaderRecoveryNotice'];
+let defaultPropertyRuntime;
+let foundationPorts;
+let foundationModifierPorts;
+let foundationModifierColorMetrics;
+function readerFoundationGlobals(platform) {
+  foundationPorts ??= foundationSpecs();
+  if (foundationModifierPorts === undefined || foundationModifierColorMetrics !== platform.ColorMetrics) {
+    foundationModifierPorts = foundationModifiers(foundationPorts, platform.ColorMetrics);
+    foundationModifierColorMetrics = platform.ColorMetrics;
+  }
+  return { ...foundationPorts, ...foundationModifierPorts };
+}
 
 // HeaderSpecs is .ets; mirror its finite geometry so pages that read the
 // initial fallback can compile without the whole chrome stack.
@@ -61,9 +76,11 @@ const headers = { bookshelfHeaderSpec: () => new BookshelfHeaderSpec(), detailHe
   readerPageInitialHeaderHeight: (kind) => kind === 'bookshelf' ? 60 : 58 };
 
 export function readerProbeGlobals({ source, dependencies, platform, Child }) {
+  const observedObject = (defaultPropertyRuntime ??= createArkUIPropertyRuntimeProbe()).sdk.ObservedObject;
   // Geometry/property probes do not register physical platform fonts. The
   // actual registrar has a separate demand/failure/retry test.
   const globals = { readerRegisteredFontFamily: (_font, family) => family,
+    ObservedObject: observedObject,
     // Pure projections and presentation-only ports the refactored surfaces call
     // directly. Explicit case dependencies still override every entry.
     readerReadableFontScale: (fs) => Number.isFinite(fs) && fs > 0 ? Math.max(1, fs) : 1,
@@ -89,13 +106,15 @@ export function readerProbeGlobals({ source, dependencies, platform, Child }) {
       const width = metrics?.windowRect?.width;
       return Number.isFinite(width) && width > 0 && width >= 600;
     },
-    ...localImportMotion, ...headers, ...readerScrollLayoutModule, ...headerMetrics,
+    ...localImportMotion, ...headers, ...readerScrollLayoutModule, ...headerMetrics, ...sourceManagementPresentation,
+    ...readerFoundationGlobals(platform),
     readerScaledBarHeight: (base, lineHeight, fs) => Math.ceil(
       (Number.isFinite(base) ? Math.max(0, base) : 0) +
       (Number.isFinite(lineHeight) ? Math.max(0, lineHeight) : 0) *
       Math.max(0, (Number.isFinite(fs) && fs > 0 ? Math.max(1, fs) : 1) - 1)),
     readerMotionDurationMs: (_id, reduceMotion) => reduceMotion === true ? 0 : 200,
-    motionAnimateParamDelayed: (_id, delay) => ({ duration: 200, curve: 'ease-in-out', delay }),
+    motionAnimateParamDelayed: (_id, delay, onFinish) => ({ duration: 200, curve: 'ease-in-out', delay,
+      ...(onFinish === undefined ? {} : { onFinish }) }),
     RemoteReadingGatewayError,
     defaultSourceManagementFilters: () => ({ searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '全部分组' }),
     TextInputController: class { caretPosition() {} },

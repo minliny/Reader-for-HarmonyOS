@@ -60,9 +60,12 @@ function fixture(text=indexSource, runtime){
  const r=runtime??{};currentOwner=r;
  const probe=createReaderBuilderProbe(text,methods,{...sdk.deps,BookRemovalDialog:Book,CustomDialogController:Controller,DialogAlignment:{Center:'center'},ReaderRuntimeOwner,
   ReaderDialogSurface:SurfaceChild,BookshelfGroupSelector:Group,ReaderRecoveryNotice:sdk.deps.ReaderRecoveryNotice,ReaderRecoveryAction:sdk.deps.ReaderRecoveryAction,readerRecoveryView,DOMAIN:0,hilog:{error(){}},errorMessageOf:e=>e.message}, {...sdk.hooks,mountChildren:true});
- const i=probe.owner;Object.assign(i,{mountedRuntimeOwner:r,navigationGeneration:1,detailShelfAdmissionMount:1,route:'bookshelf',shelfReceiptRetired:false,
+ const i=probe.owner;let refresh=0,invalid=0;const writes=[],toasts=[],bindings=[],opens=[];let task,management;
+ Object.assign(i,{mountedRuntimeOwner:r,navigationGeneration:1,detailShelfAdmissionMount:1,route:'bookshelf',shelfReceiptRetired:false,searchAppForeground:true,
   bookRemovalPresentation:0,bookRemovalDialogOpen:false,editingShelfGroupPresentation:0,editingShelfGroupBusy:false,bookshelfManagementSnapshot:{busy:false},bookshelfManagementPresentationIdentity:'',rssInstanceIdentity:1,appThemeScheme:'day'});
- let refresh=0,invalid=0;const writes=[],toasts=[],bindings=[],opens=[];let task,management;
+ // Page feedback now publishes through the shared owner; do not model the
+ // retired native PromptAction path as the product contract.
+ i.transientFeedback={show:(_context,options,isCurrent)=>!isCurrent()||!options.message?false:(toasts.push(options.message),true),reset(){}};
  // Match the actual Host's initial current()/Runtime admission. A fixture that
  // unconditionally binds would hide State proxy versus captured raw identity.
  const managementCurrent=(owner,identity)=>management?.owner===owner&&management.identity===identity&&
@@ -70,7 +73,7 @@ function fixture(text=indexSource, runtime){
  i.bookshelfHost={bindManagement:(owner,identity,current)=>{const accepted=ReaderRuntimeOwner.isCurrent(owner)&&current();bindings.push({owner,identity,accepted});if(!accepted)return false;management={owner,identity,current};return true;},
   openManagement:identity=>opens.push(identity),detachManagementPresentation:()=>{management=undefined;},isManagementPresentationCurrent:managementCurrent,
   assignDefaultGroup:async(book,identity)=>{if(!managementCurrent(r,identity))return undefined;writes.push(book);if(task)await task.promise;return{receipt:{receipt:{confirmation:'confirmed',fact:'confirmedCurrent'}}};}};
- i.invalidateBookshelfProjection=()=>invalid++;i.refreshBookshelf=()=>refresh++;i.getUIContext=()=>({getPromptAction:()=>({showToast:v=>toasts.push(v.message)})});
+ i.invalidateBookshelfProjection=()=>invalid++;i.refreshBookshelf=()=>refresh++;i.getUIContext=()=>({});
  const leaf=()=>[...i.children.values()].findLast(c=>c instanceof Book);
  const native=()=>{const b=leaf();b.initialRender();const surface=sharedSurface([...b.children.values()][0].params);return{b,surface,
   confirm:[...surface.nodes.values()].filter(n=>n.type==='Button'&&n.onClick)[1],cancel:[...surface.nodes.values()].filter(n=>n.type==='Button'&&n.onClick)[0]};};

@@ -7,10 +7,16 @@ const { runtimeOwnerIdentityProbe }=await import('./lib/reader-runtime-admission
 const {readFileSync}=await import('node:fs');
 const {stripTypeScriptTypes,createRequire}=await import('node:module');
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const ordinary=s=>stripTypeScriptTypes(s.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+`;return ${n};`)(...Object.values(deps));
+const localClass=(definition,name,FrameCallback)=>new Function('FrameCallback',`${stripTypeScriptTypes(
+  (()=>{const start=definition.indexOf(`class ${name}`);let depth=0,end=-1;
+    for(let i=definition.indexOf('{',start);i<definition.length;i++){if(definition[i]==='{')depth++;
+      else if(definition[i]==='}'&&--depth===0){end=i;break;}}
+    assert.ok(start>=0&&end>start,`production local class ${name}`);
+    return definition.slice(start,end+1);})())};return ${name};`)(FrameCallback);
 const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
 const projectPersistedReceipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts);
 const ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence'),readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
@@ -22,7 +28,10 @@ const SourceOrchestrator=load('features/source/SourceOrchestrator.ets','SourceOr
 const SourceHost=load('features/source/SourceHost.ets','SourceHost',{ReaderRuntimeOwner,SourceOrchestrator,SourceGateway});
 const prefs=new WeakMap();const preferences={getPreferences:async ctx=>prefs.get(ctx)};
 function freshSettingsHost(){
-const {SettingsGateway,createDefaultSettingsSnapshot}=load('features/settings/SettingsGateway.ts','{SettingsGateway,createDefaultSettingsSnapshot}',{preferences,ReaderThemeHost:{async prepareUserChange(){}}});
+const {SettingsGateway,createDefaultSettingsSnapshot}=load('features/settings/SettingsGateway.ts','{SettingsGateway,createDefaultSettingsSnapshot}',{preferences,
+  // Theme rollback has its own durable suite. This fixture only supplies the
+  // current finite ThemeHost ports so the settings write reaches Preferences.
+  ReaderThemeHost:{async prepareUserChange(){},settingsWriteGeneration:()=>0,assertSettingsWritable(){}}});
 const SettingsOrchestrator=load('features/settings/SettingsOrchestrator.ets','SettingsOrchestrator',{SettingsGateway,createDefaultSettingsSnapshot,ReaderRuntimeOwner,ReaderWriteEvidence,LocalConfigurationReset:{request(){throw Error('reset tested by full durable reset suite');}},hilog:{error(){}},projectPersistedReceipt,...facts});
 const SettingsHost=load('features/settings/SettingsHost.ets','SettingsHost',{SettingsOrchestrator,ReaderRuntimeOwner});
 return SettingsHost;
@@ -50,7 +59,20 @@ function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();curr
  const host=field(index,sourceDomain?'sourceHost':'settingsHost',{SourceHost,SettingsHost});index[sourceDomain?'sourceHost':'settingsHost']=host;if(sourceDomain)assert.equal(index.bindSourceManagement(),true);else assert.equal(index.bindSettingsPresentation(),true);
  let rendered=false;const refresh=()=>{if(!rendered){index[method]();rendered=true;}else index.replay();return [...index.children.values()].at(-1).params;};
  function page(){const params=refresh(),path=sourceDomain?'features/source/SourceManagementPage.ets':'features/settings/SettingsPage.ets';
-  if(sourceDomain){const sdk=boundedSurfaceSdk();const page=sdk.consumer(source(path),['operation','statusKind','statusMessage','onReconcile','onRetryLoad','statusBanner','recovery'],{readerRecoveryView},params);Object.assign(page,{appThemeScheme:'day',resetMessage:'',contentFrame:()=>({width:350})});page.statusBanner();page.actualSdk=sdk;return page;}
+  if(sourceDomain){const sdk=boundedSurfaceSdk(),definition=source(path),FrameCallback=sdk.deps.FrameCallback;
+   const page=sdk.consumer(definition,boundedMembers(definition),{readerRecoveryView,
+     SourceListDataSource:localClass(definition,'SourceListDataSource',FrameCallback),
+     SourceManagementLayoutFrame:localClass(definition,'SourceManagementLayoutFrame',FrameCallback)},params);
+   Object.assign(page,{appThemeScheme:'day',resetMessage:'',contentFrame:()=>({width:350}),
+     // The receipt contract owns the recovery branch in sourceList. Its
+     // unrelated search/stats/filter leaves have dedicated visual suites and
+     // are kept opaque here so this fixture does not duplicate those assets.
+     searchField:()=>{},statsRow:()=>{},statusAction:()=>{},filterArea:()=>{},categoryFilter:()=>{}});
+   page.sourceList();
+   const listItems=[...page.nodes.values()].filter(n=>n.type==='ListItem'&&typeof n.create?.[0]==='function');
+   assert.ok(listItems.length>0,'actual source list owns deferred ListItem content');
+   for(const listItem of listItems)listItem.create[0](listItem.id,true);
+   page.pendingOverlay(0);page.actualSdk=sdk;return page;}
   const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   const page=sdk.consumer(source(path),['operation','cacheCleanup','onCacheCleanupChanged','applyCacheCleanup','temporaryBackIdentity','operationFeedback','pendingFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind','recoveryActionGeneration',
    'recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],{readerRecoveryView,ReaderRuntimeOwner});
@@ -61,7 +83,9 @@ function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();curr
   const actor=page.actualSdk.walk(page).find(c=>c.label===currentLabel&&c instanceof page.actualSdk.deps.ReaderRecoveryAction);assert.ok(actor,label+' actual native action');
   return [...actor.nodes.values()].find(n=>n.onClick).onClick;};
 
- return{r,index,host,refresh,page,open:()=>host.open(sourceDomain?index.sourcePresentationIdentity:index.settingsPresentationIdentity),write:()=>sourceDomain?host.toggleSource('a',false,index.sourcePresentationIdentity):host.toggle('reduceMotion',true,index.settingsPresentationIdentity),settle:async()=>{await tick();if(sourceDomain)await host.orchestrator.operationChain;else for(let i=0;i<5;i++)await tick();},receipt:()=>index[sourceDomain?'sourceOperation':'settingsOperation'],read:()=>index[sourceDomain?'sourceOperation':'settingsOperation'].readFacts,native,retry:page=>{if(sourceDomain){const actor=page.actualSdk.walk(page).find(c=>c.specId==='source-management-retry'&&c.label==='重试');assert.ok(actor,'actual shared Source retry component');const hit=page.actualSdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual shared Source retry native action');hit.onClick();}else native(page,page.hasPendingSettings()?'核对':'刷新设置')();}};}
+ return{r,index,host,refresh,page,open:()=>host.open(sourceDomain?index.sourcePresentationIdentity:index.settingsPresentationIdentity),write:()=>sourceDomain?host.toggleSource('a',false,index.sourcePresentationIdentity):host.toggle('reduceMotion',true,index.settingsPresentationIdentity),settle:async()=>{await tick();if(sourceDomain)await host.orchestrator.operationChain;else for(let i=0;i<5;i++)await tick();},receipt:()=>index[sourceDomain?'sourceOperation':'settingsOperation'],read:()=>index[sourceDomain?'sourceOperation':'settingsOperation'].readFacts,native,retry:page=>{if(sourceDomain){const label=page.operation.receipt?.receipt.confirmation==='unknown'?'核对':
+   (page.sources.length===0&&page.operation.readFacts?.fact==='failed'?'重试':'刷新列表');
+  const actor=page.actualSdk.walk(page).find(c=>c instanceof page.actualSdk.deps.ReaderRecoveryAction&&c.label===label);assert.ok(actor,'actual shared Source recovery component');const hit=page.actualSdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual shared Source recovery native action');hit.onClick();}else native(page,page.hasPendingSettings()?'核对':'刷新设置')();}};}
 
 try{
 if(id==='source-readback'){
@@ -157,7 +181,7 @@ if(id==='settings-retry-before'){
  assert.equal(f.receipt().receipt.receipt.confirmation,'unknown');assert.equal(f.index.settingsSnapshot.reduceMotion,true);
  oldSave();await f.settle();assert.equal(f.r.puts,puts,'pure refresh retires the old generation action');
  const debugPage=f.page();const save=f.native(debugPage,'重试保存当前设置');save();save();await f.settle();
- assert.equal(f.r.puts,puts+5);assert.equal(f.r.flushes,flushes+1);
+ assert.equal(f.r.puts,puts+6);assert.equal(f.r.flushes,flushes+1);
  assert.equal(f.receipt().receipt.receipt.confirmation,'confirmed');
  // A retained SDK physical actor is never upgraded by a new generation.
  f.r.writeFail=true;f.host.toggle('crashLog',false,f.index.settingsPresentationIdentity);await f.settle();const before=f.r.puts;
@@ -173,7 +197,7 @@ if(id==='settings-retry-after'){
  assert.equal(f.receipt().receipt.receipt.confirmation,'unknown');assert.equal(f.index.settingsSnapshot.reduceMotion,true);
  oldSave();await f.settle();assert.equal(f.r.puts,puts,'pure refresh retires the old generation action');
  const debugPage=f.page();const save=f.native(debugPage,'重试保存当前设置');save();save();await f.settle();
- assert.equal(f.r.puts,puts+5);assert.equal(f.r.flushes,flushes+1);
+ assert.equal(f.r.puts,puts+6);assert.equal(f.r.flushes,flushes+1);
  assert.equal(f.receipt().receipt.receipt.confirmation,'confirmed');
  // A retained SDK physical actor is never upgraded by a new generation.
  f.r.writeFail=true;f.host.toggle('crashLog',false,f.index.settingsPresentationIdentity);await f.settle();const before=f.r.puts;

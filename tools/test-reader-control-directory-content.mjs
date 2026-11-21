@@ -68,15 +68,20 @@ assert.doesNotMatch(content, /(?:if|else if)\s*\(this\.motionProgress\s*[<>=]/,
 assert.doesNotMatch(content, /\.scale\(/, 'real text/list layout is never scaled as an image');
 assert.doesNotMatch(content, /animateTo\(|\.animation\(/,
   'the content consumes the shared progress instead of starting an actor clock');
-assert.match(content, /controlValue\(32, 40\)/,
-  'all directory rows use the same restored row-height endpoints');
+assert.match(content, /readerScaledControlHeight\(44, 20, this\.fontScale\(\)\)/,
+  'all directory rows retain the current shared minimum touch height');
+assert.doesNotMatch(content, /controlValue\(32, 40\)/,
+  'the retired sub-44 row-height morph cannot return');
 assert.match(content, /rowHeight: this\.directoryListRowHeight\(\)/,
   'the virtual List receives a stable row height during intermediate morph frames');
 assert.match(content, /private directoryListRowHeight\(\): number/);
 assert.match(content, /controlValue\(286, 338\)/);
 assert.match(content, /controlValue\(190, 666\)/);
 assert.match(content, /controlValue\(127, 160\)/);
-assert.match(content, /controlValue\(31, 36\)/);
+assert.match(content, /private tabHeight\(\): number \{\s*return 44;\s*\}/,
+  'directory and bookmark tabs retain their current shared 44vp touch height');
+assert.doesNotMatch(content, /controlValue\(31, 36\)/,
+  'the retired sub-44 tab morph cannot return');
 assert.match(content, /controlValue\(48, 99\)/,
   'the entire real List moves from the restored Quick row origin to Full');
 

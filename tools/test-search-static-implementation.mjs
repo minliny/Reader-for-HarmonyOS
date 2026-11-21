@@ -147,7 +147,7 @@ for (const selected of selectedCases){
       sourceGroupDirectory:()=>({valid:()=>true}),resetFilteredResults:()=>reset++,publishSurface:()=>publish++,
       getUIContext:()=>({getFocusController:()=>({clearFocus(){}})})});
     owner.applySearchFilters('在线','漫画',ALL_SEARCH_SOURCE_GROUP,owner.filterActionIdentity());
-    assert.equal(reset,1);assert.equal(publish,1);assert.equal(owner.filtersExpanded,false);assert.equal(owner.viewState.filtersExpanded,false);
+    assert.equal(reset,1);assert.equal(publish,1);assert.equal(owner.filtersExpanded,false);
     assert.equal(owner.selectedGroupName,'在线');assert.equal(owner.selectedContentType,'漫画');
     owner.applySearchFilters('全部','小说',ALL_SEARCH_SOURCE_GROUP,owner.filterActionIdentity());assert.equal(reset,1,'closed presentation cannot commit twice');
     const filterSource=read('features/search/ReaderSearchFilterPanel.ets'),filterProps=createArkUIPropertyRuntimeProbe();

@@ -140,7 +140,7 @@ if(selectedCase==='lazy-theme'){
  const probe=createReaderBuilderProbe(read('entry/src/main/ets/features/settings/SettingsPage.ets'),['appThemeMode','temporaryBackIdentity','appThemeControl','themeIndex','selectAppTheme'],{
   SEG_OPTIONS:['跟随','浅色','深色'],ReaderRuntimeOwner:{isCurrent:owner=>owner===runtime},
   ReaderThemeHost:{selectApp:mode=>{calls.push(mode);return Promise.resolve();}},
- });
+ },{eagerChildren:false});
  const o=probe.owner;Object.assign(o,{mounted:true,themeOwner:runtime,appThemeMode:'system'});o.temporaryBackIdentity='lazy-theme';o.appThemeControl();
  const actor=[...o.children.values()].find(c=>c.nodes&&[...c.nodes.values()].some(n=>n.type==='Stack'&&n.accessibilityRole==='AccessibilityRoleType.RADIO'));
  assert.ok(actor,'omitted dependency resolved to actual ReaderSegmentedControl native radio nodes');

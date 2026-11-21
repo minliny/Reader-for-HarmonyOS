@@ -245,9 +245,13 @@ export function createEtsBuilderProbe(source, names, dependencies = {}, hooks = 
         this.keys.set(key, id); const before = this.observers.length; generator();
         this.keys.set(`${key}-empty`, before === this.observers.length);
       } else if (hooks.allowEmptyBranchAdmission && this.keys.get(key) !== id) {
-        assert.equal(this.keys.get(`${key}-empty`), true, 'probe only admits previously empty branches; it does not model removal');
-        this.keys.set(key, id); const before = this.observers.length; generator();
-        this.keys.set(`${key}-empty`, before === this.observers.length);
+        const beforeEmpty = this.keys.get(`${key}-empty`);
+        const before = this.observers.length; generator();
+        const nextEmpty = before === this.observers.length;
+        assert.ok(beforeEmpty === true || nextEmpty,
+          'probe only admits switches to a newly empty branch; it does not model non-empty replacement');
+        this.keys.set(key, id);
+        this.keys.set(`${key}-empty`, nextEmpty);
       }
     }
     updateStateVarsOfChildByElmtId(id, params) {
@@ -267,6 +271,7 @@ export function createEtsBuilderProbe(source, names, dependencies = {}, hooks = 
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
   }
   const platform = { ViewPU, $r: value => value,
+    ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {}, getApiVersion: () => 21 },
     LengthMetrics: { vp: value => ({ value, unit: 'vp' }) },
     ColorMetrics: { resourceColor: color => ({ color }) },
     ...Object.fromEntries(['Blank', 'Divider', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']

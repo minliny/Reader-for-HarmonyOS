@@ -3,9 +3,22 @@ import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import * as timing from '../entry/src/main/ets/features/common/ProductMotionTiming.ts';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { readerPanelActorPose } from '../entry/src/main/ets/features/reading/ReaderPanelMotionContract.ts';
+import { readerMotionValueDurationMs as collapseMotionDurationMs } from '../entry/src/main/ets/features/common/ReaderMotionDurationPolicy.ts';
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
 const sdk = boundedSurfaceSdk();
+const curves = new Proxy({}, {get:(_,name)=>(...args)=>({nativeCurve:String(name),args})});
+const Curve = new Proxy({}, {get:(_,name)=>`Curve.${String(name)}`});
+const motion = pureModuleProbe(readFileSync(new URL('common/MotionSpec.ets', root),'utf8'), 'MotionSpec.ets',
+  {...timing,SOURCE_SWITCH_VISUAL,MANGA_DIRECTORY_VISUAL,readerPanelActorPose,curves,Curve},
+  ['motionAnimateParam','motionSpecGet']);
+const motionPolicy = pureModuleProbe(readFileSync(new URL('common/ReaderMotionPolicy.ets', root),'utf8'),
+  'ReaderMotionPolicy.ets',{...motion,curves,collapseMotionDurationMs},['readerMotionAnimateParam']);
 let cases = 0;
 const definitions = {
   directory: {
@@ -22,7 +35,7 @@ const definitions = {
   },
   select: {
     file:'common/ReaderSelectPanel.ets',
-    fields:['reduceMotion','value','options','variant','closing','selectionId','expandedHeight','chevronAngle','closeInFlight','mounted','generation','closingValue','closingOptions','closeFinish','onSelect','onCommit','onDismiss'],
+    fields:['reduceMotion','value','options','variant','closing','selectionId','expandedHeight','chevronAngle','measuredHeightRevision','optionHeights','closeInFlight','mounted','generation','closingValue','closingOptions','closeFinish','onSelect','onCommit','onDismiss'],
     methods:['aboutToAppear','aboutToDisappear','expandPanel','fullPanelHeight','collapsePanel','onReduceMotionChanged','finishCollapse','onIdentityChanged','onClosingChanged','selectAndCollapse'],
     props:{reduceMotion:false,value:'a',options:['a','b'],variant:'default',closing:false,selectionId:'A'},
   },
@@ -36,6 +49,7 @@ function fixture(kind,mutate = source => source) {
     APPEARANCE_SELECT_OPTION_HEIGHT:30,appearanceSelectMenuHeight:n=>n*30+6,
     setTimeout:callback=>{tasks.push(callback);return tasks.length;},
     motionAnimateParam:(id,onFinish)=>({id,duration:210,onFinish}),
+    readerMotionAnimateParam:motionPolicy.readerMotionAnimateParam,
   },{...property.hooks,initialParams:props});
   const owner=probe.owner;owner.usesExpandedLayout=()=>false;owner.aboutToAppear();
   return {owner,animations,tasks,property,props,

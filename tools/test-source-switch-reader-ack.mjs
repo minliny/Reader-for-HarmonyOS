@@ -56,8 +56,11 @@ for(const failure of [{wrongId:true},{finalized:false},{loseAck:true}]){
  assert.equal(stored.sourceSwitchTransactionId,undefined);f.owner.admitCommittedProgress(stored);assert.equal(f.callbacks[0].sourceSwitchTransactionId,undefined);
 }
 function failureOwner(input=source){
- const p=boundedSurfaceSdk();const o=p.consumer(input,['sourceSwitchScopeId','sourceSwitchFailureMessage','readingFailureContent'],{
-  LOCAL_READING_SOURCE_ID:LOCAL_SOURCE_ID,readerAppearanceThemeStyle:()=>({ink:'#111111',paperStart:'#ffffff'})},{sourceSwitchScopeId:1,sourceSwitchFailureMessage:'saved receipt pending'});
+ const p=boundedSurfaceSdk();const o=p.consumer(input,['sourceSwitchScopeId','sourceSwitchFailureMessage',
+  'readerRecoveryView','readerRecoveryActionLabel','readingFailureContent'],{
+  LOCAL_READING_SOURCE_ID:LOCAL_SOURCE_ID,readerAppearanceThemeStyle:()=>({ink:'#111111',paperStart:'#ffffff'})},
+  {sourceSwitchScopeId:1,sourceSwitchFailureMessage:'saved receipt pending',
+    readerRecoveryView:{message:'',visible:false,canRetry:false,generation:0},readerRecoveryActionLabel:'重试'});
  o.sourceId='new';o.appearanceSnapshot={activeTheme:'day'};o.readingLayout=()=>({bodyWidth:()=>390,bodyHeight:()=>800,contentLeft:0,contentTop:0});
  o.onRetryFailedSourceSwitch=id=>o.actions.push(['retry',id]);o.onDismissSourceSwitchFailure=id=>o.actions.push(['dismiss',id]);
  o.openReaderControl=()=>{};o.onSwitchSource=()=>{};o.retryReading=()=>o.actions.push(['body']);o.actions=[];
@@ -74,7 +77,8 @@ function failureAction(p,o,label){
  o.sourceSwitchScopeId=2;o.sourceSwitchFailureMessage='new scope';oldRetry();oldDismiss();
  assert.deepEqual(o.actions,[['retry',1],['dismiss',1]],'real SDK physical callbacks preserve original scope');
  o.readingFailureContent();const newRetry=failureAction(p,o,'重试');newRetry();assert.deepEqual(o.actions.at(-1),['retry',2]);
- const column=p.nodes(o).find(n=>n.type==='Column');assert.deepEqual(column.create,{space:12});assert.equal(column.padding,24);
+ const actions=p.nodes(o).find(n=>n.type==='Column'&&n.create?.space===12);assert.ok(actions,'actual failure action column owns 12vp spacing');
+ const surface=p.nodes(o).find(n=>n.padding===24);assert.ok(surface,'actual failure surface owns 24vp inset');
  const plain=failureOwner();plain.o.sourceSwitchFailureMessage='';plain.o.readingFailureContent();
  failureAction(p,o,'阅读设置')();assert.equal(o.sourceSwitchScopeId,2);
 }

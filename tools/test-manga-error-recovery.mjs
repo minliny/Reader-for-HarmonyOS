@@ -12,12 +12,13 @@ const { createRequire } = await import('node:module');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { mangaUserError } = await import('../entry/src/main/ets/features/manga/MangaUserError.ts');
+const { READER_FEEDBACK_BRIEF_MS } = await import('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts');
 
 
 const file = new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const Surface = productionMotionMethods(file,
-  ['requestedLast', 'imageError', 'rowHasError', 'nativeFailureKey', 'wholeImageUnavailable', 'unavailableMarkerTile', 'unavailableMarkerTop', 'rowDisplayWidth', 'rowDisplayHeight', 'unavailableImageWidth', 'unavailableImageHeight', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery', 'notifyPreparationFailure']);
+  ['requestedLast', 'imageError', 'rowHasError', 'nativeFailureKey', 'wholeImageUnavailable', 'unavailableMarkerTile', 'unavailableMarkerTop', 'rowDisplayWidth', 'rowDisplayHeight', 'unavailableImageWidth', 'unavailableImageHeight', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery', 'notifyPreparationFailure'], { READER_FEEDBACK_BRIEF_MS });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
   let resolve, reject;
@@ -95,9 +96,9 @@ if(selectedCase==='brief-current-error') {
 {
   const {surface,controller}=fixture(),messages=[];
   controller.preparationError='MANGA_CHAPTER_PREPARATION_FAILED';
-  Object.assign(surface,{preparationFailureNoticeKey:'',error:'settings error',
+  Object.assign(surface,{preparationFailureNoticeKey:'',error:'settings error',exiting:false,windowChromeActive:true,isReaderIdentityCurrent:()=>true,
     displayError:()=> '整章加载暂未完成，已加载的内容仍可阅读。',
-    getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})})});
+    getUIContext:()=>({}),transientFeedback:{show(_context,options){messages.push(options.message);return true;}}});
   surface.notifyPreparationFailure();surface.notifyPreparationFailure();
   assert.equal(messages.length,1);assert.equal(surface.error,'settings error');
   assert.equal(surface.opened,true);assert.equal(surface.controller,controller);
@@ -118,10 +119,10 @@ async function openedErrorSdkProof(surfaceSource=source) {
   const members=['error','opened','mounted','openedErrorNoticeKey','presentationGeneration',
     'onErrorPresentationChanged','onWindowChromeChanged','notifyOpenedError','controlsPresentedForWindow','loginRequired',
     'requestedLast','rowHasError','imageError','nativeFailureKey','nativeImageFailures','topControls'];
-  const owner=sdk.consumer(surfaceSource,members,{TOK_BORDER_W:1});
+  const owner=sdk.consumer(surfaceSource,members,{TOK_BORDER_W:1,READER_FEEDBACK_BRIEF_MS});
   let live=true;
   const tile={image:{fileUri:'file://retained',revision:'v1'}},row={key:'page:0',ordinal:0,tileIndex:0};
-  Object.assign(owner,{getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
+  Object.assign(owner,{getUIContext:()=>({}),transientFeedback:{show(_context,options){messages.push(options.message);return true;}},
     onWindowChromeChanged(){},displayError:code=>'public '+code,isReaderIdentityCurrent:()=>live,
     controller:{chapter:{manifest:{manifestVersion:'v1'}},tile:()=>tile,visiblePages:()=>[]},
     data:{totalCount:()=>1,getData:()=>row},first:0,last:0,iconAction(){},

@@ -26,7 +26,7 @@ let currentOwner, indexInstance = 0;
 const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-for(const [name,path] of [['MainTabShell','features/shell/MainTabShell.ets'],['AppTopBar','features/common/AppTopBar.ets'],['ReaderIconButton','features/common/ReaderIconButton.ets'],['BookshelfMoreMenu','features/bookshelf/BookshelfMoreMenu.ets'],['BookshelfShell','features/bookshelf/BookshelfShell.ets'],['LocalImportDialog','features/bookshelf/LocalImportDialog.ets'],['ReaderRecoveryNotice','features/common/ReaderRecoveryNotice.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));syntax.builderParamObjectCollection.set(name,new Set([...source(path).matchAll(/@BuilderParam\s+(\w+)/g)].map(m=>m[1])));}
+for(const [name,path] of [['MainTabShell','features/shell/MainTabShell.ets'],['AppTopBar','features/common/AppTopBar.ets'],['ReaderIconButton','features/common/ReaderIconButton.ets'],['BookshelfMoreMenu','features/bookshelf/BookshelfMoreMenu.ets'],['BookshelfShell','features/bookshelf/BookshelfShell.ets'],['LocalImportDialog','features/bookshelf/LocalImportDialog.ets'],['ReaderRecoveryNotice','features/common/ReaderRecoveryNotice.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets'],['ReaderRaisedSurface','features/common/ReaderRaisedSurface.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));syntax.builderParamObjectCollection.set(name,new Set([...source(path).matchAll(/@BuilderParam\s+(\w+)/g)].map(m=>m[1])));}
 syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));
 for(const n of ['bookshelfContent','topBar'])require(sdk+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add(n);
 const indexNames=[...projectionIndexMethods,'beginImport','isCurrentImport','closeImportDialog','openImportDialog','canRemoveShelfBook','canRemoveDetailBook','removeShelfBook','removeShelfBooks','removeDetailBook','applyShelfBookRemoval','applyDetailBookRemoval','hasUnknownShelfWrite','shelfRecovery','shelfReadRecovery','emptyShelfRecovery','reconcileShelfWrite','continueShelfRemoval','canContinueShelfRemoval','registerTemporaryBackBridge','hasVisibleImportDialog','visibleImportDialogState','visibleImportBatch','currentImportPresentation','reconcileImportPresentation'];
@@ -48,7 +48,7 @@ function indexRenderActor(method){
  let factory=indexRenderFactories.get(method);
  if(factory===undefined){
   factory=createReaderBuilderProbe(source('pages/Index.ets'),[method,'localImportSurface'],
-   {BookshelfShell:Child,LocalImportDialog:Child,ReaderRuntimeOwner,readerRecoveryView},{allowEmptyBranchAdmission:true});
+   {BookshelfShell:Child,LocalImportDialog:Child,ReaderRaisedSurface:Child,ReaderRuntimeOwner,readerRecoveryView},{allowEmptyBranchAdmission:true});
   indexRenderFactories.set(method,factory);
  }
  return freshActor(factory);
@@ -56,6 +56,8 @@ function indexRenderActor(method){
 function shelfRenderSdk(){
  if(shelfComposition===undefined){
   shelfComposition=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  shelfComposition.deps.ReaderRaisedSurface=Child;
+  shelfComposition.childSources.ReaderRaisedSurface=source('features/common/ReaderRaisedSurface.ets');
   const text=source('features/bookshelf/BookshelfShell.ets');
   shelfFactory=createReaderBuilderProbe(text,boundedMembers(text),
    {...shelfComposition.deps,bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{},
@@ -76,6 +78,7 @@ function importRenderSdk(selection=false){
 
 const clone=v=>structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
+const settle=async check=>{for(let i=0;i<1000;i++){if(check())return;await new Promise(r=>setTimeout(r,20));}assert.fail('operation did not settle');};
 const book=id=>({sourceId:'local',bookId:id,title:id,author:'author',kind:'TXT',sortIndex:0,addedAt:1});
 const selection=id=>({state:'ready',input:{bookId:id,fileName:id+'.txt',stagedPath:'/private/input/'+id}});
 function rpc(){return{calls:[],rows:[book('a'),book('b')],readFail:0,writeFail:false,cleanupFail:false,malformedBatch:false,malformedAdd:false,admission:false,pause:undefined,pickerPause:undefined,selections:[selection('c')],supportsCoreCapability:()=>false,async selectLocalBookInputs(){this.pickerStarted=true;if(this.pickerPause)await this.pickerPause.promise;return clone(this.selections);},async discardLocalBookInput(){this.calls.push('discard');},async commitLocalBookInput(){this.calls.push('assets.commit');return{created:false};},async rollbackLocalBookAsset(){this.calls.push('assets.rollback');},async releaseLocalBookAsset(){this.calls.push('assets.release');if(this.cleanupFail)throw Error('retained file busy');},async enqueuePendingLocalImportFinalize(){this.calls.push('journal.queue');},async request(method,p){this.calls.push(method);if(this.pause?.method===method)await this.pause.promise;
@@ -180,7 +183,7 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
   await Promise.all(reconciliationCalls.slice(start));
   assert.equal(index.bookshelfHost.operations(r).current().reconcileBusy,false,'the real owner releases readback admission after its actual task settles');
  };
- const remove=async(kind='single')=>{if(kind==='batch'){index.route='bookshelfMultiSelect';index.removeShelfBooks(clone(index.shelfBooks));}else if(kind==='detail'){index.route='detail';index.detailBook=clone(index.shelfBooks[0]);index.detailInBookshelf=true;index.detailToc=[{index:324,title:'第325章',navigable:true}];index.detailMembershipOriginal={book:index.detailBook,toc:index.detailToc};index.removeDetailBook(index.detailBook);}else index.removeShelfBook(index.shelfBooks[0]);await until(()=>!index.bookshelfHost.operations(r).current().busy);};
+ const remove=async(kind='single')=>{if(kind==='batch'){index.route='bookshelfMultiSelect';index.removeShelfBooks(clone(index.shelfBooks));}else if(kind==='detail'){index.route='detail';index.detailBook=clone(index.shelfBooks[0]);index.detailInBookshelf=true;index.detailToc=[{index:324,title:'第325章',navigable:true}];index.detailMembershipOriginal={book:index.detailBook,toc:index.detailToc};index.removeDetailBook(index.detailBook);}else index.removeShelfBook(index.shelfBooks[0]);await settle(()=>!index.bookshelfHost.operations(r).current().busy);};
  return{r,index,remove,render,importRender,retry,import:async()=>{index.openImportDialog();await index.beginImport();},receipt:()=>index.shelfOperation.receipt,presentation:()=>index.currentImportPresentation(),serialized:()=>serialized,owner:()=>index.bookshelfHost.operations(r),renderIndex};}
 for(const kind of ['single','batch','detail']){
  const command=kind==='batch'?'bookshelf.removeBatch':'bookshelf.remove';

@@ -8,6 +8,7 @@ const {createRequire}=await import("node:module");
 const {fixture,compile,until,deferred,ReaderWriteEvidence}=await import("./lib/rules-mutation-durable-probe.mjs");
 const {createReaderBuilderProbe}=await import("./lib/reader-control-builder-probe.mjs");
 const {boundedSurfaceSdk,boundedMembers}=await import("./lib/bounded-surface-sdk-probe.mjs");
+const {compileCardSpecs}=await import("./lib/reader-card-probe.mjs");
 const facts=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const projection=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const recovery=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
@@ -42,7 +43,7 @@ function index(f,Host,text=indexSource){
 function actualPage(props){
  const foundation=foundationControls(),sdk=boundedSurfaceSdk();sdk.hooks.lifecycleChildren=true;Object.assign(sdk.hooks.childSources,foundation.hooks.childSources);
  const page=sdk.consumer(pageSource,boundedMembers(pageSource),{...foundation.dependencies,...recovery,EMPTY_RULES_MANAGEMENT_SNAPSHOT:props.snapshot,
-  ReaderToggle:Child,PageBackBar:Child},props);
+  ReaderToggle:Child,PageBackBar:Child,resolveReaderCardSpec:compileCardSpecs()},props);
  Object.assign(page,{dictName:draft.name,dictUrl:draft.urlRule,dictShow:draft.showRule,dictEnabled:true,dictOrder:'0'});
  page.dictCard();page.bundleCard();page.recoveryAction();
  return{sdk,page,save:()=>sdk.nodes(page).find(n=>n.create==='保存字典规则'),retry:()=>sdk.nodes(page).find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick)};

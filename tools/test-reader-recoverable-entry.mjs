@@ -265,6 +265,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
     LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle:()=>({ink:'#123456',paperStart:'#eeeeee'})});
   Object.assign(owner,{sourceId:local?'local':'remote',sourceSwitchFailureMessage:switchFailure?'目标源目录失败':'',
     failureCode:'private raw error /path?token=secret',failureHint:readingFailureHint('private raw error /path?token=secret'),appearanceSnapshot:{activeTheme:'day'},
+    readerRecoveryView:{message:'',visible:false,canRetry:false,generation:0},readerRecoveryActionLabel:'重试',
     readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:50}),
     retryReading:()=>actions.push('retry'),onRetryFailedSourceSwitch:()=>actions.push('switch-retry'),
     openReaderControl:()=>actions.push('settings'),onSwitchSource:()=>actions.push('switch'),onDismissSourceSwitchFailure:()=>actions.push('continue')});
@@ -412,6 +413,7 @@ function fixture(options={}) {
 // still disposes its own resources, but cannot repaint the new owner's chrome.
 {
   const calls=[], topInfoWrites=[];
+  const { ReaderTransientFeedback } = await import('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts');
   const WindowReader=productionMotionMethods(source,['applyWindowChrome','applyWindowPolicyForChromeOwner',
     'applyReaderWindowPolicy','isSessionActive','isMountedToken','aboutToDisappear'],{
     ReaderWindowCoordinator:{requestAppChrome:()=>calls.push('app-chrome'),requestReaderChrome:()=>calls.push('reader-chrome'),
@@ -419,7 +421,7 @@ function fixture(options={}) {
       requestReaderWindowPolicy:async()=>{calls.push('reader-policy');}},
     ReaderWindowChromeStyle:class{},readerAppearanceThemeStyle:()=>({paperStart:'#fff',ink:'#000'}),
     readerAppearanceChromeTone:()=> 'dark',AppStorage:{setOrCreate:(key,value)=>{calls.push('global-top-info');if(key==='readerTopInfoSuppressed')topInfoWrites.push(value);}},
-    invalidateReaderAutoPageState:s=>s,
+    invalidateReaderAutoPageState:s=>s,ReaderTransientFeedback,
   });
   for(const current of [false,true])for(const chromeActive of [false,true]) {
     const owner=Object.assign(new WindowReader(),{isReaderIdentityCurrent:()=>current,
@@ -439,12 +441,12 @@ function fixture(options={}) {
     owner.applyWindowChrome();assert.deepEqual(calls,current?[chromeActive?'reader-chrome':'app-chrome']:[]);
     calls.length=0;topInfoWrites.length=0;await owner.applyReaderWindowPolicy({hideStatusBar:false});
     assert.deepEqual(calls,current&&chromeActive?['global-top-info','reader-policy']:[]);
-    assert.deepEqual(topInfoWrites,current&&chromeActive?[true]:[],
-      'only the current active reader may suppress page information for its visible system status bar');
+    assert.deepEqual(topInfoWrites,current&&chromeActive?[false]:[],
+      'only the current active reader may publish the controls-presented top-info suppression fact');
     calls.length=0;topInfoWrites.length=0;owner.applyWindowPolicyForChromeOwner();await settle();
     assert.deepEqual(calls.filter(value=>value!=='global-top-info'),current?['volume-policy',chromeActive?'reader-policy':'app-policy']:[]);
-    if(current){assert.ok(topInfoWrites.length>0);assert.ok(topInfoWrites.every(value=>value===chromeActive),
-      'active status visibility suppresses page information; application ownership releases it');}
+    if(current){assert.ok(topInfoWrites.length>0);assert.ok(topInfoWrites.every(value=>value===false),
+      'controls are not presented, so the active reader publishes top information as visible');}
     else {assert.deepEqual(calls,[],'a retired reader cannot write any global state or native policy');
       assert.deepEqual(topInfoWrites,[],'a retired reader cannot publish global information state');}
     calls.length=0;owner.aboutToDisappear();await settle();
@@ -748,6 +750,7 @@ function fixture(options={}) {
       'unresolved reconciliation exposes recovery rather than an indefinite spinner');
     const failureSdk=boundedSurfaceSdk(),failure=failureSdk.consumer(raw,['readingFailureContent'],{LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle});
     Object.assign(failure,{sourceId:'target',sourceSwitchFailureMessage:'',failureCode:'章节加载失败',appearanceSnapshot:{activeTheme:'day'},
+      readerRecoveryView:{message:'',visible:false,canRetry:false,generation:0},readerRecoveryActionLabel:'重试',
       readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:30}),
       retryReading:()=>r.retryReading(),openReaderControl(){},onSwitchSource(){}});
     failure.readingFailureContent();

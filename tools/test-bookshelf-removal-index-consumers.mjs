@@ -45,7 +45,7 @@ function render(f,index) {
  const shell=sdk.consumer(read('features/bookshelf/BookshelfShell.ets'),boundedMembers(read('features/bookshelf/BookshelfShell.ets')),
   {bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{},...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}},params);
  shell.aboutToAppear();shell.recoveryNoticeContent(shell.recovery,false);
- const nodes=()=>sdk.nodes(shell),action=label=>{const actor=sdk.walk(shell).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label);return actor&&sdk.nodes(actor).find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===28&&n.onClick);};
+ const nodes=()=>sdk.nodes(shell),action=label=>{const actor=sdk.walk(shell).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label);return actor&&sdk.nodes(actor).find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick);};
  return{parent,params,sdk,shell,nodes,action};
 }
 async function unknown(before=true) {

@@ -91,6 +91,7 @@ function prepareReaderFixture({ source, names, dependencies, hooks, original, st
     'catalogHeaderHeight','catalogHeaderTop',
     'searchFontScale','searchFilterHeight','searchFilterLabelWidth','searchBarHeight','bookFontScale',
     'resultTagWidth','resultTagHeight',
+    'standardMeasurements',
     // Nonmodal feedback is a finite visual/admission seam. Keep the actual
     // production defaults and helpers in focused pre-migration consumers.
     'indexRecoveryNotice','indexRecoveryActionLabel','indexRecoveryAction','indexRecoveryCurrent',
@@ -283,17 +284,24 @@ function prepareReaderFixture({ source, names, dependencies, hooks, original, st
 // so compilation can resolve such a child by its real name instead of failing.
 const featureIndex = new Map();
 function indexFeatureSources() {
-  const root = new URL('../../entry/src/main/ets/features/', import.meta.url);
+  const roots = [
+    new URL('../../entry/src/main/ets/features/', import.meta.url),
+    new URL('../../entry/src/main/ets/app/', import.meta.url),
+  ];
   const visit = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.isDirectory()) visit(new URL(`${entry.name}/`, dir));
       else if (entry.name.endsWith('.ets')) {
         const name = entry.name.slice(0, -4);
-        if (!featureIndex.has(name)) featureIndex.set(name, new URL(entry.name, dir));
+        const url = new URL(entry.name, dir);
+        if (!featureIndex.has(name)) featureIndex.set(name, url);
+        const source = readFileSync(url, 'utf8');
+        for (const match of source.matchAll(/\b(?:export\s+)?struct\s+([A-Za-z][A-Za-z0-9_]*)/g))
+          if (!featureIndex.has(match[1])) featureIndex.set(match[1], url);
       }
     }
   };
-  visit(root);
+  for (const root of roots) visit(root);
 }
 // When a real child cannot compile with the parent's ports, mount a
 // prop-compatible stand-in. Parent contracts still execute; the child's own
@@ -306,28 +314,46 @@ function childStandIn(name, source) {
 function missingComponents(error) {
   const names = new Set();
   for (const diagnostic of error?.actual ?? []) {
-    const match = /'([A-Za-z][A-Za-z0-9_]*)\s*\(\{/.exec(diagnostic?.message ?? '');
+    const match = /'([A-Za-z][A-Za-z0-9_]*)\s*\(/.exec(diagnostic?.message ?? '');
     if (match) names.add(match[1]);
   }
   return [...names];
 }
 export function createReaderBuilderProbe(source, names, dependencies = {}, hooks = {}) {
   const childSources = { ...(hooks.childSources ?? {}) };
+  const activeComponents = hooks.activeComponents ?? new Set();
   const options = { ...hooks, childSources, createGlobals: hooks.createGlobals ?? readerProbeGlobals,
     prepareComponent: hooks.prepareComponent ?? prepareReaderFixture };
   let deps = dependencies;
   if (featureIndex.size === 0) indexFeatureSources();
-  // Mount children this source instantiates with parameters before lowering,
-  // so an inline `Name({...})` never reaches the runtime as a bare global.
-  for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s*\(\s*\{/g)) {
-    const name = match[1];
-    if (deps[name] !== undefined || !featureIndex.has(name)) continue;
-    const child = readFileSync(featureIndex.get(name), 'utf8');
-    try {
-      deps = { ...deps, [name]: createReaderBuilderProbe(child, builderComponentMembers(child, name), deps,
-        { ...hooks, componentName: name }).Component };
-      if (childSources[name] === undefined) childSources[name] = child;
-    } catch (_error) { /* keep unresolved */ }
+  // Mount parameterized children before lowering. Zero-argument components
+  // are resolved lazily below when the SDK reports their mount site, which
+  // avoids recursively expanding an entire page graph on every probe.
+  if (hooks.eagerChildren !== false) {
+    for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s*\(\s*\{/g)) {
+      const name = match[1];
+      if (deps[name] !== undefined || !featureIndex.has(name)) continue;
+      if (activeComponents.has(name)) continue;
+      const child = readFileSync(featureIndex.get(name), 'utf8');
+      activeComponents.add(name);
+      try {
+        deps = { ...deps, [name]: createReaderBuilderProbe(child, builderComponentMembers(child, name), deps,
+          { ...hooks, componentName: name, activeComponents }).Component };
+        if (childSources[name] === undefined) childSources[name] = child;
+      } catch (error) {
+        const standIn = childStandIn(name, child);
+        try {
+          deps = { ...deps, [name]: createReaderBuilderProbe(standIn, ['build'], deps,
+            { ...hooks, componentName: name, activeComponents }).Component };
+          childSources[name] = standIn;
+        } catch (stubError) {
+          if (process.env.PROBE_DEBUG) console.error('EAGER-CHILD-FAIL', name,
+            String(error).split('\n')[0], String(stubError).split('\n')[0]);
+        }
+      } finally {
+        activeComponents.delete(name);
+      }
+    }
   }
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -339,24 +365,29 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       if (featureIndex.size === 0) indexFeatureSources();
       let added = false;
       for (const name of pending) {
+        if (activeComponents.has(name)) continue;
         const path = featureIndex.get(name);
         if (path === undefined) continue;
         const child = readFileSync(path, 'utf8');
+        activeComponents.add(name);
         try {
           deps = { ...deps, [name]: createReaderBuilderProbe(child, builderComponentMembers(child, name), deps,
-            { ...hooks, componentName: name }).Component };
+            { ...hooks, componentName: name, activeComponents }).Component };
           childSources[name] = child;
           added = true;
         } catch (childError) {
           const standIn = childStandIn(name, child);
           try {
             deps = { ...deps, [name]: createReaderBuilderProbe(standIn, ['build'], deps,
-              { ...hooks, componentName: name }).Component };
+              { ...hooks, componentName: name, activeComponents }).Component };
             childSources[name] = standIn;
             added = true;
           } catch (stubError) {
-            if (process.env.PROBE_DEBUG) console.error('AUTO-CHILD-FAIL', name, String(childError).split('\n')[0]);
+            if (process.env.PROBE_DEBUG) console.error('AUTO-CHILD-FAIL', name,
+              String(childError).split('\n')[0], String(stubError).split('\n')[0]);
           }
+        } finally {
+          activeComponents.delete(name);
         }
       }
       if (!added) throw error;

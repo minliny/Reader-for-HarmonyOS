@@ -57,7 +57,7 @@ for(const family of ['bookmarks','offline']){
  const action=ui.actions().find(action=>action.label===label);assert.ok(action,'busy retains the original label and action geometry');
  assert.equal(action.isBusy,true);
  const stack=[...action.nodes.values()].find(node=>node.onClick),text=[...action.nodes.values()].find(node=>node.type==='Text');
- assert.equal(stack.constraintSize.minHeight,28);assert.equal(stack.enabled,false);assert.equal(text.create,label);assert.equal(text.opacity,0);
+ assert.equal(stack.constraintSize.minHeight,44);assert.equal(stack.enabled,false);assert.equal(text.create,label);assert.equal(text.opacity,0);
  const spinner=[...action.nodes.values()].find(node=>node.type==='LoadingProgress');assert.ok(spinner);assert.equal(spinner.width,18);assert.equal(spinner.height,18);
  stack.onClick();stack.onClick();assert.deepEqual(ui.calls,[],'busy physical actor does not dispatch again');
  const blocked=family==='bookmarks'?directory('unknown','failed',{completion:'unknown',projection:receipt('unknown','failed',false)}):

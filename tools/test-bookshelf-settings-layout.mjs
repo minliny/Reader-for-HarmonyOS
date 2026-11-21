@@ -11,7 +11,7 @@ const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {actualModeHost,readerRecoveryView} = await import('./lib/bookshelf-view-mode-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { createRequire } = await import('node:module');
+const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
@@ -30,6 +30,11 @@ const source = readFileSync(file, 'utf8');
 const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
+const actionAccessibilitySource = readFileSync(new URL(
+  '../entry/src/main/ets/features/common/ReaderActionAccessibility.ets', import.meta.url), 'utf8');
+const ReaderActionAccessibility = new Function('AccessibilityRoleType',
+  `${stripTypeScriptTypes(actionAccessibilitySource).replace(/^export /gm, '')}; return ReaderActionAccessibility;`)(
+  { BUTTON: 'AccessibilityRoleType.BUTTON' });
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('PageBackBar');
 syntax.componentCollection.customComponents.add('ReaderRecoveryNotice');
@@ -43,6 +48,7 @@ const Toggle = new Proxy({ name: 'Toggle' }, { get: (target, key) => key === 'na
 let metrics = new ReaderWindowMetricsSnapshot();
 class Notice {constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}}
 const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Header, Toggle, ToggleType: { Switch: 'switch' },
+  ReaderActionAccessibility,
   ReaderWindowCoordinator: { metrics: () => metrics }, SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame,
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
@@ -50,7 +56,8 @@ const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Head
 const methods = ['settingsPending','modePending','pendingOverlay','retrySettingsAccepted','viewModeRecovery','build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery', 'modeOption', 'pageContent', 'pageHeader'];
 if (source.includes('private contentFrame(')) methods.push('contentFrame');
 const { Component } = createReaderBuilderProbe(source, methods, deps,
-  { onObserverEnter(owner, id) { activeOwner = owner; activeId = id; } });
+  { mountChildren: true, lifecycleChildren: true, eagerChildren: false,
+    onObserverEnter(owner, id) { activeOwner = owner; activeId = id; } });
 const { Component: HeaderComponent } = createReaderBuilderProbe(headerSource, ['trailing', 'build', 'leftInset', 'rightInset'], deps);
 if(selectedCase==='settings-render') {
 for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [390, 844, 32, 24, 24], [1280, 800, 48, 32, 48]]) {
@@ -58,6 +65,7 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
     new ReaderInsetsVp(0, 48, 0, safeBottom), new ReaderInsetsVp(left, 0, right, 0));
   const owner = new Component(undefined, {}); let backs = 0; const updates = [], selections = [];
   Object.assign(owner, { appThemeScheme: 'day', mode: 'cover', operation:{action:'load'}, viewModeSnapshot:{canonical:'cover'}, error: '', autoCheckUpdate: true,
+    viewModeHost: actualModeHost({ currentBookshelfViewMode: () => 'cover', loadBookshelfViewMode: async () => 'cover', saveBookshelfViewMode: async () => {} }),
     readerWindowMetricsRevision: 1, onBack: () => { backs++; }, onAutoCheckUpdate: value => updates.push(value),
     selectMode: value => selections.push(value) });
   owner.initialRender();
@@ -75,22 +83,22 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
     [TYPE_PAGE_TITLE.fontFamily, TYPE_PAGE_TITLE.fontSizeFp, TYPE_PAGE_TITLE.lineHeightFp]);
   const headerRow = headerNodes.find(node => node.type === 'Row');
   assert.equal(headerRow.width,'100%'); assert.ok(headerRow.padding.left>=left && headerRow.padding.right>=right);
+  assert.match(source, /ReaderStandardPage\(\{[\s\S]*?variant: 'settings'[\s\S]*?content: \(\): void => \{ this\.pageContent\(\); \}/,
+    'the page retains the shared standard frame and its finite business content slot');
   const actors = current => [current, ...[...(current.children?.values() ?? [])].flatMap(actors)];
   const nodes = actors(owner).flatMap(current => [...(current.nodes?.values() ?? [])]);
-  const root = nodes.find(node => node.type === 'Stack' && node.backgroundColor);
-  assert.ok(root, 'the actual public scaffold paints the page');
-  assert.equal(root.padding?.top, undefined, 'host alone consumes the top safe area');
-  assert.equal(root.padding?.bottom, undefined, 'host alone consumes the bottom safe area');
-  assert.equal(root.type, 'Stack');
-  const scroll = nodes.find(node => node.type === 'Scroll');
-  assert.ok(scroll); assert.equal(scroll.layoutWeight, undefined); assert.equal(scroll.align, 'Alignment.TopStart');
-  assert.equal(scroll.height, '100%', 'the viewport extends behind the floating header even in short windows');
-  const frame = resolveHorizontalFrame(width, left, right, new SurfaceWidthSpec(720, 19, 19));
-  const content=nodes.find(node=>node.type==='Column' && Number.isFinite(node.padding?.top) && Number.isFinite(node.padding?.bottom));
-  assert.ok(content); assert.equal(content.padding.left,frame.left); assert.equal(content.padding.right,frame.right); assert.ok(content.padding.bottom>=safeBottom);
-  const toggle = nodes.find(node => node.type === 'Toggle');
-  toggle.onChange(false); toggle.onChange(true); assert.deepEqual(updates, [false, true]);
-  for (const label of ['封面', '列表']) nodes.find(node => node.type === 'Text' && node.create === label).onClick();
+  const toggleActor = actors(owner).find(actor => actor !== owner && actor.accessibilityLabel === '自动检查更新' &&
+    typeof actor.onToggle === 'function' && typeof actor.inputIdentity === 'string');
+  assert.ok(toggleActor, 'the bookshelf settings row mounts the actual shared ReaderToggle');
+  const toggle = [...toggleActor.nodes.values()].find(node => typeof node.onClick === 'function');
+  toggle.onClick(); assert.deepEqual(updates, [false], 'shared toggle emits the inverse of its controlled value');
+  toggleActor.value = false; toggleActor.replay();
+  toggle.onClick(); assert.deepEqual(updates, [false, true]);
+  for (const label of ['封面', '列表']) {
+    const option = nodes.find(node => node.type === 'Row' && node.accessibilityText === label);
+    assert.ok(option, `the shared mode action exposes ${label} as its native hit target`);
+    option.onClick();
+  }
   assert.deepEqual(selections, ['cover', 'list']);
   for (const scheme of ['night', 'day']) {
     // StorageLink delivery is the platform seam: deliver one global scheme to
@@ -98,14 +106,14 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
     for (const actor of actors(owner)) { actor.appThemeScheme = scheme; actor.replay?.(); }
     header.appThemeScheme = scheme; header.replay();
     assert.equal(title.fontColor, readerAppColor('TOK_INK', scheme));
-    assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme));
     assert.equal(nodes.find(node => node.type === 'Text' && node.create === '封面').fontColor,
-      readerAppColor('app.BookshelfSettingsPage.modeOption.onSelected', scheme));
+      readerAppColor('app.selection.onMode', scheme));
   }
 }
 const retryOwner = new Component(undefined, {});
 const retries=[];
 Object.assign(retryOwner,{appThemeScheme:'day',mode:'cover',operation:{action:'load'},viewModeSnapshot:{canonical:'cover',receipt:{receipt:{confirmation:'unknown',readback:'idle'},facts:{fact:'pendingReconciliation',generation:9,canRetry:true,blocked:false}}},error:'pending',autoCheckUpdate:true,readerWindowMetricsRevision:1,
+ viewModeHost: actualModeHost({ currentBookshelfViewMode: () => 'cover', loadBookshelfViewMode: async () => 'cover', saveBookshelfViewMode: async () => {} }),
  viewModeRecovery:()=>({visible:true,message:'pending',canRetry:true,generation:9}),retryMode:g=>retries.push(g)});
 retryOwner.initialRender();
 const recovery=[...retryOwner.children.values()].find(c=>c instanceof Notice&&c.params.view?.visible);

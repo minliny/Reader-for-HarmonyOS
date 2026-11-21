@@ -359,24 +359,10 @@ async function case_sync_cold_layout() {
 const { createIndexProductBuilderProbe } = await import('./lib/reader-extended-product-surface-probe.mjs');
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { pageFrameSdkFixture } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
-const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
-const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
-const findChild = (owner, predicate) => {
-  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
-};
-function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
-  const properties = createArkUIPropertyRuntimeProbe();
-  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
-    { ...properties.hooks, ...hooks }), properties };
-}
 
 const source=file=>readFileSync(`entry/src/main/ets/${file}`,'utf8');const indexSource=source('pages/Index.ets');const readWorkspace=file=>readFileSync(file,'utf8');const architectureBaseline=JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
 const succession=verifyIndexSyncColdLayoutSuccession(architectureBaseline, readWorkspace);
@@ -396,7 +382,7 @@ for (const [before, after] of [
 // The actual route owner supplies the visual facts. Keep other branches finite
 // and inert, while the shipping Scaffold and cold slot run through the SDK.
 for (const [testedSource,proof] of [[indexSource,succession],[renamed,verifyChanged(renamed)]]) for (const ready of [false, true]) {
-  const properties = createArkUIPropertyRuntimeProbe();
+  const frameFixture = pageFrameSdkFixture();
   class OtherActor { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); this.nodes = new Map(); this.children = new Map(); } }
   const components = { BookshelfMultiSelectPage: 'features/bookshelf/BookshelfMultiSelectPage.ets', ReaderShell: 'features/shell/ReaderShell.ets',
     SyncPage: 'features/sync/SyncPage.ets', ReaderLayoutDebugOverlay: 'features/common/ReaderLayoutDebugOverlay.ets',
@@ -405,16 +391,16 @@ for (const [testedSource,proof] of [[indexSource,succession],[renamed,verifyChan
   const { owner } = createIndexProductBuilderProbe(testedSource,
     ['syncUi','syncProduct','appThemeScheme','expandedLayout',proof.routeMethod,'syncContent','syncSurface',proof.coldContentMethod,
      'syncPreparingFrameStyle','readerOwnsWindowEdges','mangaOwnsWindowEdges','appContentTopInset'],
-    { ...properties.sdk, ...Object.fromEntries(Object.keys(components).map(name => [name, OtherActor])),
+    { ...frameFixture.deps, ...Object.fromEntries(Object.keys(components).map(name => [name, OtherActor])),
       ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop, isReaderProductSurfaceEnabled: () => true },
-    { ...properties.hooks, mountChildren: true, childSources: Object.fromEntries(Object.entries(components).map(([name, file]) => [name, source(file)])) });
+    { ...frameFixture.hooks, childSources: { ...frameFixture.hooks.childSources,
+      ...Object.fromEntries(Object.entries(components).map(([name, file]) => [name, source(file)])) } });
   Object.assign(owner, {route: 'sync',navigationGeneration: 7,detailShelfAdmissionMount: 3,syncPresentationIdentity: 'sync-window',
     getSyncOrchestrator: () => ({}),readingSessionActive: false,jsonImportVisible: false,appThemeScheme: 'day',readerWindowMetricsRevision: -1,
     syncProduct:{syncSnapshotReady: ready,syncSnapshot: {}},retainsShelfOpeningBackground:()=>false,indexRecoveryNoticeContent:()=>{}});
   owner[proof.routeMethod]();
-  const descendants = actor => [actor, ...[...(actor.children?.values() ?? [])].flatMap(descendants)];
-  const actors = descendants(owner);
-  const frames=actors.filter(actor=>actor.params?.frameStyle);
+  const actors = frameFixture.walk(owner);
+  const frames = actors.filter(actor => actor instanceof frameFixture.deps.ReaderPageScaffold);
   if (ready) {
     const sync = actors.find(actor => actor.params && Object.hasOwn(actor.params,'snapshot'));
     if(sync)assert.deepEqual(sync.params.snapshot,owner.syncProduct.syncSnapshot,'real Prop keeps presentation values across the composition copy');
@@ -422,13 +408,13 @@ for (const [testedSource,proof] of [[indexSource,succession],[renamed,verifyChan
     assert.equal(frames.length, 0, 'cold frame cannot cover the ready branch');
   } else {
     assert.equal(frames.length,1,'actual cold branch owns one common frame');const frame=frames[0];
-    const label = flatten(owner).find(node => node.type === 'Text' && node.create === '正在读取安全配置…'); assert.ok(label);
+    const label = frameFixture.nodes(owner).find(node => node.type === 'Text' && node.create === '正在读取安全配置…'); assert.ok(label);
     const column = [...owner.nodes.values()].find(node => node.type === 'Column' && node.justifyContent === 'FlexAlign.Center');
     assert.deepEqual([column.width, column.height], ['100%', '100%']);
     assert.equal(column.backgroundColor, undefined); assert.equal(label.fontSize, undefined, 'original native AUTO survives the real cold slot');
     const root = [...frame.nodes.values()].find(node => node.type === 'Stack' && node.padding);
     for (const scheme of ['day', 'night']) {
-      owner.appThemeScheme = scheme; properties.flush();
+      owner.appThemeScheme = scheme; frameFixture.properties.flush();
       assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme),'parent-owned style updates the same real scaffold');
     }
   }

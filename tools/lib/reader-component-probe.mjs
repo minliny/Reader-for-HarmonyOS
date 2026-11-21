@@ -10,7 +10,11 @@ function indexFeatureSources() {
       if (entry.isDirectory()) visit(new URL(`${entry.name}/`, dir));
       else if (entry.name.endsWith('.ets')) {
         const name = entry.name.slice(0, -4);
-        if (!featureIndex.has(name)) featureIndex.set(name, new URL(entry.name, dir));
+        const url = new URL(entry.name, dir);
+        if (!featureIndex.has(name)) featureIndex.set(name, url);
+        const source = readFileSync(url, 'utf8');
+        for (const match of source.matchAll(/\b(?:export\s+)?struct\s+([A-Za-z][A-Za-z0-9_]*)/g))
+          if (!featureIndex.has(match[1])) featureIndex.set(match[1], url);
       }
     }
   };
@@ -19,7 +23,7 @@ function indexFeatureSources() {
 function missingComponents(error) {
   const names = new Set();
   for (const diagnostic of error?.actual ?? []) {
-    const match = /'([A-Za-z][A-Za-z0-9_]*)\s*\(\{/.exec(diagnostic?.message ?? '');
+    const match = /'([A-Za-z][A-Za-z0-9_]*)\s*\(/.exec(diagnostic?.message ?? '');
     if (match) names.add(match[1]);
   }
   return [...names];
@@ -36,25 +40,30 @@ function childStandIn(name, source) {
  * to a prop-compatible stand-in when their own ports are not available. */
 export function createReaderComponentProbe(source, names, dependencies = {}, hooks = {}) {
   const childSources = { ...(hooks.childSources ?? {}) };
-  const options = { ...hooks, childSources, createGlobals: hooks.createGlobals ?? readerProbeGlobals };
+  const activeComponents = hooks.activeComponents ?? new Set();
+  const options = { ...hooks, childSources, activeComponents, createGlobals: hooks.createGlobals ?? readerProbeGlobals };
   let deps = dependencies;
   if (featureIndex.size === 0) indexFeatureSources();
-  // Proactively mount children this source instantiates with parameters, so a
-  // bare `Name({...})` call cannot fail as an undefined global.
+  // Proactively mount parameterized children. Zero-argument components are
+  // resolved lazily on the SDK diagnostic so page-level probes stay bounded.
   for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s*\(\s*\{/g)) {
     const name = match[1];
-    if (deps[name] !== undefined || !featureIndex.has(name)) continue;
+    if (deps[name] !== undefined || !featureIndex.has(name) || activeComponents.has(name)) continue;
     const child = readFileSync(featureIndex.get(name), 'utf8');
+    activeComponents.add(name);
     try {
       deps = { ...deps, [name]: createReaderComponentProbe(child, builderComponentMembers(child, name), deps,
-        { ...hooks, componentName: name }).Component };
+        { ...hooks, componentName: name, activeComponents }).Component };
       if (childSources[name] === undefined) childSources[name] = child;
     } catch (_error) {
       try {
         const standIn = childStandIn(name, child);
-        deps = { ...deps, [name]: createReaderComponentProbe(standIn, ['build'], deps, { ...hooks, componentName: name }).Component };
+        deps = { ...deps, [name]: createReaderComponentProbe(standIn, ['build'], deps,
+          { ...hooks, componentName: name, activeComponents }).Component };
         childSources[name] = standIn;
       } catch (_stubError) { /* keep unresolved */ }
+    } finally {
+      activeComponents.delete(name);
     }
   }
   for (let attempt = 0; attempt < 8; attempt++) {
@@ -78,19 +87,23 @@ export function createReaderComponentProbe(source, names, dependencies = {}, hoo
       let added = false;
       for (const name of pending) {
         const path = featureIndex.get(name);
-        if (path === undefined) continue;
+        if (path === undefined || activeComponents.has(name)) continue;
         const child = readFileSync(path, 'utf8');
         let mounted;
+        activeComponents.add(name);
         try {
           mounted = createReaderComponentProbe(child, builderComponentMembers(child, name), deps,
-            { ...hooks, componentName: name }).Component;
+            { ...hooks, componentName: name, activeComponents }).Component;
           if (childSources[name] === undefined) childSources[name] = child;
         } catch (_childError) {
           try {
             const standIn = childStandIn(name, child);
-            mounted = createReaderComponentProbe(standIn, ['build'], deps, { ...hooks, componentName: name }).Component;
+            mounted = createReaderComponentProbe(standIn, ['build'], deps,
+              { ...hooks, componentName: name, activeComponents }).Component;
             childSources[name] = standIn;
-          } catch (_stubError) { continue; }
+          } catch (_stubError) { activeComponents.delete(name); continue; }
+        } finally {
+          activeComponents.delete(name);
         }
         deps = { ...deps, [name]: mounted };
         added = true;

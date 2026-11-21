@@ -32,13 +32,22 @@ const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnaps
  'requestRemoveDetailBook','openBookRemovalDialog','dismissBookRemovalDialog','confirmBookRemovalDialog','isCurrentBookRemoval'];
 const Runtime={current:()=>{throw Error('consumer must use captured mounted Runtime');},isCurrent:owner=>ProductionHost.forRuntime(owner).owns(owner)};
 const emptyAdmission={key:'',generation:0,adding:false,cancelling:false,message:'',confirmation:'none'};
+const raisedSurfaceStandIn=`@Component\nexport struct ReaderRaisedSurface {
+  @Prop surfaceWidth: number = 0;
+  @Prop surfaceHeight: number = 0;
+  @Prop cornerRadius: number = 0;
+  @Prop scheme: string = 'day';
+  build() { Column() {} }
+}`;
 export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Index.ets'),domain='all'}={}){
  assert.ok(['all','entry'].includes(domain),'known Index fixture domain');
  const EntryHost=f.host.constructor;
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  p.hooks.childSources.ReaderRaisedSurface=raisedSurfaceStandIn;
+  const raisedSurface=createReaderBuilderProbe(raisedSurfaceStandIn,['build'],p.deps,p.hooks).Component;
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
  const src=read('features/bookshelf/LocalBookDetail.ets');
- const leafDeps={...p.deps,...geometry,...metricsApi,ReaderWindowCoordinator:{metrics:()=>metrics},
+ const leafDeps={...p.deps,...geometry,...metricsApi,ReaderRaisedSurface:raisedSurface,ReaderWindowCoordinator:{metrics:()=>metrics},
   BookDirectoryPage:class {}};
  p.hooks.childSources.LocalBookDetail=src;
  p.hooks.childSources.BookDirectoryPage=read('features/bookshelf/BookDirectoryPage.ets');

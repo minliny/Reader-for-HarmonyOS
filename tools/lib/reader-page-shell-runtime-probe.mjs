@@ -40,6 +40,7 @@ export function actualReaderPageShell(source = readFileSync(readerPageShellSourc
     return exports;
   };
   return { ...load(readerPageShellSourceUrl),
+    ...load(new URL('ReaderFloatingBarMetrics.ts', readerPageShellSourceUrl)),
     ...load(new URL('ReaderFrameStyle.ts', readerPageShellSourceUrl)),
     ...load(new URL('ReaderPageGeometry.ts', readerPageShellSourceUrl)) };
 }

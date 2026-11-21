@@ -5,10 +5,19 @@ import {stripTypeScriptTypes} from 'node:module';
 import {bookshelfDialogPresentationFixture as dialogFixture,indexSource,defer,bookshelfDialogSdk as sdk} from './lib/bookshelf-dialog-presentation-sdk.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
+import {compileCardSpecs} from './lib/reader-card-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import * as facts from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {ReaderWriteEvidence} from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {getHeapStatistics} from 'node:v8';
+if(process.env.BOOKSHELF_MANAGEMENT_RELAUNCH!=='1'&&getHeapStatistics().heap_size_limit<6*1024**3){
+ const child=spawnSync(process.execPath,['--max-old-space-size=8192',fileURLToPath(import.meta.url),...process.argv.slice(2)],{
+  env:{...process.env,BOOKSHELF_MANAGEMENT_RELAUNCH:'1'},stdio:'inherit'});
+ process.exit(child.status??1);
+}
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const compile=(p,n,deps,text=source(p))=>new Function(...Object.keys(deps),stripTypeScriptTypes(text.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export \{[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+`;return ${n};`)(...Object.values(deps));
 const projectPersistedReceipt=compile('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts);
@@ -101,18 +110,21 @@ function managementIndex(f){
  const names=['bookshelfManagementContent','bookshelfManagementSurface','bookshelfManagementIdentity','bindBookshelfManagement','isCurrentBookshelfManagement','isCurrentRuntime'];
  const pageSource=source('features/bookshelf/BookshelfManagementPage.ets');
  class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
- const i=createReaderBuilderProbe(indexSource,names,{ReaderRuntimeOwner:f.Runtime,BookshelfManagementPage:Child},
+ const i=createReaderBuilderProbe(indexSource,names,{ReaderRuntimeOwner:f.Runtime,BookshelfManagementPage:Child,resolveReaderCardSpec:compileCardSpecs()},
   {childSources:{BookshelfManagementPage:pageSource,PageBackBar:source('features/common/PageBackBar.ets')}}).owner;
  Object.assign(i,{route:'bookshelfManagement',navigationGeneration:1,detailShelfAdmissionMount:1,mountedRuntimeOwner:f.r,shelfReceiptRetired:false,
   rssInstanceIdentity:Math.random(),bookshelfManagementPresentationIdentity:''});
  f.attach(i);i.bindBookshelfManagement();let back=0;i.returnToBookshelf=()=>back++;
  const owner=i.bookshelfHost.managementOrchestrator;
+ sdk.hooks.eagerChildren=false;let PageComponent;
  const actualPage=()=>{
   i.bookshelfManagementContent();const props=[...i.children.values()].at(-1).params;
-  const page=sdk.consumer(pageSource,boundedMembers(pageSource),{EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:i.bookshelfManagementSnapshot,readerRecoveryView,InputType:{Number:1}},props);
-  const toasts=[];page.getUIContext=()=>({getPromptAction:()=>({showToast(){}})});
+  let page;
+  if(PageComponent===undefined){page=sdk.consumer(pageSource,boundedMembers(pageSource),{EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:i.bookshelfManagementSnapshot,readerRecoveryView,InputType:{Number:1},resolveReaderCardSpec:compileCardSpecs()},props);PageComponent=page.constructor;}
+  else page=new PageComponent(undefined,{...props});
+  const toasts=[];page.getUIContext=()=>({getFont:()=>({})});
   page.transientFeedback={show(_context,options){toasts.push(options.message);return true;}};
-  page.onSnapshotChanged();page.groupEditorCard();page.pendingOverlay();
+  page.aboutToAppear();page.groupEditorCard();page.pendingOverlay();
   return{page,props,toasts,save:nativeAction(page,'创建')};
  };
  return{i,owner,actualPage,back:()=>back,open:async()=>{i.bookshelfHost.openManagement(i.bookshelfManagementPresentationIdentity);await owner.operationTail;}};
@@ -129,7 +141,7 @@ function managementIndex(f){
 {
  const f=await fixture(),x=managementIndex(f);await x.open();const p=x.actualPage();p.props.onGroupNameChanged('truth');f.r.readFailure='book-group.list';p.save.onClick();await x.owner.operationTail;
  assert.equal(x.i.bookshelfManagementSnapshot.receipt.receipt.fact,'confirmedRefreshFailed');
- const actual=x.actualPage();assert.equal(nativeAction(actual.page,'核对操作结果'),undefined,'known saved/read failure stays Toast');assert.match(actual.toasts[0],/保存|刷新/);
+ const actual=x.actualPage();assert.equal(nativeAction(actual.page,'核对操作结果'),undefined,'known saved/read failure stays shared transient feedback');assert.match(actual.toasts[0],/保存|刷新/);
  actual.props.onReconcile(x.i.bookshelfManagementSnapshot.receipt.facts.generation);await x.owner.operationTail;
  assert.equal(f.writes().length,1);assert.equal(x.i.bookshelfManagementSnapshot.receipt.receipt.fact,'confirmedCurrent');cases++;
 }

@@ -89,7 +89,7 @@ const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplac
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('actual editor has distinct back and fixed bottom save/cancel outside scrolling fields',()=>{
-  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','originalRecoveryAction','textAction','editorFields','editorText','editorFlag','previewContent',
+  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','originalRecoveryNotice','textAction','editorFields','editorText','editorFlag','previewContent',
     ...(source.includes('private editorActions(')?['editorActions']:[])];
   const composition=boundedSurfaceSdk(),owner=composition.consumer(source,members);
   Object.assign(owner,{layer:'editor',draft:state.createReaderControlReplaceDraft(),state:ready(),appThemeScheme:'night',
@@ -147,6 +147,7 @@ const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, registerHooks } = await import('node:module');
+const { stripTypeScriptTypes } = await import('node:module');
 const { loadReaderTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
@@ -156,6 +157,11 @@ const { readerAppColor } = await import('../entry/src/main/ets/features/common/R
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const gatewaySource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts', import.meta.url), 'utf8');
+const errorStart = gatewaySource.indexOf('export class ReaderControlReplaceGatewayError');
+const errorEnd = gatewaySource.indexOf('\n}', errorStart) + 2;
+const ReaderControlReplaceGatewayError = new Function(
+  `${stripTypeScriptTypes(gatewaySource.slice(errorStart, errorEnd)).replace(/^export /gm, '')};return ReaderControlReplaceGatewayError;`)();
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
 const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
@@ -166,12 +172,16 @@ const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplac
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss',async()=>{
-  const Host=productionMotionMethods(file,['saveEditor','cancelTemporaryLayer','perform','dismissTemporaryLayer'],{errorMessageOf:e=>e.message});
-  let writes=0,fail=true,resolve;
+  const Host=productionMotionMethods(file,['saveEditor','cancelTemporaryLayer','perform','showOperationFailure','dismissTemporaryLayer'],
+    {ReaderControlReplaceGatewayError,errorMessageOf:e=>e.message});
+  let writes=0,fail=true,resolve;const feedback=[];
   const owner=Object.assign(new Host(),{layer:'editor',state:ready(),draft:state.createReaderControlReplaceDraft(),localPending:false,
     localError:'',interactionEnabled:true,presentationRevision:0,fullInput:()=>true,readyInput:()=>true,
+    transientFeedback:{show(_context,payload){feedback.push(payload);},reset(){}},
     onTemporaryLayerChange(){},onSave:async()=>{writes++;if(fail)throw Error('validation failed');}});
-  const draft=owner.draft;await owner.saveEditor();assert.equal(owner.layer,'editor');assert.equal(owner.draft,draft);assert.equal(owner.localError,'validation failed');
+  const draft=owner.draft;await owner.saveEditor();assert.equal(owner.layer,'editor');assert.equal(owner.draft,draft);
+  assert.equal(owner.localError,'','ordinary failures use shared short feedback, not the field error slot');
+  assert.equal(feedback.at(-1)?.message,'替换规则操作未完成，请重试');
   fail=false;await owner.saveEditor();assert.equal(owner.layer,'');assert.equal(writes,2);
   owner.layer='editor';owner.cancelTemporaryLayer();assert.equal(owner.layer,'');assert.equal(writes,2);
   owner.layer='editor';owner.onSave=()=>new Promise(r=>{resolve=r;});const task=owner.saveEditor();
@@ -242,6 +252,7 @@ const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_I
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
+const {compileCardSpecs}=await import('./lib/reader-card-probe.mjs');
 await (async (_label,fn)=>await fn())('actual standalone settings Add action has no inherited reading scope',()=>{
   const settingsSource=readFileSync(new URL('../entry/src/main/ets/features/settings/RulesManagementPage.ets',import.meta.url),'utf8');
   const sdk=resolveEtsLoaderRoot();
@@ -251,7 +262,8 @@ await (async (_label,fn)=>await fn())('actual standalone settings Add action has
   syntax.propCollection.set('ReaderToggle',new Set([...toggleSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class NativeChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   const foundation=foundationControls();
-  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{...foundation.dependencies,ReaderToggle:NativeChild,...rulesTypography},foundation.hooks);
+  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],
+    {...foundation.dependencies,ReaderToggle:NativeChild,resolveReaderCardSpec:compileCardSpecs(),...rulesTypography},foundation.hooks);
   let saved;
   Object.assign(owner,{appThemeScheme:'day',snapshot:{replaceRules:[],busy:false},replaceId:-1,replaceName:'独立规则',
     replacePattern:'原文',replaceValue:'替换',replaceEnabled:true,replaceRegex:false,replaceOrder:'0',onSaveReplace:draft=>{saved=draft;},

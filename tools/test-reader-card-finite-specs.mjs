@@ -75,7 +75,7 @@ async function cardCase(selectedCase) {
   const read = file => readFileSync(file, 'utf8');
   const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/CategorySection.ets',sync='entry/src/main/ets/features/sync/SyncPage.ets';
   const historical = selectedCase === 'historical-migration';
-  let golden, before;
+  let golden, before, physicalSuccessor;
   if (historical) {
     golden = JSON.parse(read('tools/fixtures/reader-card-ui-baseline.json'));
     for (const entry of Object.values(golden.sources)) assert.equal(createHash('sha256').update(entry.source).digest('hex'), entry.sha256, 'historical source identity');
@@ -87,6 +87,19 @@ assert.equal(layout.schema,1);assert.equal(layout.page,sync);
 assert.equal(layout.previousFixture,'tools/fixtures/reader-card-ui-baseline.json');
 assert.equal(digest(read(layout.previousFixture)),layout.previousFixtureSha256,'layout successor cannot rewrite the frozen Card/body witness');
 assert.equal(golden.sources[sync].sha256,layout.previousPageSha256);
+const bodySuccessor=JSON.parse(read('tools/fixtures/reader-card-sync-body-successor-20261120.json'));
+assert.equal(bodySuccessor.schema,1);assert.equal(bodySuccessor.page,sync);
+assert.equal(bodySuccessor.previousFixture,'tools/fixtures/reader-card-page-layout-successor-20261014.json');
+assert.equal(bodySuccessor.previousPageSha256,layout.previousPageSha256);
+assert.deepEqual(bodySuccessor.successorCommits,['fce869a1','1dea9328']);
+assert.deepEqual(bodySuccessor.removedMethods,['expandRow']);
+physicalSuccessor=JSON.parse(read('tools/fixtures/reader-card-physical-successor-20261120.json'));
+assert.equal(physicalSuccessor.schema,1);assert.equal(physicalSuccessor.component,common+'ReaderCard.ets');
+assert.equal(physicalSuccessor.previousFixture,'tools/fixtures/reader-card-ui-baseline.json');
+assert.equal(digest(read(physicalSuccessor.previousFixture)),physicalSuccessor.previousFixtureSha256,'physical successor cannot rewrite the frozen Card witness');
+assert.equal(digest(read(common+'ReaderCardSpecs.ets')),physicalSuccessor.currentSpecSourceSha256,'physical successor binds the exact current finite Card specs');
+assert.deepEqual(physicalSuccessor.successorCommits,['fce869a1']);
+assert.deepEqual(Object.keys(physicalSuccessor.methodSpecs).sort(),['autoBackupSection','build','emptyState','historyRow','manualActionsSection','webdavSection']);
 assert.deepEqual(layout.previousLayoutMethods,['build','contentFrame','bottomContentInset']);
 assert.deepEqual(Object.keys(layout.currentLayoutMethods),['build','pageContent','contentFrame']);
 assert.deepEqual([layout.host,layout.variant,layout.slots],['ReaderStandardPage','sync',{header:'backBar',content:'pageContent'}]);
@@ -125,9 +138,21 @@ function bodiesWithoutCardInputs(source){
  const normalized=parse(source),owner=normalized.statements.find(ts.isStructDeclaration),printer=ts.createPrinter({removeComments:true});
  return Object.fromEntries(owner.members.filter(ts.isMethodDeclaration).map(member=>[member.name.getText(normalized),printer.printNode(ts.EmitHint.Unspecified,member,normalized)]));
 }
+function verifyBodySuccessor(source){
+ const {tree,owner}=sdkOwner(source),printer=ts.createPrinter({removeComments:true});
+ const method=name=>{const node=owner.members.find(member=>ts.isMethodDeclaration(member)&&member.name.getText(tree)===name);assert.ok(node,'successor method present: '+name);return node;};
+ for(const[name,sha]of Object.entries(bodySuccessor.successorMethods))assert.equal(digest(printer.printNode(ts.EmitHint.Unspecified,method(name),tree)),sha,'exact registered body successor: '+name);
+ for(const name of bodySuccessor.removedMethods)assert.equal(owner.members.some(member=>ts.isMethodDeclaration(member)&&member.name.getText(tree)===name),false,'successor method remains removed: '+name);
+}
 function compareBodies(file,source=read(file)){
  const actual=bodiesWithoutCardInputs(source),expected=bodiesWithoutCardInputs(golden.sources[file].source);
- if(file===sync){proveSyncLayout(source);for(const name of Object.keys(layout.currentLayoutMethods))delete actual[name];for(const name of layout.previousLayoutMethods)delete expected[name];}
+ if(file===sync){
+  proveSyncLayout(source);verifyBodySuccessor(source);
+  for(const name of Object.keys(layout.currentLayoutMethods))delete actual[name];
+  for(const name of layout.previousLayoutMethods)delete expected[name];
+  for(const name of Object.keys(bodySuccessor.successorMethods)){delete actual[name];delete expected[name];}
+  for(const name of bodySuccessor.removedMethods)delete expected[name];
+ }
  assert.deepEqual(actual,expected,'all actual body/state/callback methods unchanged except finite Card inputs and one proved layout successor: '+file);
 }
 for(const file of[category,sync])compareBodies(file);
@@ -136,6 +161,7 @@ for(const file of[category,sync])compareBodies(file);
 for(const[from,to]of[["variant: 'sync'","variant: 'settings'"],['this.pageContent();','this.webdavSection();'],['this.autoBackupSection();','']]){
  const changed=read(sync).replace(from,to);assert.notEqual(changed,read(sync));assert.throws(()=>compareBodies(sync,changed));
 }
+assert.throws(()=>compareBodies(sync,read(sync).replace("titleColor: readerAppColor('app.text.syncHeading', this.appThemeScheme)","titleColor: readerAppColor('TOK_INK', this.appThemeScheme)")),/exact registered body successor/);
 assert.throws(()=>compareBodies(sync,read(sync).replace("return this.snapshot.facts?.canMutate ?? true;","return true;")),'unchanged body and callback contract is still strict');
 
 
@@ -179,23 +205,71 @@ function parent({legacy=false,method='build',scheme='day',width=352,specSource=o
  return {shared,owner,card,outer:()=>shared.outer(card),contentCalls:()=>contentCalls,backupCalls:()=>backupCalls};
 }
 const physical=node=>Object.fromEntries(['width','constraintSize','backgroundColor','border','borderRadius'].map(key=>[key,node[key]]));
+const successorSentinel='<declared-physical-successor>';
+function normalizeSuccessorPhysical(tuple,changedFields){
+ const normalized=structuredClone(tuple);
+ if(changedFields.includes('backgroundColor'))normalized.backgroundColor=successorSentinel;
+ if(changedFields.includes('border.color'))normalized.border.color=successorSentinel;
+ if(changedFields.includes('borderRadius'))normalized.borderRadius=successorSentinel;
+ return normalized;
+}
+function nativeCardCalls(probe){
+ const id=probe.outer().id;
+ return structuredClone(probe.card.attributeCalls.filter(call=>call.id===id).map(({property,args})=>({property,args})));
+}
+function normalizeSuccessorCalls(calls,changedFields){
+ for(const call of calls){
+  if(call.property==='backgroundColor'&&changedFields.includes('backgroundColor'))call.args=[successorSentinel];
+  if(call.property==='border'&&changedFields.includes('border.color'))
+   call.args=call.args.map(value=>value&&typeof value==='object'?{...value,color:successorSentinel}:value);
+  if(call.property==='borderRadius'&&changedFields.includes('borderRadius'))call.args=[successorSentinel];
+ }
+ return calls;
+}
 
 if (historical) {
 let comparisons=0;
 const metadataBeforeComparisons=readerBuilderChildPropertyCacheStats();
 for(const method of ['build',...methods])for(const scheme of ['day','night'])for(const width of [0,152,352,800]){
  const old=parent({legacy:true,method,scheme,width}),current=parent({method,scheme,width});
- assert.deepEqual(physical(current.outer()),physical(old.outer()),`${method}/${scheme}/${width} exact original native Card tuple`);
- assert.deepEqual(current.card.attributeCalls.filter(call=>call.id===current.outer().id).map(({property,args})=>({property,args})),old.card.attributeCalls.filter(call=>call.id===old.outer().id).map(({property,args})=>({property,args})),`${method}/${scheme}/${width} exact native attribute calls, including omission presence`);
+ const specId=physicalSuccessor.methodSpecs[method],successor=physicalSuccessor.specs[specId];
+ assert.ok(successor,'finite Card successor registered: '+specId);
+ assert.equal(current.card.specId,specId,'consumer resolves its finite Card spec');
+ const spec=current.shared.resolveReaderCardSpec(specId);
+ assert.deepEqual({backgroundRole:spec.backgroundRole,borderRole:spec.borderRole,radius:spec.radius},
+  {backgroundRole:successor.current.backgroundRole,borderRole:successor.current.borderRole,radius:successor.current.radius},
+  'current spec matches the committed finite successor');
+ const currentPhysical=physical(current.outer()),oldPhysical=physical(old.outer());
+ assert.deepEqual(currentPhysical,{
+  width:width>0?width:'100%',
+  constraintSize:{maxWidth:readerFoundationTokens.TOK_CONTENT_MAX_W_TABLET},
+  backgroundColor:readerAppColor(successor.current.backgroundRole,scheme),
+  border:{width:readerFoundationTokens.TOK_BORDER_W,color:readerAppColor(successor.current.borderRole,scheme)},
+  borderRadius:successor.current.radius,
+ },`${method}/${scheme}/${width} current Card has the complete finite native tuple`);
+ assert.deepEqual(normalizeSuccessorPhysical(currentPhysical,successor.changedPhysicalFields),
+  normalizeSuccessorPhysical(oldPhysical,successor.changedPhysicalFields),
+  `${method}/${scheme}/${width} physical differences stay within the declared successor`);
+ const currentCalls=nativeCardCalls(current),oldCalls=nativeCardCalls(old);
+ assert.deepEqual(normalizeSuccessorCalls(currentCalls,successor.changedPhysicalFields),
+  normalizeSuccessorCalls(oldCalls,successor.changedPhysicalFields),
+  `${method}/${scheme}/${width} complete native attribute sequence differs only at declared successor fields`);
+ for(const field of successor.changedPhysicalFields){
+  if(field==='backgroundColor')assert.notEqual(currentPhysical.backgroundColor,oldPhysical.backgroundColor,`${method}/${scheme}/${width} declared background successor is observable`);
+  if(field==='border.color')assert.notEqual(currentPhysical.border.color,oldPhysical.border.color,`${method}/${scheme}/${width} declared border successor is observable`);
+  if(field==='borderRadius')assert.notEqual(currentPhysical.borderRadius,oldPhysical.borderRadius,`${method}/${scheme}/${width} declared radius successor is observable`);
+ }
  assert.equal(current.outer().width,width>0?width:'100%');
  assert.equal(current.outer().constraintSize.maxWidth,readerFoundationTokens.TOK_CONTENT_MAX_W_TABLET);
  assert.equal(current.outer().border.width,readerFoundationTokens.TOK_BORDER_W);
+ assert.equal(current.contentCalls(),old.contentCalls(),'Builder slot execution count is unchanged');
  if(method==='build'){
-  assert.equal(current.contentCalls(),1);assert.equal(old.contentCalls(),1,'actual original Builder slot');
+  assert.equal(current.contentCalls(),1,'actual original Builder slot');
   const label=current.shared.nodes(current.owner).find(n=>n.type==='Text'&&n.create==='真实分类标题');assert.ok(label,'real section heading remains mounted');
  }
  comparisons++;
 }
+assert.equal(comparisons,48,'six real consumer sites by two schemes and four width inputs');
 assert.ok(readerBuilderChildPropertyCacheStats().hits>metadataBeforeComparisons.hits,'real Card comparisons reuse identical child metadata');
 assert.ok(readerBuilderChildPropertyCacheStats().entries<=256,'child metadata storage stays bounded');
 

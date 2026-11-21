@@ -100,6 +100,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     readerWidthClassWithHint: (width, hint) => hint === true || width >= 600 ? 'expanded' : 'compact',
     readerActionIcon: (kind, scheme) => `resource:${kind}:${scheme === 'night' ? 'night' : 'day'}`,
     motionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
+    readerMotionNowMs: () => 0,
     FrameCallback: class { onFrame() {} cancel() {} },
     ReaderActionAccessibility: class { constructor() {} applyNormalAttribute() {} },
     RemoteReadingGatewayError,
@@ -149,7 +150,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   do {
     expanded = false;
     for (const helper of [...mangaDirectoryAdaptiveMembers, ...mangaMessageHelpers, 'searchContentStartInset', 'searchHeaderLayoutKey', 'directoryCurrentPagePosition', 'directoryCurrentIndex', 'directoryEntries', 'directoryFontScale', 'directoryToolHeight', 'directoryInitialWidth', 'directoryHeaderChrome', 'directoryQuickHeight', 'reopenChangedChapter', 'retryLabel', 'notifyPublishedRows', 'rowRenderKey', 'isPrimaryErrorRow', 'primaryErrorRowKey', 'rowHasError', 'requestedLast', 'performPanelAction', 'closePanel', 'invalidatePanelMotion', 'openPanel', 'dismissPanelKeyboard', 'preparePanelFonts', 'settlePanel', 'panelTravel', 'panelWidth', 'panelHeight', 'widePanel', 'clearMangaSourceSwitchSelection', 'waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'showSourceImportResult', 'refreshCachedChapterFromPrompt', 'showIndexRecoveryNotice', 'clearIndexRecoveryNotice', 'runIndexRecoveryAction', 'runSourceImportSearchAction', 'showReaderRecovery', 'readerRecoveryOwnerKey', 'settleReaderRecovery', 'setReaderPreferenceNotice', 'settleReaderPreferenceNotice', 'persistReaderSettingsSnapshot', 'reconcileReaderRecovery', 'handoffExitProgress', 'releasePageTurnRecoveryInput', 'isMountedToken', 'isSelectionCurrent', 'admitRetainedReadingRecency', 'isVisiblePageCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'prepareChapterMeasurementProjection', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey', 'traceBoundary', 'tracePosition', 'readingFailureActions', 'pageGeometry', 'expandedLayout',
-    'clearShelfNavigationMotion', 'sourceManagementInitialFilters', 'shelfHeaderClearance']) {    if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
+    'clearShelfNavigationMotion', 'sourceManagementInitialFilters', 'shelfHeaderClearance', 'traceShelfMotion']) {    if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       (capturedOwnerFields.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
   } while (expanded);
@@ -195,8 +196,10 @@ if (names.includes('traceBoundary')) capturedOwnerFields += '\n' + ordinaryField
   const completionFields = type.name?.getText(tree) === 'ReadingExperience' &&
     names.some(name => ['cancelSourceSwitchCompletion', 'finishSourceSwitchReveal'].includes(name))
     ? ['sourceSwitchCompletion', 'sourceSwitchCompletionEpoch', 'sourceSwitchRevealAnimator',
-      'sourceSwitchRevealOpacity', 'sourceSwitchToastTimer', 'sourceSwitchToastText',
-      'sourceSwitchVisualSelectionToken', 'consumedSourceSwitchCompletions']
+      'sourceSwitchRevealOpacity', 'sourceSwitchVisualSelectionToken', 'consumedSourceSwitchCompletions',
+      'sourceSwitchFeedback', 'sourceSwitchPendingCompletionKey', 'sourceSwitchPendingCompletionSelectionToken',
+      'sourceSwitchPendingCompletionLifecycleToken', 'sourceSwitchCompletionVisible',
+      'sourceSwitchPresentedSelectionToken', 'sourceSwitchPresentedContinuous', 'sourceSwitchPresentedRevision']
       .filter(name => !names.includes(name))
       .map(name => {
         const member = type.members.find(m => m.name?.getText(tree) === name);

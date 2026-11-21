@@ -1,10 +1,13 @@
 import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
+import * as headerMetrics from '../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts';
 import * as positioning from '../entry/src/main/ets/features/reading/ReaderControlListPositioning.ts';
 import * as bookmarkProjection from '../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts';
 import * as snapshots from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
@@ -12,6 +15,11 @@ import * as hierarchy from '../entry/src/main/ets/features/reading/ReaderDirecto
 import * as markers from '../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts';
 import * as viewport from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as widthClass from '../entry/src/main/ets/features/common/ReaderWidthClass.ts';
+import * as themeRegistry from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as layoutTokens from '../entry/src/main/ets/features/common/ReaderLayoutTokens.ts';
+import * as searchControlGeometry from '../entry/src/main/ets/features/common/ReaderSearchControlGeometry.ts';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
 import { sampleReaderControlBookmark } from '../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts';
 import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
@@ -22,8 +30,33 @@ registerHooks({ resolve(specifier, context, next) {
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(specifier + '.ts', context); throw error; }
 } });
 const recovery = await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
-const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const pageGeometry = await import('../entry/src/main/ets/features/common/ReaderPageGeometry.ts');
+const pageShell = await import('../entry/src/main/ets/features/common/ReaderPageShell.ts');
+const surfaceResolvers = await import('../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts');
+const surfaceBudgets = await import('../entry/src/main/ets/features/common/ReaderSurfaceBudgets.ts');
+const horizontalGeometry = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const frameStyle = await import('../entry/src/main/ets/features/common/ReaderFrameStyle.ts');
+const measurements = await import('../entry/src/main/ets/features/common/ReaderMeasurements.ts');
+const mangaDirectoryState = await import('../entry/src/main/ets/features/manga/MangaDirectoryState.ts');
+const mangaDirectoryPresentation = await import('../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts');
+const mangaDirectoryVisual = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const downloadVisual = await import('../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts');
+const layoutGeometry = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { readerWidthClass } = layoutGeometry;
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
+const headerSpecs = pureModuleProbe(read('features/common/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets',
+  { ...readerFoundationTokens, ...headerMetrics }, ['directoryHeaderSpec']);
+const typographySource = read('features/common/ReaderTypography.ets');
+const typography = pureModuleProbe(typographySource, 'ReaderTypography.ets',
+  { ...layoutTokens, ...searchControlGeometry, ...fontFamilies, ...downloadVisual, ...mangaDirectoryVisual },
+  [...new Set([...typographySource.matchAll(/export const ([A-Za-z0-9_]+)/g)].map(match => match[1]))]);
+const accessibility = pureModuleProbe(read('features/common/ReaderActionAccessibility.ets'),
+  'ReaderActionAccessibility.ets', { AccessibilityRoleType: { BUTTON: 'AccessibilityRoleType.BUTTON' } },
+  ['ReaderActionAccessibility', 'readerActionTouchRegion']);
+const tokenRefs = [...new Set(['pages/Index.ets', 'features/reading/ReaderFullDirectory.ets', 'features/reading/FullDirectoryPanel.ets',
+  'features/reading/ReaderDirectoryList.ets', 'features/reading/ReaderDirectoryNavigationSurface.ets', 'features/shell/ReaderShell.ets']
+  .flatMap(file => [...read(file).matchAll(/\bTOK_[A-Z0-9_]+\b/g)].map(match => match[0])))];
+const tokens = Object.fromEntries(tokenRefs.map(name => [name, readerAppColor(name, 'day')]));
 const indexSource = read('pages/Index.ets'), fullSource = read('features/reading/ReaderFullDirectory.ets');
 const panelSource = read('features/reading/FullDirectoryPanel.ets'), listSource = read('features/reading/ReaderDirectoryList.ets');
 const surfaceSource = read('features/reading/ReaderDirectoryNavigationSurface.ets');
@@ -31,13 +64,47 @@ const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript'), options = require(sdk + '/lib/ets_checker.js').compilerOptions;
 const syntax = require(sdk + '/lib/validate_ui_syntax.js');
+function stripStructs(source, fileName) {
+  const tree = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  let text = source;
+  for (const declaration of tree.statements.filter(node => ts.isStructDeclaration(node)).reverse())
+    text = text.slice(0, declaration.getStart(tree)) + text.slice(declaration.end);
+  return text;
+}
+const panelChromeSource = read('features/reading/ReaderPanelChrome.ets');
+const panelChrome = pureModuleProbe(stripStructs(panelChromeSource, 'ReaderPanelChrome.ets'), 'ReaderPanelChrome.ets',
+  { ...themeRegistry, ...typography },
+  [...new Set([...panelChromeSource.matchAll(/export function ([A-Za-z0-9_]+)/g)].map(match => match[1]))]);
 const listTree = ts.createSourceFile('ReaderDirectoryList.ets', listSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const structSources = new Map();
+(function indexStructSources(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) { indexStructSources(new URL(`${entry.name}/`, dir)); continue; }
+    if (!entry.name.endsWith('.ets')) continue;
+    const url = new URL(entry.name, dir), source = readFileSync(url, 'utf8');
+    const tree = ts.createSourceFile(entry.name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    for (const node of tree.statements.filter(ts.isStructDeclaration))
+      if (!structSources.has(node.name.text)) structSources.set(node.name.text, { source, tree, node });
+  }
+})(new URL('../entry/src/main/ets/', import.meta.url));
+function componentStub(name) {
+  const entry = structSources.get(name);
+  if (!entry) return undefined;
+  const fields = new Map();
+  for (const member of entry.node.members.filter(ts.isPropertyDeclaration)) {
+    const prop = member.name.getText(entry.tree);
+    fields.set(prop, member.getText(entry.tree).includes('@BuilderParam')
+      ? `  @BuilderParam ${prop}: () => void = () => {};`
+      : `  @Prop ${prop}: any = undefined;`);
+  }
+  return `@Component\nexport struct ${name} {\n${[...fields.values()].join('\n')}\n  build() { Column() {} }\n}`;
+}
 const dataSource = listTree.statements.find(node => ts.isClassDeclaration(node) && node.name.text === 'DirectoryListDataSource');
 const DirectoryListDataSource = new Function('sameReaderDirectoryData', 'snapshotReaderDirectoryData',
   ts.transpileModule(dataSource.getText(listTree), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText + ';return DirectoryListDataSource;')(
   snapshots.sameReaderDirectoryData, snapshots.snapshotReaderDirectoryData);
 const entries = Array.from({ length: 40 }, (_, ordinal) => ({ index: 17 + ordinal * 9, title: 'Chapter ' + (ordinal + 1), navigable: true }));
-const allOwners = owner => [owner, ...[...(owner.children?.values() ?? [])].filter(child => child.nodes).flatMap(allOwners)];
+const allOwners = owner => [owner, ...[...(owner?.children?.values() ?? [])].filter(child => child?.nodes).flatMap(allOwners)];
 const nodes = owner => allOwners(owner).flatMap(child => [...child.nodes.values()]);
 
 function fixture({ index = indexSource, full = fullSource, panel = panelSource, context = 'detail', current = -1, embedded = false, width = 390, scheme = 'day', safeTop = 0 } = {}) {
@@ -50,7 +117,9 @@ function fixture({ index = indexSource, full = fullSource, panel = panelSource, 
     scrollEdge(edge) { scrolls.push({ edge }); }
   }
   class Port { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-  const dependencies = { ...properties.sdk, ...positioning, ...bookmarkProjection, ...snapshots, ...hierarchy, ...markers, ...viewport, ...metricsApi, ...recovery,
+  const dependencies = { ...properties.sdk, ...layoutGeometry, ...widthClass, ...positioning, ...bookmarkProjection, ...snapshots, ...hierarchy, ...markers, ...viewport,
+    ...metricsApi, ...recovery, ...headerSpecs, ...typography, ...tokens, ...accessibility, ...pageGeometry, ...pageShell, ...surfaceResolvers,
+    ...surfaceBudgets, ...horizontalGeometry, ...frameStyle, ...measurements, ...mangaDirectoryState, ...mangaDirectoryPresentation, ...panelChrome,
     projectReaderDirectoryEntries, sampleReaderControlBookmark, DirectoryListDataSource,
     BOOKMARK_ROW_HEIGHT: Number(read('features/reading/ReaderBookmarkRow.ets').match(/export const BOOKMARK_ROW_HEIGHT = (\d+)/)[1]),
     ChildrenMainSize: class { constructor(height) { this.childDefaultSize = height; } },
@@ -58,18 +127,32 @@ function fixture({ index = indexSource, full = fullSource, panel = panelSource, 
     setTimeout(action) { const timer = { action, cancelled: false }; timers.push(timer); return timer; }, clearTimeout(timer) { if (timer) timer.cancelled = true; },
     LazyForEach: { create() {}, pop() {} }, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
     motionAnimateParam: (_name, onFinish) => ({ duration: 0, onFinish }),
-    uiContext: { getFont: () => ({}), animateTo(options, action) { action(); options.onFinish?.(); } },
+    uiContext: { getFont: () => ({}), postFrameCallback(callback) { callback?.action?.(); },
+      animateTo(options, action) { action(); options.onFinish?.(); } },
     Curve: { Linear: 'Curve.Linear' }, Edge: { Top: 'Edge.Top' }, ScrollSource: { DRAG: 'drag' },
     ReaderSearchField: Port, ReaderBookmarkList: Port, ReaderBookmarkEmptyState: Port, ReaderBookmarkLoadingState: Port, ReaderBookmarkErrorState: Port, ReaderDirectoryNavigationList: Port,
+    ReaderTransientToast: Port,
+    FrameCallback: class {}, ReaderNavigationBackfillFrame: class { constructor(action) { this.action = action; } },
     ReaderDirectoryRecoverySurface: Port, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => false }) },
     readerDirectoryScopeKey, readerWidthClass, deviceInfo: { deviceType: 'phone' }, ReadingExperience: Port, ReaderStatusBarPaper: Port,
   };
+  const stubbedSources = {};
+  for (const match of indexSource.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s*\(/g)) {
+    const name = match[1];
+    if (dependencies[name] !== undefined || ['ReaderPageScaffold', 'ReaderFixedHeaderHost', 'ReaderFullDirectory', 'ReaderShell'].includes(name)) continue;
+    const stub = componentStub(name);
+    if (stub === undefined) continue;
+    dependencies[name] = Port;
+    stubbedSources[name] = stub;
+  }
   const hooks = { ...properties.hooks, mountChildren: true, lifecycleChildren: true, childSources: {
     ReaderFullDirectory: full, FullDirectoryPanel: panel, ReaderDirectoryList: listSource, ReaderDirectoryNavigationSurface: surfaceSource,
     BookDirectoryPage: read('features/bookshelf/BookDirectoryPage.ets'),
     LocalBookDetail: read('features/bookshelf/LocalBookDetail.ets'), BookshelfMultiSelectPage: read('features/bookshelf/BookshelfMultiSelectPage.ets'),
     ReadingExperience: read('features/reading/LocalReadingExperience.ets'), ReaderStatusBarPaper: read('features/reading/ReaderStatusBarPaper.ets'),
     ReaderShell: read('features/shell/ReaderShell.ets'), ReaderLayoutDebugOverlay: read('features/common/ReaderLayoutDebugOverlay.ets'), ArkWebExecutionHost: read('app/ArkWebExecutionHost.ets'),
+    ReaderTransientToast: read('features/common/ReaderTransientToast.ets'),
+    ...stubbedSources,
   } };
   for (const name of ['ReaderSearchField', 'ReaderBookmarkList', 'ReaderBookmarkEmptyState', 'ReaderBookmarkLoadingState', 'ReaderBookmarkErrorState', 'ReaderDirectoryNavigationList', 'ReaderDirectoryRecoverySurface'])
     hooks.childSources[name] = read(`features/${name === 'ReaderSearchField' ? 'common' : 'reading'}/${name}.ets`);
@@ -101,6 +184,8 @@ function fixture({ index = indexSource, full = fullSource, panel = panelSource, 
       readingContentKind: 'text', sourceSwitchState: { kind: 'idle' }, sourceSwitchVisible: false, directoryOpenedFromControl: true,
       readableAdmissions: [], detailShelfAdmissionMount: 1, shelfOperation: { removalKey: '', busy: false, batchRemovalBusy: false },
       remoteContentVerdict: 'readable', remoteContentVerdictLabel: () => '', readerWindowMetricsRevision: 0,
+      indexRecoveryNotice: { message: '', visible: false, canRetry: false, generation: 0 }, indexRecoveryActionLabel: '',
+      indexRecoveryAction: undefined, indexRecoveryCurrent: () => false, indexRecoveryRevision: 0, indexRecoveryTag: '',
       detailBookmarkIdentity: () => ({ sourceId: 'local', bookId: 'catalog-book' }),
       onDirectoryChapterSelected: chapter => effects.push(['chapter', chapter]), closeDirectory: () => effects.push(['close']),
     });
@@ -113,8 +198,12 @@ function fixture({ index = indexSource, full = fullSource, panel = panelSource, 
   assert.ok(nativeList, 'actual Panel flat fallback mounts the actual native List');
   const ancestor = [...panelOwner.nodes.values()].find(node => node.type === 'Stack' && typeof node.enabled === 'boolean' && node.clip === true);
   assert.ok(ancestor, 'actual native List ancestor carries the positioning input fence');
-  const scaffold = allOwners(fullOwner).find(actor => actor.variant === 'directory' || actor.variant === 'readerDirectory');
-  const header = allOwners(scaffold).find(actor => actor.kind === 'floating' && actor.surface !== undefined);
+  const scaffold = allOwners(fullOwner).find(actor => actor?.frameStyle instanceof frameStyle.ReaderFrameStyle &&
+    actor.geometry !== undefined && typeof actor.content === 'function');
+  assert.ok(scaffold, 'actual shared ReaderPageScaffold actor mounts for the directory frame');
+  const header = allOwners(scaffold).find(actor => actor?.style instanceof frameStyle.ReaderHeaderFrameStyle &&
+    typeof actor.content === 'function');
+  assert.ok(header, 'actual ReaderFixedHeaderHost actor mounts inside the shared frame');
   const frame = [...scaffold.nodes.values()].find(node => node.type === 'Stack' && node.padding);
   assert.ok(scaffold && header && frame, 'real common frame and header actors belong to this catalog branch');
   function drain() { for (let count = 0; timers.length; count++) { assert.ok(count < 200, 'actual timers settle'); const timer = timers.shift(); if (!timer.cancelled) timer.action(); properties.flush(); } }
@@ -154,7 +243,7 @@ for (const width of [320, 390, 800]) for (const context of ['detail', 'reader'])
   const f = fixture({ width, context, safeTop: 39 }); f.drain();
   const root = [...f.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding?.top !== undefined);
   const card = nodes(f.full).find(node => node.type === 'Row' && node.height === 54 && node.borderRadius);
-  const cardHost = nodes(f.full).find(node => node.type === 'Row' && node.height === 54 && node.margin?.top !== undefined);
+  const cardHost = [...f.scaffold.nodes.values()].find(node => node.type === 'Column' && node.margin?.top !== undefined && node.zIndex === 10);
   assert.ok(root && card && cardHost, 'actual Index root and Full card paint in the selected route');
   const parentTop = context === 'detail' ? 39 : 0, localTop = context === 'detail' ? 18 : 39;
   assert.equal(root.padding.top, parentTop); assert.equal(cardHost.margin.top, localTop);
@@ -211,9 +300,9 @@ for (const context of ['detail', 'reader']) {
   assert.ok(topBar, 'original 54vp opaque card is the shared header content');
   assert.equal(f.full.fullPanelTop(), f.full.topBarTop() + 54 + 16, 'unmeasured catalog retains its original top/card/list gap');
   const initialHeight = f.full.topBarTop() + 54;
-  actor.onAreaChange({}, { height: initialHeight }); f.properties.flush();
+  actor.onAreaChange({}, { height: 54 }); f.properties.flush();
   assert.equal(f.full.fullPanelTop(), initialHeight + 16);
-  actor.onAreaChange({}, { height: initialHeight }); f.properties.flush();
+  actor.onAreaChange({}, { height: 54 }); f.properties.flush();
   assert.equal(f.full.fullPanelTop(), initialHeight + 16, 'replayed total header height does not accumulate top padding');
   f.metrics.systemInsets.top = 48; f.owner.readerWindowMetricsRevision++; f.full.readerWindowMetricsRevision++; f.properties.flush();
   const indexCanvas = [...f.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding?.top !== undefined);
@@ -221,7 +310,7 @@ for (const context of ['detail', 'reader']) {
   assert.equal(f.header.onHeightChange, stableCallback, 'regular callback member is retained across the actual Prop update');
   if (context === 'reader') {
     oldArea({}, { height: 999 }); f.properties.flush();
-    assert.notEqual(f.full.catalogHeaderHeight, 999, 'old physical Area cannot borrow the new safe-top key');
+    assert.equal(f.full.fullPanelTop(), f.full.topBarTop() + 54 + 16, 'old physical Area cannot borrow the new safe-top key');
     assert.equal(f.full.fullPanelTop(), f.full.topBarTop() + 70, 'changed safe-top uses the original fallback until current measurement');
     assert.notEqual(actor.onAreaChange, oldArea, 'actual retained native observer freezes the new measurement key');
   } else {
@@ -229,14 +318,17 @@ for (const context of ['detail', 'reader']) {
     assert.equal(f.full.fullPanelTop(), initialHeight + 16, 'parent safe-top changes do not add a second local inset');
   }
   actor.onAreaChange({}, { height: '120vp' }); f.properties.flush();
-  assert.equal(f.full.catalogHeaderTop, f.full.topBarTop()); assert.equal(f.full.fullPanelTop(), 136);
+  assert.equal(f.full.fullPanelTop(), f.full.topBarTop() + 120 + 16);
   assert.equal(allOwners(f.full).find(owner => owner === f.panel), f.panel);
   assert.equal(nodes(f.listOwner).find(node => node.type === 'List'), f.nativeList);
   assert.equal(allOwners(f.full).find(owner => owner === f.header), f.header);
   assert.equal(nodes(f.full).find(node => node === topBar), topBar);
   assert.deepEqual(f.scrolls, []); assert.deepEqual(f.effects, []);
   assert.deepEqual(f.frame.expandSafeArea, [[], []]); assert.deepEqual(f.frame.ignoreLayoutSafeArea, [[], []]);
-  f.scaffold.readingUnderlayColor = '#FF314159'; f.properties.flush();
-  assert.equal(f.frame.backgroundColor, context === 'reader' ? '#FF314159' : readerAppColor('app.window.background', 'day'), 'catalog context retains its original window paper owner');
+  const originalFrameStyle = f.scaffold.frameStyle;
+  f.scaffold.frameStyle = new frameStyle.ReaderFrameStyle('#FF314159', true, originalFrameStyle.alignment,
+    originalFrameStyle.safeArea, originalFrameStyle.header, originalFrameStyle.footer);
+  f.properties.flush();
+  assert.equal(f.frame.backgroundColor, '#FF314159', 'catalog frame consumes the current shared frame style');
 }
 console.log('PASS actual text detail Index→Full→Scaffold/Header→Panel→native List: standalone unknown browse, embedded/reader wait, sparse known positioning/retirement, retained actors, safe-top physical Area key fencing, paper context and four admission controls. Native gestures/layout/pixels and device acceptance remain separate.');

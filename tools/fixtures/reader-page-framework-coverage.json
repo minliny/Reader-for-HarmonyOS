@@ -193,7 +193,7 @@
       "component": "features/bookshelf/BookshelfNavigationTransition.ets#BookshelfNavigationTransition",
       "kind": "transition",
       "reason": "Retained cover transition overlays pages without owning their frame.",
-      "contract": "tools/test-book-cover-handoff.mjs"
+      "contract": "tools/test-book-opening-timeline.mjs"
     },
     {
       "component": "features/search/ReaderLibrarySearchSurface.ets#ReaderLibrarySearchSurface",

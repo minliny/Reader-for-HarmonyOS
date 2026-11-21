@@ -20,10 +20,12 @@ const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=n
 const props=o=>({state:o.state,batch:o.batch,reduceMotion:o.reduceMotion,failureMessage:o.failureMessage,originalPending:o.originalPending,recovery:o.recovery,selectionEnabled:o.selectionEnabled,selectionBlockedMessage:o.selectionBlockedMessage});
 function mount(params={},options={},input=source,viewportHeight=0){
   const p=boundedSurfaceSdk(options),animations=[],feedback=[];let now=0;
+  class Feedback{show(_context,options,isCurrent){if(!isCurrent()||!options.message)return false;feedback.push(options.message);return true;}reset(){}}
   const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,localImportResultLayout,
     ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},readerMotionNowMs:()=>now,
+    ReaderTransientFeedback:Feedback,
     BorderStyle:{Dashed:'BorderStyle.Dashed'},Curve:{Linear:'Curve.Linear'},curves:{cubicBezierCurve:(...values)=>values},
-    uiContext:{animateTo:(options,work)=>{animations.push(options);work();},getPromptAction:()=>({showToast:({message})=>feedback.push(message)})}}, {state:'fileSelection',reduceMotion:true,...params});
+    uiContext:{animateTo:(options,work)=>{animations.push(options);work();}}}, {state:'fileSelection',reduceMotion:true,...params});
   o.viewportHeight=viewportHeight;o.aboutToAppear();o.initialRender();return{p,o,animations,feedback,clock:n=>now=n};
 }
 if(selectedCase==='picker-admission') {

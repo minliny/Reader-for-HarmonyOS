@@ -11,20 +11,23 @@ const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const { admitBookshelfSdkCarrier } = await import('./lib/bookshelf-projection-owner-probe.mjs');
 const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 const geometryApi = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
-const { readerFloatingTabBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
+const { readerFloatingTabBottomInset, readerFloatingTabBarHeight, readerMainTabItemHeight } =
+  await import('./lib/reader-floating-bar-metrics-probe.mjs');
 
 
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
 const bookshelf = read('features/bookshelf/BookshelfPage.ets'), shellText = read('features/bookshelf/BookshelfShell.ets');
 const mainText = read('features/shell/MainTabShell.ets'), barText = read('features/shell/MainTabBar.ets');
+const navigationSpecText = read('features/shell/MainNavigationSpec.ts');
 const expectedItems = [
-  ['bookshelf_library', '书架', 'bookshelf', true],
-  ['bookshelf_compass', '发现', 'discover', false],
-  ['bookshelf_rss', 'RSS', 'rss', false],
-  ['bookshelf_settings', '设置', 'settings', false],
+  ['bookshelf_library_active', '书架', 'bookshelf', true],
+  ['bookshelf_compass_outline', '发现', 'discover', false],
+  ['bookshelf_rss_outline', 'RSS', 'rss', false],
+  ['bookshelf_settings_outline', '设置', 'settings', false],
 ];
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
@@ -36,23 +39,40 @@ createRequire(import.meta.url)(sdkRoot+'/lib/validate_ui_syntax.js').builderPara
 const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
 Object.assign(sdk.childSources, { MainTabShell: mainSource, MainTabBar: barText, BookshelfShell: shellText, BookshelfMoreMenu: read('features/bookshelf/BookshelfMoreMenu.ets') });
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+const raisedSurfaceSource = read('features/common/ReaderRaisedSurface.ets');
+sdk.childSources.ReaderRaisedSurface = raisedSurfaceSource;
+const requireSdk = createRequire(import.meta.url);
+const syntaxSdk = requireSdk(resolveEtsLoaderRoot() + '/lib/validate_ui_syntax.js');
+syntaxSdk.componentCollection.customComponents.add('ReaderRaisedSurface');
+syntaxSdk.propCollection.set('ReaderRaisedSurface', new Set(
+  [...raisedSurfaceSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
 const metrics = () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0, 0, 1280, 800));
 // The existing extended-admission seam exercises all four configured routes.
 // It does not enable deferred tabs in the shipping product profile.
-const configuration = barText.match(/const ALL_MAIN_TABS:[\s\S]*?;\s*export const MAIN_TABS:[\s\S]*?;/)[0];
+const configuration = navigationSpecText.match(/const ALL_MAIN_TABS:[\s\S]*?;\s*export const MAIN_TABS:[\s\S]*?;/)[0];
 const MAIN_TABS = new Function('isReaderMainTabEnabled', stripTypeScriptTypes(configuration).replace(/\bexport /g, '') + ';return MAIN_TABS;')(() => true);
-const platform = { ...sdk.deps, ...metricsApi, ...geometryApi, ReaderWindowCoordinator: { metrics }, MAIN_TABS,
-  readerFloatingTabBottomInset, registerReaderShelfFonts() {}, bookshelfTemporaryGeneration: 0,
-  BOOKSHELF_WIDE_BREAKPOINT: Number(shellText.match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]) };
+const actualNavigation = pureModuleProbe(navigationSpecText, 'MainNavigationSpec.ts', {
+  readerMainTabItemHeight, READER_EXPANDED_MIN_WIDTH: 600,
+  readerInteractiveSafeBottom: metricsApi.readerInteractiveSafeBottom,
+  readerInteractiveSafeLeft: metricsApi.readerInteractiveSafeLeft,
+  readerInteractiveSafeRight: metricsApi.readerInteractiveSafeRight,
+  readerVisualSafeTop: metricsApi.readerVisualSafeTop,
+  isReaderMainTabEnabled: () => true, ReaderWindowCoordinator: { metrics },
+  AppStorage: { get: () => undefined },
+}, ['readerMainNavigationMode', 'readerMainViewport', 'readerMainRailLeft', 'readerMainRailTop',
+  'readerMainRailLeading', 'readerMainRailBottomInset', 'readerMainRailContentLeft', 'readerMainRailContentRight',
+  'mainTabBottomWidth', 'mainTabRailHeight']);
+const platform = { ...sdk.deps, ...metricsApi, ...geometryApi, ...actualNavigation,
+  ReaderWindowCoordinator: { metrics }, MAIN_TABS,
+  readerFloatingTabBottomInset, readerFloatingTabBarHeight, readerMainTabItemHeight,
+  registerReaderShelfFonts() {}, bookshelfTemporaryGeneration: 0, ReaderRaisedSurface: Child };
 const Bar = createReaderBuilderProbe(barText, boundedMembers(barText), platform, sdk.hooks).Component;
 const Main = createReaderBuilderProbe(mainSource, boundedMembers(mainSource), { ...platform, MainTabBar: Bar }, sdk.hooks).Component;
-const shellNames = ['build', 'shellHeader', 'shellOverlay', 'content', 'headerHeight', 'onHeaderHeightChange', 'showBottomNav', 'numericAreaLength',
-  'recovery', 'onRecoveryChanged', 'onReadRecoveryChanged', 'onNoticeHeightChange', 'noticeHeight', 'lastReadFeedback', 'readRecovery', 'populated', 'reduceMotion', 'onMainTab', 'mounted', 'navigationGeneration', 'onNavigationGenerationChanged', 'registerTemporaryBackGeneration', 'onTemporaryBackBridge',
-  'temporaryBackGeneration', 'temporaryBackIdentity', 'moreMenuVisible', 'moreSelectionId', 'dismissMoreMenu', 'requestMainTab'];
+const shellNames = boundedMembers(shellText);
 const Shell = createReaderBuilderProbe(shellText, shellNames, { ...platform, MainTabShell: Main, BookshelfMoreMenu: Child }, sdk.hooks).Component;
 const Parent = createReaderBuilderProbe(read('pages/Index.ets'), ['bookshelfShellContent'], { BookshelfShell: Child },
   { childSources: { BookshelfShell: shellText } }).Component;
-const parent = new Parent(), firstRuntime = {}; let installedRuntime = firstRuntime;
+const parent = new Parent(undefined, {}), firstRuntime = {}; let installedRuntime = firstRuntime;
 const calls = [], emptyRecovery = () => ({ visible: false, canRetry: false, message: '', generation: 0 });
 function initializeParent(owner, runtime) {
 Object.assign(owner, { isBookshelfVisualAdmitted: true, shelfRecovery: emptyRecovery, shelfReadRecovery: emptyRecovery,
@@ -65,11 +85,12 @@ for (const [key, method] of [['discover', 'openDiscover'], ['rss', 'openRss'], [
 initializeParent(parent, firstRuntime);
 const currentProps = () => { parent.bookshelfShellContent(); return [...parent.children.values()].at(-1).params; };
 const firstProps=currentProps(),shell = new Shell(undefined, firstProps);
-Object.assign(shell, firstProps, { mounted: true, topBar() {}, content() {} }); shell.initialRender();
+Object.assign(shell, firstProps, { mounted: true, content() {} }); shell.initialRender();
 const main = sdk.walk(shell).find(owner => owner instanceof Main); main.aboutToAppear();
 const nav = sdk.walk(shell).find(owner => owner instanceof Bar);
 assert.ok(nav, 'real BookshelfShell -> MainTabShell -> Scaffold mounts the actual shared navigation actor');
-assert.equal(nav.vertical, true); assert.equal(nav.railVariant, 'bookshelf');
+assert.equal(nav.vertical ?? nav.params?.vertical, false);
+assert.equal(nav.current ?? nav.params?.current, 'bookshelf');
 assert.ok(sdk.nodes(shell).some(node => node.type === 'Stack' && node.backgroundColor), 'actual shared scaffold owns the full page');
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 const actions = new Map();
@@ -104,10 +125,10 @@ assert.deepEqual(calls, [['discover', 1], ['rss', 2]], 'unmounted public navigat
 // creates a fresh Shell/Main/Bar binding rather than making it borrow Runtime.
 installedRuntime = {}; main.aboutToAppear(); settings();
 assert.deepEqual(calls, [['discover', 1], ['rss', 2]], 'an old captured Runtime cannot dispatch into its replacement');
-const successor = new Parent(); initializeParent(successor, installedRuntime);
+const successor = new Parent(undefined, {}); initializeParent(successor, installedRuntime);
 Object.assign(successor, { navigationGeneration: 3, detailShelfAdmissionMount: 2 }); successor.bookshelfShellContent();
 const successorProps=[...successor.children.values()].at(-1).params, successorShell = new Shell(undefined, successorProps);
-Object.assign(successorShell, successorProps, { mounted: true, topBar() {}, content() {} }); successorShell.initialRender();
+Object.assign(successorShell, successorProps, { mounted: true, content() {} }); successorShell.initialRender();
 const successorMain=sdk.walk(successorShell).find(owner=>owner instanceof Main); successorMain.aboutToAppear();
 const successorBar=sdk.walk(successorShell).find(owner=>owner instanceof Bar);
 sdk.nodes(successorBar).find(node=>node.type==='Column'&&node.accessibilityText==='设置').onClick();

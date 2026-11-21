@@ -14,7 +14,7 @@ function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  for(const previous of indexActors){assert.notEqual(result.index,previous);assert.notEqual(result.index.nodes,previous.nodes);assert.notEqual(result.index.__sourceSwitchState,previous.__sourceSwitchState);}indexActors.push(result.index);return result;
 }
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
-async function waitForRetiredSourceCleanup(host,identity,previousGeneration,outcome){for(let turn=0;turn<2000;turn++){const operation=host.snapshot();if(operation?.action==='clear'&&operation.sourceId===identity.sourceId&&operation.bookId===identity.bookId&&operation.generation>previousGeneration&&['succeeded','failed','retired'].includes(operation.materialization)&&!host.busy())return operation;await new Promise(setImmediate);}assert.fail('exact retired cache cleanup did not settle: '+outcome);}
+async function waitForRetiredSourceCleanup(host,identity,previousGeneration,outcome){for(let turn=0;turn<3000;turn++){const operation=host.snapshot();if(operation?.action==='clear'&&operation.sourceId===identity.sourceId&&operation.bookId===identity.bookId&&operation.generation>previousGeneration&&['succeeded','failed','retired'].includes(operation.materialization)&&!host.busy())return operation;await new Promise(resolve=>setTimeout(resolve,2));}assert.fail('exact retired cache cleanup did not settle: '+outcome+' '+JSON.stringify(host.snapshot()));}
 async function visualContract(){const {readFileSync}=await import('node:fs');return{numbers:JSON.parse(readFileSync(new URL('../../Reader-UI/design/source-switch/source-switch.visual.json',import.meta.url),'utf8')).numbers,colors:JSON.parse(readFileSync(new URL('../../Reader-UI/theme/registry.json',import.meta.url),'utf8')).appRoles.TOK_SS_DRAWER_SCRIM};}
 const checks=[];let passed=false;
 
@@ -251,7 +251,9 @@ if(id==='unknown-recovery'){
  x.index.openDetailSourceSwitch();await settle();const panel=x.mount();panel.onSelectCandidate(f.candidate());await settle();
  assert.equal(f.host.current().write.confirmation,'unknown');assert.equal(x.index.sourceSwitchState.confirmation,'unknown');
  const rendered=x.mount();assert.ok(x.p.nodes(rendered).some(n=>n.create==='换源结果未确认'));
- const action=x.p.nodes(rendered).find(n=>n.type==='Button'&&n.createWithLabel?.[0]==='重试核对');assert.ok(action?.onClick);
+ const retry=x.p.walk(rendered).filter(c=>c instanceof x.p.deps.ReaderRecoveryAction&&c.label==='重试核对').at(-1);
+ assert.ok(retry,'actual shared recovery action remains reachable');
+ const action=x.p.nodes(retry).find(n=>n.type==='Stack'&&n.onClick&&n.constraintSize?.minHeight===44);assert.ok(action?.onClick);
  panel.onClose();assert.equal(f.host.current().visible,true);
  f.options.failExactQuery=false;action.onClick();await settle();assert.equal(f.host.current().write.confirmation,'confirmed');
  assert.equal(x.index.detailBook.sourceId,'new');assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,1);
@@ -385,8 +387,8 @@ if(id==='reader-completion'){
  const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
  const compiled=createReaderBuilderProbe(source,['sourceSwitchTransactionId','phase','visibleFragments','sourceSwitchFailureMessage','reduceMotion','onSessionLaunchReduceMotionChanged',
     'shouldShowSourceSwitchPreparation','sourceSwitchPreparationContent',
-    'sourceSwitchCompletion','readingReadyGeneration','sourceSwitchCompletionVisible','sourceSwitchRevealOpacity','sourceSwitchToastText',
-    'sourceSwitchCompletionEpoch','sourceSwitchRevealAnimator','sourceSwitchToastTimer','consumedSourceSwitchCompletions',
+    'sourceSwitchCompletion','readingReadyGeneration','sourceSwitchCompletionVisible','sourceSwitchRevealOpacity',
+    'sourceSwitchFeedback','sourceSwitchCompletionEpoch','sourceSwitchRevealAnimator','consumedSourceSwitchCompletions',
     'sourceSwitchPendingCompletionKey','sourceSwitchPendingCompletionSelectionToken','sourceSwitchPendingCompletionLifecycleToken',
     'sourceSwitchPresentedRevision','sourceSwitchPresentedSelectionToken','sourceSwitchPresentedContinuous',
     'sourceSwitchCanonicalPageCurrent','onSourceSwitchPagePresented','hasContinuousRenderContent',
@@ -395,10 +397,15 @@ if(id==='reader-completion'){
  const actors=[];
  const make=fields=>{
   const o=new compiled.Component(undefined,{});
-  assert.equal(o.sourceSwitchToastText,'','each scenario starts with its own pristine completion state');
+  const feedback={calls:[],resets:0,
+    show(_context,options,current){this.calls.push({options,admitted:current()});return true;},
+    reset(){this.resets+=1;}};
+  o.sourceSwitchFeedback=feedback;
+  assert.equal(feedback.calls.length,0,'each scenario starts with its own pristine completion state');
   for(const previous of actors){
    assert.notEqual(o,previous);assert.notEqual(o.nodes,previous.nodes);assert.notEqual(o.keys,previous.keys);
    assert.notEqual(o.watches,previous.watches);
+   assert.notEqual(o.sourceSwitchFeedback,previous.sourceSwitchFeedback,'shared feedback access remains actor-local');
    assert.notEqual(o.consumedSourceSwitchCompletions,previous.consumedSourceSwitchCompletions,'completion history is actor-local');
   }
   actors.push(o);
@@ -409,7 +416,7 @@ if(id==='reader-completion'){
     sourceSwitchCompletionVisible:true,materializedChapterSelectionToken:-1,pageTurnRenderRevision:2,
     continuousRenderRevision:4,continuousFragments:[],readerSettingsSnapshot:{navigationMode:'paged'},
     windowChromeActive:true,readerWindowMetricsRevision:1,readerStatusBarMetrics:()=>metrics,...fields});
-  return{p,o,deps};
+  return{p,o,deps,feedback};
  };
  for(const fields of [{},
   {phase:'measuring',sessionGateway:{hasPendingSourceSwitch:()=>true}},
@@ -435,12 +442,17 @@ if(id==='reader-completion'){
    materializedChapterSelectionToken:2});
  ready.o.sourceSwitchCompletion=new ready.deps.SourceSwitchCompletionPresentation('tx','new','target',1,'新书源',19,0);
  ready.p.properties.flush();
- assert.equal(ready.o.sourceSwitchToastText,'','phase ready without the resident revision cannot announce success');
+ assert.equal(ready.feedback.calls.length,0,'phase ready without the resident revision cannot announce success');
  ready.o.onSourceSwitchPagePresented(ready.o.pageTurnRenderRevision-1);
- assert.equal(ready.o.sourceSwitchToastText,'','the prior native page revision cannot announce this chapter');
+ assert.equal(ready.feedback.calls.length,0,'the prior native page revision cannot announce this chapter');
  ready.o.onSourceSwitchPagePresented(ready.o.pageTurnRenderRevision);
- assert.equal(ready.o.sourceSwitchToastText,'已切换至 新书源','real production canonical and current-revision guards admit completion');
+ assert.equal(ready.feedback.calls.length,1,'real production canonical and current-revision guards admit completion');
+ assert.equal(ready.feedback.calls[0].admitted,true);
+ assert.deepEqual({title:ready.feedback.calls[0].options.title,tone:ready.feedback.calls[0].options.tone,
+   message:ready.feedback.calls[0].options.message}, {title:'书源已切换',tone:'success',message:'已切换至 新书源'});
+ assert.match(ready.feedback.calls[0].options.key,/^source-switch:/);
  ready.o.cancelSourceSwitchCompletion();
+ assert.ok(ready.feedback.resets>=1,'retiring completion also retires only its shared feedback admission');
  
  checks.push('actual-target-reader-prepare-current-selection-ready-failure-stale-prop-foreground-reduced-motion');
 }

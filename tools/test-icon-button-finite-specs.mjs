@@ -24,7 +24,11 @@ const before = read('tools/fixtures/icon-button-family/ReaderIconButton.before.e
 const golden = JSON.parse(read('tools/fixtures/icon-button-family/original-consumers.json'));
 const approved = JSON.parse(read('tools/fixtures/icon-button-family/approved-bookshelf-manga-20261005.json'));
 const searchScale = JSON.parse(read('tools/fixtures/design/search-system-font-scale-successor-20261015.json'));
-const consumerMethods = [...golden.methods.filter(row => row.file !== approved.file), approved];
+const retiredBookshelfIconSite = 'bookshelf/BookshelfShell.ets';
+const retiredSearchPageIconSite = 'search/SearchPage.ets';
+const retiredIconSites = new Set([retiredBookshelfIconSite, retiredSearchPageIconSite]);
+const consumerMethods = [...golden.methods.filter(row => row.file !== approved.file), approved]
+  .filter(row => !retiredIconSites.has(row.file));
 
 const sdk = resolveEtsLoaderRoot();
 const req = createRequire(import.meta.url), ts = req(sdk + '/node_modules/typescript'), options = req(sdk + '/lib/ets_checker.js').compilerOptions;
@@ -32,10 +36,10 @@ const syntax = req(sdk + '/lib/validate_ui_syntax.js');
 const parse = source => ts.createSourceFile(virtualFilePath('IconConsumer.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const ids = ['toolbar-standard', 'toolbar-wide', 'navigation-back', 'toolbar-compact'];
 const tuples = [[44, 24, 22], [44, 44, 22], [32, 20, 16], [44, 20, 22]];
-const expected = { 'bookshelf/BookshelfShell.ets': ['floating-more'],
-  'discover/DiscoverPage.ets': ['toolbar-standard'], 'search/SearchPage.ets': ['navigation-back'], 'source/SourceManagementPage.ets': ['toolbar-compact'] };
-const labels = { 'bookshelf/BookshelfShell.ets': ['更多'], 'discover/DiscoverPage.ets': ['刷新'],
-  'search/SearchPage.ets': ['返回'], 'source/SourceManagementPage.ets': ['书源工具'] };
+const expected = { 'discover/DiscoverPage.ets': ['toolbar-standard'],
+  'source/SourceManagementPage.ets': ['toolbar-compact'] };
+const labels = { 'discover/DiscoverPage.ets': ['刷新'],
+  'source/SourceManagementPage.ets': ['书源工具'] };
 const semanticAttributes = new Set(['enabled', 'focusable', 'accessibilityText', 'accessibilityRole']);
 const physical = node => Object.fromEntries(['type', 'create', 'width', 'height', 'borderRadius', 'backgroundColor'].filter(key => Object.hasOwn(node, key)).map(key => [key, node[key]]));
 const metrics = createDefaultReaderWindowMetrics();
@@ -61,6 +65,60 @@ function verifyConsumer(source, file) {
     if (file.startsWith('discover/')) assert.equal(input.properties.find(p => p.name.getText(tree) === 'actionEnabled').initializer.getText(tree), '!this.presentation.loading', 'actual business busy source');
   }
 }
+function minimalSurfaceActor(tree, owner, memberName, marker) {
+  const method = owner?.members.find(node => node.name?.getText(tree) === memberName);
+  assert.ok(method, 'current production search surface owns ' + memberName);
+  const candidates = [];
+  const visit = node => {
+    const text = node.getText(tree);
+    if (text.startsWith('Stack(') && text.includes(marker) && text.includes('.onClick(')) candidates.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(method);
+  assert.ok(candidates.length > 0, 'current surface actor remains present: ' + memberName);
+  const shortest = Math.min(...candidates.map(node => node.getText(tree).length));
+  const exact = candidates.filter(node => node.getText(tree).length === shortest);
+  assert.equal(exact.length, 1, 'one minimal current surface actor: ' + memberName);
+  return exact[0].getText(tree);
+}
+function verifyShelfSurfaceActors(source) {
+  const tree = parse(source);
+  assert.equal(tree.parseDiagnostics.length, 0);
+  const owner = tree.statements.find(node => node.name?.text === 'ReaderLibrarySearchSurface');
+  const more = minimalSurfaceActor(tree, owner, 'bar', ".accessibilityText('更多')");
+  const leading = minimalSurfaceActor(tree, owner, 'bar', ".accessibilityText(this.presentedSearch() ? '返回' : '搜索书籍')");
+  for (const [name, text] of [['More', more], ['Search/Back', leading]]) {
+    assert.match(text, /\.width\(44\)\.height\(44\)\.borderRadius\(14\)/, 'finite 44vp ' + name + ' target');
+  }
+  assert.match(more, /\.focusable\(this\.mode === 'idle' && this\.transitionKind === 'none'\)/,
+    'More is focusable only in the settled idle shelf');
+  assert.match(more, /\.onClick\(this\.moreAction\(this\.identity, this\.navigationGeneration, this\.mounting, this\.moreIdentity\)\)/,
+    'More retains the full presented identity and Shell-owned callback');
+  assert.match(leading, /\.focusable\(true\)/, 'current leading Search/Back remains focusable');
+  assert.match(leading, /\.onClick\(this\.leadingAction\(this\.identity, this\.navigationGeneration, this\.mounting\)\)/,
+    'leading Search/Back retains the full presented identity');
+  return { more, leading };
+}
+const shellSource = read(root + retiredBookshelfIconSite), searchPageSource = read(root + retiredSearchPageIconSite),
+  searchSurfaceSource = read(root + 'search/ReaderLibrarySearchSurface.ets');
+assert.doesNotMatch(shellSource, /ReaderIconButton|floating-more/, 'BookshelfShell no longer owns a floating ReaderIconButton');
+assert.equal(iconInputs(shellSource).inputs.length, 0, 'retired shelf icon declaration cannot return');
+assert.doesNotMatch(searchPageSource, /ReaderIconButton|navigation-back/, 'SearchPage no longer owns a navigation-back ReaderIconButton');
+assert.equal(iconInputs(searchPageSource).inputs.length, 0, 'retired search back declaration cannot return');
+const surfaceActors = verifyShelfSurfaceActors(searchSurfaceSource);
+const brokenSize = searchSurfaceSource.replace(surfaceActors.more, surfaceActors.more.replace('.width(44)', '.width(45)'));
+assert.notEqual(brokenSize, searchSurfaceSource);
+assert.throws(() => verifyShelfSurfaceActors(brokenSize), /finite 44vp More target/, 'current More target rejects a non-44vp width');
+const brokenBinding = searchSurfaceSource.replace(surfaceActors.more, surfaceActors.more.replace(
+  '.onClick(this.moreAction(this.identity, this.navigationGeneration, this.mounting, this.moreIdentity))',
+  '.onClick(this.moreOpenAction(this.moreIdentity))'));
+assert.notEqual(brokenBinding, searchSurfaceSource);
+assert.throws(() => verifyShelfSurfaceActors(brokenBinding), /full presented identity/, 'current More rejects a captured or incomplete binding');
+const brokenLeading = searchSurfaceSource.replace(surfaceActors.leading, surfaceActors.leading.replace(
+  '.onClick(this.leadingAction(this.identity, this.navigationGeneration, this.mounting))',
+  '.onClick(this.onBack)'));
+assert.notEqual(brokenLeading, searchSurfaceSource);
+assert.throws(() => verifyShelfSurfaceActors(brokenLeading), /leading Search\/Back retains/, 'current leading actor rejects a captured or incomplete binding');
 for (const frozen of consumerMethods) {
   const source=read(root+frozen.file);
   verifyConsumer(source, frozen.file);
@@ -68,7 +126,7 @@ for (const frozen of consumerMethods) {
     const { tree: t, inputs } = iconInputs(source);
     for (const input of inputs) {
       const negative = source.slice(0, input.getStart(t) + 1) + property + ': 99,' + source.slice(input.getStart(t) + 1);
-      assert.throws(() => verifyConsumer(negative, frozen.file), /no free icon appearance input/, 'literal99 cannot return at any of five actual declarations');
+      assert.throws(() => verifyConsumer(negative, frozen.file), /no free icon appearance input/, 'literal99 cannot return at any remaining actual declaration');
     }
   }
 }
@@ -119,7 +177,7 @@ function parent(file, { legacy = false, scheme = 'day', specSource = iconButtonS
     const tree = parse(live), owner = tree.statements.find(ts.isStructDeclaration), member = owner.members.find(n => n.name?.text === frozen.name);
     source = live.slice(0, member.getStart(tree)) + frozen.source + live.slice(member.end);
   }
-  const names = [frozen.name]; if (file.startsWith('bookshelf/')) names.push('moreOpenAction');
+  const names = [frozen.name];
   const owner = p.consumer(source, names); let tap = 0;
   Object.assign(owner, { appThemeScheme: scheme, onSearchRequested: () => tap++, onRefresh: () => tap++, onBack: () => tap++, onOpenTools: () => tap++,
     mounted: true, temporaryBackIdentity: 'bookshelf:1', navigationGeneration: 1, moreMenuVisible: false,
@@ -136,10 +194,7 @@ for (const file of Object.keys(expected)) for (const scheme of ['day', 'night'])
     const event = next.p.nodes(next.actors[i]).find(n => n.onClick); event.onClick();
     assert.equal(event.accessibilityText, labels[file][i]); assert.equal(event.accessibilityRole, 'AccessibilityRoleType.BUTTON');
     assert.equal(event.enabled, true); assert.equal(event.focusable, true);
-    if (file.startsWith('bookshelf/')) {
-      assert.equal(next.owner.moreMenuVisible, true); next.owner.moreMenuVisible = false;
-      next.owner.temporaryBackIdentity = 'bookshelf:2'; event.onClick(); assert.equal(next.owner.moreMenuVisible, false, 'old physical More preserves captured identity refusal');
-    } else assert.equal(next.tap(), 1, file + ': actual original business callback');
+    assert.equal(next.tap(), 1, file + ': actual original business callback');
     comparisons++;
   }
 }
@@ -153,24 +208,6 @@ for (const file of Object.keys(expected)) for (const scheme of ['day', 'night'])
   current.owner.replay(); current.p.properties.flush();
   assert.equal(hit.enabled, true); assert.equal(hit.focusable, true); hit.onClick(); assert.equal(current.tap(), 1, 'settled current fact permits refresh');
 }
-{
-  const current = parent('bookshelf/BookshelfShell.ets', { allowNewSearchActor: true }), generations = [];
-  current.owner.onSearchRequested = generation => generations.push(generation);
-  const oldHeader = [...current.owner.children.values()].find(c => c.title === '书架');
-  const oldHit = current.p.nodes(oldHeader).find(n => n.type === 'Stack' && n.width === 44 && n.onClick);
-  assert.ok(oldHit, 'approved AppTopBar owns the real 44vp leading search');
-  oldHit.onClick(); assert.deepEqual(generations, [1]);
-  current.owner.navigationGeneration = 2;
-  current.owner.replay(); current.p.properties.flush();
-  const newHeader = [...current.owner.children.values()].find(c => c !== oldHeader && c.title === '书架');
-  assert.ok(newHeader, 'only the temporary toolbar actor is keyed by navigation');
-  const newHit = current.p.nodes(newHeader).find(n => n.type === 'Stack' && n.width === 44 && n.onClick);
-  oldHit.onClick(); newHit.onClick();
-  assert.deepEqual(generations, [1, 2], 'old leading callback is refused while the current header carries the new navigation');
-  // This SDK fixture intentionally models retained old closures. The real
-  // native header removal and persistent shelf Scroll remain separate gates.
-}
-
 const changed = iconButtonSpecSource.replace('boxSize: 44, iconSize: 24, radius: 22', 'boxSize: 46, iconSize: 26, radius: 23');
 assert.notEqual(changed, iconButtonSpecSource);
 for (const file of Object.keys(expected)) {
@@ -181,6 +218,6 @@ for (const file of Object.keys(expected)) {
     assert.equal(hit.width, actor.specId === 'toolbar-standard' ? 46 : current.p.resolveReaderIconButtonSpec(actor.specId).boxSize);
   }
 }
-console.log(`PASS F01 actual SDK: ${comparisons} original/current four-spec and four retained/approved-site day/night native comparisons; exact names/role/focus, real loading/retained eligibility, unnamed and guard-removal negatives, approved AppTopBar leading Search navigation fence, same-spec propagation/variant isolation, retained Props, original callbacks/old More identity, 12 literal99 consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);
+console.log(`PASS F01 actual SDK: ${comparisons} original/current day/night native comparisons across two retained ReaderIconButton sites; the retired BookshelfShell and SearchPage icons are absent, while the current search-surface Search/Back and More actors retain 44vp targets, names, admission and full presented callback identity. Exact names/role/focus, real loading/retained eligibility, unnamed and guard-removal negatives, same-spec propagation/variant isolation, retained Props, original callbacks, 6 literal99 consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);
 
 }

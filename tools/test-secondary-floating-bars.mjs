@@ -84,12 +84,14 @@ for (const [file, bottom] of cases.filter(row=>row[0]===chosenFiles[selectedCase
       const header = [...owner.children.values()].find(child => child instanceof Header);
       assert.ok(header,'actual shared header is SDK mounted, not a shape-only child');
       const ordered = controls.orderedNodes(owner);
-      const headerRow = [...header.nodes.values()].find(node => node.type === 'Row' && node.height !== undefined);
+      const headerRow = [...header.nodes.values()].find(node => node.type === 'Row');
       assert.ok(ordered.indexOf(headerRow) > ordered.indexOf(scroll), `${file}: the actual header native row is emitted after the full scroll`);
       assert.ok(nodes.some(node => node.type === 'Column' && node.zIndex > 0 && node.hitTestBehavior === 'HitTestMode.Transparent'), `${file}: public fixed header host owns the layer above content`);
       const measuredHost = nodes.find(node => node.type === 'Column' && node.backgroundColor && node.onAreaChange);
       assert.ok(measuredHost, `${file}: actual public host paints and measures the fixed header`);
-      const priorHeight=headerRow.height,priorTop=content.padding.top;measuredHost.onAreaChange({}, {height:`${priorHeight+38}vp`});controls.properties.flush();assert.equal(content.padding.top,priorTop+38,`${file}: header height delta reaches content once`);
+      const priorHeight=headerRow.constraintSize?.minHeight ?? headerRow.height,priorTop=content.padding.top;
+      assert.ok(Number.isFinite(priorHeight));
+      measuredHost.onAreaChange({}, {height:`${priorHeight+38}vp`});controls.properties.flush();assert.equal(content.padding.top,priorTop+38,`${file}: header height delta reaches content once`);
       assert.ok(controls.nodes(owner).includes(scroll), `${file}: measured clearance preserves the existing Scroll node`);
       measuredHost.onAreaChange({}, {height:`${priorHeight}vp`});controls.properties.flush();assert.equal(content.padding.top,priorTop,`${file}: current header endpoint restored`);
       [...header.nodes.values()].find(n=>n.type==='Stack'&&n.onClick).onClick(); assert.deepEqual(calls, ['back'], `${file}: return routing remains unchanged`);

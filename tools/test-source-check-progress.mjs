@@ -42,7 +42,7 @@ const executable = stripTypeScriptTypes(
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
 let currentOwner;const owned=[];const {isReaderCoreTransactionPendingError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
-const {SourceGateway,SourceToolsOrchestrator}=new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError','hilog',executable.replace(/^export /gm,'')+';return{SourceGateway,SourceToolsOrchestrator};')(runtimeOwnerIdentityProbe(()=>currentOwner),isReaderCoreTransactionPendingError,{warn(){},error(){},info(){},debug(){},fatal(){}});
+const {SourceGateway,SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}=new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError','hilog',executable.replace(/^export /gm,'')+';return{SourceGateway,SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT};')(runtimeOwnerIdentityProbe(()=>currentOwner),isReaderCoreTransactionPendingError,{warn(){},error(){},info(){},debug(){},fatal(){}});
 const tick = () => new Promise((resolveTick) => setImmediate(resolveTick));
 
 async function waitUntil(predicate, label) {
@@ -70,7 +70,8 @@ function rawSource(item) {
     baseUrl: item.baseUrl,
     enabled: item.enabled,
     enabledExplore: item.enabledExplore,
-    bookSource: {},
+    sourceVersion: item.sourceVersion ?? 'v1',
+    bookSource: { bookSourceUrl: item.sourceId, bookSourceName: item.name },
   };
 }
 
@@ -109,7 +110,8 @@ function controlledOwner(sources) {
     supportsCoreCapability: capability => capability === 'source.check.mode.v1',
     request(method, params, options) {
       if (method === 'source.list') {
-        return Promise.resolve({ data: { sources: sources.map(rawSource) } });
+        const rows = params?.sourceId === undefined ? sources : sources.filter(item => item.sourceId === params.sourceId);
+        return Promise.resolve({ data: { sources: rows.map(rawSource) } });
       }
       assert.equal(method, 'source.check.run');
       const sourceId = params.sourceIds[0];
@@ -220,7 +222,7 @@ for (const phase of ['completed', 'stopped']) for (const action of ['saved', 're
   const owner = controlledOwner(sources), originalRequest = owner.request.bind(owner);
   let failReadback = false, imports = 0, exports = 0;
   owner.request = async (method, params, options) => {
-    if (method === 'source.list' && failReadback) { failReadback = false; throw new Error('readback unavailable'); }
+    if (method === 'source.list' && failReadback && imports > 0) { failReadback = false; throw new Error('readback unavailable'); }
     if (method === 'source.export') {
       const selected = sources.filter(item => params.sourceIds === undefined || params.sourceIds.includes(item.sourceId));
       return { data: { data: JSON.stringify(selected.map(item => ({ bookSourceUrl: item.sourceId, bookSourceName: item.name, enabled: true }))), count: selected.length, format: 'json' } };
@@ -230,9 +232,11 @@ for (const phase of ['completed', 'stopped']) for (const action of ['saved', 're
   };
   owner.saveBookSourceJson = async () => { exports++; return 'saved-sources.json'; };
   const notices = [],page = Object.assign(new SourceToolsFeedback(), { mounted: true, lastFeedbackIdentity: '',
-    getUIContext: () => ({ getPromptAction: () => ({ showToast: notice => notices.push(notice) }) }) });
+    transientFeedback: { show(_context, options) { notices.push(options); return true; }, reset() {} },
+    getUIContext: () => ({ getFont: () => ({}) }) });
   const { orchestrator, snapshots } = capture(owner, snapshot => { page.snapshot = snapshot; page.showTransientFeedback(); });
   await openReady(orchestrator, snapshots, sources);
+  const initialFeedback = notices.length;
   const selected = sources.map(item => item.sourceId);
   orchestrator.setSelection(selected);orchestrator.checkSelected(selected);
   await waitUntil(() => owner.state.pending.has('https://after-a.example'), 'feedback regression first source');
@@ -243,25 +247,26 @@ for (const phase of ['completed', 'stopped']) for (const action of ['saved', 're
   await orchestrator.operationTail;
   const retained = structuredClone(latest(snapshots).batchCheck);
   assert.equal(retained.phase, phase);assert.ok(retained.results.length > 0);
-  assert.deepEqual(notices, [], 'initial read/selection/batch messages keep their own existing carriers');
+  assert.equal(notices.length, initialFeedback, 'selection and the retained batch emit no new short feedback');
   assert.equal(latest(snapshots).statusEvent, 'batch');
   if (action === 'exported') orchestrator.exportSelected(['https://after-a.example']);
   else {
     orchestrator.openEditor('https://after-a.example');await orchestrator.operationTail;
-    assert.deepEqual(notices, [], 'opening the editor does not replay the retained batch result');
+    assert.equal(notices.length, initialFeedback, 'opening the editor does not replay the retained batch result');
     failReadback = action === 'readbackFailed';orchestrator.saveEditor();
   }
   await orchestrator.operationTail;
   assert.deepEqual(latest(snapshots).batchCheck, retained, 'later operations preserve original progress, counts and item results');
   assert.equal(latest(snapshots).statusEvent, 'feedback');
-  assert.equal(notices.length, 1, `${phase}/${action}: later operation emits one own result`);
-  page.showTransientFeedback();assert.equal(notices.length, 1, 'repainting a terminal operation cannot replay feedback');
-  if (action === 'exported') { assert.equal(exports, 1);assert.match(notices[0].message, /已导出 1 个书源/); }
+  assert.equal(notices.length, initialFeedback + 1, `${phase}/${action}: later operation emits one own result`);
+  const ownNotice = notices.at(-1);
+  page.showTransientFeedback();assert.equal(notices.length, initialFeedback + 1, 'repainting a terminal operation cannot replay feedback');
+  if (action === 'exported') { assert.equal(exports, 1);assert.match(ownNotice.message, /已导出 1 个书源/); }
   else {
     assert.equal(imports, 1, 'follow-up read failure never repeats source.import');
     assert.equal(latest(snapshots).receipt.receipt.confirmation, 'confirmed');
-    if (action === 'readbackFailed') { assert.equal(latest(snapshots).receipt.receipt.fact, 'confirmedRefreshFailed');assert.match(notices[0].message, /已确认.*刷新失败/);assert.ok(latest(snapshots).editorText.length > 0, 'failed readback retains the original draft'); }
-    else { assert.equal(latest(snapshots).editorSourceId, '');assert.match(notices[0].message, /校验并保存/); }
+    if (action === 'readbackFailed') { assert.equal(latest(snapshots).receipt.receipt.fact, 'confirmedRefreshFailed');assert.match(ownNotice.message, /已确认.*刷新失败/);assert.ok(latest(snapshots).editorText.length > 0, 'failed readback retains the original draft'); }
+    else { assert.equal(latest(snapshots).editorSourceId, '');assert.match(ownNotice.message, /校验并保存/); }
   }
 }
 }
@@ -439,7 +444,7 @@ if(id==='list-notifications'){
 const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts,options}=installedEtsCompiler();const sourceText=read('entry/src/main/ets/features/source/SourceToolsPage.ets');const tree=ts.createSourceFile('SourceToolsData.ets',sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
 const names=['SourceToolListRow','SourceToolListDataSource','SourceCheckResultDataSource','SourceDebugLogDataSource'];const declarations=tree.statements.filter(n=>n.name&&names.includes(n.name.getText(tree)));assert.equal(declarations.length,names.length);
 const code=ts.transpileModule(declarations.map(n=>n.getText(tree)).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;const types=new Function(code+';return{'+names.join(',')+'};')();
-const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const snapshot={sources:Array.from({length:1777},(_,i)=>source('row-'+i,'源'+i)),selectedSourceIds:[],sourceListRevision:1,selectionRevision:1,busy:false,batchCheck:{results:[]},debugLogs:[],debugSourceId:''};
+const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const snapshot={...EMPTY_SOURCE_TOOLS_SNAPSHOT,sources:Array.from({length:1777},(_,i)=>source('row-'+i,'源'+i)),selectedSourceIds:[],sourceListRevision:1,selectionRevision:1,busy:false};
 const page=sdk.consumer(sourceText,['snapshot','sourceDataSource','batchResultDataSource','debugLogDataSource','projectedSourceListRevision','projectedSelectionRevision','projectedBusy','projectedCanWrite','projectedBatchResultsIdentity','projectedDebugLogsIdentity','mounted','lastFeedbackIdentity','feedbackIdentity','showTransientFeedback','syncListDataSources','canWriteSources','batchResultsIdentity','debugLogsIdentity'],{...types,EMPTY_SOURCE_TOOLS_SNAPSHOT:snapshot},{snapshot});
 let reloads=0,resultReloads=0;const listener={onDataReloaded(){reloads++;}};page.sourceDataSource.registerDataChangeListener(listener);page.sourceDataSource.registerDataChangeListener(listener);page.batchResultDataSource.registerDataChangeListener({onDataReloaded(){resultReloads++;}});
 page.syncListDataSources();assert.equal(reloads,1);assert.equal(page.sourceDataSource.totalCount(),1777);assert.deepEqual(page.sourceDataSource.getData(1776).source,snapshot.sources[1776]);
@@ -497,7 +502,6 @@ if(id==='report-history'){
   await assert.rejects(new SourceGateway(reportOwner(1, undefined, [currentHistory])).loadSources(undefined, true),
     /unrequested report version/);
   const ordinaryOwner = reportOwner(2, undefined, [null]);
-  delete ordinaryOwner.supportsCoreCapability;
   const ignored = await new SourceGateway(ordinaryOwner).loadSources();
   assert.equal(ignored[0].checkReports, undefined, 'history remains opt-in');
   assert.deepEqual(ordinaryOwner.calls[0].params, {}, 'ordinary listing never requires diagnostic capability negotiation');

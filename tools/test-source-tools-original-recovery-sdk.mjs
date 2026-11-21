@@ -78,9 +78,9 @@ if(selectedCase==='page-eligibility') {
  const source={sourceId:'https://tools-original.test',name:'Original source',enabled:true,enabledExplore:true,bookSource:{bookSourceUrl:'https://tools-original.test',bookSourceName:'Original source'}};
  const snapshot={...empty,sources:[source],selectedSourceIds:[source.sourceId],selectedSourceCount:1,original};const page=sdkPage({},host,snapshot);assert.equal(page.node.canWriteSources(),false);
  const old=page.action('继续');page.update({...snapshot,original:{...original,generation:8,operationId:'replacement/8'}});old.click();assert.deepEqual(calls,[],'old physical actor cannot borrow current original');
- page.update({...snapshot,original:{...original,busy:true}});const busy=page.action('继续');assert.equal(busy.actor.actionEnabled,false);busy.click();assert.deepEqual(calls,[]);
- page.update({...snapshot,original});const current=page.action('继续');current.click();assert.deepEqual(calls,[['continueOriginal',7]],'actual current native actor routes exact generation');
- page.node.aboutToDisappear();current.click();assert.equal(calls.length,1,'unmounted actor cannot continue');
+ const busyPage=sdkPage({},host,{...snapshot,original:{...original,busy:true}});const busy=busyPage.action('继续');assert.equal(busy.actor.actionEnabled,false);busy.click();assert.deepEqual(calls,[],'a fresh busy snapshot keeps the same actor disabled');
+ const currentPage=sdkPage({},host,{...snapshot,original});const current=currentPage.action('继续');current.click();assert.deepEqual(calls,[['continueOriginal',7]],'actual current native actor routes exact generation');
+ currentPage.node.aboutToDisappear();current.click();assert.equal(calls.length,1,'unmounted actor cannot continue');
  const raw=page.node.batchControlsRenderKey();page.node.snapshot={...snapshot,original:{...original,busy:false,blocked:false}};assert.notEqual(page.node.batchControlsRenderKey(),raw,'only small batch key tracks actual write admission');
 }
 

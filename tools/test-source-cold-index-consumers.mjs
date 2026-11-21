@@ -12,6 +12,7 @@ const {boundedMembers,boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk
 const {readerRecoveryView}=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const {ReaderNativeAlertOwner}=await import('./lib/reader-native-alert-sdk-probe.mjs');
 const {readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const {defaultSourceManagementFilters,copySourceManagementFilters,sourceManagementFilterKey,copySourceManagementScroll}=await import('../entry/src/main/ets/features/source/SourceManagementPresentation.ts');
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const document=JSON.stringify({bookSourceUrl:'https://index-original.test',bookSourceName:'Original',enabled:true});
 const id='https://index-original.test';
@@ -39,7 +40,7 @@ function index(f,kind='source',instance=1){
   SourceManagementPage:Child,SourceToolsPage:Child,deviceInfo:{deviceType:'phone'},ReaderNativeAlertOwner,readerAppColor}),i=probe.owner;
  Object.assign(i,{route:kind,mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:1,
   rssInstanceIdentity:instance,sourceToolsInstanceIdentity:instance,sourcePresentationIdentity:'',sourceToolsPresentationIdentity:'',sourceToolsOrchestrator:undefined,
-  sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},settingsSnapshot:{reduceMotion:false}});
+  sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},sourceManagementFilters:defaultSourceManagementFilters(),settingsSnapshot:{reduceMotion:false}});
  const alerts=[];i.nativeAlertOwner=new ReaderNativeAlertOwner();i.getUIContext=()=>({showAlertDialog:options=>alerts.push(options)});
  i.sourceHost=hostField(i,f.SourceHost);
  let host,domainHost;
@@ -53,8 +54,9 @@ function index(f,kind='source',instance=1){
 function page(f,x,kind='source'){
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),path=kind==='source'?'features/source/SourceManagementPage.ets':'features/source/SourceToolsPage.ets',text=read(path);
  const prelude=text.slice(0,text.indexOf('@Component'))+'\nexport const pageClasses={'+(kind==='source'?'SourceListDataSource,GROUP_FILTER_WIDTH,GROUP_SELECT_WIDTH':'SourceToolListDataSource,SourceCheckResultDataSource,SourceDebugLogDataSource')+'};';
- const classes=compile(path,'pageClasses',{},true,prelude),empty=compile('features/source/SourceToolsOrchestrator.ets','EMPTY_SOURCE_TOOLS_SNAPSHOT',{},true);
+ const classes=compile(path,'pageClasses',{FrameCallback:class{onFrame(){}cancel(){}}},true,prelude),empty=compile('features/source/SourceToolsOrchestrator.ets','EMPTY_SOURCE_TOOLS_SNAPSHOT',{},true);
  const child=sdk.consumer(text,boundedMembers(text),{...classes,sourceTemporaryGeneration:0,EMPTY_SOURCE_TOOLS_SNAPSHOT:empty,readerRecoveryView,ReaderNativeAlertOwner,
+  defaultSourceManagementFilters,copySourceManagementFilters,sourceManagementFilterKey,copySourceManagementScroll,
   registerReaderFonts:()=>{}},x.params());
  child.aboutToAppear();const feedback=()=>{if(kind==='source')child.originalRecovery();else{child.statusCard();child.recoveryAction();}};feedback();
  const action=label=>{const currentLabel=({'核对原操作回执':'核对','继续原操作':'继续','继续原清理':'继续清理'})[label]??label;
@@ -165,7 +167,8 @@ const retired='unmount';
  await until(()=>f.calls.some(c=>c.method==='rules.mutation.apply'&&c.params.mutation.method==='source.update'));
  const b=index(f,'source',2);assert.deepEqual(b.i.sourceOperation,a.i.sourceOperation,'accepted operation first DTO survives sameRuntime remount before ACK');
  const count=f.writes().length;a.params().onToggleSource(id,true);assert.equal(f.writes().length,count);gate.resolve();await b.settled();
- b.open();await b.settled();assert.equal(b.i.sourceSources[0].enabled,false);assert.equal(f.writes().length,count);groups++;
+ b.open();await b.settled();
+ assert.equal(b.i.sourceSources[0].enabled,false);assert.equal(f.writes().length,count);groups++;
 
 },
 'cookie-cleanup':async()=>{

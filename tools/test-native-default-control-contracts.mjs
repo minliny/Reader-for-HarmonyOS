@@ -7,6 +7,8 @@ const {default: assert} = await import('node:assert/strict');
 const { createRequire } = await import('node:module');
 const { foundationControls, foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { APP_HEADER_BAR_HEIGHT } = await import('../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts');
 const { readFileSync,readdirSync } = await import('node:fs');
 const { auditNativeTextElements } = await import('./lib/reader-typography-consumer-audit.mjs');
 const { boundedSurfaceSdk,boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
@@ -56,6 +58,13 @@ for(const [switchFailure,local,inline]of [[true,false,false],[false,true,false],
 async function proveNativeDirectoryFallback(navigationSource) {
  const read=file=>readFileSync(new URL('../entry/src/main/ets/features/'+file,import.meta.url),'utf8');
  const source=read('bookshelf/BookDirectoryPage.ets');
+ const toolbarSource=read('reading/ReaderDirectoryToolbar.ets');
+ const {READER_DIRECTORY_TOOLBAR_HEIGHT}=pureModuleProbe(toolbarSource.split('@Component')[0],
+  'ReaderDirectoryToolbar.ts',{},['READER_DIRECTORY_TOOLBAR_HEIGHT']);
+ const {BOOK_DIRECTORY_PAGE_HEADER_SPEC}=pureModuleProbe(
+  source.slice(source.indexOf('class BookDirectoryPageHeaderSpec'),source.indexOf('@Component')),
+  'BookDirectoryPageHeaderSpec.ts',{APP_HEADER_BAR_HEIGHT,READER_DIRECTORY_TOOLBAR_HEIGHT,TOK_BORDER_W:1},
+  ['BOOK_DIRECTORY_PAGE_HEADER_SPEC']);
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=390;metrics.windowRect.height=844;metrics.systemInsets.bottom=34;
  const navigationRequests=[];
@@ -63,7 +72,7 @@ async function proveNativeDirectoryFallback(navigationSource) {
   navigationRequests.push({command,params});
   return {data:{status:'unavailable',reason:'no_navigation'}};
  }};
- Object.assign(sdk.deps,{...fontFamilies,ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeBottom,
+ Object.assign(sdk.deps,{...fontFamilies,BOOK_DIRECTORY_PAGE_HEADER_SPEC,ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeBottom,
   TOK_CONTENT_MAX_W_TABLET:720,ReaderRuntimeOwner:{current:()=>runtime},
   ReaderDirectoryNavigationGateway,readerDirectoryScopeKey,openReaderDirectoryNavigation,
   readerDirectoryNoteMissingNavigation,readerDirectoryToggleCollapsed,ReaderDirectoryTrace,
@@ -86,7 +95,7 @@ async function proveNativeDirectoryFallback(navigationSource) {
  Object.assign(sdk.deps,{DirectoryListDataSource,ChildrenMainSize:class{constructor(size){this.childDefaultSize=size;}}});
  for(const name of['ReaderDirectoryList','ReaderDirectoryNavigationSurface','PageBackBar'])sdk.deps[name]=createReaderBuilderProbe(sdk.childSources[name],boundedMembers(sdk.childSources[name]),sdk.deps,sdk.hooks).Component;
  const selected=[];
- const page=sdk.consumer(source,['standardPage','standardContent','standardHeader','standardToolbar','flatList','recoveryContent','supportsDirectoryRules','supportsCurrentDirectoryView','contentFrame','bottomInset','identity','rulesExpanded','rulesRevision'],sdk.deps);
+ const page=sdk.consumer(source,['standardPage','standardContent','standardHeader','standardToolbar','flatList','recoveryContent','supportsDirectoryRules','supportsCurrentDirectoryView','contentFrame','bottomInset','identity','rulesExpanded','rulesRevision','standardMeasurements','standardHeaderSpec','standardMeasurementRevision'],sdk.deps);
  const scroller={};const entry={index:17,title:'实际章节',navigable:true,bookmarks:[]};
  Object.assign(page,{sourceId:'local',bookId:'native-layout-book',bookKind:'txt',contentKind:'text',viewportWidth:390,readerWindowMetricsRevision:0,appThemeScheme:'day',
   admittedIdentity:'local\u0000native-layout-book',admittedEntries:[entry],projectedEntries:[entry],searchDraft:'',searchQuery:'',ascending:true,currentChapterIndex:17,
@@ -97,7 +106,10 @@ async function proveNativeDirectoryFallback(navigationSource) {
  for(const omission of fixture.consumers.find(row=>row.id==='NATIVE-DEFAULT-01').typographyOmissions)assert.equal(Object.hasOwn(button,omission),false,'original native typography AUTO '+omission);
  const list=nodes().find(n=>n.type==='List');assert.ok(list,'actual navigation fallback mounts the shared native List');assert.equal(list.create.scroller,scroller);const initialStart=list.contentStartOffset;assert.ok(initialStart>0);
  const count=nodes().filter(n=>n.type==='List').length;
- const header=nodes().find(n=>n.type==='Column'&&n.zIndex===10&&n.onAreaChange);assert.ok(header);assert.match(header.backgroundColor,/^#FF/,'actual fixed header paints the opaque scrolling mask');
+ const fixedHeader=sdk.walk(page).find(actor=>actor!==page&&typeof actor.onHeightChange==='function'&&
+  Number.isFinite(actor.measurementKey));assert.ok(fixedHeader,'actual fixed-header measurement owner is mounted');
+ const header=[...fixedHeader.nodes.values()].find(n=>n.type==='Column'&&n.onAreaChange);assert.ok(header);
+ assert.match(header.backgroundColor,/^#FF/,'actual fixed header paints the opaque scrolling mask');
  button.onClick();assert.equal(page.rulesExpanded,true,'the original physical native rules callback toggles the page state');
  header.onAreaChange({}, {height:'157vp'});sdk.properties.flush();
  const firstMeasuredStart=list.contentStartOffset;header.onAreaChange({}, {height:'204vp'});sdk.properties.flush();assert.equal(list.contentStartOffset-firstMeasuredStart,204-157,'actual header delta reaches retained List');const retainedMeasuredStart=list.contentStartOffset;
@@ -118,7 +130,7 @@ async function proveNativeDirectoryFallback(navigationSource) {
  assert.equal(navigation.loadPending,false,'the first unavailable response releases pending state');
  assert.equal(navigation.loadFailed,true,'a missing navigation index exposes an explicit recoverable failure');
  assert.equal(navigation.view,undefined,'a missing index cannot masquerade as a complete directory');
- sdk.properties.flush();retainedFlatList();
+ retainedFlatList();
  navigation.retryOpen();
  assert.equal(navigationRequests.length,2,'actual SDK retryOpen admits exactly one second directory request');
  assert.equal(navigationRequests[1].command,'reading.directory.view.open.v2');
@@ -129,7 +141,7 @@ async function proveNativeDirectoryFallback(navigationSource) {
  // List during pending, then replay dependency delivery at the next error state;
  // loading/error actors and the physical retry callback have their own SDK cases.
  retainedFlatList();
- await Promise.resolve();await Promise.resolve();await Promise.resolve();sdk.properties.flush();
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();
  assert.equal(navigationRequests.length,2,'a repeated unavailable response does not create an automatic request loop');
  assert.equal(navigation.settledFlat,false,'a repeated temporary unavailable response stays retryable');
  assert.equal(navigation.loadPending,false);assert.equal(navigation.loadFailed,true);

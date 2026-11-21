@@ -139,7 +139,7 @@ for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 
   let metrics = { windowRect: new ReaderRectVp(0, 0, 390, 844), statusBarRect: new ReaderRectVp(2, 1, 386, 48) };
   const shell = createReaderBuilderProbe(shellSource, ['overlayStatusBarUnderlay', 'chromeMetrics'], {
     ReaderStatusBarPaper: Child, readerWidthClass, ReaderWindowCoordinator: { metrics: () => metrics },
-  }).owner;
+  }, {eagerChildren: false}).owner;
   Object.assign(shell, { visible: true, route, sourceSwitchVisible: route === 'reading', isTablet: false,
     chromePaperThemeId: theme.id, chromeUnderlayColor: theme.paperStart, windowMetricsRevision: 1 });
   shell.overlayStatusBarUnderlay();
@@ -156,11 +156,12 @@ for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 
   statusGeometry(status(updated), metrics.statusBarRect, [760, 960]);
 }
 
+const StatusUnderlayComponent = createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
+  ReaderStatusBarPaper: Child, readerAppearanceThemeStyle,
+  ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: new ReaderRectVp(0, 0, 390, 48) }) },
+}).Component;
 for (const extend of [false, true]) for (const controls of [false, true]) for (const hideStatusBar of [false, true]) {
-  const owner = createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
-    ReaderStatusBarPaper: Child, readerAppearanceThemeStyle,
-    ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: new ReaderRectVp(0, 0, 390, 48) }) },
-  }).owner;
+  const owner = new StatusUnderlayComponent(undefined, {});
   Object.assign(owner, { windowChromeActive: true, readerSettingsSnapshot: { extendIntoCutout: extend, hideStatusBar },
     windowControlsPresented: controls, readerWindowMetricsRevision: 1, appearanceSnapshot: { activeTheme: 'paper' },
     readingLayout: () => ({ viewportWidth: 390, viewportHeight: 844, widthClass: 'compact' }) });
@@ -199,6 +200,7 @@ registerHooks({resolve(specifier,context,next){try{return next(specifier,context
 const { createDefaultReaderReadingLayout, resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
 const { createDefaultReaderAppearanceSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
 const { createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const { createDefaultReaderTtsPreferencesSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
 const { readerRenderStageKind } = await import('../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts');
 const { ReaderWindowMetricsSnapshot, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 
@@ -313,6 +315,7 @@ let cases = 0;
       ReaderBookTurnSurface:read('features/reading/ReaderBookTurnSurface.ets')}});
     const fragments=[{id:'visible-first',startScalar:0,endScalar:1000,text:'正文',imageHeight:0}];
     Object.assign(owner,{bookTitle:'连续书名',sourceId:'s',bookId:'b',readerSettingsSnapshot:{navigationMode:'continuous'},
+      ttsPreferences:createDefaultReaderTtsPreferencesSnapshot(),ttsState:{charStart:0,charEnd:0},
       chapter:cold?undefined:{chapterIndex:2,chapterTitle:'当前章'},chapterLayoutMap:{scalarCount:()=>1000},
       continuousFragments:fragments,continuousVisibleScalar:cold?0:250,continuousProgressRevision:0,
       continuousRenderChapterIdentity:'s:b:2',continuousRenderChapterTitle:'当前章',continuousRenderGeometryKey:'geometry',
@@ -323,6 +326,8 @@ let cases = 0;
       readingTocEntries:()=>[],readableChapterPosition:index=>index,shouldShowSessionCapsule:()=>false,
       activeSessionCapsuleWidth:()=>0,activeSessionCapsuleHeight:()=>0,
       autoPageHighlightStart:()=>undefined,autoPageHighlightEnd:()=>undefined,readerTextSelectionEnabled:()=>false,
+      pageBookmarkFeedbackMode:()=>'hidden',pageBookmarkFeedbackOpacity:()=>0,bookmarkPageOffsetY:0,
+      bookmarkSnapshotForCurrentPage:()=>({mode:'hidden',opacity:0}),
       isReaderPageInteractionEnabled:()=>true,sourceSwitchContinuousRangeObserver:()=>()=>{},
       usesBookTurnSimulation:()=>false,effectivePageTurnStyle:()=> 'none',pageTurnStageViewportWidth:()=>390,
       shouldMountBookTurnSurface:()=>false,resolveVisibleContinuousImages(){},hasPartialEntryWindow:()=>false,

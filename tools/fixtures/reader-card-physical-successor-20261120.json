@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "component": "entry/src/main/ets/features/common/ReaderCard.ets",
+  "previousFixture": "tools/fixtures/reader-card-ui-baseline.json",
+  "previousFixtureSha256": "559725ee084ba8d025a55ca2743d36893847ee1e89e7adfd2473d9e288148ff5",
+  "successorCommits": [
+    "fce869a1"
+  ],
+  "previousSpecSource": {
+    "commit": "fce869a1^",
+    "sha256": "dede1c93ad2dd5bb8e5f9ea6f9754a160a89d9610c3c022c246d7bcebe4076b6"
+  },
+  "currentSpecSourceSha256": "9a70a72981eeb8d9e8da91b0daa44ecba9e5b54598ecba5ed7cb7ec403e01c7f",
+  "methodSpecs": {
+    "build": "settings-category",
+    "webdavSection": "sync-config",
+    "manualActionsSection": "sync-status",
+    "autoBackupSection": "sync-status",
+    "emptyState": "sync-status",
+    "historyRow": "sync-status"
+  },
+  "specs": {
+    "settings-category": {
+      "previous": {
+        "backgroundRole": "TOK_CARD_BG",
+        "borderRole": "TOK_BORDER",
+        "radius": 8
+      },
+      "current": {
+        "backgroundRole": "TOK_CARD_BG",
+        "borderRole": "app.border.contentCard",
+        "radiusToken": "TOK_RADIUS_MD",
+        "radius": 8
+      },
+      "changedPhysicalFields": [
+        "border.color"
+      ]
+    },
+    "sync-config": {
+      "previous": {
+        "backgroundRole": "TOK_CARD_BG",
+        "borderRole": "TOK_BORDER",
+        "radius": 8
+      },
+      "current": {
+        "backgroundRole": "TOK_CARD_BG",
+        "borderRole": "app.border.contentCard",
+        "radiusToken": "TOK_RADIUS_MD",
+        "radius": 8
+      },
+      "changedPhysicalFields": [
+        "border.color"
+      ]
+    },
+    "sync-status": {
+      "previous": {
+        "backgroundRole": "TOK_SURFACE_SOLID",
+        "borderRole": "app.SyncPage.CARD_BORDER_SOFT",
+        "radius": 13
+      },
+      "current": {
+        "backgroundRole": "TOK_CARD_BG",
+        "borderRole": "app.border.contentCard",
+        "radiusToken": "TOK_RADIUS_LG",
+        "radius": 12
+      },
+      "changedPhysicalFields": [
+        "backgroundColor",
+        "border.color",
+        "borderRadius"
+      ]
+    }
+  }
+}

@@ -49,14 +49,18 @@ if(scope==='source'){
   const h=leaf.harness(),source=scope==='settings'?leaf.settingsSource:scope==='source'?leaf.sourceSource:leaf.shelfSource;
   const method=scope==='settings'?'settingsContent':scope==='source'?'sourceManagementContent':'bookshelfShellContent';
   let parent;
-  function props(){parent=createReaderBuilderProbe(indexSource,[method,...(scope==='source'?['sourceManagementSurface']:scope==='settings'?['settingsSurface']:[])],{...readerWindowMetrics,isReaderProductSurfaceEnabled,SettingsPage:Child,SourceManagementPage:Child,BookshelfShell:Child,deviceInfo:{deviceType:'phone'}},{childSources:{SettingsPage:leaf.settingsSource,SourceManagementPage:leaf.sourceSource,BookshelfShell:leaf.shelfSource}}).owner;Object.assign(parent,index);parent.registerTemporaryBackBridge=index.registerTemporaryBackBridge.bind(index);parent.isCurrentSourceManagement=index.isCurrentSourceManagement.bind(index);parent.isCurrentSettingsPresentation=index.isCurrentSettingsPresentation.bind(index);parent[method]();return[...parent.children.values()].at(-1).params;}
-  const f=h.owner(source,{...props(),sources:[],groups:['A','B']});
-  const open=()=>{if(scope==='settings')f.o.toggleSelection('language');else if(scope==='source')f.o.toggleGroupSelection();else f.o.moreOpenAction(f.o.temporaryBackIdentity)();};
+  function props(){parent=createReaderBuilderProbe(indexSource,[method,...(scope==='source'?['sourceManagementSurface']:scope==='settings'?['settingsSurface']:[])],{...readerWindowMetrics,isReaderProductSurfaceEnabled,SettingsPage:Child,SourceManagementPage:Child,BookshelfShell:Child,deviceInfo:{deviceType:'phone'}},{eagerChildren:false,childSources:{SettingsPage:leaf.settingsSource,SourceManagementPage:leaf.sourceSource,BookshelfShell:leaf.shelfSource}}).owner;Object.assign(parent,index);parent.registerTemporaryBackBridge=index.registerTemporaryBackBridge.bind(index);parent.isCurrentSourceManagement=index.isCurrentSourceManagement.bind(index);parent.isCurrentSettingsPresentation=index.isCurrentSettingsPresentation.bind(index);parent[method]();return[...parent.children.values()].at(-1).params;}
+  const sourceRows=[{sourceId:'a',name:'a',baseUrl:'https://a.test',enabled:true,enabledExplore:false,category:'novel',group:'A'},
+    {sourceId:'b',name:'b',baseUrl:'https://b.test',enabled:true,enabledExplore:false,category:'novel',group:'B'}];
+  const pageProps=props(),bridgeParent=parent;
+  const f=h.owner(source,{...pageProps,sources:scope==='source'?sourceRows:[]});
+  const open=()=>{if(scope==='settings')f.o.toggleSelection('language');else if(scope==='source')f.o.toggleGroupSelection();else bridgeParent.shelfMoreHandler?.();};
   const finish=()=>{if(scope==='source'){f.o.dismissGroupSelection(f.o.groupSelectionId);}};
-  return{index,runtime,calls,h,f,open,finish,props,parent:()=>parent};
+  return{index,runtime,calls,h,f,open,finish,props,parent:()=>parent,bridge:()=>bridgeParent};
 }
 for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selectedCase)){
-  const x=fixture(scope);assert.ok(x.index.temporaryBackLease,'actual SDK Index child constructor publishes real leaf lease');x.open();assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,[],'temporary Back never invokes route exit');
+  const x=fixture(scope);
+  assert.ok(x.index.temporaryBackLease,'actual SDK Index child constructor publishes real leaf lease');x.open();assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,[],'temporary Back never invokes route exit');
   if(scope==='source')assert.equal(x.f.o.groupClosing,true,'Source collapse retains existing finish boundary');else assert.equal(scope==='settings'?x.f.o.openSelect:x.f.o.moreMenuVisible,scope==='settings'?'':false);
   x.finish();assert.equal(x.index.onBackPress(),scope!=='bookshelf');if(scope==='settings')assert.equal(x.index.settingsSection,'home');if(scope==='source')assert.deepEqual(x.calls,['source-route']);
 }
@@ -83,18 +87,21 @@ if(selectedCase==='priority'){
 }
 if(selectedCase==='bookshelf'){
   const x=fixture('bookshelf'),o=x.f.o,first=x.index.temporaryBackLease,firstId=o.temporaryBackIdentity;
-  o.content=()=>{};o.initialRender();[...o.children.values()].find(c=>c instanceof x.h.p.deps.AppTopBar).params.trailing();
-  const children=[...o.children.values()],oldTrigger=children.filter(c=>c instanceof x.h.p.deps.ReaderIconButton).at(-1);const oldAction=oldTrigger.params.onTap;
-  x.open();x.index.nextNavigationGeneration();assert.equal(x.index.temporaryBackLease,undefined);
+  o.content=()=>{};o.initialRender();
+  const firstMore=x.bridge().shelfMoreHandler;assert.equal(typeof firstMore,'function','actual Shell publishes the Index-owned More bridge');
+  firstMore();const firstSheet=o.moreSheetOptions();
+  x.index.nextNavigationGeneration();x.bridge().navigationGeneration=x.index.navigationGeneration;
+  assert.equal(x.index.temporaryBackLease,undefined);
   const p=x.props();o.updateStateVars(p);x.h.p.properties.flush();
-  const second=x.index.temporaryBackLease;assert.equal(second.generation,2);assert.notEqual(second.identity,firstId);assert.equal(o.moreMenuVisible,false,'actual @Prop/@Watch retires old opening');assert.equal(first.handler(),false);
-  assert.ok(children.filter(c=>!(c instanceof x.h.p.deps.ReaderIconButton)).every(c=>[...o.children.values()].includes(c)),'shell/content actors stay mounted through navigation generation');
-  oldAction();assert.equal(o.moreMenuVisible,false,'old physical More trigger is retired');
-  o.topBar();const nextHeader=[...o.children.values()].filter(c=>c instanceof x.h.p.deps.AppTopBar).at(-1);nextHeader.params.trailing();
-  const nextTrigger=[...o.children.values()].filter(c=>c instanceof x.h.p.deps.ReaderIconButton).at(-1);assert.notEqual(nextTrigger,oldTrigger);nextTrigger.params.onTap();assert.equal(o.moreMenuVisible,true,'new small trigger gets the current constructor callback');
+  const second=x.index.temporaryBackLease,secondMore=x.bridge().shelfMoreHandler;
+  assert.equal(second.generation,2);assert.notEqual(second.identity,firstId);assert.equal(o.moreMenuVisible,false,'actual @Prop/@Watch retires old opening');assert.equal(first.handler(),false);
+  assert.equal(typeof secondMore,'function');assert.notEqual(secondMore,firstMore,'navigation generation publishes a fresh bridged More handler');
+  firstMore();assert.equal(o.moreMenuVisible,false,'old bridged More handler is retired');
+  firstSheet.onDisappear();
+  secondMore();assert.equal(o.moreMenuVisible,true,'current bridged More handler opens the Shell-owned sheet');
   p.onTemporaryBackBridge(undefined,first.identity,first.generation);assert.equal(x.index.temporaryBackLease,second);assert.equal(x.index.onBackPress(),true);assert.equal(o.moreMenuVisible,false);
   o.aboutToDisappear();assert.equal(x.index.temporaryBackLease,undefined);o.aboutToAppear();assert.ok(x.index.temporaryBackLease);assert.equal(second.handler(),false);
 }
-console.log('PASS actual Index→SDK three leaf Back bridges: layer priority, route fallback, Source collapse, captured Runtime/navigation/instance identity, old unregister and unavailable owner; retained bookshelf true Prop/Watch renews lease and only temporary trigger constructor');
+console.log('PASS actual Index→SDK three leaf Back bridges: layer priority, route fallback, Source collapse, captured Runtime/navigation/instance identity, old unregister and unavailable owner; retained bookshelf true Prop/Watch renews both temporary Back and More bridge ownership');
 
 }

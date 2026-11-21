@@ -16,8 +16,62 @@ const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mj
 
 // Snapshot of the actual replaced local constants, captured before migration.
 // Verify authored Day/alpha and the live consumers, not just registry presence.
+// Exact 2026-10-26 migration from Reader-UI/theme/semantic-role-migration.
+const legacyRoleMigration = {
+  'app.ReaderSegmentedControl.SEG_TEXT_ACTIVE': 'app.segment.activeText',
+  'app.ReaderSegmentedControl.SEG_TEXT_INACTIVE': 'app.segment.inactiveText',
+  'app.ReaderSegmentedControl.SEG_SELECTED_BG': 'app.segment.selected',
+  'app.ReaderSegmentedControl.SEG_SELECTED_BORDER': 'TOK_GREEN',
+  'app.ReaderSegmentedControl.SEG_BG': 'app.segment.surface',
+  'app.ReaderSegmentedControl.SEG_BORDER': 'app.segment.border',
+  'app.SyncPage.ROW_BG': 'app.surface.syncRow',
+  'app.SyncPage.ROW_BORDER': 'app.border.contentCard',
+  'app.SyncPage.GHOST_BG': 'app.sync.ghostSurface',
+  'app.SyncPage.GHOST_BORDER': 'app.sync.ghostBorder',
+  'app.SyncPage.SOLID_BG': 'app.sync.actionSurface',
+  'app.SyncPage.CARD_BORDER_SOFT': 'app.border.statusCard',
+  'app.SyncPage.BADGE_BG': 'app.sync.badgeSurface',
+  'app.SourceManagementPage.STATUS_ERROR_DOT': 'app.status.checkError',
+  'app.SourceManagementPage.STATUS_ERROR_BG': 'app.status.checkErrorSoft',
+  'app.SourceManagementPage.CHIP_BORDER': 'app.border.sourceGroup',
+  'app.SourceManagementPage.SEARCH_FIELD_BORDER': 'app.border.searchField',
+  'app.SourceManagementPage.STATUS_GOOD_BG': 'app.status.goodSoft',
+  'app.SourceManagementPage.STATUS_MUTED_BG': 'app.status.mutedSoft',
+  'app.SourceManagementPage.STATUS_GOOD_DOT': 'app.status.good',
+  'app.SourceManagementPage.STATUS_MUTED_DOT': 'app.status.mutedDot',
+  'app.DiscoverPage.ICON_BOX_BG': 'app.discover.sourceIconSurface',
+  'app.DiscoverPage.CURRENT_SOURCE_BORDER': 'app.discover.sourceBorder',
+  'app.DiscoverPage.CHIP_BG': 'app.discover.categorySurface',
+  'app.DiscoverPage.FILTER_BORDER': 'app.border.filter',
+  'app.DiscoverPage.APPLY_BORDER': 'app.action.applyBorder',
+  'app.RssEntryDetailPage.CARD_BORDER': 'app.border.contentCard',
+  'app.RssEntryDetailPage.ACTION_BG': 'app.feed.actionSoft',
+  'app.RssSourceFeedPage.CARD_BORDER': 'app.border.contentCard',
+  'app.RssSourceFeedPage.ACTION_BG': 'app.feed.actionSoft',
+  'app.RssPage.PILL_BG': 'app.feed.pillSurface',
+  'app.RssPage.PILL_BORDER': 'app.feed.pillBorder',
+  'app.RssPage.SOFT_PILL_BG': 'app.feed.actionSoft',
+  'app.RssPage.CARD_BORDER': 'app.border.contentCard',
+  'app.RssPage.FILTER_TEXT': 'app.text.filter',
+  'app.RssPage.FILTER_BORDER': 'app.border.filter',
+  'app.RssPage.VIEW_ALL_BG': 'TOK_PRIMARY_SOFT',
+  'app.RssPage.MUTED_DEEP': 'app.text.feedMeta',
+  'app.RssPage.ERROR_CARD_BG': 'app.feed.errorSurface',
+  'app.RssPage.STATUS_DISABLED_BG': 'app.feed.disabledSurface',
+  'app.RssPage.STATUS_ENABLED_BG': 'app.feed.enabledSurface',
+  'app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR': 'app.directory.edgeFade',
+  'app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR': 'app.directory.edgeFadeTransparent',
+  'app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT': 'app.bookmark.excerptAccent',
+  'app.ReaderBookmarkEmptyState.EMPTY_STATE_BUTTON_COLOR': 'app.bookmark.emptyAction',
+  'app.BookshelfSettingsPage.modeOption.onSelected': 'app.selection.onMode',
+};
 const rows = JSON.parse(readFileSync(new URL('./fixtures/design/theme-consumers.json', import.meta.url)))
-  .filter(row => row.originalConstant !== undefined);
+  .filter(row => row.originalConstant !== undefined)
+  .map(row => {
+    const role = legacyRoleMigration[row.role];
+    assert.equal(typeof role, 'string', `semantic migration covers ${row.file}:${row.originalConstant}`);
+    return { ...row, role };
+  });
 
 // Migrated Sync actions consume these same roles through the actual shared
 // Button. Execute the SDK-emitted parent and child, then retain the authored
@@ -48,12 +102,13 @@ function checkSyncActions(probe, scheme) {
     const node = probe.shared.nodes(child).find(n => n.onClick);
     const surface = child.primary ? spec.primarySurface : spec.secondarySurface;
     const border = child.primary ? spec.primaryBorder : spec.secondaryBorder;
-    const authoredSurface = child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BG';
+    const authoredSurface = legacyRoleMigration[child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BG'];
     assert.equal(surface, authoredSurface, 'authored Sync surface role retained through finite spec');
     assert.equal(node.backgroundColor, readerAppColor(authoredSurface, scheme), 'live shared surface follows current scheme');
     sharedRoles.add(surface);
     if (spec.hasBorder && (!child.primary || spec.primaryHasBorder)) {
-      assert.equal(border, child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BORDER', 'authored Sync border role retained');
+      assert.equal(border, legacyRoleMigration[child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BORDER'],
+        'authored Sync border role retained');
       assert.equal(node.border.color, readerAppColor(border, scheme), 'live shared border follows current scheme');
       sharedRoles.add(border);
     }
@@ -74,7 +129,8 @@ function captureSharedConsumer(file, methods, render) {
   Object.assign(owner, { appThemeScheme: 'day', activeMode: 'all', filterValue: 'all',
     filterControlWidth: () => 280, contentFrame: () => ({ width: 350 }), actionBottomInset: () => 0,
     onOpenTools: () => {}, onAddSource: () => {}, onModeRequested: () => {},
-    presentation:{activeKindIndex:0,kinds:[{title:'默认'},{title:'其他'}],filterKey:'all',loading:false},
+    presentation:{activeKindIndex:0,activeSourceIndex:0,sources:[{name:'默认'}],
+      kinds:[{title:'默认'},{title:'其他'}],filterKey:'all',loading:false,page:1},
     onSelectKind:()=>{},onCycleFilter:()=>{},onRefresh:()=>{} });
   render(owner);
   const roles = new Set(rows.filter(row => row.file === file).map(row => row.role));
@@ -107,8 +163,8 @@ if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/RssSourceFeedP
 if(selectedCase==='rss') captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
   owner.statusTab('未读', 'unread'); owner.filterPill('未读'); owner.recentUnreadHeader();
 });
-if(selectedCase==='discover') captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
-  owner.categoryChips();owner.filterRow();
+if(selectedCase==='discover') captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','currentSourceCard','rankingHeader','currentFilterText','kindTitles'], owner => {
+  owner.currentSourceCard();owner.categoryChips();owner.rankingHeader();
 });
 // F04's same theme palette now belongs to the actual finite enum producer.
 function captureSegmentTheme(source = segmentSource) {
@@ -149,7 +205,18 @@ for(const scheme of ['day','night','day']){
 }
 assert.equal(returned,3);
 }
-if(selectedCase==='role-registry') for(const role of new Set(rows.map(row=>row.role))){const day=readerAppColor(role,'day'),night=readerAppColor(role,'night');assert.match(day,/^#[0-9A-Fa-f]{8}$/);assert.match(night,/^#[0-9A-Fa-f]{8}$/);assert.equal(day.slice(1,3),night.slice(1,3),'local-role alpha is an explicit semantic invariant; color values may evolve');}
+if(selectedCase==='role-registry') {
+ for(const row of rows) {
+  assert.match(row.day,/^#[0-9A-Fa-f]{8}$/);assert.match(row.night,/^#[0-9A-Fa-f]{8}$/);
+  assert.equal(row.day.slice(1,3),row.night.slice(1,3),
+   row.file+':'+row.originalConstant+': archived local-role alpha remains an explicit invariant');
+ }
+ for(const role of new Set(rows.map(row=>row.role))) {
+  const day=readerAppColor(role,'day'),night=readerAppColor(role,'night');
+  assert.match(day,/^#[0-9A-Fa-f]{8}$/,role+': current Day role resolves');
+  assert.match(night,/^#[0-9A-Fa-f]{8}$/,role+': current Night role resolves');
+ }
+}
 // Negative controls prove that a hard-coded Day scheme or wrong finite role
 // cannot be admitted as a successfully migrated consumer.
 if(selectedCase==='sync-actions') {

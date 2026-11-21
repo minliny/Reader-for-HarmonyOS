@@ -12,6 +12,7 @@ const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-r
 const { mangaSurfaceSdkDependencies, mangaSurfaceBoundedControls } = await import('./lib/manga-surface-sdk-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
 
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
@@ -46,6 +47,7 @@ function fixture(text = source, options = {}) {
   const shared=mangaSurfaceBoundedControls(properties, { panGesture });
   let owner;
   const uiContext = {
+    getFont: () => ({}),
     getFocusController: () => ({ clearFocus: () => events.push('clear-focus') }),
     postFrameCallback: frame => frames.push(frame),
     animateTo(params, apply) {
@@ -70,6 +72,7 @@ function fixture(text = source, options = {}) {
   owner = probe.owner;
   const chapter = {};
   Object.assign(owner, {
+    getUIContext: () => uiContext,
     // This suite owns sheet frames, not a mounted system-window identity.
     sourceId: '', bookId: '',
     isReaderIdentityCurrent: () => false,
@@ -88,8 +91,16 @@ function fixture(text = source, options = {}) {
   const walk = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? walk(child) : [])];
   return { owner, frames, animations, events, properties, pans, output: probe.output,
     nodes: () => walk(owner).flatMap(child => [...child.nodes.values()]),
-    frame: () => { const next = frames.shift(); assert.ok(next, 'native next-frame boundary was requested'); next.onFrame(16); },
-    enterFrames: () => { const before = animations.length; assert.equal(frames.length, 1); frames.shift().onFrame(16); assert.equal(animations.length, before, 'onFrame may precede build: admission frame cannot start animation'); assert.equal(frames.length, 1); frames.shift().onFrame(32); },
+    frame: () => {
+      const next = frames.shift(); assert.ok(next, 'native next-frame boundary was requested');
+      next.onFrame(16); next.onIdle(0);
+    },
+    enterFrames: () => {
+      const before = animations.length; assert.equal(frames.length, 1);
+      const next = frames.shift(); next.onFrame(16);
+      assert.equal(animations.length, before, 'onFrame may precede build: admission cannot start animation');
+      next.onIdle(0);
+    },
     finish: index => { assert.equal(typeof animations[index]?.params.onFinish, 'function'); animations[index].params.onFinish(); },
   };
 }
@@ -98,10 +109,15 @@ function assertOpening(f, panel) {
   assert.ok(Number.isFinite(f.owner.panelOffset)&&f.owner.panelOffset>0,'current admitted sheet begins outside its bounded frame');
   assert.equal(f.owner.panelScrimOpacity, 0); assert.equal(f.animations.length, 0);
   f.owner.panelOverlay();
-  const sheet = f.nodes().find(node => (panel==='more'||panel==='downloads'?node.type==='__Common__':node.type==='Stack'&&node.clip===true) && node.translate);
-  const scrim = f.nodes().find(node => node.type === 'Column' && node.backgroundColor === '#57000000');
+  const sheet = f.nodes().find(node => node.translate);
+  const scrim = f.nodes().find(node => node.type === 'Column' && node.opacity === 0 &&
+    node.backgroundColor !== undefined && typeof node.onClick === 'function');
   assert.deepEqual(sheet.translate, { x: 0, y: f.owner.panelOffset }, 'actual SDK lowered actor starts outside the phone');
   assert.equal(scrim.opacity, 0, 'actual SDK lowered scrim starts transparent');
+  if (panel === 'directory') {
+    const scheme = f.owner.backgroundPreference === 'ink' ? 'night' : 'day';
+    assert.equal(scrim.backgroundColor, mangaDirectoryColor('scrim', scheme), 'directory scrim uses the shared night/day palette');
+  }
   if (panel === 'directory') {
     const actions = f.nodes().filter(node => ['上一章节', '完整目录', '下一章节'].includes(node.accessibilityText));
     assert.equal(actions.length, 3, 'the demo quick toolbar stays reachable while the sheet is opening');
@@ -110,7 +126,8 @@ function assertOpening(f, panel) {
   }
   f.enterFrames();
   assert.equal(f.animations.length, 2);
-  assert.ok(f.animations.every(a=>a.params&&typeof a.params.onFinish==='function'),'actual native completion callbacks own phase publication');
+  assert.ok(f.animations.slice(1).every(a=>a.params&&typeof a.params.onFinish==='function'),
+    'the evidence settle animation owns native completion; the companion scrim animation has no phase callback');
   assert.equal(f.owner.panelPhase, 'opening', 'target mutation is not treated as animation completion');
   f.finish(1); assert.equal(f.owner.panelPhase, 'open');
 }
@@ -130,8 +147,9 @@ async function verifyMotion(text = source) {
     await f.owner.selectDirectoryTarget(99); assert.ok(!f.events.some(event => Array.isArray(event) && event[0] === 'target'), 'late directory selection cannot navigate during exit');
     assert.equal(f.owner.panelTitle(), { directory: '章节目录', mode: '阅读方式', settings: '漫画阅读设置', more: '更多' }[panel]);
     f.properties.flush(); f.owner.replay();
-    assert.equal(f.nodes().find(node => (panel==='more'?node.type==='__Common__':node.type==='Stack'&&node.clip===true) && node.translate).enabled, false,
-      'native content is blocked during the closing lifecycle');
+    const blocked = f.nodes().filter(node => node.enabled === false);
+    assert.ok(blocked.length > 0,
+      `native content is blocked during the closing lifecycle: ${JSON.stringify(blocked.map(node => [node.type, node.create]))}`);
     f.finish(3); assert.equal(await closing, true); assert.equal(f.owner.panel, '');
   }
 }
@@ -360,10 +378,11 @@ if(selectedCase==='lifecycle') await assert.rejects(() => verifyMotion(mutate('o
   const requests = [];
   const visit = node => { if (ts.isCallExpression(node) && node.expression?.name?.getText(tree) === 'postFrameCallback') requests.push(node); ts.forEachChild(node, visit); };
   visit(tree);
-  assert.equal(requests.length, 2, 'the production entry fence has two native frame admissions');
-  const inner = requests[1];
-  return text.replace(inner.getText(tree), `${inner.arguments[0].getText(tree)}.onFrame(0)`);
-})), /admission frame cannot start animation/);
+  assert.equal(requests.length, 1, 'the production entry fence has one native frame admission');
+  const inner = requests[0], frame = inner.arguments[0].getText(tree);
+  return text.replace(inner.getText(tree),
+    `this.getUIContext().postFrameCallback(((frame) => { frame.onFrame = (): void => frame.onIdle(0); return frame; })(${frame}))`);
+})), /admission (?:frame )?cannot start animation/);
 if(selectedCase==='lifecycle') await assert.rejects(() => verifyRaces(mutate('settlePanel', text =>
   text.replace("if (this.mounted && generation === this.panelGeneration && this.panelPhase === 'opening')", 'if (true)'))),
 /unmounted entry callback is inert/);

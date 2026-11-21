@@ -162,16 +162,25 @@ if(selectedCase==='legacy-isolation'){
  const baseline=new URL('../.reader-artifacts/source-tools-accessibility-20261103/baseline/',import.meta.url);
  const beforeButton=readFileSync(new URL('entry/src/main/ets/features/common/ReaderButton.ets',baseline),'utf8');
  const afterButton=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderButton.ets',import.meta.url),'utf8');
- const removed=afterButton.replace(" || this.id === 'source-tools-action' || this.id === 'source-tools-compact'",'').replace(" || this.id === 'source-tools-action' || this.id === 'source-tools-compact'",'');
- assert.equal(removed,beforeButton,'only two opt-in predicate extensions; Source a11y and all other branches byte-identical');
+ const successor=afterButton
+  .replace(" || this.id === 'source-tools-action' || this.id === 'source-tools-compact'",'')
+  .replace("      if (this.id === 'source-tools-action' || this.id === 'source-tools-compact') instance.constraintSize({ minWidth: 44, minHeight: height });\n      else if",'      if')
+  .replace("    if (this.id === 'source-management-category') instance.constraintSize({ minWidth: 44 });\n",'');
+ assert.equal(successor,beforeButton,'only the registered Tools min-target and Source category 44vp successors differ from the frozen legacy source');
  const beforeSource=readFileSync(new URL('entry/src/main/ets/features/common/ReaderControlSpecs.ets',baseline),'utf8');
  const before=foundationSpecs(readerTypographyRoles,beforeSource),after=foundationSpecs();
  const ids=[...beforeSource.match(/export type ReaderButtonSpecId = ([^;]+);/)[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);
  const old=foundationModifiers(before,undefined,{buttonSource:beforeButton}),current=foundationModifiers(after);
  function capture(Modifier,id,scale,primary){const values=[];const port=new Proxy({},{get(_target,key){return(...args)=>{values.push([key,...args]);return port;};}});new Modifier(id,primary,true,'intrinsic','day',false,366,scale).applyNormalAttribute(port);return values;}
- for(const id of ids){assert.deepEqual(after.resolveReaderButtonSpec(id),before.resolveReaderButtonSpec(id));for(const scale of [1,2,3.2])for(const primary of [false,true])assert.deepEqual(capture(current.ReaderButtonTextModifier,id,scale,primary),capture(old.ReaderButtonTextModifier,id,scale,primary),id+' unchanged actual modifier attributes');}
+ for(const id of ids){assert.deepEqual(after.resolveReaderButtonSpec(id),before.resolveReaderButtonSpec(id));for(const scale of [1,2,3.2])for(const primary of [false,true]){
+  const actual=capture(current.ReaderButtonTextModifier,id,scale,primary),expected=capture(old.ReaderButtonTextModifier,id,scale,primary);
+  if(id==='source-management-category'){assert.deepEqual(actual.filter(value=>value[0]!=='constraintSize'),expected,'Source category retains every legacy modifier outside its approved 44vp minimum');assert.deepEqual(actual.find(value=>value[0]==='constraintSize'),['constraintSize',{minWidth:44}]);}
+  else assert.deepEqual(actual,expected,id+' unchanged actual modifier attributes');
+ }}
+ assert.equal(ids.includes('source-tools-action'),false,'Tools action is a post-baseline finite id');
+ assert.equal(ids.includes('source-tools-compact'),false,'Tools compact action is a post-baseline finite id');
  for(const id of ['source-tools-action','source-tools-compact']){const spec=after.resolveReaderButtonSpec(id);assert.equal(spec.height,44);assert.equal(spec.responseOffset,undefined);assert.equal(spec.maxFontScale,undefined);assert.equal(spec.maxLines,0);assert.equal(spec.textEllipsis,false);}
- console.log(JSON.stringify({unchangedOldSpecs:ids.length,modifierContexts:ids.length*6,sourceA11y:'byte-identical outside Tools predicate additions'}));
+ console.log(JSON.stringify({unchangedOldSpecs:ids.length,modifierContexts:ids.length*6,sourceA11y:'legacy source byte-identical outside registered Tools accessibility/min-target and Source category 44vp successors'}));
 }
 
 if(selectedCase==='carrier-propagation'){

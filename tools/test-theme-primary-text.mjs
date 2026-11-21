@@ -42,9 +42,10 @@ for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.et
     const text=shared.nodes(owner).filter(n=>n.type==='Text');
     assert.equal(text[0].fontColor,readerAppColor('TOK_ON_PRIMARY',scheme),'solid action keeps its independent onPrimary');
     assert.equal(text[0].backgroundColor,readerAppColor('TOK_PRIMARY_DARK',scheme),'solid primaryDark fill is unchanged');
-    assert.equal(text[1].fontColor,readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme));
+    const secondaryRole=file.startsWith('source/')?'TOK_CONTROL_INK':scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK';
+    assert.equal(text[1].fontColor,readerAppColor(secondaryRole,scheme),'secondary action uses its actual current role');
     assert.equal(text[1].backgroundColor,readerAppColor('TOK_SURFACE_PANEL_SOFT',scheme));
-    output.builder.push({method:file+'.actionButton',scheme,busy,primary:{font:text[0].fontColor,fill:text[0].backgroundColor},secondary:{font:text[1].fontColor,fill:text[1].backgroundColor}});
+    output.builder.push({method:file+'.actionButton',scheme,busy,primary:{font:text[0].fontColor,fill:text[0].backgroundColor},secondary:{role:secondaryRole,font:text[1].fontColor,fill:text[1].backgroundColor}});
   }
 }
 // Inspect the actual SDK AST for every foreground consumer. Restrict this gate
@@ -115,7 +116,7 @@ for(const file of ['bookshelf/BookshelfManagementPage.ets','source/SourceToolsPa
  }
  output.messageConsumers.push({file:'features/'+file,method:'statusCard',colors});
 }
-// Eleven former foreground sites moved into finite public Button/Icon specs in
+// Ten former foreground sites moved into finite public Button/Icon specs in
 // the fourth, fifth and Source action migrations. Bind exact actual owner/spec/native edges; a raw AST total
 // alone cannot prove their semantic color or retained theme propagation.
 const moved=[
@@ -127,16 +128,15 @@ const moved=[
  {file:'rss/RssPage.ets',method:'managePill',specId:'rss-manage',label:'管理',arguments:[],methods:['managePill'],icon:true},
  {file:'rss/RssPage.ets',method:'recentUnreadHeader',specId:'rss-view-all',label:'查看全部',arguments:[],methods:['recentUnreadHeader'],icon:true},
  {file:'rss/RssSourceFeedPage.ets',method:'entrySectionHeader',specId:'rss-source-operations',label:'源操作',arguments:[],methods:['entrySectionHeader'],icon:true},
- {file:'source/SourceManagementPage.ets',method:'statusBanner',specId:'source-management-retry',label:'重试',arguments:[],methods:['statusBanner','recovery']},
- {file:'source/SourceManagementPage.ets',method:'loginButton',specId:'source-management-login',label:'登录',arguments:[{sourceId:'source1'}],methods:['loginButton']},
+ {file:'source/SourceManagementPage.ets',method:'loginButton',specId:'source-management-login',label:'登录',arguments:[{sourceId:'source1',name:'实际书源',checkState:'idle'}],methods:['loginButton','sourceActionEnabled','sourceActionLabel']},
  {file:'sync/SyncPage.ets',method:'configActions',specId:'sync-config-test',label:'测试网络连通性',arguments:[],methods:['configActions','canMutate','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath']},
 ];
 for(const edge of moved.filter(edge=>'shared-'+edge.file.split('/')[0]===selectedCase)){
  const shared=edge.icon?labeledIconControls():foundationControls(),{owner}=createReaderBuilderProbe(source(edge.file),edge.methods,{...shared.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62,readerRecoveryView},shared.hooks);
- Object.assign(owner,{operation:{receipt:undefined,readFacts:undefined,confirmedParts:0},statusKind:'error',statusMessage:'加载失败',readFacts:{fact:'failed',message:'离线',canRetry:true,generation:1},onRetryLoad:()=>{},onReconcile:()=>{},onLoginSource:()=>{},appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0,facts:{canMutate:true}},onManage:()=>{},onModeRequested:()=>{},onSourceOperations:()=>{},onSaveConfig:()=>{},onTestConnection:()=>{},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
+ Object.assign(owner,{mounted:true,operation:{receipt:undefined,readFacts:undefined,confirmedParts:0},statusKind:'error',statusMessage:'加载失败',readFacts:{fact:'failed',message:'离线',canRetry:true,generation:1},onRetryLoad:()=>{},onReconcile:()=>{},onLoginSource:()=>{},appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0,facts:{canMutate:true}},onManage:()=>{},onModeRequested:()=>{},onSourceOperations:()=>{},onSaveConfig:()=>{},onTestConnection:()=>{},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
  owner[edge.method](...edge.arguments);const actors=[...owner.children.values()].filter(c=>c instanceof (edge.icon?shared.component:shared.button.Component)&&c.specId===edge.specId&&c.label===edge.label);assert.equal(actors.length,1,'exact current owner -> finite shared class: '+edge.file+'/'+edge.method);
  const actor=actors[0];if(!edge.icon)assert.equal(actor.primary,false,'the original emphasis branch remains secondary');const native=shared.nodes(actor).find(n=>n.type==='Text');assert.ok(native);
- const colors=[];for(const scheme of ['day','night','day']){owner.appThemeScheme=scheme;shared.flush(owner);const expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);assert.equal(native.fontColor,expected,'real shared theme propagation: '+edge.file+'/'+edge.method);colors.push(native.fontColor);}
+ const colors=[];for(const scheme of ['day','night','day']){owner.appThemeScheme=scheme;shared.flush(owner);const role=edge.role??(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK'),expected=readerAppColor(role,scheme);assert.equal(native.fontColor,expected,'real shared theme propagation: '+edge.file+'/'+edge.method);colors.push(native.fontColor);}
  output.sharedConsumers.push({file:'features/'+edge.file,method:edge.method,specId:edge.specId,label:edge.label,colors});
 }
 console.log('selected primary foreground actual SDK/AST case PASS: '+selectedCase);

@@ -11,20 +11,21 @@ const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-r
 const { actualReaderPageShell } = await import('./lib/reader-page-shell-runtime-probe.mjs');
 const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { TOK_SCREEN_INSET } = await import('../entry/src/main/ets/features/common/ReaderLayoutTokens.ts');
 
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const sdk = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url), ts = require(sdk + '/node_modules/typescript'), options = require(sdk + '/lib/ets_checker.js').compilerOptions;
 const parse = source => ts.createSourceFile('ResponsivePage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-function proveStandardBinding(name, source, variant, builder) {
+function proveStandardBinding(name, source, variant, builder, variantExpression = `'${variant}'`) {
   const tree = parse(source); assert.deepEqual(tree.parseDiagnostics, []);
   assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier.text === '../common/ReaderStandardPage'), name + ': actual public owner import');
   const bindings = [];
   function visit(node) {
     if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) && node.expression.getText(tree) === 'ReaderStandardPage') {
       const props = node.arguments[0].properties, selected = props.find(property => property.name?.text === 'variant');
-      if (selected?.initializer.text === variant) bindings.push(props.find(property => property.name?.text === 'content').initializer);
+      if (selected?.initializer.getText(tree) === variantExpression) bindings.push(props.find(property => property.name?.text === 'content').initializer);
     }
     ts.forEachChild(node, visit);
   }
@@ -50,6 +51,7 @@ const rssEditor = read('entry/src/main/ets/features/rss/RssSubscriptionEditorPag
 const rssFeed = read('entry/src/main/ets/features/rss/RssSourceFeedPage.ets');
 const rssEntry = read('entry/src/main/ets/features/rss/RssEntryDetailPage.ets');
 const settingsShell = read('entry/src/main/ets/features/shell/SettingsShell.ets');
+const mainTabShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
 const settingsPage = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 const rulesManagement = read('entry/src/main/ets/features/settings/RulesManagementPage.ets');
 const sourceManagement = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
@@ -72,7 +74,7 @@ const standardBindings = [
   ['RSS subscription editor', rssEditor, 'rssEditor', 'pageContent', Number.MAX_SAFE_INTEGER],
   ['rules management', rulesManagement, 'management', 'pageContent', Number.MAX_SAFE_INTEGER],
   ['source tools', sourceTools, 'tools', 'pageContent', Number.MAX_SAFE_INTEGER],
-  ['settings home', settingsShell, 'settingsHome', 'homeContent', 720],
+  ['settings home', mainTabShell, 'settingsHome', 'content', 'this.standardPageVariant', 720],
   ['settings general', settingsShell, 'settingsGeneral', 'generalContent', 720],
   ['RSS subscription management', rssManagement, 'rssManagement', 'pageContent', 720],
   ['RSS source feed', rssFeed, 'rssFeed', 'pageContent', 720],
@@ -83,6 +85,8 @@ function checkSharedWidths(sharedSource = standardSource, sharedPolicy = policyS
   const runtime = createArkUIPropertyRuntimeProbe(), policy = actualReaderPageShell(sharedPolicy);
   let metrics;
   class HeaderLeaf { constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); } }
+  const mountedActors = current => [current, ...[...(current.children?.values() ?? [])].flatMap(mountedActors)];
+  const mountedNodes = current => mountedActors(current).flatMap(actor => [...(actor.nodes?.values() ?? [])]);
   const headers = Object.fromEntries([['PageBackBar', 'common/PageBackBar'], ['AppTopBar', 'common/AppTopBar'], ['MainTabBar', 'shell/MainTabBar']]
     .map(([name, path]) => [name, read('entry/src/main/ets/features/' + path + '.ets')]));
   for (const [name, source] of Object.entries(headers)) {
@@ -90,7 +94,10 @@ function checkSharedWidths(sharedSource = standardSource, sharedPolicy = policyS
     const fields = owner.members.filter(member => ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@BuilderParam')).map(member => member.name.text);
     require(sdk + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set(name, new Set(fields));
   }
-  let dependencies = {...runtime.sdk, ...policy, ReaderWindowCoordinator: {metrics: () => metrics}, PageBackBar: HeaderLeaf, AppTopBar: HeaderLeaf, MainTabBar: HeaderLeaf};
+  let dependencies = {...runtime.sdk, ...policy, TOK_SCREEN_INSET, ReaderWindowCoordinator: {metrics: () => metrics},
+    publishReaderMainViewport: () => {}, readerMainNavigationMode: () => 'bottom',
+    readerMainViewport: () => ({width: 0, height: 0}), readerMainRailLeading: () => 0, readerMainRailBottomInset: () => 0,
+    PageBackBar: HeaderLeaf, AppTopBar: HeaderLeaf, MainTabBar: HeaderLeaf};
   const hooks = {...runtime.hooks, mountChildren: true, childSources: {...headers, ReaderStandardPage: sharedSource}};
   const Standard = createReaderBuilderProbe(sharedSource, boundedMembers(sharedSource), dependencies, hooks).Component;
   dependencies = {...dependencies, ReaderStandardPage: class extends Standard {
@@ -99,7 +106,7 @@ function checkSharedWidths(sharedSource = standardSource, sharedPolicy = policyS
   // Each real production page build creates its actual standard owner. Only
   // business/header leaf painting is opaque to this horizontal-frame proof;
   // no public frame, Scroll, policy or Area callback is substituted.
-  for (const [name, source, variant, _builder] of standardBindings.filter(row=>row[0]===caseNames[selectedCase])) {
+  for (const [name, source, variant, _builder, _variantExpression] of standardBindings.filter(row=>row[0]===caseNames[selectedCase])) {
     const tree = parse(source), declaration = tree.statements.find(node => node.members?.some(member => member.name?.text === 'build') && node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
     const builders = declaration.members.filter(member => ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@Builder')).map(member => member.name.text);
     const parameters = declaration.members.filter(member => ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@BuilderParam')).map(member => member.name.text);
@@ -108,13 +115,14 @@ function checkSharedWidths(sharedSource = standardSource, sharedPolicy = policyS
     for (const width of [320, 360, 365.71, 390, 600, 720, 760, 840]) for (const [left, right] of [[0, 0], [48, 14]]) for (const unit of [false, true]) {
       metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 900), undefined, new ReaderInsetsVp(left, 0, right, 0));
       const page = new Component(undefined, {});
-      Object.assign(page, {activeSection: variant === 'settingsHome' ? 'home' : 'general', showOverlay: false});
+      Object.assign(page, {activeSection: variant === 'settingsHome' ? 'home' : 'general', showOverlay: false,
+        standardScroll: variant === 'settingsHome', standardPageVariant: variant, headerKind: 'home', mounted: true});
       for (const builder of [...builders, ...parameters]) page[builder] = () => {};
       page.initialRender();
       const standard = [...page.children.values()].find(child => child.params?.variant === variant);
       assert.ok(standard?.nodes, name + ': actual page build mounts its finite shared Scroll owner');
-      const host = [...standard.nodes.values()].find(node => typeof node.onAreaChange === 'function'); assert.ok(host);
-      const scroll = [...standard.nodes.values()].find(node => node.type === 'Scroll'), scroller = standard.scroller; assert.ok(scroll);
+      const host = mountedNodes(standard).find(node => typeof node.onAreaChange === 'function'); assert.ok(host);
+      const scroll = mountedNodes(standard).find(node => node.type === 'Scroll'), scroller = standard.scroller; assert.ok(scroll);
       if (scrollerOwners.length) assert.ok(scrollerOwners.some(key => page[key] === scroller), name + ': the shared Scroll retains its existing page-owned Scroller');
       const hostWidth = Math.min(304, width);
       host.onAreaChange({}, {width: unit ? `${hostWidth}vp` : hostWidth}); runtime.flush();
@@ -124,9 +132,10 @@ function checkSharedWidths(sharedSource = standardSource, sharedPolicy = policyS
         host.onAreaChange({}, {width: unit ? `${measuredWidth}vp` : measuredWidth}); runtime.flush();
         const frame = policy.readerStandardPageContentFrame(variant, metrics, measuredWidth);
         assert.ok(frame.width>=0&&frame.left>=0&&frame.right>=0);assert.ok(frame.left+frame.width+frame.right<=measuredWidth+1e-6,'resolved frame remains within measured host');
-        const column = [...standard.nodes.values()].find(node => node.type === 'Column' && node.padding?.top !== undefined); assert.ok(column);
+        const column = mountedNodes(standard).find(node => node.type === 'Column' &&
+          node.padding?.left !== undefined && node.padding?.right !== undefined); assert.ok(column);
         assert.deepEqual([column.padding.left, column.padding.right], [frame.left, frame.right], name + ': emitted Scroll content consumes actual asymmetric shared geometry');
-        assert.equal(standard.nodes.get(scroll.id), scroll); assert.equal(standard.scroller, scroller);
+        assert.ok(mountedNodes(standard).includes(scroll)); assert.equal(standard.scroller, scroller);
         assert.equal(scroll.create, scroller, 'width publication retains the original native Scroll/scroller');
       }
     }
@@ -146,7 +155,10 @@ for (const width of [200, 280, 352, 390]) {
 
 }
 else{
-const chosen=standardBindings.find(row=>row[0]===caseNames[selectedCase]);proveStandardBinding(...chosen.slice(0,4));checkSharedWidths();const legacy=standardSource.replace('readerPageAreaLength(next.width)','Number(next.width)');assert.notEqual(legacy,standardSource);assert.throws(()=>checkSharedWidths(legacy),/actual public Area receipt/);const [name,source,variant,builder]=chosen,changed=source.replace(`content: (): void => { this.${builder}(); }`,'content: (): void => {}');assert.notEqual(changed,source);assert.throws(()=>proveStandardBinding(name,changed,variant,builder),/AssertionError/);
+const chosen=standardBindings.find(row=>row[0]===caseNames[selectedCase]),[name,source,variant,builder,maybeVariantExpression]=chosen,
+  variantExpression=typeof maybeVariantExpression==='string'?maybeVariantExpression:`'${variant}'`;
+proveStandardBinding(name,source,variant,builder,variantExpression);checkSharedWidths();const legacy=standardSource.replace('readerPageAreaLength(next.width)','Number(next.width)');assert.notEqual(legacy,standardSource);assert.throws(()=>checkSharedWidths(legacy),/actual public Area receipt/);
+const changed=source.replace(`content: (): void => { this.${builder}(); }`,'content: (): void => {}');assert.notEqual(changed,source);assert.throws(()=>proveStandardBinding(name,changed,variant,builder,variantExpression),/AssertionError/);
 }
 
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
-const {fixture:productionFixture,settle,deferred,origin,target,session,rawCandidate,hostSource,Gateway,gatewayExports,read,setCurrentRuntime,ReadingSessionFlowGateway}=await import('./lib/source-switch-owner-probe.mjs');const owned=[];const fixture=(...a)=>{const f=productionFixture(...a);owned.push(f.host);return f;};const checks=[],TX='00000000-0000-4000-8000-000000000001/1';async function untilOwner(p){for(let turn=0;turn<1000;turn++){if(p())return;await new Promise(setImmediate);}assert.fail('controlled source owner boundary not reached');}
+const {fixture:productionFixture,settle,deferred,origin,target,session,rawCandidate,hostSource,Gateway,gatewayExports,read,setCurrentRuntime,ReadingSessionFlowGateway}=await import('./lib/source-switch-owner-probe.mjs');const owned=[];const fixture=(...a)=>{const f=productionFixture(...a);owned.push(f.host);return f;};const checks=[],TX='00000000-0000-4000-8000-000000000001/1';async function untilOwner(p){for(let turn=0;turn<1000;turn++){if(p())return;await new Promise(resolve=>setTimeout(resolve,1));}assert.fail('controlled source owner boundary not reached');}
 const authorProof={schemaVersion:1,sourceVersion:'v1',field:'detail',raw:'@Writer',label:'Writer',rule:'author-nickname-at-v1'};
 const exactAuthorRecord={origin:'old',bookUrl:'book',name:'Book',author:'@Writer',
   acquisition:{sourceVersion:'v1',authorIdentity:authorProof}};
@@ -156,6 +156,7 @@ for(const proofState of ['current','stale'])for(const preview of [false,true]){
 if(id==='author-resolution'){
 {
   const f=fixture({open:false}),base=f.runtime.request.bind(f.runtime),queries=[];
+  let bookSearches=0;
   f.context.query={...f.context.query,author:'@Writer'};
   f.runtime.request=async(method,params,options)=>{
     if(method==='search-book.get'){
@@ -163,6 +164,7 @@ if(id==='author-resolution'){
       return{data:{book:exactAuthorRecord}};
     }
     if(method==='book.search'){
+      bookSearches+=1;
       assert.equal(params.page,1);
       return{data:{sourceId:params.sourceId,sourceVersion:'v1',contentKind:'text',books:params.sourceId==='new'
         ?[{bookId:'target',title:'Book',author:'Writer',variables:{}}]:[]}};
@@ -179,7 +181,7 @@ if(id==='author-resolution'){
   assert.deepEqual(query.authorIdentity,authorProof);assert.equal(query.author,'@Writer');
   assert.equal(query.sourceVersion,'v1');assert.notEqual(query,f.context.query);
   f.host.refresh(f.host.current().scopeId);
-  await untilOwner(()=>f.host.current().state.refreshing===false);
+  await untilOwner(()=>bookSearches>0&&f.host.current().state.refreshing===false);
   assert.equal(f.host.current().state.refreshing,false);
   const candidate=f.host.current().state.candidates.find(row=>row.sourceId==='new');assert.ok(candidate);
   await f.host.pick(candidate,f.host.current().scopeId);await settle();
@@ -685,7 +687,9 @@ const {sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs')
   owner.aboutToAppear();owner.initialRender();const nodes=p.nodes(owner);
   assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='换源结果未确认'));
   assert.equal(nodes.some(node=>node.type==='Text'&&node.create==='换源失败'),false,'unknown Core must not render a failed-commit title');
-  const retry=nodes.find(node=>node.type==='Button'&&node.createWithLabel?.[0]==='重试核对');assert.ok(retry?.onClick);
+  const retryActor=p.walk(owner).filter(child=>child instanceof p.deps.ReaderRecoveryAction&&child.label==='重试核对').at(-1);
+  assert.ok(retryActor,'actual shared recovery action remains reachable');
+  const retry=p.nodes(retryActor).find(node=>node.type==='Stack'&&node.onClick&&node.constraintSize?.minHeight===44);assert.ok(retry?.onClick);
   const originalFrame=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width==='100%'&&node.height==='100%');
   assert.ok(originalFrame,'the approved live picker retains one full-viewport owner');
   const frames=p.walk(owner).filter(child=>child instanceof p.deps.ReaderBoundedSurface);

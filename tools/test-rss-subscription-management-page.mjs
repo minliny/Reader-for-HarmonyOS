@@ -31,11 +31,15 @@ const page = readFileSync(resolve(
  const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=393;metrics.systemInsets.left=24;metrics.cutoutInsets.right=30;
  const owner=sdk.consumer(page,['build','pageContent','backBar','pageScroller','focusSubscriptionIfNeeded','expandedSubscriptionId','focusedSubscriptionId'],
   {Scroller,PageBackBar:Header,ReaderWindowCoordinator:{metrics:()=>metrics},setTimeout:action=>queue.push(action)});
- Object.assign(owner,{focusedSubscriptionId:'feed',stats:()=>bodies.push('stats'),operationFeedback:()=>bodies.push('operationFeedback'),subscriptionList:()=>bodies.push('subscriptionList')});owner.initialRender();
+ Object.assign(owner,{focusedSubscriptionId:'feed',resultMessage:'',stats:()=>bodies.push('stats'),operationFeedback:()=>bodies.push('operationFeedback'),subscriptionList:()=>bodies.push('subscriptionList')});owner.initialRender();
  const child=sdk.walk(owner).find(actor=>actor.variant==='rssManagement');assert.ok(child);assert.equal(child.scroller,owner.pageScroller);
- const scroll=[...child.nodes.values()].find(node=>node.type==='Scroll');assert.ok(scroll);assert.equal(scroll.create,owner.pageScroller);assert.equal(scroll.height,'100%');
+ const host=sdk.walk(owner).find(actor=>actor.scroller===owner.pageScroller&&actor.layout);assert.ok(host,'actual shared Scroll host consumes the page scroller');
+ const allNodes=sdk.walk(owner).flatMap(actor=>[...(actor.nodes?.values()??[])]);
+ const scroll=allNodes.find(node=>node.type==='Scroll'&&node.create===owner.pageScroller);assert.ok(scroll);assert.equal(scroll.height,'100%');
  assert.deepEqual(bodies,['stats','operationFeedback','subscriptionList']);
- const body=[...child.nodes.values()].find(node=>node.type==='Column'&&node.padding);assert.deepEqual([body.padding.left,body.padding.right],[24,30]);
+ const scaffoldNode=[...child.nodes.values()].find(node=>typeof node.onAreaChange==='function');assert.ok(scaffoldNode,'actual standard page receives the native viewport');
+ scaffoldNode.onAreaChange({}, {width:393,height:800});sdk.properties.flush();
+ const body=allNodes.find(node=>node.type==='Column'&&node.padding?.left===24&&node.padding?.right===30);assert.ok(body);assert.deepEqual([body.padding.left,body.padding.right],[24,30]);
  owner.focusSubscriptionIfNeeded({subscriptionId:'feed'},3);queue.shift()();assert.equal(scrolls.length,1);assert.equal(scrolls[0].xOffset,0);assert.ok(scrolls[0].yOffset>0);assert.equal(scrolls[0].animation,false,'focus restores through actual native controller without invented layout timing');
  assert.equal(owner.expandedSubscriptionId,'feed');sdk.properties.flush();assert.equal(child.scroller,owner.pageScroller);assert.equal(scroll.create,owner.pageScroller);assert.deepEqual(bodies,['stats','operationFeedback','subscriptionList']);
 }

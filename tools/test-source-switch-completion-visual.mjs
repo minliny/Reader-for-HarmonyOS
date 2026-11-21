@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"historical-definition": {"description": "仅显式历史message carrier witness；不作为runtime completion前置", "resources": []}, "ack-boundary": {"description": "实际Index finalized精确target/transaction接纳、小说与漫画分界及navigation退休", "resources": []}, "visual-clock": {"description": "实际reader已呈现receipt动效/notice/重复DTO/guard/取消/selection/reducedMotion", "resources": []}, "stage-order": {"description": "实际resident/continuous回调必须匹配本selection/lifecycle/body当前revision", "resources": []}, "canonical-stage": {"description": "实际completeFirstPage等待canonical progress ACK→revision→SDK resident stage→视觉准入", "resources": []}, "actor-clock-isolation": {"description": "两真实SDK actor独立property/watch/timer/animator且迟到旧clock不动新actor", "resources": []}};
+const definitions={"historical-definition": {"description": "旧私有toast carrier已退休；当前ReaderTransientFeedback与wash边界", "resources": []}, "ack-boundary": {"description": "实际Index finalized精确target/transaction接纳、小说与漫画分界及navigation退休", "resources": []}, "visual-clock": {"description": "实际reader已呈现receipt动效/共享feedback/重复DTO/guard/取消/selection/reducedMotion", "resources": []}, "stage-order": {"description": "实际resident/continuous回调必须匹配本selection/lifecycle/body当前revision", "resources": []}, "canonical-stage": {"description": "实际completeFirstPage等待canonical progress ACK→revision→SDK resident stage→视觉准入", "resources": []}, "actor-clock-isolation": {"description": "两真实SDK actor独立property/watch/feedback/animator且迟到旧clock不动新actor", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -11,27 +11,40 @@ const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs'
 const { sourceSwitchLiveSdk } = await import('./lib/source-switch-sdk-consumer.mjs');
 const { SourceSwitchCompletionPresentation } = await import('../entry/src/main/ets/features/source/SourceSwitchCompletionPresentation.ts');
 const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const { READER_FEEDBACK_EXTENDED_MS } = await import('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts');
 const { bookshelfSourceDisplayName, readableBookshelfSourceName } = await import('../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts');
 const { ReaderPhysicalPaginationOwner } = await import('../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts');
 const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
 const { ReaderPageChromeSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const {readerMessageStyles} = await import('./lib/reader-typography-probe.mjs');
+const { ReaderPageBookmarkSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderPageBookmarkModel.ts');
 
 
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const localSource = read('features/reading/LocalReadingExperience.ets');
-if(selectedCase==='historical-definition'){const {approvedTypographyContract}=await import('./lib/approved-manga-typography-carriers.mjs');assert.equal(approvedTypographyContract(read('features/source/SourceSwitchCompletionOverlay.ets'),'features/source/SourceSwitchCompletionOverlay.ets').registered,true);return;}
+if(selectedCase==='historical-definition'){
+  const overlay=read('features/source/SourceSwitchCompletionOverlay.ets');
+  assert.match(overlay,/Confirmed completion feedback uses ReaderTransientFeedback/);
+  assert.doesNotMatch(overlay,/this\.toastText|Text\(/,'the retired private toast carrier cannot return');
+  assert.match(localSource,/private readonly sourceSwitchFeedback: ReaderTransientFeedback/);
+  const show=localSource.indexOf('this.sourceSwitchFeedback.show(');
+  assert.ok(show>=0);
+  const scope=localSource.slice(show,show+700);
+  assert.match(scope,/title: '书源已切换'/);assert.match(scope,/tone: 'success'/);
+  assert.match(scope,/message: `已切换至 \$\{completion\.sourceName \|\| completion\.sourceId\}`/);
+  assert.match(scope,/duration: READER_FEEDBACK_EXTENDED_MS/);
+  return;
+}
 const indexSource = read('pages/Index.ets');
 const members = ['sourceSwitchCompletion', 'readingReadyGeneration', 'sourceSwitchCompletionVisible',
-  'sourceSwitchRevealOpacity', 'sourceSwitchToastText', 'sourceSwitchVisualSelectionToken', 'sourceSwitchCompletionEpoch',
-  'sourceSwitchRevealAnimator', 'sourceSwitchToastTimer', 'consumedSourceSwitchCompletions', 'phase',
+  'sourceSwitchRevealOpacity', 'sourceSwitchVisualSelectionToken', 'sourceSwitchCompletionEpoch',
+  'sourceSwitchRevealAnimator', 'consumedSourceSwitchCompletions', 'phase',
   'sourceSwitchPresentedRevision', 'sourceSwitchPresentedSelectionToken', 'sourceSwitchPresentedContinuous',
   'sourceSwitchPendingCompletionKey', 'sourceSwitchPendingCompletionSelectionToken', 'sourceSwitchPendingCompletionLifecycleToken',
   'sourceSwitchCanonicalPageCurrent', 'sourceSwitchContinuousRangeObserver', 'onSourceSwitchPagePresented', 'hasContinuousRenderContent',
   'sourceSwitchCompletionKey', 'sourceSwitchCompletionCurrent', 'sourceSwitchCompletionDisplayCurrent',
   'finishSourceSwitchReveal', 'cancelSourceSwitchCompletion', 'sourceSwitchCompletionVisibleChanged',
-  'sourceSwitchCompletionChanged', 'sourceSwitchCompletionWash', 'sourceSwitchCompletionToast'];
+  'sourceSwitchCompletionChanged', 'sourceSwitchCompletionWash'];
 const visualScope = new AsyncLocalStorage();
 let visualTemplate, visualEmissions = 0;
 const visualActors = [];
@@ -39,7 +52,11 @@ const visualActors = [];
 function fixture({ reduced = false, phase = 'ready', presented = true, extraMembers = [], extraDeps = {} } = {}) {
   let nextTimer = 0;
   const timers = new Map(), animators = [];
-  const uiContext = { getFont: () => ({}), createAnimator(options) {
+  const uiContext = { getFont: () => ({}), px2vp: value => value, fp2px: value => value,
+    px2fp: value => value, getMeasureUtils: () => ({
+      measureText: ({ textContent }) => String(textContent).length * 12,
+      measureTextSize: ({ textContent }) => ({ width: String(textContent).length * 12, height: 16 })
+    }), createAnimator(options) {
     const port = { options, plays: 0, cancels: 0, onFrame() {}, onFinish() {},
       play() { this.plays += 1; },
       cancel() { this.cancels += 1; this.onFrame(options.end); this.onFinish(); } };
@@ -75,6 +92,10 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
   for (const [field, watch] of reader.watches) for (const [name, method] of originals)
     if (watch === method) reader.watches.set(field, reader[name]);
   reader.getUIContext = () => uiContext;
+  const feedback = { calls: [], resets: 0,
+    show(_context, options, current) { this.calls.push({ options, admitted: current() }); return true; },
+    reset() { this.resets += 1; } };
+  reader.sourceSwitchFeedback = feedback;
   const ownsPropertyActor = owner => {
     for (let current = owner; current !== undefined; current = current.owner)
       if (current === reader) return true;
@@ -92,18 +113,28 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
   Object.assign(reader, { mounted: true, exitRequested: false, appForeground: true, reduceMotion: reduced,
     isReaderIdentityCurrent: () => true, sourceId: 'target', bookId: 'book', readingReadyGeneration: 7,
     sourceSwitchFailureMessage: '', sourceSwitchCompletionVisible: true, phase,
+    bookTitle: '测试书', pageChromeClockText: '12:00',
+    bookmarkPendingTarget: '', bookmarkPendingAnchor: '', bookmarkPendingOwner: '',
+    bookmarkPreviewOwner: '', bookmarkPreviewChanged: false, bookmarkPreviewCancelled: false,
+    bookmarkPageOffsetY: 0, bookmarkPreviewStatus: 'empty', controlDirectoryEntries: () => [],
     visiblePage: { startScalar: 0 }, visibleFragments: [{ text: '真实正文', imageHeight: 0 }],
     chapter: { sourceId: 'target', bookId: 'book', chapterIndex: 2, chapterTitle: '当前章', content: '真实正文' },
     materializedChapterSelectionToken: 3, pageTurnRenderRevision: 2, continuousRenderRevision: 4,
     continuousFragments: [], readerSettingsSnapshot: { navigationMode: 'paged' },
     visiblePageSelectionToken: 3, chapterSelectionToken: 3, lifecycleToken: 5,
-    visibleReadingAppearance: () => ({ activeTheme: 'warm' }), readingLayout: () => ({ widthClass: 'compact' }),
+    visibleReadingAppearance: () => ({ activeTheme: 'warm' }), readingLayout: () => ({
+      widthClass: 'compact', viewportWidth: 390, viewportHeight: 844, systemFontScale: 1,
+      contentTop: 72, contentLeft: 24, contentRight: 366,
+      pageChromeVisualSafeTop: 0, pageChromeVisualSafeLeft: 0, pageChromeVisualSafeRight: 0,
+      pageChromeVisualSafeBottom: 0, pageChromeTopRegionHeight: 0,
+      pageChromeInteractiveSafeRight: 0, pageChromeInteractiveSafeBottom: 0
+    }),
     readerWindowMetricsRevision: 0, readerStatusBarMetrics: () => deps.createDefaultReaderWindowMetrics() });
   p.properties.flush();
   if (presented) reader.onSourceSwitchPagePresented(reader.pageTurnRenderRevision);
   const event = id => new SourceSwitchCompletionPresentation(id, 'target', 'book', 7, '目标书源', 2, 0);
   const accept = value => { reader.sourceSwitchCompletion = value; p.properties.flush(); };
-  return { p, reader, deps, event, accept, timers, animators };
+  return { p, reader, deps, event, accept, timers, animators, feedback };
 }
 
 if(selectedCase==='ack-boundary'){
@@ -167,34 +198,40 @@ if(selectedCase==='visual-clock'){
   const x = fixture();
   x.accept(x.event('ready'));
   assert.equal(x.reader.phase, 'ready');
-  assert.equal(x.reader.sourceSwitchToastText, '已切换至 目标书源');
+  assert.equal(x.feedback.calls.length, 1);
+  assert.equal(x.feedback.calls[0].admitted, true);
+  assert.deepEqual({
+    title: x.feedback.calls[0].options.title,
+    tone: x.feedback.calls[0].options.tone,
+    message: x.feedback.calls[0].options.message,
+    duration: x.feedback.calls[0].options.duration,
+  }, { title: '书源已切换', tone: 'success', message: '已切换至 目标书源', duration: READER_FEEDBACK_EXTENDED_MS });
+  assert.match(x.feedback.calls[0].options.key, /^source-switch:/);
   assert.equal(x.reader.sourceSwitchRevealOpacity, 1 - SOURCE_SWITCH_VISUAL.readerEnterFromOpacity);
   assert.equal(x.animators.length, 1);
   const animator = x.animators[0];
   assert.equal(animator.options.duration, SOURCE_SWITCH_VISUAL.readerEnterDurationMs);
   assert.equal(animator.options.end, 0);
   assert.equal(animator.options.iterations, 1);
-  assert.equal([...x.timers.values()][0].delay, SOURCE_SWITCH_VISUAL.toastDurationMs);
+  assert.equal(x.timers.size, 0, 'the shared feedback host owns notice duration');
   animator.onFrame(.25);
   assert.equal(x.reader.sourceSwitchRevealOpacity, .25);
   x.accept(x.event('ready')); // a fresh ArkUI DTO copy is the same event
   assert.equal(x.animators.length, 1);
+  assert.equal(x.feedback.calls.length, 1);
   animator.onFrame(.1);
   assert.equal(x.reader.sourceSwitchRevealOpacity, .1, 'retained animation survives copied equal props');
   x.reader.sourceSwitchCompletionWash();
-  x.reader.sourceSwitchCompletionToast();
   x.p.properties.flush();
   const overlays = x.p.walk(x.reader).filter(child => child instanceof x.deps.SourceSwitchCompletionOverlay);
-  assert.equal(overlays.length, 2, 'actual wash and toast children are emitted');
-  const toast = x.p.nodes(x.reader).find(node => node.type === 'Text' && node.create === '已切换至 目标书源');
-  assert.equal(toast.fontSize, readerMessageStyles.MESSAGE_META.fontSizeFp);
-  assert.equal(toast.lineHeight, readerMessageStyles.MESSAGE_META.lineHeightFp);
+  assert.equal(overlays.length, 1, 'only the reader reveal wash remains in the local tree');
+  assert.equal(x.p.nodes(x.reader).some(node => node.type === 'Text' && node.create === '已切换至 目标书源'), false,
+    'confirmed completion text is owned by the shared transient host');
   const paper = x.p.walk(x.reader).find(child => child instanceof x.deps.ReaderPaperBackground);
   assert.equal(paper.theme, 'warm', 'wash uses the actual visible reading paper');
   animator.onFinish();
   assert.equal(x.reader.sourceSwitchRevealOpacity, 0);
-  [...x.timers.values()][0].callback();
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  assert.equal(x.feedback.calls.length, 1, 'native animation completion cannot replay feedback');
   assert.equal(x.reader.phase, 'ready', 'visual clocks do not change business readiness');
 }
 
@@ -203,7 +240,7 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   reader => { reader.appForeground = false; }, reader => { reader.sourceSwitchCompletionVisible = false; }]) {
   const x = fixture(); mutation(x.reader); x.p.properties.flush(); x.accept(x.event('guarded'));
   assert.equal(x.animators.length, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  assert.equal(x.feedback.calls.length, 0);
 }
 
 {
@@ -214,6 +251,7 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   assert.equal(x.animators.length, 0, 'phase ready alone cannot acknowledge a resident text page');
   x.reader.onSourceSwitchPagePresented(x.reader.pageTurnRenderRevision);
   assert.equal(x.animators.length, 1, 'the current resident revision callback admits the same receipt after reflow');
+  assert.equal(x.feedback.calls.length, 1);
 }
 
 {
@@ -222,11 +260,13 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   x.reader.sourceSwitchCompletionVisible = false; x.p.properties.flush();
   assert.equal(animator.cancels, 1);
   assert.equal(x.timers.size, 0);
+  assert.ok(x.feedback.resets >= 1);
   lateFrame(.55); lateFinish();
   assert.equal(x.reader.sourceSwitchRevealOpacity, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  assert.equal(x.feedback.calls.length, 1);
   x.reader.sourceSwitchCompletionVisible = true; x.p.properties.flush();
   assert.equal(x.animators.length, 1, 'retired event is consumed and cannot replay on return');
+  assert.equal(x.feedback.calls.length, 1);
 }
 
 {
@@ -235,7 +275,7 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   x.reader.visiblePageSelectionToken = x.reader.chapterSelectionToken;
   assert.equal(x.reader.sourceSwitchCompletionDisplayCurrent(), false, 'same-anchor successor selection immediately rejects the old view');
   x.animators[0].onFrame(.3);
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  assert.ok(x.feedback.resets > 0, 'the retired local reveal resets its shared feedback admission');
   assert.equal(x.timers.size, 0);
 }
 
@@ -243,8 +283,9 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   const x = fixture({ reduced: true }); x.accept(x.event('reduced'));
   assert.equal(x.animators.length, 0);
   assert.equal(x.reader.sourceSwitchRevealOpacity, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '已切换至 目标书源');
-  assert.equal(x.timers.size, 1);
+  assert.equal(x.feedback.calls.length, 1);
+  assert.equal(x.feedback.calls[0].options.message, '已切换至 目标书源');
+  assert.equal(x.timers.size, 0);
 }
 
 
@@ -256,7 +297,7 @@ for (const mutation of [reader => { reader.chapterSelectionToken += 1; reader.vi
   mutation(x.reader); x.reader.phase = 'ready'; x.p.properties.flush();
   x.reader.onSourceSwitchPagePresented(x.reader.pageTurnRenderRevision);
   assert.equal(x.animators.length, 0); assert.equal(x.timers.size, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '', 'same-anchor manual refresh/successor lifecycle cannot replay a pending old receipt');
+  assert.equal(x.feedback.calls.length, 0, 'same-anchor manual refresh/successor lifecycle cannot replay a pending old receipt');
 }
 
 // Reproduce the VM's early success independently from visual clocks: a true
@@ -288,7 +329,7 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
   const x = fixture({ presented: false }); mutation(x.reader); x.accept(x.event('unverified'));
   x.reader.onSourceSwitchPagePresented(x.reader.pageTurnRenderRevision);
   assert.equal(x.animators.length, 0); assert.equal(x.timers.size, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '', 'legacy/empty/obsolete model cannot emit a success notice');
+  assert.equal(x.feedback.calls.length, 0, 'legacy/empty/obsolete model cannot emit a success notice');
 }
 
 {
@@ -317,6 +358,22 @@ if(selectedCase==='canonical-stage'){
   const require = createRequire(import.meta.url);
   const sdk = resolveEtsLoaderRoot();
   const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const fontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+  const chromeLayout = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+  class ReaderTextStyle {
+    constructor(fontFamily, fontWeight, fontSizeFp, lineHeightFp, letterSpacingFp, scalePolicy, source) {
+      Object.assign(this, { fontFamily, fontWeight, fontSizeFp, lineHeightFp, letterSpacingFp, scalePolicy, source });
+    }
+  }
+  const messageStyle = pureModuleProbe(read('features/common/ReaderMessageStyle.ets'), 'ReaderMessageStyle.ets',
+    { ReaderTextStyle, ...fontFamilies }, ['MESSAGE_META', 'MESSAGE_GESTURE_ICON']);
+  const TYPE_READER_IMMERSIVE_TIME = new ReaderTextStyle(fontFamilies.READER_FONT_NOTO_SANS_SC,
+    400, 12, 14.4, 0, 'system', 'figmaNode');
+  const chromeText = pureModuleProbe(read('features/reading/ReaderPageChromeTextMeasurement.ets'),
+    'ReaderPageChromeTextMeasurement.ets', { ReaderTextStyle, TYPE_READER_IMMERSIVE_TIME,
+      READER_FONT_HARMONYOS_SANS: fontFamilies.READER_FONT_HARMONYOS_SANS },
+    ['readerPageChromeTopTextStyle', 'measureReaderPageChromeText']);
   const actualClass = (source, name, deps = {}) => {
     const tree = ts.createSourceFile(virtualFilePath('CompletionActualClasses.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     const declaration = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === name);
@@ -324,13 +381,19 @@ if(selectedCase==='canonical-stage'){
     return new Function(...Object.keys(deps), stripTypeScriptTypes(declaration.getText(tree)).replace(/^export /, '') + `;return ${name};`)(...Object.values(deps));
   };
   const stageSource = read('features/reading/ReaderPageTurnStage.ets');
-  const ReaderPageTurnRenderPage = actualClass(stageSource, 'ReaderPageTurnRenderPage', { ReaderPageChromeSnapshot });
+  const ReaderPageTurnRenderPage = actualClass(stageSource, 'ReaderPageTurnRenderPage', { ReaderPageChromeSnapshot, ReaderPageBookmarkSnapshot });
   const CoreReadingAnchor = actualClass(localSource, 'CoreReadingAnchor');
   const ReadingCommit = actualClass(localSource, 'ReadingCommit');
   const PhysicalReadingPage = actualClass(read('features/reading/ReadingMeasurementModels.ets'), 'PhysicalReadingPage');
   const ReadingSurfacePageFragment = actualClass(read('features/reading/ReadingSurface.ets'), 'ReadingSurfacePageFragment');
   const x = fixture({ phase: 'measuring', presented: false,
-    extraDeps: { CoreReadingAnchor, ReadingCommit, ReaderPageTurnRenderPage },
+    extraDeps: { CoreReadingAnchor, ReadingCommit, ReaderPageTurnRenderPage, ReaderPageBookmarkSnapshot,
+      readerPageChromeTopTextStyle: chromeText.readerPageChromeTopTextStyle,
+      measureReaderPageChromeText: chromeText.measureReaderPageChromeText,
+      resolveReaderPageChromeLayout: chromeLayout.resolveReaderPageChromeLayout,
+      ReaderPageChromeMeasurements: chromeLayout.ReaderPageChromeMeasurements,
+      READER_PAGE_CHROME_BOOKMARK_SIZE: chromeLayout.READER_PAGE_CHROME_BOOKMARK_SIZE,
+      MESSAGE_META: messageStyle.MESSAGE_META, MESSAGE_GESTURE_ICON: messageStyle.MESSAGE_GESTURE_ICON },
     extraMembers: ['completeFirstPage', 'persistMeasuredCanonicalProgress', 'activeGateway', 'requireChapter', 'requireChapterLayoutMap',
       'isMeasurementCurrent', 'isSessionActive', 'isMountedToken', 'isSelectionCurrent', 'isSelectionActive',
       'resumeSupersededAppearanceMeasurement', 'isOrdinaryPageMeasurement', 'admitCommittedProgress', 'isChapterFirstPageStart', 'errorMessage',
@@ -407,13 +470,15 @@ if(selectedCase==='actor-clock-isolation'){
 {
   const first = fixture(), second = fixture();
   first.accept(first.event('independent-first')); second.accept(second.event('independent-second'));
-  assert.equal(first.timers.size, 1); assert.equal(second.timers.size, 1);
+  assert.equal(first.feedback.calls.length, 1); assert.equal(second.feedback.calls.length, 1);
+  const firstResets = first.feedback.resets, secondResets = second.feedback.resets;
   const lateFirst = first.animators[0].onFinish;
   first.reader.sourceSwitchCompletionVisible = false; first.p.properties.flush();
-  assert.equal(first.timers.size, 0); assert.equal(second.timers.size, 1,
-    'retiring the old actor cannot clear a successor clock with the same numeric timer id');
+  assert.ok(first.feedback.resets > firstResets); assert.equal(second.feedback.resets, secondResets,
+    'retiring the old actor cannot reset a successor feedback admission');
   lateFirst();
-  assert.equal(second.reader.sourceSwitchToastText, '已切换至 目标书源');
+  assert.equal(second.feedback.calls.length, 1);
+  assert.equal(second.feedback.calls[0].options.message, '已切换至 目标书源');
   assert.equal(second.animators[0].cancels, 0, 'native animator ports remain actor-local');
 }
 

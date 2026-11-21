@@ -59,6 +59,7 @@ async function fixture() {
    replaceMutationActiveGeneration:-1,replaceMutationActiveLifecycleToken:-1,replaceMutationActiveBookId:'',replaceMutationActiveRuleId:-1,
    controlSession:{location:{module:'replace'}},reloads:0,notices:[],
    readerRecoveryView:{message:'',visible:false,canRetry:false,generation:0},
+   replaceRecovery:{message:'',visible:false,canRetry:false,generation:0},replaceRecoveryOperationId:undefined,
    controlVisible(){return this.visible;},controlPage(){return this.page;},isSessionActive(t){return this.mounted&&t===this.lifecycleToken;},
    setControlPage(p){this.page=p;},persistBeforeContentMutation:async()=>()=>true,
    reloadCurrentPageAfterReplacePersist(){this.reloads++;},errorMessage:e=>e.message,
@@ -104,18 +105,24 @@ if(id==="footer-chain")
 {
  const f=await fixture();f.options.afterMethod='rules.mutation.apply';
  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url),'utf8');
- const sdk=boundedSurfaceSdk(),ui=sdk.consumer(source,['editorActions','readyInput','fullInput','quickInput','saveEditor','perform','dismissTemporaryLayer','cancelTemporaryLayer'],{
-  readerControlReplaceEndpoint,errorMessageOf:e=>e.message,
+ const sdk=boundedSurfaceSdk(),ui=sdk.consumer(source,['editorActions','originalRecoveryNotice','readyInput','fullInput','quickInput','saveEditor','perform','dismissTemporaryLayer','cancelTemporaryLayer'],{
+  readerControlReplaceEndpoint,ReaderControlReplaceGatewayError:f.FullError,errorMessageOf:e=>e.message,
  });
  const draft=states.createReaderControlReplaceDraft(row());draft.replacement='durable new';
  Object.assign(ui,{layer:'editor',state:f.owner.controlReplaceState,draft,appThemeScheme:'day',motionProgress:1,interactionEnabled:true,
   localPending:false,localError:'',presentationRevision:1,onTemporaryLayerChange(){},onSave:d=>f.owner.saveControlReplace(d)});
- ui.editorActions();const save=sdk.nodes(ui).find(n=>n.create==='保存');assert.equal(save.enabled,true);save.onClick();await until(()=>ui.localError.length>0);
+ ui.editorActions();const save=sdk.nodes(ui).find(n=>n.create==='保存');assert.equal(save.enabled,true);save.onClick();
+ await until(()=>f.owner.controlReplaceState.writeUncertain);ui.state=f.owner.controlReplaceState;ui.replay();sdk.properties.flush();
  assert.equal(f.shared.snapshot().confirmation,'unknown');assert.equal(ui.layer,'editor');assert.strictEqual(ui.draft,draft);
- assert.match(ui.localError,/未确认/);ui.state=f.owner.controlReplaceState;ui.replay();sdk.properties.flush();assert.equal(save.enabled,false);
+ assert.equal(ui.localError,'','uncertain writes stay in the shared recovery host, not the draft field error');
+ ui.originalRecoveryNotice();const notice=sdk.walk(ui).find(actor=>actor instanceof sdk.deps.ReaderRecoveryNotice);assert.ok(notice);
+ assert.equal(notice.view.visible,true);assert.match(notice.view.message,/未确认/);
+ ui.state=f.owner.controlReplaceState;ui.replay();sdk.properties.flush();assert.equal(save.enabled,false);
  const count=f.writes().length;save.onClick();await tick();assert.equal(f.writes().length,count);
  await f.gateway.loadRules();ui.state=f.owner.controlReplaceState;ui.replay();sdk.properties.flush();assert.equal(save.enabled,false);
- await f.owner.reloadControlReplace();ui.state=f.owner.controlReplaceState;ui.replay();sdk.properties.flush();assert.equal(save.enabled,true,'qualified same-ID query releases old uncertainty');
+ await f.owner.reloadControlReplace();ui.state=f.owner.controlReplaceState;ui.editorActions();
+ const released=sdk.nodes(ui).filter(n=>n.create==='保存').at(-1);
+ assert.equal(released.enabled,true,'qualified same-ID query releases old uncertainty');
  assert.strictEqual(ui.draft,draft);assert.equal(ui.layer,'editor');results.push('actual SDK footer → actual LRE/Gateway: unknown retains draft, closes no layer and matching list cannot enable Save');
 }
 if(id==="footer-chain")
@@ -126,13 +133,16 @@ if(id==="footer-chain")
  assert.strictEqual(states.settleReaderControlReplaceOriginal(f.owner.controlReplaceState,'wrong'),f.owner.controlReplaceState);
  const before=f.calls.length;await f.owner.reloadControlReplace(true,'wrong');assert.equal(f.calls.length,before,'old origin cannot query or replay a later intent');
  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url),'utf8');
- const sdk=boundedSurfaceSdk(),ui=sdk.consumer(source,['originalRecoveryAction','textAction','reload','perform','fullInput','quickInput'],{errorMessageOf:e=>e.message,readerControlReplaceEndpoint});
+ const sdk=boundedSurfaceSdk(),ui=sdk.consumer(source,['originalRecoveryNotice','textAction','reload','perform','fullInput','quickInput'],
+  {errorMessageOf:e=>e.message,readerControlReplaceEndpoint,ReaderControlReplaceGatewayError:f.FullError});
  let sent=[];const draft=states.createReaderControlReplaceDraft(row());
  Object.assign(ui,{state:f.owner.controlReplaceState,layer:'editor',draft,localPending:false,localError:'',presentationRevision:1,
   interactionEnabled:true,motionProgress:1,appThemeScheme:'day',onReload:async id=>{sent.push(id);await f.owner.reloadControlReplace(true,id);}});
- ui.originalRecoveryAction();const old=sdk.nodes(ui).find(n=>n.type==='Text').onClick;
- ui.state={...ui.state,writeOperationId:'successor'};old();await tick();assert.equal(sent.length,0,'actual physical callback captured old tuple cannot borrow new state');
- ui.state=f.owner.controlReplaceState;old();await until(()=>f.shared.snapshot().confirmation==='confirmed');
+ ui.originalRecoveryNotice();
+ const notice=sdk.walk(ui).find(actor=>actor instanceof sdk.deps.ReaderRecoveryNotice);assert.ok(notice,'actual shared recovery notice is mounted');
+ const old=notice.onReconcile,revision=ui.state.revision;
+ ui.state={...ui.state,writeOperationId:'successor'};old(revision);await tick();assert.equal(sent.length,0,'actual physical callback captured old tuple cannot borrow new state');
+ ui.state=f.owner.controlReplaceState;old(revision);await until(()=>f.shared.snapshot().confirmation==='confirmed');
  assert.deepEqual(sent,[originalId]);assert.equal(f.writes().length,2);assert.strictEqual(ui.draft,draft);assert.equal(ui.layer,'editor');
  results.push('actual SDK recovery captures original ID; wrong/old callback blocked; explicit same-ID retry retains editor draft');
 }

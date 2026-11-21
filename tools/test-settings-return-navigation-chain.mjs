@@ -113,6 +113,7 @@ function navigation(text=indexSource){
       'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],
       {ReaderRuntimeOwner:f.Runtime,readerRecoveryView,isReaderProductSurfaceEnabled},props);
     page.mounted=true;page.themeOwner=f.runtime;page.temporaryBackIdentity='return-native:'+instance;page.resetMessage='';
+    page.originalSyncOperationId='';page.originalSyncReadFailed=false;page.originalSyncPresentation=0;page.lastOperationToast='';
     page.buildHome();
     const row=sdk.walk(page).find(child=>child instanceof sdk.deps.CategoryRow&&child.label==='书源管理');
     assert.ok(row,'actual Settings buildHome mounts Source row in the production CategorySection/Card');
@@ -194,7 +195,9 @@ for(const changedKey of ['reduceMotion','developerMode'])for(const failure of ['
   assert.equal(n.f.disk.get(changedKey),failure==='after','fixture distinguishes not-durable and durable-with-lost-ACK flush');
   assert.equal(original.pendingReconciliation,true);assert.equal(original.acceptedRevision,1);assert.equal(original.savedRevision,0);
   const writes=()=>n.f.events.filter(event=>event[0]==='put'||event[0]==='flush');
-  const dispatched=structuredClone(writes());assert.equal(dispatched.filter(event=>event[0]==='put').length,5);
+  const dispatched=structuredClone(writes());
+  assert.deepEqual(dispatched.filter(event=>event[0]==='put').map(event=>event[1]),Object.keys(defaults),
+    'one write per current persisted setting, in the production order');
   assert.equal(dispatched.filter(event=>event[0]==='flush').length,1);
   const pending=n.home();pending.click();assert.equal(i.route,'source');await n.idle();
   const source=n.params('source');source.onBack();assert.equal(i.route,'settings');
