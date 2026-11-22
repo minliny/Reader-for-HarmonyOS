@@ -1,0 +1,131 @@
+{
+  "id": "source-management.unknown-recovery-body-fits",
+  "version": 1,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-read-v1",
+    "description": "Enter Source Management from ordinary Settings on a public test target already retaining the unresolved unknown receipt without a blocked original operation. Observe the mounted notice when its body fits at the actual window. Leave the business operation untouched. Do not manufacture a recovery state or override the system font.",
+    "publicSources": true
+  },
+  "ownerSources": [
+    "entry/src/main/ets/app/ReaderOperationFacts.ts",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts",
+    "entry/src/main/ets/app/ReaderRecoveryProjection.ts",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
+    "entry/src/main/ets/pages/ReaderSourceTextMetrics.ets"
+  ],
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "recovery-fitting",
+      "kind": "sample",
+      "afterAction": "open-sources",
+      "keyboard": false,
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list"
+      ],
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "recovery",
+            "payload.recovery.branch": "unknown"
+          }
+        },
+        {
+          "kind": "source.recovery-title",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.branch": "unknown"
+          }
+        }
+      ],
+      "quietMs": 600
+    }
+  ],
+  "assertions": [
+    {
+      "id": "source.recovery.unknown.body-fits",
+      "evaluator": "source",
+      "kind": "recovery-body-text",
+      "required": false,
+      "condition": "The current unknown Source recovery notice is initially fitted in the native window.",
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#pendingRecovery",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-sources",
+      "sample": "recovery-fitting",
+      "expected": {
+        "branch": "unknown",
+        "presentation": "fits"
+      }
+    }
+  ],
+  "structure": {
+    "recovery-fitting": "recovery-fitting"
+  }
+}

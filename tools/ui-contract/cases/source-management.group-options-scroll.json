@@ -1,0 +1,307 @@
+{
+  "id": "source-management.group-options-scroll",
+  "phase": 1,
+  "version": 3,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-group-options-scroll-v1",
+    "description": "Use the normal 320–366vp compact portrait at independently verified default system font with only the twelve fixed disabled public JSON sources, one source per group. Use the measured Source group Scroll to reach the initially unshown twelfth option, tap that exact public option and verify the sole expected projection without reopening Source Management. Verify bounded native glyph ranges on the first public option initially and on the twelfth after scrolling.",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          },
+          "channel": "business",
+          "match": "latest"
+        }
+      ]
+    },
+    {
+      "id": "source-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-group-trigger"
+      ],
+      "keyboard": false,
+      "quietMs": 500,
+      "afterAction": "open-sources",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 12,
+            "payload.projected": 12,
+            "payload.allGroups": true,
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0
+          },
+          "channel": "business",
+          "match": "latest"
+        }
+      ]
+    },
+    {
+      "id": "open-group",
+      "kind": "action",
+      "op": "click",
+      "from": "source-ready",
+      "target": "reader-source-group-trigger",
+      "gesture": true,
+      "waitFor": [
+        {
+          "kind": "source.overlay",
+          "fields": {
+            "payload.overlay": "group",
+            "payload.phase": "open"
+          },
+          "channel": "business",
+          "match": "latest"
+        }
+      ]
+    },
+    {
+      "id": "panel-before",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-group-panel",
+        "reader-source-group-options-scroll",
+        "reader-source-group-scroll-reference",
+        "reader-source-group-selected",
+        "reader-source-group-scroll-head-option"
+      ],
+      "keyboard": false,
+      "quietMs": 500,
+      "afterAction": "open-group",
+      "waitFor": [
+        {
+          "kind": "source.overlay",
+          "fields": {
+            "payload.overlay": "group",
+            "payload.phase": "open"
+          },
+          "channel": "business",
+          "match": "latest"
+        },
+        {
+          "kind": "source.surface-text-layout",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.scope": "group-menu",
+            "payload.phase": "initial"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scroll-group-options",
+      "kind": "action",
+      "op": "swipe",
+      "from": "panel-before",
+      "target": "reader-source-group-options-scroll",
+      "path": {
+        "from": [
+          0.5,
+          0.94
+        ],
+        "to": [
+          0.5,
+          0.06
+        ],
+        "speed": 900
+      }
+    },
+    {
+      "id": "panel-tail",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-group-panel",
+        "reader-source-group-options-scroll",
+        "reader-source-group-tail-option",
+        "reader-source-group-scroll-reference"
+      ],
+      "keyboard": false,
+      "quietMs": 500,
+      "afterAction": "scroll-group-options",
+      "waitFor": [
+        {
+          "kind": "source.surface-text-layout",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.scope": "group-menu",
+            "payload.phase": "settled"
+          }
+        }
+      ]
+    },
+    {
+      "id": "select-tail-option",
+      "kind": "action",
+      "op": "click",
+      "from": "panel-tail",
+      "target": "reader-source-group-tail-option",
+      "waitFor": [
+        {
+          "kind": "source.overlay",
+          "fields": {
+            "payload.overlay": "group",
+            "payload.phase": "dismiss"
+          },
+          "channel": "business",
+          "match": "latest"
+        },
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.trigger": "group"
+          },
+          "channel": "business",
+          "match": "latest"
+        }
+      ]
+    },
+    {
+      "id": "selected-tail",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-group-trigger"
+      ],
+      "keyboard": false,
+      "quietMs": 500,
+      "afterAction": "select-tail-option",
+      "waitFor": [
+        {
+          "kind": "source.overlay",
+          "fields": {
+            "payload.overlay": "group",
+            "payload.phase": "dismiss"
+          },
+          "channel": "business",
+          "match": "latest"
+        }
+      ]
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+    "entry/src/main/ets/ui/controls/ReaderButton.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
+    "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+    "entry/src/main/ets/pages/ReaderSourceTextMetrics.ets"
+  ],
+  "assertions": [
+    {
+      "id": "source.group.options-scroll",
+      "evaluator": "source",
+      "kind": "group-options-scroll",
+      "required": true,
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#groupOverlay",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "entryAction": "open-sources",
+      "openAction": "open-group",
+      "scrollAction": "scroll-group-options",
+      "baseline": "panel-before",
+      "sample": "selected-tail",
+      "action": "select-tail-option",
+      "expected": {
+        "groupIndex": 12,
+        "sourceCount": 12
+      }
+    },
+    {
+      "id": "source.group.options-text",
+      "evaluator": "source",
+      "kind": "group-options-text",
+      "required": true,
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#scheduleVerificationGroupText",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "entryAction": "open-sources",
+      "openAction": "open-group",
+      "baseline": "panel-before",
+      "sample": "panel-tail",
+      "action": "scroll-group-options",
+      "expected": {
+        "groupIndex": 12,
+        "sourceCount": 12
+      }
+    }
+  ],
+  "structure": {
+    "source-ready": "source-ready",
+    "panel-before": "panel-before",
+    "panel-tail": "panel-tail",
+    "selected-tail": "selected-tail"
+  }
+}

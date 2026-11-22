@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync, lstatSync, realpathSync } from 
 import { dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import Ajv from 'ajv';
 import { canonicalAppJson } from '../../../scripts/lib/app-build-identity.mjs';
-import { requireEvidence, sha256 } from '../../lib/native-ui-evidence.mjs';
+import { EvidenceError, requireEvidence, sha256 } from '../../lib/native-ui-evidence.mjs';
 
 const schema = JSON.parse(readFileSync(new URL('../schema/evidence.json', import.meta.url), 'utf8'));
 const ajv = new Ajv({ allErrors: true, strict: true });
@@ -11,7 +11,7 @@ const validators = new Map(['case', 'session', 'receipt', 'event'].map(type => [
   type, ajv.compile({ $ref: `reader-ui-phase0-v1#/$defs/${type}` }),
 ]));
 
-export { requireEvidence, sha256 };
+export { EvidenceError, requireEvidence, sha256 };
 export const jsonBytes = value => Buffer.from(`${canonicalAppJson(value)}\n`);
 export const jsonDigest = value => sha256(jsonBytes(value));
 
@@ -22,7 +22,8 @@ export function validate(type, value) {
 }
 
 function safeEvidencePath(root, path, writing = false) {
-  requireEvidence(typeof path === 'string' && /^[a-zA-Z0-9._/-]+$/.test(path) && !isAbsolute(path) &&
+  requireEvidence(typeof path === 'string' && !isAbsolute(path) && !path.includes('\\') &&
+    ![...path].some(character => character.charCodeAt(0) < 0x20) &&
     path.split('/').every(part => part !== '.' && part !== '..' && part.length > 0),
   'Invalid evidence-relative path');
   let current = root;

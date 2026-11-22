@@ -55,18 +55,18 @@ export function evaluatePage(page, model) {
   return diagnostics;
 }
 
-export function checkRegister(inputs = loadInputs(), { bindSource = true } = {}) {
+function checkRegistrations(inputs, all, {bindSource = true, selection} = {}) {
   const diagnostics = [];
-  const all = registrations(inputs.register);
   const designDigests = new Map();
   for (const { page, host } of all) {
     diagnostics.push(...evaluatePage(page, inputs.model));
-    diagnostics.push(...checkNormalPageEvidence(page, inputs.model));
+    const layout = checkLayoutEvidence(page, { bindSource });
+    diagnostics.push(...checkNormalPageEvidence(page, inputs.model, selection, layout.report?.sourceE2ReceiptGroup));
     if (page.layers.visual.facts.designContractRef || page.layers.visual.result === 'PASS') {
       diagnostics.push(...checkDesignAuthority(page, inputs.designAuthority, designDigests).map(item =>
         diagnostic(item.rule, page.pageId, 'visual', 'designContractRef', item.message)));
     }
-    diagnostics.push(...checkLayoutEvidence(page, { bindSource }).diagnostics);
+    diagnostics.push(...layout.diagnostics);
     for (const [id, record] of Object.entries(page.invariants)) {
       if (record.result === 'FAIL' && !diagnostics.some(d=>d.pageId===page.pageId && d.ruleId===id && d.result==='FAIL')) diagnostics.push(diagnostic(id, page.pageId, inputs.model.invariants.find(r=>r.id===id)?.layer, `invariants.${id}`, record.reason));
     }
@@ -123,6 +123,47 @@ export function checkRegister(inputs = loadInputs(), { bindSource = true } = {})
   ];
   return { diagnostics, manual };
 }
+
+export function checkRegister(inputs = loadInputs(), {bindSource = true} = {}) {
+  return checkRegistrations(inputs, registrations(inputs.register), {bindSource});
+}
+
+/** 只对所选的独立回放及其登记证据组合页面结论；不影响默认登记检查。 */
+export function checkPageComposition(selection, inputs = loadInputs()) {
+  const {receipt} = selection;
+  const result = (verdict, diagnostics = []) => ({verdict, diagnostics});
+  if (receipt?.page?.registration !== 'REGISTERED_PAGE') return result('NOT_RUN');
+  const matched = registrations(inputs.register).filter(({page}) => page.pageId === receipt.page.id);
+  if (matched.length !== 1 || matched[0].host) return result('INCOMPLETE');
+  const [{page}] = matched;
+  const layers = Object.values(page.layers);
+  const invariants = Object.values(page.invariants);
+  const states = receipt.structure?.states ?? [];
+  if ([...layers, ...invariants].some(record => record.result === 'FAIL') || receipt.structure?.behavior === 'FAIL' ||
+      states.some(state => state.verdict === 'FAIL' || state.checks.some(check => check.verdict === 'FAIL'))) {
+    return result('FAIL');
+  }
+  if (receipt.execution !== 'PASS' || receipt.behavior !== 'PASS' || receipt.observations !== 'COMPLETE' ||
+      receipt.structure?.behavior !== 'PASS' || receipt.structure.observations !== 'COMPLETE' || !states.length ||
+      states.some(state => state.verdict !== 'PASS' || state.observationsComplete !== true || !state.checks.length ||
+        state.checks.some(check => check.verdict !== 'PASS' || check.observationsComplete !== true)) ||
+      inputs.model.layers.length !== layers.length || inputs.model.invariants.length !== invariants.length ||
+      !layers.some(record => record.applicability === 'applicable') ||
+      inputs.model.layers.some(({id}) => {
+        const record = page.layers[id];
+        return !record || !(record.applicability === 'applicable' && record.result === 'PASS' ||
+          record.applicability === 'not_applicable' && record.result === 'NOT_RUN');
+      }) || inputs.model.invariants.some(({id}) => page.invariants[id]?.result !== 'PASS')) {
+    return result('INCOMPLETE');
+  }
+  try {
+    const {diagnostics} = checkRegistrations(inputs, matched, {selection});
+    return result(diagnostics.some(item => item.result === 'FAIL') ? 'FAIL' : diagnostics.length ? 'INCOMPLETE' : 'PASS', diagnostics);
+  } catch (error) {
+    return result('INCOMPLETE', [diagnostic('PAGE_COMPOSITION_INPUT', page.pageId, null, '', error.message, 'NOT_RUN')]);
+  }
+}
+
 if (isMain(import.meta.url)) {
   try { const { diagnostics, manual } = checkRegister(); printReport('check-register', diagnostics, { manual, boundary: 'Registration/source checks; page failures are preserved. Native geometry/accessibility remains NOT_RUN.' }); }
   catch (error) { printReport('check-register', [diagnostic('INPUT', 'framework', null, '', error.message)]); }

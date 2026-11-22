@@ -106,6 +106,9 @@
         }
       }
     },
+    "sourceE2ReceiptGroup": {
+      "$ref": "#/properties/nativeEvidence"
+    },
     "results": {
       "type": "object",
       "additionalProperties": false,

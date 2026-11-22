@@ -1,0 +1,73 @@
+{
+  "id": "bookshelf.search-entry-history-loading",
+  "version": 1,
+  "phase": 1,
+  "pageId": "bookshelf",
+  "fixture": {
+    "id": "public-search-entry-history-loading-v1",
+    "description": "Open normal Search from the public bookshelf with readable enabled sources. Observe history while the ordinary durable read is pending whenever its feedback fits the current open input viewport.",
+    "bookTitle": "Reader Phase 1 公共长目录",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "before",
+      "kind": "sample",
+      "anchors": ["reader-bookshelf-search-entry"],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "open-search",
+      "kind": "action",
+      "op": "click",
+      "target": "reader-bookshelf-search-entry",
+      "from": "before",
+      "waitFor": [{"kind": "search-open-accepted", "channel": "business"}]
+    },
+    {
+      "id": "history-loading",
+      "kind": "sample",
+      "anchors": ["reader-book-search-input", "reader-library-search-back", "reader-bookshelf-search-field"],
+      "afterAction": "open-search",
+      "waitFor": [
+        {"kind": "search-entry-history-state", "channel": "business", "match": "latest",
+          "fields": {"payload.mode": "input", "payload.historyStatus": "loading", "payload.feedbackEligible": true}},
+        {"kind": "search-page-projection", "channel": "business", "match": "latest",
+          "fields": {"payload.projection": "initial", "payload.historyStatus": "loading"}}
+      ]
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+    "entry/src/main/ets/features/search/application/SearchOrchestrator.ets",
+    "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
+    "entry/src/main/ets/features/search/presentation/ReaderLibrarySearchModel.ets",
+    "entry/src/main/ets/features/search/presentation/SearchPresentation.ts",
+    "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets",
+    "entry/src/main/ets/features/search/ui/SearchHistoryGeometry.ts",
+    "entry/src/main/ets/features/search/ui/SearchPage.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets"
+  ],
+  "assertions": [
+    {
+      "id": "search.entry.history-loading",
+      "evaluator": "search",
+      "kind": "phase-history-loading",
+      "required": false,
+      "condition": "The initial history read is pending after the normal Search input viewport becomes interactive and the current feedback can fit. A read proved ready before the opening reaches that viewport does not apply. An eligible interval missed by native capture stays required.",
+      "expected": {"length": 0},
+      "source": "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets#observeEntryHistory",
+      "sources": ["native-tree", "window-metrics", "app-owner"],
+      "action": "open-search",
+      "baseline": "before",
+      "sample": "history-loading"
+    }
+  ],
+  "structure": {
+    "before": "before",
+    "history-loading": "history-loading"
+  }
+}

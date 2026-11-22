@@ -1,0 +1,323 @@
+{
+  "id": "reading.control-grabber-cancel",
+  "version": 2,
+  "phase": 1,
+  "pageId": "reading",
+  "fixture": {
+    "id": "public-local-reading-grabber-cancel-v2",
+    "bookTitle": "Reader Phase 0 公共测试书",
+    "description": "On the isolated public book, dispatch one normal Search Quick grabber drag. While it is held in the original native window, the Debug-only fixture asks the stock ArkUI input dispatcher for one Cancel. The actual grabber callback and native return frames must independently prove the result."
+  },
+  "steps": [
+    {
+      "id": "reading-book-entry",
+      "kind": "locate",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "enter-reading",
+      "kind": "action",
+      "op": "click",
+      "from": "reading-book-entry",
+      "target": {
+        "publicBookTitle": "Reader Phase 0 公共测试书"
+      },
+      "waitFor": [
+        {
+          "kind": "reading.ready",
+          "fields": {
+            "payload.localBook": true,
+            "payload.reduceMotion": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "reading-before",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "enter-reading",
+      "quietMs": 500,
+      "anyAnchor": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ]
+    },
+    {
+      "id": "open",
+      "kind": "action",
+      "op": "click",
+      "from": "reading-before",
+      "target": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ],
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ],
+      "gesture": true
+    },
+    {
+      "id": "open-state",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "open",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "enter-search",
+      "kind": "action",
+      "op": "click",
+      "from": "open-state",
+      "target": "reader-control-entry-search",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "enter-search-state",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "enter-search",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "observe-grabber-drag",
+      "kind": "action",
+      "op": "drag",
+      "from": "enter-search-state",
+      "target": "reader-control-motion-grabber",
+      "waitFor": [
+        {
+          "kind": "reading.control-grabber-platform-cancel",
+          "channel": "probe",
+          "fields": {
+            "payload.accepted": true,
+            "payload.transport": "arkui-send-touch-event"
+          }
+        },
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "interrupted"
+          }
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ],
+      "path": {
+        "from": [
+          0.5,
+          0.5
+        ],
+        "to": [
+          0.5,
+          0.4
+        ],
+        "speed": 650,
+        "endTarget": "reader-reading-stage"
+      }
+    },
+    {
+      "id": "grabber-drag-ended",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "observe-grabber-drag",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "reading.control-grabber-platform-cancel",
+          "channel": "probe",
+          "fields": {
+            "payload.accepted": true,
+            "payload.transport": "arkui-send-touch-event"
+          }
+        },
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "interrupted"
+          }
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ]
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+    "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+    "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
+    "entry/src/main/ets/entryability/EntryAbility.ets",
+    "entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderPublicLongBook.ts",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts"
+  ],
+  "assertions": [
+    {
+      "id": "reading.control-grabber-cancel.restore-quick",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "observe-grabber-drag",
+      "baseline": "enter-search-state",
+      "sample": "grabber-drag-ended",
+      "expected": {
+        "op": "drag",
+        "direction": "morph",
+        "origins": [
+          "grabber-cancel"
+        ],
+        "source": {
+          "level": "secondary",
+          "module": "search",
+          "form": "full",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "secondary",
+          "module": "search",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 260,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
+          "entry/src/main/ets/entryability/EntryAbility.ets",
+          "entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderPublicLongBook.ts",
+          "entry/src/main/ets/app/ReaderWindowCoordinator.ts"
+        ],
+        "trajectory": {
+          "layoutToleranceVp": 1,
+          "opacityTolerance": 0.02,
+          "transformTolerance": 0.001,
+          "cadenceGapFactor": 3,
+          "dockTravelVp": 18,
+          "grabberWidthVp": 72,
+          "grabberHeightVp": 28,
+          "maxContentInsetVp": 13,
+          "quickContentTopVp": 29,
+          "quickContentReserveVp": 52,
+          "quickCornerVp": 8,
+          "cornerDeltaVp": 4
+        },
+        "nativeSource": {
+          "level": "secondary",
+          "module": "search",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "maximumFrameGapMs": 50,
+        "minimumInteriorFrames": 4,
+        "requireCancelObservation": true,
+        "requirePlatformCancelDispatch": true
+      },
+      "required": false,
+      "source": "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts#cancelReaderControlGesture",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics",
+        "debug-frame"
+      ],
+      "condition": "The platform delivered a real Cancel to the current reading grabber while the drag pointer was held."
+    }
+  ],
+  "structure": {
+    "reading-before": "reading-before",
+    "open-state": "open-state",
+    "enter-search-state": "enter-search-state",
+    "grabber-drag-ended": "grabber-drag-ended"
+  }
+}

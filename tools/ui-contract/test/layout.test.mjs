@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { evaluateLayout, layoutTapPoint, normalizeHarmonyLayout, selectLayoutNode } from '../lib/layout.mjs';
-import { requestedOperation } from '../collectors/harmonyos/records.mjs';
+import { evaluateStructure } from '../lib/structure.mjs';
+import { loadStructureDefinition } from '../lib/structure-contract.mjs';
+import { readyForStep, requestedOperation } from '../collectors/harmonyos/records.mjs';
 
 const density = 3.5;
 const windowId = '42';
@@ -90,6 +92,135 @@ function check(assertion, current, baseline) {
   return evaluateLayout({ sample: 'current', ...assertion }, new Map([['current', current], ['baseline', baseline]]));
 }
 
+test('AutoPage Quick interval dispatch requires the current native label and the contained plus button', () => {
+  const currentAlias = seconds => 'reader-auto-speed-current-' + seconds;
+  const plusAlias = seconds => 'reader-auto-speed-increase-from-' + seconds;
+  const state = seconds => ({ anchors:[currentAlias(seconds)], keyboard:false });
+  const action = seconds => ({ id:'increase-autoPage-interval-'+ (seconds+1),kind:'action',op:'click',
+    from:'speed',target:plusAlias(seconds) });
+  const exposedAction = seconds => ({...action(seconds),
+    from:seconds === 8 ? 'enter-autoPage-state' : 'autopage-interval-' + seconds,
+    target:'reader-auto-speed-increase-exposed-from-' + seconds});
+  const exposedOperation = (seconds, layout, overrides, currentFixture = fixture) => {
+    const step = {...exposedAction(seconds),...overrides};
+    return requestedOperation(step,{[step.from]:layout},currentFixture);
+  };
+  const fixture = {id:'public-local-reading-v1'};
+  function quick({seconds = 8, clipPlus = false, hidePlus = false, duplicate = false,
+    collapseEnabled = false, full = false, wrongValue = false, optIn = true,
+    glyphBox = [66,135,80,156], siblingBox = [70,134,80,155], siblingAttributes = {}} = {}) {
+    const text = (value, box) => node('',box,{type:'Text',text:'',originalText:value});
+    const plus = node('',[64,132,82,158],{
+      type:'Button', accessibilityId:'2', clickable:'true',
+      hitTestBehavior:hidePlus ? 'HitTestMode.None' : 'HitTestMode.Default',
+      ...(clipPlus ? {bounds:bounds(64,132,72,158)} : {}),
+      children:[text('+',glyphBox)],
+    });
+    const minus = node('',[22,132,40,158],{type:'Button',accessibilityId:'1',clickable:'true',
+      hitTestBehavior:'HitTestMode.Default',children:[text('−',[24,134,38,156])]});
+    const current = node('reader-auto-speed-current',[45,139,59,151],{
+      type:'Text',text:`${seconds} 秒`,originalText:`${wrongValue ? seconds+1 : seconds} 秒`,
+    });
+    const retainedMaximum = node('reader-auto-speed-maximum',siblingBox,{
+      type:'Text',originalText:'20 秒',opacity:'0.000000',hitTestBehavior:'HitTestMode.Default',...siblingAttributes,
+    });
+    const row = node('',[17,128,88,164],{
+      type:'Stack',children:[minus,current,plus,retainedMaximum,...duplicate?[plus]:[]],
+    });
+    const viewport = node('reader-control-module-autoPage',[5,35,95,185],{type:'Scroll',clip:'true',children:[row]});
+    const panel = node(full ? 'reader-session-morph-fullAutoPagePlayback' : 'reader-session-morph-quickAutoPage',
+      [5,35,95,185],{type:'Stack',children:[viewport]});
+    const collapse = node('reader-control-collapse',[80,15,96,32],{type:'Button',enabled:String(collapseEnabled)});
+    return sample(dump([panel,collapse]),{observeQuickAutoPageSpeed:optIn});
+  }
+  for (let seconds = 8; seconds <= 12; seconds += 1) {
+    const layout = quick({seconds});
+    assert.equal(readyForStep(state(seconds),layout),true);
+    assert.equal(readyForStep(state(seconds-1),layout),false);
+    const point = requestedOperation(action(seconds),{speed:layout},fixture);
+    assert.deepEqual(point,{op:'click',x:290,y:577});
+    assert.throws(() => requestedOperation(action(seconds-1),{speed:layout},fixture),/missing/);
+    if (seconds < 12) {
+      assert.deepEqual(exposedOperation(seconds,layout),{op:'click',x:290,y:535});
+      const button = selectLayoutNode(layout,plusAlias(seconds));
+      const fullButton = {left:259,top:532,width:63,height:91};
+      assert.deepEqual(button.rectPx,fullButton);
+      assert.deepEqual(button.visibleRectPx,fullButton);
+    }
+  }
+  assert.throws(() => exposedOperation(9,quick()),/missing/);
+  assert.throws(() => exposedOperation(8,quick(),{from:'stale'}),/exact public Quick action/);
+  assert.throws(() => exposedOperation(8,quick(),undefined,{id:'other'}),/exact public Quick action/);
+  for (const unproven of [
+    {siblingBox:[70,132,80,155]}, {siblingAttributes:{origBounds:undefined}},
+    {siblingAttributes:{hostWindowId:'9'}}, {siblingAttributes:{bounds:bounds(72,134,80,155)}},
+    {glyphBox:[66,132,80,156]}, {glyphBox:[66,130,80,156]}, {glyphBox:[66,135,72,156]},
+  ]) {
+    const layout = quick(unproven);
+    assert.deepEqual(requestedOperation(action(8),{speed:layout},fixture),{op:'click',x:290,y:577});
+    assert.throws(() => exposedOperation(8,layout),/no verified exposed native top interval/);
+  }
+  for (const incompatible of [
+    {clipPlus:true},{hidePlus:true},{duplicate:true},{collapseEnabled:true},{full:true},{wrongValue:true},{optIn:false},
+  ]) {
+    const layout = quick(incompatible);
+    assert.equal(readyForStep(state(8),layout),false);
+    assert.throws(() => requestedOperation(action(8),{speed:layout},fixture),/missing/);
+    assert.throws(() => exposedOperation(8,layout),/missing/);
+  }
+});
+
+test('Phase 1 search append maps only the two public titles on true online rows of their native list', () => {
+  const fixture = {cedar:'Reader Phase 1 Online Cedar',maple:'Reader Phase 1 Online Maple'};
+  const name = role => `reader-search-public-online-result-${role}`;
+  const viewport = 'reader-search-result-list:2:8';
+  const onlineIdentity = 'online:opaque-source-and-book-key';
+  function row(title, key = onlineIdentity, page = 2, query = 8, type = 'Button', author = '') {
+    return node(`reader-search-result:${JSON.stringify([page,query,key])}`,[2,40,98,70],{type,children:[
+      node('',[2,40,98,70],{type:'Row',children:[
+        node('',[25,40,98,70],{type:'Column',children:[
+          node('',[25,40,98,70],{type:'Column',children:[
+            node('',[27,43,94,51],{type:'Text',originalText:title}),
+            node('',[27,53,94,60],{type:'Text',originalText:author}),
+          ]}),
+        ]}),
+      ]}),
+    ]});
+  }
+  const list = children => node(viewport,[0,26,100,190],{type:'List',children});
+  const valid = sample(dump([list([row(fixture.cedar),row(fixture.maple,'online:second-private-key')])]),
+    {publicOnlineResultTitles:fixture});
+  for (const role of ['cedar','maple']) {
+    const result = selectLayoutNode(valid,{id:name(role),ancestors:[viewport]});
+    assert.deepEqual(result.publicOnlineRoles,[role]);
+    assert.deepEqual(result.searchResultMount,{page:2,queryRevision:8,kind:'online'});
+    assert.equal(result.id,null);
+    assert.equal(result.searchTitleObserved,true);
+  }
+  assert.ok(!JSON.stringify(valid).includes(onlineIdentity));
+  assert.ok(!JSON.stringify(valid).includes(fixture.cedar));
+  for (const nodes of [
+    [list([row(fixture.cedar,'local:public-or-private-opaque-key')])],
+    [list([row(fixture.cedar,onlineIdentity,2,7)])],
+    [list([]),row(fixture.cedar)],
+    [list([row(fixture.cedar,onlineIdentity,2,8,'Column')])],
+    [list([row('Another actual title',onlineIdentity,2,8,'Button',fixture.cedar)])],
+  ]) {
+    const wrong = sample(dump(nodes),{publicOnlineResultTitles:fixture});
+    assert.throws(() => selectLayoutNode(wrong,name('cedar')),/missing/);
+  }
+  const duplicate = sample(dump([list([row(fixture.cedar),row(fixture.cedar,'online:second-private-key')])]),
+    {publicOnlineResultTitles:fixture});
+  assert.throws(() => selectLayoutNode(duplicate,name('cedar')),/ambiguous/);
+  const unrelated = sample(dump([list([row(fixture.cedar)])]),{publicBookTitle:title});
+  assert.ok(unrelated.nodes.every(node => !node.searchResultMount && !node.publicOnlineRoles));
+  assert.throws(() => selectLayoutNode(unrelated,name('cedar')),/missing/);
+  const unseen = sample(dump([list([row(undefined,onlineIdentity,2,8,'Button',fixture.cedar)])]),
+    {publicOnlineResultTitles:fixture});
+  assert.throws(() => selectLayoutNode(unseen,name('cedar')),/missing/);
+  assert.equal(unseen.nodes.find(item => item.searchResultMount).searchTitleObserved,undefined);
+});
+
 test('scopes a Reader node to the normal window and rejects within-window ambiguity', () => {
   const external = node(field, [0, 0, 10, 10], { hostWindowId: '9', bundleName: 'com.ohos.sceneboard' });
   const searchTree = sample(dump([search()], [external, external]));
@@ -121,6 +252,40 @@ test('admits only the search action from the submit button native description', 
   const unrecognized = ready('private button description');
   assert.throws(() => requestedOperation(step, {ready:unrecognized}), /no enabled search semantics/);
   assert.doesNotMatch(JSON.stringify(unrecognized), /private button description/);
+});
+
+test('Phase 1 search reads the actual visible Stop child on the normal search button', () => {
+  const ready = label => sample(dump([node(submit, [10, 20, 50, 40], {clickable:'true',
+    children:[node('', [20, 22, 40, 38], {type:'Text',originalText:label})]})]));
+  assert.equal(selectLayoutNode(ready('停止'), submit).searchSemantic,'stop');
+  assert.equal(selectLayoutNode(ready('搜索'), submit).searchSemantic,'search');
+  assert.equal(selectLayoutNode(ready('synthetic unknown fixture content'), submit).searchSemantic,undefined);
+});
+
+test('Phase 1 search Task retry accepts only the unique enabled button inside the named native sheet', () => {
+  const title = label => node('', [10,100,50,110], {type:'Text',originalText:label});
+  const button = (extra = {}) => node('', [10,130,70,150], {type:'Button',clickable:'true',...extra,
+    children:[node('', [12,132,68,148], {type:'Text',originalText:'重试未完成的书源'})]});
+  const sheet = children => node('', [0,0,100,200], {type:'SheetWrapper',children:[
+    node('', [0,90,100,200], {type:'SheetPage',children}),
+  ]});
+  const options = {observeSearchTaskRetry:true};
+  const selector = 'reader-search-task-retry';
+  const current = sample(dump([button(),sheet([title('搜索进度'),button()])]), options);
+  assert.equal(selectLayoutNode(current, selector).path,'0/1/0/1');
+  assert.deepEqual(current.nodes.flatMap(item => item.sheetTitle ? [item.sheetTitle] : []),['搜索进度']);
+  assert.doesNotMatch(JSON.stringify(current),/重试未完成的书源/u);
+  assert.throws(() => selectLayoutNode(sample(dump([sheet([title('筛选'),button()])]),options),selector),/missing/);
+  assert.throws(() => selectLayoutNode(sample(dump([sheet([title('搜索进度'),button(),button()])]),options),selector),/missing/);
+  assert.throws(() => selectLayoutNode(sample(dump([sheet([title('搜索进度'),button({enabled:'false'})])]),options),selector),/missing/);
+  const recovered = children => sample(dump(children), {...options,observeSearchTaskSheet:true});
+  const settled = recovered([sheet([title('搜索进度')])]);
+  assert.equal(selectLayoutNode(settled,'reader-search-task-sheet').type,'SheetPage');
+  assert.throws(() => selectLayoutNode(settled,selector),/missing/);
+  const duplicateRetry = recovered([sheet([title('搜索进度'),button(),button()])]);
+  assert.equal(duplicateRetry.nodes.filter(item => item.alias === selector).length,2);
+  assert.throws(() => selectLayoutNode(recovered([sheet([title('搜索进度')]),sheet([title('搜索进度')])]),
+    'reader-search-task-sheet'),/missing/);
 });
 
 test('reads an enabled search button’s direct native text child without accepting a stop action', () => {
@@ -255,4 +420,151 @@ test('selects a unique local public fixture card and excludes arbitrary text and
   assert.doesNotMatch(JSON.stringify(current), /private/);
   assert.throws(() => selectLayoutNode(sample(dump([online]), { publicBookTitle: title }), { publicBookTitle: title }), /missing/);
   assert.throws(() => selectLayoutNode(sample(dump([local, local]), { publicBookTitle: title }), { publicBookTitle: title }), /ambiguous/);
+});
+
+test('Phase 1 search resolves distinct allowlisted local book titles without retaining book keys', () => {
+  const secondTitle = 'PhaseOneCedar7314 Public Fixture';
+  const result = (owner, privateKey, label) => node('reader-search-result:' + JSON.stringify([2, 8, owner + ':' + privateKey]), [10, 10, 60, 60], {
+    clickable: 'true',
+    children: [node('', [10, 18, 30, 23], { text: label })],
+  });
+  const a = result('local', 'private A book key', title);
+  const b = result('local', 'private B book key', secondTitle);
+  const remote = result('online', 'private remote key', secondTitle);
+  const options = { publicBookTitle: title, publicBookTitles: { b: secondTitle } };
+  const current = sample(dump([a, b, remote]), options);
+  assert.equal(selectLayoutNode(current, 'reader-search-public-local-result').path, '0/0');
+  assert.equal(selectLayoutNode(current, 'reader-search-public-local-result-b').path, '0/1');
+  assert.doesNotMatch(JSON.stringify(current), /private|PhaseOneCedar7314/u);
+  assert.throws(() => selectLayoutNode(sample(dump([a, remote]), options), 'reader-search-public-local-result-b'), /missing/);
+  assert.throws(() => selectLayoutNode(sample(dump([a, b, b]), options), 'reader-search-public-local-result-b'), /ambiguous/);
+});
+
+test('source read surfaces normalize only scoped native state witnesses', () => {
+  const title = (value, options) => node('',[3,7,30,11],{type:'Text',originalText:value,...options});
+  const progress = () => node('',[4,4,12,10],{type:'LoadingProgress'});
+  const read = nodes => sample(dump(nodes),{observeSourceRead:true});
+  const loading = 'reader-source-loading-progress';
+  const failure = 'reader-source-read-failure-title';
+  const empty = 'reader-source-empty-library-title';
+  const recovery = 'reader-source-recovery-message';
+  for (const host of ['reader-source-empty-state','reader-source-filter-block']) {
+    const nodes = [node(host,[0,0,100,70],{children:[progress()]})];
+    assert.equal(selectLayoutNode(read(nodes),{id:loading,ancestors:[host]}).type,'LoadingProgress');
+    assert.throws(() => selectLayoutNode(sample(dump(nodes)),loading),/missing/u);
+  }
+  const actualFailure = title('书源读取失败');
+  const error = read([actualFailure,node('reader-source-empty-state',[0,0,100,70],{
+    children:[actualFailure,title('暂无书源'),title('书源读取失败',{hostWindowId:'43'})],
+  })]);
+  assert.equal(selectLayoutNode(error,{id:failure,ancestors:['reader-source-empty-state']}).type,'Text');
+  assert.equal(selectLayoutNode(error,{id:empty,ancestors:['reader-source-empty-state']}).type,'Text');
+  assert.throws(() => selectLayoutNode(read([title('暂无书源')]),empty),/missing/u);
+  assert.throws(() => selectLayoutNode(read([actualFailure,progress()]),failure),/missing/u);
+  assert.throws(() => selectLayoutNode(read([progress()]),loading),/missing/u);
+  const button = node('',[1,12,30,25],{type:'Button',children:[title('核对')]});
+  const host = children => node('reader-source-pending-recovery',[0,0,100,70],{children});
+  assert.throws(() => selectLayoutNode(read([host([button,title('白屏',{visible:'false'})])]),recovery),/missing/u);
+  const notice = read([host([button,title('Synthetic private recovery details')])]);
+  assert.equal(selectLayoutNode(notice,{id:recovery,ancestors:['reader-source-pending-recovery']}).type,'Text');
+  assert.ok(!JSON.stringify(notice).includes('Synthetic private recovery details'));
+});
+
+test('source group option order uses actionable native aliases without group labels', () => {
+  const host = 'reader-source-group-panel';
+  const firstAlias = 'reader-source-group-option-1';
+  const option = (generation, name, top) => node(`source-group:${generation}:focus:option:${name}`,[5,top,90,top+30],{
+    type:'Button',clickable:'true',text:name,
+  });
+  const menu = (generation) => node(host,[0,10,100,130],{children:[
+    node(`source-group:${generation}:focus:selected`,[5,10,90,40],{type:'Button',clickable:'true'}),
+    option(generation,'fixture-first-group',40),
+    option(generation,'公开分组名称',70),
+  ]});
+  const captured = sample(dump([menu(17)]));
+  assert.equal(selectLayoutNode(captured,{id:firstAlias,ancestors:[host]}).id,null);
+  assert.equal(selectLayoutNode(captured,'reader-source-group-option-2').rectPx.top,315);
+  assert(!JSON.stringify(captured).includes('fixture-first-group'));
+  assert(!JSON.stringify(captured).includes('公开分组名称'));
+  assert.throws(() => selectLayoutNode(sample(dump([menu(17),menu(18)])),firstAlias),/ambiguous/u);
+});
+
+test('Phase 1 search rechecks fully visible enabled submits without relaxing the visible area', () => {
+  const exposed = (enabled, clipped) => sample(dump([node(submit, [20, 20, 90, 40], {
+    enabled, bounds: clipped ? bounds(20, 20, 89, 40) : bounds(20, 20, 90, 40),
+  })]));
+  const rule = {kind:'visibleFraction', a:submit, basis:'rectangular', expected:{minFraction:1, enabled:true}};
+  assert.equal(check(rule, exposed('true', false)).verdict, 'PASS');
+  assert.equal(check(rule, exposed('false', false)).verdict, 'FAIL');
+  assert.equal(check(rule, exposed('true', true)).verdict, 'FAIL');
+  assert.equal(check(rule, exposed(null, false)).verdict, 'NOT_RUN');
+});
+
+test('Phase 1 search history matches only the exact public word on the newest native chip', () => {
+  const alias='reader-search-history-public-item-0';
+  const chip=(index,label)=>node('reader-search-history-item-'+index,[20,25,70,45],{type:'Button',clickable:'true',
+    children:[node('',[25,28,64,43],{type:'Text',originalText:label})]});
+  const publicWord='PhaseOneCedar7314';
+  const actual=sample(dump([chip(0,publicWord),chip(1,'synthetic other history')]),{publicHistoryWord:publicWord});
+  assert.equal(selectLayoutNode(actual,alias).id,'reader-search-history-item-0');
+  assert.doesNotMatch(JSON.stringify(actual),/PhaseOneCedar7314|synthetic other history/u);
+  const wrong=sample(dump([chip(0,'synthetic other history'),chip(1,publicWord)]),{publicHistoryWord:publicWord});
+  assert.throws(()=>selectLayoutNode(wrong,alias),/missing/u);
+});
+
+test('directory editor uses the measured local fixture field under the Directory module', () => {
+  const moduleId = 'reader-control-module-directory';
+  const editor = { id:'reader-control-directory-query-directory', ancestors:[moduleId] };
+  const measured = node(`reader-control-directory-query:local:${title}:13:directory`, [10,20,80,40],
+    { type:'TextInput', clickable:'true', focused:'true' });
+  const tree = dump([node(moduleId, [5,5,95,95], {children:[
+    measured,
+    node(`reader-control-directory-query:remote:${title}:13:directory`, [10,50,50,60], {type:'TextInput'}),
+    node('reader-control-directory-query:local:different book:13:directory', [10,70,50,85], {type:'TextInput'}),
+  ]})]);
+  const normalized = sample(tree, {publicBookTitle:title});
+  assert.equal(selectLayoutNode(normalized, editor).focused, true);
+  assert.equal(normalized.nodes.filter(item => item.alias === editor.id).length, 1);
+  assert.throws(() => selectLayoutNode(sample(tree), editor), /missing/);
+  assert.throws(() => selectLayoutNode(sample(dump([measured]), {publicBookTitle:title}), editor), /missing/);
+});
+
+test('reading Search aliases only the public fixture editor and first native result', () => {
+  const moduleId = 'reader-control-module-search';
+  const fieldId = 'reader-control-search-field';
+  const listId = 'reader-control-search-results';
+  const editorAlias = 'reader-control-search-editor';
+  const firstAlias = 'reader-control-search-first-result';
+  const input = (id = 'reader-content-search-input-4') => node(id,[10,20,80,40],{
+    type:'TextInput',focused:'true',originalText:'private synthetic query',
+  });
+  const row = (id,type = 'Button') => node(id,[10,65,80,85],{type,clickable:'true',text:'private synthetic result'});
+  const tree = dump([
+    node(moduleId,[5,5,95,95],{children:[
+      node(fieldId,[8,15,90,45],{children:[input()]}),
+      node(listId,[8,50,90,90],{type:'List',children:[
+        row('reader-control-search-result:2:0'),row('reader-control-search-result:2:1'),
+        row('reader-control-search-result:2:0','Text'),row('reader-control-search-result:0:0'),
+      ]}),
+    ]}),
+    input('reader-content-search-input-7'),row('reader-control-search-result:3:0'),
+  ]);
+  const actual = sample(tree,{observeReadingSearchResults:true,report:report({rects:[{left:0,top:100,width:100,height:100}]})});
+  assert.equal(selectLayoutNode(actual,editorAlias).id,'reader-content-search-input-4');
+  assert.equal(selectLayoutNode(actual,firstAlias).id,'reader-control-search-result:2:0');
+  assert.doesNotMatch(JSON.stringify(actual),/private synthetic/u);
+  assert.throws(() => selectLayoutNode(sample(tree),firstAlias),/missing/u);
+  assert.throws(() => selectLayoutNode(sample(tree),editorAlias),/missing/u);
+  const locate = step => requestedOperation({id:'ordinary-input',from:'prior',...step},{prior:actual},{inputs:{a:'桥墩和屋檐'}});
+  assert.equal(locate({op:'inputText',target:editorAlias,inputRole:'a'}).text,'桥墩和屋檐');
+  assert.equal(locate({op:'click',target:firstAlias}).op,'click');
+
+  const definition = loadStructureDefinition();
+  const rule = definition.structureRules.find(item => item.id === 'reading.search-quick-results');
+  assert.deepEqual(rule.requires,['reading.search-quick']);
+  const assess = capture => evaluateStructure(rule,capture,definition.structureSelectors).verdict;
+  const endpoint = {...actual,captureComplete:true};
+  assert.equal(assess(endpoint),'PASS');
+  assert.equal(assess({...endpoint,nodes:actual.nodes.filter(item => item.alias !== firstAlias)}),'FAIL');
+  assert.equal(assess({...endpoint,captureComplete:false}),'NOT_RUN');
 });

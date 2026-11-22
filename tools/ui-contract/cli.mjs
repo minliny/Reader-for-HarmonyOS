@@ -2,7 +2,7 @@
 import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
 import { loadCase, planCase } from './lib/cases.mjs';
-import { requireEvidence } from './lib/evidence.mjs';
+import { EvidenceError, requireEvidence } from './lib/evidence.mjs';
 
 async function main() {
   const options = {
@@ -10,6 +10,8 @@ async function main() {
     replay: {type:'string'}, 'expected-root': {type:'string'}, manifest: {type:'string'},
     deployment: {type:'string'}, hdc: {type:'string'}, server: {type:'string'}, target: {type:'string'},
     'output-dir': {type:'string'}, fixture: {type:'string'}, 'vm-log': {type:'string'},
+    'runner-mode': {type:'string'}, 'runner-manifest': {type:'string'}, 'runner-install-evidence': {type:'string'},
+    'runner-deployment-sha256': {type:'string'}, 'runner-qualification': {type:'string'}, 'runner-qualification-sha256': {type:'string'},
   };
   const {values, tokens} = parseArgs({options, tokens:true, strict:true, allowPositionals:false});
   requireEvidence(tokens.length === new Set(tokens.map(token => token.name)).size &&
@@ -27,15 +29,26 @@ async function main() {
     return replayReceipt({receiptPath:values.replay, expectedRoot:values['expected-root'], contract});
   }
   const required = ['case','manifest','deployment','hdc','server','target','output-dir','fixture'];
-  requireEvidence(Object.keys(values).every(key => required.includes(key) || key === 'vm-log') && required.every(key => values[key]) &&
-    ['127.0.0.1:8710','192.168.1.10:8710'].includes(values.server) &&
+  requireEvidence(Object.keys(values).every(key => required.includes(key) || key === 'vm-log' || key.startsWith('runner-')) &&
+    required.every(key => values[key]) &&
+    values.server === '127.0.0.1:8710' &&
     /^[A-Za-z0-9._:\[\]-]{1,256}$/.test(values.target) && !values.target.startsWith('-'),
-  'Live collection requires the case, exact local or remote server and target, signed manifest/deployment and public fixture (plus the current log for a VM)');
+  'Live collection requires the case, exact local HDC server and target, signed manifest/deployment and public fixture (plus the current log for a VM); remote VM collection is not permitted');
   const { collectHarmony } = await import('./collectors/harmonyos/run.mjs');
-  const outcome = await collectHarmony({
+  const optionalPath = name => values[name] ? resolve(values[name]) : undefined;
+  const collectOptions = {
     manifest:resolve(values.manifest), deployment:resolve(values.deployment), hdc:resolve(values.hdc), server:values.server,
-    target:values.target, outputDir:resolve(values['output-dir']), fixture:resolve(values.fixture), vmLog:values['vm-log'] ? resolve(values['vm-log']) : undefined,
-  }, contract);
+    target:values.target, outputDir:resolve(values['output-dir']), fixture:resolve(values.fixture), vmLog:optionalPath('vm-log'),
+    runnerMode:values['runner-mode'],runnerManifest:optionalPath('runner-manifest'),runnerInstallEvidence:optionalPath('runner-install-evidence'),
+    runnerDeploymentSha:values['runner-deployment-sha256'],runnerQualification:optionalPath('runner-qualification'),
+    runnerQualificationSha:values['runner-qualification-sha256'],
+  };
+  const outcome = await collectHarmony(collectOptions, contract);
+  if (collectOptions.runnerMode === 'qualify') {
+    const {sealRunnerQualification} = await import('./collectors/harmonyos/runner-collection-admission.mjs');
+    const qualification = sealRunnerQualification(outcome,contract);
+    if (qualification) return qualification;
+  }
   return sealReceipt(outcome, contract);
 }
 
@@ -44,6 +57,7 @@ try {
   console.log(JSON.stringify(result, null, 2));
   if (result.receipt && result.receipt.execution !== 'PASS') process.exitCode = 1;
 } catch (error) {
-  console.error(JSON.stringify({execution:'INCOMPLETE', reason:error.message}));
-  process.exitCode = 1;
+  const incomplete = error instanceof EvidenceError;
+  console.error(JSON.stringify({execution:incomplete ? 'INCOMPLETE' : 'ERROR', reason:error.message}));
+  process.exitCode = incomplete ? 1 : 2;
 }

@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {safePath,digest} from './lib.mjs';
+import {safePath,digest,readJSON} from './lib.mjs';
 import {sourceInteractiveControls} from './layout-evidence.mjs';
+import {checkContractReceiptGroup} from './receipt-evidence.mjs';
+import {planSourceE2Admission,sourceE2Runs} from './source-e2-admission.mjs';
+import {loadCase} from '../ui-contract/lib/cases.mjs';
 const entry='tools/page-structure/source-e2-evidence.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex');
-export function composeSourceE2(matrix,interaction,{matrixInput,interactionInput,fingerprint=digest}={}){
+export function composeSourceE2(matrix,interaction,{matrixInput,interactionInput,nativeGroupEvidence,fingerprint=digest}={}){
  assert.deepEqual(matrix.widths,[320,366]);assert.deepEqual(matrix.fontScales,[1,1.3,1.6,2]);
  assert.equal(matrix.results.E2,'PASS');assert.equal(interaction.results.sdkProperties,'PASS');
  assert.deepEqual(interaction.command.cases,['inventory','sdk-targets','recovery-targets']);
@@ -41,11 +44,35 @@ export function composeSourceE2(matrix,interaction,{matrixInput,interactionInput
  }
  for(const x of [matrixInput,interactionInput])if(x)inputs.set(x.path,x.sha256);
  for(const path of [entry,'tools/page-structure/layout-evidence.mjs','tools/page-structure/schema/layout-evidence.schema.json','entry/src/main/ets/ui/foundation/ReaderTokens.ets','tools/test-source-group-border-budget.mjs','tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets'])inputs.set(path,fingerprint(path));
- // These dimensions are inputs to review. No original touch was dispatched.
- return {schemaVersion:'1.0',pageId:'source-management',command:{entry,cases:['complete-targets']},inputs:[...inputs].map(([path,sha256])=>({path,sha256})),widths:matrix.widths,fontScales:matrix.fontScales,results:{E2:'NOT_RUN',E3:'NOT_RUN'},targets,budgets:matrix.budgets};
+ const report={schemaVersion:'1.0',pageId:'source-management',command:{entry,cases:['complete-targets']},inputs:[...inputs].map(([path,sha256])=>({path,sha256})),widths:matrix.widths,fontScales:matrix.fontScales,results:{E2:'NOT_RUN',E3:'NOT_RUN'},targets,budgets:matrix.budgets};
+ if (nativeGroupEvidence !== undefined) {
+  assert.ok(nativeGroupEvidence?.kind === 'device' && nativeGroupEvidence.result === 'PASS' &&
+    nativeGroupEvidence.symbol === 'ui-contract-receipt-group', 'A Source E2 native receipt group is required');
+  const model = readJSON('tools/page-structure/model.json');
+  const page = readJSON('tools/page-structure/register.json').pages.find(item => item.pageId === report.pageId);
+  checkContractReceiptGroup(page, model, 'invariants.E2', nativeGroupEvidence);
+  report.sourceE2ReceiptGroup = {path:nativeGroupEvidence.path, sha256:nativeGroupEvidence.rootSha256};
+  report.results.E2 = 'PASS';
+ }
+ return report;
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
- const [matrixPath,interactionPath,outputPath]=process.argv.slice(2);assert.ok(matrixPath&&interactionPath&&outputPath,'explicit matrix, interaction, output required');assert.ok(outputPath.startsWith('.reader-artifacts/')||outputPath==='tools/page-structure/source-layout-evidence.json','output must be a private run or the controlled portable report');
- const a=readFileSync(safePath(matrixPath),'utf8'),b=readFileSync(safePath(interactionPath),'utf8');const out=composeSourceE2(JSON.parse(a),JSON.parse(b),{matrixInput:{path:matrixPath,sha256:hash(a)},interactionInput:{path:interactionPath,sha256:hash(b)}});
+ if (process.argv.length === 3 && process.argv[2] === '--plan-native-group') {
+  const model = readJSON('tools/page-structure/model.json');
+  const coverage = model.receiptCoverageReferences.find(item => item.pageId === 'source-management' && item.claim === 'invariants.E2');
+  const mapping = planSourceE2Admission(coverage,loadCase);
+  const runs = sourceE2Runs(mapping).map(({cellId,part}) => ({cellId,caseId:part.caseId}));
+  const page = readJSON('tools/page-structure/register.json').pages.find(item => item.pageId === mapping.pageId);
+  const registered = new Set([page.source,...page.sourceInputs].map(({path}) => path));
+  const missingRegisteredSourceInputs = [...new Set(mapping.cases.flatMap(part => part.ownerSources)
+    .filter(path => !registered.has(path)))].sort();
+  console.log(JSON.stringify({execution:'NOT_RUN',mapping,runs,missingRegisteredSourceInputs},null,2));
+ } else {
+ const [matrixPath,interactionPath,outputPath,groupFlag,groupPath,...extra]=process.argv.slice(2);assert.ok(matrixPath&&interactionPath&&outputPath,'explicit matrix, interaction, output required');assert.ok(outputPath.startsWith('.reader-artifacts/')||outputPath==='tools/page-structure/source-layout-evidence.json','output must be a private run or the controlled portable report');
+ assert.ok(groupFlag === undefined || groupFlag === '--native-group-evidence' && groupPath && !extra.length,
+   'Use --native-group-evidence with one repository-relative evidence record');
+ const nativeGroupEvidence = groupPath && JSON.parse(readFileSync(safePath(groupPath),'utf8'));
+ const a=readFileSync(safePath(matrixPath),'utf8'),b=readFileSync(safePath(interactionPath),'utf8');const out=composeSourceE2(JSON.parse(a),JSON.parse(b),{matrixInput:{path:matrixPath,sha256:hash(a)},interactionInput:{path:interactionPath,sha256:hash(b)},nativeGroupEvidence});
  writeFileSync(safePath(outputPath),JSON.stringify(out,null,2)+'\n');console.log(JSON.stringify({targets:out.targets.length,controlRefs:new Set(out.targets.map(t=>t.controlRef)).size,budgets:out.budgets.length,E2:out.results.E2,E3:out.results.E3}));
+ }
 }

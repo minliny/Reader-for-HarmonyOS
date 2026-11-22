@@ -1,4 +1,7 @@
+import { EvidenceError } from '../../lib/native-ui-evidence.mjs';
 import { layoutTapPoint, selectLayoutNode } from './layout.mjs';
+import { evaluateControlEffect } from './control-effects.mjs';
+import { easedFraction, evaluateControlInterruption, evaluateControlTransition, grabberY, rebaseProjection } from './control-transition.mjs';
 
 const OWNER = 'entry/src/main/ets/features/reading/ui/';
 const TIMING = 'entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
@@ -162,6 +165,7 @@ class MotionEvidence {
     try {
       return selectLayoutNode(sample, id);
     } catch (error) {
+      if (!(error instanceof EvidenceError)) throw error;
       throw new MissingMotionEvidence(error.message);
     }
   }
@@ -226,6 +230,7 @@ class MotionEvidence {
     try {
       point = layoutTapPoint(target, { requireClickable: false });
     } catch (error) {
+      if (!(error instanceof EvidenceError)) throw error;
       throw new MissingMotionEvidence(error.message);
     }
     const rect = target.rectPx;
@@ -341,20 +346,6 @@ function ownerResult(evidence, direction, data) {
     reason: reason.length > 0 ? reason.join(', ') : null };
 }
 
-// ArkUI cubicBezierCurve(.2, 0, 0, 1) uses the x coordinate as elapsed
-// fraction. Invert the monotone x cubic before evaluating the y coordinate.
-function easedFraction(fraction) {
-  let from = 0, to = 1;
-  for (let index = 0; index < 20; index++) {
-    const t = (from + to) / 2;
-    const x = 0.6 * t * (1 - t) ** 2 + t ** 3;
-    if (x < fraction) from = t;
-    else to = t;
-  }
-  const t = (from + to) / 2;
-  return fraction === 0 ? 0 : fraction === 1 ? 1 : (3 - 2 * t) * t * t;
-}
-
 const axisKeys = ['quickGrabberScreenY', 'fullGrabberScreenY', 'hiddenGrabberScreenY'];
 const visualKeys = ['expansionProgress', 'visibilityProgress'];
 const transitionKeys = ['progress', 'startProgress', 'targetProgress', 'elapsedMs', 'durationMs'];
@@ -396,36 +387,6 @@ function visualAt(transition, progress) {
   };
 }
 
-function grabberY(axis, visual) {
-  return axis.quickGrabberScreenY + (axis.fullGrabberScreenY - axis.quickGrabberScreenY) * visual.expansionProgress +
-    (axis.hiddenGrabberScreenY - axis.quickGrabberScreenY) * (1 - visual.visibilityProgress);
-}
-
-function rebaseProjection(before, axis) {
-  const transition = before.transition;
-  const anchor = grabberY(before.axis, visualAt(transition, transition.progress)) + before.compensation.offsetY;
-  const fromY = grabberY(axis, transition.from);
-  const toY = grabberY(axis, transition.to);
-  const travel = toY - fromY;
-  const epsilon = Number.EPSILON * Math.max(1, Math.abs(fromY), Math.abs(toY), Math.abs(anchor)) * 16;
-  const spatiallyStatic = Math.abs(travel) <= epsilon;
-  const currentY = grabberY(axis, visualAt(transition, transition.progress));
-  const projected = (anchor - fromY) / travel;
-  const reachableRoot = finite(projected) &&
-    projected >= -Number.EPSILON * 64 && projected <= 1 + Number.EPSILON * 64;
-  const alreadyAtAnchor = Math.abs(currentY - anchor) <= epsilon;
-  const progress = !alreadyAtAnchor && !spatiallyStatic && reachableRoot ? unit(projected) : transition.progress;
-  const reason = spatiallyStatic ? 'compensated-static-segment' :
-    alreadyAtAnchor || reachableRoot ? 'projected' : 'compensated-outside-segment';
-  const offsetY = anchor - grabberY(axis, visualAt(transition, progress));
-  const durationMs = Math.max(0, transition.durationMs - transition.elapsedMs);
-  const running = offsetY !== 0 && durationMs > 0;
-  return { reason, progress, anchor, durationMs, compensation: {
-    offsetY, startOffsetY: offsetY, elapsedMs: 0, durationMs: running ? durationMs : 0, running,
-    revision: before.compensation.revision + (running ? 2 : 1),
-  } };
-}
-
 function compensationAt(compensation, elapsedMs) {
   return compensation.running ?
     compensation.startOffsetY * (1 - motionFraction(elapsedMs, compensation.durationMs)) : compensation.offsetY;
@@ -463,7 +424,8 @@ function boundaryViewport(data) {
     let stage;
     try {
       stage = selectLayoutNode(sample, READING_STAGE).rectPx;
-    } catch {
+    } catch (error) {
+      if (!(error instanceof EvidenceError)) throw error;
       return null;
     }
     if (!present(window, ['left', 'width']) || !present(stage, ['left', 'width']) ||
@@ -548,7 +510,7 @@ function checkRebase(check, event, frame, priorFrame, priorTick, incoming, initi
     near(axis.hiddenGrabberScreenY - axis.quickGrabberScreenY, expected.dockTravelVp, expected.transformTolerance);
   const initial = p.fromTicket === initialTicket;
   const previous = incoming?.payload.after;
-  const p0 = previous?.transition.startProgress ?? (initial ? 0 : old.startProgress);
+  const p0 = previous?.transition.startProgress ?? (initial ? 0 : old.startProgress ?? null);
   const oldExpected = { ...old, startProgress: p0 };
   const oldProgress = progressAt(oldExpected, old.elapsedMs);
   const offsetBefore = previous ? compensationAt(previous.compensation, old.elapsedMs) :
@@ -895,10 +857,13 @@ function motionResult(evidence, direction, data) {
 }
 
 export function evaluateMotion(assertion, context) {
+  if (assertion.kind === 'control-effect') return evaluateControlEffect(assertion, context);
+  if (assertion.kind === 'control-transition') return evaluateControlTransition(assertion, context);
+  if (assertion.kind === 'control-interruption') return evaluateControlInterruption(assertion, context);
+  const kinds = ['control-open', 'control-dismiss', 'motion-open', 'motion-dismiss'];
+  if (!kinds.includes(assertion.kind)) throw new Error(`Unknown reading motion assertion kind ${assertion.kind}`);
   const evidence = new MotionEvidence(context, assertion);
   try {
-    const kinds = ['control-open', 'control-dismiss', 'motion-open', 'motion-dismiss'];
-    requireEvidence(kinds.includes(assertion.kind), 'Unknown reading motion assertion kind');
     const direction = assertion.kind.endsWith('-open') ? 'open' : 'dismiss';
     const data = evidence.pair(direction);
     const result = assertion.kind.startsWith('control-') ? ownerResult(evidence, direction, data) :

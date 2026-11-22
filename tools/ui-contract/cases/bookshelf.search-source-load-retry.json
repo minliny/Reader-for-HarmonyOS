@@ -1,0 +1,129 @@
+{
+  "id": "bookshelf.search-source-load-retry",
+  "version": 3,
+  "phase": 1,
+  "pageId": "bookshelf",
+  "fixture": {
+    "id": "public-search-source-load-retry-v3",
+    "description": "Open Search on the public bookshelf. A settled healthy source.list read requires the normal native input over the bookshelf and no Retry. Retry once when the current source read fails and exposes its actual native recovery button.",
+    "bookTitle": "Reader Phase 1 公共长目录",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "before",
+      "kind": "sample",
+      "anchors": ["reader-bookshelf-search-entry"],
+      "book": true,
+      "keyboard": false
+    },
+    {
+      "id": "open-search",
+      "kind": "action",
+      "op": "click",
+      "from": "before",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [{"kind": "search-open-accepted", "channel": "business"}]
+    },
+    {
+      "id": "entry-projection",
+      "kind": "sample",
+      "afterAction": "open-search",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-library-search-back",
+        "reader-bookshelf-search-sourceLoadError",
+        "reader-search-source-recovery-primary"
+      ],
+      "waitFor": [
+        {"kind": "search-surface-settled", "channel": "business", "match": "latest", "fields": {"payload.mode": "input"}},
+        {"kind": "search-page-projection", "channel": "business", "match": "latest", "fields": {"payload.projection": "sourceLoadError"}}
+      ],
+      "quietMs": 350
+    },
+    {
+      "id": "retry-source-list",
+      "kind": "action",
+      "op": "click",
+      "from": "entry-projection",
+      "target": "reader-search-source-recovery-primary",
+      "beforeEvent": [
+        {"kind": "search-page-projection", "channel": "business", "match": "latest", "fields": {"payload.projection": "sourceLoadError"}}
+      ],
+      "waitFor": [
+        {"kind": "search-page-action", "channel": "business", "fields": {"payload.action": "retry-source-load"}},
+        {"kind": "search-source-list-retry", "channel": "business", "fields": {"payload.phase": "started"}}
+      ]
+    },
+    {
+      "id": "retry-settled",
+      "kind": "sample",
+      "afterAction": "retry-source-list",
+      "anchors": ["reader-book-search-input", "reader-library-search-back"],
+      "waitFor": [
+        {"kind": "search-source-list-retry", "channel": "business", "match": "latest", "fields": {"payload.phase": "settled"}}
+      ],
+      "quietMs": 500
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets",
+    "entry/src/main/ets/features/search/ui/SearchPage.ets",
+    "entry/src/main/ets/features/search/ui/LibrarySearchResults.ets",
+    "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
+    "entry/src/main/ets/features/search/presentation/ReaderLibrarySearchModel.ets",
+    "entry/src/main/ets/features/search/presentation/SearchPresentation.ts",
+    "entry/src/main/ets/features/search/presentation/SearchPublication.ts",
+    "entry/src/main/ets/features/search/presentation/SearchViewState.ts",
+    "entry/src/main/ets/features/search/application/SearchGateway.ts",
+    "entry/src/main/ets/features/search/application/SearchOrchestrator.ets",
+    "entry/src/main/ets/features/search/application/SearchHost.ets",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/ui/controls/ReaderButton.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+    "entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts"
+  ],
+  "assertions": [
+    {
+      "id": "search.entry.source-load-error",
+      "evaluator": "search",
+      "kind": "phase-projection",
+      "required": false,
+      "condition": "The actual source.list request fails in the current public Search opening.",
+      "source": "entry/src/main/ets/features/search/ui/SearchPage.ets#observePageProjection",
+      "sources": ["native-tree", "window-metrics", "app-owner"],
+      "action": "open-search",
+      "sample": "entry-projection",
+      "expected": {
+        "mode": "input",
+        "projections": ["sourceLoadError"],
+        "searchActive": false,
+        "node": "reader-bookshelf-search-sourceLoadError"
+      }
+    },
+    {
+      "id": "search.entry.retry-source-list",
+      "evaluator": "search",
+      "kind": "phase-source-load-retry",
+      "required": false,
+      "condition": "The current Search opening reports an actual failed source-list read and exposes the recovery action.",
+      "source": "entry/src/main/ets/features/search/application/SearchOrchestrator.ets#retrySourceLoad",
+      "sources": ["native-tree", "window-metrics", "app-owner"],
+      "action": "retry-source-list",
+      "baseline": "entry-projection",
+      "sample": "retry-settled",
+      "expected": {"state": "sourceLoadError", "exclusiveRead": true}
+    }
+  ],
+  "structure": {
+    "before": "before",
+    "entry-projection": "entry-projection",
+    "retry-settled": "retry-settled"
+  }
+}

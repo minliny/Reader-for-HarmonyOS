@@ -7,12 +7,12 @@ import {checkLayoutEvidence,sourceInteractiveControls} from './layout-evidence.m
 import {safePath,digest} from './lib.mjs';
 const args=process.argv.slice(2),paths={};
 for(const name of ['matrix','interaction','report']){const found=args.filter(a=>a.startsWith('--'+name+'='));assert.equal(found.length,1,'one explicit '+name+' input');paths[name]=found[0].split('=').slice(1).join('=');}
-const selected=selectContractCases({'complete-targets':'SDK dimension composition with exact/minimum provenance; E2 and E3 remain NOT_RUN','rejection-boundaries':'Missing ref, undersize, stale input, matrix duplicate/missing, no parent payment and false intrinsic width rejected'}, {argv:args.filter(a=>!/^--(matrix|interaction|report)=/.test(a))});
+const selected=selectContractCases({'complete-targets':'SDK dimension composition with exact/minimum provenance; E2 and E3 remain NOT_RUN','rejection-boundaries':'Missing ref, undersize, stale input, matrix duplicate/missing, no parent payment and false intrinsic width rejected','native-group-binding':'Source E2 PASS requires a matching pinned, independently verified native group'}, {argv:args.filter(a=>!/^--(matrix|interaction|report)=/.test(a))});
 const read=p=>readFileSync(safePath(p),'utf8'),hash=x=>createHash('sha256').update(x).digest('hex');
 const matrix=JSON.parse(read(paths.matrix)),interaction=JSON.parse(read(paths.interaction)),report=JSON.parse(read(paths.report));
 const page=structuredClone(JSON.parse(read('tools/page-structure/register.json')).pages.find(p=>p.pageId==='source-management'));
 page.invariants.E2.result='PASS';page.invariants.E3.result='FAIL';page.layers.interaction.facts.targets.controlRefs=[...sourceInteractiveControls];
-function check(value,{fingerprint=digest}={}){const bytes=JSON.stringify(value);return checkLayoutEvidence({...page,layoutEvidence:{path:'memory-report.json',sha256:hash(bytes)}},{read:p=>p==='memory-report.json'?bytes:read(p),fingerprint}).diagnostics;}
+function check(value,{fingerprint=digest,register=page}={}){const bytes=JSON.stringify(value);return checkLayoutEvidence({...register,layoutEvidence:{path:'memory-report.json',sha256:hash(bytes)}},{read:p=>p==='memory-report.json'?bytes:read(p),fingerprint}).diagnostics;}
 for(const id of selected){
  if(id==='complete-targets'){
   const rebuilt=composeSourceE2(matrix,interaction,{matrixInput:{path:paths.matrix,sha256:hash(read(paths.matrix))},interactionInput:{path:paths.interaction,sha256:hash(read(paths.interaction))}});
@@ -36,6 +36,25 @@ for(const id of selected){
   const stale=structuredClone(interaction);stale.inputs[0].sha256='0'.repeat(64);assert.throws(()=>composeSourceE2(matrix,stale),/stale source/);
   const border=structuredClone(interaction);const option=border.records.find(r=>r.group==='group-option');option.parentWidthMinimum=option.parentOuterWidthMinimum;assert.throws(()=>composeSourceE2(matrix,border),/pay border/);
   console.log(JSON.stringify({negativeBoundaries:10,thresholdUnchanged:44}));
+ }
+ if(id==='native-group-binding'){
+  // Exercise the group gate with the captured SDK inputs even if the live source has moved on.
+  const capturedInputs=new Map([...matrix.inputs,...interaction.inputs].map(input=>[input.path,input.sha256]));
+  const fingerprint=path=>capturedInputs.get(path) ?? digest(path);
+  const options={matrixInput:{path:paths.matrix,sha256:hash(read(paths.matrix))},interactionInput:{path:paths.interaction,sha256:hash(read(paths.interaction))},fingerprint};
+  const rebuilt=composeSourceE2(matrix,interaction,options);
+  assert.equal(rebuilt.results.E2,'NOT_RUN');
+  assert.throws(()=>composeSourceE2(matrix,interaction,{...options,nativeGroupEvidence:{kind:'device',result:'PASS',symbol:'ui-contract-receipt'}}),/native receipt group is required/);
+  const claimed=structuredClone(rebuilt);
+  claimed.results.E2='PASS';
+  const missingGroup=diagnostics=>diagnostics.some(d=>d.ruleId==='LAYOUT_EVIDENCE_PROVENANCE' && d.field==='sourceE2ReceiptGroup');
+  assert.ok(missingGroup(check(claimed,{fingerprint})));
+  const group={path:paths.interaction,sha256:digest(paths.interaction)};
+  claimed.sourceE2ReceiptGroup=group;
+  assert.ok(missingGroup(check(claimed,{fingerprint})));
+  const register=structuredClone(page);
+  register.invariants.E2.evidence=[{kind:'device',result:'PASS',symbol:'ui-contract-receipt-group',path:group.path,rootSha256:group.sha256}];
+  assert.ok(missingGroup(check(claimed,{register,fingerprint:path=>path===group.path?'0'.repeat(64):fingerprint(path)})));
  }
  recordContractCasePass(id);
 }

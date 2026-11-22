@@ -1,4 +1,7 @@
 import { loadInputs, readJSON, diagnostic, printReport, isMain, schemaValidator, registrations, isEmbeddedContent } from './lib.mjs';
+import { validateStructureDefinition } from '../ui-contract/lib/structure-contract.mjs';
+import { isSourceE3Claim, requireSourceE3Matrix } from './source-e3-admission.mjs';
+import { isSourceE2Claim, requireSourceE2InteractionPlan } from './source-e2-admission.mjs';
 
 const pairs = [
   ['model', 'tools/page-structure/schema/model.schema.json'],
@@ -17,6 +20,13 @@ export function validateModel(inputs = loadInputs(), { asOf = new Date().toISOSt
   }
   if (diagnostics.length) return { diagnostics, dependency };
   const model = inputs.model;
+  if (['structureSelectors', 'structureRules', 'scenarioObligations', 'structureFoundations'].some(key => Object.hasOwn(model, key))) {
+    try {
+      validateStructureDefinition(model);
+    } catch (error) {
+      diagnostics.push(diagnostic('STRUCTURE_DEFINITION', 'model', null, 'scenarioObligations', error.message));
+    }
+  }
   if (model.modelVersion !== inputs.register.modelVersion) diagnostics.push(diagnostic('VERSION', 'register', null, 'modelVersion', 'Registration must consume the same model version'));
   if (model.layers.length !== 16 || new Set(model.layers.map(l => l.id)).size !== 16) diagnostics.push(diagnostic('L0', 'model', null, 'layers', 'Exactly sixteen unique layer definitions required'));
   for (const key of ['layers', 'prototypes', 'illegalCombinations', 'invariants']) {
@@ -24,6 +34,37 @@ export function validateModel(inputs = loadInputs(), { asOf = new Date().toISOSt
     if (new Set(ids).size !== ids.length) diagnostics.push(diagnostic('DUPLICATE', 'model', null, key, 'Duplicate model IDs'));
   }
   const all = registrations(inputs.register), ids = new Set();
+  const receiptClaims = new Set();
+  for (const mapping of model.receiptAdmissions ?? []) {
+    const page = all.find(item => item.page.pageId === mapping.pageId)?.page;
+    const [scope, id] = mapping.claim.split('.');
+    const key = JSON.stringify([mapping.pageId, mapping.claim]);
+    const parts = mapping.cases ?? [mapping];
+    const owners = new Set([page?.source, ...(page?.sourceInputs ?? [])].map(input => input?.path));
+    if (!page || page.routeContractRef !== mapping.routeContractRef || !page[scope]?.[id] ||
+        receiptClaims.has(key) || new Set(parts.map(part => part.caseId)).size !== parts.length ||
+        parts.some(part => new Set(part.assertions.map(value => value.id)).size !== part.assertions.length ||
+          (mapping.cases && !model.scenarioObligations?.some(item => item.caseId === part.caseId)) ||
+          part.ownerSources.some(path => !owners.has(path)))) {
+      diagnostics.push(diagnostic('RECEIPT_ADMISSION', mapping.pageId, null, mapping.claim,
+        'Expected one declared page/route rule with distinct cases, distinct assertions and fingerprinted owners'));
+    }
+    if (isSourceE3Claim(mapping,mapping.claim)) {
+      try {
+        requireSourceE3Matrix(mapping);
+      } catch (error) {
+        diagnostics.push(diagnostic('RECEIPT_ADMISSION', mapping.pageId, null, mapping.claim, error.message));
+      }
+    }
+    if (isSourceE2Claim(mapping,mapping.claim)) {
+      try {
+        requireSourceE2InteractionPlan(mapping);
+      } catch (error) {
+        diagnostics.push(diagnostic('RECEIPT_ADMISSION', mapping.pageId, null, mapping.claim, error.message));
+      }
+    }
+    receiptClaims.add(key);
+  }
   for (const family of inputs.register.pages) {
     const variantIds = (family.variants ?? []).map(v => v.variantId);
     if (new Set(variantIds).size !== variantIds.length) diagnostics.push(diagnostic('DUPLICATE', family.pageId, null, 'variants', 'Duplicate mounting variant ID'));

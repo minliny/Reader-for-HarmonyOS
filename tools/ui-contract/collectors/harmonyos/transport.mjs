@@ -3,17 +3,21 @@ import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { EvidenceError } from '../../../lib/native-ui-evidence.mjs';
 import { requireEvidence } from '../../lib/evidence.mjs';
 
 const probe = fileURLToPath(new URL('../../../reader-control-device-probe.mjs', import.meta.url));
 
 /** One owned probe and exactly one in-flight, bounded request. */
-export function openProbe({hdc, server, target, outputDir}) {
+export function openProbe({hdc, server, target, outputDir, runnerMode}) {
+  requireEvidence(runnerMode === undefined || runnerMode === 'dry' || runnerMode === 'dispatch',
+    'The probe Runner mode must be dry or dispatch');
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
     !/^(http|https|all|socks|no)_proxy$/i.test(key)));
   Object.assign(env, {NO_PROXY: '*', no_proxy: '*'});
-  const child = spawn(process.execPath, [probe, '--hdc', hdc, '--server', server, '--target', target, '--output-dir', outputDir],
-    { stdio: ['pipe', 'pipe', 'pipe'], env });
+  const args = [probe,'--hdc',hdc,'--server',server,'--target',target,'--output-dir',outputDir];
+  if (runnerMode !== undefined) args.push('--runner-mode',runnerMode);
+  const child = spawn(process.execPath,args,{stdio:['pipe','pipe','pipe'],env});
   const records = [];
   const reader = createInterface({ input: child.stdout, crlfDelay: Infinity });
   let exited = null;
@@ -23,7 +27,7 @@ export function openProbe({hdc, server, target, outputDir}) {
     child.on('close', (code, signal) => {
       exited = {code, signal};
       reader.close();
-      pending?.reject(new Error('Probe exited before reporting the requested operation'));
+      pending?.reject(new EvidenceError('Probe exited before reporting the requested operation'));
       resolve(exited);
     });
     child.on('error', () => { aborted = 'Probe failed to launch'; });
@@ -36,11 +40,12 @@ export function openProbe({hdc, server, target, outputDir}) {
       const record = JSON.parse(line);
       requireEvidence(record.seq === records.length + 1, 'Unexpected sequence in probe output');
       records.push(record);
-      if (record.ok === false) throw Error('Probe device command failed');
+      requireEvidence(record.ok !== false, 'Probe device command failed');
       if (pending?.event === record.event) pending.resolve(record);
     } catch (error) {
-      aborted = error.message;
-      pending?.reject(new Error(aborted));
+      const problem = error instanceof EvidenceError ? error : new Error('Malformed probe output');
+      aborted = problem.message;
+      pending?.reject(problem);
     }
   });
   function next(event, op, timeout) {
@@ -48,7 +53,7 @@ export function openProbe({hdc, server, target, outputDir}) {
     let timer;
     return new Promise((resolve, reject) => {
       pending = { event, resolve, reject };
-      timer = setTimeout(() => reject(new Error(`Timed out waiting for probe ${event}`)), timeout);
+      timer = setTimeout(() => reject(new EvidenceError(`Timed out waiting for probe ${event}`)), timeout);
       if (op) child.stdin.write(`${JSON.stringify(op.op === 'uiContractReadiness' ? op : {...op, preflightConfirmed:true})}\n`);
     }).finally(() => {
       clearTimeout(timer);
@@ -58,8 +63,12 @@ export function openProbe({hdc, server, target, outputDir}) {
   return {
     records,
     ready: () => next('ready', null, 34000),
-    command: op => next(op.op === 'uiContractReadiness' ? 'readiness' : op.op === 'recv' ? 'capture-integrity' : 'command',
-      op, op.op === 'recv' || op.op === 'uiContractReadiness' ? 122000 : 32000),
+    command: op => {
+      const capture = op.op === 'recv' || op.op === 'uiContractReadiness';
+      const event = { uiContractReadiness: 'readiness', recv: 'capture-integrity', clickThenBack: 'click-then-back',
+        clickThenReaderCenter: 'click-then-reader-center' }[op.op] ?? 'command';
+      return next(event, op, capture ? 122000 : 32000);
+    },
     async close() {
       if (!exited) child.stdin.end();
       const outcome = await Promise.race([ended, delay(2000, null, {ref: false})]);

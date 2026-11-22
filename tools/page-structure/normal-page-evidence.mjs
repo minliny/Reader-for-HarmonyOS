@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { diagnostic, digest, safePath } from './lib.mjs';
+import { checkContractReceipt, checkContractReceiptGroup, sourceE2AdmissionGap, sourceE3AdmissionGap } from './receipt-evidence.mjs';
+import { isSourceE3Claim } from './source-e3-admission.mjs';
+import { isSourceE2Claim } from './source-e2-admission.mjs';
 import { candidateIdentity, captureRecord, nativeBounds, normalReaderWindowRoots, pngSize, requireEvidence, sha256 } from '../lib/native-ui-evidence.mjs';
 
 const layoutTag = 'READER_DEVELOPER_LAYOUT';
@@ -176,7 +179,7 @@ function verifyReport(page, path) {
 }
 
 /** A source, SDK or isolated fixture report can never close a native page layer. */
-export function checkNormalPageEvidence(page, model) {
+export function checkNormalPageEvidence(page, model, selection, sourceE2ReceiptGroup) {
   const diagnostics = [];
   const checked = new Map();
   const claims = [
@@ -185,10 +188,46 @@ export function checkNormalPageEvidence(page, model) {
       [model.invariants.find(rule => rule.id === id)?.layer, `invariants.${id}`, result]),
   ].filter(([, , record]) => record.result === 'PASS');
   for (const [layer, claim, record] of claims) {
-    let failure = 'PASS requires same-scene full screenshot, native tree and Developer Mode parameters';
+    const gap = sourceE2AdmissionGap(page, claim, model) ?? sourceE3AdmissionGap(page, claim, model);
+    if (gap) {
+      diagnostics.push(diagnostic('NORMAL_PAGE_EVIDENCE', page.pageId, layer, claim, gap));
+      continue;
+    }
+    const sourceE3 = isSourceE3Claim(page, claim);
+    const sourceE2 = isSourceE2Claim(page,claim);
+    let failure = sourceE3 ? 'Source E3 PASS requires the model-owned grouped native matrix receipt' :
+      sourceE2 ? 'Source E2 PASS requires a model-owned native receipt covering the complete interaction claim' :
+      'PASS requires same-scene full screenshot, native tree and Developer Mode parameters';
     let admitted = false;
-    for (const evidence of record.evidence ?? []) {
-      if (evidence.kind !== 'device' || evidence.result !== 'PASS' || evidence.symbol !== 'normal-page') continue;
+    const requiresContractReceipt = sourceE2 || (model.receiptAdmissions ?? []).some(mapping =>
+      mapping.pageId === page.pageId && mapping.claim === claim);
+    const registered = record.evidence ?? [];
+    const evidenceList = selection ? registered.filter(evidence => evidence.kind === 'device' &&
+      evidence.result === 'PASS' && evidence.symbol === 'ui-contract-receipt' &&
+      evidence.rootSha256 === selection.rootSha256) : registered;
+    // 分组证据跨用例或窗口，旧 normal-page 报告也不绑定所选回执的根。两者仍可用于原有单项准入。
+    if (selection && (evidenceList.length !== 1 || sourceE2 || sourceE3)) {
+      diagnostics.push(diagnostic('PAGE_RECEIPT_BINDING', page.pageId, layer, claim,
+        'Page composition requires exactly one registered single receipt for the selected root', 'NOT_RUN'));
+      continue;
+    }
+    for (const evidence of evidenceList) {
+      if (evidence.kind !== 'device' || evidence.result !== 'PASS') continue;
+      if ((sourceE3 || sourceE2) && evidence.symbol !== 'ui-contract-receipt-group') continue;
+      if (sourceE2 && sourceE2ReceiptGroup && (evidence.path !== sourceE2ReceiptGroup.path ||
+          evidence.rootSha256 !== sourceE2ReceiptGroup.sha256)) continue;
+      if (evidence.symbol === 'ui-contract-receipt' || evidence.symbol === 'ui-contract-receipt-group') {
+        try {
+          const verifyReceipt = evidence.symbol === 'ui-contract-receipt-group' ? checkContractReceiptGroup : checkContractReceipt;
+          verifyReceipt(page, model, claim, evidence, selection);
+          admitted = true;
+          break;
+        } catch (error) {
+          failure = error.message;
+          continue;
+        }
+      }
+      if (requiresContractReceipt || evidence.symbol !== 'normal-page') continue;
       try {
         if (!checked.has(evidence.path)) checked.set(evidence.path, verifyReport(page, evidence.path));
         if (checked.get(evidence.path).includes(claim)) { admitted = true; break; }

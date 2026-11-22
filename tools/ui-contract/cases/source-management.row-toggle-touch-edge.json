@@ -1,0 +1,627 @@
+{
+  "id": "source-management.row-toggle-touch-edge",
+  "version": 3,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-row-toggle-touch-v3",
+    "description": "Use the isolated public catalog with only the initially disabled Phase1 Source 01 fixture. Keep default filters. Tap the upper native edge to enable and the lower edge to restore disabled. Only after both authoritative reads, tap the native center to enable and again to restore. Every write follows a proven state, and the final read must leave the only source disabled.",
+    "publicSources": true
+  },
+  "ownerSources": [
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
+    "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
+    "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/ui/foundation/ReaderTokens.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/ui/controls/ReaderFormRow.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
+    "entry/src/main/ets/ui/layout/ReaderScrollLayout.ts",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+    "entry/src/main/ets/ui/controls/ReaderToggle.ets"
+  ],
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-public-toggle-fixture"
+      ],
+      "keyboard": false,
+      "afterAction": "open-sources",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": false
+          }
+        }
+      ],
+      "quietMs": 125
+    },
+    {
+      "id": "enable-source",
+      "kind": "action",
+      "op": "click",
+      "from": "source-ready",
+      "target": "reader-source-public-toggle-fixture",
+      "tapEdge": "top",
+      "beforeEvent": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": false
+          }
+        }
+      ],
+      "waitFor": [
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-enabled",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-public-toggle-fixture"
+      ],
+      "keyboard": false,
+      "afterAction": "enable-source",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": true
+          }
+        }
+      ],
+      "quietMs": 125
+    },
+    {
+      "id": "restore-source",
+      "kind": "action",
+      "op": "click",
+      "from": "source-enabled",
+      "target": "reader-source-public-toggle-fixture",
+      "tapEdge": "bottom",
+      "beforeEvent": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": true
+          }
+        }
+      ],
+      "waitFor": [
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-restored",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-public-toggle-fixture"
+      ],
+      "keyboard": false,
+      "afterAction": "restore-source",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": false
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": false
+          }
+        }
+      ],
+      "quietMs": 125
+    },
+    {
+      "id": "enable-source-center",
+      "kind": "action",
+      "op": "click",
+      "from": "source-restored",
+      "target": "reader-source-public-toggle-fixture",
+      "beforeEvent": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": false
+          }
+        }
+      ],
+      "waitFor": [
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-center-enabled",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-public-toggle-fixture"
+      ],
+      "keyboard": false,
+      "afterAction": "enable-source-center",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": true
+          }
+        }
+      ],
+      "quietMs": 125
+    },
+    {
+      "id": "restore-source-center",
+      "kind": "action",
+      "op": "click",
+      "from": "source-center-enabled",
+      "target": "reader-source-public-toggle-fixture",
+      "beforeEvent": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": true
+          }
+        }
+      ],
+      "waitFor": [
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-center-restored",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-public-toggle-fixture"
+      ],
+      "keyboard": false,
+      "afterAction": "restore-source-center",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "settled",
+            "payload.requestedEnabled": false
+          }
+        },
+        {
+          "kind": "source.toggle",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.enabled": false
+          }
+        }
+      ],
+      "quietMs": 125
+    }
+  ],
+  "assertions": [
+    {
+      "id": "source.route.entry",
+      "evaluator": "source",
+      "kind": "route",
+      "expected": {
+        "action": "open",
+        "from": "settings",
+        "to": "source",
+        "anchor": "reader-source-back"
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderSourceJourney.ets#ReaderSourceJourney",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "sample": "source-ready",
+      "action": "open-sources"
+    },
+    {
+      "id": "source.toggle.target.ready",
+      "evaluator": "source",
+      "kind": "toggle-touch-target",
+      "required": true,
+      "expected": {},
+      "source": "entry/src/main/ets/ui/controls/ReaderToggle.ets#ReaderToggle",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-sources",
+      "sample": "source-ready"
+    },
+    {
+      "id": "source.toggle.edge.enable",
+      "evaluator": "source",
+      "kind": "toggle-touch",
+      "required": true,
+      "expected": {
+        "target": "reader-source-public-toggle-fixture",
+        "position": "top",
+        "requestedEnabled": true
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#sourceSwitch",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "enable-source",
+      "baseline": "source-ready",
+      "sample": "source-enabled"
+    },
+    {
+      "id": "source.toggle.target.enabled",
+      "evaluator": "source",
+      "kind": "toggle-touch-target",
+      "required": true,
+      "expected": {},
+      "source": "entry/src/main/ets/ui/controls/ReaderToggle.ets#ReaderToggle",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-sources",
+      "sample": "source-enabled"
+    },
+    {
+      "id": "source.toggle.edge.restore",
+      "evaluator": "source",
+      "kind": "toggle-touch",
+      "required": true,
+      "expected": {
+        "target": "reader-source-public-toggle-fixture",
+        "position": "bottom",
+        "requestedEnabled": false
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#sourceSwitch",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "restore-source",
+      "baseline": "source-enabled",
+      "sample": "source-restored"
+    },
+    {
+      "id": "source.toggle.center.enable",
+      "evaluator": "source",
+      "kind": "toggle-touch",
+      "required": true,
+      "expected": {
+        "target": "reader-source-public-toggle-fixture",
+        "position": "center",
+        "requestedEnabled": true
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#sourceSwitch",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "enable-source-center",
+      "baseline": "source-restored",
+      "sample": "source-center-enabled"
+    },
+    {
+      "id": "source.toggle.center.restore",
+      "evaluator": "source",
+      "kind": "toggle-touch",
+      "required": true,
+      "expected": {
+        "target": "reader-source-public-toggle-fixture",
+        "position": "center",
+        "requestedEnabled": false
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#sourceSwitch",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "restore-source-center",
+      "baseline": "source-center-enabled",
+      "sample": "source-center-restored"
+    }
+  ],
+  "structure": {
+    "source-ready": "source-ready",
+    "source-enabled": "source-enabled",
+    "source-restored": "source-restored",
+    "source-center-enabled": "source-center-enabled",
+    "source-center-restored": "source-center-restored"
+  }
+}
