@@ -31,6 +31,10 @@ export const until=async check=>{for(let i=0;i<200;i++){if(check())return;await 
 // Own only roots created by this module; reopening an externally supplied root
 // never grants deletion authority. Callers clean up in finally, including FAIL.
 const ownedDurableRoots = new Set();
+process.once('exit', () => {
+  for (const root of ownedDurableRoots) fs.rmSync(root, { recursive: true, force: true });
+  ownedDurableRoots.clear();
+});
 export async function cleanupDurableFixtures({ retain = false } = {}) {
  const roots = [...ownedDurableRoots];
  if (retain) { ownedDurableRoots.clear(); return { retained: roots, removed: [] }; }

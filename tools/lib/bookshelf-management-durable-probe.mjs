@@ -19,13 +19,28 @@ export const coreRoot=process.env.READER_BOOKSHELF_MANAGEMENT_CORE_ROOT??process
 export const binary=coreCliPath(coreRoot);
 export const read=p=>fs.readFileSync(resolve(host,'entry/src/main/ets',p),'utf8');
 
+// Own only roots created by this module; reopening an externally supplied root
+// never grants deletion authority. The exit hook is synchronous so failed tests
+// and process.exit() cannot strand SQLite directories.
+const ownedDurableRoots=new Set();
+process.once('exit',()=>{
+ for(const root of ownedDurableRoots)fs.rmSync(root,{recursive:true,force:true});
+ ownedDurableRoots.clear();
+});
+export async function cleanupDurableFixtures() {
+ const roots=[...ownedDurableRoots];ownedDurableRoots.clear();
+ for(const root of roots)await fsp.rm(root,{recursive:true,force:true});
+ return{removed:roots};
+}
+
 /** Actual AtomicFile adapter + complete production SDK-emitted classes. Every
  * Core RPC starts a separate CLI process against the same SQLite directory.
  * Serialize those cold process opens: production shares one initialized Core
  * instance, while each schema-37 CLI open acquires SQLite initialization locks.
  * Replacing the fixture module deliberately removes only warm JS statics. */
 export async function managementFixture(existing, suppliedRuntime, gatewaySource) {
- const root=existing?.root??await fsp.mkdtemp(resolve(tmpdir(),'reader-bookshelf-management-durable-'));
+ const ownsRoot=!existing?.root,root=existing?.root??await fsp.mkdtemp(resolve(tmpdir(),'reader-bookshelf-management-durable-'));
+ if(ownsRoot)ownedDurableRoots.add(root);
  const files=resolve(root,'files'),core=resolve(root,'core');await fsp.mkdir(files,{recursive:true});
  const options={},calls=[],io={finishes:0,syncs:0,failWrites:0};let installed,uuid=existing?.uuid??0;
  const Runtime=runtimeOwnerIdentityProbe(()=>installed);
