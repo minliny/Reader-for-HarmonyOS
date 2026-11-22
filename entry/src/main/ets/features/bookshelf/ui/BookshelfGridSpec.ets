@@ -16,6 +16,11 @@ const PHONE_COVER_RATIO = 145.443 / PHONE_CARD_MAX_WIDTH;
 const TABLET_CARD_MAX_WIDTH = 186.672;
 const TABLET_COVER_RATIO = 280 / TABLET_CARD_MAX_WIDTH;
 export const BOOKSHELF_GRID_TEXT_GAP = 6;
+/** Runtime title line count. Figma `Library/BookCard` `493:196` exposes
+ * TitleLines=1/2; product decision 2026-11-20 enables the two-line variant
+ * on the bookshelf grid so long titles stay readable. See
+ * docs/issues/bookshelf-cover-and-title-20261120.md. */
+export const BOOKSHELF_GRID_TITLE_LINES = 2;
 const PHONE_SELECTION_TEXT_MIN_HEIGHT = 191 - 145.44;
 const TABLET_SELECTION_TEXT_MIN_HEIGHT = 325.3 - 280;
 
@@ -26,9 +31,11 @@ export interface BookshelfGridTextFrame {
   height: number;
 }
 
-export function bookshelfGridTextFrame(fontScale: number = 1, hasProgress: boolean = false): BookshelfGridTextFrame {
+export function bookshelfGridTextFrame(fontScale: number = 1, hasProgress: boolean = false,
+  titleLines: number = 1): BookshelfGridTextFrame {
   const scale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
-  const titleHeight = (TYPE_SHELF_LIST_TITLE.lineHeightFp as number) * scale;
+  const lines = Number.isFinite(titleLines) && titleLines >= 1 ? Math.round(titleLines) : 1;
+  const titleHeight = (TYPE_SHELF_LIST_TITLE.lineHeightFp as number) * scale * lines;
   const authorHeight = (TYPE_SHELF_LIST_AUTHOR.lineHeightFp as number) * scale;
   const progressHeight = (TYPE_SHELF_LIST_STATUS.lineHeightFp as number) * scale;
   return { titleHeight, authorHeight, progressHeight,
@@ -48,7 +55,7 @@ export interface BookshelfGridFrame {
  *  keep three columns; card width is capped by width class and the column gap
  *  absorbs the remaining content width. */
 export function bookshelfGridFrame(contentWidth: number, expanded: boolean, fontScale: number = 1,
-  hasProgress: boolean = false): BookshelfGridFrame {
+  hasProgress: boolean = false, titleLines: number = 1): BookshelfGridFrame {
   const usable = Math.max(0, contentWidth);
   const cardMaxWidth = expanded ? TABLET_CARD_MAX_WIDTH : PHONE_CARD_MAX_WIDTH;
   const cardWidth = Math.min(cardMaxWidth,
@@ -60,7 +67,7 @@ export function bookshelfGridFrame(contentWidth: number, expanded: boolean, font
     rowWidth: cardWidth * GRID_COLUMNS + columnGap * (GRID_COLUMNS - 1),
     cardWidth,
     coverHeight,
-    cardHeight: coverHeight + bookshelfGridTextFrame(fontScale, hasProgress).height,
+    cardHeight: coverHeight + bookshelfGridTextFrame(fontScale, hasProgress, titleLines).height,
     columnGap,
   };
 }

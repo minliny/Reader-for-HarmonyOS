@@ -11,7 +11,7 @@ import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
-import { NoCoverCover } from '../../../ui/patterns/NoCoverCover';
+import { NoCoverCover, noCoverGlyph } from '../../../ui/patterns/NoCoverCover';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -250,7 +250,8 @@ export struct BookshelfMultiSelectPage {
             .borderRadius(8)
             .shadow({ radius: 26, color: readerAppColor('app.shadow.cover', this.appThemeScheme), offsetX: 0, offsetY: 8 });
         } else {
-          NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight() });
+          NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight(),
+            glyph: noCoverGlyph(this.currentBook(book).title) });
         }
 
         this.selectionBadge(book, 4);
@@ -487,7 +488,7 @@ export struct BookshelfMultiSelectPage {
             .objectFit(ImageFit.Cover)
             .borderRadius(6);
         } else {
-          NoCoverCover({ coverWidth: 48, coverHeight: 80 });
+          NoCoverCover({ coverWidth: 48, coverHeight: 80, glyph: noCoverGlyph(this.currentBook(book).title) });
         }
         this.selectionBadge(book, 2);
       }

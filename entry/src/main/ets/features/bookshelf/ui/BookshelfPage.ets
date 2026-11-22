@@ -1,5 +1,5 @@
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
-import { BOOKSHELF_GRID_TEXT_GAP } from './BookshelfGridSpec';
+import { BOOKSHELF_GRID_TEXT_GAP, BOOKSHELF_GRID_TITLE_LINES } from './BookshelfGridSpec';
 import { BOOKSHELF_COVER_SHADOW_RADIUS, BOOKSHELF_COVER_SHADOW_OFFSET_Y } from './BookshelfCoverVisual';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { resolveReaderIconButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
@@ -62,7 +62,7 @@ import {
   TOK_SPACE_XS,
 } from '../../../ui/foundation/ReaderTokens';
 
-import { NoCoverCover } from '../../../ui/patterns/NoCoverCover';
+import { NoCoverCover, noCoverGlyph } from '../../../ui/patterns/NoCoverCover';
 import { registerReaderShelfFonts } from '../../../ui/foundation/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
 import { SheetSurfaceSpec, resolveSheetSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -601,8 +601,11 @@ export struct BookshelfPage {
           .height(this.continueCardFrame(expandedLayout).coverHeight)
           .objectFit(ImageFit.Cover).borderRadius(8);
       } else {
-        NoCoverCover({ coverWidth: this.continueCardFrame(expandedLayout).coverWidth,
-          coverHeight: this.continueCardFrame(expandedLayout).coverHeight });
+        NoCoverCover({
+          coverWidth: this.continueCardFrame(expandedLayout).coverWidth,
+          coverHeight: this.continueCardFrame(expandedLayout).coverHeight,
+          glyph: noCoverGlyph(bookProvider()?.title),
+        });
       }
     }.width(this.continueCardFrame(expandedLayout).coverWidth)
       .height(this.continueCardFrame(expandedLayout).coverHeight).borderRadius(8).clip(true)
@@ -1161,6 +1164,7 @@ export struct BookshelfPage {
         NoCoverCover({
           coverWidth: this.shelfBookCardWidth(expandedLayout),
           coverHeight: this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout),
+          glyph: noCoverGlyph(book.title),
         });
       }
       if ((book.unreadCount ?? 0) > 0) {
@@ -1216,7 +1220,7 @@ export struct BookshelfPage {
         .lineHeight(`${TYPE_SHELF_LIST_TITLE.lineHeightFp}fp`)
         .letterSpacing(TYPE_SHELF_LIST_TITLE.letterSpacingFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1)
+        .maxLines(BOOKSHELF_GRID_TITLE_LINES)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Text(book.author)
         .width(this.shelfBookCardWidth(expandedLayout))
@@ -2074,7 +2078,8 @@ export struct BookshelfPage {
 
   private gridBookCardHeight(book: ShelfBook, expandedLayout: boolean): number {
     return bookshelfGridFrame(this.shelfContentWidth(expandedLayout), expandedLayout,
-      ReaderWindowCoordinator.metrics().systemFontScale, this.gridProgressLabel(book).length > 0).cardHeight;
+      ReaderWindowCoordinator.metrics().systemFontScale, this.gridProgressLabel(book).length > 0,
+      BOOKSHELF_GRID_TITLE_LINES).cardHeight;
   }
 
   private hasCover(book: ShelfBook | undefined): boolean {
