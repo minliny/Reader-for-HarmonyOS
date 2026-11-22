@@ -22,6 +22,52 @@ export type ReaderCoreRuntimeConfig = JsonObject & {
   dataDirectory?: string; cacheDirectory?: string; storageMigration?: ReaderCoreStorageMigration;
 };
 
+/** Core-owned local recovery only. No path, nonce or remote URL is accepted. */
+export type RuntimeStorageBackupCreateParams = Record<string, never>;
+export type RuntimeStorageBackupCreateData = {
+  backupId: string;
+  sha256: string;
+  bytes: number;
+  format: "library47";
+  schemaUserVersion: 47;
+};
+export type RuntimeStorageBackupRestoreParams = {
+  backupId: string;
+  expectedSha256: string;
+};
+export type RuntimeStorageBackupRestoreData = {
+  restored: boolean;
+  backupId: string;
+  sha256: string;
+  format: "library47";
+  schemaUserVersion: 47;
+  revokedResourceGrants: number;
+  resourceEvidenceRequiringValidation: number;
+};
+
+/** Compiled operation support; concrete data still needs Core preflight. */
+export type CoreStorageCapabilities = {
+  logicalExport: boolean;
+  logicalRestore: boolean;
+  legacyHostImport: boolean;
+  physicalBackup: boolean;
+  physicalRestore: boolean;
+  webdavConfigRestore: boolean;
+  activeLibrarySync: false;
+  logicalExportRequiresDataPreflight: true;
+  /** Always true for Library47; both values are accepted for Legacy declarations. */
+  logicalRestoreRequiresCompleteCoverage: boolean;
+  resourceEvidenceOnly: true;
+  externalFilesIncluded: false;
+};
+/** Missing matrix is an old declaration, not permission for new operations. */
+export type CoreStorageFormatInfo = {
+  format: "legacy" | "library47";
+  /** Equals logicalExport && logicalRestore && legacyHostImport when matrix is present. */
+  portableSnapshotSupported: boolean;
+  capabilities?: CoreStorageCapabilities;
+};
+
 export type NativeRuntimeHandle = unknown;
 
 /** Bounded Core-owned bytes used by Host responses that exceed JSON comfort. */
@@ -129,6 +175,7 @@ export type ReaderCoreTerminalMetadata = {
 const TERMINAL_DIAGNOSTIC_METHODS = new Set<string>([
   "core.info", "runtime.ping", "runtime.hostSmoke", "runtime.status",
   "runtime.storage.restore", "runtime.storage.flush", "runtime.storage.export", "runtime.storage.apply",
+  "runtime.storage.backup.create", "runtime.storage.backup.restore",
   "source.group.catalog", "source.list", "source.import", "source.supply", "source.update", "source.delete",
   "book.search", "book.detail", "book.toc", "chapter.content",
   "bookshelf.list", "bookshelf.get", "bookshelf.add", "bookshelf.book.update",
