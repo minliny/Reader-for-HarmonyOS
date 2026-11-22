@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import fileIo from '@ohos.file.fs';
 import type { BusinessError } from '@ohos.base';
 import util from '@ohos.util';
@@ -273,8 +274,8 @@ class ReadingDomainIntent {
     if (this.lane.warm === undefined || !this.same(this.lane.warm, intent)) throw new ReadingOperationPendingError('旧清理回执不能清除新标识', intent, true);
     this.lane.warm = undefined;
   }
-  private async replace(raw: string): Promise<void> { const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('READING_OPERATION_DURABLE_IO_UNAVAILABLE'); await replaceReaderAtomicSnapshot(this.path(), context.filesDir, raw); }
-  private path(): string { const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('READING_OPERATION_DURABLE_IO_UNAVAILABLE'); return `${context.filesDir}/${this.domain === 'bookmark' ? 'reader-bookmark-intent-v1.json' : 'reader-cache-clear-intent-v1.json'}`; }
+  private async replace(raw: string): Promise<void> { const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('READING_OPERATION_DURABLE_IO_UNAVAILABLE'); await replaceReaderAtomicSnapshot(this.path(), readerHostFilesDirectory(context.filesDir), raw); }
+  private path(): string { const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('READING_OPERATION_DURABLE_IO_UNAVAILABLE'); return `${readerHostFilesDirectory(context.filesDir)}/${this.domain === 'bookmark' ? 'reader-bookmark-intent-v1.json' : 'reader-cache-clear-intent-v1.json'}`; }
   private runtimeCurrent(): boolean { try { return this.ownsRuntime(); } catch (_) { return false; } }
   private assertCurrent(): void { if (!this.runtimeCurrent()) throw new ReadingOperationPendingError('原Runtime已退役，请由当前服务核对保留记录'); }
   private same(a: ReadingOperationIntent, b: ReadingOperationIntent): boolean { return a.method === b.method && JSON.stringify(a.params) === JSON.stringify(b.params) && JSON.stringify(a.context) === JSON.stringify(b.context); }

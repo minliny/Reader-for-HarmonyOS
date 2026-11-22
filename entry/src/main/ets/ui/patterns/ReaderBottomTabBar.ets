@@ -92,6 +92,7 @@ export struct ReaderBottomTabBar {
     .backgroundColor(this.current === tab.key ? readerAppColor('TOK_PRIMARY_DARK', this.scheme) : Color.Transparent)
     .enabled(this.inputEnabled)
     .accessibilityText(`${this.currentTab(tab).label}${this.current === tab.key ? '，已选中' : ''}`)
+    .id(`reader-main-tab-${tab.key}`)
     .accessibilitySelected(this.current === tab.key)
     .onClick((): void => this.activate(tab.key));
   }

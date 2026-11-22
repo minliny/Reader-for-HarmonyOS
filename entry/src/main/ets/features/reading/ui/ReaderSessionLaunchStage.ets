@@ -61,6 +61,7 @@ export struct ReaderSessionLaunchStage {
     Stack({ alignContent: Alignment.TopStart }) {
       // MorphSurface · canonical capsule shell.
       Row() {}
+        .id('reader-session-launch-surface')
         .width('100%').height('100%')
         .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor))
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
@@ -77,18 +78,21 @@ export struct ReaderSessionLaunchStage {
         Row().width('100%').height(1).backgroundColor(this.sourceHighlightColor)
           .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) }).hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
+          .id('reader-session-launch-sharp')
           .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
           .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
           .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
           .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
           .opacity(this.sample.sharpOpacity).hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) { this.sourceBlurContent(); }
+          .id('reader-session-launch-blur')
           .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
           .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
           .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
           .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
           .blur(this.sample.blurRadius).opacity(this.sample.blurOpacity).hitTestBehavior(HitTestMode.None);
       }
+      .id('reader-session-launch-source')
       .width('100%').height('100%')
       .clipShape(this.sourceClip()).opacity(this.sample.sourceSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
@@ -100,16 +104,18 @@ export struct ReaderSessionLaunchStage {
           capsuleHeight: this.sample.capsuleHeight, labelWidth: this.metrics().labelWidth,
           labelHeight: this.metrics().labelHeight, countdownSize: this.metrics().countdownSize })
           .translate({ x: this.sample.leadingOffsetX }).opacity(this.sample.leadingOpacity);
-      }.width('100%').height('100%').borderRadius(READER_SESSION_CAPSULE_RADIUS).clip(true).hitTestBehavior(HitTestMode.None);
+      }.id('reader-session-launch-leading').width('100%').height('100%').borderRadius(READER_SESSION_CAPSULE_RADIUS).clip(true).hitTestBehavior(HitTestMode.None);
 
       // CircleState is NOT a descendant of the reveal row: already visible at dot.
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
         primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
         .position({ x: this.sample.pauseX, y: (this.sample.proxyHeight - 16) / 2 }).opacity(this.sample.pauseOpacity);
     }
+    .id('reader-session-launch-proxy')
     .width(this.sample.proxyWidth).height(this.sample.proxyHeight)
     .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }
+    .id('reader-session-launch-toggle')
     .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
     .width(Math.max(44, this.sample.proxyWidth)).height(Math.max(44, this.sample.proxyHeight))
     .position({ x: this.sample.proxyLeft - Math.max(0, 44 - this.sample.proxyWidth) / 2,

@@ -20,6 +20,7 @@ export struct ReaderSearchHistoryPanel {
   @Prop history: string[] = [];
   @Prop status: SearchHistoryStatus | undefined = undefined;
   @Prop geometry: SearchHistoryGeometry = new SearchHistoryGeometry(0, 0, 1, false);
+  @Prop observeActions: boolean = false;
   onClear: () => void = (): void => {};
   onRetry: () => void = (): void => {};
   onSelect: (keyword: string) => void = (_keyword: string): void => {};
@@ -91,6 +92,7 @@ export struct ReaderSearchHistoryPanel {
       }
       if (this.geometry.feedbackVisible && this.status === 'loading') {
         ReaderPageState({ message: '正在读取搜索历史', loading: true, padded: false })
+          .id('reader-search-history-loading')
           .onAreaChange(this.feedbackMeasurement(this.status));
       } else if (this.geometry.feedbackVisible && (this.status === 'loadFailed' || this.status === 'clearFailed')) {
         ReaderPageState({ message: this.status === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败',
@@ -104,6 +106,7 @@ export struct ReaderSearchHistoryPanel {
             ForEach(row.chips, (chip: SearchHistoryChip) => {
               ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: chip.keyword,
                 layout: 'full', actionEnabled: this.actionsEnabled(),
+                focusId: this.observeActions ? `reader-search-history-item-${this.history.indexOf(chip.keyword)}` : '',
                 actionAccessibilityLabel: `搜索${chip.keyword}`, onAction: (): void => this.onSelect(chip.keyword) })
                 .width(chip.width).height(this.geometry.buttonHeight);
             }, (chip: SearchHistoryChip): string => `history:${chip.keyword}`);

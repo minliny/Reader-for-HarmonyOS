@@ -539,7 +539,7 @@ export struct ReaderControlAutoPageContent {
             .position({ x: this.frame().content.x, y: this.frame().content.y });
         }.width(this.availableWidth)
           .height(Math.max(this.frame().contentHeight, this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion)));
-      }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
+      }.id('reader-control-module-autoPage').width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.fullInput() || this.quickMinimumScrollInput())
         .onAppear((): void => this.syncMorphScroll())
         .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
@@ -684,7 +684,8 @@ export struct ReaderControlAutoPageContent {
         .position({ x: this.textMetric('runningLabelWidth', 36) > 36 ?
           Math.max(0, (this.frame().toggle.width - this.textMetric('runningLabelWidth', 36)) / 2) : 29.4921875, y: 39 });
     }.width('100%').height('100%').accessibilityLevel('no-hide-descendants');
-    }.width(this.frame().toggle.width).height(this.frame().toggle.height)
+    }.id(this.sourceOnly === 'none' ? 'reader-control-autopage-transport-toggle' : '')
+      .width(this.frame().toggle.width).height(this.frame().toggle.height)
       .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
       .position({ x: this.frame().toggle.x, y: this.frame().toggle.y }).clip(true)
       .responseRegion(this.transportResponse('toggle'))

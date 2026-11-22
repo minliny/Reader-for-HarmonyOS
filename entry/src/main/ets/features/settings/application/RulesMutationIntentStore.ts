@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import { sha256Hex } from '../../../app/BundledBookSourceSupply';
 import fileIo from '@ohos.file.fs';
 import type { BusinessError } from '@ohos.base';
@@ -284,16 +285,16 @@ export class RulesMutationIntentStore {
     return j.settled ?? {applied:j.facts.filter(f=>f.outcome==='applied').length,rejected:j.facts.filter(f=>f.outcome==='rejected').length};
   }
   private directory(): string {
-    const context=this.runtime.getUIAbilityContext?.();if(context===undefined)throw new Error('规则持久记录能力不可用');return context.filesDir;
+    const context=this.runtime.getUIAbilityContext?.();if(context===undefined)throw new Error('规则持久记录能力不可用');return readerHostFilesDirectory(context.filesDir);
   }
   private planPath(): string { return `${this.directory()}/reader-rule-subscription-plan-v1.json`; }
   private async replace(raw: string): Promise<void> {
     const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('规则持久记录能力不可用');
-    await replaceReaderAtomicSnapshot(this.path(), context.filesDir, raw);
+    await replaceReaderAtomicSnapshot(this.path(), readerHostFilesDirectory(context.filesDir), raw);
   }
   private path(): string {
     const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('规则持久记录能力不可用');
-    return `${context.filesDir}/reader-rules-mutation-intent-v1.json`;
+    return `${readerHostFilesDirectory(context.filesDir)}/reader-rules-mutation-intent-v1.json`;
   }
   private same(a: RulesMutationIntent, b: RulesMutationIntent): boolean {
     if (a.operationId!==b.operationId || a.sequence!==b.sequence || a.label!==b.label || JSON.stringify(a.mutation)!==JSON.stringify(b.mutation)) return false;

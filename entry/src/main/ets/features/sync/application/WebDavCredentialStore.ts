@@ -7,6 +7,8 @@ import asset from '@ohos.security.asset';
 import util from '@ohos.util';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import type { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
+import { readerHostFilesDirectory, readerHostPreferencesName, READER_PUBLIC_FIXTURE_IDS,
+  type ReaderPublicFixtureId, type ReaderPublicFixtureScope } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 
 const ASSET_ALIAS = 'reader.webdav.config.v2';
 const CONFIG_RECORD_PREFIX = 'reader.webdav.config-save.';
@@ -83,6 +85,7 @@ export interface StoredWebDavState {
 export class WebDavCredentialStore {
   static readonly instance: WebDavCredentialStore = new WebDavCredentialStore();
 
+  private static assetScope: ReaderPublicFixtureId | null | undefined;
   private static writeTail: Promise<void> = Promise.resolve();
   private static warmIntent: WebDavConfigIntent | undefined;
   private static warmPath: string = '';
@@ -95,7 +98,16 @@ export class WebDavCredentialStore {
   private pendingBookshelfModeWrites: number = 0;
 
   /** Attach the ability context for non-secret WebDAV-adjacent preferences. */
-  attachContext(context: common.UIAbilityContext): void {
+  attachContext(context: common.UIAbilityContext, fixture?: ReaderPublicFixtureScope): void {
+    if (fixture !== undefined && (fixture.kind !== 'fixture' ||
+      !READER_PUBLIC_FIXTURE_IDS.includes(fixture.id))) {
+      throw new Error('Invalid WebDAV public fixture');
+    }
+    const scope = fixture?.id ?? null;
+    if (WebDavCredentialStore.assetScope !== undefined && WebDavCredentialStore.assetScope !== scope) {
+      throw new Error('WebDAV cannot change its data scope in a live process');
+    }
+    WebDavCredentialStore.assetScope = scope;
     if (this.context === context) return;
     this.contextGeneration += 1;
     this.context = context;
@@ -117,7 +129,7 @@ export class WebDavCredentialStore {
       return state;
     }
     const query = new Map<asset.Tag, asset.Value>();
-    query.set(asset.Tag.ALIAS, this.utf8(alias));
+    query.set(asset.Tag.ALIAS, this.assetAlias(alias));
     query.set(asset.Tag.RETURN_TYPE, asset.ReturnType.ALL);
     let records: Array<asset.AssetMap>;
     try {
@@ -369,7 +381,8 @@ export class WebDavCredentialStore {
     if (this.localPreferences !== undefined) return this.localPreferences;
     if (this.context === undefined) throw new Error('本机配置尚未就绪，请重试');
     const generation = this.contextGeneration;
-    const store = await preferences.getPreferences(this.context, LOCAL_PREFERENCES_NAME);
+    const store = await preferences.getPreferences(this.context,
+      readerHostPreferencesName(this.context.filesDir, LOCAL_PREFERENCES_NAME));
     if (generation !== this.contextGeneration) throw new Error('本机配置所属窗口已变化，请重试');
     this.localPreferences = store;
     return this.localPreferences;
@@ -529,7 +542,7 @@ export class WebDavCredentialStore {
   }
   private intentPath(): string {
     if (this.context === undefined || typeof this.context.filesDir !== 'string' || this.context.filesDir.length === 0) throw new Error('WebDAV local intent context unavailable');
-    return this.context.filesDir + '/' + CONFIG_INTENT_FILE;
+    return readerHostFilesDirectory(this.context.filesDir) + '/' + CONFIG_INTENT_FILE;
   }
   private async readConfigIntent(path: string = this.intentPath()): Promise<WebDavConfigIntent | undefined> { let disk: WebDavConfigIntent | undefined;
     try {
@@ -651,7 +664,7 @@ export class WebDavCredentialStore {
       throw new Error(`WebDAV secure configuration exceeds ${MAX_CONFIG_BYTES} bytes`);
     }
     const attributes = new Map<asset.Tag, asset.Value>();
-    attributes.set(asset.Tag.ALIAS, this.utf8(alias));
+    attributes.set(asset.Tag.ALIAS, this.assetAlias(alias));
     attributes.set(asset.Tag.SECRET, payload);
     attributes.set(asset.Tag.ACCESSIBILITY, asset.Accessibility.DEVICE_POWERED_ON);
     attributes.set(asset.Tag.CONFLICT_RESOLUTION, asset.ConflictResolution.THROW_ERROR);
@@ -668,7 +681,7 @@ export class WebDavCredentialStore {
 
   private async remove(evidence?: ReaderWriteEvidence, alias: string = ASSET_ALIAS): Promise<void> {
     const query = new Map<asset.Tag, asset.Value>();
-    query.set(asset.Tag.ALIAS, this.utf8(alias));
+    query.set(asset.Tag.ALIAS, this.assetAlias(alias));
     try {
       evidence?.dispatched();
       await asset.remove(query);
@@ -685,6 +698,12 @@ export class WebDavCredentialStore {
     if (typeof operationId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId)) {
       throw new Error('WebDAV secure configuration receipt identity is invalid');
     }
+  }
+
+  private assetAlias(alias: string): Uint8Array {
+    if (WebDavCredentialStore.assetScope === undefined) WebDavCredentialStore.assetScope = null;
+    const scope = WebDavCredentialStore.assetScope;
+    return this.utf8(scope === null ? alias : `reader.public-fixture.${scope}/${alias}`);
   }
 
   private normalize(config: StoredWebDavConfig): StoredWebDavConfig {

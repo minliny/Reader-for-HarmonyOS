@@ -23,6 +23,9 @@ import { MangaImageDecodeHost, type MangaImageDecodeTransport } from '../platfor
 import { MangaImageMetadataHost } from '../platform/reading-resources/MangaImageMetadataHost';
 import { ReadingBodyImageHost } from '../platform/reading-resources/ReadingBodyImageHost';
 import type { MangaOfflineNetworkProbe } from './MangaOfflineNetworkProbe';
+import { buildReaderPublicFixtureDirectory, type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
+import { admitReaderPublicSearchHttpFixtureRequest, readerPublicSearchHttpFixtureMode,
+  type ReaderPublicSearchHttpFixture } from './diagnostics/ReaderPublicSearchHttpFixture';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
@@ -114,13 +117,24 @@ export class ReaderHostRegistry {
   private readonly context: common.UIAbilityContext;
   private responseAssetBridge: ReaderCoreAssetBridge | undefined;
   private readonly mangaOfflineProbe: MangaOfflineNetworkProbe | undefined;
+  private readonly fixtureDirectory: string | undefined;
+  private readonly publicSearchHttpFixture: ReaderPublicSearchHttpFixture | undefined;
+  private readonly publicSearchHttpIsCurrent: (() => boolean) | undefined;
   private writeTail: Promise<void> = Promise.resolve();
   /** Serializes read/modify/write operations on the finalize queue. */
   private pendingFinalizeWriteTail: Promise<void> = Promise.resolve();
 
-  constructor(context: common.UIAbilityContext, mangaOfflineProbe?: MangaOfflineNetworkProbe) {
+  constructor(context: common.UIAbilityContext, mangaOfflineProbe?: MangaOfflineNetworkProbe,
+    publicFixture?: ReaderPublicFixtureScope, publicSearchHttpIsCurrent?: () => boolean) {
     this.context = context;
     this.mangaOfflineProbe = mangaOfflineProbe;
+    this.publicSearchHttpFixture = readerPublicSearchHttpFixtureMode(publicFixture?.id);
+    this.publicSearchHttpIsCurrent = publicSearchHttpIsCurrent;
+    this.fixtureDirectory = publicFixture === undefined ? undefined :
+      buildReaderPublicFixtureDirectory(context.filesDir, publicFixture.id);
+    if (publicFixture !== undefined && this.fixtureDirectory === undefined) {
+      throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
+    }
     const directory = this.localBookStageDirectory();
     this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
       directory,
@@ -224,6 +238,16 @@ export class ReaderHostRegistry {
       return this.writeSnapshot(event);
     });
     router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      if (this.fixtureDirectory !== undefined) {
+        const fixture = this.publicSearchHttpFixture;
+        const current = this.publicSearchHttpIsCurrent;
+        const request = fixture !== undefined && current?.() === true ?
+          admitReaderPublicSearchHttpFixtureRequest(fixture, event.params) : undefined;
+        if (request === undefined || current === undefined) {
+          return Promise.reject(new Error('PUBLIC_FIXTURE_NETWORK_DISABLED'));
+        }
+        return HttpExecuteHost.instance.execute(request, event.requestId, (): boolean => !current());
+      }
       this.mangaOfflineProbe?.beforeCoreHttp(event.requestId);
       if (this.responseAssetBridge !== undefined && event.params['responseAsset'] === true) {
         return HttpExecuteHost.instance.executeForCore(
@@ -894,11 +918,11 @@ export class ReaderHostRegistry {
   }
 
   private localBookStageDirectory(): string {
-    return `${this.context.filesDir}/reader-import/staging`;
+    return `${this.pendingLocalImportFinalizeDirectory()}/staging`;
   }
 
   private localBookAssetDirectory(): string {
-    return `${this.context.filesDir}/reader-import/books`;
+    return `${this.pendingLocalImportFinalizeDirectory()}/books`;
   }
 
   private requireLocalBookHash(bookId: string): string {
@@ -1047,7 +1071,7 @@ export class ReaderHostRegistry {
   }
 
   private snapshotDirectory(): string {
-    return `${this.context.filesDir}/reader-core`;
+    return this.fixtureDirectory ?? `${this.context.filesDir}/reader-core`;
   }
 
   private snapshotPath(): string {
@@ -1059,7 +1083,7 @@ export class ReaderHostRegistry {
   }
 
   private pendingLocalImportFinalizeDirectory(): string {
-    return `${this.context.filesDir}/reader-import`;
+    return `${this.fixtureDirectory ?? this.context.filesDir}/reader-import`;
   }
 
   private pendingLocalImportFinalizePath(): string {

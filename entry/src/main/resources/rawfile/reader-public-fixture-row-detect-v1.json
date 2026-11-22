@@ -1,0 +1,10 @@
+[
+  {
+    "bookSourceName": "Reader Phase 1 Offline Detect",
+    "bookSourceUrl": "https://offline-detect.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Offline Detect",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  }
+]

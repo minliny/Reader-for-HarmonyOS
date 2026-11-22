@@ -1,7 +1,7 @@
 import {
-  advanceReaderControlSession, copyReaderControlSessionState, createReaderControlSessionState,
+  advanceReaderControlSession, copyReaderControlLocation, copyReaderControlSessionState, createReaderControlSessionState,
   readerControlSessionStateEquals, type ReaderControlSessionState, type ReaderControlTransition,
-  type ReaderControlTransitionKind, type ReaderControlVisualFrame,
+  type ReaderControlLocation, type ReaderControlTransitionKind, type ReaderControlVisualFrame,
   sampleReaderControlSession,
 } from './ReaderControlSessionState.ts';
 import {
@@ -24,6 +24,38 @@ export interface ReaderControlRuntimeUpdate {
   offsetY: number;
   endpoint: ReaderControlSessionState | undefined;
   layoutRebase?: ReaderControlRuntimeRebase;
+  releaseMotion?: ReaderControlVerificationReleaseMotion;
+  cancelMotion?: ReaderControlVerificationCancelMotion;
+}
+
+interface ReaderControlVerificationReleasePoint {
+  epoch: number;
+  ticket: number;
+  heldPointerId: number;
+  pointerWindowYVp: number;
+  expansionProgress: number;
+  visibilityProgress: number;
+  grabberScreenYVp: number;
+}
+
+interface ReaderControlVerificationReleaseBoundary {
+  pointerId: number;
+  upWindowYVp: number;
+  before: ReaderControlVerificationReleasePoint;
+  held: ReaderControlVerificationReleasePoint;
+  released: ReaderControlVerificationReleasePoint;
+}
+
+export interface ReaderControlVerificationReleaseMotion {
+  travelVp: number;
+  velocityYVpPerSecond: number;
+  boundary: ReaderControlVerificationReleaseBoundary;
+}
+
+export interface ReaderControlVerificationCancelMotion {
+  priorTarget: ReaderControlLocation;
+  held: ReaderControlVerificationReleasePoint;
+  cancelled: ReaderControlVerificationReleasePoint;
 }
 
 interface ReaderControlRuntimeRebaseSample {
@@ -161,8 +193,7 @@ export class ReaderControlRuntime {
     if (observeLayoutRebase && this.active && this.now !== undefined && this.revision !== fromTicket &&
       this.continuationSlope === undefined && this.session.epoch === previous.epoch &&
       previous.heldPointerId < 0 && this.session.heldPointerId < 0 &&
-      before !== undefined && after !== undefined && (before.kind === 'open' || before.kind === 'dismiss') &&
-      before.kind === after.kind) {
+      before !== undefined && after !== undefined && before.kind === after.kind) {
       update.layoutRebase = {
         epoch: this.session.epoch, fromTicket: fromTicket, toTicket: this.revision,
         beforeTickMs: beforeTickMs, ticketStartTickMs: this.previousTimeMs,
@@ -176,6 +207,17 @@ export class ReaderControlRuntime {
 
   ticket(): number { return this.revision; }
   owner(): number { return this.gesture.pointerId; }
+  verificationContinuationSlope(): number | undefined { return this.continuationSlope; }
+  private verificationReleasePoint(): ReaderControlVerificationReleasePoint {
+    const axis = this.gesture.config.axis;
+    const visual = sampleReaderControlSession(this.session);
+    return {
+      epoch: this.session.epoch, ticket: this.revision, heldPointerId: this.session.heldPointerId,
+      pointerWindowYVp: this.gesture.lastPointerScreenY,
+      expansionProgress: visual.expansionProgress, visibilityProgress: visual.visibilityProgress,
+      grabberScreenYVp: readerControlGrabberScreenY(visual, axis) + this.compensation.offsetY,
+    };
+  }
   lastPointerY(): number { return this.gesture.lastPointerScreenY; }
   resetInputVelocity(id: number, timeMs: number): void {
     if (id !== this.gesture.pointerId || !Number.isFinite(timeMs)) return;
@@ -213,15 +255,34 @@ export class ReaderControlRuntime {
     return this.accept(updateReaderControlGesture(this.session, this.gesture, id, y, timeMs));
   }
 
-  up(id: number, y: number, timeMs: number): ReaderControlRuntimeUpdate {
+  up(id: number, y: number, timeMs: number, observeRelease: boolean = false): ReaderControlRuntimeUpdate {
     if (!this.active || id !== this.gesture.pointerId) return this.snapshot();
+    const before = observeRelease ? this.verificationReleasePoint() : undefined;
     if (y !== this.gesture.lastPointerScreenY) this.move(id, y, timeMs);
-    return this.accept(endReaderControlGesture(this.session, this.gesture, id, timeMs));
+    const held = observeRelease ? this.verificationReleasePoint() : undefined;
+    const update = this.accept(endReaderControlGesture(this.session, this.gesture, id, timeMs));
+    const transition = update.session.transition;
+    if (before === undefined || held === undefined || transition === undefined ||
+        !this.gesture.moved || this.gesture.pointerId >= 0) return update;
+    const axis = this.gesture.config.axis;
+    update.releaseMotion = {
+      travelVp: Math.abs(readerControlGrabberScreenY(transition.to, axis) - readerControlGrabberScreenY(transition.from, axis)),
+      velocityYVpPerSecond: this.gesture.velocityYVpPerSecond,
+      boundary: { pointerId: id, upWindowYVp: y, before, held, released: this.verificationReleasePoint() },
+    };
+    return update;
   }
 
-  cancel(): ReaderControlRuntimeUpdate {
+  cancel(observeCancel: boolean = false): ReaderControlRuntimeUpdate {
     if (this.gesture.pointerId < 0) return this.snapshot();
-    return this.accept(cancelReaderControlGesture(this.session, this.gesture, this.gesture.pointerId), false);
+    const result = cancelReaderControlGesture(this.session, this.gesture, this.gesture.pointerId);
+    const held = observeCancel && result.consumed ? this.verificationReleasePoint() : undefined;
+    const priorTarget = held === undefined ? undefined : copyReaderControlLocation(this.gesture.pausedTargetLocation);
+    const update = this.accept(result, false);
+    if (held !== undefined && priorTarget !== undefined) {
+      update.cancelMotion = { priorTarget, held, cancelled: this.verificationReleasePoint() };
+    }
+    return update;
   }
 
   private accept(result: ReaderControlGestureResult, released: boolean = true): ReaderControlRuntimeUpdate {

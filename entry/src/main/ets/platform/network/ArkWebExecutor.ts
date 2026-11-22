@@ -130,6 +130,7 @@ function delay(millis: number): Promise<void> {
 export class ArkWebExecutor {
   static readonly instance: ArkWebExecutor = new ArkWebExecutor();
 
+  private publicFixture: boolean = false;
   private surfaceLease: ArkWebSurfaceLease | undefined = undefined;
   private nextSurfaceId: number = 1;
   private proxyLease: ArkWebProxyLease | undefined = undefined;
@@ -139,6 +140,10 @@ export class ArkWebExecutor {
   private tail: Promise<void> = Promise.resolve();
   private presentationListener: ((presentation: ArkWebPresentation) => void) | undefined = undefined;
   private diagnosticObserver: ((event: ArkWebDiagnosticEvent) => void) | undefined = undefined;
+
+  disableForPublicFixture(): void {
+    this.publicFixture = true;
+  }
 
   attachDiagnosticObserver(observer: (event: ArkWebDiagnosticEvent) => void): void {
     this.diagnosticObserver = observer;
@@ -504,6 +509,7 @@ export class ArkWebExecutor {
   }
 
   execute(params: JsonObject, requestId: number): Promise<JsonObject> {
+    if (this.publicFixture) return Promise.reject(new Error('PUBLIC_FIXTURE_ARKWEB_DISABLED'));
     const job = this.parseJob(params, requestId);
     this.jobs.set(requestId, job);
     const scheduled = this.tail.then((): Promise<JsonObject> => this.run(job));
@@ -514,6 +520,7 @@ export class ArkWebExecutor {
   }
 
   openInteractive(url: string, profileId: string, title: string, isCurrent?: () => boolean): Promise<JsonObject> {
+    if (this.publicFixture) return Promise.reject(new Error('PUBLIC_FIXTURE_ARKWEB_DISABLED'));
     const requestId = this.nextInteractiveRequestId();
     const job = this.parseJob({
       document: { kind: 'url', url },

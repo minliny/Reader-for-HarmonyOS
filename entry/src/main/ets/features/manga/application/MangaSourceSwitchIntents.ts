@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import fileIo from '@ohos.file.fs';
 import type { BusinessError } from '@ohos.base';
 import util from '@ohos.util';
@@ -278,7 +279,7 @@ export class MangaSourceSwitchIntents {
   private async save(records: MangaSwitchIntent[], retained: MangaSwitchIntent[] = records): Promise<void> {
     this.assertCurrent();
     const path = this.path();
-    await replaceReaderAtomicSnapshot(path, this.runtime.getUIAbilityContext().filesDir, JSON.stringify(records));
+    await replaceReaderAtomicSnapshot(path, readerHostFilesDirectory(this.runtime.getUIAbilityContext().filesDir), JSON.stringify(records));
     this.assertCurrent();
     MangaSourceSwitchIntents.warm.set(path, retained);
   }
@@ -293,5 +294,5 @@ export class MangaSourceSwitchIntents {
   private assertCurrent(): void {
     if (!this.current()) throw new MangaSwitchRecoveryError('漫画换源服务已退役，原记录已保留');
   }
-  private path(): string { return `${this.runtime.getUIAbilityContext().filesDir}/reader-manga-source-switch-intent-v1.json`; }
+  private path(): string { return `${readerHostFilesDirectory(this.runtime.getUIAbilityContext().filesDir)}/reader-manga-source-switch-intent-v1.json`; }
 }

@@ -10,6 +10,7 @@ export struct StatusBadge {
   @StorageLink('readerUiConfigurationRevision') private configurationRevision: number = 0;
   @Prop status: ReaderStatusBadgeStatus = 'unknown';
   @Prop label: string = '';
+  @Prop verificationId: string = '';
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
@@ -18,6 +19,7 @@ export struct StatusBadge {
         .strokeLineCap(LineCapStyle.Round).strokeLineJoin(LineJoinStyle.Round)
         .accessibilityLevel('no');
     }.width(24).height(18).borderRadius(9).backgroundColor(this.surfaceColor())
+      .id(this.verificationId)
       .accessibilityGroup(true).accessibilityText(this.label.trim().length > 0 ? this.label : '状态未知');
   }
 

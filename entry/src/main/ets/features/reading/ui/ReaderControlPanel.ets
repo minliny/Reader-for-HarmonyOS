@@ -34,8 +34,9 @@ import { readerControlPlaybackProfileMatches, readerControlPlaybackSourceKindMat
 import { FrameCallback } from '@kit.ArkUI';
 import { readerControlMotionMs, sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
-import { ReaderControlVerificationMotion } from './ReaderControlVerificationMotion';
-import type { ReaderControlVerificationSession } from './ReaderControlVerificationSession';
+import { ReaderControlVerificationMotion, readReaderControlNativeActor, readReaderControlPopupOwner,
+  type MotionActor, type ReaderControlPopupOwnerObservation, type ReaderControlVerificationLayoutInputs } from './ReaderControlVerificationMotion';
+import type { ReaderControlVerificationOrigin, ReaderControlVerificationRequest, ReaderControlVerificationSession } from './ReaderControlVerificationSession';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../../../ui/foundation/ProductMotionTiming';
 import { registerReaderFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
@@ -159,7 +160,7 @@ import { TYPE_READER_CONTROL_CHAPTER_TITLE, TYPE_READER_CONTROL_SOURCE_ACTION } 
 import curves from '@ohos.curves';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../../../build/default/generated/profile/default/BuildProfile';
 import { ReaderControlDirectoryContent } from './ReaderControlDirectoryContent';
-import { ReaderControlAppearanceContent } from './ReaderControlAppearanceContent';
+import { ReaderControlAppearanceContent, type ReaderControlFontOrderPresentation } from './ReaderControlAppearanceContent';
 import type { ReaderControlPage } from './ReaderControlRouting';
 import { ReaderContentSearchPublication } from '../presentation/ReaderContentSearchPublication';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
@@ -176,6 +177,24 @@ import {
   type ReaderControlMotionFrame, type ReaderControlMotionBounds,
 } from './ReaderControlMotionGeometry';
 import { readerControlThemeStyle, type ReaderControlThemeStyle } from './ReaderControlThemeStyle';
+
+interface ReaderControlMenuVerificationFrame {
+  frameTimeNs: number;
+  menu: MotionActor;
+  popupOwner: ReaderControlPopupOwnerObservation;
+  trigger?: MotionActor;
+  mountedActions: string[];
+}
+
+interface ReaderControlMenuNativeState {
+  visible: boolean;
+  generation: number;
+}
+
+interface ReaderControlMenuNativeTrace extends ReaderControlMenuNativeState {
+  layout: string;
+  frames: ReaderControlMenuVerificationFrame[];
+}
 
 export type { ReaderControlPage } from './ReaderControlRouting';
 type ReaderQuickAction = 'search' | 'autoPage' | 'replace';
@@ -352,7 +371,14 @@ export struct ReaderControlPanel {
   private endInlineEditing: (() => void | Promise<void>) | undefined = undefined;
   private runtimeMounted: boolean = false;
   verificationSession: ReaderControlVerificationSession | undefined = undefined;
+  private verifiedSearchResultScope: number = 0;
+  private verifiedSearchResultCount: number = 0;
   private verificationMotion: ReaderControlVerificationMotion | undefined = undefined;
+  private verificationPointerFramePending: boolean = false;
+  private verificationPointerStartY: number | undefined = undefined;
+  private verificationMenuTicket: number = 0;
+  private verificationPopupOwnerId: number = -1;
+  private verificationLayerGeneration: number = 0;
   private pendingRuntimeFrame: boolean = false;
   private pendingRuntimeTicket: number = -1;
   private runtimeLifecycle: number = 0;
@@ -386,7 +412,7 @@ export struct ReaderControlPanel {
     profileReader?: ReaderControlMeasuredProfileReader, facts?: ReaderControlModuleFacts, factsGeometryKey?: string) => void =
     (_identity: string, _measurer: ReaderControlContentMeasurer | undefined,
       _profileReader?: ReaderControlMeasuredProfileReader, _facts?: ReaderControlModuleFacts, _factsGeometryKey?: string): void => {};
-  onSessionRequest: ((next: ReaderControlSessionState) => void) | undefined = undefined;
+  onSessionRequest: ((next: ReaderControlSessionState, origin: ReaderControlVerificationOrigin) => void) | undefined = undefined;
   private moduleMinimumMeasurer: ReaderControlModuleMeasurer | undefined = undefined;
   private moduleMinimumProfileReader: ReaderControlPlaybackProfileReader | undefined = undefined;
   onPlaybackProfileSelected: (receipt: ReaderControlPlaybackProfileReceipt) => void =
@@ -507,7 +533,8 @@ export struct ReaderControlPanel {
   private moreMenuMeasuredWidth: number = 0;
   private moreMenuWidthKey: string = '';
   private moreMenuOwnerScope: string = '';
-  onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
+  onPageChange: (page: ReaderControlPage, origin: ReaderControlVerificationOrigin) => void =
+    (_page: ReaderControlPage, _origin: ReaderControlVerificationOrigin): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
@@ -533,8 +560,8 @@ export struct ReaderControlPanel {
   onSearch: () => void = (): void => {};
   onSearchLoadMore: () => void = (): void => {};
   onSearchNeedMore: () => void = (): void => {};
-  onSearchResultSelect: (result: ReadingContentSearchResult) => void =
-    (_result: ReadingContentSearchResult): void => {};
+  onSearchResultSelect: (result: ReadingContentSearchResult, scope: number, ordinal: number) => void =
+    (_result: ReadingContentSearchResult, _scope: number, _ordinal: number): void => {};
   onAutoPageToggle: () => void = (): void => {};
   onAutoPageStop: () => void = (): void => {};
   onAutoPageSlowDown: () => void = (): void => {};
@@ -564,8 +591,9 @@ export struct ReaderControlPanel {
     (_theme: ReaderAppearanceTheme): void => {};
   onAppearanceFontChange: (font: ReaderAppearanceFont) => void =
     (_font: ReaderAppearanceFont): void => {};
-  onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => void =
-    (_fontOrder: ReaderAppearanceFontSlot[]): void => {};
+  onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => ReaderControlFontOrderPresentation =
+    (_fontOrder: ReaderAppearanceFontSlot[]): ReaderControlFontOrderPresentation =>
+      ({ displayed: Promise.resolve(false), retire: (): void => {}, current: (): boolean => false });
   onAppearanceFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
   onAppearanceMotionActivityChange: (active: boolean) => void = (_active: boolean): void => {};
   onAppearanceCustomFontImport: () => void = (): void => {};
@@ -718,6 +746,8 @@ export struct ReaderControlPanel {
 
   aboutToDisappear(): void {
     this.verificationMotion?.finish('unmounted');
+    this.verificationPointerFramePending = false;
+    this.verificationMenuTicket += 1;
     this.editingHost.unmount();
     this.dismissMoreMenu();
     this.runtimeMounted = false;
@@ -758,6 +788,11 @@ export struct ReaderControlPanel {
 
   private acceptRuntime(update: ReaderControlRuntimeUpdate): void {
     if (!this.runtimeMounted) return;
+    const observed = this.verificationSession?.current(this.visualSession);
+    if (this.visualSession.epoch !== update.session.epoch) {
+      if (observed !== undefined) this.verificationMotion?.finish('interrupted', observed.transitionId);
+      else this.verificationMotion?.finish('interrupted');
+    }
     this.rememberVisibleContentLocation(update.session);
     const sessionChanged = !readerControlSessionStateEquals(this.visualSession, update.session);
     if (sessionChanged) {
@@ -811,33 +846,75 @@ export struct ReaderControlPanel {
         // Use the component snapshot preceding this frame's publication. No
         // probe value is fed back to runtime or used to advance its clock.
         if (request !== undefined && previous.transition?.kind === request.direction) {
-          if (this.verificationMotion === undefined) this.verificationMotion = new ReaderControlVerificationMotion();
-          this.verificationMotion.sample(request, this.getUIContext(), previous, this.contentLocation(),
-            frameTimeNs, runtimeTickMs, ticket, this.motionOffsetY, false);
+          this.recordVerificationFrame(request, previous, frameTimeNs, runtimeTickMs, ticket, false);
+        }
+        if (previous.epoch !== update.session.epoch && update.session.transition !== undefined) {
+          verification?.accept('runtime-resume', previous, update.session, this.controlOpenRevision);
         }
         this.acceptRuntime(update);
         if (request !== undefined && previous.transition?.kind === request.direction && this.verificationMotion !== undefined) {
           verification?.observeVisual(update.session, this.visualVisibilityProgress);
           if (update.endpoint !== undefined) {
             const endpoint = update.endpoint;
-            const expectedLevel = request.direction === 'open' ? 'home' : 'hidden';
+            const expectedLocation = request.target;
             const trace = this.verificationMotion;
             // Observe native nodes after the normal endpoint publication has
             // reached a following frame. This callback never advances runtime.
             this.getUIContext().postFrameCallback(new ReaderControlFrameCallback((endpointFrameNs: number): void => {
               if (!this.runtimeMounted || lifecycle !== this.runtimeLifecycle || runtime.ticket() !== ticket ||
                 verification?.current(this.visualSession)?.transitionId !== request.transitionId ||
-                this.visualSession.transition !== undefined || this.visualSession.location.level !== expectedLevel) {
-                trace.finish('interrupted');
+                this.visualSession.transition !== undefined || this.visualSession.location.level !== expectedLocation.level ||
+                this.visualSession.location.module !== expectedLocation.module ||
+                this.visualSession.location.form !== expectedLocation.form ||
+                this.visualSession.location.directoryTab !== expectedLocation.directoryTab) {
+                trace.finish('interrupted', request.transitionId);
                 return;
               }
-              trace.sample(request, this.getUIContext(), endpoint, this.contentLocation(),
-                endpointFrameNs, runtimeTickMs, ticket, this.motionOffsetY, true);
-              trace.finish('completed');
+              this.recordVerificationFrame(request, endpoint, endpointFrameNs, runtimeTickMs, ticket, true);
+              trace.finish('completed', request.transitionId);
             }));
           }
         }
       } else this.scheduleRuntimeFrame();
+    }));
+  }
+
+  private recordVerificationFrame(request: ReaderControlVerificationRequest, state: ReaderControlSessionState,
+    frameTimeNs: number, runtimeTickMs: number, ticket: number, endpoint: boolean): void {
+    if (this.verificationMotion === undefined) this.verificationMotion = new ReaderControlVerificationMotion();
+    const layout = this.currentLayout();
+    const layoutInputs: ReaderControlVerificationLayoutInputs = {
+      dockLeftVp: this.dockLeft(), dockTopVp: this.presentedDockTop(), widthVp: layout.fullPanelWidth,
+      fullHeightVp: this.controlPanelHeight(), quickHeightVp: this.controlQuickHeight(),
+      quickContentHeightVp: this.contentEndpointHeight(false), fullContentHeightVp: this.contentEndpointHeight(true),
+      fullContentTopVp: layout.contentBudget === undefined ? 57 : 19 + layout.contentBudget.headerHeightVp + 8,
+    };
+    this.verificationMotion.sample(request, this.getUIContext(), state, this.contentLocation(),
+      frameTimeNs, runtimeTickMs, ticket, this.motionOffsetY, endpoint, layoutInputs,
+      this.runtime?.verificationContinuationSlope(),
+      state.heldPointerId >= 0 ? this.runtime?.lastPointerY() : undefined,
+      state.heldPointerId >= 0 ? this.verificationPointerStartY : undefined,
+      this.minimumPresentationAvailable());
+  }
+
+  /** The pointer path uses existing touch/render callbacks and never drives the clock. */
+  private acceptVerificationGesture(update: ReaderControlRuntimeUpdate, origin: ReaderControlVerificationOrigin): void {
+    const previous = this.visualSession;
+    const verification = this.verificationSession;
+    if (origin === 'grabber-down' && update.session.heldPointerId >= 0) this.verificationPointerStartY = this.runtime?.lastPointerY();
+    verification?.accept(origin, previous, update.session, this.controlOpenRevision, update.releaseMotion, update.cancelMotion);
+    this.acceptRuntime(update);
+    const request = verification?.current(update.session);
+    if (request === undefined || update.session.heldPointerId < 0 || this.verificationPointerFramePending) return;
+    const lifecycle = this.runtimeLifecycle;
+    this.verificationPointerFramePending = true;
+    this.getUIContext().postFrameCallback(new ReaderControlFrameCallback((frameTimeNs: number): void => {
+      this.verificationPointerFramePending = false;
+      const state = this.visualSession;
+      const ticket = this.runtime?.ticket();
+      if (!this.runtimeMounted || lifecycle !== this.runtimeLifecycle || ticket === undefined ||
+        verification?.current(state)?.transitionId !== request.transitionId || state.heldPointerId < 0) return;
+      this.recordVerificationFrame(request, state, frameTimeNs, readerMotionNowMs(), ticket, false);
     }));
   }
 
@@ -1267,7 +1344,8 @@ export struct ReaderControlPanel {
     if (!this.runtimeMounted || runtime === undefined || !this.inputEnabled || this.controlObscured) return;
     if (event.type === TouchType.Cancel) {
       if (runtime.owner() >= 0) event.stopPropagation();
-      this.acceptRuntime(runtime.cancel()); return;
+      this.acceptVerificationGesture(
+        runtime.cancel(this.verificationSession?.observing() === true), 'grabber-cancel'); return;
     }
     const pointers = event.changedTouches.length > 0 ? event.changedTouches : event.touches;
     if (event.type === TouchType.Down) {
@@ -1284,7 +1362,7 @@ export struct ReaderControlPanel {
           this.inputDownTime = event.timestamp;
           this.inputLastMoveTime = event.timestamp;
         }
-        this.acceptRuntime(runtime.down(pointers[0].id, pointers[0].windowY, time));
+        this.acceptVerificationGesture(runtime.down(pointers[0].id, pointers[0].windowY, time), 'grabber-down');
       }
       event.stopPropagation(); return;
     }
@@ -1304,8 +1382,9 @@ export struct ReaderControlPanel {
           pointer.id, pointer.windowY, runtime.lastPointerY(), this.inputMoveCount, this.inputResetCount,
           this.inputDownTime, this.inputLastMoveTime, event.timestamp, this.visualExpansionProgress);
       }
-      if (event.type === TouchType.Move) this.acceptRuntime(runtime.move(pointer.id, pointer.windowY, time));
-      if (event.type === TouchType.Up) this.acceptRuntime(runtime.up(pointer.id, pointer.windowY, time));
+      if (event.type === TouchType.Move) this.acceptVerificationGesture(runtime.move(pointer.id, pointer.windowY, time), 'grabber-move');
+      if (event.type === TouchType.Up) this.acceptVerificationGesture(
+        runtime.up(pointer.id, pointer.windowY, time, this.verificationSession?.observing() === true), 'grabber-release');
       return;
     }
     if (runtime.owner() >= 0) event.stopPropagation();
@@ -1327,7 +1406,7 @@ export struct ReaderControlPanel {
           if (!this.controlActionInputEnabled() || !this.contentInputEnabled()) return;
           this.onInputActivity();
           this.applySemanticSession(toggleReaderControlSession(this.visualSession,
-            readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
+            readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)), 'grabber-accessibility');
         }));
     }
   }
@@ -1456,10 +1535,16 @@ export struct ReaderControlPanel {
       if (!this.runtimeMounted || scope !== this.currentTemporaryInputScope() || this.contentLocation().module !== module ||
         (this.preparedMinimumRequired && (identity !== this.committedMinimumIdentity() || identity !== this.currentMinimumIdentity()))) return;
       if (active && !this.minimumInputReady() && !this.hasCurrentTemporaryInput()) return;
+      const oldKind = this.temporaryInputKind;
       this.temporaryInputKind = active ? kind : '';
       this.temporaryInputScope = active ? scope : '';
       this.endInlineEditing = active && kind === 'inlineEditor' ? endEditing : undefined;
       this.onTemporaryLayerChange(active, this.temporaryInputKind);
+      if (this.verificationSession?.observing() === true && oldKind !== this.temporaryInputKind) {
+        if (active) this.verificationLayerGeneration += 1;
+        this.verificationSession.layer(module, active, this.verificationLayerGeneration, this.visualSession,
+          active ? kind : oldKind);
+      }
       if (active && module === 'tts' && this.secondaryModuleInputEnabled('tts')) this.onTtsConfigurationOpen();
     };
   }
@@ -1486,9 +1571,9 @@ export struct ReaderControlPanel {
   }
 
   /** Commands and pointer input enter the same runtime before rendering. */
-  private applySemanticSession(next: ReaderControlSessionState): void {
+  private applySemanticSession(next: ReaderControlSessionState, origin: ReaderControlVerificationOrigin): void {
     if (this.preparedMinimumRequired && this.onSessionRequest !== undefined) {
-      this.onSessionRequest(next);
+      this.onSessionRequest(next, origin);
       return;
     }
     if (!readerControlSessionStateEquals(this.controlSession, next)) this.controlSession = next;
@@ -1526,10 +1611,10 @@ export struct ReaderControlPanel {
     this.onBackdropRegionsChange(this.backdropRegions, ready);
   }
 
-  private requestPage(page: ReaderControlPage): void {
+  private requestPage(page: ReaderControlPage, origin: ReaderControlVerificationOrigin = 'module-button'): void {
     this.invalidateProgressInput();
     this.onInputActivity();
-    this.onPageChange(page);
+    this.onPageChange(page, origin);
   }
 
   private controlActionInputEnabled(allowInlineEditor: boolean = false): boolean {
@@ -1547,7 +1632,7 @@ export struct ReaderControlPanel {
     // snapshot, so the shape/visibility path never jumps back to its command
     // origin before the runtime applies the module-specific settle timing.
     this.applySemanticSession(collapseReaderControlSession(this.visualSession,
-      readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
+      readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)), 'header-collapse');
   }
 
   private navigationIntentPending: boolean = false;
@@ -1607,6 +1692,7 @@ export struct ReaderControlPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.controlActorsRetained || this.frame().visibility > 0 || this.launchSample !== undefined) {
       Stack({ alignContent: Alignment.Top }) { this.topBar(); }
+        .id('reader-control-motion-topbar')
         .width(this.currentLayout().topBarWidth).height(this.currentLayout().topBarHeight)
         .position({ x: (this.currentLayout().viewportWidth - this.currentLayout().topBarWidth) / 2,
           y: this.currentLayout().topBarTop })
@@ -1773,7 +1859,7 @@ export struct ReaderControlPanel {
           sourceSharpContent: (): void => { this.launchSourceContent(); },
           sourceBlurContent: (): void => { this.launchSourceContent(); },
           onToggle: (): void => this.onLaunchToggle(),
-        }).opacity(this.launchStageOpacity).zIndex(9);
+        }).id('reader-session-launch-fade-owner').opacity(this.launchStageOpacity).zIndex(9);
       }
       }
     }
@@ -1806,8 +1892,50 @@ export struct ReaderControlPanel {
       this.moreMenuWidthKey = '';
     }
     this.moreMenuVisible = visible;
+    this.verificationSession?.layer('more', visible, this.moreMenuGeneration, this.visualSession);
+    this.observeMoreMenuFrames(visible, this.moreMenuGeneration);
     this.syncProgressInput();
     this.onTemporaryLayerChange(visible);
+  }
+
+  private observeMoreMenuFrames(visible: boolean, generation: number): void {
+    const verification = this.verificationSession;
+    if (verification?.observing() !== true) return;
+    const ticket = ++this.verificationMenuTicket;
+    if (visible) this.verificationPopupOwnerId = -1;
+    const frames: ReaderControlMenuVerificationFrame[] = [];
+    const context = this.getUIContext();
+    const target = this.currentLayout().topBarVisible ? 'reader-control-more' : 'reader-control-more-short';
+    const trigger = readReaderControlNativeActor(context, target);
+    const menuId = 'reader-control-more-menu';
+    const collect = (frameTimeNs: number): void => {
+      if (!this.runtimeMounted || ticket !== this.verificationMenuTicket || verification.observing() !== true) return;
+      const menu = readReaderControlNativeActor(context, menuId);
+      const actions: string[] = [];
+      if (menu.mounted) {
+        for (const action of ['info','refresh','download','recovery']) {
+          const node = context.getAttachedFrameNodeById(menuId + '-item-' + action);
+          if (node !== null && !node.isDisposed() && node.isAttached() && node.isVisible()) actions.push(action);
+        }
+      }
+      const popupOwner = readReaderControlPopupOwner(context, menu, this.verificationPopupOwnerId);
+      if (visible && popupOwner.status === 'measured' && popupOwner.relation === 'scroll-ancestor' &&
+        popupOwner.uniqueId !== undefined) this.verificationPopupOwnerId = popupOwner.uniqueId;
+      const frame: ReaderControlMenuVerificationFrame = { frameTimeNs: frameTimeNs, menu: menu, popupOwner: popupOwner,
+        trigger: frames.length === 0 ? trigger : undefined, mountedActions: actions };
+      frames.push(frame);
+      // The system owns Popup animation. Read a bounded normal frame window;
+      // a static/unavailable native stream is classified as an evidence gap.
+      if (frames.length < 35) {
+        context.postFrameCallback(new ReaderControlFrameCallback(collect));
+      } else {
+        const trace: ReaderControlMenuNativeTrace = {
+          visible: visible, generation: generation, layout: target, frames: frames,
+        };
+        verification.effect('more-popup', 'trace', trace, 'motion');
+      }
+    };
+    context.postFrameCallback(new ReaderControlFrameCallback(collect));
   }
 
   private currentMoreMenuOwnerScope(): string {
@@ -1894,6 +2022,10 @@ export struct ReaderControlPanel {
       autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
       transition: this.reduceMotion ? TransitionEffect.IDENTITY.animation({ duration: 0 }) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => {
+        if (generation === this.moreMenuGeneration && this.verificationSession?.observing() === true) {
+          const facts: ReaderControlMenuNativeState = { visible: event.isVisible, generation: generation };
+          this.verificationSession.effect('more-popup', 'native-state', facts);
+        }
         if (!event.isVisible) this.dismissMoreMenu(generation);
       },
     };
@@ -1921,7 +2053,8 @@ export struct ReaderControlPanel {
   @Builder
   private readerMoreMenu(generation: number = this.moreMenuGeneration) {
     ReaderActionMenuSurface({
-      specId: 'reader-more-menu', scheme: this.appScheme, actions: this.readerMoreActions(),
+      specId: 'reader-more-menu', nativeId: 'reader-control-more-menu',
+      scheme: this.appScheme, actions: this.readerMoreActions(),
       viewportHeight: Math.max(0, this.currentLayout().viewportHeight - 36),
       onAction: (id: string): void => {
         if (id === 'info' || id === 'refresh' || id === 'download' || id === 'recovery') this.performMoreAction(id, generation);
@@ -2199,10 +2332,12 @@ export struct ReaderControlPanel {
       if (this.minimumPresentationAvailable()) {
       if (this.contentLocation().level === 'home') {
         Scroll() { this.homeContent(); }
+          .id('reader-control-module-home')
           .width(this.frame().content.width).height(this.frame().content.height).edgeEffect(EdgeEffect.None)
           .enableScrollInteraction(!readerControlExtentFits(this.homeContentMinimumHeight(), this.frame().content.height));
       } else if (this.contentLocation().module === 'directory') {
         ReaderControlDirectoryContent({
+          verificationSession: this.verificationSession,
           minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
       preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
@@ -2236,7 +2371,7 @@ export struct ReaderControlPanel {
               tab === 'bookmarks' ? 1 : 0, String(this.minimumInputReady()), this.runtime?.owner() ?? -1);
             this.onInputActivity();
             this.applySemanticSession(setReaderControlDirectoryTab(this.controlSession,
-              tab === 'bookmarks' ? 'bookmarks' : 'directory'));
+              tab === 'bookmarks' ? 'bookmarks' : 'directory'), 'directory-tab');
           },
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
           onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void =>
@@ -2269,6 +2404,7 @@ export struct ReaderControlPanel {
   @Builder
   private appearanceContent() {
     ReaderControlAppearanceContent({
+      verificationSession: this.verificationSession,
       minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
       preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
@@ -2292,7 +2428,7 @@ export struct ReaderControlPanel {
       onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),
       onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),
       onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
-      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
+      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): ReaderControlFontOrderPresentation =>
         this.onAppearanceFontOrderChange(fontOrder),
       onFontReorderActivityChange: (active: boolean): void =>
         this.setAppearanceFontReorderActivity(active),
@@ -2316,6 +2452,17 @@ export struct ReaderControlPanel {
       (!this.preparedMinimumRequired || this.minimumInputReady());
   }
 
+  private observeSearchResultList(scope: number, count: number): void {
+    const verification = this.verificationSession;
+    const location = this.contentLocation();
+    if (!this.runtimeMounted || verification?.observing() !== true ||
+      location.level !== 'secondary' || location.module !== 'search' || location.form !== 'quick' ||
+      (scope === this.verifiedSearchResultScope && count === this.verifiedSearchResultCount)) return;
+    this.verifiedSearchResultScope = scope;
+    this.verifiedSearchResultCount = count;
+    verification.effect('search-results', 'published', { scope, rowCount: count, form: 'quick', epoch: this.visualSession.epoch });
+  }
+
   @Builder
   private searchModuleContent() {
     ReaderControlSearchContent({ editingHost: this.editingHost,
@@ -2336,12 +2483,14 @@ export struct ReaderControlPanel {
       query: this.searchQuery,
       searchPublication: this.searchPublication,
       searchRevision: this.searchRevision,
-      onBack: (): void => this.requestPage('home'),
+      onBack: (): void => this.requestPage('home', 'module-back'),
       onQueryChange: (query: string): void => this.onSearchQueryChange(query),
       onSearch: (): void => this.onSearch(),
       onLoadMore: (): void => this.onSearchLoadMore(),
       onNeedMore: (): void => this.onSearchNeedMore(),
-      onSelectResult: (result: ReadingContentSearchResult): void => this.onSearchResultSelect(result),
+      onResultListPublished: (scope: number, count: number): void => this.observeSearchResultList(scope, count),
+      onSelectResult: (result: ReadingContentSearchResult, scope: number, ordinal: number): void =>
+        this.onSearchResultSelect(result, scope, ordinal),
     });
   }
 
@@ -2464,7 +2613,7 @@ export struct ReaderControlPanel {
           status: this.autoPageStatus, speedSeconds: this.autoPageSpeedSeconds,
           timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
           timerSummaryText: this.autoPageTimerSummaryText, followHighlight: this.autoPageFollowHighlight,
-          onBack: (): void => this.requestPage('home'),
+          onBack: (): void => this.requestPage('home', 'module-back'),
           onPreviousChapter: (): void => this.onPreviousChapter(),
           onToggleRunning: (): void => this.onAutoPageToggle(),
           onStop: (): void => this.onAutoPageStop(),
@@ -2493,12 +2642,12 @@ export struct ReaderControlPanel {
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('replace'),
           dismissTemporaryRevision: this.dismissTemporaryRevision, retireTemporaryRevision: this.retireTemporaryRevision,
           onTemporaryLayerChange: this.moduleTemporaryLayerHandler('replace'),
-          onBack: (): void => this.requestPage('home'),
+          onBack: (): void => this.requestPage('home', 'module-back'),
           onExpand: (): void => {
             if ((this.temporaryLayerKind !== '')) return;
             this.onInputActivity();
             this.applySemanticSession(expandReaderControlSession(this.controlSession,
-              readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
+              readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)), 'replace-expand');
           },
           onReload: (operationId?: string): Promise<void> => this.onReloadControlReplace(operationId),
           onSave: (draft: ReaderControlReplaceDraft): Promise<void> => this.onSaveControlReplace(draft),
@@ -2595,6 +2744,7 @@ export struct ReaderControlPanel {
     .height(44)
     .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .responseRegion(readerActionTouchRegion(44, 44))
+    .id('reader-control-more')
     .attributeModifier(new ReaderActionAccessibility('更多',
       this.topBarInputEnabled() && !this.controlObscured && (this.temporaryLayerKind === '' || this.moreMenuVisible), false, true, undefined, 'nativeButton'))
     .onClick(this.controlActionHandler((): void => { if (this.topBarInputEnabled()) this.setMoreMenuVisible(!this.moreMenuVisible); }))
@@ -2637,6 +2787,7 @@ export struct ReaderControlPanel {
         Image($r(this.appScheme === 'night' ? 'app.media.rc_dots_theme_night' : 'app.media.rc_dots')).width(20).height(20);
       }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
         .enabled(this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible))
+        .id('reader-control-more-short')
         .accessibilityText('更多')
         .onClick(this.controlActionHandler((): void => {
           if (this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
@@ -2682,6 +2833,7 @@ export struct ReaderControlPanel {
       }.width('100%').height('100%').alignItems(HorizontalAlign.Center).accessibilityLevel('no-hide-descendants');
     }
     .layoutWeight(1)
+    .id('reader-control-entry-' + action)
     .height(55.438 + this.homeMetric('actionLabelHeight', 13) - 13)
     .padding(0)
     .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
@@ -3181,6 +3333,7 @@ export struct ReaderControlPanel {
     }.width('100%').height('100%').alignItems(HorizontalAlign.Center);
     }
     .layoutWeight(1)
+    .id('reader-control-entry-' + module)
     .height(62 + (this.selectedMinimumProfile()?.navigationLabelHeight ?? 13.889) - 13.889)
     .padding(0).backgroundColor(Color.Transparent)
     .borderRadius(12)

@@ -5,6 +5,28 @@ import type { LibrarySearchPresentation } from '../../features/search/presentati
 import type { SourceJourneyPresentation } from '../../features/source/presentation/SourceJourneyPresentation';
 import type { ReaderLibraryAcquisitionBinding } from './ReaderLibraryAcquisitionBinding';
 import type { ReaderSettingsJourney } from './ReaderSettingsJourney';
+import { ReaderUIVerificationProbe } from '../diagnostics/ReaderUIVerificationProbe';
+
+interface ReaderSourceRouteObservation {
+  readonly action: string;
+  readonly from: string;
+  readonly to: string;
+  readonly mounting: number;
+  readonly previousGeneration: number;
+  readonly generation: number;
+}
+
+interface ReaderSourceImportSearchObservation {
+  readonly mounting: number;
+  readonly sourceGeneration: number;
+  readonly navigation: number;
+  readonly keywordLength: number;
+  readonly previousQueryRevision: number;
+  readonly queryRevision: number;
+  readonly previousSearchGeneration: number;
+  readonly searchGeneration: number;
+  readonly draftMatches: boolean;
+}
 
 export type ReaderSourceRoute = 'source' | 'sourceTools';
 
@@ -44,9 +66,11 @@ export class ReaderSourceJourney {
   }
 
   openManagement(returnTarget: SourceManagementReturnTarget = 'settings', keyword: string = ''): void {
+    const previous = this.navigation.snapshot();
     const next = this.navigation.openSourceManagement(returnTarget, keyword, (): void => this.advance());
     if (next === undefined) return;
     this.ports.publish(next);
+    this.observeRoute('open', previous, next);
     this.openPresentation('source');
   }
 
@@ -69,17 +93,28 @@ export class ReaderSourceJourney {
   }
 
   openTools(): void {
+    const previous = this.navigation.snapshot();
     const next = this.navigation.openSourceTools((): void => this.advance());
     if (next === undefined) return;
     this.ports.publish(next);
+    this.observeRoute('tools', previous, next);
     this.openPresentation('sourceTools');
   }
 
   returnToManagement(): void {
+    const previous = this.navigation.snapshot();
     const next = this.navigation.backFromSourceTools(this.ports.advance);
     if (next === undefined) return;
     this.ports.publish(next);
+    this.observeRoute('tools-back', previous, next);
     this.openPresentation('source');
+  }
+
+  private observeRoute(action: string, previous: ReaderNavigationSnapshot, next: ReaderNavigationSnapshot): void {
+    if (!ReaderUIVerificationProbe.enabled()) return;
+    const observation: ReaderSourceRouteObservation = { action, from: previous.route, to: next.route,
+      mounting: this.ports.scope().mounting, previousGeneration: previous.generation, generation: next.generation };
+    ReaderUIVerificationProbe.emit('source.route', 'business', observation);
   }
 
   private advance(): void {
@@ -88,17 +123,34 @@ export class ReaderSourceJourney {
   }
 
   returnFromManagement(autoSearch: boolean = false): void {
+    const previous = this.navigation.snapshot();
+    const retained = autoSearch && ReaderUIVerificationProbe.enabled() ? this.ports.search() : undefined;
+    const retainedDraft = retained?.host.viewState.keywordDraft.trim() ?? '';
     const result = this.navigation.closeSourceManagement(autoSearch, (): void => this.advance());
     if (result === undefined) return;
     this.ports.publish(result.snapshot);
+    this.observeRoute('close', previous, result.snapshot);
     if (result.snapshot.route === 'settings') {
       this.ports.settings().openPresentation('settings');
       return;
     }
     this.ports.refreshMembership();
     const keyword = result.keyword;
-    this.ports.search().returnFromSourceManagement(keyword !== undefined && this.ports.acquisition().beginSearch() ?
-      keyword : undefined);
+    const query = keyword !== undefined && this.ports.acquisition().beginSearch() ? keyword : undefined;
+    const search = this.ports.search();
+    const observe = query !== undefined && ReaderUIVerificationProbe.enabled();
+    const previousQueryRevision = observe ? search.host.viewState.revision : 0;
+    const previousSearchGeneration = observe ? search.host.observeWriteLease()?.generation ?? 0 : 0;
+    search.returnFromSourceManagement(query);
+    if (observe && query !== undefined) {
+      const observation: ReaderSourceImportSearchObservation = {
+        mounting: this.ports.scope().mounting, sourceGeneration: previous.generation, navigation: result.snapshot.generation,
+        keywordLength: query.length, previousQueryRevision, queryRevision: search.host.viewState.revision,
+        previousSearchGeneration, searchGeneration: search.host.observeWriteLease()?.generation ?? 0,
+        draftMatches: retained === search && retainedDraft === query && search.host.viewState.keywordDraft === query,
+      };
+      ReaderUIVerificationProbe.emit('source.import-search-return', 'business', observation);
+    }
   }
 
   importSearchAction(): (() => void) | undefined {

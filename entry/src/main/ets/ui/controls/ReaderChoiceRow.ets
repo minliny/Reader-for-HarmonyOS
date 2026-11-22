@@ -238,6 +238,7 @@ export struct ReaderChoiceRow {
   @Prop wrapLabel: boolean = false;
   /** Optional focus address on the wrapping option row. */
   @Prop focusId: string = '';
+  textLayoutOptions: TextOptions | undefined = undefined;
   onHeightChange: (height: number) => void = (_height: number): void => {};
   onChoose: (value: string) => void = (): void => {};
 
@@ -292,7 +293,7 @@ export struct ReaderChoiceRow {
   private flowRow() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: this.spec().layout === 'positioned' ? 7 : this.spec().gap }) {
-        Text(this.label).layoutWeight(1)
+        Text(this.label, this.textLayoutOptions).layoutWeight(1)
           .attributeModifier(new ReaderChoiceLabelModifier(this.specId, this.selected, true))
           .fontColor(this.textColor());
         if (this.hasIcon()) {

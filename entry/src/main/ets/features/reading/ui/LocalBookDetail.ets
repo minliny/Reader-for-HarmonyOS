@@ -22,6 +22,7 @@ import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconA
 import type { ReadingBookDetail } from '../presentation/ReadingBookDetail';
 import { bookIntroText } from '../../../app/library/BookIntroText';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import {
   readerVisualSafeLeft,
   readerVisualSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom,
@@ -236,6 +237,7 @@ export struct LocalBookDetail {
       },
       footer: (): void => { this.detailFooter(); },
     })
+      .id(ReaderUIVerificationProbe.enabled() ? 'reader-book-detail-verification' : '')
       .onTouch((event: TouchEvent): void => {
         if (event.type === TouchType.Down && this.acceptsDetailInput()) this.cancelDirectoryFocusRestore();
       })

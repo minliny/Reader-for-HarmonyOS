@@ -14,12 +14,13 @@ export struct ReaderRecoveryAction {
   @Prop isBusy: boolean = false;
   @Prop minimumWidth: number = 44;
   @Prop focusId: string = '';
+  textLayoutOptions: TextOptions | undefined = undefined;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   build() {
     ForEach([this.generation], (expected: number): void => {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Stack({ alignContent: Alignment.Center }) {
-      Text(this.label)
+      Text(this.label, this.textLayoutOptions)
         .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight)
         .fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
         .fontColor(readerAppColor(this.variant === 'notice' ? 'TOK_MESSAGE_NOTICE_INK' : 'TOK_MESSAGE_SOFT_INK', this.appThemeScheme))

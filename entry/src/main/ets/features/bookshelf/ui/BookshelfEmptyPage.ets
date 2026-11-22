@@ -50,15 +50,18 @@ export struct BookshelfEmptyPage {
       Column({ space: 9 }) {
         this.sectionHeader();
         ReaderPageState({ title: '书架还是空的', message: '导入本地书籍或通过搜索加入书架。',
+          titleTextId: 'reader-bookshelf-empty-title',
           actionLabel: '导入本地书籍', actionFocusId: this.importFocusId,
           onAction: (): void => this.onImportRequested(this.importFocusId),
-          secondaryActionLabel: '搜索书籍', onSecondaryAction: (): void => this.onSearchRequested() })
+          secondaryActionLabel: '搜索书籍', secondaryActionFocusId: 'reader-bookshelf-empty-search-entry',
+          onSecondaryAction: (): void => this.onSearchRequested() })
           .width(this.emptyCardWidth());
       }
       .width(this.contentFrame().width)
       .alignItems(HorizontalAlign.Center)
       .padding({ top: this.headerBottom + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
+    .id('reader-bookshelf-empty-scroll')
     .width('100%')
     .height('100%')
     .align(Alignment.Top)

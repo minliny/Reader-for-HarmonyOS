@@ -7,6 +7,8 @@ import type { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
 import { RulesMutationOwner, type RulesMutationSnapshot } from '../../settings/application/RulesMutationOwner';
 import type { RuleSubscriptionStep } from '../../settings/application/RulesMutationIntentStore';
+import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
+import { sourceVerificationOfflineDetectFixture } from '../ui/SourceManagementVerification';
 
 export type BookSource = {
   sourceId: string;
@@ -24,6 +26,7 @@ export type BookSource = {
   checkMessage?: string;
   checkReports?: SourceCheckHistoryEntry[];
   lastCheckSummary?: string;
+  offlineDetectReportVersion?: number;
 };
 
 export type SourcePatch = {
@@ -240,6 +243,13 @@ export class SourceGateway {
         loginUrl,
         sourceVersion: this.optionalString(source, 'sourceVersion'),
       };
+      if (sourceId === 'https://offline-detect.reader-phase1.invalid/' && ReaderUIVerificationProbe.enabled() &&
+        rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource) &&
+        sourceVerificationOfflineDetectFixture(entry, rawBookSource as JsonObject) &&
+        this.runtimeOwner.supportsCoreCapability('source.check.mode.v1')) {
+        entry.offlineDetectReportVersion = this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
+          this.runtimeOwner.supportsCoreCapability('source.check.report.v1') ? 1 : undefined;
+      }
       if (checkReports !== undefined) entry.checkReports = checkReports;
       if (lastCheckSummary !== undefined) entry.lastCheckSummary = lastCheckSummary;
       // Current-rule persisted diagnostics drive the unified status filter.

@@ -1,3 +1,4 @@
+import { readerHostPreferencesName } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import preferences from '@ohos.data.preferences';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
@@ -134,7 +135,8 @@ export class ReaderTtsPreferencesGateway {
 
   private async ensureStore(): Promise<preferences.Preferences> {
     if (this.store !== undefined) return this.store;
-    this.store = await preferences.getPreferences(this.runtimeOwner.getUIAbilityContext(), READER_TTS_PREFERENCES_NAME);
+    const context = this.runtimeOwner.getUIAbilityContext();
+    this.store = await preferences.getPreferences(context, readerHostPreferencesName(context.filesDir, READER_TTS_PREFERENCES_NAME));
     return this.store;
   }
 }

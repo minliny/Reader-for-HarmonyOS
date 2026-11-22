@@ -15,10 +15,12 @@ export struct ReaderPageState {
   @Prop message: string = '';
   @Prop loading: boolean = false;
   @Prop loadingActive: boolean = true;
+  @Prop loadingProgressId: string = '';
   @Prop actionLabel: string = '';
   @Prop actionGeneration: number = 0;
   @Prop actionFocusId: string = '';
   @Prop secondaryActionLabel: string = '';
+  @Prop secondaryActionFocusId: string = '';
   @Prop actionEnabled: boolean = true;
   @Prop secondaryActionEnabled: boolean = true;
   @Prop padded: boolean = true;
@@ -27,19 +29,40 @@ export struct ReaderPageState {
   @BuilderParam actionContent: () => void = this.emptySlot;
   @Prop inkColor: ResourceColor | undefined = undefined;
   @Prop mutedColor: ResourceColor | undefined = undefined;
+  @Prop titleTextId: string = '';
+  @Prop messageTextId: string = '';
+  titleTextLayoutOptions: TextOptions | undefined = undefined;
+  messageTextLayoutOptions: TextOptions | undefined = undefined;
+  actionTextLayoutOptions: TextOptions | undefined = undefined;
   onAction: (generation: number) => void = (_generation: number): void => {};
   onSecondaryAction: (generation: number) => void = (_generation: number): void => {};
+  onLoadingProgressVisible: ((ratio: number) => void) | undefined = undefined;
 
   @Builder
   private emptySlot() {}
 
+  @Builder
+  private loadingProgress() {
+    if (this.onLoadingProgressVisible === undefined) {
+      LoadingProgress().id(this.loadingProgressId).width(32).height(32)
+        .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
+        .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
+        .accessibilityText('载入中');
+    } else {
+      LoadingProgress().id(this.loadingProgressId).width(32).height(32)
+        .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
+        .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
+        .accessibilityText('载入中')
+        .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => {
+          if (visible && ratio > 0) this.onLoadingProgressVisible?.(ratio);
+        });
+    }
+  }
+
   build() {
     if (this.variant === 'inline' && this.loading) {
       Row({ space: 10 }) {
-        LoadingProgress().width(32).height(32)
-          .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
-          .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
-          .accessibilityText('载入中');
+        this.loadingProgress();
         Text(this.message.length > 0 ? this.message : this.title).layoutWeight(1)
           .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
           .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
@@ -50,19 +73,16 @@ export struct ReaderPageState {
       Column({ space: this.variant === 'readingBookmark' ? 0 : this.variant === 'inline' ? MESSAGE_INLINE_STATE_SPACING : 12 }) {
         this.leading();
         if (this.loading) {
-          LoadingProgress().width(32).height(32)
-            .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
-            .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
-            .accessibilityText('载入中');
+          this.loadingProgress();
         }
         if (this.title.length > 0) {
-          Text(this.title).width('100%').textAlign(TextAlign.Center)
+          Text(this.title, this.titleTextLayoutOptions).id(this.titleTextId).width('100%').textAlign(TextAlign.Center)
             .fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
             .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
             .fontColor(this.inkColor ?? readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
         }
         if (this.message.length > 0) {
-          Text(this.message).width('100%').textAlign(TextAlign.Center)
+          Text(this.message, this.messageTextLayoutOptions).id(this.messageTextId).width('100%').textAlign(TextAlign.Center)
             .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
             .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
             .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
@@ -74,12 +94,13 @@ export struct ReaderPageState {
           Flex({ justifyContent: FlexAlign.Center, wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(10), cross: LengthMetrics.vp(10) } }) {
             if (this.actionLabel.length > 0) {
               ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.actionLabel, actionEnabled: this.actionEnabled, focusId: this.actionFocusId,
+                textLayoutOptions: this.actionTextLayoutOptions,
                 generation: this.actionGeneration,
                 onReconcile: (expected: number): void => this.onAction(expected) });
             }
             if (this.secondaryActionLabel.length > 0) {
               ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.secondaryActionLabel, actionEnabled: this.secondaryActionEnabled,
-                generation: this.actionGeneration,
+                focusId: this.secondaryActionFocusId, generation: this.actionGeneration,
                 onReconcile: (expected: number): void => this.onSecondaryAction(expected) });
             }
           }.width('100%').margin({ top: this.variant === 'readingBookmark' ? 23 : 0 });

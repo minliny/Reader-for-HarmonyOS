@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from '../../app/diagnostics/ReaderPublicFixtureScope';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import statfs from '@ohos.file.statvfs';
@@ -293,7 +294,7 @@ export class ReadingImageDiskCache {
         let inventory = await this.mangaInventory();
         let buckets = await this.mangaStorageBuckets(inventory);
         const headroom = priority === 'background' ? MANGA_FOREGROUND_RESERVE_BYTES : 0;
-        let capacity = await this.mangaStorageCapacityForPath(this.context.filesDir);
+        let capacity = await this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
         let freeBytes = capacity.freeBytes;
         const bucketBytes = (): number => kind === 'derived' ? buckets.derivedBytes : buckets.originalBytes;
         const bucketReservedBytes = (): number => kind === 'derived' ? this.mangaDerivedReservedBytes : this.mangaOriginalReservedBytes;
@@ -307,13 +308,13 @@ export class ReadingImageDiskCache {
           await this.evictMangaCandidates('capacity', undefined, async (): Promise<boolean> => {
             inventory = await this.mangaInventory();
             buckets = await this.mangaStorageBuckets(inventory);
-            capacity = await this.mangaStorageCapacityForPath(this.context.filesDir);
+            capacity = await this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
             freeBytes = capacity.freeBytes;
             return !overBudget() && !lowSpace();
           });
           inventory = await this.mangaInventory();
           buckets = await this.mangaStorageBuckets(inventory);
-          capacity = await this.mangaStorageCapacityForPath(this.context.filesDir);
+          capacity = await this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
           freeBytes = capacity.freeBytes;
         }
         if (overBudget() || lowSpace()) throw new ReadingOfflineMaterializationError('storage_full', 'MANGA_CACHE_STORAGE_FULL');
@@ -430,7 +431,7 @@ export class ReadingImageDiskCache {
   }> {
     const inventory = await this.mangaInventory();
     const buckets = await this.mangaStorageBuckets(inventory);
-    const capacity = await this.mangaStorageCapacityForPath(this.context.filesDir);
+    const capacity = await this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
     const cleanableBytes = await this.mangaCleanableBytes(inventory);
     return {
       totalBytes: buckets.downloadBytes + buckets.ordinaryBytes,
@@ -456,7 +457,7 @@ export class ReadingImageDiskCache {
     await this.loadStoragePolicy();
     await this.enqueueMangaPolicy(async (): Promise<void> => {
       if (this.closed) throw new Error('MANGA_CACHE_CLOSED');
-      const directory = `${this.context.filesDir}/reader-offline`;
+      const directory = `${readerHostFilesDirectory(this.context.filesDir)}/reader-offline`;
       await this.ensureDirectory(directory);
       await this.writeAtomicBytes(`${directory}/storage-policy.json`, new util.TextEncoder().encodeInto(
         JSON.stringify({ version: 1, limitMb, cleanupAfterDays })));
@@ -690,7 +691,7 @@ export class ReadingImageDiskCache {
   }
 
   private async readStoragePolicy(): Promise<void> {
-    const path = `${this.context.filesDir}/reader-offline/storage-policy.json`;
+    const path = `${readerHostFilesDirectory(this.context.filesDir)}/reader-offline/storage-policy.json`;
     if (!(await fileIo.access(path))) return;
     try {
       const bytes = await this.readMangaMetadata(path, MANGA_IDENTITY_METADATA_BYTES);
@@ -735,7 +736,7 @@ export class ReadingImageDiskCache {
    * derived-cache cleanup without being able to delete user downloads.
    */
   async mangaStorageCapacity(): Promise<MangaStorageCapacity> {
-    return this.mangaStorageCapacityForPath(this.context.filesDir);
+    return this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
   }
 
   /**
@@ -1011,7 +1012,7 @@ export class ReadingImageDiskCache {
     }
     if (this.mangaExternal !== undefined) {
       for (const file of await this.mangaExternal.inventory()) {
-        if (!file.path.startsWith(`${this.context.filesDir}/`) || file.path.split('/').indexOf('..') >= 0) throw new Error('manga external path escapes app storage');
+        if (!file.path.startsWith(`${readerHostFilesDirectory(this.context.filesDir)}/`) || file.path.split('/').indexOf('..') >= 0) throw new Error('manga external path escapes app storage');
         if (!(await fileIo.access(file.path))) continue;
         const stat = await fileIo.stat(file.path);
         if (!stat.isFile()) continue;
@@ -1056,7 +1057,7 @@ export class ReadingImageDiskCache {
     // this private filesDir on the same app-data volume. The public SDK exposes
     // bigint ino, not POSIX dev. Keep the sandbox namespace plus its exact inode
     // so hard-linked originals/display files still share one physical owner.
-    return `${this.context.filesDir}:${stat.ino}`;
+    return `${readerHostFilesDirectory(this.context.filesDir)}:${stat.ino}`;
   }
 
   /** Automatic maintenance shares the public total cache budget. Per-kind
@@ -1064,7 +1065,7 @@ export class ReadingImageDiskCache {
    * Read directly inside the policy lane; re-enqueuing it would await itself. */
   private async mangaMaintenanceHasCapacity(): Promise<boolean> {
     const buckets = await this.mangaStorageBuckets(await this.mangaInventory());
-    const capacity = await this.mangaStorageCapacityForPath(this.context.filesDir);
+    const capacity = await this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
     return buckets.ordinaryBytes + this.mangaOrdinaryReservedBytes <= capacity.cacheBudgetBytes &&
       capacity.freeBytes >= capacity.systemReserveBytes + this.mangaReservedBytes;
   }
@@ -2034,11 +2035,11 @@ export class ReadingImageDiskCache {
   }
 
   private rootDirectory(): string {
-    return `${this.context.filesDir}/reader-offline/images-v2`;
+    return `${readerHostFilesDirectory(this.context.filesDir)}/reader-offline/images-v2`;
   }
 
   private legacyRootDirectory(): string {
-    return `${this.context.filesDir}/reader-offline/images-v1`;
+    return `${readerHostFilesDirectory(this.context.filesDir)}/reader-offline/images-v1`;
   }
 
   private async writeAtomicBytes(path: string, bytes: Uint8Array, isCurrent?: () => boolean): Promise<void> {

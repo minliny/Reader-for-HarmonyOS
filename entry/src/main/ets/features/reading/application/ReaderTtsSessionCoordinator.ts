@@ -1,6 +1,6 @@
-import type { ReaderTtsHost, ReaderTtsHostEvent } from './ReaderTtsHostContract.ts';
+import type { ReaderTtsHost, ReaderTtsHostEvent, ReaderTtsNativeSpeakPoint } from './ReaderTtsHostContract.ts';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy.ts';
-import { ReaderStartupTrace } from '../../../app/ReaderStartupTrace.ts';
+import { ReaderStartupTrace, type ReaderTtsCapsuleTiming } from '../../../app/ReaderStartupTrace.ts';
 import { errorMessageOf } from '../../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
@@ -365,6 +365,15 @@ export class ReaderTtsSessionCoordinator {
     return { ...this.transport };
   }
 
+  /** The locally published pause can precede Host stop and the Core acknowledgement. */
+  hasConfirmedUserPause(generation: number): boolean {
+    return this.active?.identity.sessionGeneration === generation && this.state.sessionGeneration === generation &&
+      this.transport.sessionGeneration === generation && this.state.status === 'paused' &&
+      this.state.pauseReason === 'user' && this.state.audioStarted === true && this.coreSnapshot?.state === 'paused' &&
+      this.transport.audioSession === 'inactive' && this.transport.focus === 'none' &&
+      this.transport.currentRequestId === undefined;
+  }
+
   getProbedConfig(): ReaderTtsConfig | undefined {
     return this.probedConfig;
   }
@@ -471,9 +480,10 @@ export class ReaderTtsSessionCoordinator {
     }
   }
 
-  start(input: ReaderTtsStartInput, desiredPlaying: boolean = true): Promise<void> {
+  start(input: ReaderTtsStartInput, desiredPlaying: boolean = true,
+    capsuleTiming?: ReaderTtsCapsuleTiming): Promise<void> {
     this.assertStartInput(input);
-    const traceOperationId = ReaderStartupTrace.currentTts()?.beginTtsOperation();
+    const traceOperationId = ReaderStartupTrace.currentTts()?.beginTtsOperation(capsuleTiming);
     this.lastTraceOperationId = traceOperationId;
     this.voidLogged(this.stopAudition(), 'audition.formal-start');
     this.desiredPlaying = desiredPlaying;
@@ -980,10 +990,19 @@ export class ReaderTtsSessionCoordinator {
         return;
       }
       this.setState({ ...this.state, stopReason: undefined, errorMessage: undefined });
-      active.plan = await this.gateway.slice(active.input.chapter, active.input.content, 'paragraph-then-sentence');
+      const trace = active.traceOperationId === undefined ? undefined : ReaderStartupTrace.currentTts();
+      trace?.markTtsCapsule('tts.core-slice.enter', active.traceOperationId);
+      const slice = this.gateway.slice(active.input.chapter, active.input.content, 'paragraph-then-sentence');
+      trace?.markTtsCapsule('tts.core-slice.return', active.traceOperationId);
+      active.plan = await slice;
+      trace?.markTtsCapsule('tts.core-slice.ready', active.traceOperationId);
       if (!this.isSessionCurrent(identity)) return;
       const startIndex = this.firstSliceIndex(active.plan, active.input.scalarPosition);
-      const snapshot = await this.gateway.play(active.plan, startIndex);
+      trace?.markTtsCapsule('tts.core-play.enter', active.traceOperationId);
+      const play = this.gateway.play(active.plan, startIndex);
+      trace?.markTtsCapsule('tts.core-play.return', active.traceOperationId);
+      const snapshot = await play;
+      trace?.markTtsCapsule('tts.core-play.ready', active.traceOperationId);
       if (!this.isSessionCurrent(identity)) return;
       const ratedSnapshot = await this.gateway.setRate(
         active.input.chapter,
@@ -1164,9 +1183,18 @@ export class ReaderTtsSessionCoordinator {
       charEnd: slice.charEnd,
       failurePolicy: active.input.failurePolicy ?? 'stop',
     });
+    const trace = active.traceOperationId === undefined ? undefined : ReaderStartupTrace.currentTts();
     try {
       this.host.setBackgroundPlaybackEnabled?.(active.input.backgroundPlayback ?? true);
-      await this.host.activateAudioSession(active.input.allowMixing ?? false);
+      trace?.markTtsCapsule('tts.host-audio.enter', active.traceOperationId);
+      let activation: Promise<void>;
+      try {
+        activation = this.host.activateAudioSession(active.input.allowMixing ?? false);
+      } finally {
+        trace?.markTtsCapsule('tts.host-audio.return', active.traceOperationId);
+      }
+      await activation;
+      trace?.markTtsCapsule('tts.host-audio.ready', active.traceOperationId);
     } catch (error) {
       await this.handleSessionUtteranceFailure(active, token,
         `音频会话启动失败：${errorMessageOf(error)}`);
@@ -1184,6 +1212,8 @@ export class ReaderTtsSessionCoordinator {
       await this.host.speak({
         requestId: token.requestId,
         traceOperationId: active.traceOperationId,
+        traceNativeSpeak: trace?.observingTtsCapsule(active.traceOperationId) === true ?
+          (point: ReaderTtsNativeSpeakPoint): void => trace.markTtsCapsule(`tts.system-speak.${point}`, active.traceOperationId) : undefined,
         text: slice.text,
         rate: active.input.rate ?? 1,
         pitch: active.input.pitch ?? 1,
@@ -1279,8 +1309,9 @@ export class ReaderTtsSessionCoordinator {
           this.clearStartWatchdog();
           this.awaitingStartToken = undefined;
           this.startConfirmedRequestId = event.requestId;
-          this.applyCoreSnapshot(result.snapshot);
-          this.setState({ ...this.state, status: 'playing', consecutiveFailures: 0, audioStarted: true });
+          this.applyCoreSnapshot(result.snapshot, undefined, undefined, {
+            status: 'playing', consecutiveFailures: 0, audioStarted: true,
+          });
           const nextSlice = active.plan?.slices[correlated.sliceIndex + 1];
           if (nextSlice !== undefined) {
             try {
@@ -1679,6 +1710,7 @@ export class ReaderTtsSessionCoordinator {
     snapshot: ReaderTtsQueueSnapshot,
     errorMessage?: string,
     pauseReason?: 'user' | 'systemInterruption' | 'routeBackground' | 'deviceChange',
+    confirmedStart?: Pick<ReaderTtsState, 'status' | 'consecutiveFailures' | 'audioStarted'>,
   ): void {
     this.coreSnapshot = snapshot;
     const active = this.active;
@@ -1708,6 +1740,7 @@ export class ReaderTtsSessionCoordinator {
       consecutiveFailures: snapshot.consecutiveFailures,
       pauseReason: snapshot.state === 'paused' ? pauseReason ?? this.state.pauseReason : undefined,
       errorMessage,
+      ...confirmedStart,
     });
     const published = snapshot.state === 'playing' ? (status === 'playing' ? 'playing' : 'preparing') :
       snapshot.state === 'paused' ? 'paused' :

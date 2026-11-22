@@ -1,3 +1,4 @@
+import { readerHostPreferencesName } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import preferences from '@ohos.data.preferences';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
@@ -210,7 +211,7 @@ export class ReaderSettingsGateway {
     }
     this.store = await preferences.getPreferences(
       this.runtimeOwner.getUIAbilityContext(),
-      READER_SETTINGS_PREFERENCES_NAME,
+      readerHostPreferencesName(this.runtimeOwner.getUIAbilityContext().filesDir, READER_SETTINGS_PREFERENCES_NAME),
     );
     return this.store;
   }

@@ -315,7 +315,8 @@ export struct SourceToolsPage {
 
   @Builder
   private pageHeader() {
-    PageBackBar({ title: '批量管理与书源工具', onBack: this.toolsBackAction(this.temporaryBackIdentity) });
+    PageBackBar({ title: '批量管理与书源工具', backFocusId: 'reader-source-tools-back',
+      onBack: this.toolsBackAction(this.temporaryBackIdentity) });
   }
 
   @Builder

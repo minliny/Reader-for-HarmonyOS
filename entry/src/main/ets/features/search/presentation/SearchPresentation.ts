@@ -9,6 +9,12 @@ export type SearchSourceSkip = {
 
 export type SearchHistoryStatus = 'loading' | 'ready' | 'loadFailed' | 'clearFailed';
 
+export interface SearchEntrySourceReadObservation {
+  readonly session: number;
+  readonly outcome: 'ready' | 'noSources' | 'allDisabled' | 'failed';
+  readonly sourceCount?: number;
+}
+
 /** Entry history is independent of the current query/result presentation. */
 export interface SearchHistoryProjection {
   history?: string[];

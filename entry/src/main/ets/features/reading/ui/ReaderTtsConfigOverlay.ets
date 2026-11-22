@@ -255,7 +255,8 @@ export struct ReaderTtsConfigOverlay {
       Column() {
       ReaderBoundedSurface({ specId: this.boundedSpecId(), surfaceWidth: this.manager ? '100%' : this.panelWidth(),
         surfaceHeight: this.panelHeight(), header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); }, actions: (): void => { this.boundedActions(); } });
-      }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? this.modalVisibleHeight() : this.panelHeight())
+      }.id(this.manager ? 'reader-control-tts-manager-overlay' : 'reader-control-tts-overlay')
+        .width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? this.modalVisibleHeight() : this.panelHeight())
         .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
         .padding(this.manager ? { left: 13, right: 13,
           top: this.managerOuterPadding(), bottom: this.managerOuterPadding() } : 0)

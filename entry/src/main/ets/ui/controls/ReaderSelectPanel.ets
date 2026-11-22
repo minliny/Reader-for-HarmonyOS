@@ -1,4 +1,5 @@
 import { FrameCallback } from '@kit.ArkUI';
+import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
@@ -15,7 +16,7 @@ import {
   TOK_SPACE_CONTROL_INLINE,
   TOK_SURFACE_PANEL_SOFT,
 } from '../foundation/ReaderTokens';
-import { motionAnimateParam } from '../foundation/MotionSpec';
+import { motionAnimateParam, motionSpecGet } from '../foundation/MotionSpec';
 import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';
 import {
   APPEARANCE_SELECT_OPTION_HEIGHT, appearanceSelectMenuHeight,
@@ -75,9 +76,12 @@ export struct ReaderSelectPanel {
   @Prop alignRight: boolean = false;
   /** Optional addresses for the selected row and its wrapping alternatives. */
   @Prop focusIdPrefix: string = '';
+  @Prop nativeAnchorId: string = '';
   // Production callers commit the immutable choice now; finish only unmounts.
   onCommit: ((option: string, identity: string) => void) | undefined = undefined;
   inputCurrent: (() => boolean) | undefined = undefined;
+  optionTextLayoutOptions: ((option: string, identity: string) => TextOptions | undefined) | undefined = undefined;
+  onOptionsScrollStop: ((identity: string) => void) | undefined = undefined;
   onDismiss: (identity: string) => void = (_identity: string): void => {};
   @State private expandedHeight: number = OPTION_H;
   @State private chevronAngle: number = 0;
@@ -92,6 +96,8 @@ export struct ReaderSelectPanel {
   private closingValue: string = '';
   private closingOptions: string[] = [];
   private closeFinish: (() => void) | undefined = undefined;
+  private appearanceHeightAnimator: AnimatorResult | undefined = undefined;
+  private appearanceHeightTarget: number = 0;
 
   private renderedValue(): string { return this.closeInFlight ? this.closingValue : this.value; }
   private renderedOptions(): string[] { return this.closeInFlight ? this.closingOptions : this.options; }
@@ -103,10 +109,16 @@ export struct ReaderSelectPanel {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.closeFinish = undefined; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.generation += 1;
+    this.closeFinish = undefined;
+    if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
+  }
 
   private onIdentityChanged(): void {
     this.generation += 1;
+    if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
     this.closeInFlight = false;
     this.closeFinish = undefined;
     if (this.mounted) this.expandPanel();
@@ -115,6 +127,7 @@ export struct ReaderSelectPanel {
   private onReduceMotionChanged(): void {
     if (!this.mounted || !this.reduceMotion) return;
     const generation = ++this.generation;
+    if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
     this.getUIContext().animateTo(readerMotionAnimateParam(
       this.closeInFlight ? 'dropdown.menu.collapse' : 'dropdown.menu.expand', true), (): void => {
       this.expandedHeight = this.closeInFlight ? OPTION_H : this.fullPanelHeight();
@@ -139,6 +152,9 @@ export struct ReaderSelectPanel {
   }
 
   private onGeometryChanged(): void {
+    if (this.variant !== 'appearanceLibrary' && this.appearanceHeightAnimator !== undefined) {
+      this.cancelAppearanceHeightAnimation();
+    }
     if (this.mounted && !this.closeInFlight && this.wrapsOptions()) {
       this.invalidateOptionHeights();
       this.expandPanel();
@@ -184,11 +200,6 @@ export struct ReaderSelectPanel {
     this.optionHeightsLayoutIdentity = identity;
   }
 
-  private measuredOptionHeight(key: string, fallback: number): number {
-    return this.optionHeightsLayoutIdentity === this.optionMeasurementIdentity() ?
-      this.optionHeights.get(key) ?? fallback : fallback;
-  }
-
   private panelHeight(): number {
     return this.hostBottomVp >= 0 ? Math.min(this.expandedHeight, Math.max(0, this.hostBottomVp - this.hostTopVp)) : this.expandedHeight;
   }
@@ -209,9 +220,11 @@ export struct ReaderSelectPanel {
       if (this.wrapsOptions()) {
         Scroll() {
           Column({ space: 0 }) { this.optionContent(); }.width('100%');
-        }.width('100%').layoutWeight(1).scrollBar(BarState.Auto);
+        }.width('100%').layoutWeight(1).scrollBar(BarState.Auto)
+          .onScrollStop(this.onOptionsScrollStop === undefined ? (): void => {} : this.optionsScrollStopAction());
       } else { this.optionContent(); }
     }
+    .id(this.nativeAnchorId)
     .width(this.resolvedWidth())
     .height(this.panelHeight())
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
@@ -270,6 +283,7 @@ export struct ReaderSelectPanel {
     ReaderChoiceRow({
       specId: this.variant === 'sourceGroup' ? 'source-group-option' : 'default-option',
       label: opt, scheme: this.appThemeScheme, actionEnabled: !this.closeInFlight,
+      textLayoutOptions: this.optionTextLayoutOptions?.(opt, this.selectionId),
       wrapLabel: this.wrapsOptions(),
       focusId: this.optionFocusId(`option:${opt}`),
       onHeightChange: this.optionHeightHandler(opt, false),
@@ -279,6 +293,16 @@ export struct ReaderSelectPanel {
 
   private optionFocusId(key: string): string {
     return this.focusIdPrefix.length > 0 ? `${this.focusIdPrefix}:${key}` : '';
+  }
+
+  private optionsScrollStopAction(): () => void {
+    const identity = this.selectionId;
+    const generation = this.generation;
+    const report = this.onOptionsScrollStop;
+    return (): void => {
+      if (this.mounted && !this.closing && !this.closeInFlight && this.selectionId === identity &&
+        this.generation === generation) report?.(identity);
+    };
   }
 
   // 最长文本(值 ∪ 选项)实测宽 + chrome, px→vp。
@@ -373,11 +397,18 @@ export struct ReaderSelectPanel {
     if (!this.mounted || this.closeInFlight) return;
     if (this.closing) { this.onClosingChanged(); return; }
     const targetHeight = this.fullPanelHeight();
+    if (this.expandedHeight === targetHeight && this.chevronAngle === -180) {
+      if (this.appearanceHeightAnimator !== undefined && this.appearanceHeightTarget !== targetHeight) {
+        this.cancelAppearanceHeightAnimation();
+      }
+      return;
+    }
     if (this.reduceMotion) {
       this.expandedHeight = targetHeight;
       this.chevronAngle = -180;
       return;
     }
+    if (this.variant === 'appearanceLibrary' && this.animateAppearanceHeight(targetHeight, -180)) return;
     this.getUIContext().animateTo(motionAnimateParam('dropdown.menu.expand'), (): void => {
       this.expandedHeight = targetHeight;
       this.chevronAngle = -180;
@@ -411,6 +442,7 @@ export struct ReaderSelectPanel {
     this.closeInFlight = true;
     this.closeFinish = onFinish;
     const generation = ++this.generation;
+    if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
@@ -419,6 +451,8 @@ export struct ReaderSelectPanel {
       this.finishCollapse(generation, deferParent);
       return;
     }
+    if (this.variant === 'appearanceLibrary' &&
+      this.animateAppearanceHeight(OPTION_H, 0, (): void => this.finishCollapse(generation))) return;
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {
         this.finishCollapse(generation);
@@ -430,22 +464,77 @@ export struct ReaderSelectPanel {
     );
   }
 
+  private cancelAppearanceHeightAnimation(): void {
+    const animator = this.appearanceHeightAnimator;
+    this.appearanceHeightAnimator = undefined;
+    animator?.cancel();
+  }
+
+  private animateAppearanceHeight(height: number, angle: number, finish?: () => void): boolean {
+    if (this.hosting !== 'overlay') return false;
+    if (this.appearanceHeightAnimator !== undefined && this.appearanceHeightTarget === height) return true;
+    this.cancelAppearanceHeightAnimation();
+    const spec = motionSpecGet(finish === undefined ? 'dropdown.menu.expand' : 'dropdown.menu.collapse');
+    const curve = spec?.curve;
+    if (spec === undefined || typeof curve !== 'object') return false;
+    const generation = this.generation;
+    const fromHeight = this.expandedHeight;
+    const fromAngle = this.chevronAngle;
+    const context = this.getUIContext();
+    try {
+      const animator = context.createAnimator({
+        duration: spec.durationMs, easing: 'linear', delay: 0, fill: 'forwards',
+        direction: 'normal', iterations: 1, begin: 0, end: 1,
+      });
+      this.appearanceHeightAnimator = animator;
+      this.appearanceHeightTarget = height;
+      animator.onFrame = (fraction: number): void => {
+        if (this.appearanceHeightAnimator !== animator || !this.mounted || generation !== this.generation) return;
+        const progress = curve.interpolate(fraction);
+        this.expandedHeight = fromHeight + (height - fromHeight) * progress;
+        this.chevronAngle = fromAngle + (angle - fromAngle) * progress;
+      };
+      animator.onFinish = (): void => {
+        if (this.appearanceHeightAnimator !== animator || !this.mounted || generation !== this.generation) return;
+        this.appearanceHeightAnimator = undefined;
+        this.expandedHeight = height;
+        this.chevronAngle = angle;
+        if (finish !== undefined) {
+          context.postFrameCallback(new ReaderSelectParentFrame(finish));
+        }
+      };
+      animator.play();
+      return true;
+    } catch (_) {
+      this.appearanceHeightAnimator = undefined;
+      return false;
+    }
+  }
+
   private fullPanelHeight(): number {
     if (this.wrapsOptions()) {
       // Native rows report their actual wrapped height. Retain this state read
       // so measurements also update the animated frame during font/width changes.
       if (this.measuredHeightRevision < 0) return 0;
-      const minimum = this.variant === 'appearanceLibrary' ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
-      let height = this.variant === 'appearanceLibrary' ? 8 : TOK_BORDER_W * 2;
-      if (this.variant !== 'appearanceLibrary') height += this.measuredOptionHeight(`${this.variant}:true:${this.renderedValue()}`, minimum);
-      for (const option of this.renderedOptions()) {
-        if (this.variant === 'appearanceLibrary' || option !== this.renderedValue())
-          height += this.measuredOptionHeight(`${this.variant}:${this.variant === 'appearanceLibrary' && option === this.renderedValue()}:${option}`, minimum);
-      }
       const configured = Number.isFinite(this.maxPanelHeight) && this.maxPanelHeight > 0 ? Math.min(330, this.maxPanelHeight) : 330;
       const maximum = this.hostBottomVp >= 0 ?
         Math.min(configured, Math.max(0, this.hostBottomVp - this.hostTopVp)) : configured;
-      return Math.min(height, maximum);
+      const appearance = this.variant === 'appearanceLibrary';
+      const minimum = appearance ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
+      let height = appearance ? 8 : TOK_BORDER_W * 2;
+      if (height >= maximum) return maximum;
+      const selected = this.renderedValue();
+      // The identity includes the complete option list. Resolve it once per
+      // panel height, since native row measurement can run this for every row.
+      const heights = this.optionHeightsLayoutIdentity === this.optionMeasurementIdentity() ? this.optionHeights : undefined;
+      if (!appearance) height += heights?.get(`${this.variant}:true:${selected}`) ?? minimum;
+      for (const option of this.renderedOptions()) {
+        if (height >= maximum) return maximum;
+        if (appearance || option !== selected) {
+          height += heights?.get(`${this.variant}:${appearance && option === selected}:${option}`) ?? minimum;
+        }
+      }
+      return Math.min(height,maximum);
     }
     if (this.variant === 'appearanceLibrary') return appearanceSelectMenuHeight(this.options.length);
     let unselectedCount = 0;

@@ -337,6 +337,7 @@ export struct ReaderControlSettingsContent {
       .width(this.availableWidth)
       .height(this.scrollContentHeight());
     }
+    .id('reader-control-module-settings')
     .width(this.availableWidth).height(this.availableHeight)
     .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
     .enableScrollInteraction(this.fullInput() || this.quickMinimumScrollInput())

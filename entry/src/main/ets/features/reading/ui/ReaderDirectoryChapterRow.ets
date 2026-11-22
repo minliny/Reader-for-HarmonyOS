@@ -19,6 +19,7 @@ export struct ReaderDirectoryChapterRow {
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop bookmarkActionsEnabled: boolean = true;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop selectionFocusId: string = '';
   canActOnEntry?: (entry: LocalReadingTocEntry) => boolean;
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onTogglePreviewGroup: (index: number) => void = (_index: number): void => {};
@@ -120,6 +121,7 @@ export struct ReaderDirectoryChapterRow {
           this.chapterTitle();
         }
       }.layoutWeight(1).height(this.rowHeight).accessibilityText(readerDirectoryAccessibilityText(this.entry))
+        .id(this.selectionFocusId)
         .enabled(this.entry.navigable !== false)
         .responseRegion({ x: 0, y: 0, width: '100%', height: this.rowHeight })
         .onClick((): void => {

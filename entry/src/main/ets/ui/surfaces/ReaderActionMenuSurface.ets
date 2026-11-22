@@ -45,6 +45,7 @@ export struct ReaderActionMenuSurface {
   @StorageLink('readerAppForeground') private foreground: boolean = true;
   @Prop variant: ReaderActionMenuVariant = 'menu';
   @Prop specId: ReaderActionMenuSpecId = 'reader-more-menu';
+  @Prop nativeId: string = '';
   @Prop scheme: string = 'day';
   @Prop actions: ReaderMenuActionView[] = [];
   @Prop availableWidth: string | number = '100%';
@@ -74,6 +75,7 @@ export struct ReaderActionMenuSurface {
         }, (action: ReaderMenuActionView): string => action.id);
       }.width('100%').height(this.menuActionHeight() * this.actions.length);
     }.width(this.availableWidth)
+      .id(this.nativeId)
       .height(Math.max(0, Math.min(this.menuActionHeight() * this.actions.length, this.viewportHeight)))
       .clip(true).scrollBar(BarState.Auto).align(Alignment.TopStart);
   }
@@ -109,6 +111,7 @@ export struct ReaderActionMenuSurface {
       }
     }.width('100%').height(this.menuActionHeight());
     }.width('100%').height(this.menuActionHeight()).padding(0).borderRadius(0)
+      .id(this.nativeId.length > 0 ? this.nativeId + '-item-' + id : '')
       .backgroundColor(Color.Transparent)
       .opacity(this.action(id).enabled || this.action(id).busy ? 1 : 0.45)
       .enabled(this.action(id).enabled)

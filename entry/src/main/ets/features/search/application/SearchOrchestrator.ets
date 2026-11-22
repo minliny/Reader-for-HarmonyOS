@@ -5,11 +5,21 @@ import {
   type SearchBook,
   type SearchResultDelta,
   type SearchHistory,
+  type SearchOutcome,
   type SearchSource,
+  type SearchWorkCompletion,
   searchSourceHealthState,
 } from './SearchGateway';
 import { projectOperationFacts } from '../../../app/ReaderOperationFacts';
-import type { SearchHistoryStatus, SearchIncompleteSource, SearchOperationFacts, SearchOperationValue, SearchPresentation, SearchSourceSkip } from '../presentation/SearchPresentation';
+import type {
+  SearchEntrySourceReadObservation,
+  SearchHistoryStatus,
+  SearchIncompleteSource,
+  SearchOperationFacts,
+  SearchOperationValue,
+  SearchPresentation,
+  SearchSourceSkip,
+} from '../presentation/SearchPresentation';
 import type { SearchBookPatch } from './SearchBookProjection';
 import type { BookAcquisitionChange } from '../../reading/application/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../../app/BookRequestScheduler';
@@ -105,12 +115,13 @@ class SearchQueryRun {
     return value;
   }
 
-  append(source: SearchSource, books: SearchBook[]): void {
+  append(source: SearchSource, books: SearchBook[]): number {
     const previous = this.sourceResults.get(source.sourceId) ?? [];
     const merged = new Map<string, SearchBook>();
     for (const book of previous) merged.set(`${book.sourceId}\u0000${book.bookId}`, book);
     for (const book of this.admit(books)) merged.set(`${book.sourceId}\u0000${book.bookId}`, book);
     this.sourceResults.set(source.sourceId, Array.from(merged.values()));
+    return merged.size - previous.length;
   }
 
   results(): SearchBook[] {
@@ -136,7 +147,73 @@ class SearchQueryRun {
  * `isCurrent()` is provided by Index and answers "is the Search route still the
  * active one?" so the orchestrator needs no knowledge of navigation.
  */
+export type SearchObsoleteWorkObserver = (generation: number, session: number, completion: SearchWorkCompletion) => void;
+
+export interface SearchWriteLease {
+  generation: number;
+  session: number;
+  active: boolean;
+}
+
+type SearchContinuationTrigger = 'viewport' | 'empty';
+
+export interface SearchContinuationPageObservation {
+  stage: 'admitted' | 'settled';
+  trigger: SearchContinuationTrigger;
+  generation: number;
+  session: number;
+  sourceOrdinal: number;
+  requestedPage: number;
+  previousPage: number;
+  outcome?: 'receipt' | 'failed' | 'missing-receipt';
+  addedResultCount?: number;
+  receiptState?: 'next' | 'end' | 'unknown';
+  progressState?: 'ready' | 'end' | 'unknown' | 'satisfied';
+  nextPage?: number;
+}
+
+export interface SearchContinuationObserver {
+  enabled: () => boolean;
+  observe: (observation: SearchContinuationPageObservation) => void;
+  observeAttempt?: (observation: SearchOnlineAttemptObservation) => void;
+}
+
+export interface SearchOnlineAttemptObservation {
+  stage: 'started' | 'settled';
+  trigger: 'initial' | 'retry';
+  generation: number;
+  session: number;
+  sourceCount: number;
+  sourceOrdinal: number;
+  requestedPage: number;
+  sameFailedSource?: boolean;
+  outcome?: 'completed' | 'failed';
+  httpStatus?: number;
+  capability?: 'book.search.page-receipt.v1';
+  receiptState?: 'next' | 'unknown';
+  receiptReason?: 'unverifiedEmpty';
+  progressState?: 'ready' | 'unknown';
+  nextPage?: number;
+  addedResultCount?: number;
+}
+
+export interface SearchSourceRetryObservation {
+  phase: 'started' | 'settled';
+  session: number;
+  attempt: number;
+  outcome?: 'ready' | 'noSources' | 'allDisabled' | 'failed';
+  sourceCount?: number;
+}
+
+interface SearchEntrySourceRead {
+  readonly load: Promise<SearchSource[]>;
+  observation?: SearchEntrySourceReadObservation;
+}
+
 export class SearchOrchestrator {
+  private obsoleteWorkObserver: SearchObsoleteWorkObserver | undefined;
+  private continuationObserver: SearchContinuationObserver | undefined;
+  private sourceRetryObserver: ((observation: SearchSourceRetryObservation) => void) | undefined;
   private gateway: SearchGateway;
   private emitPresentation: (presentation: SearchPresentation) => void;
   private emitSources: (sources: SearchSource[]) => void;
@@ -168,6 +245,9 @@ export class SearchOrchestrator {
   private work: number = 0;
   private sourceLoad: Promise<SearchSource[]> | undefined = undefined;
   private sourceLoadSession: number = 0;
+  private entrySourceRead: SearchEntrySourceRead | undefined = undefined;
+  private sourceRetry: Promise<SearchSource[]> | undefined = undefined;
+  private sourceRetryAttempt: number = 0;
   /**
    * True while the live sweep has active or paused workers.
    */
@@ -199,7 +279,7 @@ export class SearchOrchestrator {
   }
 
   /** Enter the Search page: invalidate prior entries, load sources + history. */
-  open(): void {
+  open(observeEntrySourceRead: boolean = false): void {
     this.close();
     this.sessionOpen = true;
     this.unsubscribeBooks = this.owner.bookAcquisitions?.().subscribe((change: BookAcquisitionChange): void => {
@@ -221,20 +301,31 @@ export class SearchOrchestrator {
     const sourceLoad = this.gateway.loadSources();
     this.sourceLoad = sourceLoad;
     this.sourceLoadSession = session;
+    const entryRead: SearchEntrySourceRead | undefined = observeEntrySourceRead ? { load: sourceLoad } : undefined;
+    this.entrySourceRead = entryRead;
     sourceLoad
       .then((sources: SearchSource[]): void => {
         if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
           return;
         }
+        const entry = this.presentation.kind === 'initial' ? this.entryPresentationForSources(sources) : undefined;
+        if (entryRead !== undefined && this.entrySourceRead === entryRead && this.work === 0 &&
+          this.presentation.kind === 'initial') {
+          const outcome = entry?.kind === 'sourceRequired' ? entry.reason : 'ready';
+          entryRead.observation = { session, outcome, sourceCount: sources.length };
+        }
         this.presentSources(sources);
         // Online-source availability does not disable local book search.
         // A user who already left Initial keeps the active search state.
-        if (this.presentation.kind === 'initial') {
-          const entry = this.entryPresentationForSources(sources);
-          if (entry !== undefined) {
-            this.present(entry);
-          }
+        if (this.presentation.kind === 'initial' && entry !== undefined) {
+          this.present(entry);
         }
+      }, (error: Error): void => {
+        if (entryRead !== undefined && this.entrySourceRead === entryRead && this.isCurrentSession(session) &&
+          this.sourceLoad === sourceLoad && this.work === 0 && this.presentation.kind === 'initial') {
+          entryRead.observation = { session, outcome: 'failed' };
+        }
+        throw error;
       })
       .catch((error: Error): void => {
         if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
@@ -249,6 +340,13 @@ export class SearchOrchestrator {
         this.presentSources([]);
       });
     this.loadEntryHistory(false);
+  }
+
+  observeEntrySourceRead(): SearchEntrySourceReadObservation | undefined {
+    const read = this.entrySourceRead;
+    if (read === undefined || read.load !== this.sourceLoad || !this.sessionOpen ||
+      this.work !== 0 || this.sourceLoadSession !== this.session) return undefined;
+    return read.observation;
   }
 
   /** Retry only history; do not reset a query, its scope, or source metadata. */
@@ -333,6 +431,7 @@ export class SearchOrchestrator {
     this.pendingBookIdentities.clear();
     this.sourceLoad = this.gateway.loadSources();
     this.sourceLoadSession = this.session;
+    this.entrySourceRead = undefined;
     this.work += 1;
     this.wakeDispatchers();
     this.sweepAlive = true;
@@ -416,6 +515,48 @@ export class SearchOrchestrator {
     }
   }
 
+  /** Diagnostic view of the same lease used by the worker publication guard. */
+  observeWriteLease(): SearchWriteLease {
+    return { generation: this.work, session: this.session, active: this.sweepAlive };
+  }
+
+  observeObsoleteWork(observer?: SearchObsoleteWorkObserver): void {
+    this.obsoleteWorkObserver = observer;
+  }
+
+  observeContinuation(observer?: SearchContinuationObserver): void {
+    this.continuationObserver = observer;
+  }
+
+  observeSourceRetry(observer?: (observation: SearchSourceRetryObservation) => void): void {
+    this.sourceRetryObserver = observer;
+  }
+
+  private acceptsCompletedWork(generation: number, session: number, completion: SearchWorkCompletion): boolean {
+    if (this.isCurrentWork(generation, session)) return true;
+    this.obsoleteWorkObserver?.(generation, session, completion);
+    return false;
+  }
+
+  private onlineWorkCompletion(outcome: SearchOutcome): SearchWorkCompletion {
+    if (outcome.ok === false) return outcome.obsoleteCompletion ?? 'other';
+    return outcome.results.length > 0 ? 'decoded-results' : 'other';
+  }
+
+  private onlineAttempt(run: SearchQueryRun, source: SearchSource, generation: number, session: number,
+    requestedPage: number, previousFailures: Map<string, WorkerFailure> | undefined): SearchOnlineAttemptObservation | undefined {
+    const sourceOrdinal = run.sources.indexOf(source);
+    if (this.run !== run || !this.isCurrentWork(generation, session) || sourceOrdinal < 0) return undefined;
+    const attempt: SearchOnlineAttemptObservation = { stage: 'started', trigger: previousFailures === undefined ? 'initial' : 'retry',
+      generation, session, sourceCount: run.sources.length, sourceOrdinal, requestedPage };
+    const previous = previousFailures?.get(source.sourceId)?.source;
+    if (previous === undefined && previousFailures !== undefined && previousFailures.size > 0) attempt.sameFailedSource = false;
+    else if (previous?.sourceVersion !== undefined && source.sourceVersion !== undefined) {
+      attempt.sameFailedSource = previous.sourceVersion === source.sourceVersion;
+    }
+    return attempt;
+  }
+
   /** Re-run the last failed or empty search, or reload sources after a list failure. */
   retry(): void {
     const run = this.run;
@@ -477,6 +618,8 @@ export class SearchOrchestrator {
     this.unsubscribeBooks?.();
     this.unsubscribeBooks = undefined;
     this.sessionOpen = false;
+    this.entrySourceRead = undefined;
+    this.sourceRetry = undefined;
     this.work += 1;
     this.sweepAlive = false;
     this.wakeDispatchers();
@@ -613,6 +756,7 @@ export class SearchOrchestrator {
     const sourceLoad = this.gateway.loadSources();
     this.sourceLoad = sourceLoad;
     this.sourceLoadSession = session;
+    this.entrySourceRead = undefined;
     sourceLoad
       .then((sources: SearchSource[]): void => {
         if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
@@ -798,7 +942,7 @@ export class SearchOrchestrator {
       try {
         const books = await this.gateway.searchLocalBooks(run.keyword, run.requestId,
           (): boolean => this.isCurrentWork(work, session));
-        if (!this.isCurrentWork(work, session)) return;
+        if (!this.acceptsCompletedWork(work, session, books.length > 0 ? 'decoded-results' : 'other')) return;
         run.localResults = run.admit(books, run.localResults);
         run.localStatus = 'done';
         run.localFailed = false;
@@ -837,6 +981,9 @@ export class SearchOrchestrator {
         run.sources = admitted;
         run.sourceListFailed = false;
         run.sourceListFailureReason = undefined;
+        const observer = this.continuationObserver;
+        const observe = observer?.enabled() === true ? observer.observeAttempt : undefined;
+        const previousFailures = observe !== undefined && forceSourceRetry ? new Map<string, WorkerFailure>(run.failures) : undefined;
         // Keep successful source buckets on retry. Replaced/deleted sources
         // cannot survive an explicit registry refresh through a stale bucket.
         const retained = new Set<string>(enabled.map((source: SearchSource): string => source.sourceId));
@@ -854,9 +1001,22 @@ export class SearchOrchestrator {
           (run.resumePages && run.progress(source).state === 'ready'));
         run.resumePages = false;
         await runBookSourceWorkers(pending, MAX_SEARCH_CONCURRENCY, async (source: SearchSource): Promise<void> => {
+            const requestedPage = run.progress(source).page;
+            const attempt = observe === undefined ? undefined :
+              this.onlineAttempt(run, source, work, session, requestedPage, previousFailures);
+            if (attempt !== undefined) observe?.(attempt);
             const outcome = await this.gateway.searchBySource(source, run.keyword,
-              (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent(), run.progress(source).page);
-            if (!this.isCurrentWork(work, session)) return;
+              (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent(), requestedPage);
+            if (!this.acceptsCompletedWork(work, session, this.onlineWorkCompletion(outcome))) return;
+            const settled: SearchOnlineAttemptObservation | undefined = attempt !== undefined && this.run === run
+              ? { stage: 'settled', trigger: attempt.trigger, generation: attempt.generation, session: attempt.session,
+                sourceCount: attempt.sourceCount, sourceOrdinal: attempt.sourceOrdinal,
+                requestedPage: attempt.requestedPage, sameFailedSource: attempt.sameFailedSource,
+                outcome: outcome.ok ? 'completed' : 'failed',
+                httpStatus: outcome.ok === false ? outcome.httpStatus : undefined,
+                capability: attempt.capability, receiptState: attempt.receiptState,
+                receiptReason: attempt.receiptReason, progressState: attempt.progressState,
+                nextPage: attempt.nextPage, addedResultCount: attempt.addedResultCount } : undefined;
             run.completed.add(source.sourceId);
             run.completedVersions.set(source.sourceId, source.sourceVersion);
             if (outcome.ok === false) {
@@ -872,9 +1032,33 @@ export class SearchOrchestrator {
                 (outcome.discardedReasons ?? []).join('; '));
               run.failures.delete(source.sourceId);
               this.failedSourceCooldown.delete(this.sourceCooldownKey(source));
-              run.append(source, outcome.results);
-              run.progress(source).accept(outcome.pageReceipt, outcome.results.map((book: SearchBook): string => book.bookId));
+              const addedResultCount = run.append(source, outcome.results);
+              const progress = run.progress(source);
+              const receipt = outcome.pageReceipt;
+              progress.accept(receipt, outcome.results.map((book: SearchBook): string => book.bookId));
+              // A negotiated receipt alone is insufficient when the source cursor refuses to advance.
+              if (settled !== undefined && (settled.trigger === 'initial' || settled.sameFailedSource === true) &&
+                  requestedPage === 1 && receipt?.state === 'next' &&
+                  source.sourceVersion !== undefined && source.sourceVersion.length > 0 && receipt.sourceVersion === source.sourceVersion &&
+                  receipt.nextPage === 2 && progress.state === 'ready' && progress.page === 2) {
+                settled.capability = 'book.search.page-receipt.v1';
+                settled.receiptState = 'next';
+                settled.progressState = 'ready';
+                settled.nextPage = progress.page;
+                settled.addedResultCount = addedResultCount;
+              } else if (settled?.trigger === 'initial' && requestedPage === 1 && receipt?.state === 'unknown' &&
+                  receipt.reason === 'unverifiedEmpty' && receipt.requestFingerprint !== undefined &&
+                  source.sourceVersion !== undefined && source.sourceVersion.length > 0 && receipt.sourceVersion === source.sourceVersion &&
+                  progress.state === 'unknown' && progress.reason === 'unverifiedEmpty' && progress.page === requestedPage &&
+                  outcome.results.length === 0 && addedResultCount === 0) {
+                settled.capability = 'book.search.page-receipt.v1';
+                settled.receiptState = 'unknown';
+                settled.receiptReason = 'unverifiedEmpty';
+                settled.progressState = 'unknown';
+                settled.addedResultCount = 0;
+              }
             }
+            if (settled !== undefined) observe?.(settled);
             this.scheduleRunPublish(run, work, session);
         }, async (): Promise<boolean> => await this.waitForDispatch(work, session) && this.isCurrent());
         if (!this.isCurrentWork(work, session)) return;
@@ -898,7 +1082,7 @@ export class SearchOrchestrator {
     }
   }
 
-  needMoreResults(): void {
+  needMoreResults(trigger: SearchContinuationTrigger = 'empty'): void {
     const run = this.run;
     if (run === undefined || run.stopped || this.sweepAlive || run.continuationRunning || !this.isCurrent() ||
       run.localStatus === 'running' || run.onlineStatus !== 'done') return;
@@ -906,15 +1090,49 @@ export class SearchOrchestrator {
       run.completed.has(source.sourceId) && !run.failures.has(source.sourceId) && run.progress(source).state === 'ready');
     if (pending.length === 0) return;
     const work = this.work, session = this.session;
+    const observer = this.continuationObserver;
+    const sourceOrdinals = observer?.enabled() === true ? new Map<string, number>() : undefined;
+    if (sourceOrdinals !== undefined) {
+      run.sources.forEach((source: SearchSource, index: number): void => { sourceOrdinals.set(source.sourceId, index); });
+    }
     run.continuationRunning = true; this.sweepAlive = true;
     this.publishRun(run);
     void runBookSourceWorkers(pending, MAX_SEARCH_CONCURRENCY, async (source: SearchSource): Promise<void> => {
       const progress = run.progress(source);
+      const requestedPage = progress.page;
+      const sourceOrdinal = sourceOrdinals?.get(source.sourceId);
+      // Only a validated Core next receipt advances ready progress beyond
+      // page one. The initial ready state is not a continuation receipt.
+      const observation: SearchContinuationPageObservation | undefined = sourceOrdinal !== undefined &&
+        requestedPage > 1 && progress.state === 'ready' && this.isCurrentWork(work, session) && this.run === run
+        ? { stage: 'admitted', trigger, generation: work, session, sourceOrdinal, requestedPage,
+          previousPage: requestedPage - 1 }
+        : undefined;
+      if (observation !== undefined) observer?.observe(observation);
       const outcome = await this.gateway.searchBySource(source, run.keyword,
-        (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent(), progress.page);
-      if (!this.isCurrentWork(work, session) || this.run !== run) return;
-      if (outcome.ok === false) run.failures.set(source.sourceId, { source, error: outcome.error, diagnostic: outcome.diagnostic });
-      else { run.append(source, outcome.results); progress.accept(outcome.pageReceipt, outcome.results.map((book: SearchBook): string => book.bookId)); run.failures.delete(source.sourceId); }
+        (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent(), requestedPage);
+      if (!this.acceptsCompletedWork(work, session, this.onlineWorkCompletion(outcome)) || this.run !== run) return;
+      if (outcome.ok === false) {
+        run.failures.set(source.sourceId, { source, error: outcome.error, diagnostic: outcome.diagnostic });
+        if (observation !== undefined) {
+          observer?.observe({ stage: 'settled', trigger: observation.trigger, generation: observation.generation,
+            session: observation.session, sourceOrdinal: observation.sourceOrdinal,
+            requestedPage: observation.requestedPage, previousPage: observation.previousPage,
+            outcome: 'failed', addedResultCount: 0 });
+        }
+      } else {
+        const addedResultCount = run.append(source, outcome.results);
+        const receipt = outcome.pageReceipt;
+        progress.accept(receipt, outcome.results.map((book: SearchBook): string => book.bookId));
+        run.failures.delete(source.sourceId);
+        if (observation !== undefined) {
+          observer?.observe({ stage: 'settled', trigger: observation.trigger, generation: observation.generation,
+            session: observation.session, sourceOrdinal: observation.sourceOrdinal,
+            requestedPage: observation.requestedPage, previousPage: observation.previousPage,
+            outcome: receipt === undefined ? 'missing-receipt' : 'receipt', addedResultCount,
+            receiptState: receipt?.state, progressState: progress.state, nextPage: receipt?.nextPage });
+        }
+      }
       this.scheduleRunPublish(run, work, session);
     }, async (): Promise<boolean> => await this.waitForDispatch(work, session) && this.isCurrent()).catch((error: Error): void => {
       if (this.isCurrentWork(work, session)) { run.sourceListFailureReason = errorMessageOf(error); run.sourceListFailed = true; }
@@ -1038,32 +1256,31 @@ export class SearchOrchestrator {
 
   /** Re-run the source-list load after a sourceLoadError, staying on the same session. */
   private retrySourceLoad(): void {
+    if (!this.sessionOpen || this.sourceRetry !== undefined && this.sourceRetry === this.sourceLoad) return;
     const session = this.session;
-    const sourceLoad = this.gateway.loadSources();
+    const attempt = ++this.sourceRetryAttempt;
+    const sourceLoad = this.gateway.loadSources(true);
+    this.sourceRetry = sourceLoad;
     this.sourceLoad = sourceLoad;
     this.sourceLoadSession = session;
-    sourceLoad
-      .then((sources: SearchSource[]): void => {
-        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
-          return;
-        }
-        this.presentSources(sources);
-        const entry = this.entryPresentationForSources(sources);
-        if (entry !== undefined) {
-          this.present(entry);
-          return;
-        }
-        // Sources recovered; the normal entry reset keeps Initial, history and
-        // sources coherent.
-        this.open();
-      })
-      .catch((error: Error): void => {
-        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Search source list retry failed: %{private}s', error.message);
-        this.present({ kind: 'sourceLoadError', history: this.entryHistory });
-      });
+    this.entrySourceRead = undefined;
+    this.sourceRetryObserver?.({ phase: 'started', session, attempt });
+    void sourceLoad.then((sources: SearchSource[]): void => {
+      if (this.sourceRetry === sourceLoad) this.sourceRetry = undefined;
+      if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) return;
+      const entry = this.entryPresentationForSources(sources);
+      this.presentSources(sources);
+      this.present(entry ?? { kind: 'initial', history: this.entryHistory });
+      const outcome = entry?.kind === 'sourceRequired' ? entry.reason : 'ready';
+      this.sourceRetryObserver?.({ phase: 'settled', session, attempt, outcome, sourceCount: sources.length });
+    }, (error: Error): void => {
+      if (this.sourceRetry === sourceLoad) this.sourceRetry = undefined;
+      if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) return;
+      hilog.error(DOMAIN, 'Reader', 'Search source list retry failed: %{private}s', error.message);
+      this.presentSources([]);
+      this.present({ kind: 'sourceLoadError', history: this.entryHistory });
+      this.sourceRetryObserver?.({ phase: 'settled', session, attempt, outcome: 'failed' });
+    });
   }
 
   private dedupeSearchResults(results: SearchBook[]): SearchBook[] {

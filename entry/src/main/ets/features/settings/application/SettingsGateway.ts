@@ -1,3 +1,4 @@
+import { readerHostPreferencesName } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import preferences from '@ohos.data.preferences';
 import { common } from '@kit.AbilityKit';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
@@ -186,7 +187,7 @@ export class SettingsGateway {
       wideNavigationRail: snapshot.wideNavigationRail };
   }
   private async ensureStore(): Promise<preferences.Preferences> {
-    if (this.store === undefined) this.store = await preferences.getPreferences(this.context, SETTINGS_PREFERENCES_NAME);
+    if (this.store === undefined) this.store = await preferences.getPreferences(this.context, readerHostPreferencesName(this.context.filesDir, SETTINGS_PREFERENCES_NAME));
     return this.store;
   }
 }

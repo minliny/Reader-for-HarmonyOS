@@ -18,6 +18,8 @@ export class ReaderLibrarySearchModel {
   historyStatus: SearchHistoryStatus | undefined = undefined;
   hasSession: boolean = false;
   sourceRecoveryVisible: boolean = false;
+  /** Pending until the current entry owner can choose native focus versus editing. */
+  fieldKeyboardOnFocus: boolean | undefined = undefined;
   sweeping: boolean = false;
   canSubmit: boolean = false;
   fieldSubmitEnabled: boolean = false;
@@ -37,8 +39,14 @@ export class ReaderLibrarySearchModel {
   onHistory: (value: string) => void = (_value: string): void => {};
   private owner: number = 0;
   private inputBack: (() => boolean) | undefined;
+  private inputFocusReady: ((owner: number) => void) | undefined;
 
-  claim(owner: number): void { this.owner = owner; this.interactive = false; this.panelOwnsInput = false; }
+  claim(owner: number): void {
+    this.owner = owner;
+    this.interactive = false;
+    this.panelOwnsInput = false;
+    this.fieldKeyboardOnFocus = undefined;
+  }
   owns(owner: number): boolean { return owner !== 0 && this.owner === owner; }
   currentOwner(): number { return this.owner; }
   activate(owner: number): void { if (this.owns(owner)) this.interactive = true; }
@@ -46,6 +54,16 @@ export class ReaderLibrarySearchModel {
   bindInputBack(handler: () => boolean): () => void {
     this.inputBack = handler;
     return (): void => { if (this.inputBack === handler) this.inputBack = undefined; };
+  }
+  bindInputFocusReady(handler: (owner: number) => void): () => void {
+    this.inputFocusReady = handler;
+    return (): void => { if (this.inputFocusReady === handler) this.inputFocusReady = undefined; };
+  }
+  setFieldKeyboardOnFocus(owner: number, keyboardOnFocus: boolean | undefined): void {
+    if (!this.accepts(owner) || this.fieldKeyboardOnFocus === keyboardOnFocus) return;
+    const becameReady = this.fieldKeyboardOnFocus === undefined && keyboardOnFocus !== undefined;
+    this.fieldKeyboardOnFocus = keyboardOnFocus;
+    if (becameReady) this.inputFocusReady?.(owner);
   }
   consumeInputBack(): boolean { return this.interactive && this.inputBack?.() === true; }
   private accepts(owner: number): boolean { return this.interactive && this.owns(owner); }

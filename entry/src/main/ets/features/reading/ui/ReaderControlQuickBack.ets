@@ -29,6 +29,7 @@ export struct ReaderControlQuickBack {
         .backgroundColor(readerAppColor(this.variant === 'auto-page' ? 'TOK_SURFACE_PANEL' : 'TOK_SURFACE_PANEL_SOFT', this.scheme))
         .borderRadius(8);
     }.width(this.actionWidth).height(this.actionHeight)
+      .id('reader-control-module-back-' + this.variant)
       .padding(0)
       .backgroundColor(Color.Transparent)
       .borderRadius(8).opacity(1)

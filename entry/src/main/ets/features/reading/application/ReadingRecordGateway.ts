@@ -1,3 +1,4 @@
+import { readerHostPreferencesName } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import preferences from '@ohos.data.preferences';
 import util from '@ohos.util';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -562,7 +563,7 @@ export class ReadingRecordGateway {
     }
     this.store = await preferences.getPreferences(
       this.runtimeOwner.getUIAbilityContext(),
-      READING_RECORD_PREFERENCES_NAME,
+      readerHostPreferencesName(this.runtimeOwner.getUIAbilityContext().filesDir, READING_RECORD_PREFERENCES_NAME),
     );
     return this.store;
   }

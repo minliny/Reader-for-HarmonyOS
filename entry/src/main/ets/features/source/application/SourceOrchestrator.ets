@@ -7,15 +7,23 @@ import {
 import type { BookSourceJsonSelection } from '../../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
-import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderOperationFacts';
+import { projectOperationFacts, type CommitConfirmationKind, type OperationFacts } from '../../../app/ReaderOperationFacts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../../app/ReaderPersistedReceiptProjection';
 import type { RulesMutationSnapshot } from '../../settings/application/RulesMutationOwner';
 import { errorMessageOf } from '../../../app/ErrorMessage';
+import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
+import { OFFLINE_DETECT_CORE_REASON, PUBLIC_OFFLINE_DETECT_SOURCE_URL, sourceVerificationOfflineDetectIdentity,
+  sourceVerificationOpening, sourceVerificationRecoveryControl, sourceVerificationRowLoginControl,
+  sourceVerificationToggleAnchor, type SourceOfflineDetectAdmission, type SourceVerificationControl,
+  type SourceVerificationOpening,
+  type SourceToggleObservationIdentity, type SourceToggleSettledObservation } from '../ui/SourceManagementVerification';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
 const DOMAIN = 0x5244;
 let sourceProjectionGeneration: number = 0;
+let offlineDetectVerificationSequence: number = 0;
+let sourceControlVerificationSequence: number = 0;
 
 interface SourceCheckCapture {
   sourceId: string;
@@ -23,6 +31,16 @@ interface SourceCheckCapture {
   signature: string;
   session: number;
   definition?: SourceDefinitionSnapshot;
+  offlineDetect?: SourceOfflineDetectAdmission;
+}
+
+interface SourceReadRetryObservation {
+  readonly phase: 'started' | 'settled';
+  readonly failedReadGeneration: number;
+  readonly startedReadGeneration: number;
+  readonly readGeneration: number;
+  readonly readFact: string;
+  readonly count: number;
 }
 
 export interface SourceManagementProjection {
@@ -148,6 +166,7 @@ export class SourceOrchestrator {
   reconcile(generation: number): void {
     const session = this.session;
     const original = this.latestProjection.original;
+    this.observeRecoveryControl('reconcile', generation);
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
       if (!this.isCurrentSession(session)) return;
       if (original?.blocked && original.generation === generation) {
@@ -161,9 +180,23 @@ export class SourceOrchestrator {
           receipt.receipt.confirmation, 'reading');
         await this.loadList(session);
       } else if (read?.generation === generation && read.canRetry) {
-        this.publishRead(session, 'loading'); await this.loadList(session);
+        this.publishRead(session, 'loading');
+        const started = this.latestProjection.readFacts?.generation;
+        if (started !== undefined) this.observeReadRetry(session, 'started', generation, started);
+        await this.loadList(session);
+        if (started !== undefined) this.observeReadRetry(session, 'settled', generation, started);
       }
     });
+  }
+
+  private observeReadRetry(session: number, phase: 'started' | 'settled',
+    failedReadGeneration: number, startedReadGeneration: number): void {
+    if (!ReaderUIVerificationProbe.enabled() || !this.isCurrentSession(session)) return;
+    const read = this.latestProjection.readFacts;
+    if (read === undefined || (phase === 'settled' && read.generation <= startedReadGeneration)) return;
+    const observation: SourceReadRetryObservation = { phase, failedReadGeneration, startedReadGeneration,
+      readGeneration: read.generation, readFact: read.fact, count: this.sources.length };
+    ReaderUIVerificationProbe.emit('source.read-retry', 'business', observation);
   }
 
   continueOriginal(generation: number): void {
@@ -171,7 +204,43 @@ export class SourceOrchestrator {
     const original = this.latestProjection.original;
     if (!this.isCurrentSession(session) || original?.generation !== generation || original.operationId === undefined ||
       !original.blocked || !original.canRetryOriginal || original.busy) return;
+    this.observeRecoveryControl('continue', generation);
     this.operationChain = this.operationChain.then((): Promise<void> => this.recoverProjectedOriginal(session, original, true));
+  }
+
+  private observeRecoveryControl(control: 'reconcile' | 'continue', generation: number): void {
+    try {
+      if (!ReaderUIVerificationProbe.enabled() || !this.isCurrentSession(this.session)) return;
+      const owner = sourceVerificationOpening(this.presentationIdentity ?? '');
+      const original = this.latestProjection.original;
+      const receipt = this.latestProjection.receipt;
+      const admitted = sourceVerificationRecoveryControl(control, generation,
+        original === undefined ? undefined : {
+          blocked: original.blocked,
+          generation: original.generation,
+          operationId: original.operationId,
+          canRetryOriginal: original.canRetryOriginal,
+          busy: original.busy,
+        },
+        receipt === undefined ? undefined : {
+          confirmation: receipt.receipt.confirmation,
+          generation: receipt.facts.generation,
+          canRetry: receipt.facts.canRetry,
+        });
+      if (owner === undefined || admitted === undefined) return;
+      this.emitControlAdmission(owner, admitted);
+    } catch (_) {
+      // Verification never participates in the normal recovery command.
+    }
+  }
+
+  private emitControlAdmission(owner: SourceVerificationOpening, admitted: SourceVerificationControl): void {
+    ReaderUIVerificationProbe.emit('source.control-action', 'business', {
+      phase: 'admitted', owner, branch: admitted.branch, control: admitted.control,
+      generation: admitted.generation, blocked: admitted.blocked, canContinue: admitted.canContinue,
+      sourceAnchor: admitted.sourceAnchor, loginEligible: admitted.loginEligible,
+      sequence: ++sourceControlVerificationSequence,
+    });
   }
 
   private async recoverProjectedOriginal(session: number, expected: RulesMutationSnapshot, retry: boolean): Promise<void> {
@@ -255,8 +324,9 @@ export class SourceOrchestrator {
     this.toggleSeq += 1;
     const seq = this.toggleSeq;
     const session = this.session;
+    const observation = this.observeToggleAdmission(id, enabled, seq);
     this.operationChain = this.operationChain
-      .then((): Promise<void> => this.applyToggle(id, enabled, seq, session))
+      .then((): Promise<void> => this.applyToggle(id, enabled, seq, session, observation))
       .catch((error: Error): void => {
         if (this.isCurrentSession(session)) {
           this.publishStatus('error', `书源启停失败：${error.message}`);
@@ -267,10 +337,31 @@ export class SourceOrchestrator {
       });
   }
 
-  /** Queue one production L1-L5 diagnostic; repeated taps never duplicate it. */
+  private observeToggleAdmission(id: string, requestedEnabled: boolean, toggleSeq: number): SourceToggleObservationIdentity | undefined {
+    try {
+      if (!ReaderUIVerificationProbe.enabled()) return undefined;
+      const owner = sourceVerificationOpening(this.presentationIdentity ?? '');
+      if (owner === undefined) return undefined;
+      const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
+      const anchor = sourceVerificationToggleAnchor(source);
+      if (anchor === 0) return undefined;
+      const observation: SourceToggleObservationIdentity = { owner, anchor, toggleSeq, requestedEnabled };
+      ReaderUIVerificationProbe.emit('source.toggle', 'business', {
+        phase: 'admitted', owner: observation.owner, anchor: observation.anchor,
+        toggleSeq: observation.toggleSeq, requestedEnabled: observation.requestedEnabled,
+      });
+      return observation;
+    } catch (_) {
+      // Verification must never affect whether the normal input is admitted.
+      return undefined;
+    }
+  }
+
+  /** Queue the production row diagnostic without duplicating a pending check. */
   checkSource(id: string): void {
     const capture = this.captureSourceCheck(id);
     if (capture === undefined) return;
+    this.observeOfflineDetectAdmission(capture);
     this.setCheckProjection(id, 'checking', [], '检测中');
     this.operationChain = this.operationChain
       .then((): Promise<void> => this.applySourceCheck(capture))
@@ -282,6 +373,53 @@ export class SourceOrchestrator {
       .finally((): void => {
         if (this.checkingSourceIds.get(id) === capture) this.checkingSourceIds.delete(id);
       });
+  }
+
+  private observeOfflineDetectAdmission(capture: SourceCheckCapture): void {
+    try {
+      if (capture.sourceId !== PUBLIC_OFFLINE_DETECT_SOURCE_URL || !ReaderUIVerificationProbe.enabled()) return;
+      const read = this.latestProjection.readFacts;
+      if (read?.fact !== 'current') return;
+      const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === capture.sourceId);
+      const identity = sourceVerificationOfflineDetectIdentity(source,
+        sourceVerificationOpening(this.presentationIdentity ?? ''), read.generation);
+      if (identity === undefined) return;
+      const admitted: SourceOfflineDetectAdmission = {
+        owner: identity.owner, anchor: identity.anchor, readGeneration: identity.readGeneration,
+        definition: identity.definition, reportVersion: identity.reportVersion,
+        sequence: ++offlineDetectVerificationSequence,
+      };
+      capture.offlineDetect = admitted;
+      ReaderUIVerificationProbe.emit('source.row-detect', 'business', {
+        phase: 'admitted', owner: admitted.owner, anchor: admitted.anchor,
+        readGeneration: admitted.readGeneration, definition: admitted.definition,
+        reportVersion: admitted.reportVersion, sequence: admitted.sequence,
+      });
+    } catch (_) {
+      // Verification is observational for the normal admitted command.
+    }
+  }
+
+  private observeOfflineDetectResult(capture: SourceCheckCapture, outcome: SourceCheckOutcome): void {
+    try {
+      const admission = capture.offlineDetect;
+      const report = outcome.report;
+      if (admission === undefined || report === undefined || !this.isCurrentSourceCheck(capture)) return;
+      const l1 = report.steps[0];
+      const l2 = report.steps[1];
+      ReaderUIVerificationProbe.emit('source.row-detect', 'business', {
+        phase: 'settled', owner: admission.owner, anchor: admission.anchor,
+        readGeneration: admission.readGeneration, definition: admission.definition,
+        sequence: admission.sequence, reportVersion: report.version, mode: report.mode,
+        available: outcome.available, requestedLevels: outcome.requestedLevels ?? [],
+        levelsPassed: outcome.levelsPassed, l1: l1.status, l2: l2.status,
+        l1Executed: l1.executed, l2Executed: l2.executed,
+        reason: outcome.failureReason === OFFLINE_DETECT_CORE_REASON ? 'missing-search-url' : 'other',
+        hostEvidenceCount: outcome.hostEvidenceCount,
+      });
+    } catch (_) {
+      // The validated production report and row projection are already committed.
+    }
   }
 
   /** Open the source-owned login/challenge URL on the shared Host session. */
@@ -297,6 +435,7 @@ export class SourceOrchestrator {
       .then(async (): Promise<void> => {
         const definition = await this.validateSourceCheck(capture);
         if (definition === undefined) return;
+        this.observeRowLoginControl(source, loginUrl);
         await this.owner.openSourceLogin(source.sourceId, loginUrl, source.name,
           (): boolean => this.isCurrentSourceCheck(capture));
         if (await this.validateSourceCheck(capture, definition) === undefined) return;
@@ -317,6 +456,20 @@ export class SourceOrchestrator {
       .finally((): void => {
         if (this.checkingSourceIds.get(id) === capture) this.checkingSourceIds.delete(id);
       });
+  }
+
+  private observeRowLoginControl(source: BookSource, loginUrl: string): void {
+    try {
+      if (!ReaderUIVerificationProbe.enabled() || !this.isCurrentSession(this.session)) return;
+      const owner = sourceVerificationOpening(this.presentationIdentity ?? '');
+      const admitted = sourceVerificationRowLoginControl(source, loginUrl,
+        this.gateway.originalMutationSnapshot()?.blocked === true,
+        this.latestProjection.receipt?.receipt.confirmation);
+      if (owner === undefined || admitted === undefined) return;
+      this.emitControlAdmission(owner, admitted);
+    } catch (_) {
+      // The source owner opens the same normal page regardless of observation.
+    }
   }
 
   /**
@@ -474,7 +627,7 @@ export class SourceOrchestrator {
   }
 
   private async applyToggle(
-    id: string, enabled: boolean, seq: number, session: number,
+    id: string, enabled: boolean, seq: number, session: number, observation?: SourceToggleObservationIdentity,
   ): Promise<void> {
     // A toggle can be rejected while an unrelated Host operation (search,
     // check, sync) is in flight, because Core refuses to start `source.update`
@@ -485,7 +638,10 @@ export class SourceOrchestrator {
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
     try { await this.updateSourceWithRetry(id, enabled); }
-    catch (error) { this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', (error as Error).message); return; }
+    catch (error) {
+      this.publishToggleReceipt(session, id, evidence.confirmation(), 'failed', observation, (error as Error).message);
+      return;
+    }
     finally { this.gateway.observeWrites(undefined); }
     this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
     if (!enabled && !this.gateway.handlesSourceCleanup()) {
@@ -533,7 +689,7 @@ export class SourceOrchestrator {
     try {
       sources = await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
     } catch (error) {
-      this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', (error as Error).message);
+      this.publishToggleReceipt(session, id, evidence.confirmation(), 'failed', observation, (error as Error).message);
       hilog.warn(DOMAIN, 'Reader',
         'Source toggle persisted but list reload failed: sourceId=%{private}s enabled=%{private}s err=%{private}s',
         id, enabled, (error as Error).message);
@@ -542,7 +698,26 @@ export class SourceOrchestrator {
     if (this.isCurrentSession(session) && seq === this.toggleSeq) {
       this.presentSources(sources);
       this.hasRead = true;
-      this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'succeeded');
+      this.publishToggleReceipt(session, id, evidence.confirmation(), 'succeeded', observation, undefined, sources);
+    }
+  }
+
+  private publishToggleReceipt(session: number, id: string, confirmation: CommitConfirmationKind,
+    readback: 'failed' | 'succeeded', observation: SourceToggleObservationIdentity | undefined,
+    refreshError?: string, freshSources?: BookSource[]): void {
+    const receipt = this.publishReceipt(session, 'toggle', id, confirmation, readback, refreshError).receipt;
+    if (observation === undefined || !this.isCurrentSession(session) || observation.toggleSeq !== this.toggleSeq) return;
+    try {
+      const rows = freshSources?.filter((source: BookSource): boolean => source.sourceId === id) ?? [];
+      const observed = rows.length === 1 && sourceVerificationToggleAnchor(rows[0]) === observation.anchor ? rows[0] : undefined;
+      const settled: SourceToggleSettledObservation = {
+        phase: 'settled', owner: observation.owner, anchor: observation.anchor,
+        toggleSeq: observation.toggleSeq, requestedEnabled: observation.requestedEnabled,
+        confirmation: receipt.confirmation, readback, observedEnabled: observed?.enabled,
+      };
+      ReaderUIVerificationProbe.emit('source.toggle', 'business', settled);
+    } catch (_) {
+      // An incomplete probe is independent of the original write and read-back.
     }
   }
 
@@ -557,8 +732,8 @@ export class SourceOrchestrator {
   }
 
   private publishReceipt(session: number, action: string, sourceId: string,
-    confirmation: 'confirmed' | 'unknown' | 'undispatched', readback: 'reading' | 'failed' | 'succeeded',
-    refreshError?: string, confirmedParts?: number): void {
+    confirmation: CommitConfirmationKind, readback: 'reading' | 'failed' | 'succeeded',
+    refreshError?: string, confirmedParts?: number): PersistedReceiptProjection<BookSource[]> {
     const original=this.gateway.originalMutationSnapshot();
     if (original?.blocked) confirmation=original.confirmation;
     const receipt = projectPersistedReceipt<BookSource[]>({ confirmation, readback, value: this.hasRead ? this.sources : undefined,
@@ -572,6 +747,7 @@ export class SourceOrchestrator {
         readback === 'succeeded' && confirmation === 'confirmed' ? '' :
           receipt.receipt.message + (refreshError === undefined ? '' : `：${refreshError}`));
     }
+    return receipt;
   }
 
   private sourceCheckSignature(source: BookSource): string {
@@ -669,6 +845,7 @@ export class SourceOrchestrator {
         outcome.levelsPassed,
         `搜索检测通过 · ${outcome.durationMs}ms`,
       );
+      this.observeOfflineDetectResult(capture, outcome);
       return;
     }
     this.setCheckProjection(
@@ -677,6 +854,7 @@ export class SourceOrchestrator {
       outcome.levelsPassed,
       outcome.failureReason ?? '检测失败',
     );
+    this.observeOfflineDetectResult(capture, outcome);
   }
 
   private setCheckProjection(
@@ -799,6 +977,7 @@ export class SourceOrchestrator {
         checkMessage: checked?.checkMessage ?? source.checkMessage,
         checkReports: source.checkReports,
         lastCheckSummary: source.lastCheckSummary,
+        offlineDetectReportVersion: source.offlineDetectReportVersion,
       };
     });
     if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }

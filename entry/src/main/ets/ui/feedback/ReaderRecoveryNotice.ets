@@ -5,6 +5,9 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderRecoveryAction } from './ReaderRecoveryAction';
 import type { ReaderRecoveryView } from './ReaderRecoveryView';
 
+export type ReaderRecoveryTextAction = 'reconcile' | 'continue' | 'expand';
+export type ReaderRecoveryBodyPresentation = 'fits' | 'collapsed' | 'expanded';
+
 /** One original operation, with its own captured generation and actions. The
  * host places this compact surface above content, below the safe top inset. */
 @Component
@@ -28,6 +31,8 @@ export struct ReaderRecoveryNotice {
   /** The enclosing group owns its single painted surface. */
   @Prop grouped: boolean = false;
   @Prop follows: boolean = false;
+  @Prop focusIdPrefix: string = '';
+  @Prop titleId: string = '';
   @State private separateActions: boolean = false;
   @State private expanded: boolean = false;
   @State private clipped: boolean = false;
@@ -39,8 +44,14 @@ export struct ReaderRecoveryNotice {
   private mounted: boolean = false;
   private appearanceEpoch: number = 0;
   private measuredGeneration: number = -1;
+  textLayoutOptions: ((action: ReaderRecoveryTextAction, label: string) => TextOptions | undefined) | undefined = undefined;
+  bodyTextLayoutOptions: ((generation: number, presentation: ReaderRecoveryBodyPresentation, prefix: string) =>
+    TextOptions | undefined) | undefined = undefined;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onSecondaryAction: (generation: number) => void = (_generation: number): void => {};
+  onTitleMeasured: (generation: number, clipped: boolean | undefined) => void =
+    (_generation: number, _clipped: boolean | undefined): void => {};
+  onBodyExpansion: ((generation: number, expanded: boolean) => void) | undefined = undefined;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -68,7 +79,7 @@ export struct ReaderRecoveryNotice {
   private noticeBody() {
       Stack({ alignContent: Alignment.BottomEnd }) {
         Column() {
-          Text() {
+          Text(undefined, this.noticeBodyTextOptions()) {
             Span(` ${this.tag} `).fontSize(MESSAGE_META.fontSizeFp)
               .textBackgroundStyle({ color: readerAppColor('TOK_MESSAGE_TAG', this.appThemeScheme), radius: 4 });
             Span(`  ${this.view.message}`);
@@ -79,7 +90,7 @@ export struct ReaderRecoveryNotice {
               Span(this.reservedSpace);
             }
           }
-          .width('100%').fontFamily(MESSAGE_NOTICE_TITLE.fontFamily)
+          .id(this.titleId).width('100%').fontFamily(MESSAGE_NOTICE_TITLE.fontFamily)
           .fontWeight(MESSAGE_NOTICE_TITLE.fontWeight).fontSize(MESSAGE_NOTICE_TITLE.fontSizeFp)
           .lineHeight(MESSAGE_NOTICE_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_NOTICE_INK', this.appThemeScheme))
@@ -99,23 +110,32 @@ export struct ReaderRecoveryNotice {
           if ((this.view.canRetry || this.busy || this.secondaryBusy || this.retainPrimaryAction) && this.actionLabel.length > 0) {
             ReaderRecoveryAction({ variant: 'notice', label: this.actionLabel, generation: this.view.generation,
               isBusy: this.busy, actionEnabled: this.actionEnabled && !this.busy && !this.secondaryBusy,
+              focusId: this.focusId('reconcile'),
+              textLayoutOptions: this.textLayoutOptions?.('reconcile', this.actionLabel),
               onReconcile: this.onReconcile });
           }
           if (this.secondaryActionLabel.length > 0) {
             ReaderRecoveryAction({ variant: 'notice', label: this.secondaryActionLabel, generation: this.view.generation,
               isBusy: this.secondaryBusy, actionEnabled: this.secondaryActionEnabled && !this.busy && !this.secondaryBusy,
+              focusId: this.focusId('continue'),
+              textLayoutOptions: this.textLayoutOptions?.('continue', this.secondaryActionLabel),
               onReconcile: this.onSecondaryAction });
           }
           if (this.clipped) {
             ReaderRecoveryAction({ variant: 'notice', label: this.expanded ? '收起' : '展开',
-              generation: this.view.generation,
+              generation: this.view.generation, focusId: this.focusId('expand'),
+              textLayoutOptions: this.textLayoutOptions?.('expand', this.expanded ? '收起' : '展开'),
               onReconcile: (generation: number): void => {
-                if (this.view.visible && this.clipped && generation === this.view.generation) this.expanded = !this.expanded;
+                if (this.view.visible && this.clipped && generation === this.view.generation) {
+                  this.expanded = !this.expanded;
+                  this.onBodyExpansion?.(generation, this.expanded);
+                }
               } });
           }
         }.constraintSize({ maxWidth: '100%' }).width(this.actionsWidth > 0 ? this.actionsWidth : undefined)
           .onAreaChange(this.actionsAreaHandler());
       }
+      .id(this.focusId('recovery'))
       .width('100%')
       .margin({ top: this.grouped && this.follows ? 10 : 0 })
       .padding({ left: this.grouped ? 0 : 12, right: this.grouped ? 0 : 12,
@@ -126,6 +146,16 @@ export struct ReaderRecoveryNotice {
       .backgroundColor(this.grouped ? Color.Transparent : readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))
       .shadow({ radius: this.grouped ? 0 : 16, offsetY: this.grouped ? 0 : 4, color: '#18000000' })
       .hitTestBehavior(HitTestMode.Default);
+  }
+
+  private focusId(part: string): string {
+    return this.focusIdPrefix.length > 0 ? `${this.focusIdPrefix}-${part}` : '';
+  }
+
+  private noticeBodyTextOptions(): TextOptions | undefined {
+    if (this.bodyTextLayoutOptions === undefined || this.view.message.length === 0) return undefined;
+    const presentation: ReaderRecoveryBodyPresentation = this.clipped ? (this.expanded ? 'expanded' : 'collapsed') : 'fits';
+    return this.bodyTextLayoutOptions(this.view.generation, presentation, ` ${this.tag}   ${this.view.message}`);
   }
 
   private hasNoticeActions(): boolean {
@@ -164,6 +194,7 @@ export struct ReaderRecoveryNotice {
     }
     if (!Number.isFinite(width) || width <= 0) return;
     this.measuredWidth = width;
+    let measuredClipping: boolean | undefined;
     try {
       const context = this.getUIContext();
       const utils = context.getMeasureUtils();
@@ -194,7 +225,7 @@ export struct ReaderRecoveryNotice {
       this.reservedSpace = reservationWidth > 0 && space > 0 ? ' ' + ' '.repeat(Math.ceil(reservationWidth / space)) : '';
       this.titleLineHeight = context.px2vp(Number(utils.measureTextSize({ textContent: '字', fontSize: '14fp',
         fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400, lineHeight: '22fp' }).height));
-
+      if (Number.isFinite(full) && Number.isFinite(folded) && full > 0 && folded > 0) measuredClipping = this.clipped;
     } catch (_) {
       // The full original message remains available if native measurement is
       // unavailable. Never hide an operation or guess its completion state.
@@ -204,5 +235,6 @@ export struct ReaderRecoveryNotice {
       this.separateActions = true;
       this.reservedSpace = '';
     }
+    if (this.view.visible) this.onTitleMeasured(this.view.generation, measuredClipping);
   }
 }

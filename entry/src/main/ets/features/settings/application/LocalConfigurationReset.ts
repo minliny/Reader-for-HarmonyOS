@@ -1,3 +1,4 @@
+import { readerHostPreferencesName } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import preferences from '@ohos.data.preferences';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
@@ -72,7 +73,8 @@ export class LocalConfigurationReset {
 
   private static async apply(owner: ReaderRuntimeOwner, requested: boolean): Promise<boolean> {
     LocalConfigurationReset.assertOwner(owner);
-    const store = await preferences.getPreferences(owner.getUIAbilityContext(), RESET_PREFERENCES);
+    const context = owner.getUIAbilityContext();
+    const store = await preferences.getPreferences(context, readerHostPreferencesName(context.filesDir, RESET_PREFERENCES));
     const pending = await store.get(RESET_INTENT_KEY, '');
     if (pending !== '' && pending !== RESET_INTENT) throw new Error('CONFIGURATION_RESET_INTENT_INVALID');
     if (pending === '' && !requested) return false;

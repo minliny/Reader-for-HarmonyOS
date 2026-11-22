@@ -1,6 +1,8 @@
 import { TYPE_SHELF_COVER_PLACEHOLDER } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import {
+  TOK_BORDER,
+  TOK_BORDER_W,
   TOK_INK,
   TOK_META_BG,
 } from '../foundation/ReaderTokens';
@@ -47,6 +49,7 @@ export struct NoCoverCover {
     .width(this.coverWidth)
     .height(this.coverHeight)
     .backgroundColor(readerAppColor('TOK_META_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true);
   }

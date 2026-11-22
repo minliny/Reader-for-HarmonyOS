@@ -58,6 +58,7 @@ export struct SourceJourneySurface {
   @Builder
   private managementPage() {
     SourceManagementPage({
+      verificationOpening: this.identity,
       inputEnabled: this.inputEnabled,
       isOpeningCurrent: (): boolean => this.presentation.isManagementCurrent(this.identity),
       isInputAllowed: (): boolean => this.managementInputIsCurrent(),

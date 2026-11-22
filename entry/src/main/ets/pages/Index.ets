@@ -744,7 +744,7 @@ struct Index {
       prepareVisibleBooks: (books: ShelfBook[]): void => this.prepareVisibleReadingBooks(books),
       openDestination: (destination: BookshelfSceneDestination): void => {
         switch (destination) {
-          case 'search': this.libraryJourney.openSearch(); break;
+          case 'search': this.libraryJourney.openSearch('empty-shelf'); break;
           case 'discover': this.openDiscover(); break;
           case 'rss': this.rssJourney.openRss(); break;
           case 'settings': this.settingsNavigation.openSettings(); break;
@@ -924,7 +924,8 @@ struct Index {
         .padding({ top: this.shelfMotion.retainsOpeningBackground() ? this.appContentTopInset() : 0 })
         .enabled(this.bookshelfContentAcceptsInput())
         .hitTestBehavior(this.bookshelfContentAcceptsInput() ? HitTestMode.Default : HitTestMode.None)
-        .accessibilityLevel(this.bookshelfContentAcceptsInput() ? 'auto' : 'no-hide-descendants');
+        .accessibilityLevel(this.bookshelfContentAcceptsInput() ? 'auto' : 'no-hide-descendants')
+        .customProperty('readerLayoutDebugExcluded', this.route !== 'bookshelf');
       } else if (this.route === 'bookshelfSettings') {
         this.settingsContent('bookshelfSettings');
       } else if (this.route === 'bookshelfMultiSelect') {

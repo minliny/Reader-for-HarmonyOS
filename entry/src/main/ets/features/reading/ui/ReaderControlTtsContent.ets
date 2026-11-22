@@ -763,7 +763,7 @@ export struct ReaderControlTtsContent {
         }.width(this.availableWidth)
           .height(Math.max(this.frame().contentHeight,
             this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion)));
-      }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
+      }.id('reader-control-module-tts').width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None).enableScrollInteraction((this.fullInput() || this.quickMinimumScrollInput()) && this.configField === '')
         .enabled(this.configField === '')
         .accessibilityLevel(this.configField === '' ? 'auto' : 'no-hide-descendants')
@@ -1109,7 +1109,8 @@ export struct ReaderControlTtsContent {
         .border({ width: kind === 'stop' ? 0.5 : 0, color: readerAppColor('TOK_TTS_CLAY_LINE', this.appScheme) })
         .borderRadius(Math.min(this.transportPaint(kind).width, this.transportPaint(kind).height) / 2)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }.width(this.transport(kind).width).height(this.transport(kind).height).padding(0).clip(false)
+    }.id(this.sourceOnly === 'none' ? 'reader-control-tts-transport-' + kind : '')
+      .width(this.transport(kind).width).height(this.transport(kind).height).padding(0).clip(false)
       .position({ x: this.transport(kind).x, y: this.transport(kind).y })
       .responseRegion(this.transportResponse(kind))
       .backgroundColor(Color.Transparent)
@@ -1518,7 +1519,7 @@ export struct ReaderControlTtsContent {
         .fontColor(kind === 'voice' ? readerAppColor('TOK_TTS_INK', this.appScheme) : readerAppColor('app.control.paint.5B5046', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.End);
       Image($r(this.appScheme === 'night' ? 'app.media.reader_appearance_make_chevron_theme_night' : 'app.media.reader_appearance_make_chevron')).width(12).height(12).flexShrink(0);
-      }.width('100%').alignItems(VerticalAlign.Center)
+      }.id('reader-control-tts-choice-' + kind).width('100%').alignItems(VerticalAlign.Center)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.width(this.fieldWidth(kind)).height(this.fieldHeight(kind)).flexShrink(0).opacity(1)
       .responseRegion({ x: 0, y: kind === 'voice' ? -(Math.min(44, this.textMinimum()?.voiceRow ?? 52) - this.fieldHeight(kind)) / 2 : 0,

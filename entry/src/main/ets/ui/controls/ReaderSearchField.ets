@@ -39,7 +39,7 @@ export type ReaderSearchFieldVariant =
 
 export type ReaderSearchFieldMode = 'submit' | 'live' | 'passive';
 
-export type ReaderSearchEditorEvent = 'focus' | 'edit' | 'selection' | 'unmounted';
+export type ReaderSearchEditorEvent = 'focus' | 'edit' | 'selection' | 'unmounted' | 'clear';
 
 export interface ReaderSearchEditorObservation {
   focused: boolean;
@@ -87,6 +87,9 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
       instance.minFontScale(1);
       instance.maxFontScale(this.fontScale);
     }
+    // The system picker can return focus to the source query without a user tap.
+    // Only an explicit editing action may show the keyboard for this field.
+    if (this.variant === 'sourceManagement') instance.enableKeyboardOnFocus(false);
     if (this.variant === 'readerDirectory') {
       if (this.focusId.length > 0) {
         instance.id(this.focusId);
@@ -118,6 +121,8 @@ export struct ReaderSearchField {
   @Prop accessibilityLabel: string = '';
   @Prop expandedLayout: boolean = false;
   @Prop clearable: boolean = false;
+  @Prop bookPanelClearId: string = '';
+  @Prop bookKeyboardOnFocus: boolean = true;
   @Prop submitEnabled: boolean = true;
   @Prop focusOnAppear: boolean = false;
   @Prop naturalFieldHeightVp: number = 0;
@@ -125,12 +130,14 @@ export struct ReaderSearchField {
   /** Border-box width supplied by the passive RSS field's existing frame owner. */
   @Prop fieldWidthVp: number = 0;
   @Prop @Watch('onDirectoryIdentityChanged') directoryFocusId: string = '';
+  editingFocusId: string = '';
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusAllowed: boolean = false;
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusRevision: number = 0;
   @Prop directoryKeyboardOnFocus: boolean = true;
   directoryFocusCurrent: (id: string) => boolean = (_id: string): boolean => true;
   onDirectoryFocusChanged: (id: string, focused: boolean) => void = (_id: string, _focused: boolean): void => {};
   onDirectoryEditingRequested: (id: string) => void = (_id: string): void => {};
+  onDirectoryKeyboardBack: (id: string) => void = (_id: string): void => {};
   onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean) => void = (_id: string, _requested: boolean): void => {};
   private directoryLayoutId: string = '';
   private directoryInputLoaded: boolean = false;
@@ -194,8 +201,9 @@ export struct ReaderSearchField {
   }
 
   private editingNativeId(): string {
-    return this.isBookField() ? 'reader-book-search-input' :
-      this.directoryFocusId.length > 0 ? this.directoryFocusId : this.editingTarget.id;
+    if (this.isBookField()) return 'reader-book-search-input';
+    if (this.directoryFocusId.length > 0) return this.directoryFocusId;
+    return this.editingFocusId.length > 0 ? this.editingFocusId : this.editingTarget.id;
   }
   private bindEditingTarget(): void {
     if (!this.mounted) return;
@@ -270,9 +278,11 @@ export struct ReaderSearchField {
   }
 
   private onDirectoryInputKey(id: string, event: KeyEvent): boolean {
-    if (event.type === KeyType.Down && event.keyCode === KeyCode.KEYCODE_BACK) this.editingTarget.back();
-    if (this.directoryFocusEnabled(id) && this.directoryNativeFocused &&
-      event.type === KeyType.Down && event.keyCode === KeyCode.KEYCODE_BACK) {
+    const back = event.type === KeyType.Down && event.keyCode === KeyCode.KEYCODE_BACK;
+    const current = this.directoryFocusEnabled(id) && this.directoryNativeFocused;
+    if (back && current) this.onDirectoryKeyboardBack(id);
+    if (back) this.editingTarget.back();
+    if (back && current) {
       this.directoryFocusTicket += 1;
       this.directoryKeyboardRestorePendingRevision = -1;
       this.directoryKeyboardRestorePendingTicket = -1;
@@ -365,6 +375,24 @@ export struct ReaderSearchField {
     }));
   }
 
+  private requestSourceManagementEditing(): void {
+    if (!this.mounted || this.variant !== 'sourceManagement' || !this.directoryKeyboardOnFocus) return;
+    const generation = this.focusGeneration;
+    this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+      if (!this.mounted || generation !== this.focusGeneration || this.variant !== 'sourceManagement' ||
+        !this.directoryKeyboardOnFocus) return;
+      try {
+        // Native focus precedes this frame. Request the IME once so a field
+        // that was already focused before the tap cannot leave the keyboard hidden.
+        void inputMethod.getController().showTextInput().catch((error: Error): void => {
+          if (DEBUG) hilog.warn(0x5244, 'Reader', 'Source search keyboard: %{private}s', error.message);
+        });
+      } catch (error) {
+        if (DEBUG) hilog.warn(0x5244, 'Reader', 'Source search keyboard: %{private}s', (error as Error).message);
+      }
+    }));
+  }
+
   private queueDirectoryFocus(explicitEditing: boolean = false): void {
     const id = this.directoryFocusId, revision = this.directoryFocusRevision;
     if (!this.directoryFocusEnabled(id) || !this.directoryInputLoaded || this.directoryLayoutId !== id ||
@@ -451,6 +479,10 @@ export struct ReaderSearchField {
 
   private clearBookInput(): void {
     if (!this.mounted) return;
+    if (this.bookEditorObservationCurrent()) {
+      this.observeBookEditor?.('clear', { focused: this.bookInputFocused, length: 0, beforeLength: this.observedBookLength });
+      this.observedBookLength = 0;
+    }
     this.changeText('');
     this.focusBookInput();
     this.revealBookInputCaret();
@@ -497,7 +529,8 @@ export struct ReaderSearchField {
     Row({ space: 0 }) {
       TextInput({ placeholder: this.placeholder, text: this.text, controller: this.bookInputController })
         .id('reader-book-search-input')
-        .enableKeyboardOnFocus(true)
+        // This gates programmatic focus. Native TextInput taps still open the keyboard.
+        .enableKeyboardOnFocus(this.bookKeyboardOnFocus)
         .onEditChange((editing: boolean): void => this.editingTarget.edit(editing))
         .onContentScroll((): void => this.editingTarget.changed())
         .onKeyPreIme((event: KeyEvent): boolean => {
@@ -548,6 +581,7 @@ export struct ReaderSearchField {
           Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
             .width(14).height(14).accessibilityLevel('no');
         }.width(SEARCH_CONTROL_MIN_TARGET).height(this.fieldHeight()).padding(0).backgroundColor(Color.Transparent)
+          .id(this.bookPanelClearId)
           .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空搜索内容')
           .onClick((): void => this.clearBookInput());
       }
@@ -578,7 +612,10 @@ export struct ReaderSearchField {
           .width(this.iconSize())
           .height(this.iconSize());
         TextInput({ placeholder: this.placeholder, text: this.text, controller: this.directoryInputController })
-          .onClick((): void => this.requestDirectoryEditing(inputFocusId))
+          .onClick((): void => {
+            if (this.variant === 'sourceManagement') this.requestSourceManagementEditing();
+            else this.requestDirectoryEditing(inputFocusId);
+          })
           .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
           .layoutWeight(1)
           .height(this.inputHeight())
@@ -695,7 +732,7 @@ export struct ReaderSearchField {
       return this.fieldHeight() - this.fieldBorderWidth() * 2;
     }
     if (this.variant === 'sourceManagement') {
-      return this.fieldHeight() - this.fieldBorderWidth() * 2;
+      return Math.max(44, this.fieldHeight() - this.fieldBorderWidth() * 2);
     }
     if (this.variant === 'readerDirectory') {
       return Number.isFinite(this.naturalInputHeightVp) && this.naturalInputHeightVp > 0 ?

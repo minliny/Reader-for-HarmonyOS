@@ -12,11 +12,13 @@ import type { RemoteReadingVariable } from '../../reading/application/RemoteRead
 import { readerSourceCategoryIsText } from '../../source/application/ReaderSourceCategory';
 import { ReaderLibrarySearchModel } from './ReaderLibrarySearchModel';
 import { SearchHost } from '../application/SearchHost';
+import type { SearchContinuationPageObservation, SearchOnlineAttemptObservation, SearchSourceRetryObservation } from '../application/SearchOrchestrator';
 import { searchCandidateRank } from './SearchCandidatePolicy';
-import type { SearchBook } from '../application/SearchGateway';
+import type { SearchBook, SearchWorkCompletion } from '../application/SearchGateway';
 import type { SearchPresentation } from './SearchPresentation';
 
 export type LibrarySearchMode = 'idle' | 'input' | 'results';
+export type LibrarySearchBackConsumer = 'keyboard' | 'temporary' | 'route';
 
 interface LibraryShelfMoreLease {
   identity: string;
@@ -36,6 +38,33 @@ interface LibraryContinueCardCoverage {
   identity: number;
   navigation: number;
   mounting: number;
+}
+
+interface ObsoleteSearchWork {
+  completion: SearchWorkCompletion;
+  generation: number;
+  session: number;
+  currentGeneration: number;
+  currentSession: number;
+  queryRevision: number;
+}
+
+interface SearchContinuationEvidence extends SearchContinuationPageObservation {
+  capability: string;
+  owner: number;
+  page: number;
+  queryRevision: number;
+}
+
+interface SearchOnlineAttemptEvidence extends SearchOnlineAttemptObservation {
+  queryRevision: number;
+}
+
+interface SearchSourceRetryEvidence extends SearchSourceRetryObservation {
+  owner: number;
+  page: number;
+  queryRevision: number;
+  publicationRevision: number;
 }
 
 export interface LibrarySearchSelectionPorts {
@@ -68,7 +97,74 @@ export class LibrarySearchPresentation {
 
   constructor(isVisible: () => boolean, isDetailJourneyCurrent: () => boolean) {
     this.isDetailJourneyCurrent = isDetailJourneyCurrent;
-    this.host = new SearchHost((): void => this.onPublication(), isVisible);
+    this.host = new SearchHost((): void => this.onPublication(), isVisible,
+      (generation: number, session: number, completion: SearchWorkCompletion): void =>
+        this.observeObsoleteSearchWork(generation, session, completion), {
+        enabled: (): boolean => this.model.verification?.enabled() === true,
+        observe: (observation: SearchContinuationPageObservation): void => this.observeSearchContinuationPage(observation),
+        observeAttempt: (observation: SearchOnlineAttemptObservation): void => this.observeSearchOnlineAttempt(observation),
+      }, (observation: SearchSourceRetryObservation): void => this.observeSourceRetry(observation));
+  }
+
+  private observeObsoleteSearchWork(generation: number, session: number, completion: SearchWorkCompletion): void {
+    const probe = this.model.verification;
+    if (probe?.enabled() !== true) return;
+    const current = this.host.observeWriteLease();
+    if (current === undefined) return;
+    const facts: ObsoleteSearchWork = { completion: completion, generation: generation, session: session, currentGeneration: current.generation,
+      currentSession: current.session, queryRevision: this.host.viewState.revision };
+    probe.emit('search-obsolete-work-discarded', 'business', facts);
+  }
+
+  private observeSearchContinuationPage(observation: SearchContinuationPageObservation): void {
+    const probe = this.model.verification;
+    if (probe?.enabled() !== true || this.mode !== 'results' || !this.model.interactive) return;
+    const lease = this.host.observeWriteLease();
+    const owner = this.model.currentOwner();
+    if (owner === 0 || lease?.active !== true || lease.generation !== observation.generation ||
+      lease.session !== observation.session) return;
+    const view = this.host.viewState;
+    const facts: SearchContinuationEvidence = {
+      stage: observation.stage, trigger: observation.trigger, generation: observation.generation,
+      session: observation.session, sourceOrdinal: observation.sourceOrdinal,
+      requestedPage: observation.requestedPage, previousPage: observation.previousPage,
+      outcome: observation.outcome, addedResultCount: observation.addedResultCount,
+      receiptState: observation.receiptState, progressState: observation.progressState,
+      nextPage: observation.nextPage, capability: 'book.search.page-receipt.v1', owner,
+      page: view.pageRevision, queryRevision: view.revision,
+    };
+    probe.emit('search-continuation-page', 'business', facts);
+  }
+
+  private observeSearchOnlineAttempt(observation: SearchOnlineAttemptObservation): void {
+    const probe = this.model.verification;
+    const lease = this.host.observeWriteLease();
+    if (probe?.enabled() !== true || this.mode !== 'results' || lease?.active !== true ||
+      lease.generation !== observation.generation || lease.session !== observation.session) return;
+    const facts: SearchOnlineAttemptEvidence = {
+      stage: observation.stage, trigger: observation.trigger, generation: observation.generation,
+      session: observation.session, sourceCount: observation.sourceCount, sourceOrdinal: observation.sourceOrdinal,
+      requestedPage: observation.requestedPage, sameFailedSource: observation.sameFailedSource,
+      outcome: observation.outcome, httpStatus: observation.httpStatus, capability: observation.capability,
+      receiptState: observation.receiptState, receiptReason: observation.receiptReason,
+      progressState: observation.progressState, nextPage: observation.nextPage,
+      addedResultCount: observation.addedResultCount, queryRevision: this.host.viewState.revision,
+    };
+    probe.emit('search-online-attempt', 'business', facts);
+  }
+
+  private observeSourceRetry(observation: SearchSourceRetryObservation): void {
+    const probe = this.model.verification;
+    const owner = this.model.currentOwner();
+    if (probe?.enabled() !== true || this.mode !== 'input' || !this.model.interactive || owner === 0 ||
+      this.host.observeWriteLease()?.session !== observation.session) return;
+    const view = this.host.viewState;
+    const facts: SearchSourceRetryEvidence = {
+      phase: observation.phase, session: observation.session, attempt: observation.attempt,
+      outcome: observation.outcome, sourceCount: observation.sourceCount, owner, page: view.pageRevision,
+      queryRevision: view.revision, publicationRevision: this.publicationRevision,
+    };
+    probe.emit('search-source-list-retry', 'business', facts);
   }
 
   mount(): void {
@@ -139,9 +235,10 @@ export class LibrarySearchPresentation {
   }
 
   /** Returns whether the caller should leave the search route immediately. */
-  back(): boolean {
-    if (this.model.consumeInputBack()) return false;
-    if (this.model.consumeTemporaryBack(this.model.currentOwner())) return false;
+  back(observe?: (consumer: LibrarySearchBackConsumer) => void): boolean {
+    if (this.model.consumeInputBack()) { observe?.('keyboard'); return false; }
+    if (this.model.consumeTemporaryBack(this.model.currentOwner())) { observe?.('temporary'); return false; }
+    observe?.('route');
     if (this.mode === 'idle') return true;
     this.model.suspend();
     this.mode = 'idle';

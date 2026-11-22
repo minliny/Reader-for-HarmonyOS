@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from '../../app/diagnostics/ReaderPublicFixtureScope';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import util from '@ohos.util';
@@ -45,9 +46,9 @@ export class LocalEpubResourceHost {
 
   private async readResource(locator: LocalEpubResourceLocator, isCurrent: () => boolean): Promise<Uint8Array> {
     this.assertCurrent(isCurrent);
-    let archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.source`;
+    let archivePath = `${readerHostFilesDirectory(this.context.filesDir)}/reader-import/books/${locator.hash}.source`;
     if (!(await fileIo.access(archivePath))) {
-      archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.epub`;
+      archivePath = `${readerHostFilesDirectory(this.context.filesDir)}/reader-import/books/${locator.hash}.epub`;
     }
     if (!(await fileIo.access(archivePath))) {
       throw new Error('local EPUB source asset is unavailable; re-import is required');

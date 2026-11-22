@@ -7,6 +7,8 @@ import { SyncGateway } from '../features/sync/application/SyncGateway';
 import { LocalConfigurationReset } from '../features/settings/application/LocalConfigurationReset';
 import { ReaderThemeHost } from '../app/ReaderThemeHost';
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
+import contextConstant from '@ohos.app.ability.contextConstant';
+import fileIo from '@ohos.file.fs';
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
@@ -29,12 +31,26 @@ import { readerMotionNowMs } from '../ui/foundation/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { WebDavCredentialStore } from '../features/sync/application/WebDavCredentialStore';
 import { ReaderFrameworkCapture } from '../app/diagnostics/ReaderFrameworkCapture';
+import { ReaderAppearancePixelProbe } from '../app/diagnostics/ReaderAppearancePixelProbe';
 import { ReaderUIVerificationProbe } from '../app/diagnostics/ReaderUIVerificationProbe';
+import { bindReaderNamedPublicStorage, buildReaderPublicFixtureDirectory, isReaderNamedPublicFixture,
+  READER_PUBLIC_FIXTURE_PARAMETER, readerHostCacheDirectory, readerHostFilesDirectory, selectReaderPublicFixture,
+  type ReaderPublicFixtureId, type ReaderPublicFixtureScope } from '../app/diagnostics/ReaderPublicFixtureScope';
+import { prepareReaderPublicLongBook, prepareReaderPublicScrolledBooks } from '../app/diagnostics/ReaderPublicLongBook';
+import { prepareReaderPublicSingleSource } from '../app/diagnostics/ReaderPublicSingleSource';
+import { prepareReaderPublicSourceRecipe } from '../app/diagnostics/ReaderPublicSourceRecipe';
+import { readerPublicSearchHttpFixtureMode } from '../app/diagnostics/ReaderPublicSearchHttpFixture';
+import { CookieSessionStore } from '../platform/network/CookieSessionStore';
+import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
 const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
+  private static dataMode: 'normal' | ReaderPublicFixtureId | undefined = undefined;
+  private publicFixture: ReaderPublicFixtureScope | undefined = undefined;
+  private fixtureAdmissionRejected: boolean = false;
   private windowStageGeneration: number = 0;
   private readonly frameworkCapture: ReaderFrameworkCapture = new ReaderFrameworkCapture();
+  private cancelAppearancePixelProbe: (() => void) | undefined = undefined;
   private activeWindowStage: window.WindowStage | undefined = undefined;
   private coreCopyProbeGeneration: number = 0;
   private coreCopyOnly: boolean = false;
@@ -52,35 +68,46 @@ export default class EntryAbility extends UIAbility {
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    try {
+      this.admitPublicFixture(want.parameters);
+    } catch (_) {
+      this.fixtureAdmissionRejected = true;
+      hilog.error(DOMAIN, 'Reader', 'Public UI fixture directory could not be isolated');
+      void this.context.terminateSelf().catch((): void => {});
+      return;
+    }
+    // Fixture starts always take the ordinary Index route and cannot arm
+    // independent privileged startup diagnostics or accept an external file.
+    const parameters = this.publicFixture === undefined ? want.parameters : undefined;
     const coreCopyProbeGeneration = ++this.coreCopyProbeGeneration;
-    this.coreCopyOnly = readerCoreCopyOnlyEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerCoreCopyProbe,
-      want.parameters?.readerCoreCopyOnly, want.parameters?.readerCoreCopyMode, want.parameters?.readerCoreCopyId);
+    this.coreCopyOnly = readerCoreCopyOnlyEnabled(DEBUG, BUILD_MODE_NAME, parameters?.readerCoreCopyProbe,
+      parameters?.readerCoreCopyOnly, parameters?.readerCoreCopyMode, parameters?.readerCoreCopyId);
     if (this.coreCopyOnly) {
       hilog.info(DOMAIN, 'Reader', 'READER_CORE_COPY_ONLY mainRuntime=disabled');
-      void probeReaderCoreCopy(DEBUG, BUILD_MODE_NAME, true, want.parameters?.readerCoreCopyMode,
-        want.parameters?.readerCoreCopyId, this.context.filesDir,
+      void probeReaderCoreCopy(DEBUG, BUILD_MODE_NAME, true, parameters?.readerCoreCopyMode,
+        parameters?.readerCoreCopyId, this.context.filesDir,
         (): boolean => this.coreCopyOnly && this.coreCopyProbeGeneration === coreCopyProbeGeneration,
         (sample: ReaderCoreCopyProbeSample): void => hilog.info(DOMAIN, 'Reader',
           'READER_CORE_COPY phase=%{public}s code=%{public}s count=%{public}d', sample.phase, sample.code, sample.count))
         .catch((): void => {});
       return;
     }
-    ReaderUIVerificationProbe.configure(DEBUG === true && BUILD_MODE_NAME === 'debug');
+    ReaderUIVerificationProbe.configure(DEBUG === true && BUILD_MODE_NAME === 'debug', this.publicFixture?.id);
     installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
-    }, DEBUG === true && BUILD_MODE_NAME === 'debug', want.parameters?.readerTtsTrace === true);
+    }, DEBUG === true && BUILD_MODE_NAME === 'debug', parameters?.readerTtsTrace === true);
     trace.mark('ability.create');
     // Diagnostics require a cold start, debug build, and exact primitive
     // boolean parameters. Warm file Wants use the guarded import/exit queue.
     this.coldStartPage = readerControlVerificationColdStartPage(
       DEBUG,
       BUILD_MODE_NAME,
-      want.parameters?.readerControlMotionVerification,
-      want.parameters?.readerOpenSourcePilot,
-      want.parameters?.readerStartupMainLoadFailure,
+      parameters?.readerControlMotionVerification,
+      parameters?.readerOpenSourcePilot,
+      parameters?.readerStartupMainLoadFailure,
     );
-    if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {
+    if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, parameters?.readerEventLoopProbe)) {
       this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,
         (sample: ReaderEventLoopSample): void => {
           hilog.info(DOMAIN, 'Reader', 'READER_EVENT_LOOP %{public}s', JSON.stringify(sample));
@@ -88,7 +115,11 @@ export default class EntryAbility extends UIAbility {
     }
     AppStorage.setOrCreate('readerAppForeground', true);
     ReaderDocumentPickerActivity.setForeground(true);
-    WebDavCredentialStore.instance.attachContext(this.context);
+    if (this.publicFixture !== undefined) {
+      CookieSessionStore.configurePublicFixture(this.publicFixture);
+      ArkWebExecutor.instance.disableForPublicFixture();
+    }
+    WebDavCredentialStore.instance.attachContext(this.context, this.publicFixture);
     this.bookshelfModeReady = trace.measure('startup.bookshelf-mode',
       (): Promise<'cover' | 'list'> => WebDavCredentialStore.instance.loadBookshelfViewMode())
       .then((mode): void => {
@@ -102,27 +133,27 @@ export default class EntryAbility extends UIAbility {
     });
     // Selection diagnostics have no inferred identity. Conflicting diagnostic
     // flags reject both selection modes; exact Want scope semantics stay intact.
-    const mangaSelectFlag = want.parameters?.readerMangaOfflineProbeSelectManga === true ||
-      want.parameters?.readerMangaReadingProbeSelectManga === true;
+    const mangaSelectFlag = parameters?.readerMangaOfflineProbeSelectManga === true ||
+      parameters?.readerMangaReadingProbeSelectManga === true;
     const mangaSelectionMode = this.coldStartPage === 'pages/Index' ? readerMangaProbeSelectionMode(DEBUG, BUILD_MODE_NAME,
-      want.parameters?.readerMangaOfflineProbeSelectManga, want.parameters?.readerMangaReadingProbeSelectManga,
-      [want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaReadingProbe,
-        want.parameters?.readerControlMotionVerification, want.parameters?.readerOpenSourcePilot,
-        want.parameters?.readerEventLoopProbe, want.parameters?.readerDisableOptionalEntryMemory]) : undefined;
+      parameters?.readerMangaOfflineProbeSelectManga, parameters?.readerMangaReadingProbeSelectManga,
+      [parameters?.readerMangaOfflineProbe, parameters?.readerMangaReadingProbe,
+        parameters?.readerControlMotionVerification, parameters?.readerOpenSourcePilot,
+        parameters?.readerEventLoopProbe, parameters?.readerDisableOptionalEntryMemory]) : undefined;
     this.mangaPlatformDiagnostic = ReaderMangaPlatformDiagnostic.install(mangaSelectionMode,
-      want.parameters?.readerMangaRecordedJankR31 === true);
+      parameters?.readerMangaRecordedJankR31 === true);
     const owner = ReaderRuntimeOwner.install(this.context,
-      readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory),
+      readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, parameters?.readerDisableOptionalEntryMemory),
       this.coldStartPage === 'pages/Index' ? readerMangaOfflineProbeScope(DEBUG, BUILD_MODE_NAME,
-        want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaOfflineSourceId,
-        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaReadingProbe) : undefined,
+        parameters?.readerMangaOfflineProbe, parameters?.readerMangaOfflineSourceId,
+        parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : parameters?.readerMangaReadingProbe) : undefined,
       this.coldStartPage === 'pages/Index' ? readerMangaReadingProbeScope(DEBUG, BUILD_MODE_NAME,
-        want.parameters?.readerMangaReadingProbe, want.parameters?.readerMangaOfflineSourceId,
-        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaOfflineProbe) : undefined,
-      mangaSelectionMode);
+        parameters?.readerMangaReadingProbe, parameters?.readerMangaOfflineSourceId,
+        parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : parameters?.readerMangaOfflineProbe) : undefined,
+      mangaSelectionMode, this.publicFixture);
     this.runtimeOwner = owner;
-    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerCapacityTrace === true) {
-      this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, want.parameters?.readerCapacityTrace,
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && parameters?.readerCapacityTrace === true) {
+      this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, parameters?.readerCapacityTrace,
         async (method: string, params: JsonObject, options: ReaderCapacityQueryOptions): Promise<JsonObject> => (await owner.request(method, params, options)).data,
         (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner));
     }
@@ -139,7 +170,29 @@ export default class EntryAbility extends UIAbility {
       await LocalConfigurationReset.recover(owner);
     });
     const coreReady = trace.measure('startup.core', (): Promise<void> => owner.start());
-    this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, coreReady])
+    const fixture = this.publicFixture;
+    const requiresFixtureSeed = fixture !== undefined && isReaderNamedPublicFixture(fixture.id);
+    let dataReady = coreReady;
+    if (fixture?.id === 'empty-sources' && want.parameters?.readerPublicFixtureBook === 'long-directory') {
+      dataReady = coreReady.then(async (): Promise<void> => {
+        await prepareReaderPublicLongBook(owner, fixture);
+        hilog.info(DOMAIN, 'Reader', 'Public UI fixture long-directory book verified');
+      });
+    } else if (fixture !== undefined && requiresFixtureSeed) {
+      dataReady = coreReady.then(async (): Promise<void> => {
+        if (fixture.id === 'search-detail-scroll-corpus') {
+          await prepareReaderPublicScrolledBooks(owner, fixture);
+          hilog.info(DOMAIN, 'Reader', 'Public UI fixture empty Source and eight scroll books verified');
+          return;
+        }
+        if (fixture.id === 'single-reserved') await prepareReaderPublicSingleSource(owner, fixture);
+        else await prepareReaderPublicSourceRecipe(owner, fixture);
+        await prepareReaderPublicLongBook(owner, fixture);
+        if (readerPublicSearchHttpFixtureMode(fixture.id) !== undefined) owner.confirmPublicSearchHttpFixture(fixture);
+        hilog.info(DOMAIN, 'Reader', 'Public UI fixture source and long-directory book verified: %{public}s', fixture.id);
+      });
+    }
+    this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, dataReady])
       .then(async (): Promise<void> => {
         if (this.runtimeOwner === owner) {
           await trace.measure('startup.sync-recovery', (): Promise<boolean> => sync.recoverInterruptedRestore());
@@ -162,31 +215,33 @@ export default class EntryAbility extends UIAbility {
         // The persistent receipt/journal remains pending; opening the UI permits retry.
         hilog.error(DOMAIN, 'Reader', 'Core or confirmed restore recovery failed summary=%{public}s detail=%{private}s',
           localReadFailureSummary(error), errorMessageOf(error));
+        if (requiresFixtureSeed) throw error;
       });
+    if (requiresFixtureSeed) void this.recoveryReady.catch((): void => {});
     // Method-level probes may execute onCreate without private helpers; the
     // production class still owns the concrete scheduler below.
-    this.scheduleRebuildableCacheClear?.(want, owner);
+    if (this.publicFixture === undefined) this.scheduleRebuildableCacheClear?.(want, owner);
     ReaderSystemFileOpenHost.install(owner, this.recoveryReady);
-    ReaderSystemFileOpenHost.receive(want);
+    if (this.publicFixture === undefined) ReaderSystemFileOpenHost.receive(want);
     // This diagnostic is an explicit cold debug Want only. Normal starts and
     // warm external files perform no synthetic filesystem work.
-    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAtomicSnapshotProbe === true) {
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && parameters?.readerAtomicSnapshotProbe === true) {
       void this.recoveryReady.then((): Promise<void> => probeReaderAtomicSnapshot(DEBUG, BUILD_MODE_NAME,
         true, this.context.filesDir, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner),
         readerMotionNowMs, (sample: ReaderAtomicSnapshotSample): void => {
           hilog.info(DOMAIN, 'Reader', 'READER_ATOMIC_SNAPSHOT %{public}s', JSON.stringify(sample));
         })).catch((): void => {});
     }
-    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAssetInventoryProbe === true) {
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && parameters?.readerAssetInventoryProbe === true) {
       void this.recoveryReady.then((): Promise<void> => probeReaderAssetInventory(DEBUG, BUILD_MODE_NAME,
         true, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner), readerMotionNowMs,
         (sample: ReaderAssetInventorySample): void => {
           hilog.info(DOMAIN, 'Reader', 'READER_ASSET_INVENTORY %{public}s', JSON.stringify(sample));
         })).catch((): void => {});
     }
-    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerCoreCopyProbe === true) {
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && parameters?.readerCoreCopyProbe === true) {
       void this.recoveryReady.then((): Promise<void> => probeReaderCoreCopy(DEBUG, BUILD_MODE_NAME,
-        true, want.parameters?.readerCoreCopyMode, want.parameters?.readerCoreCopyId, this.context.filesDir,
+        true, parameters?.readerCoreCopyMode, parameters?.readerCoreCopyId, this.context.filesDir,
         (): boolean => this.coreCopyProbeGeneration === coreCopyProbeGeneration &&
           this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner),
         (sample: ReaderCoreCopyProbeSample): void => {
@@ -196,9 +251,66 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
+  private admitPublicFixture(parameters: Record<string, Object> | undefined): void {
+    const selection = selectReaderPublicFixture(DEBUG, BUILD_MODE_NAME, parameters);
+    if (selection.kind === 'rejected') throw new Error('PUBLIC_FIXTURE_SELECTION_REJECTED');
+    const mode = selection.kind === 'fixture' ? selection.id : 'normal';
+    if (EntryAbility.dataMode !== undefined && EntryAbility.dataMode !== mode) {
+      throw new Error('PUBLIC_FIXTURE_REQUIRES_COLD_PROCESS');
+    }
+    if (selection.kind === 'fixture') {
+      if (this.context.area !== contextConstant.AreaMode.EL2) throw new Error('PUBLIC_FIXTURE_ORIGINAL_AREA_UNKNOWN');
+      const original = [this.context.filesDir, this.context.cacheDir, this.context.preferencesDir, this.context.databaseDir];
+      const area = mode === 'empty-shelf' ? contextConstant.AreaMode.EL3 : contextConstant.AreaMode.EL4;
+      const partition = `/el${area + 1}/`;
+      this.context.area = area;
+      const isolated = [this.context.filesDir, this.context.cacheDir, this.context.preferencesDir, this.context.databaseDir];
+      if (this.context.area !== area || isolated.some(path =>
+        !path.startsWith('/data/') || !path.includes(partition) || original.includes(path)) ||
+        buildReaderPublicFixtureDirectory(this.context.filesDir, selection.id) === undefined) {
+        throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
+      }
+      if (isReaderNamedPublicFixture(selection.id)) {
+        bindReaderNamedPublicStorage(selection.id, this.context.filesDir, this.context.cacheDir);
+        this.prepareNamedFixtureDirectory(this.context.filesDir, readerHostFilesDirectory(this.context.filesDir));
+        this.prepareNamedFixtureDirectory(this.context.cacheDir, readerHostCacheDirectory(this.context.cacheDir));
+      }
+      this.publicFixture = selection;
+      hilog.info(DOMAIN, 'Reader', 'Public UI fixture scope: %{public}s', selection.id);
+    }
+    EntryAbility.dataMode = mode;
+  }
+
+  private prepareNamedFixtureDirectory(sandbox: string, root: string): void {
+    const parent = `${sandbox}/reader-public-ui-fixtures`;
+    for (const path of [sandbox, parent, root]) {
+      if (path !== sandbox && !fileIo.accessSync(path)) fileIo.mkdirSync(path);
+      if (!fileIo.lstatSync(path).isDirectory()) throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
+    }
+  }
+
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
-    if (this.coreCopyOnly) return;
+    if (this.coreCopyOnly || this.fixtureAdmissionRejected || this.publicFixture !== undefined ||
+        want.parameters?.[READER_PUBLIC_FIXTURE_PARAMETER] !== undefined) return;
     this.frameworkCapture.start(DEBUG, BUILD_MODE_NAME, want.parameters?.readerFrameworkCaptureSeconds, this.context.cacheDir);
+    if (DEBUG && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAppearancePixelProbe === true &&
+      want.parameters?.readerFrameworkCaptureSeconds === undefined && want.action !== 'ohos.want.action.viewData' &&
+      this.coldStartPage === 'pages/Index' && ReaderUIVerificationProbe.enabled()) {
+      const stage = this.activeWindowStage;
+      const generation = this.windowStageGeneration;
+      if (stage !== undefined) {
+        try {
+          const win = stage.getMainWindowSync();
+          const windowId = win.getWindowProperties().id;
+          const cancel = ReaderAppearancePixelProbe.arm(win, generation, this.context.cacheDir, (): boolean =>
+            this.activeWindowStage === stage && this.windowStageGeneration === generation &&
+            ReaderWindowCoordinator.diagnosticWindowId() === windowId && ReaderUIVerificationProbe.enabled());
+          if (cancel !== undefined) this.cancelAppearancePixelProbe = cancel;
+        } catch (_) {
+          hilog.warn(DOMAIN, 'ReaderAppearancePixel', 'Could not bind current Reader window');
+        }
+      }
+    }
     const focusTrace = want.parameters?.readerToggleFocusTrace;
     if (DEBUG && BUILD_MODE_NAME === 'debug') {
       if (typeof focusTrace === 'boolean') AppStorage.setOrCreate('readerToggleFocusTrace', focusTrace);
@@ -289,7 +401,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    if (this.coreCopyOnly) return;
+    if (this.coreCopyOnly || this.fixtureAdmissionRejected) return;
     this.activeWindowStage = windowStage;
     ReaderStartupTrace.current()?.mark('window.create');
     const generation = ++this.windowStageGeneration;
@@ -328,7 +440,9 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageDestroy(): void {
-    if (this.coreCopyOnly) return;
+    if (this.coreCopyOnly || this.fixtureAdmissionRejected) return;
+    this.cancelAppearancePixelProbe?.();
+    this.cancelAppearancePixelProbe = undefined;
     this.eventLoopProbe?.stop('window-destroyed');
     this.capacityProbe?.stop();
     this.startupContent?.close();
@@ -339,7 +453,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
-    if (this.coreCopyOnly) return;
+    if (this.coreCopyOnly || this.fixtureAdmissionRejected) return;
     if (newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ||
         newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT) {
       void ReaderThemeHost.systemChanged(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')
@@ -353,7 +467,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onForeground(): void {
-    if (this.coreCopyOnly) return;
+    if (this.coreCopyOnly || this.fixtureAdmissionRejected) return;
     AppStorage.setOrCreate('readerAppForeground', true);
     ReaderDocumentPickerActivity.setForeground(true);
     this.runtimeOwner?.setReadingPreparationContext(true, false);
@@ -362,7 +476,9 @@ export default class EntryAbility extends UIAbility {
   }
 
   onBackground(): void {
-    if (this.coreCopyOnly) return;
+    if (this.coreCopyOnly || this.fixtureAdmissionRejected) return;
+    this.cancelAppearancePixelProbe?.();
+    this.cancelAppearancePixelProbe = undefined;
     AppStorage.setOrCreate('readerAppForeground', false);
     ReaderDocumentPickerActivity.setForeground(false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
@@ -379,7 +495,10 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    if (this.fixtureAdmissionRejected) return;
     this.frameworkCapture.close();
+    this.cancelAppearancePixelProbe?.();
+    this.cancelAppearancePixelProbe = undefined;
     this.coreCopyProbeGeneration += 1;
     if (this.coreCopyOnly) { this.coreCopyOnly = false; return; }
     this.mangaPlatformDiagnostic?.stop(); this.mangaPlatformDiagnostic = undefined;

@@ -1061,7 +1061,22 @@ export struct BookshelfPage {
       }, (book: ShelfBook): string => `${book.sourceId}:${book.bookId}`);
     }
     .width(this.shelfContentWidth(expandedLayout))
-    .height(this.projectionRowHeight(row, expandedLayout, rowIndex() * 3));
+    .height(this.projectionRowHeight(row, expandedLayout, rowIndex() * 3))
+    // The native no-expand child range can expose only the first generated
+    // card of this ForEach row. Publish the already-mounted card and cover
+    // actors by their stable ids so the developer scanner can resolve every
+    // column and the cover boundary at each column.
+    .customProperty('readerLayoutDebugMountedIds',
+      this.layoutDebugMountedIds(row));
+  }
+
+  private layoutDebugMountedIds(row: ShelfBook[]): string {
+    const ids: string[] = [];
+    for (const book of row) {
+      ids.push(this.bookActionFocusKey(book, false));
+      ids.push(this.bookCoverMotionId(book, false));
+    }
+    return JSON.stringify(ids);
   }
 
   /**
@@ -1174,7 +1189,11 @@ export struct BookshelfPage {
     .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
     .linearGradient({
       angle: 141.7,
-      colors: [[readerAppColor('TOK_PRIMARY_GRADIENT_START', this.appThemeScheme), 0.077], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0.923]],
+      colors: this.hasCover(book) ?
+        [[readerAppColor('TOK_PRIMARY_GRADIENT_START', this.appThemeScheme), 0.077],
+          [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0.923]] :
+        [[readerAppColor('TOK_META_BG', this.appThemeScheme), 0],
+          [readerAppColor('TOK_META_BG', this.appThemeScheme), 1]],
     })
     .borderRadius(this.projectionCoverRadius(expandedLayout, index()))
     .clip(true)

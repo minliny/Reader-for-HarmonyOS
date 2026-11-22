@@ -4,6 +4,7 @@ import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteracti
 import { MESSAGE_BODY, MESSAGE_TITLE } from '../foundation/ReaderMessageStyle';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam, readerReduceMotionFromStorage } from '../foundation/ReaderMotionPolicy';
+import { ReaderPostLayoutFrame } from '../layout/ReaderPostLayoutFrame';
 import { announceReaderTransientToast } from './ReaderTransientAnnouncement';
 import {
   READER_TRANSIENT_TOAST_STORAGE_KEY,
@@ -11,7 +12,9 @@ import {
   registerReaderTransientHost,
   unregisterReaderTransientHost,
   retireReaderTransientToast,
+  readerTransientTextObserver,
   createReaderTransientToastState,
+  type ReaderTransientTextObserver,
   type ReaderTransientToastState,
 } from './ReaderTransientFeedback';
 
@@ -39,6 +42,7 @@ export struct ReaderTransientToast {
   @State private editingHostHeight: number = -1;
   @State private editingHostY: number = 0;
   private handledGeneration: number = -1;
+  private textLayoutGeneration: number = -1;
   private dismissTimer: number = -1;
 
   aboutToAppear(): void {
@@ -98,7 +102,8 @@ export struct ReaderTransientToast {
                 .fontColor(readerAppColor('TOK_MESSAGE_FEEDBACK_INK', this.appThemeScheme))
                 .wordBreak(WordBreak.BREAK_WORD);
             }
-            Text(this.toast.message)
+            Text(this.toast.message, this.toastMessageTextOptions())
+              .id(this.toastVerificationId(true))
               .fontFamily(MESSAGE_BODY.fontFamily)
               .fontWeight(this.toast.title.length > 0 ? MESSAGE_BODY.fontWeight : MESSAGE_TITLE.fontWeight)
               .fontSize(this.toast.title.length > 0 ? MESSAGE_BODY.fontSizeFp : MESSAGE_TITLE.fontSizeFp)
@@ -106,13 +111,15 @@ export struct ReaderTransientToast {
               .fontColor(readerAppColor('TOK_MESSAGE_FEEDBACK_INK', this.appThemeScheme))
               .opacity(this.toast.title.trim().length > 0 ? 0.74 : 1)
               .margin({ top: this.toast.title.length > 0 ? 2 : 0 })
-              .wordBreak(WordBreak.BREAK_WORD);
+              .wordBreak(WordBreak.BREAK_WORD)
+              .onAreaChange(this.toastTextLayout(this.toast.generation));
           }
           .layoutWeight(1)
           .margin({ left: 10 })
           .alignItems(HorizontalAlign.Start);
         }
         .width('100%')
+        .id(this.toastVerificationId(false))
         .constraintSize({ maxWidth: 560 })
         .padding({ left: 14, right: 14, top: 12, bottom: 12 })
         .borderRadius(15)
@@ -136,6 +143,48 @@ export struct ReaderTransientToast {
     .zIndex(1000)
     .visibility(this.displayed ? Visibility.Visible : Visibility.Hidden)
     .hitTestBehavior(HitTestMode.None);
+  }
+
+  private activeTextObserver(generation: number): ReaderTransientTextObserver | undefined {
+    if (!this.foreground || !this.displayed || this.activeHost !== this.hostId ||
+      !this.toast.visible || generation !== this.toast.generation || generation !== this.handledGeneration) return undefined;
+    return readerTransientTextObserver(generation, this.hostId);
+  }
+
+  private toastVerificationId(text: boolean): string {
+    const generation = this.toast.generation;
+    if (this.activeTextObserver(generation) === undefined) return '';
+    return `reader-transient-feedback-${text ? 'text-' : ''}${generation}`;
+  }
+
+  private toastMessageTextOptions(): TextOptions | undefined {
+    try { return this.activeTextObserver(this.toast.generation)?.textOptions(this.toast.message); }
+    catch (_) { return undefined; }
+  }
+
+  private toastTextLayout(generation: number): (_old: Area, next: Area) => void {
+    return (_old: Area, next: Area): void => {
+      const observer = this.activeTextObserver(generation);
+      if (observer === undefined || this.textLayoutGeneration === generation ||
+        !(Number(next.width) > 0 && Number(next.height) > 0)) return;
+      const host = this.hostId;
+      const duration = this.toast.duration;
+      const context = this.getUIContext();
+      let retry = true;
+      const observe = (): void => {
+        if (host !== this.hostId || this.activeTextObserver(generation) !== observer) return;
+        try {
+          if (!observer.onLayout(generation, host, duration) && retry) {
+            retry = false;
+            context.postFrameCallback(new ReaderPostLayoutFrame(context, observe));
+          }
+        } catch (_) {}
+      };
+      try {
+        context.postFrameCallback(new ReaderPostLayoutFrame(context, observe));
+        this.textLayoutGeneration = generation;
+      } catch (_) {}
+    };
   }
 
   private toastBottomInset(): number {

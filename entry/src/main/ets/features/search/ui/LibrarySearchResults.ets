@@ -51,7 +51,7 @@ export struct LibrarySearchResults {
       },
       onRetry: (): void => {
         if (!this.inputCurrent()) return;
-        this.coordinator?.beginSearch();
+        if (this.presentation.host.presentation().kind !== 'sourceLoadError') this.coordinator?.beginSearch();
         this.presentation.host.retry();
       },
       onManageSources: (): void => { if (this.inputCurrent()) this.onManageSources(); },

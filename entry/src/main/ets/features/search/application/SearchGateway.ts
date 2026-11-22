@@ -4,7 +4,7 @@ import { readBookSearchTiming } from '../../../app/library/BookSearchTiming';
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../reading/application/BookAcquisitionCoordinator';
 import type { BookRequestOptions } from '../../../app/BookRequestScheduler';
-import { errorMessageOf, httpTransportFailureSummary, type HttpTransportFailureSummary } from '../../../app/ErrorMessage';
+import { coreHttpResponseStatus, errorMessageOf, httpTransportFailureSummary, type HttpTransportFailureSummary } from '../../../app/ErrorMessage';
 import { SearchBookProjection, type SearchBookPatch } from './SearchBookProjection';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import {
@@ -111,11 +111,32 @@ export function searchSourceHealthState(source: SearchSource, now: number = Date
   return health.state;
 }
 
+export type SearchWorkCompletion = 'received-results' | 'decoded-results' | 'unverified' | 'other';
+
 export type SearchOutcome =
   | { ok: true; results: SearchBook[]; pageReceipt?: BookSearchPageReceipt; discardedCount?: number; discardedReasons?: string[] }
-  | { ok: false; error: string; diagnostic?: HttpTransportFailureSummary };
+  | { ok: false; error: string; diagnostic?: HttpTransportFailureSummary; obsoleteCompletion?: SearchWorkCompletion; httpStatus?: number };
 
 type SearchRequestGuard = () => boolean;
+
+const SEARCH_BOOK_DECODE_CHUNK = 32;
+
+function supersededSearch(obsoleteCompletion: SearchWorkCompletion): SearchOutcome {
+  return { ok: false, error: 'search superseded', obsoleteCompletion };
+}
+
+// Check for a credible book row without decoding an obsolete batch or retaining source data.
+function receivedSearchCompletion(rawBooks: unknown[]): SearchWorkCompletion {
+  if (rawBooks.length === 0) return 'other';
+  const limit = Math.min(rawBooks.length, SEARCH_BOOK_DECODE_CHUNK);
+  for (let index = 0; index < limit; index += 1) {
+    const row = rawBooks[index];
+    if (typeof row !== 'object' || row === null || Array.isArray(row)) continue;
+    const book = row as JsonObject;
+    if (nonBlankString(book['bookId']) && nonBlankString(book['title'])) return 'received-results';
+  }
+  return 'unverified';
+}
 
 type LocalSearchMatchedPage = {
   offset: number;
@@ -239,6 +260,7 @@ export class SearchGateway {
       bookSourceUrl: this.sourceBookUrl(source),
       sourceRuleVersion: source.sourceVersion ?? '',
     };
+    let obsolete = false;
     try {
       let dispatchedAt: number | undefined = undefined;
       const options = this.requestOptions(isCurrent, canDispatch, SEARCH_SOURCE_REQUEST_TIMEOUT_MS);
@@ -254,16 +276,16 @@ export class SearchGateway {
       }
       const result = await this.runtimeOwner.request('book.search', params, options);
       const measuredAt = Date.now();
-      if (isCurrent?.() === false) return { ok: false, error: 'search superseded' };
+      obsolete = isCurrent?.() === false;
       const data = result.data;
       const returnedSourceId = requiredString(data, 'sourceId');
       if (returnedSourceId !== source.sourceId) {
-        return { ok: false, error: 'book.search returned a mismatched sourceId' };
+        return obsolete ? supersededSearch('unverified') : { ok: false, error: 'book.search returned a mismatched sourceId' };
       }
       if (data['sourceVersion'] !== undefined) {
         if (typeof data['sourceVersion'] !== 'string' || data['sourceVersion'].length === 0 ||
           (source.sourceVersion !== undefined && data['sourceVersion'] !== source.sourceVersion)) {
-          return { ok: false, error: 'book.search returned a mismatched sourceVersion' };
+          return obsolete ? supersededSearch('unverified') : { ok: false, error: 'book.search returned a mismatched sourceVersion' };
         }
         identity.sourceRuleVersion = data['sourceVersion'] as string;
       }
@@ -271,19 +293,24 @@ export class SearchGateway {
       const rawBooks = data['books'];
       if ((sourceCategory === 'comic' && data['contentKind'] !== 'manga') ||
         (sourceCategory === 'novel' && data['contentKind'] !== undefined && data['contentKind'] !== 'text')) {
-        return { ok: false, error: 'book.search returned a mismatched contentKind' };
+        return obsolete ? supersededSearch('unverified') : { ok: false, error: 'book.search returned a mismatched contentKind' };
       }
       if (!Array.isArray(rawBooks)) {
-        return { ok: false, error: 'book.search returned invalid books' };
+        return obsolete ? supersededSearch('unverified') : { ok: false, error: 'book.search returned invalid books' };
+      }
+      if (obsolete) {
+        const version = data['sourceVersion'] ?? pageReceipt?.sourceVersion;
+        return supersededSearch(source.sourceVersion === undefined || version === source.sourceVersion ?
+          receivedSearchCompletion(rawBooks) : 'unverified');
       }
       const books: SearchBook[] = [];
       let discardedCount = 0;
       const discardedReasons: string[] = [];
       let processed = 0;
       for (const raw of rawBooks) {
-        if (++processed % 32 === 0) {
+        if (++processed % SEARCH_BOOK_DECODE_CHUNK === 0) {
           await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-          if (isCurrent?.() === false) return { ok: false, error: 'search superseded' };
+          if (isCurrent?.() === false) return supersededSearch(books.length > 0 ? 'decoded-results' : 'unverified');
         }
         try { books.push(decodeBookSearchResult(raw, source, identity)); }
         catch (error) {
@@ -310,9 +337,13 @@ export class SearchGateway {
       if (discardedCount > 0) return { ok: true, results: books, pageReceipt, discardedCount, discardedReasons };
       return { ok: true, results: books, pageReceipt };
     } catch (error) {
-      const message = errorMessageOf(error);
+      if (obsolete) return supersededSearch('unverified');
+      const failure: SearchOutcome = { ok: false, error: errorMessageOf(error) };
       const diagnostic = httpTransportFailureSummary(error);
-      return diagnostic === undefined ? { ok: false, error: message } : { ok: false, error: message, diagnostic };
+      const status = coreHttpResponseStatus(error, 'book.search');
+      if (diagnostic !== undefined) failure.diagnostic = diagnostic;
+      if (status !== undefined) failure.httpStatus = status;
+      return failure;
     }
   }
 
@@ -538,21 +569,27 @@ export class SearchGateway {
     if (isCurrent?.() === false) throw new Error('local search superseded');
   }
 
-  async loadSources(): Promise<SearchSource[]> {
+  async loadSources(fresh: boolean = false): Promise<SearchSource[]> {
     const revision = this.sourceRevision();
     // Opening Search and immediately submitting share one versioned source
     // projection. Unknown revisions deliberately do not reuse stale metadata.
-    if (revision !== undefined && this.cachedSourceRevision === revision && this.cachedSources !== undefined) {
+    if (!fresh && revision !== undefined && this.cachedSourceRevision === revision && this.cachedSources !== undefined) {
       return this.cachedSources;
     }
-    if (revision !== undefined && this.loadingSourceRevision === revision && this.loadingSources !== undefined) {
+    if (!fresh && revision !== undefined && this.loadingSourceRevision === revision && this.loadingSources !== undefined) {
       return this.loadingSources;
     }
     const loading = this.readSources(revision);
     this.loadingSources = loading;
     this.loadingSourceRevision = revision;
-    try { return await loading; }
-    finally {
+    try {
+      const sources = await loading;
+      if (this.loadingSources === loading) {
+        this.cachedSources = sources;
+        this.cachedSourceRevision = revision;
+      }
+      return sources;
+    } finally {
       if (this.loadingSources === loading) this.loadingSources = undefined;
     }
   }
@@ -611,8 +648,6 @@ export class SearchGateway {
       sources.push(decoded);
     }
     if (revision !== this.sourceRevision()) throw new Error('source registry changed while loading');
-    this.cachedSources = sources;
-    this.cachedSourceRevision = revision;
     return sources;
   }
 
@@ -755,9 +790,13 @@ function requiredString(value: JsonObject, key: string): string {
   return candidate;
 }
 
+function nonBlankString(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 function requiredNonBlankString(value: JsonObject, key: string): string {
   const candidate = requiredString(value, key);
-  if (candidate.trim().length === 0) {
+  if (!nonBlankString(candidate)) {
     throw new Error(`search protocol returned blank ${key}`);
   }
   return candidate;

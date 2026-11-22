@@ -130,9 +130,10 @@ export struct ReaderControlSearchContent {
   onSearch: () => void = (): void => {};
   onLoadMore: () => void = (): void => {};
   onNeedMore: () => void = (): void => {};
+  onResultListPublished?: (scope: number, count: number) => void;
   private continuationQueued: boolean = false;
-  onSelectResult: (result: ReadingContentSearchResult) => void =
-    (_result: ReadingContentSearchResult): void => {};
+  onSelectResult: (result: ReadingContentSearchResult, scope: number, ordinal: number) => void =
+    (_result: ReadingContentSearchResult, _scope: number, _ordinal: number): void => {};
   private inputController: TextInputController = new TextInputController();
   private readonly queryInputId: string = `reader-content-search-input-${++readerContentSearchInputSequence}`;
   private queryInputMounted: boolean = false;
@@ -412,8 +413,14 @@ export struct ReaderControlSearchContent {
     const state = displayState;
     // A fast same-keyword requery can coalesce away the loading render. Its
     // new owner scope must still reset; only the same scope may append.
-    const change = this.resultDataSource.publish(state.kind === 'results' ? `${this.displayedResultScope()}:${state.keyword}` : state.kind,
+    const scope = state.kind === 'results' ? this.displayedResultScope() : 0;
+    const change = this.resultDataSource.publish(state.kind === 'results' ? `${scope}:${state.keyword}` : state.kind,
       state.kind === 'results' ? state.results : []);
+    if (state.kind === 'results' && scope > 0 && state.results.length > 0 && this.motionProgress === 0 &&
+      this.onResultListPublished !== undefined && this.displayedFacts()?.resultScope === scope &&
+      this.searchPublication.resultScrollScopeFor(this.currentSearchState()) === scope) {
+      this.onResultListPublished(scope, state.results.length);
+    }
     if (change !== 'replace') {
       if (change === 'append') this.scheduleResultNativeFollow();
       return;
@@ -655,6 +662,7 @@ export struct ReaderControlSearchContent {
       this.quickBack();
     }
     .width(this.availableWidth).height(this.availableHeight)
+    .id('reader-control-module-search')
     .attributeModifier(new ReaderPanelFrame('reader-full-card', this.appThemeScheme))
     .clip(true).enabled(this.currentInputEnabled() || this.currentEditorInputEnabled());
 
@@ -673,6 +681,7 @@ export struct ReaderControlSearchContent {
         },
         onEditingChange: (editing: boolean): void => this.onQueryEditingChanged(editing), onSubmit: (): void => this.submit() });
     }
+    .id('reader-control-search-field')
     .width(this.frame().field.width).height(this.frame().field.height)
     .padding({ left: 9, right: 9 }).alignItems(VerticalAlign.Center)
     .attributeModifier(new ReaderPanelFrame('reader-soft-control', this.appThemeScheme))
@@ -687,6 +696,7 @@ export struct ReaderControlSearchContent {
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search'))).width(16).height(16)
         .opacity(this.canSearch() ? 1 : .4);
     }
+    .id('reader-control-search-submit')
     .width(this.frame().action.width).height(this.frame().action.height)
     .padding(0)
     .position({ x: this.frame().action.x, y: this.frame().action.y })
@@ -717,14 +727,18 @@ export struct ReaderControlSearchContent {
       if (this.displayState().kind === 'results') {
         Stack({ alignContent: Alignment.TopStart }) {
         List({ space: 0, scroller: this.resultScroller, initialIndex: this.resultInitialNativeIndex }) {
+          // A new query can find the same anchor. Bind both the native cell
+          // and its click to the publication that actually presented it.
           LazyForEach(this.resultDataSource, (result: ReadingContentSearchResult, index: number) => {
             ListItem() {
-              this.resultRow(result.chapterIndex, result.chapterOffset, result.sourceId, result.bookId);
+              this.resultRow(result.chapterIndex, result.chapterOffset, index, result.sourceId, result.bookId,
+                this.displayedResultScope());
             }
             .width('100%').height(READER_SEARCH_LIST_ITEM_HEIGHT)
             .translate({ y: this.resultRowTranslation(this.currentResultIndex(result.chapterIndex, result.chapterOffset)) }).clip(false);
-          }, (result: ReadingContentSearchResult): string => readerContentSearchResultKey(result));
+          }, (result: ReadingContentSearchResult): string => `${this.displayedResultScope()}:${readerContentSearchResultKey(result)}`);
         }
+        .id('reader-control-search-results')
         .width(this.frame().firstResult.width).height(this.resultListFrame().viewportHeightVp)
         .position({ x: 0, y: 0 })
         .childrenMainSize(this.resultItemSizes).cachedCount(READER_SEARCH_LIST_CACHE_COUNT, true)
@@ -830,7 +844,8 @@ export struct ReaderControlSearchContent {
   }
 
   @Builder
-  private resultRow(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = '') {
+  private resultRow(chapterIndex: number, chapterOffset: number, resultOrdinal: number,
+    sourceId: string, bookId: string, resultScope: number) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Stack({ alignContent: Alignment.TopStart }) {
         Text(this.resultTitle(this.currentResult(chapterIndex, chapterOffset)))
@@ -842,13 +857,14 @@ export struct ReaderControlSearchContent {
         this.resultSnippet(chapterIndex, chapterOffset);
       }.width(this.frame().firstResult.width).height(this.frame().rowHeight);
     }
+    .id(`reader-control-search-result:${resultScope}:${resultOrdinal}`)
     .width(this.frame().firstResult.width).height(this.frame().rowHeight)
     .padding(0).backgroundColor(Color.Transparent)
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .clipShape(this.resultClip(chapterIndex, chapterOffset))
     .borderRadius(6).clip(false)
     .accessibilityText(`${this.resultTitle(this.currentResult(chapterIndex, chapterOffset))}，搜索结果`)
-    .onClick((): void => this.selectCurrentResult(chapterIndex, chapterOffset, sourceId, bookId));
+    .onClick((): void => this.selectCurrentResult(chapterIndex, chapterOffset, resultOrdinal, sourceId, bookId, resultScope));
   }
 
   @Builder
@@ -922,13 +938,15 @@ export struct ReaderControlSearchContent {
     return splitReaderSearchSnippet(result.snippet, result.snippetStart, result.chapterOffset, result.matchLength);
   }
 
-  private selectCurrentResult(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = ''): void {
+  private selectCurrentResult(chapterIndex: number, chapterOffset: number, resultOrdinal: number,
+    sourceId: string, bookId: string, resultScope: number): void {
+    if (resultScope <= 0 || resultScope !== this.displayedResultScope() || !this.queryInputMounted ||
+      !this.currentInputEnabled() || (this.motionProgress !== 0 && this.motionProgress !== 1)) return;
     const state = this.currentSearchState();
-    const result = state.kind === 'results' ? state.results.find((item: ReadingContentSearchResult): boolean =>
-      item.chapterIndex === chapterIndex && item.chapterOffset === chapterOffset) : undefined;
-    if (this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1) &&
-      result !== undefined && (sourceId.length === 0 || result.sourceId === sourceId) &&
-      (bookId.length === 0 || result.bookId === bookId)) this.onSelectResult(result);
+    if (state.kind !== 'results' || this.searchPublication.resultScrollScopeFor(state) !== resultScope) return;
+    const result = state.results[resultOrdinal];
+    if (result !== undefined && result.chapterIndex === chapterIndex && result.chapterOffset === chapterOffset &&
+      result.sourceId === sourceId && result.bookId === bookId) this.onSelectResult(result, resultScope, resultOrdinal);
   }
 
   private resultTitle(result: ReadingContentSearchResult | undefined): string {

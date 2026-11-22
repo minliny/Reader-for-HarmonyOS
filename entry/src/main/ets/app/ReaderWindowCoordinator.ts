@@ -183,7 +183,7 @@ export class ReaderWindowCoordinator {
     }
   }
 
-  static async install(win: window.Window, configuration?: Configuration): Promise<boolean> {
+  static async install(win: window.Window, configuration?: Configuration, appOrientation?: window.Orientation): Promise<boolean> {
     ReaderWindowCoordinator.detach();
     ReaderWindowCoordinator.installEpoch += 1;
     const epoch = ReaderWindowCoordinator.installEpoch;
@@ -196,7 +196,7 @@ export class ReaderWindowCoordinator {
     ReaderDocumentPickerActivity.bind(windowId);
     ReaderDocumentPickerActivity.setForeground(AppStorage.get<boolean>('readerAppForeground') !== false);
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
-    ReaderWindowCoordinator.appOrientation = win.getPreferredOrientation();
+    ReaderWindowCoordinator.appOrientation = appOrientation ?? win.getPreferredOrientation();
     ReaderWindowCoordinator.appKeepScreenOn = win.getWindowProperties().isKeepScreenOn;
     await win.setWindowLayoutFullScreen(true);
     if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
@@ -209,6 +209,10 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.registerWindowListeners(win);
     if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
       return false;
+    }
+    if (appOrientation !== undefined) {
+      await ReaderWindowCoordinator.requestAppWindowPolicy();
+      if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) return false;
     }
     ReaderWindowCoordinator.refreshMetrics();
     ReaderWindowCoordinator.publishUiConfigurationRevision();

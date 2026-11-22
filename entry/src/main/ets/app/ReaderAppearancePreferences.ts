@@ -1,3 +1,4 @@
+import { readerHostPreferencesName } from './diagnostics/ReaderPublicFixtureScope';
 import common from '@ohos.app.ability.common';
 import preferences from '@ohos.data.preferences';
 import {
@@ -61,7 +62,7 @@ export class ReaderAppearancePreferences implements ReaderAppearancePersistence 
 
   private async ensureStore(): Promise<preferences.Preferences> {
     if (this.store === undefined) {
-      this.store = await preferences.getPreferences(this.context, 'reader_appearance_v1');
+      this.store = await preferences.getPreferences(this.context, readerHostPreferencesName(this.context.filesDir, 'reader_appearance_v1'));
     }
     return this.store;
   }

@@ -1,3 +1,7 @@
+import { readReaderControlNativeActor, type MotionActor } from './ReaderControlVerificationMotion';
+import { ReaderAppearancePixelProbe } from '../../../app/diagnostics/ReaderAppearancePixelProbe';
+import type { ReaderControlVerificationSession } from './ReaderControlVerificationSession';
+import { ReaderControlVerificationFontTrace, ReaderControlFontVerificationTrack } from './ReaderControlVerificationFontTrace';
 import { readerControlAppearanceSelectValue, readerControlAppearanceMetricLabel, readerControlAppearanceMetricValue, readerControlAppearanceThemeSummary, readerControlAppearanceThemeActionLabel, readerControlAppearanceMinimumFacts, measureReaderControlAppearanceMinimum, type ReaderControlAppearanceMinimumInput, type ReaderControlAppearanceFontMinimumInput, type ReaderControlAppearanceMeasuredMinimum } from './ReaderControlAppearanceMinimum';
 
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
@@ -53,6 +57,41 @@ import {
 } from './ReaderControlAppearanceGeometry';
 
 interface ReaderControlAppearancePoint { x: number; y: number; }
+interface ReaderControlSelectNativeFrame {
+  timeNs: number;
+  actor: MotionActor;
+}
+interface ReaderControlSelectNativeTrace {
+  opening: boolean;
+  kind: string;
+  generation: number;
+  frames: ReaderControlSelectNativeFrame[];
+}
+
+interface ReaderControlFontDragStart {
+  font: ReaderAppearanceFontSlot;
+  order: ReaderAppearanceFontSlot[];
+  generation: number;
+}
+
+interface ReaderControlFontDragRelease {
+  commit: boolean;
+  changed: boolean;
+  order: ReaderAppearanceFontSlot[];
+}
+
+export interface ReaderControlFontOrderPresentation {
+  displayed: Promise<boolean>;
+  current: () => boolean;
+  retire: () => void;
+}
+
+interface ReaderControlPendingFontOrder {
+  presentation: ReaderControlFontOrderPresentation;
+  order: string;
+  admitted: boolean;
+}
+
 interface ReaderAppearanceScrollPair { before: number; after: number; }
 
 class ReaderAppearanceTextMaximum implements AttributeModifier<TextAttribute> {
@@ -66,12 +105,12 @@ class ReaderAppearanceTextMaximum implements AttributeModifier<TextAttribute> {
 let nextReaderAppearanceSelectFocusIdentity: number = 0;
 
 class ReaderFontMotionFrameCallback extends FrameCallback {
-  private readonly callback: () => void;
-  constructor(callback: () => void) {
+  private readonly callback: (timeNs: number) => void;
+  constructor(callback: (timeNs: number) => void) {
     super();
     this.callback = callback;
   }
-  onFrame(_time: number): void { this.callback(); }
+  onFrame(timeNs: number): void { this.callback(timeNs); }
   onIdle(_remaining: number): void {}
 }
 
@@ -115,7 +154,10 @@ export struct ReaderControlAppearanceContent {
       !readerControlModuleProfileMatches(prepared.moduleData, 'appearance') || !readerControlModuleFactsMatch(prepared.facts, 'appearance')) return;
     this.adoptedPrepared = prepared;
     const adopted = `${prepared.identity}|${prepared.key}`;
-    if (adopted === this.adoptedPreparedKey) return;
+    if (adopted === this.adoptedPreparedKey) {
+      this.reconcileFontOrderPresentation();
+      return;
+    }
     this.adoptedPreparedKey = adopted;
     this.onMinimumKeyChanged();
   }
@@ -151,7 +193,9 @@ export struct ReaderControlAppearanceContent {
   onSetDayTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onSetNightTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
-  onFontOrderChange: (order: ReaderAppearanceFontSlot[]) => void = (_order: ReaderAppearanceFontSlot[]): void => {};
+  onFontOrderChange: (order: ReaderAppearanceFontSlot[]) => ReaderControlFontOrderPresentation =
+    (_order: ReaderAppearanceFontSlot[]): ReaderControlFontOrderPresentation =>
+      ({ displayed: Promise.resolve(false), current: (): boolean => false, retire: (): void => {} });
   onCustomFontImport: () => void = (): void => {};
   onIndentRequest: (indent: ReaderAppearanceIndent) => void = (_indent: ReaderAppearanceIndent): void => {};
   onAlignmentRequest: (current: ReaderAppearanceAlignment) => void = (_current: ReaderAppearanceAlignment): void => {};
@@ -190,7 +234,10 @@ export struct ReaderControlAppearanceContent {
   private fontOrigin: ReaderControlAppearancePoint = { x: 0, y: 0 };
   private suppressFontClick: boolean = false;
   @State private fontMotionTimeMs: number = 0;
+  verificationSession: ReaderControlVerificationSession | undefined = undefined;
+  private readonly fontVerification: ReaderControlVerificationFontTrace = new ReaderControlVerificationFontTrace();
   private fontMotionGeneration: number = 0;
+  private pendingFontOrder: ReaderControlPendingFontOrder | undefined = undefined;
   private readonly fontTracks: Map<string, MotionPointTrack> = new Map();
   private readonly fontMotionCurve = curves.cubicBezierCurve(0, 0, .58, 1);
   private cachedFrame: ReaderControlAppearanceFrame = sampleReaderControlAppearance(0, 286, 666);
@@ -318,7 +365,8 @@ export struct ReaderControlAppearanceContent {
       if (previous !== undefined) this.restoreMinimumScroll(previous, profile, previousFonts);
     }
     // A new cell geometry retires an uncommitted pointer mapping, never a saved order.
-    if (this.draggedFontId !== '' || this.fontPointerId >= 0 || this.fontTracks.size > 0) this.cancelFontDrag();
+    if (this.draggedFontId !== '' || this.fontPointerId >= 0 || this.fontTracks.size > 0 ||
+      this.pendingFontOrder !== undefined) this.cancelFontDrag();
     if (this.openSelect !== '' && !this.selectClosing) this.positionSelect(this.openSelect);
   }
 
@@ -571,7 +619,7 @@ export struct ReaderControlAppearanceContent {
       this.selectInputRevision += 1;
       if (this.openSelect !== '') this.dismissTemporaryLayer();
       if (this.draggedFontId !== '' || this.fontPointerId >= 0 || this.fontTracks.size > 0 ||
-        this.previewFontOrder.length > 0) this.cancelFontDrag();
+        this.pendingFontOrder !== undefined) this.cancelFontDrag();
     }
   }
   private onInputChanged(): void {
@@ -580,7 +628,7 @@ export struct ReaderControlAppearanceContent {
       this.selectInputRevision += 1;
       if (this.openSelect !== '') this.dismissTemporaryLayer();
       if (this.draggedFontId !== '' || this.fontPointerId >= 0 || this.fontTracks.size > 0 ||
-        this.previewFontOrder.length > 0) this.cancelFontDrag();
+        this.pendingFontOrder !== undefined) this.cancelFontDrag();
     }
   }
   private dismissTemporaryLayer(returnFocus: boolean = false): void {
@@ -596,10 +644,54 @@ export struct ReaderControlAppearanceContent {
     if (returnFocus && inputRevision >= 0) this.scheduleSelectFocus(kind, identity, false, generation, inputRevision);
   }
 
+  private inspectSelectMotion(opening: boolean, kind: string, generation: number): void {
+    const verification = this.verificationSession;
+    if (verification?.observing() !== true) return;
+    const frames: ReaderControlSelectNativeFrame[] = [];
+    const context = this.getUIContext();
+    const pixelArmed = kind === 'indent' && !this.reduceMotion && ReaderAppearancePixelProbe.armed();
+    const readingId = pixelArmed ? verification.observationIdentity() : '', inputRevision = this.selectInputRevision;
+    const pixel = pixelArmed ?
+      ReaderAppearancePixelProbe.begin(context.getWindowId(), readingId, this.selectFocusId, generation, opening, (): boolean =>
+        this.feedbackMounted && verification.observing() && this.verificationSession === verification &&
+        verification.observationIdentity() === readingId && this.selectInputRevision === inputRevision &&
+        (this.selectGeneration === generation && this.openSelect === kind && this.selectClosing !== opening ||
+          !opening && this.selectGeneration === generation + 1 && this.openSelect === '')) : undefined;
+    const collect = (timeNs: number): void => {
+      if (!this.feedbackMounted || verification.observing() !== true ||
+        opening && (this.selectGeneration !== generation || this.selectClosing) ||
+        !opening && this.selectGeneration > generation + 1) return;
+      const actor = readReaderControlNativeActor(context, 'reader-control-appearance-overlay');
+      if (pixel !== undefined) {
+        const rect = actor.layoutRectVp;
+        if (!actor.mounted) pixel(timeNs);
+        else if (actor.uniqueId !== undefined && actor.clipToFrame === true && actor.visible === true && rect !== undefined &&
+          rect.width >= 24 && rect.height > 0) {
+          // A narrow right-side strip spans the measured clip edge while avoiding the option labels.
+          const x = Math.floor(context.vp2px(rect.x + rect.width - 14));
+          const y = Math.floor(context.vp2px(rect.y - 4));
+          pixel(timeNs, { id: actor.uniqueId, x: x, y: y, width: Math.ceil(context.vp2px(8)),
+            height: Math.ceil(context.vp2px(rect.y + rect.height + 4)) - y });
+        }
+      }
+      const frame: ReaderControlSelectNativeFrame = { timeNs: timeNs, actor: actor };
+      frames.push(frame);
+      if (frames.length < 25) context.postFrameCallback(new ReaderFontMotionFrameCallback(collect));
+      else {
+        const trace: ReaderControlSelectNativeTrace = {
+          opening: opening, kind: kind, generation: generation, frames: frames,
+        };
+        verification.effect('appearance-selector', 'trace', trace, 'motion');
+      }
+    };
+    context.postFrameCallback(new ReaderFontMotionFrameCallback(collect));
+  }
+
   private requestSelectClose(): void {
     if (this.openSelect === '' || this.selectClosing) return;
     if (this.selectCloseInputRevision < 0) this.selectCloseInputRevision = this.selectInputRevision;
     this.selectClosing = true;
+    this.inspectSelectMotion(false, this.openSelect, this.selectGeneration);
   }
 
   private selectTriggerFocusId(kind: string): string { return `${this.selectFocusId}:${kind}`; }
@@ -622,8 +714,7 @@ export struct ReaderControlAppearanceContent {
   }
 
   private onSnapshotChanged(): void {
-    if (this.draggedFontId === '' && this.previewFontOrder.join('|') ===
-      normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder).join('|')) this.previewFontOrder = [];
+    this.reconcileFontOrderPresentation();
     this.publishMinimumMeasurer();
   }
 
@@ -671,6 +762,7 @@ export struct ReaderControlAppearanceContent {
           }, (font: ReaderAppearanceFontSlot): string => `control-appearance-font-${font}`);
           this.layoutLibrary();
         }
+        .id('reader-control-font-grid')
         .width(this.availableWidth).height(this.scrollContentHeight())
         .translate({ x: this.frame().contentTranslateX });
       }
@@ -685,6 +777,7 @@ export struct ReaderControlAppearanceContent {
       .onDidScroll((): void => this.onFullDidScroll());
       this.selectOverlay();
     }
+    .id('reader-control-module-appearance')
     .width(this.availableWidth).height(this.availableHeight).clip(true)
       .onTouch((event: TouchEvent): void => {
         if (event.type === TouchType.Down) this.selectInputRevision += 1;
@@ -841,8 +934,8 @@ export struct ReaderControlAppearanceContent {
   private fontActor(font: ReaderAppearanceFontSlot): ReaderControlAppearanceActor {
     return this.fontActorAt(font, this.frame());
   }
-  private fontActorAt(font: ReaderAppearanceFontSlot, frame: ReaderControlAppearanceFrame): ReaderControlAppearanceActor {
-    const full = this.fontIds();
+  private fontActorAt(font: ReaderAppearanceFontSlot, frame: ReaderControlAppearanceFrame,
+    full: ReaderAppearanceFontSlot[] = this.fontIds()): ReaderControlAppearanceActor {
     const quick = full.filter((slot: ReaderAppearanceFontSlot): boolean => slot !== 'import');
     return readerControlAppearanceFontActor(frame, quick.indexOf(font), full.indexOf(font),
       font === 'import', this.importLayout);
@@ -921,7 +1014,7 @@ export struct ReaderControlAppearanceContent {
         .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .opacity(this.presentation().contentOpacity * (this.fontPreviewReady(font) ? 1 : 0.65))
         .blur(this.presentation().contentBlur);
-    }.width(this.fontActor(font).width).height(this.fontActor(font).height)
+    }.id('reader-control-font-' + font).width(this.fontActor(font).width).height(this.fontActor(font).height)
       .clipShape(this.sharedClip('font', 0, font))
       .position(this.fontCellPosition(font)).opacity(this.fontActor(font).opacity)
       .zIndex(this.draggedFontId === font ? 3 : 1).enabled(this.fontInput(font))
@@ -1001,6 +1094,7 @@ export struct ReaderControlAppearanceContent {
       ReaderSelect({ value: this.selectValue(kind), options: this.selectOptions(kind),
         isOpen: this.openSelect === kind && !this.selectClosing, variant: 'appearanceLibrary',
         focusId: this.selectTriggerFocusId(kind),
+        nativeAnchorId: 'reader-control-appearance-select-' + kind,
         reduceMotion: this.reduceMotion, onToggle: (): void => this.toggleSelect(kind, y()),
       }).enabled(this.fullInput())
         .accessibilityText(`${this.selectLabel(kind)}，当前${this.selectValue(kind)}`);
@@ -1023,6 +1117,7 @@ export struct ReaderControlAppearanceContent {
     this.selectIdentity = `${kind}:${++this.selectGeneration}`;
     const identity = this.selectionActorIdentity(), generation = this.selectGeneration, inputRevision = this.selectInputRevision;
     this.onTemporaryLayerChange(true);
+    this.inspectSelectMotion(true, kind, generation);
     this.scheduleSelectFocus(kind, identity, true, generation, inputRevision);
   }
 
@@ -1074,6 +1169,7 @@ export struct ReaderControlAppearanceContent {
         reduceMotion: this.reduceMotion, controlWidth: APPEARANCE_SELECT_MENU_WIDTH,
         maxPanelHeight: this.selectMenuViewportHeight(this.openSelect) ?? 0,
         focusIdPrefix: this.selectPanelFocusPrefix(_actor),
+        nativeAnchorId: 'reader-control-appearance-overlay',
         closing: this.selectClosing, selectionId: _actor,
         onCommit: this.conversionSelectionCommit(),
         onDismiss: (identity: string): void => {
@@ -1177,6 +1273,10 @@ export struct ReaderControlAppearanceContent {
     this.draggedFontOffsetY = 0;
     this.suppressFontClick = true;
     this.onFontReorderActivityChange(true);
+    const facts: ReaderControlFontDragStart = {
+      font: font, order: this.fontOriginalOrder.slice(), generation: this.fontMotionGeneration,
+    };
+    this.verificationSession?.effect('font-reorder', 'drag-started', facts);
   }
   private fontTouch(font: ReaderAppearanceFontSlot, event: TouchEvent): void {
     if (!this.fullInput() || !this.fontInput(font)) return;
@@ -1186,6 +1286,7 @@ export struct ReaderControlAppearanceContent {
       if (this.fontPointerId >= 0) return;
       const pointer = event.changedTouches.length > 0 ? event.changedTouches[0] : touches[0];
       if (pointer === undefined) return;
+      this.retireFontOrderPresentation();
       this.suppressFontClick = false;
       this.fontPointerId = pointer.id;
       this.fontDownX = pointer.windowX;
@@ -1205,6 +1306,7 @@ export struct ReaderControlAppearanceContent {
         this.updateFontDrag(pointer.windowX - this.fontDownX, pointer.windowY - this.fontDownY);
         if (event.type === TouchType.Up) {
           this.settleFontDrag(true);
+          return;
         }
       }
       if (event.type === TouchType.Up) {
@@ -1241,9 +1343,10 @@ export struct ReaderControlAppearanceContent {
       this.previewFontOrder = moveReaderAppearanceFontSlot(this.fontOriginalOrder, this.fontOriginalIndex, target);
     }
     if (previous !== this.previewFontOrder.join('|')) this.animateFontPositions(positions,
-      motionSpecGet('reader.font.reorder.shift')!.durationMs);
+      motionSpecGet('reader.font.reorder.shift')!.durationMs, 'shift');
   }
   private cancelFontDrag(): void {
+    this.retireFontOrderPresentation();
     const active = this.draggedFontId !== '';
     this.draggedFontId = '';
     this.draggedFontOffsetX = 0;
@@ -1251,6 +1354,7 @@ export struct ReaderControlAppearanceContent {
     this.previewFontOrder = [];
     this.fontOriginalIndex = -1;
     this.fontPointerId = -1;
+    this.fontVerification.finish(this.verificationSession, 'interrupted');
     this.fontMotionGeneration += 1;
     this.fontTracks.clear();
     this.fontMotionTimeMs = readerMotionNowMs();
@@ -1271,35 +1375,106 @@ export struct ReaderControlAppearanceContent {
     return positions;
   }
 
-  private animateFontPositions(positions: Map<string, ReaderControlAppearancePoint>, duration: number): void {
+  private animateFontPositions(positions: Map<string, ReaderControlAppearancePoint>, duration: number,
+    verificationType: 'shift' | 'settle' = 'settle', destination?: ReaderAppearanceFontSlot[]): void {
     const now = readerMotionNowMs();
     this.fontMotionTimeMs = now;
     const generation = ++this.fontMotionGeneration;
     this.fontTracks.clear();
     if (this.reduceMotion || !this.fullInput()) return;
-    for (const font of this.fontIds()) {
+    const observing = this.verificationSession?.observing() === true;
+    const observedTracks: ReaderControlFontVerificationTrack[] = [];
+    const targetOrder = destination ?? this.fontIds();
+    const frame = this.frame();
+    for (const font of targetOrder) {
       if (font === this.draggedFontId) continue;
       const from = positions.get(font);
-      if (from !== undefined) this.fontTracks.set(font, new MotionPointTrack(from,
-        this.actorPosition(this.fontActor(font), font !== 'import'), now, duration));
+      if (from === undefined) continue;
+      const to = this.actorPosition(this.fontActorAt(font, frame, targetOrder), font !== 'import');
+      this.fontTracks.set(font, new MotionPointTrack(from, to, now, duration));
+      if (observing) {
+        observedTracks.push(new ReaderControlFontVerificationTrack('reader-control-font-' + font,
+          from.x, from.y, to.x, to.y));
+      }
     }
+    if (observing) this.fontVerification.begin(this.verificationSession, generation, verificationType, now, duration,
+      targetOrder.slice(), observedTracks);
     this.scheduleFontFrame(generation);
   }
 
   private scheduleFontFrame(generation: number): void {
-    this.getUIContext().postFrameCallback(new ReaderFontMotionFrameCallback((): void => {
+    this.getUIContext().postFrameCallback(new ReaderFontMotionFrameCallback((timeNs: number): void => {
       if (generation !== this.fontMotionGeneration) return;
+      this.fontVerification.observe(this.verificationSession, this.getUIContext(), generation, timeNs, this.fontMotionTimeMs, false);
       this.fontMotionTimeMs = readerMotionNowMs();
       let running = false;
       this.fontTracks.forEach((track: MotionPointTrack): void => {
         if (track.running(this.fontMotionTimeMs)) running = true;
       });
       if (running) this.scheduleFontFrame(generation);
-      else if (this.fontPointerId < 0) {
-        this.fontTracks.clear();
-        this.onSnapshotChanged();
+      else {
+        if (this.fontPointerId < 0 && this.pendingFontOrder === undefined) {
+          this.fontTracks.clear();
+          this.onSnapshotChanged();
+        }
+        if (this.verificationSession?.observing() === true) {
+          this.getUIContext().postFrameCallback(new ReaderFontMotionFrameCallback((endpointNs: number): void => {
+            if (generation !== this.fontMotionGeneration) return;
+            this.fontVerification.observe(this.verificationSession, this.getUIContext(), generation,
+              endpointNs, this.fontMotionTimeMs, true);
+            this.fontVerification.finish(this.verificationSession, 'completed');
+          }));
+        }
       }
     }));
+  }
+
+  private retireFontOrderPresentation(): void {
+    const pending = this.pendingFontOrder;
+    this.pendingFontOrder = undefined;
+    pending?.presentation.retire();
+  }
+
+  private reconcileFontOrderPresentation(): void {
+    const pending = this.pendingFontOrder;
+    if (pending?.admitted !== true) return;
+    if (!pending.presentation.current()) {
+      this.restoreAdmittedFontPositions();
+      return;
+    }
+    if (this.fontIds().join('|') !== pending.order ||
+      normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder).join('|') !== pending.order) return;
+    this.pendingFontOrder = undefined;
+    // The existing tracks and the prepared layout now agree. Keep any
+    // running animation, and release held endpoint tracks after adoption.
+    for (const track of this.fontTracks.values()) {
+      if (track.running(this.fontMotionTimeMs)) return;
+    }
+    this.fontTracks.clear();
+  }
+
+  private restoreAdmittedFontPositions(): void {
+    this.retireFontOrderPresentation();
+    if (this.feedbackMounted && this.fullInput() && this.fontTracks.size > 0) {
+      this.animateFontPositions(this.captureFontPositions(), motionSpecGet('reader.font.reorder.settle')!.durationMs);
+    } else {
+      this.fontTracks.clear();
+    }
+  }
+
+  private observeFontOrderPresentation(order: ReaderAppearanceFontSlot[]): void {
+    const presentation = this.onFontOrderChange(order);
+    const pending: ReaderControlPendingFontOrder = { presentation: presentation, order: order.join('|'), admitted: false };
+    this.pendingFontOrder = pending;
+    void presentation.displayed.then((displayed: boolean): void => {
+      if (this.pendingFontOrder !== pending) return;
+      if (displayed) {
+        pending.admitted = true;
+        this.reconcileFontOrderPresentation();
+        return;
+      }
+      this.restoreAdmittedFontPositions();
+    });
   }
 
   private settleFontDrag(commit: boolean): void {
@@ -1308,9 +1483,10 @@ export struct ReaderControlAppearanceContent {
     const next = this.previewFontOrder.slice();
     const changed = next.join('|') !== normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder).join('|');
     this.cancelFontDrag();
-    // Keep the intended layout while the host admits the new order.
-    if (commit) this.previewFontOrder = next;
-    if (commit && changed) this.onFontOrderChange(next);
-    this.animateFontPositions(positions, motionSpecGet('reader.font.reorder.settle')!.durationMs);
+    const facts: ReaderControlFontDragRelease = { commit: commit, changed: changed, order: next };
+    this.verificationSession?.effect('font-reorder', 'drag-released', facts);
+    this.animateFontPositions(positions, motionSpecGet('reader.font.reorder.settle')!.durationMs, 'settle',
+      commit ? next : undefined);
+    if (commit && changed) this.observeFontOrderPresentation(next);
   }
 }

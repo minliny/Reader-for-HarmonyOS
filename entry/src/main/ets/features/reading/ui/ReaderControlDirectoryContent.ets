@@ -1,3 +1,4 @@
+import type { ReaderControlVerificationSession } from './ReaderControlVerificationSession';
 import inputMethod from '@ohos.inputMethod';
 import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
 import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
@@ -45,6 +46,13 @@ import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent }
 import { TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
   TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT, TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
 import { readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
+
+interface ReaderControlDirectoryScrollFacts {
+  offsetVp?: number;
+  beforeOffsetVp?: number;
+  tab: string;
+  presentation: number;
+}
 
 class ControlDirectoryDataSource implements IDataSource {
   private rows: ReaderControlDirectoryRow[] = [];
@@ -204,6 +212,9 @@ export struct ReaderControlDirectoryContent {
   private positionQueued: boolean = false;
   private positionTicket: number = -1;
   private previousRowHeight: number = 32;
+  verificationSession: ReaderControlVerificationSession | undefined = undefined;
+  private verificationScrollBefore: number | undefined = undefined;
+  private verificationScrollPresentation: number = -1;
   private leadingRow: number | undefined = undefined;
   private leadingKey: string | undefined = undefined;
   private leadingFraction: number = 0;
@@ -525,9 +536,41 @@ export struct ReaderControlDirectoryContent {
     this.layoutRestoreTicket += 1; this.layoutRestorePending = false; this.layoutRestoreQueued = false;
   }
   private userScroll(): void {
+    if (this.verificationSession?.observing() === true && this.verificationScrollBefore === undefined) {
+      const offset = this.verificationOffset();
+      if (offset !== undefined) {
+        this.verificationScrollBefore = offset;
+        this.verificationScrollPresentation = this.layoutPresentation;
+        const facts: ReaderControlDirectoryScrollFacts = {
+          offsetVp: offset, tab: this.tab, presentation: this.layoutPresentation,
+        };
+        this.verificationSession.effect('directory-scroll', 'started', facts);
+      }
+    }
     this.cancelPendingPlacement();
     this.navigationInteracted = true;
   }
+  private verificationOffset(): number | undefined {
+    try {
+      const offset = this.scroller.currentOffset().yOffset;
+      return Number.isFinite(offset) ? offset : undefined;
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  private observeDirectoryScrollSettled(): void {
+    const before = this.verificationScrollBefore;
+    const presentation = this.verificationScrollPresentation;
+    this.verificationScrollBefore = undefined;
+    this.verificationScrollPresentation = -1;
+    if (before === undefined || presentation !== this.layoutPresentation) return;
+    const facts: ReaderControlDirectoryScrollFacts = {
+      beforeOffsetVp: before, offsetVp: this.verificationOffset(), tab: this.tab, presentation: presentation,
+    };
+    this.verificationSession?.effect('directory-scroll', 'settled', facts);
+  }
+
   private value(quick: number, full: number): number { return quick + (full - quick) * this.progress; }
   private fontScale(): number {
     return !Number.isFinite(this.minimumMetricsRevision) || this.minimumMetricsRevision < 0 ? 1 :
@@ -756,6 +799,7 @@ export struct ReaderControlDirectoryContent {
       .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }.width(this.tabWidth()).height(this.tabHeight()).padding(0)
       .borderRadius(8).backgroundColor(Color.Transparent)
+      .id('reader-control-directory-tab-' + tab)
       .accessibilityText(title)
       .responseRegion({ x: 0, y: 0, width: this.tabWidth(), height: this.tabHeight() })
       .attributeModifier(new ReaderActionAccessibility(title, this.tabsInteractive(), this.tab === tab, true, undefined, 'nativeButton'))
@@ -786,6 +830,9 @@ export struct ReaderControlDirectoryContent {
         directoryFocusCurrent: (id: string): boolean => this.currentContent(presentation) && this.queryInteractive() && id === this.directoryFocusId(),
         onDirectoryFocusChanged: (id: string, focused: boolean): void => this.onDirectoryFocus(presentation, id, focused),
         onDirectoryEditingRequested: (id: string): void => this.onDirectoryEditingRequested(presentation, id),
+        onDirectoryKeyboardBack: (_id: string): void => {
+          this.verificationSession?.backConsumerForLatestLayer('keyboard');
+        },
         onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(presentation, id, requested),
         onTextChange: (value: string): void => { if (this.currentContent(presentation) && this.queryInteractive()) this.draft = value; },
         onSearch: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.search(); },
@@ -802,6 +849,8 @@ export struct ReaderControlDirectoryContent {
   private chapterRow(entry: LocalReadingTocEntry, presentation: number) {
     ReaderDirectoryChapterRow({
       entry: entry, rowHeight: this.rowHeight(), currentChapterIndex: this.currentChapterIndex,
+      selectionFocusId: this.verificationSession?.observing() === true && entry.navigable !== false &&
+        entry.index !== this.currentChapterIndex ? `reader-control-directory-chapter:${entry.index}` : '',
       chapterDownloadEnabled: this.chapterDownloadEnabled,
       bookmarkActionsEnabled: this.bookmarkWriteEnabled(),
       chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled && this.bookmarkWriteEnabled(),
@@ -919,6 +968,7 @@ export struct ReaderControlDirectoryContent {
       .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): ScrollResult =>
         ({ offsetRemain: this.currentInputEnabled() || source === ScrollSource.SCROLLER ? offset : 0 }))
       .onWillStartDragging((): void => this.userScroll())
+      .onScrollStop((): void => this.observeDirectoryScrollSettled())
       .onAreaChange((_old: Area, area: Area): void => {
         if (this.mounted && Math.abs(readerPageAreaLength(area.height) - this.listHeight()) <= 1 &&
           Math.abs(readerPageAreaLength(area.width) - Math.max(0, this.availableWidth - 2)) <= 1) this.onListLayout();
@@ -1013,6 +1063,7 @@ export struct ReaderControlDirectoryContent {
         ReaderDirectoryNavigationSurface({
           inputCurrent: (): boolean => this.directoryInputCurrent(presentation),
           chapterInputCurrent: (chapter: LocalReadingTocEntry): boolean => this.chapterIsCurrent(chapter, presentation),
+          verificationChapterActions: this.verificationSession?.observing() === true,
             navigationPortFactory: this.navigationPortFactory,
           headerCount: this.headerCount(), prefixHeight: this.prefixHeight(), prefixIdentity: `${this.sessionKey}:${this.tab}:control-directory-prefix`,
           prefixRevealRevision: this.prefixRevealRevision, prefixBuilder: (): void => { this.shortHeader(); },
@@ -1032,6 +1083,9 @@ export struct ReaderControlDirectoryContent {
               this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
           },
           onUserScrollIntent: (): void => { if (this.directoryInputCurrent(presentation)) this.userScroll(); },
+          onObservedScrollSettled: (): void => {
+            if (this.currentContent(presentation)) this.observeDirectoryScrollSettled();
+          },
           onFirstLayout: (): void => { if (this.currentContent(presentation)) this.onListLayout(); },
           onClearSearch: (): void => { if (this.directoryInputCurrent(presentation)) this.clearSearch(presentation); },
           onTreeStateChange: (active: boolean): void => {
@@ -1098,6 +1152,7 @@ export struct ReaderControlDirectoryContent {
           this.listBody(false, presentation);
         }, (presentation: number): string => presentation.toString());
       }
+        .id('reader-control-directory-body-' + this.tab)
         .width(Math.max(0, this.availableWidth - 2)).height(this.listHeight())
         .position({ x: 1, y: this.listTop() }).clip(true)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
@@ -1123,7 +1178,8 @@ export struct ReaderControlDirectoryContent {
           .hitTestBehavior(HitTestMode.None)
           .accessibilityLevel(this.progress === 0 ? 'no-hide-descendants' : 'auto');
       }
-    }.width(this.availableWidth).height(this.availableHeight).clip(true);
+    }.width(this.availableWidth).height(this.availableHeight).clip(true)
+      .id('reader-control-module-directory');
 
     }
   }

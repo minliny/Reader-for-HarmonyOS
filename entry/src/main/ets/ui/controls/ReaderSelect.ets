@@ -1,4 +1,5 @@
 import type { MeasureOptions } from '@ohos.measure';
+import { KeyCode } from '@kit.InputKit';
 import { TYPE_SELECT_LIBRARY_VALUE } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
@@ -65,21 +66,27 @@ export struct ReaderSelect {
   @Prop maxTriggerWidthVp: number = -1;
   /** Optional address of the source-group or appearance-library native action. */
   @Prop focusId: string = '';
+  @Prop nativeAnchorId: string = '';
   onToggle: () => void = (): void => {};
   private mounted: boolean = false;
+  private sourceGroupKeyDown: boolean = false;
 
   aboutToAppear(): void {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.sourceGroupKeyDown = false;
+  }
 
   build() {
     // 收起/展开态同构；面板由宿主 overlay 覆盖，不参与字段行的测量。
     Stack({ alignContent: Alignment.TopStart }) {
       this.phoneTrigger();
     }
+    .id(this.nativeAnchorId)
     .width(this.resolvedWidth())
     .height(this.triggerHeight());
   }
@@ -101,11 +108,33 @@ export struct ReaderSelect {
     .accessibilityText(this.variant === 'sourceGroup' ? `分组：${this.value}` : this.value)
     .accessibilityDescription(this.isOpen ? '已展开' : '已收起')
     .enabled(this.triggerEnabled())
-    .onClick((): void => { if (this.mounted && this.triggerEnabled()) this.onToggle(); });
+    .onClick((): void => { if (this.mounted && this.triggerEnabled()) this.onToggle(); })
+    .onKeyEventDispatch((event: KeyEvent): boolean => this.handleSourceGroupKey(event))
+    .onKeyEvent((event: KeyEvent): boolean => this.handleSourceGroupKey(event));
   }
 
   private triggerEnabled(): boolean {
     return this.actionEnabled && (this.variant !== 'sourceGroup' || this.focusId.length === 0 || this.options.length > 1);
+  }
+
+  private handleSourceGroupKey(event: KeyEvent): boolean {
+    if (this.variant !== 'sourceGroup') return false;
+    const actionKey = event.keyCode === KeyCode.KEYCODE_ENTER ||
+      event.keyCode === KeyCode.KEYCODE_SPACE ||
+      event.keyCode === KeyCode.KEYCODE_DPAD_CENTER;
+    if (!actionKey) return false;
+    event.stopPropagation();
+    if (event.type === KeyType.Down) {
+      if (this.sourceGroupKeyDown) return true;
+      this.sourceGroupKeyDown = true;
+      if (this.mounted && this.triggerEnabled()) this.onToggle();
+      return true;
+    }
+    if (event.type === KeyType.Up) {
+      this.sourceGroupKeyDown = false;
+      return true;
+    }
+    return false;
   }
 
   @Builder

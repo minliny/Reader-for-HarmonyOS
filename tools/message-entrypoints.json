@@ -1464,7 +1464,7 @@
       "member": "originalRecovery",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前书源管理开页、当前原操作代次及前景。继续动作复查原记录的继续权限。",
+      "effectiveHost": "当前书源管理开页、当前原操作代次及前景。继续动作复查原记录的继续权限。原生核对、继续及标题展开分别继承当前通知作用域。",
       "retireRule": "分组打开及退场、切到后台或代次变化时拒绝旧动作。原回执由书源 owner 保留。",
       "status": "registered-source-entry"
     },
@@ -1475,7 +1475,7 @@
       "member": "pendingRecovery",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前书源列表的首个流内段，搜索和筛选随提示顺序排版。原 operation/original/receipt 身份与 loading/blocked 控制展示。",
+      "effectiveHost": "当前书源管理有界覆盖层，原 operation/original/receipt 身份与 loading/blocked 控制展示。原操作优先，未知回执通知独立原生核对和标题展开作用域。",
       "retireRule": "分组占用及退场、后台或开页失效时停用提示输入。已受理操作仍由原 owner 结算。",
       "status": "registered-source-entry"
     },
@@ -1841,7 +1841,7 @@
       "family": "shared.recovery-action",
       "category": "公共原操作通知的主/次动作及本地展开适配边界",
       "effectiveHost": "当前已登记RecoveryNotice的view.generation、view.canRetry/busy/secondaryBusy；原operation事实仍归调用者。第三个Action仅切expanded，不执行原操作。 Both busy roles retain the primary actor and its width reservation while group admission blocks duplicates. Only the owner-selected action shows busy. Other registered callers retain the existing secondaryBusy=false behavior.",
-      "retireRule": "主次动作按view.generation转交原onReconcile/onSecondaryAction；新generation重置展开测量，关闭/折叠不确认或取消业务。是否仍为当前原operation最终由调用者复核。",
+      "retireRule": "主次动作按view.generation转交原onReconcile/onSecondaryAction；新generation重置展开测量，关闭/折叠不确认或取消业务。是否仍为当前原operation最终由调用者复核。可选的原生作用域和标题长度测量只提供观察。",
       "status": "registered-adapter-boundary"
     },
     {

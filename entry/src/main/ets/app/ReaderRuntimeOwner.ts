@@ -1,6 +1,9 @@
 import { supplyBundledSources } from './IncrementalBundledSourceSupply';
 import { BookAcquisitionCoordinator } from '../features/reading/application/BookAcquisitionCoordinator';
 import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
+import { buildReaderPublicFixtureDirectory, readerHostCacheDirectory, readerHostFilesDirectory,
+  type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
+import { readerPublicSearchHttpFixtureMode } from './diagnostics/ReaderPublicSearchHttpFixture';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from './BookRequestScheduler';
 export { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from './BookRequestScheduler';
 import common from '@ohos.app.ability.common';
@@ -202,7 +205,8 @@ export class ReaderRuntimeOwner {
 
   getReadingProgressJournal(): ReadingProgressJournal {
     if (this.readingProgressJournal === undefined) this.readingProgressJournal = new ReadingProgressJournal(
-      new ReadingProgressIntentFile(this.getUIAbilityContext().filesDir, (): boolean => ReaderRuntimeOwner.isCurrent(this)));
+      new ReadingProgressIntentFile(readerHostFilesDirectory(this.getUIAbilityContext().filesDir),
+        (): boolean => ReaderRuntimeOwner.isCurrent(this)));
     return this.readingProgressJournal;
   }
 
@@ -234,12 +238,16 @@ export class ReaderRuntimeOwner {
   private readonly predecessorClose: Promise<void>;
   /** Fixed at process-owner construction; never a persisted user setting. */
   private readonly optionalEntryMemoryEnabled: boolean;
+  private readonly publicFixture: ReaderPublicFixtureScope | undefined;
+  private publicSearchHttpReady: boolean = false;
 
   private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve(),
     disableOptionalEntryMemory: boolean = false, mangaOfflineScope?: MangaOfflineProbeScope,
-    mangaReadingScope?: MangaOfflineProbeScope, mangaSelectionMode?: MangaProbeSelectionMode) {
+    mangaReadingScope?: MangaOfflineProbeScope, mangaSelectionMode?: MangaProbeSelectionMode,
+    publicFixture?: ReaderPublicFixtureScope) {
     this.predecessorClose = predecessorClose;
     this.optionalEntryMemoryEnabled = !disableOptionalEntryMemory;
+    this.publicFixture = publicFixture;
     let probe: MangaOfflineNetworkProbe | undefined = undefined;
     const conflictingScope = mangaOfflineScope !== undefined && mangaReadingScope !== undefined;
     const conflictingSelection = mangaSelectionMode !== undefined && (mangaOfflineScope !== undefined || mangaReadingScope !== undefined);
@@ -257,7 +265,8 @@ export class ReaderRuntimeOwner {
       }
     }
     this.mangaOfflineProbe = probe;
-    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe);
+    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe, publicFixture,
+      (): boolean => publicFixture !== undefined && this.publicSearchHttpReady && this.isCurrentPublicFixture(publicFixture));
     this.ttsHost = new HarmonyTtsHostRouter(
       new HarmonySystemTtsHost(),
       new HarmonyHttpTtsHost(this),
@@ -267,7 +276,7 @@ export class ReaderRuntimeOwner {
     );
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
-    ReadingBodyImageHost.setDisplayCacheDir(context.cacheDir);
+    ReadingBodyImageHost.setDisplayCacheDir(readerHostCacheDirectory(context.cacheDir));
     this.bindMangaStorage();
     if (this.mangaOfflineProbe?.mode === 'reading') this.bindMangaReadingProbe();
   }
@@ -331,7 +340,7 @@ export class ReaderRuntimeOwner {
       pending: async () => ((await this.request('manga.cache.eviction.pending')).data['grants'] as JsonObject[]).map(projectGrant),
     });
     const body = ReadingBodyImageHost.instance;
-    body.configureMangaDisplayCache(this.host.getContext().filesDir);
+    body.configureMangaDisplayCache(readerHostFilesDirectory(this.host.getContext().filesDir));
     this.readingImageDiskCache.setMangaExternalStorage({
       inventory: () => body.mangaDisplayInventory(),
       remove: (grant, files) => body.removeMangaDisplay(grant, files),
@@ -343,11 +352,12 @@ export class ReaderRuntimeOwner {
 
   static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false,
     mangaOfflineScope?: MangaOfflineProbeScope, mangaReadingScope?: MangaOfflineProbeScope,
-    mangaSelectionMode?: MangaProbeSelectionMode): ReaderRuntimeOwner {
+    mangaSelectionMode?: MangaProbeSelectionMode, publicFixture?: ReaderPublicFixtureScope): ReaderRuntimeOwner {
     const current = ReaderRuntimeOwner.instance;
     if (current === undefined || current.state === 'closing' || current.state === 'closed') {
       const predecessorClose = current?.closeTask ?? Promise.resolve();
-      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory, mangaOfflineScope, mangaReadingScope, mangaSelectionMode);
+      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory,
+        mangaOfflineScope, mangaReadingScope, mangaSelectionMode, publicFixture);
       if (disableOptionalEntryMemory) ReaderRuntimeOwner.instance.releaseOptionalReadingEntryMemory();
     } else current.mangaOfflineProbe?.release('ability-reinstalled');
     ReaderRuntimeOwner.instance.abilityLeases += 1;
@@ -358,6 +368,18 @@ export class ReaderRuntimeOwner {
    * that require an installed owner still use the throwing current() getter. */
   static isCurrent(owner: ReaderRuntimeOwner): boolean {
     return ReaderRuntimeOwner.instance === owner;
+  }
+
+  isCurrentPublicFixture(fixture: ReaderPublicFixtureScope): boolean {
+    return this.state === 'ready' && ReaderRuntimeOwner.isCurrent(this) && this.publicFixture === fixture;
+  }
+
+  /** Admission follows successful verification of both packaged fixture inputs. */
+  confirmPublicSearchHttpFixture(fixture: ReaderPublicFixtureScope): void {
+    if (!this.isCurrentPublicFixture(fixture) || readerPublicSearchHttpFixtureMode(fixture.id) === undefined) {
+      throw new Error('PUBLIC_SEARCH_HTTP_FIXTURE_NOT_CURRENT');
+    }
+    this.publicSearchHttpReady = true;
   }
 
   selectMangaOfflineProbe(sourceId: string, bookId: string, manga: boolean): void {
@@ -1734,7 +1756,10 @@ export class ReaderRuntimeOwner {
     let admittedBuild: CoreBuildIdentity;
     const isCurrent = (): boolean => this.state === 'starting' && ReaderRuntimeOwner.isCurrent(this);
     try {
-      const dataDirectory = `${this.host.getContext().filesDir}/reader-core`;
+      const filesDir = this.host.getContext().filesDir;
+      const dataDirectory = this.publicFixture === undefined ? `${filesDir}/reader-core` :
+        buildReaderPublicFixtureDirectory(filesDir, this.publicFixture.id);
+      if (dataDirectory === undefined) throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
       const storageProbe = await ReaderStartupTrace.measure('startup.storage-admission',
         (): Promise<ReaderCoreStorageProbe> => probeReaderCoreStorageAsync(dataDirectory, isCurrent));
       if (!isCurrent()) throw new Error('Reader Core startup cancelled after storage admission');
@@ -1850,6 +1875,7 @@ export class ReaderRuntimeOwner {
       this.scheduleImportFinalizeCleanup(runtime);
       // A 1,951-record collection must not hold the first frame or turn a
       // single malformed/dead source into an application startup failure.
+      if (this.publicFixture !== undefined && this.publicFixture.id !== 'empty-shelf') return;
       this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)
         .then((summary: BundledSourceInstallSummary): void => {
           hilog.info(LOG_DOMAIN, 'Reader',

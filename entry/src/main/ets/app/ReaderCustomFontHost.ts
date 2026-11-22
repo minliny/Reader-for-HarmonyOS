@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from './diagnostics/ReaderPublicFixtureScope';
 import { loadReaderFontChecked } from '../ui/platform/ReaderFontLoadHost';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
@@ -230,7 +231,7 @@ export class ReaderCustomFontHost {
   }
 
   private fontDirectory(): string {
-    return `${this.context.filesDir}/reader-fonts`;
+    return `${readerHostFilesDirectory(this.context.filesDir)}/reader-fonts`;
   }
 
   private isOwnedFontPath(path: string): boolean {

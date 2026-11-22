@@ -8,6 +8,7 @@ import {
   type ReaderTtsHostEvent,
   type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
+  type ReaderTtsNativeSpeakPoint,
 } from '../../features/reading/application/ReaderTtsHostContract';
 import {
   isReaderTtsVoiceInstalled,
@@ -17,6 +18,8 @@ import {
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_LANGUAGE = 'zh-CN';
 const DEFAULT_PERSON = 0;
+// Core Speech Kit supports both 0 and 13 for the Mandarin Ling Xiaoshan voice.
+const LING_XIAOSHAN_PERSON = 13;
 const OFFLINE_ENGINE = 1;
 const SYNTHESIS_COMPLETE = 0;
 const SPEECH_COMPLETE = 1;
@@ -144,7 +147,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertSpeakRequest(request);
     const generation = ++this.speakGeneration;
-    const engine = await this.ensureEngine(request.language, request.person);
+    const engine = await this.ensureEngine(request.language, request.person, request.traceNativeSpeak);
     if (this.closed || generation !== this.speakGeneration) return;
     this.currentRequestId = request.requestId;
     const params: textToSpeech.SpeakParams = {
@@ -160,10 +163,13 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       },
     };
     try {
+      request.traceNativeSpeak?.('enter');
       engine.speak(request.text, params);
     } catch (error) {
       if (this.currentRequestId === request.requestId) this.currentRequestId = undefined;
       throw error;
+    } finally {
+      request.traceNativeSpeak?.('return');
     }
   }
 
@@ -247,12 +253,23 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     this.removeAudioListeners();
   }
 
-  private async ensureEngine(language: string, person: number): Promise<textToSpeech.TextToSpeechEngine> {
+  private async ensureEngine(language: string, person: number,
+    trace?: (point: ReaderTtsNativeSpeakPoint) => void): Promise<textToSpeech.TextToSpeechEngine> {
     this.assertOpen();
-    if (this.engine !== undefined && this.engineRequestedLanguage === language &&
-      this.engineRequestedPerson === person) {
-      return this.engine;
+    if (this.engine !== undefined && this.engineRequestedLanguage === language) {
+      const cached = this.engineRequestedPerson;
+      if (cached === person) {
+        trace?.('engine-cache-hit');
+        return this.engine;
+      }
+      if (language === DEFAULT_LANGUAGE &&
+        ((cached === DEFAULT_PERSON && person === LING_XIAOSHAN_PERSON) ||
+          (cached === LING_XIAOSHAN_PERSON && person === DEFAULT_PERSON))) {
+        trace?.('engine-cache-alias-hit');
+        return this.engine;
+      }
     }
+    trace?.('engine-cache-miss');
     const generation = ++this.engineGeneration;
     const previous = this.engine;
     this.engine = undefined;

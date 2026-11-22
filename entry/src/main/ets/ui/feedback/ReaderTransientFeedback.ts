@@ -15,6 +15,37 @@ let nextHostId: number = 0;
 const transientHosts: ReaderTransientHostRegistration[] = [];
 let announcedGeneration: number = -1;
 
+export interface ReaderTransientTextObserver {
+  readonly textOptions: (message: string) => TextOptions | undefined;
+  readonly onPublished: (generation: number, durationMs: number) => void;
+  readonly onLayout: (generation: number, hostId: number, durationMs: number) => boolean;
+  readonly onRetired: (generation: number, durationMs: number) => void;
+}
+
+interface ReaderTransientTextRegistration {
+  readonly generation: number;
+  readonly durationMs: number;
+  readonly observer: ReaderTransientTextObserver;
+}
+
+// The optional observer belongs to one published generation and stays outside AppStorage.
+let transientTextRegistration: ReaderTransientTextRegistration | undefined;
+
+export function readerTransientTextObserver(generation: number, hostId: number): ReaderTransientTextObserver | undefined {
+  const registration = transientTextRegistration;
+  if (registration === undefined || registration.generation !== generation || hostId <= 0) return undefined;
+  const toast = AppStorage.get<ReaderTransientToastState>(READER_TRANSIENT_TOAST_STORAGE_KEY);
+  if (toast?.visible !== true || toast.generation !== generation ||
+    AppStorage.get<number>(READER_TRANSIENT_HOST_STORAGE_KEY) !== hostId ||
+    AppStorage.get<boolean>('readerAppForeground') === false) return undefined;
+  return registration.observer;
+}
+
+function notifyTransientTextRetired(registration: ReaderTransientTextRegistration | undefined): void {
+  if (registration === undefined) return;
+  try { registration.observer.onRetired(registration.generation, registration.durationMs); } catch (_) {}
+}
+
 /** Claims one announcement attempt across every foreground presentation host. */
 export function claimReaderTransientAnnouncement(hostId: number, generation: number): string | undefined {
   const current = AppStorage.get<ReaderTransientToastState>(READER_TRANSIENT_TOAST_STORAGE_KEY);
@@ -64,6 +95,11 @@ export function retireReaderTransientToast(generation: number): void {
     visible: false, generation: current.generation, title: current.title, message: current.message,
     duration: current.duration, key: current.key, tone: current.tone,
   });
+  if (transientTextRegistration?.generation === generation) {
+    const retired = transientTextRegistration;
+    transientTextRegistration = undefined;
+    notifyTransientTextRetired(retired);
+  }
 }
 
 
@@ -100,6 +136,7 @@ export interface ReaderTransientFeedbackOptions {
   /** Optional title for a fact with a useful secondary detail. */
   title?: string;
   tone?: 'info' | 'success' | 'error';
+  textObserver?: ReaderTransientTextObserver;
 }
 
 /** One mounted host's short feedback. Domain owners retain completion, retry
@@ -124,18 +161,41 @@ export class ReaderTransientFeedback {
       const previous = AppStorage.get<ReaderTransientToastState>(READER_TRANSIENT_TOAST_STORAGE_KEY) ??
         createReaderTransientToastState();
       const generation = Number.isSafeInteger(previous.generation) ? previous.generation + 1 : 1;
-      AppStorage.setOrCreate<ReaderTransientToastState>(READER_TRANSIENT_TOAST_STORAGE_KEY, {
-        visible: true,
-        generation,
-        title: options.title?.trim() ?? '',
-        message: options.message.trim(),
-        duration: options.duration ?? READER_FEEDBACK_BRIEF_MS,
-        key,
-        tone: options.tone ?? 'info',
-      });
+      const duration = options.duration ?? READER_FEEDBACK_BRIEF_MS;
+      const previousText = transientTextRegistration;
+      const registration: ReaderTransientTextRegistration | undefined = options.textObserver === undefined ? undefined :
+        { generation, durationMs: duration, observer: options.textObserver };
+      transientTextRegistration = registration;
+      try {
+        AppStorage.setOrCreate<ReaderTransientToastState>(READER_TRANSIENT_TOAST_STORAGE_KEY, {
+          visible: true,
+          generation,
+          title: options.title?.trim() ?? '',
+          message: options.message.trim(),
+          duration,
+          key,
+          tone: options.tone ?? 'info',
+        });
+      } catch (error) {
+        if (transientTextRegistration === registration) transientTextRegistration = previousText;
+        throw error;
+      }
       this.lastKey = key;
       this.lastShownAt = now;
       this.lastPublishedGeneration = generation;
+      if (registration !== undefined || previousText !== undefined) {
+        try {
+          const published = AppStorage.get<ReaderTransientToastState>(READER_TRANSIENT_TOAST_STORAGE_KEY);
+          if (published?.visible === true && published.generation === generation) {
+            notifyTransientTextRetired(previousText);
+            if (registration !== undefined && transientTextRegistration === registration) {
+              registration.observer.onPublished(generation, duration);
+            }
+          } else if (transientTextRegistration === registration) {
+            transientTextRegistration = previousText;
+          }
+        } catch (_) {}
+      }
       return true;
     } catch (_) {
       return false;

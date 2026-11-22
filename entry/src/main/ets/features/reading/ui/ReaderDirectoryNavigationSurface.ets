@@ -82,12 +82,14 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop prefixHeight: number = 0;
   @Prop prefixIdentity: string = '';
   @Prop prefixRevealRevision: number = 0;
+  @Prop verificationChapterActions: boolean = false;
   @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
   @BuilderParam mangaTailBuilder: () => void = this.emptyPrefix;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
   onUserScrollIntent: () => void = (): void => {};
+  onObservedScrollSettled: (() => void) | undefined = undefined;
   onFirstLayout: () => void = (): void => {};
   onScrollOffset: (offset: number) => void = (_offset: number): void => {};
   onTreeStateChange: (active: boolean) => void = (_active: boolean): void => {};
@@ -334,6 +336,7 @@ export struct ReaderDirectoryNavigationSurface {
   }
 
   private onTreeScrollSettled(): void {
+    if (this.mounted) this.onObservedScrollSettled?.();
     if (!this.mounted || this.settledFlat || !this.interactionEnabled || !this.pendingRefresh) return;
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
@@ -673,6 +676,7 @@ export struct ReaderDirectoryNavigationSurface {
             ReaderDirectoryNavigationList({
               inputCurrent: (): boolean => this.directoryInputCurrent(),
               chapterInputCurrent: this.chapterInputCurrent,
+              verificationChapterActions: this.verificationChapterActions,
               navigationPortFactory: this.navigationPortFactory,
               view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
               mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,

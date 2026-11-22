@@ -145,6 +145,7 @@ export struct ReaderSearchFilterPanel {
   @Builder
   private groupChip(label: string, index: number, identity: string) {
     ReaderButton({ scheme: this.scheme, specId: 'search-filter-option', label, primary: this.selectedGroup === label,
+      focusId: label === '在线' ? 'reader-search-filter-online' : '',
       actionAccessibilityLabel: this.selectedGroup === label ? `当前来源:${label}` : `筛选来源:${label}`,
       onAction: (): void => { if (this.accepts(identity)) this.onGroup(label, identity); } })
       .width(this.sheetGeometry().choiceWidths[index]).height(this.sheetGeometry().choiceHeight);
@@ -201,6 +202,7 @@ export struct ReaderSearchFilterPanel {
   @Builder
   private resetAction(identity: string) {
     ReaderButton({ scheme: this.scheme, specId: 'search-retry-progress', label: '重置',
+      focusId: 'reader-search-filter-reset',
       actionEnabled: this.active(), onAction: (): void => { if (this.accepts(identity)) this.onReset(identity); } });
   }
   @Builder

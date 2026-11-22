@@ -24,6 +24,7 @@ export struct ReaderFormRow {
   @Prop actionEnabled: boolean = true;
   @Prop isBusy: boolean = false;
   @Prop disclosure: boolean = false;
+  @Prop actionId: string = '';
   onAction: (() => void) | undefined = undefined;
   onLabelAction: (() => void) | undefined = undefined;
   @BuilderParam content: () => void = this.emptyContent;
@@ -47,6 +48,7 @@ export struct ReaderFormRow {
         .width('100%').constraintSize({ minHeight: 58 }).padding(0)
         .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 14, this.canAct()))
         .enabled(this.canAct())
+        .id(this.actionId)
         .accessibilityText(this.label)
         .onClick((): void => { if (this.canAct()) this.onAction?.(); });
     } else {

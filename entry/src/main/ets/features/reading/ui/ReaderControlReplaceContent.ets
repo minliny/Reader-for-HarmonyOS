@@ -585,7 +585,8 @@ export struct ReaderControlReplaceContent {
           this.temporaryOverlay(opening);
         }, (opening: number): string => opening.toString());
       }
-    }.width(this.availableWidth).height(this.availableHeight).clip(true);
+    }.width(this.availableWidth).height(this.availableHeight).clip(true)
+      .id('reader-control-module-replace');
 
     }
   }
@@ -605,7 +606,8 @@ export struct ReaderControlReplaceContent {
       Image(icon()).width(20).height(20);
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontWeight)
         .fontColor(add ? readerAppColor('app.replace.onToolbarAction', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
-    }.width('100%').height('100%').justifyContent(FlexAlign.Center);
+    }.id('reader-control-replace-tool-' + focusRole)
+      .width('100%').height('100%').justifyContent(FlexAlign.Center);
     }.width(this.toolbarButtonWidth(index)).height(this.frame().toolbarCellHeight).padding(0)
       .position({ x: this.toolbarButtonX(index), y: this.frame().toolbarColumns === 1 ? index * (this.frame().toolbarCellHeight + 8) : 0 })
       .backgroundColor(add ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme))
@@ -703,7 +705,8 @@ export struct ReaderControlReplaceContent {
   private quickFooter() {
     Row({ space: 6 }) {
       this.textAction((): string => '预览效果', (): void => { this.preview(); }, (): boolean => this.quickInput() && this.readyInput());
-      this.textAction((): string => '完整管理', (): void => this.onExpand(), (): boolean => this.quickInput() && !this.state.mutationPending);
+      this.textAction((): string => '完整管理', (): void => this.onExpand(),
+        (): boolean => this.quickInput() && !this.state.mutationPending, 'reader-control-replace-expand');
     }.width(this.frame().quickFooter.width).height(this.frame().quickFooter.height)
       .position({ x: this.frame().quickFooter.x, y: this.frame().quickFooter.y })
       .opacity(this.frame().quickFooter.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -729,13 +732,14 @@ export struct ReaderControlReplaceContent {
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
   }
   @Builder
-  private textAction(label: () => string, action: () => void, enabled: () => boolean = (): boolean => true) {
+  private textAction(label: () => string, action: () => void, enabled: () => boolean = (): boolean => true, id: string = '') {
     // Builder primitive arguments retain their initial value in partial update.
     // Read the supplied state predicate here and again at click dispatch.
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Text(label()).fontFamily(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.layoutWeight(1).height(this.frame().actionHeight).padding(0).padding({ left: 6, right: 6 }).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme)).borderRadius(6)
       .enabled(enabled() && (this.fullInput() || this.quickInput()))
+      .id(id)
       .onClick((): void => { if (enabled() && (this.fullInput() || this.quickInput())) action(); });
   }
   private temporaryNeedsFlow(): boolean {
@@ -798,7 +802,7 @@ export struct ReaderControlReplaceContent {
         if (this.temporaryNeedsFlow()) this.temporaryHeader(opening);
         this.temporaryBodyContent(opening);
         if (this.temporaryNeedsFlow()) this.temporaryActions(opening);
-      }.width('100%');
+      }.id('reader-control-replace-overlay').width('100%');
     }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart)
       .id(this.editorScroll.idFor(`${opening}`))
       .onAppear((): void => {

@@ -1,6 +1,6 @@
 import { SearchViewState } from '../presentation/SearchViewState';
 import { SearchPublication } from '../presentation/SearchPublication';
-import { SearchOrchestrator } from './SearchOrchestrator';
+import { SearchOrchestrator, type SearchContinuationObserver, type SearchObsoleteWorkObserver, type SearchSourceRetryObservation, type SearchWriteLease } from './SearchOrchestrator';
 import type { SearchSource } from './SearchGateway';
 import type { SearchPresentation } from '../presentation/SearchPresentation';
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
@@ -21,13 +21,22 @@ export class SearchHost {
   private shelfMembershipLoaded: boolean = false;
   private readonly onPublicationChanged: () => void;
   private readonly isSearchVisible: () => boolean;
+  private readonly onObsoleteWork: SearchObsoleteWorkObserver | undefined;
+  private readonly continuationObserver: SearchContinuationObserver | undefined;
+  private readonly sourceRetryObserver: ((observation: SearchSourceRetryObservation) => void) | undefined;
 
   constructor(
     onPublicationChanged: () => void,
     isSearchVisible: () => boolean,
+    onObsoleteWork?: SearchObsoleteWorkObserver,
+    continuationObserver?: SearchContinuationObserver,
+    sourceRetryObserver?: (observation: SearchSourceRetryObservation) => void,
   ) {
     this.onPublicationChanged = onPublicationChanged;
     this.isSearchVisible = isSearchVisible;
+    this.onObsoleteWork = onObsoleteWork;
+    this.continuationObserver = continuationObserver;
+    this.sourceRetryObserver = sourceRetryObserver;
   }
 
   publicationRevision(): number { return this.revision; }
@@ -38,15 +47,19 @@ export class SearchHost {
     this.viewState.requestInputFocus();
   }
 
-  open(): void { this.getOrchestrator().open(); }
-  close(): void { this.orchestrator?.close(); }
+  open(): void { this.getOrchestrator().open(true); }
+  close(): void {
+    this.orchestrator?.close();
+    this.publication.updateEntrySourceRead(undefined);
+  }
   visibilityChanged(): void { this.orchestrator?.visibilityChanged(); }
   search(keyword: string, scopeSourceIds?: string[]): void {
     this.viewState.reset(keyword);
     this.getOrchestrator().search(keyword, scopeSourceIds);
   }
   stop(): void { this.getOrchestrator().stop(); }
-  needMoreResults(): void { this.getOrchestrator().needMoreResults(); }
+  observeWriteLease(): SearchWriteLease | undefined { return this.orchestrator?.observeWriteLease(); }
+  needMoreResults(): void { this.getOrchestrator().needMoreResults('viewport'); }
   retry(): void { this.getOrchestrator().retry(); }
   retryHistory(): void { this.getOrchestrator().retryHistory(); }
   clearHistory(): void { this.getOrchestrator().clearHistory(); }
@@ -76,6 +89,7 @@ export class SearchHost {
   }
 
   private advanceRevision(): void {
+    this.publication.updateEntrySourceRead(this.orchestrator?.observeEntrySourceRead());
     this.revision += 1;
     this.onPublicationChanged();
   }
@@ -95,6 +109,9 @@ export class SearchHost {
         },
         this.isSearchVisible,
       );
+      this.orchestrator.observeObsoleteWork(this.onObsoleteWork);
+      this.orchestrator.observeContinuation(this.continuationObserver);
+      this.orchestrator.observeSourceRetry(this.sourceRetryObserver);
     }
     return this.orchestrator;
   }

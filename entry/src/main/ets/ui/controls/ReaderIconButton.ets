@@ -15,6 +15,7 @@ export struct ReaderIconButton {
   @Prop specId: ReaderIconButtonSpecId = 'toolbar-standard';
   @Prop accessibilityLabel: string = '';
   @Prop focusId: string = '';
+  @Prop minimumTargetSize: number = 0;
   @Prop actionEnabled: boolean = true;
   @Prop actionScope: string = '';
   @Prop scheme: string = 'auto';
@@ -39,7 +40,7 @@ export struct ReaderIconButton {
     Button({ type: ButtonType.Normal }) {
       Image(this.icon).width(resolveReaderIconButtonSpec(this.specId).iconSize)
         .height(resolveReaderIconButtonSpec(this.specId).iconSize).accessibilityLevel('no');
-    }.width(resolveReaderIconButtonSpec(this.specId).boxSize).height(resolveReaderIconButtonSpec(this.specId).boxSize).padding(0)
+    }.width(this.formPrimaryBoxSize()).height(this.formPrimaryBoxSize()).padding(0)
       .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
         Math.min(resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
         Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, resolveReaderIconButtonSpec(this.specId).boxSize / 2)))
@@ -48,7 +49,7 @@ export struct ReaderIconButton {
       .enabled(this.canAct())
       .id(this.focusId)
       .onFocus((): void => { if (this.mounted) this.onFocused(); })
-      .responseRegion(readerActionTouchRegion(resolveReaderIconButtonSpec(this.specId).boxSize, resolveReaderIconButtonSpec(this.specId).boxSize))
+      .responseRegion(readerActionTouchRegion(this.formPrimaryBoxSize(), this.formPrimaryBoxSize()))
       .onClick(this.actionHandler());
   }
 
@@ -84,6 +85,9 @@ export struct ReaderIconButton {
   }
 
   private canAct(): boolean { return this.mounted && this.actionEnabled && this.accessibilityLabel.trim().length > 0; }
+  private formPrimaryBoxSize(): number {
+    return Math.max(resolveReaderIconButtonSpec(this.specId).boxSize, this.minimumTargetSize);
+  }
   private effectiveScheme(): string { return this.scheme === 'day' || this.scheme === 'night' ? this.scheme : this.appThemeScheme; }
   private frameSurface(): ResourceColor {
     const activeFill = resolveReaderIconButtonSpec(this.specId).activeFill;

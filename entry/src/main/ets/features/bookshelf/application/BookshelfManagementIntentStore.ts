@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import fileIo from '@ohos.file.fs';
 import type { BusinessError } from '@ohos.base';
 import util from '@ohos.util';
@@ -294,9 +295,9 @@ export class BookshelfManagementIntentStore {
     return { operationId: intent.operationId, sequence: intent.sequence, mutation: intent.mutation };
   }
   private async replace(raw: string): Promise<void> {
-    const context = this.owner.getUIAbilityContext(); await replaceReaderAtomicSnapshot(this.path(), context.filesDir, raw);
+    const context = this.owner.getUIAbilityContext(); await replaceReaderAtomicSnapshot(this.path(), readerHostFilesDirectory(context.filesDir), raw);
   }
-  private path(): string { return `${this.owner.getUIAbilityContext().filesDir}/reader-bookshelf-management-intent-v1.json`; }
+  private path(): string { return `${readerHostFilesDirectory(this.owner.getUIAbilityContext().filesDir)}/reader-bookshelf-management-intent-v1.json`; }
   private current(admitted?: () => boolean): boolean {
     try { return ReaderRuntimeOwner.isCurrent(this.owner) && (admitted?.() ?? true); } catch (_) { return false; }
   }

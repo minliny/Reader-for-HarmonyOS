@@ -1,7 +1,11 @@
+export type ReaderTtsNativeSpeakPoint =
+  'enter' | 'return' | 'engine-cache-hit' | 'engine-cache-alias-hit' | 'engine-cache-miss';
+
 export type ReaderTtsHostSpeakRequest = {
   requestId: string;
   /** Process-local diagnostics identity, never speech/book/provider data. */
   traceOperationId?: number;
+  traceNativeSpeak?: (point: ReaderTtsNativeSpeakPoint) => void;
   text: string;
   rate: number;
   pitch: number;

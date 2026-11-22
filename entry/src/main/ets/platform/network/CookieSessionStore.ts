@@ -5,6 +5,7 @@ import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
 import { isCookieVisibleToScript, isExactCookieDomainScope } from './CookieSecurityPolicy';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import { READER_PUBLIC_FIXTURE_IDS, type ReaderPublicFixtureId, type ReaderPublicFixtureScope } from '../../app/diagnostics/ReaderPublicFixtureScope';
 
 const LOG_DOMAIN = 0x5244;
 const LOG_TAG = 'Reader';
@@ -97,6 +98,7 @@ export type ArkWebObservedCookie = {
  */
 export class CookieSessionStore {
   static readonly instance: CookieSessionStore = new CookieSessionStore();
+  private static assetScope: ReaderPublicFixtureId | null | undefined;
 
   private readonly cookies: StoredCookie[] = [];
   private loadPromise: Promise<void> | null = null;
@@ -106,6 +108,18 @@ export class CookieSessionStore {
   private persistedGeneration: string | undefined = undefined;
   private generationSequence: number = 0;
   private readonly sessionGenerations: Map<string, number> = new Map();
+
+  static configurePublicFixture(fixture?: ReaderPublicFixtureScope): void {
+    if (fixture !== undefined && (fixture.kind !== 'fixture' ||
+      !READER_PUBLIC_FIXTURE_IDS.includes(fixture.id))) {
+      throw new Error('Invalid cookie public fixture');
+    }
+    const scope = fixture?.id ?? null;
+    if (CookieSessionStore.assetScope !== undefined && CookieSessionStore.assetScope !== scope) {
+      throw new Error('Cookies cannot change data scope in a live process');
+    }
+    CookieSessionStore.assetScope = scope;
+  }
 
   sessionGeneration(sessionId: string): number {
     return this.sessionGenerations.get(this.requireSessionId(sessionId)) ?? 0;
@@ -570,7 +584,7 @@ export class CookieSessionStore {
 
   private async readRecordSecret(alias: string): Promise<Uint8Array | null> {
     const query = new Map<asset.Tag, asset.Value>();
-    query.set(asset.Tag.ALIAS, this.utf8(alias));
+    query.set(asset.Tag.ALIAS, this.assetAlias(alias));
     query.set(asset.Tag.RETURN_TYPE, asset.ReturnType.ALL);
     let records: Array<asset.AssetMap>;
     try {
@@ -594,7 +608,7 @@ export class CookieSessionStore {
 
   private async writeRecord(alias: string, secret: Uint8Array): Promise<void> {
     const attributes = new Map<asset.Tag, asset.Value>();
-    attributes.set(asset.Tag.ALIAS, this.utf8(alias));
+    attributes.set(asset.Tag.ALIAS, this.assetAlias(alias));
     attributes.set(asset.Tag.SECRET, secret);
     attributes.set(asset.Tag.ACCESSIBILITY, asset.Accessibility.DEVICE_POWERED_ON);
     attributes.set(asset.Tag.CONFLICT_RESOLUTION, asset.ConflictResolution.OVERWRITE);
@@ -607,7 +621,7 @@ export class CookieSessionStore {
 
   private async removeRecord(alias: string): Promise<void> {
     const query = new Map<asset.Tag, asset.Value>();
-    query.set(asset.Tag.ALIAS, this.utf8(alias));
+    query.set(asset.Tag.ALIAS, this.assetAlias(alias));
     try {
       await asset.remove(query);
     } catch (error) {
@@ -615,6 +629,12 @@ export class CookieSessionStore {
         throw new Error(`cookie store cannot clear secure AssetStore: ${this.errorMessage(error)}`);
       }
     }
+  }
+
+  private assetAlias(alias: string): Uint8Array {
+    if (CookieSessionStore.assetScope === undefined) CookieSessionStore.assetScope = null;
+    const scope = CookieSessionStore.assetScope;
+    return this.utf8(scope === null ? alias : `reader.public-fixture.${scope}/${alias}`);
   }
 
   private parseChunkHeader(secret: Uint8Array): PersistedChunkHeader | null {

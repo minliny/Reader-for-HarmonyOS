@@ -1,0 +1,98 @@
+[
+  {
+    "bookSourceName": "Phase1 Scroll Source 01",
+    "bookSourceUrl": "https://group-scroll-01.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 01",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 02",
+    "bookSourceUrl": "https://group-scroll-02.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 02",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 03",
+    "bookSourceUrl": "https://group-scroll-03.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 03",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 04",
+    "bookSourceUrl": "https://group-scroll-04.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 04",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 05",
+    "bookSourceUrl": "https://group-scroll-05.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 05",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 06",
+    "bookSourceUrl": "https://group-scroll-06.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 06",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 07",
+    "bookSourceUrl": "https://group-scroll-07.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 07",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 08",
+    "bookSourceUrl": "https://group-scroll-08.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 08",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 09",
+    "bookSourceUrl": "https://group-scroll-09.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 09",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 10",
+    "bookSourceUrl": "https://group-scroll-10.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 10",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 11",
+    "bookSourceUrl": "https://group-scroll-11.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 11",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  },
+  {
+    "bookSourceName": "Phase1 Scroll Source 12",
+    "bookSourceUrl": "https://group-scroll-12.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Scroll 12",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false
+  }
+]

@@ -41,6 +41,7 @@ export struct ReaderDirectoryToolbar {
   directoryFocusCurrent: (id: string) => boolean = (_id: string): boolean => true;
   onDirectoryFocusChanged: (id: string, focused: boolean) => void = (_id: string, _focused: boolean): void => {};
   onDirectoryEditingRequested: (id: string) => void = (_id: string): void => {};
+  onDirectoryKeyboardBack: (id: string) => void = (_id: string): void => {};
   onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean) => void = (_id: string, _requested: boolean): void => {};
   onTextChange: (value: string) => void = (_value: string): void => {};
   onSearch: () => void = (): void => {};
@@ -167,6 +168,9 @@ export struct ReaderDirectoryToolbar {
           },
           onDirectoryEditingRequested: (id: string): void => {
             if (id === inputFocusId && this.currentDirectoryInput(inputFocusId)) this.onDirectoryEditingRequested(id);
+          },
+          onDirectoryKeyboardBack: (id: string): void => {
+            if (id === inputFocusId && this.currentDirectoryInput(inputFocusId)) this.onDirectoryKeyboardBack(id);
           },
           onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => {
             if (this.currentDirectoryInput(inputFocusId)) this.onDirectoryKeyboardRestoreSettled(id, requested);

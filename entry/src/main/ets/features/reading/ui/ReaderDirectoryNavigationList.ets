@@ -290,6 +290,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop chapterDownloadActionsEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   @Prop bookmarkActionsEnabled: boolean = true;
+  @Prop verificationChapterActions: boolean = false;
   /** One optional native-only prefix; Core/page ranks stay zero based. */
   @Prop @Watch('onPrefixChanged') headerCount: number = 0;
   @Prop @Watch('onPrefixChanged') prefixHeight: number = 0;
@@ -1464,6 +1465,14 @@ export struct ReaderDirectoryNavigationList {
     return `${node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(node)}级，打开${node.title}`;
   }
 
+  private verificationChapterSelectionId(item: ReaderDirectoryNavigationItem): string {
+    if (!this.verificationChapterActions || item.node === undefined) return '';
+    const node = this.currentPaintNode(item.node);
+    const chapter = node.chapterIndex;
+    return node.kind === 'target' && chapter !== undefined && chapter >= 0 && !this.isCurrentNode(item) &&
+      chapter !== this.currentChapterIndex ? `reader-control-directory-chapter:${chapter}` : '';
+  }
+
   @Builder
   private row(item: ReaderDirectoryNavigationItem) {
     Row() {
@@ -1475,6 +1484,7 @@ export struct ReaderDirectoryNavigationList {
             .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
         Text(this.currentPaintNode(item.node).title)
+          .id(this.verificationChapterSelectionId(item))
           .height(this.rowHeight)
           .layoutWeight(1)
           .padding({ left: 9 + Math.min(3, this.displayLevel(this.currentPaintNode(item.node)) - 1) * 12, right: 9 })

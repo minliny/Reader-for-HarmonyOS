@@ -427,7 +427,8 @@ export struct SettingsPage {
       this.navRow('通用设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
         this.onSectionChange('general');
       });
-      this.navRow('书源管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_source_theme_night') : $r('app.media.settings_row_source')), (): void => this.onOpenSourceManagement());
+      this.navRow('书源管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_source_theme_night') : $r('app.media.settings_row_source')),
+        (): void => this.onOpenSourceManagement(), 'reader-settings-source-management');
       if (isReaderProductSurfaceEnabled('sync')) {
         this.navRow('同步与备份', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')), (): void => this.onOpenSync());
       }
@@ -691,8 +692,8 @@ export struct SettingsPage {
   }
 
   @Builder
-  private navRow(label: string, icon: () => Resource, action: () => void) {
-    ReaderFormRow({ icon: icon(), label, disclosure: true,
+  private navRow(label: string, icon: () => Resource, action: () => void, actionId: string = '') {
+    ReaderFormRow({ icon: icon(), label, disclosure: true, actionId,
       onAction: (): void => { if (this.settingsInputIsCurrent()) action(); } });
   }
 

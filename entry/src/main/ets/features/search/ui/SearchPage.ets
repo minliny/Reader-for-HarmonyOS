@@ -2,7 +2,7 @@ import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame'
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
-import type { SearchOperationFacts } from '../presentation/SearchPresentation';
+import type { SearchHistoryStatus, SearchOperationFacts } from '../presentation/SearchPresentation';
 import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../../../ui/foundation/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey, type BookAuthorIdentityProof } from '../../../app/library/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
@@ -17,7 +17,7 @@ import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerSc
 import { ReaderLibrarySearchModel, READER_LIBRARY_SEARCH_BACK_FOCUS_ID } from '../presentation/ReaderLibrarySearchModel';
 import { SearchViewState, type SearchContentType } from '../presentation/SearchViewState';
 import { SearchPublication } from '../presentation/SearchPublication';
-import type { SearchPresentation } from '../presentation/SearchPresentation';
+import type { SearchEntrySourceReadObservation, SearchPresentation } from '../presentation/SearchPresentation';
 import { bookIntroText } from '../../../app/library/BookIntroText';
 import type { SearchBook } from '../application/SearchGateway';
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
@@ -82,6 +82,54 @@ interface SearchProjectionEvidence {
   state: SearchVerificationProjection;
   searchActive: boolean;
   viewportId: string;
+}
+
+interface SearchFilterEvidence {
+  owner: number;
+  page: number;
+  queryRevision: number;
+  panelGeneration: number;
+  workGeneration: number;
+  viewportId: string;
+  action: 'scope' | 'reset';
+  scope: 'all' | 'local' | 'online';
+  content: 'all' | 'novel' | 'comic';
+  resultCount: number;
+  visibleCount: number;
+}
+
+interface SearchPageEvidence {
+  queryRevision: number;
+  owner: number;
+  page: number;
+  projection?: string;
+  operation?: string;
+  operationGeneration?: number;
+  publicationRevision?: number;
+  viewportId?: string;
+  searchActive?: boolean;
+  resultCount?: number;
+  visibleCount?: number;
+  incompleteCount?: number;
+  failedCount?: number;
+  skippedCount?: number;
+  stopped?: boolean;
+  localFailed?: boolean;
+  sourceListFailed?: boolean;
+  moreSources?: boolean;
+  sourceRequiredReason?: string;
+  entrySourceRead?: SearchEntrySourceReadObservation;
+  historyCount?: number;
+  historyStatus?: SearchHistoryStatus;
+  length?: number;
+  released?: boolean;
+  action?: string;
+  panel?: SearchPanelKind;
+  anchorIndex?: number;
+  anchorOffset?: number;
+  anchorItemY?: number;
+  anchorAtStart?: boolean;
+  anchorMatchesRestore?: boolean;
 }
 
 interface SearchResultSelection {
@@ -429,6 +477,7 @@ export struct SearchPage {
   @State private displayIdleRevision: number = 0;
   @State private resultNoticeFacts: SearchNoticeFacts | undefined = undefined;
   private observedProjection: SearchProjectionEvidence | undefined;
+  private observedPagePublication: number = -1;
 
   private acceptPublication(): void {
     if (!this.ownsPageQuery()) return;
@@ -442,6 +491,7 @@ export struct SearchPage {
   aboutToAppear(): void {
     this.pageMounted = true;
     this.observedProjection = undefined;
+    this.observedPagePublication = -1;
     this.pageEpoch = ++this.viewState.pageRevision;
     this.queryAtMount = this.viewState.revision;
     this.startPositionedQuery = -1;
@@ -469,6 +519,12 @@ export struct SearchPage {
   aboutToDisappear(): void {
     const current = this.ownsPageQuery();
     this.surfaceModel?.release(this.surfaceOwner);
+    const verification = this.surfaceModel?.verification;
+    if (verification?.enabled() === true && this.surfaceOwner > 0) {
+      const evidence = this.pageEvidence();
+      evidence.released = !this.surfaceModel?.owns(this.surfaceOwner);
+      verification.emit('search-page-owner-released', 'business', evidence);
+    }
     if (current) this.rememberAnchorNeighbors();
     this.taskStatusGeneration += 1;
     this.retirePanelScope();
@@ -509,6 +565,10 @@ export struct SearchPage {
     const state = this.resultProjectionState();
     const searchActive = this.hasActiveSearchRequest();
     const previous = this.observedProjection;
+    if (this.observedPagePublication !== this.publicationRevision) {
+      this.observedPagePublication = this.publicationRevision;
+      this.observePageProjection();
+    }
     // Result publications can update the native list while the sweep continues.
     if (previous !== undefined && previous.state === state && previous.searchActive === searchActive &&
       (state === 'pending' || previous.publicationRevision === this.publicationRevision)) return;
@@ -516,6 +576,67 @@ export struct SearchPage {
       owner: this.surfaceOwner, page: this.pageEpoch, state: state, searchActive: searchActive, viewportId: this.resultViewportId() };
     this.observedProjection = facts;
     verification.emit('search-result-projection', 'business', facts);
+  }
+
+  private pageEvidence(): SearchPageEvidence {
+    return { queryRevision: this.queryAtMount, owner: this.surfaceOwner, page: this.pageEpoch };
+  }
+
+  private observePageProjection(): void {
+    const verification = this.surfaceModel?.verification;
+    if (verification?.enabled() !== true) return;
+    const p = this.presentation, operation = this.operation(), evidence = this.pageEvidence();
+    evidence.projection = p.kind;
+    evidence.operation = operation?.fact;
+    evidence.operationGeneration = operation?.generation;
+    evidence.publicationRevision = this.publicationRevision;
+    evidence.viewportId = this.hasSearchSession() ? this.resultViewportId() : undefined;
+    evidence.searchActive = this.hasActiveSearchRequest();
+    evidence.resultCount = p.kind === 'results' ? p.results.length : 0;
+    evidence.visibleCount = this.visibleGroups.length;
+    evidence.sourceRequiredReason = p.kind === 'sourceRequired' ? p.reason : undefined;
+    const entrySourceRead = this.publication.entrySourceReadAt(this.publicationRevision);
+    if ((p.kind === 'initial' && entrySourceRead?.outcome === 'ready') ||
+      (p.kind === 'sourceRequired' && entrySourceRead?.outcome === p.reason) ||
+      (p.kind === 'sourceLoadError' && entrySourceRead?.outcome === 'failed')) {
+      evidence.entrySourceRead = entrySourceRead;
+    }
+    evidence.historyCount = p.history?.length ?? 0;
+    evidence.historyStatus = p.historyStatus;
+    if (p.kind === 'results' || p.kind === 'empty' || p.kind === 'error') {
+      evidence.incompleteCount = p.incompleteSourceCount ?? 0;
+      evidence.failedCount = p.failedSourceCount ?? 0;
+      evidence.skippedCount = p.skippedSourceCount ?? 0;
+      evidence.stopped = p.kind !== 'error' && p.stopped === true;
+      evidence.localFailed = p.localSearchFailed === true;
+      evidence.sourceListFailed = p.sourceListFailed === true;
+      evidence.moreSources = p.kind === 'results' && p.hasMoreSources === true;
+    }
+    verification.emit('search-page-projection', 'business', evidence);
+  }
+
+  private observePageAction(action: string, panel?: SearchPanelKind): void {
+    const verification = this.surfaceModel?.verification;
+    if (verification?.enabled() !== true) return;
+    const evidence = this.pageEvidence();
+    evidence.action = action;
+    evidence.panel = panel;
+    evidence.operationGeneration = this.operation()?.generation;
+    evidence.resultCount = this.presentation.kind === 'results' ? this.presentation.results.length : 0;
+    verification.emit('search-page-action', 'business', evidence);
+  }
+
+  private observePageAnchor(action: string): void {
+    const verification = this.surfaceModel?.verification;
+    if (verification?.enabled() !== true) return;
+    const view = this.viewState, evidence = this.pageEvidence();
+    evidence.action = action;
+    evidence.anchorIndex = view.anchorIndex;
+    evidence.anchorOffset = view.anchorOffset;
+    evidence.anchorItemY = view.anchorItemY;
+    evidence.anchorAtStart = view.anchorAtStart;
+    evidence.anchorMatchesRestore = this.restoreKey.length > 0 && view.anchorKey === view.resolveKey(this.restoreKey);
+    verification.emit('search-page-anchor', 'business', evidence);
   }
 
   private pageInputCurrent(): boolean {
@@ -549,14 +670,20 @@ export struct SearchPage {
     model.onText = (value: string): void => {
       if (!this.surfaceInputCurrent()) return;
       this.keyword = value; this.viewState.keywordDraft = value; this.publishSurface();
+      const verification = model.verification;
+      if (verification?.enabled() === true) {
+        const evidence = this.pageEvidence();
+        evidence.length = this.viewState.keywordDraft.length;
+        verification.emit('search-draft-accepted', 'business', evidence);
+      }
     };
     model.onSubmit = (): void => {
       if (!this.surfaceInputCurrent() || this.searchPanelOwnsInput()) return;
-      if (this.hasActiveSearchRequest()) this.onStop(); else this.submitSearch();
+      if (this.hasActiveSearchRequest()) { this.observePageAction('stop'); this.onStop(); } else this.submitSearch();
     };
     model.onAction = (): void => {
       if (!this.surfaceInputCurrent() || this.searchPanelOwnsInput()) return;
-      if (this.hasActiveSearchRequest()) this.onStop(); else this.submitSearch();
+      if (this.hasActiveSearchRequest()) { this.observePageAction('stop'); this.onStop(); } else this.submitSearch();
     };
     model.onClearHistory = (): void => { if (this.surfaceInputCurrent()) this.onClearHistory(); };
     model.onRetryHistory = (): void => { if (this.surfaceInputCurrent()) this.onRetryHistory(); };
@@ -577,6 +704,10 @@ export struct SearchPage {
     model.historyStatus = presentation.historyStatus;
     model.hasSession = this.hasSearchSession();
     model.sourceRecoveryVisible = presentation.kind === 'sourceRequired' || presentation.kind === 'sourceLoadError';
+    const sourceReadPending = presentation.kind === 'initial' &&
+      this.publication.sourcesAt(this.publicationRevision).length === 0;
+    const noSources = presentation.kind === 'sourceRequired' && presentation.reason === 'noSources';
+    model.setFieldKeyboardOnFocus(this.surfaceOwner, sourceReadPending ? undefined : !noSources);
     model.sweeping = this.hasActiveSearchRequest();
     model.canSubmit = this.canSubmit();
     model.fieldSubmitEnabled = presentation.kind !== 'loading';
@@ -661,6 +792,26 @@ export struct SearchPage {
     this.selectedGroupName = '全部'; this.selectedContentType = '全部类型';
     this.viewState.category = '全部'; this.viewState.contentType = '全部类型';
     this.resetFilteredResults();
+    if (this.surfaceModel?.verification?.enabled() === true) this.observeFilterApplied('reset',identity);
+  }
+
+  private observeFilterApplied(action: 'scope' | 'reset', identity: string): void {
+    const verification = this.surfaceModel?.verification;
+    const operation = this.operation();
+    if (verification === undefined || !this.ownsSurface() || this.nativePanel?.kind !== 'filter' ||
+      this.nativePanel.identity !== identity || this.presentation.kind !== 'results' || operation === undefined) return;
+    const scope = this.selectedGroupName === '全部' ? 'all' :
+      this.selectedGroupName === SEARCH_LOCAL_SCOPE ? 'local' : 'online';
+    const content = this.selectedContentType === '全部类型' ? 'all' :
+      this.selectedContentType === '漫画' ? 'comic' : 'novel';
+    const page = this.pageEvidence();
+    const observation: SearchFilterEvidence = {
+      queryRevision: page.queryRevision, owner: page.owner, page: page.page,
+      panelGeneration: this.filterGeneration, workGeneration: operation.generation,
+      viewportId: this.resultViewportId(), action, scope, content,
+      resultCount: this.presentation.results.length, visibleCount: this.visibleGroups.length,
+    };
+    verification.emit('search-filter-applied','business',observation);
   }
 
   private taskStatusIdentity(): string {
@@ -716,6 +867,7 @@ export struct SearchPage {
     this.nativePanel = { kind, identity, chromeClaimed };
     this.publishSurfacePanelInput();
     if (!chromeClaimed) return;
+    this.observePageAction('panel-open', kind);
     const spec = resolveSheetSpec(kind === 'filter' ? 'search-result-filter' : 'search-task-status');
     const mask = readerAppColor(spec.hostMaskRole, this.appThemeScheme);
     const paper = readerScrimmedOpaqueColor(readerAppColor('app.window.background', this.appThemeScheme), mask);
@@ -738,6 +890,7 @@ export struct SearchPage {
       this.releaseNativePanelChrome(kind, identity);
       this.nativePanel = undefined;
       this.publishSurfacePanelInput();
+      this.observePageAction('panel-dismiss', kind);
     }
     this.restoreClosedPanelFocus(kind, identity);
   }
@@ -876,7 +1029,9 @@ export struct SearchPage {
   private retryOperation(): void {
     if (!this.pageInputCurrent()) return;
     const operation = this.operation();
-    if (operation !== undefined && !operation.canRetry) return;
+    const rerunsEmpty = this.presentation.kind === 'empty' && operation?.fact === 'empty';
+    if (operation !== undefined && !operation.canRetry && !rerunsEmpty) return;
+    this.observePageAction(this.presentation.kind === 'sourceLoadError' ? 'retry-source-load' : 'retry');
     this.onRetry();
   }
 
@@ -981,6 +1136,7 @@ export struct SearchPage {
             .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
         }.width('100%').padding({ top: this.searchContentStartInset() }).alignItems(HorizontalAlign.Center);
       }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off)
+        .id(this.surfaceModel?.verification?.enabled() === true ? `reader-bookshelf-search-${this.presentation.kind}` : '')
         .hitTestBehavior(HitTestMode.Transparent);
     }
   }
@@ -1086,8 +1242,10 @@ export struct SearchPage {
 
   private onListScrollStop(): void {
     if (!this.ownsList()) return;
+    const userScrolled = this.userScrolling;
     this.userScrolling = false;
     this.saveScrollAnchor();
+    if (userScrolled && this.pageInputCurrent()) this.observePageAnchor('user-scroll-settled');
     if (this.viewState.anchorAtStart) this.resultsDeferred = true;
     this.scheduleDeferredResults();
     if (!this.userInteracting) this.displayIdleRevision += 1;
@@ -1143,8 +1301,9 @@ export struct SearchPage {
         onDismiss: (identity: string): void => this.dismissSearchFilters(identity),
         onClosed: (identity: string): void => this.finishNativePanel('filter', identity),
         onGroup: (value: string, identity: string): void => {
-          if (!this.acceptsFilter(identity)) return;
+          if (!this.acceptsFilter(identity) || this.selectedGroupName === value) return;
           this.selectGroup(value);
+          if (this.surfaceModel?.verification?.enabled() === true) this.observeFilterApplied('scope',identity);
         },
         onType: (value: SearchContentType, identity: string): void => {
           if (!this.acceptsFilter(identity)) return;
@@ -1357,7 +1516,7 @@ export struct SearchPage {
             ListItem() { this.errorContent(this.presentation.searchedSourceCount); }
           } else if (this.visibleGroups.length === 0) {
             ListItem() {
-              ReaderPageState({ message: this.filteredEmptyMessage() });
+              ReaderPageState({ message: this.filteredEmptyMessage() }).id('reader-search-filtered-empty');
             }
           }
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
@@ -1374,6 +1533,7 @@ export struct SearchPage {
                   // change can retire it before its disappearance callback.
                   this.saveScrollAnchor();
                   this.rememberAnchorNeighbors();
+                  this.observePageAnchor('detail-selection');
                   this.onSelectResult(book, variants, displayCoverUrl, this.resultGroupKey(book));
                 } });
             }
@@ -1501,17 +1661,22 @@ export struct SearchPage {
       const state = this.presentation;
       if (!this.ownsPageQuery() || (!this.ownsList() && this.visibleGroups.length > 0) || !this.isPresentationVisible() || revision !== this.viewState.revision ||
         state.kind !== 'results' || state.searching || state.stopped || state.hasMoreSources !== true) return;
-      if (this.visibleGroups.length === 0) { this.onNeedMore(); return; }
+      if (this.visibleGroups.length === 0) { this.requestMoreResults(); return; }
       const visibleCount = Math.max(1, this.visibleEnd - this.visibleStart + 1);
-      if (this.visibleEnd + Math.max(2, visibleCount) >= this.visibleGroups.length - 1) { this.onNeedMore(); return; }
+      if (this.visibleEnd + Math.max(2, visibleCount) >= this.visibleGroups.length - 1) { this.requestMoreResults(); return; }
       // First layout can precede onScrollIndex, including a non-scrolling list.
       try {
         const last = this.resultScroller.getItemRect(this.resultNativeIndex(this.visibleGroups.length - 1));
         const viewport = this.getUIContext().getComponentUtils().getRectangleById(this.resultViewportId());
         const height = this.getUIContext().px2vp(viewport.size.height);
-        if (height > 0 && last.height > 0 && last.y < height) this.onNeedMore();
+        if (height > 0 && last.height > 0 && last.y < height) this.requestMoreResults();
       } catch (_) {}
     });
+  }
+
+  private requestMoreResults(): void {
+    this.observePageAction('need-more');
+    this.onNeedMore();
   }
 
   private resultNativeIndex(bookIndex: number): number { return bookIndex + 1; }
@@ -1581,6 +1746,7 @@ export struct SearchPage {
       this.scrollRestored = true;
       this.retainedViewportPending = false;
       this.saveScrollAnchor();
+      this.observePageAnchor('anchor-restored');
       if (this.pendingResultFocus.length > 0) this.restoreResultFocus(current);
     };
     // The native scroll command settles at layout. Keep a remounted list out
@@ -1789,7 +1955,7 @@ export struct SearchPage {
 
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
         this.primaryPill('添加更多书源', (): void => this.onManageSources());
-        if (!this.hasSearchNoticeRetry()) { this.secondaryPill('重新搜索', (): void => this.retryOperation()); }
+        if (!this.hasSearchNoticeRetry()) { this.secondaryPill('重新搜索', (): void => this.retryOperation(), 'reader-search-retry'); }
       }
       .margin({ top: 20 })
       .alignSelf(ItemAlign.Center);
@@ -1830,7 +1996,7 @@ export struct SearchPage {
   @Builder
   private sourceRecoveryActions(primaryLabel: string, onPrimary: () => void) {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      this.primaryPill(primaryLabel, onPrimary);
+      this.primaryPill(primaryLabel, onPrimary, 'reader-search-source-recovery-primary');
       this.secondaryPill('返回书架', (): void => {
         if (this.pageInputCurrent() && this.sourceRecoveryVisible()) this.onBack();
       });
@@ -1838,13 +2004,15 @@ export struct SearchPage {
   }
 
   @Builder
-  private primaryPill(label: string, onTap: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-primary', label, primary: true, onAction: onTap });
+  private primaryPill(label: string, onTap: () => void, verificationId: string = '') {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-primary', label, primary: true, onAction: onTap,
+      focusId: this.surfaceModel?.verification?.enabled() === true ? verificationId : '' });
   }
 
   @Builder
-  private secondaryPill(label: string, onTap: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-secondary', label, onAction: onTap });
+  private secondaryPill(label: string, onTap: () => void, verificationId: string = '') {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-secondary', label, onAction: onTap,
+      focusId: this.surfaceModel?.verification?.enabled() === true ? verificationId : '' });
   }
 
   @Builder
@@ -1887,7 +2055,8 @@ export struct SearchPage {
     Column() {
       if (!this.hasSearchNoticeRetry()) {
         ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-retry', label: '重新搜索',
-          actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+          actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation(),
+          focusId: this.surfaceModel?.verification?.enabled() === true ? 'reader-search-retry' : '' });
       }
       ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-source', label: '检查书源', onAction: (): void => this.onManageSources() });
     }.width('100%');

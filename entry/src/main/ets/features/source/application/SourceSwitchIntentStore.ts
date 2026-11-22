@@ -1,3 +1,4 @@
+import { readerHostFilesDirectory } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import fileIo from '@ohos.file.fs';
 import type { BusinessError } from '@ohos.base';
 import util from '@ohos.util';
@@ -169,7 +170,7 @@ export class SourceSwitchIntentStore {
    * finishWrite can have published before throwing: never call failWrite or
    * compensate once finish was invoked, and preserve the exact warm intent. */
   private async replace(raw: string): Promise<void> {
-    await replaceReaderAtomicSnapshot(this.path(), this.runtime.getUIAbilityContext().filesDir, raw);
+    await replaceReaderAtomicSnapshot(this.path(), readerHostFilesDirectory(this.runtime.getUIAbilityContext().filesDir), raw);
   }
   private sameIntent(left: SourceSwitchIntent, right: SourceSwitchIntent): boolean {
     return left.operationId === right.operationId && left.sequence === right.sequence &&
@@ -178,5 +179,5 @@ export class SourceSwitchIntentStore {
   private assertCurrent(): void {
     if (!ReaderRuntimeOwner.isCurrent(this.runtime)) throw new SourceSwitchIntentRecoveryError('pending', '换源服务已退役，请由当前服务核对保留记录');
   }
-  private path(): string { return `${this.runtime.getUIAbilityContext().filesDir}/${INTENT_FILE}`; }
+  private path(): string { return `${readerHostFilesDirectory(this.runtime.getUIAbilityContext().filesDir)}/${INTENT_FILE}`; }
 }

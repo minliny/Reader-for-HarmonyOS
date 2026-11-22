@@ -1,3 +1,4 @@
+import { readerHostPreferencesName } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 import common from '@ohos.app.ability.common';
 import preferences from '@ohos.data.preferences';
 import type { SettingsTextCleanupJournal } from './SharedDownloadStorageGateway';
@@ -80,7 +81,7 @@ export class SharedDownloadIntentPreferences implements SharedDownloadIntentPers
   }
 
   private async ensureStore(): Promise<preferences.Preferences> {
-    if (this.store === undefined) this.store = await preferences.getPreferences(this.context, 'reader_download_intents_v1');
+    if (this.store === undefined) this.store = await preferences.getPreferences(this.context, readerHostPreferencesName(this.context.filesDir, 'reader_download_intents_v1'));
     return this.store;
   }
 }
