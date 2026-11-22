@@ -16706,11 +16706,11 @@
           },
           "remaining": []
         },
-        "definitionSet": "68ec97b10d261a387469b55edf1085a87d10ab509c73e62e1c87c44c72f144f3",
+        "definitionSet": "e89ba7d9f1c1764cce98e5f7387332e53b664894902d5ed5319e56a653ed7911",
         "testRef": "test-reader-message-style-sdk.mjs",
         "deriveFocusedEntries": true,
         "reviewedSourceRef": true,
-        "definitionMigrationEvidence": "evidence/engineering-consolidation/definition-control-inputs-review.json"
+        "definitionMigrationEvidence": "evidence/probe-recovery-20261120/wo-probe-01-index-review-20261122T144559670Z.json"
       },
       {
         "defaultExecution": "OFF",
@@ -37278,8 +37278,8 @@
     "test-reader-message-style-sdk.mjs": {
       "tier": "integration",
       "focused": {
-        "sourceSha256": "6bbe0a0a915abe5692a94773518ec0157c49e7b375e22496cbdbe13e682e5335",
-        "resourceDefinitionSha256": "2957ed56a120dcef36a9918ef35aef27d13c0bed91cac41c9515633fd0929466"
+        "sourceSha256": "e853a3d2017b5446f3a3484c667ccb8a9a5bac977549da17b71da218bf0bb617",
+        "resourceDefinitionSha256": "3888a405e41a3d65bc09823a875a2102bc507848df1d40f3fea25fbd4c37e23a"
       },
       "catalogId": "H-reader-message-style-sdk"
     },
@@ -56191,6 +56191,98 @@
     "0d083be74d3d8125c17c5f481fae51d144d950e6ae049668598b9f21fbc47a22": {
       "path": "tools/ui-verification/scenarios.json",
       "sha256": "f0f717faa35352299b78e1e251401d58eee409f0c377671f4c7c6ad014d827cc"
+    },
+    "4bce153c33c2cdbeb2848f3bf34e922ad4f468cbdeadd45d065a4e3105497159": {
+      "path": "../Reader-UI/theme/registry.json",
+      "sha256": "335d2306c2836fabf896b479082a1287303b59dbe890b766c048ceb9277a0ebd"
+    },
+    "aaaadaf779d6ad0e4fa0af95368e75f29d2df1266a13fa43ea5009de27f2870b": {
+      "path": "docs/message-ui/approved-scope-20261019.json",
+      "sha256": "f99fb50be5e66fdd6eb8e34fef69bc40162042d4385b6cb2755960cf93ddc6f7"
+    },
+    "cfc5e07320c238ce68865e5564b40511d82547b5f2a8db394999a098a4e4eb8b": {
+      "path": "entry/src/main/ets/app/ReaderRecoveryProjection.ts",
+      "sha256": "5d5b189b807e4d813a893e56b4983e84d73b60039b0bdde6cafa6320756b19db"
+    },
+    "694381055fe99eca948c9790ae9e0cfcf27520a967a5d16599d9f10f1769a85a": {
+      "path": "entry/src/main/ets/features/common/ReaderDialogSurface.ets",
+      "sha256": "7fb4cc6ae872124109ed14aa28b30fa2937a29b198d19b796a67a29ee0bfb8bd"
+    },
+    "3d8dbc3aced1da55febe0daa219b6843c7d686e0ea90b86d9a84684b3db35d66": {
+      "path": "entry/src/main/ets/features/common/ReaderFontFamilies.ts",
+      "sha256": "da256271159a8bb1a1688c52fe70bb1f053eb48c287f610706dd2b74883160b1"
+    },
+    "8fcdbc479ff4a5d79e592945b9d2696be2e362be5b4cddb02d485de4152f9661": {
+      "path": "entry/src/main/ets/features/common/ReaderFonts.ets",
+      "sha256": "ad6eafc09e73e3cb1b825e43a54c9c8af65b4c12524cdda1449fdf49043dcd41"
+    },
+    "815cf15dba419fe1daee46d8aa5efea9530f28cc93cd776c276d14288200431e": {
+      "path": "entry/src/main/ets/features/common/ReaderMessageStyle.ets",
+      "sha256": "93c045e7c3553d839a520a5f9ca471292b85d54a33aefae6e54df33fa31a83f0"
+    },
+    "9ed8a7d7f3524ddc5e95b99003840453bca1402a04e74d59d4622b87d93a8bee": {
+      "path": "entry/src/main/ets/features/common/ReaderPageState.ets",
+      "sha256": "4c9108665fa5eb920a1e58d0a33d28b34cdcfcfc85a94347a56ac604e9e0e7bd"
+    },
+    "25965ad306f2580b13fb0864f750d00b621f977e367fc0f8cd27fac4237a64c7": {
+      "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+      "sha256": "9b2a08b5a66d8cd0dfd81c4305542080d03422620b7cb2e30695fc670797b1da"
+    },
+    "7f7e3a5cc6d16c3c321d49bd7f65c6d26c0d87b7441e98873dc759418910934c": {
+      "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+      "sha256": "4fd6d9380c8cdd964580ac7be7dcbb2698c3481f96e5a5ba12feecfb47bbb6a0"
+    },
+    "114aaeb99ae6dc2df55da2bb789b859e64939f3bb9710a4608ad939dcc187fb4": {
+      "path": "entry/src/main/ets/features/common/ReaderThemeRegistry.ts",
+      "sha256": "fc2eb8f4b5e7ccade228737813374188772668071116f4ec7bf73766aea730e2"
+    },
+    "a035af585d918ead43609b7dcf659ad51a33752b3e6b9a5b93cbad69294aa6b0": {
+      "path": "entry/src/main/ets/features/common/ReaderTypography.ets",
+      "sha256": "d86fb545ba8ed9549f1000eb998f5ff74e61c67f7e5a23d0cfbfb2d1d077e14d"
+    },
+    "fad7d3e499a1b00ddb040a39638012bbff09af55a69fd9e54dd1c73f7d59e29e": {
+      "path": "entry/src/main/ets/features/common/ReaderWindowMetrics.ts",
+      "sha256": "96ccccd1f68d36a5b50236cf82d7b03912bcea7e9c0da7da40f971a16fdc1cf0"
+    },
+    "ba124ab4bf2884215fd5c8789aa69c766f348ee11aafc844a74db3b1dbe25b9a": {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
+      "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d"
+    },
+    "bd3513cab0e717ea609bb1c51dd4ee4004bf8a2e1c55956bf3600ac43ac17e13": {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+      "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
+    },
+    "dc3bf828e02afbfd5a50719af1207f734541866b028737b38e705c4168a4e4d2": {
+      "path": "entry/src/main/resources/rawfile/ReaderMangaSans600.otf",
+      "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54"
+    },
+    "e4cde890fd1755040aeb56982d3b12328a9166d211e33d0e9e0c04ff6548eefb": {
+      "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+      "sha256": "81faa46b664e6325f09260614c49f86be06569df3d372620ad0cdd84899e28be"
+    },
+    "b6d906d13fa8bc64a03fc184a0f4797f2194b1ac1600558d49faf213fac40418": {
+      "path": "tools/lib/ets-builder-probe.mjs",
+      "sha256": "654a5df5ba1278947988d1e24a2f25d125afc880c3178e6696b4bcf1e70ff7e2"
+    },
+    "4fc52cebdc48547230f92da04cbffacae0e34a25104dfc6f47e2d543e46315be": {
+      "path": "tools/lib/reader-component-probe.mjs",
+      "sha256": "188fbc27cebb6b3057523e166d71b63ba18368decae87b8ca1d2ca130bf35a48"
+    },
+    "d28cd22d3fde4f4680f18408b3f55733e4e8b77af8261af2c8f2faf7ff05e53f": {
+      "path": "tools/lib/reader-foundation-control-probe.mjs",
+      "sha256": "3019699929d66462b928830db6db5c032ac2ccdf7c7181e71c9a348b85ecc481"
+    },
+    "ff56e220e1d07238a7a001624dac20da0c16f9eeaafeabaab0777e734a127a2c": {
+      "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
+      "sha256": "74afdc8f6a915e4aca8bb510de1028b889de6c0fbd4fac3f23c2ee6b9c835ad8"
+    },
+    "964b0110d47d885d74a37a3deaa203fc222b56643e3fba7a09b231c0d7dab575": {
+      "path": "tools/lib/reader-probe-globals.mjs",
+      "sha256": "e324b7c58fb1e9d1932ae849998b57e6af20519beb08c832ce96ee5746fea167"
+    },
+    "20eb9a47648afad2ed7421c128c18d20f1523913e039f63ff59dc726b2e05aa6": {
+      "path": "tools/test-reader-message-style-sdk.mjs",
+      "sha256": "e853a3d2017b5446f3a3484c667ccb8a9a5bac977549da17b71da218bf0bb617"
     }
   },
   "inputSets": {
@@ -81805,6 +81897,42 @@
       "7ef1accf4d32d58998b278937fb47b7542d618a18f4b22c62a6de83b79b63408",
       "d1be3285c7319412d17f2ef97782cce1eedfaa6adfcda9e61a6ddc835f9e4f57",
       "0d083be74d3d8125c17c5f481fae51d144d950e6ae049668598b9f21fbc47a22"
+    ],
+    "e89ba7d9f1c1764cce98e5f7387332e53b664894902d5ed5319e56a653ed7911": [
+      "4bce153c33c2cdbeb2848f3bf34e922ad4f468cbdeadd45d065a4e3105497159",
+      "aaaadaf779d6ad0e4fa0af95368e75f29d2df1266a13fa43ea5009de27f2870b",
+      "cfc5e07320c238ce68865e5564b40511d82547b5f2a8db394999a098a4e4eb8b",
+      "694381055fe99eca948c9790ae9e0cfcf27520a967a5d16599d9f10f1769a85a",
+      "3d8dbc3aced1da55febe0daa219b6843c7d686e0ea90b86d9a84684b3db35d66",
+      "8fcdbc479ff4a5d79e592945b9d2696be2e362be5b4cddb02d485de4152f9661",
+      "815cf15dba419fe1daee46d8aa5efea9530f28cc93cd776c276d14288200431e",
+      "9ed8a7d7f3524ddc5e95b99003840453bca1402a04e74d59d4622b87d93a8bee",
+      "25965ad306f2580b13fb0864f750d00b621f977e367fc0f8cd27fac4237a64c7",
+      "7f7e3a5cc6d16c3c321d49bd7f65c6d26c0d87b7441e98873dc759418910934c",
+      "114aaeb99ae6dc2df55da2bb789b859e64939f3bb9710a4608ad939dcc187fb4",
+      "d790ca9cc733610ba000f02bc6924f39a1bce653615b6630956b4af9ef290a2e",
+      "a035af585d918ead43609b7dcf659ad51a33752b3e6b9a5b93cbad69294aa6b0",
+      "fad7d3e499a1b00ddb040a39638012bbff09af55a69fd9e54dd1c73f7d59e29e",
+      "228e40ecaa0e91f262a765429000ed9510751aec0ef6f8b6e220cb41dc73208e",
+      "ba124ab4bf2884215fd5c8789aa69c766f348ee11aafc844a74db3b1dbe25b9a",
+      "bd3513cab0e717ea609bb1c51dd4ee4004bf8a2e1c55956bf3600ac43ac17e13",
+      "dc3bf828e02afbfd5a50719af1207f734541866b028737b38e705c4168a4e4d2",
+      "83814931ec5491fe71b1487d1e804f3b6ab8c62c7e973fd10883baa4caadb426",
+      "5a8bfb0adbd3db245e6d027e8299c63918bd4bf72b9627f0041da038b8169595",
+      "e4cde890fd1755040aeb56982d3b12328a9166d211e33d0e9e0c04ff6548eefb",
+      "b6d906d13fa8bc64a03fc184a0f4797f2194b1ac1600558d49faf213fac40418",
+      "f70bcef868d1ddb5bb006796f791336480f06343309120b0ee3502a0e72a56e0",
+      "d720c35ae7c8a44ee2b4c6a1fad1a16ef484ca54695263cb0890892600f1fd82",
+      "78893d731948b5e0368a7f76dca70f91889ea1842a11d0b98eb572a288d09fa9",
+      "4fc52cebdc48547230f92da04cbffacae0e34a25104dfc6f47e2d543e46315be",
+      "d28cd22d3fde4f4680f18408b3f55733e4e8b77af8261af2c8f2faf7ff05e53f",
+      "ff56e220e1d07238a7a001624dac20da0c16f9eeaafeabaab0777e734a127a2c",
+      "4c440631bd3a036d09270040b9c0c817edb2993e6e24a5b7e655586b7029d8fa",
+      "964b0110d47d885d74a37a3deaa203fc222b56643e3fba7a09b231c0d7dab575",
+      "f852dba449305d48eb4af53e5ee9bec5901c8b48e6dd57bba0845c3aa520acf6",
+      "672f38d64ebe3559688cf3ad41d5eedfd68bdf75da6e3f3057cd8fa84c551a04",
+      "c9f9fe28a56deb742798cad906d70df52366e59207e2edafebe7f193ab29f21d",
+      "20eb9a47648afad2ed7421c128c18d20f1523913e039f63ff59dc726b2e05aa6"
     ]
   },
   "derivedCatalogSummaries": true,
