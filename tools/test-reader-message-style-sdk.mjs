@@ -108,10 +108,13 @@ assert.equal(measured.find(options => options.textContent === '核对').fontWeig
 assert.equal(measured.find(options => options.constraintWidth).fontFamily, 'ReaderNotoSansSCUIRegular');
 const noticeTitle = sdk.nodes(notice).find(node => node.type === 'Text' && node.fontSize === readerMessageStyles.MESSAGE_NOTICE_TITLE.fontSizeFp);
 assert.equal(noticeTitle.fontFamily, 'ReaderNotoSansSCUIRegular');
+const horizontal = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+const dialogWindow = windowMetrics.createDefaultReaderWindowMetrics();
+dialogWindow.windowRect = new windowMetrics.ReaderRectVp(0, 0, 390, 844);
 for (const specId of ['book-removal', 'json-import', 'shelf-group', 'local-import']) {
   const dialogSource = readFileSync(new URL('../entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets',import.meta.url),'utf8');
   const dialog = sdk.consumer(dialogSource, undefined,
-    { ...windowMetrics, ButtonType: { Normal: 'ButtonType.Normal' } });
+    { ...windowMetrics, ...horizontal, readerWindowMetrics: () => dialogWindow, ButtonType: { Normal: 'ButtonType.Normal' } });
   Object.assign(dialog, { specId, title: '确认操作', showCloseButton: false,
     actions: [{ id: 'cancel', label: '取消', tone: 'default', enabled: true, defaultFocus: false }] });
   dialog.initialRender();
@@ -129,52 +132,126 @@ console.log('PASS actual SDK message family: same-card independent actions, orig
 
 
 }else if(id==='detail-notice'){
-// The new detail matter shares Index's intrinsic top host. A physical action
-// must retain its original detail opening as well as the write generation.
-const { readerRecoveryView } = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
-const indexSource = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-
-const index = sdk.consumer(indexSource, ['detailOperationNoticeContent','detailPendingNoticeVisible',
-  'detailReadableAdmission','detailBookKey','shelfRecovery','emptyShelfRecovery','hasUnknownShelfWrite',
-  'readerOwnsWindowEdges','messageSafeTop','isCurrentRuntime','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','reconcileDetailShelfWrite'], {
-  readerRecoveryView, ReaderRuntimeOwner: { isCurrent: owner => owner === runtime },
-  EMPTY_READABLE_ADMISSION: { confirmation: 'none', message: '', generation: 0 },
+// Run the current root notice and the real pending-operations presentation.
+// Inject the earlier unknown receipt and observe only its read-only port.
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { selectedProductionClasses, selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = windowMetrics;
+const sourceRoot = new URL('../entry/src/main/ets/', import.meta.url);
+const indexSource = new URL('pages/Index.ets', sourceRoot);
+const metrics = createDefaultReaderWindowMetrics();
+metrics.systemInsets.top = 39;
+const SafeTop = selectedProductionMethods(indexSource, 'Index', ['messageSafeTop', 'readerOwnsWindowEdges'],
+  { ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop });
+const book = { sourceId: 'source', bookId: 'book', contentKind: 'manga' };
+const host = Object.assign(new SafeTop(), {
+  route: 'bookshelf',
+  readingEntry: { book, sessionActive: false, recoveryNoticeVisible: () => false },
+  mangaSourceSwitch: { selectionVisible: false },
 });
-Object.assign(index, { route: 'detail', appThemeScheme: 'day', navigationGeneration: 4, detailShelfAdmissionMount: 2,
-  shelfReceiptRetired: false, mountedRuntimeOwner: runtime, shelfOperationOwner: runtime,
-  detailBook: { sourceId: 'source', bookId: 'book' }, readableAdmissions: [],
-  shelfOperation: { generation: 9, busy: false, reconcileBusy: false,
-    receipt: { receipt: { confirmation: 'unknown', fact: 'pendingReconciliation', message: '删除尚未确认' },
-      facts: { canRetry: true, generation: 9, message: '删除尚未确认' } } },
-  detailShelfRemovalGeneration: 9, shelfFilter: () => ({ readingState: 'all', sourceKind: 'all' }) });
-index.detailShelfRemovalKey = index.detailBookKey(index.detailBook);
-let reads = 0;
-index.bookshelfHost = { operations: () => ({ reconcile: async (generation, _filter, current) => {
-  assert.equal(generation, 9);assert.equal(current(), true);reads++;return undefined;
-} }) };
-assert.equal(index.detailPendingNoticeVisible(), true);index.detailOperationNoticeContent();
-const latestAction = () => {
-  const actor = sdk.walk(index).filter(child => child instanceof sdk.deps.ReaderRecoveryAction && child.label === '核对原操作').at(-1);
-  return [...actor.nodes.values()].find(node => node.onClick).onClick;
-};
-const stale = latestAction();index.detailShelfAdmissionMount++;stale();await Promise.resolve();assert.equal(reads, 0);
-index.detailOperationNoticeContent();const current = latestAction();current();await Promise.resolve();assert.equal(reads, 1);
-index.navigationGeneration++;current();await Promise.resolve();assert.equal(reads, 1);
-console.log('PASS Index detail pending top-host action retains exact detail opening, runtime, navigation and original write generation; recheck never reissues deletion');
-
-const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
-const metrics = createDefaultReaderWindowMetrics();metrics.systemInsets.top = 39;
-const SafeTop = selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),'Index',
-  ['messageSafeTop','readerOwnsWindowEdges'], { ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop });
-const host = Object.assign(new SafeTop(), { route: 'bookshelf', readingSessionActive: false, mangaSourceSwitchSelectionVisible: false });
 assert.equal(host.messageSafeTop(), 0, 'App root already consumed its safe top');
-host.route = 'detail';host.detailBook = { contentKind: 'manga' };
-assert.equal(host.messageSafeTop(), 39, 'edge-to-edge detail floating notice consumes safe top exactly once');
-host.route = 'reading';host.readingSessionActive = true;
-assert.equal(host.messageSafeTop(), 39, 'reader background owns its own safe top');
-console.log('PASS message host safe top: ordinary App padding is not counted twice; detail/reader own exactly one inset');
+host.route = 'detail';
+assert.equal(host.messageSafeTop(), 39, 'edge-to-edge detail uses one safe top');
+host.route = 'reading';
+host.readingEntry.sessionActive = true;
+assert.equal(host.messageSafeTop(), 39, 'edge-to-edge reader uses one safe top');
+host.route = 'detail';
+host.readingEntry.sessionActive = false;
 
+const { BookshelfDetailPresentation } = selectedProductionClasses(
+  new URL('features/bookshelf/presentation/BookshelfDetailPresentation.ets', sourceRoot),
+  ['BookshelfDetailPresentation'], { EMPTY_READABLE_ADMISSION: { confirmation: 'none' } });
+const generation = 9;
+const filter = { readingState: 'all', sourceKind: 'all' };
+let mount = 2, navigation = 4, owner = runtime, interactive = true, reads = 0;
+const mutations = {
+  owner: runtime,
+  snapshot: { generation, reconcileBusy: false },
+  hasUnknownWrite: () => true,
+  recovery: () => ({ visible: true, canRetry: true, generation, message: '删除尚未确认' }),
+  remove: () => assert.fail('reconciliation must never issue another removal'),
+};
+const presentation = new BookshelfDetailPresentation({
+  owner: () => owner,
+  isCurrentOwner: candidate => candidate === runtime,
+  retired: () => false,
+  route: () => host.route,
+  generation: () => navigation,
+  mounting: () => mount,
+  book: () => book,
+  mutations: () => mutations,
+  filter: () => filter,
+  host: () => ({ operations: candidate => {
+    assert.equal(candidate, runtime);
+    return { reconcile: async (expected, currentFilter, current) => {
+      assert.equal(expected, generation);
+      assert.equal(currentFilter, filter);
+      assert.equal(current(), true);
+      reads++;
+      return undefined;
+    } };
+  } }),
+});
+Object.assign(presentation, {
+  removalKey: `${book.sourceId}\u0000${book.bookId}`,
+  removalGeneration: generation,
+});
+assert.ok(presentation.removalRecovery()?.visible, 'the original unknown removal remains visible');
+
+const { root, require } = installedEtsCompiler();
+const syntax = require(root + '/lib/validate_ui_syntax.js');
+for (const name of ['BookshelfDetailPresentation', 'ReadingEntryPresentation']) syntax.observedClassCollection.add(name);
+sdk.deps.SynchedPropertyNesedObjectPU = sdk.properties.sdk.SynchedPropertyNestedObjectPU;
+const detailSource = readFileSync(new URL('features/bookshelf/ui/BookshelfDetailNotice.ets', sourceRoot), 'utf8');
+sdk.childSources.BookshelfDetailNotice = detailSource;
+sdk.deps.BookshelfDetailNotice = createReaderBuilderProbe(detailSource, boundedMembers(detailSource), sdk.deps, sdk.hooks).Component;
+const journeySource = readFileSync(new URL('app/composition/ReaderJourneyRecoveryNotices.ets', sourceRoot), 'utf8');
+const observe = value => sdk.properties.sdk.ObservedObject.createNew(value, undefined);
+const detail = observe(presentation);
+const reading = observe(host.readingEntry);
+
+function mountAction() {
+  const journey = sdk.consumer(journeySource, boundedMembers(journeySource), {}, {
+    reading, detail, topInset: host.messageSafeTop(), interactive: true,
+  });
+  Object.assign(journey, { canInteract: () => interactive, noticeWidth: () => 300, availableHeight: () => 400 });
+  journey.initialRender();
+  const detailNotices = sdk.walk(journey).filter(child => child instanceof sdk.deps.BookshelfDetailNotice);
+  assert.equal(detailNotices.length, 1, 'the current root mounts one actual detail notice');
+  const actions = sdk.walk(detailNotices[0]).filter(child => child instanceof sdk.deps.ReaderRecoveryAction &&
+    child.label === '核对原操作');
+  assert.equal(actions.length, 1, 'the original unknown removal owns one real SDK action');
+  const button = [...actions[0].nodes.values()].find(node => node.type === 'Button' && node.onClick);
+  assert.ok(button, 'the real recovery notice exposes a native Button callback');
+  assert.equal(sdk.nodes(journey).find(node => node.type === 'Scroll')?.margin?.top, 51,
+    'the root applies the one admitted 39vp safe top plus its 12vp gap');
+  return button.onClick;
+}
+const stale = mountAction();
+mount++;
+stale();
+assert.equal(reads, 0, 'the old detail opening cannot borrow its successor');
+const current = mountAction();
+interactive = false;
+current();
+assert.equal(reads, 0, 'a retained action obeys the real root input gate');
+interactive = true;
+current();
+assert.equal(reads, 1, 'the active detail opening reconciles exactly one original receipt');
+mutations.snapshot.generation++;
+current();
+assert.equal(reads, 1, 'a retained action cannot borrow a newer write generation');
+mutations.snapshot.generation = generation;
+owner = {};
+current();
+assert.equal(reads, 1, 'a retired Runtime cannot dispatch recovery');
+owner = runtime;
+navigation++;
+current();
+assert.equal(reads, 1, 'a new navigation invalidates the retained callback');
+console.log('PASS current detail root, native action and presentation preserve safe top, opening, foreground, runtime and original write generation');
 
 }else{
 // A confirmed write can still own unfinished durable cleanup. Closing its

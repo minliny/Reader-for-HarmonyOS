@@ -156877,15 +156877,15 @@
         "detail opening authority",
         "group pending cleanup"
       ],
-      "productionBinding": "真实bundled字体表、ReaderRecoveryNotice/Action/PageState/Dialog SDK；Index实际methods，domain操作fake；bounded helper只有typography结构隐含。",
+      "productionBinding": "ReaderFonts.ets registers the approved physical faces. The installed SDK lowers ReaderRecoveryNotice, ReaderRecoveryAction, ReaderPageState and ReaderDialogSurface.",
       "overlap": "message-lifecycle关notice事实；本项字体物理表及SDKcarrier独有，但detail/group业务不属于style。",
       "minimumTrigger": "字体资源/消息SDK载体、detail action或group completion各自修改时按需分层。; exact case: fonts-carriers",
       "necessityReason": "真实字体表比provenance自报强；实际SDK回调充分保护carrier层，186行跨业务需拆。",
-      "limitations": "Actual SDK attributes/callbacks and ordinary Index receipt policy; font tables/registration binding do not prove native glyph raster, platform layout or device acceptance.",
+      "limitations": "Actual font tables and SDK-emitted attributes and callbacks. Native font rasterization, measured platform layout and device acceptance remain separate.",
       "id": "H-reader-message-style-sdk#fonts-carriers",
       "parentId": "H-reader-message-style-sdk",
       "caseId": "fonts-carriers",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
@@ -156897,7 +156897,7 @@
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Upstream real static font tables and current SDK message role/action/loader carriers",
+      "protectedBehavior": "Keep the three static message faces bound to their inspected font bytes and the current shared message carriers.",
       "prerequisites": [
         "Node",
         "installed ETS compiler/emitter",
@@ -156906,22 +156906,114 @@
         "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
         "entry/src/main/resources/rawfile/ReaderMangaSans600.otf"
       ],
-      "mechanism": "Upstream real static font tables and current SDK message role/action/loader carriers; owner implementation record: [\"Separate physical fonts/current message carriers, actual detail notice identity and group receipt completion.\", \"Replace handwritten sfnt binary-table parser with upstream fontTools; inspect static weights/cmap/names/hash and bind app aliases to files through actual ReaderFonts registrar.\", \"Remove unexplained fixed14/17/etc geometry tuple locks; validate actual current role propagation. Native18/32 loader values derive approved-scope rule.\", \"Use exact actual Index methods for safe top/group receipt; each case has no implicit sibling import/run.\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "Check physical cmap/static weights and registrar aliases, actual notice generations and busy state, 18/32vp loaders from approved scope, and each shared dialog title/action role.",
+      "failureExample": "A mismatched physical face, alias, intrinsic loader, retained action generation or message role fails the selected assertion.",
       "estimatedCostType": "selected-sdk-or-method",
-      "reviewedSourceSha256": "6bbe0a0a915abe5692a94773518ec0157c49e7b375e22496cbdbe13e682e5335",
+      "reviewedSourceSha256": "9dca1d1d134f53742bc64a12499750856dc5874f8a51afb696ccae2231c3b4d4",
       "definitionInputs": [
+        {
+          "path": "../Reader-UI/theme/registry.json",
+          "sha256": "335d2306c2836fabf896b479082a1287303b59dbe890b766c048ceb9277a0ebd"
+        },
+        {
+          "path": "docs/message-ui/approved-scope-20261019.json",
+          "sha256": "f99fb50be5e66fdd6eb8e34fef69bc40162042d4385b6cb2755960cf93ddc6f7"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+          "sha256": "02f8352367941edfcf6db7af3447cf2cf056b0747f67916bfebcd6b218fca62f"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+          "sha256": "97d9e3110385eb22a1cb2bfdb611fd9cf399b2decf2560864551b982ef403510"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
+          "sha256": "b199a36b0f5470184278b65a190e2ea195869e1e960efcd0e002ff5fd0761a8e"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts",
+          "sha256": "da256271159a8bb1a1688c52fe70bb1f053eb48c287f610706dd2b74883160b1"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+          "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderMessageStyle.ets",
+          "sha256": "557c0a7cda3cdc223ea7e792c9dae38edb3acc96be0dbe8ac5eeae2df0d774ec"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts",
+          "sha256": "113ccca942f76f0ec60f32cf3506909d3349fef6691f9b2d2f4d8becdfe1b549"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderTypography.ets",
+          "sha256": "9884dee996f1b02dbde84b56e8fa095f2c9cb30f5dadb2287073c3661f68da10"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderWindowEnvironment.ts",
+          "sha256": "801e6f1fe0948522cd4e93a4c3a439aa8416c2749e94e83799feec997a30645c"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts",
+          "sha256": "17c5d22883961c65039302c3b151de7f2fe7804f0568fe1f2496faa3439f37e8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts",
+          "sha256": "a1abae74b2d9064354f77a10c054e2fa192555d2946bb05ae76d54b4609ddeab"
+        },
+        {
+          "path": "entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets",
+          "sha256": "8ebab808cae3ec885a88ebaf193745037be8fa160917cf4dd013c35a373baafc"
+        },
+        {
+          "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
+          "sha256": "85c008cf7490d2dca778a88c31a4f53a04239718fe9b5e70f69b287f88844ab2"
+        },
+        {
+          "path": "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
+          "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d"
+        },
+        {
+          "path": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+          "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
+        },
+        {
+          "path": "entry/src/main/resources/rawfile/ReaderMangaSans600.otf",
+          "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54"
+        },
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "34c4eb7537bb8f833e642be3073ecc42858d7addfd46047c6de746faa23ba407"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "da8b553bb30c3a12c9179ea70815541b6890b3d26da3feab4124411d01942fc7"
+        },
+        {
+          "path": "tools/contract-test-tiers.json",
+          "sha256": "2780d9c415f270b93bcf0f65ebcc049ddf3b2af7de70fffc50ffb9ee357cd85b"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
-          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "afb664199b380d9247101acbc689451243af87df61e65cb7d9a8d8da68a8fee6"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+          "sha256": "a9300ad871060c6b13dae66deebd5dc8f1ea3acae432a626ac4b841d21358f8c"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
         },
         {
           "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -156932,28 +157024,40 @@
           "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
         },
         {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+        },
+        {
           "path": "tools/lib/manga-directory-entry-row-probe.mjs",
-          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
         },
         {
           "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
-          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+          "sha256": "fc90aa42ce87ff148d00df32558131886938747f46f29840a26a571c5c1adfa9"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+        },
+        {
+          "path": "tools/lib/reader-editing-sdk-probe.mjs",
+          "sha256": "56b83d626463aae3063904461ba63d1d9b262bc25f24434f94defd8284f7e45b"
         },
         {
           "path": "tools/lib/reader-foundation-control-probe.mjs",
-          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+          "sha256": "e72e426c4317fe60c0e570f2aed6cad827a9143a937c6e1fc0701ffda084e70f"
         },
         {
           "path": "tools/lib/reader-icon-button-probe.mjs",
-          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+          "sha256": "9fe39afcf36450870215be306e71b95f64c354bc6c1d9b2892687290227a5b43"
         },
         {
           "path": "tools/lib/reader-page-builder-slots.mjs",
@@ -156961,23 +157065,43 @@
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/reader-post-layout-frame-probe.mjs",
+          "sha256": "71df317460573bc02b549fe42d297053af2dfe5a457d8536216fd95de2fd04ce"
         },
         {
           "path": "tools/lib/reader-press-feedback-probe.mjs",
-          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+          "sha256": "c4e9b74924dcdb1ba5b5284c6c581b9ccfaba54493ab60b59996e1f4fededb36"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "68148fe92754e8bd674d542296b09bf2f958b7f0c9d21e012b585be0dd33e2ec"
         },
         {
           "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a"
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -156989,11 +157113,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-message-style-sdk.mjs",
-          "sha256": "6bbe0a0a915abe5692a94773518ec0157c49e7b375e22496cbdbe13e682e5335"
+          "sha256": "9dca1d1d134f53742bc64a12499750856dc5874f8a51afb696ccae2231c3b4d4"
         }
       ],
       "definitionInputProblems": [],
@@ -157002,58 +157126,13 @@
       "repair": null,
       "implementation": "COMPLETE",
       "validationEvidence": {
-        "plan": "READING-060/061/062",
         "status": "PASS",
-        "passedCases": [
-          "fonts-carriers",
-          "detail-notice",
-          "group-receipt"
-        ],
-        "notRun": [],
-        "failures": [
-          "READ060 all message cases unreached because layout geometry fixture failed. READ061 fonts real parse rejected incorrect fixture assumption app alias==embedded sfnt name. Actual loader registration permits independent alias; READ062 asserts actual alias→physical file and records embedded names, all3 PASS."
-        ],
-        "toolEvidence": {
-          "python": "3.12.14",
-          "fontTools": "4.60.1",
-          "interpreter": "/Users/minliny/Documents/Reader/.reader-artifacts/gate-audit-20261019/reaudit/implementation/tooling-venv/bin/python",
-          "faces": [
-            {
-              "familyAlias": "ReaderNotoSansSCUIRegular",
-              "asset": "NotoSansSC-UIRegular.otf",
-              "fontNames": [
-                "Noto Sans SC",
-                "NotoSansSC-Thin"
-              ],
-              "weight": 400,
-              "unicodeCount": 30890,
-              "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
-            },
-            {
-              "familyAlias": "ReaderNotoSansSCUIMedium",
-              "asset": "NotoSansSC-UIMedium.otf",
-              "fontNames": [
-                "Noto Sans SC",
-                "NotoSansSC-Thin"
-              ],
-              "weight": 500,
-              "unicodeCount": 30890,
-              "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d"
-            },
-            {
-              "familyAlias": "ReaderMangaSans600",
-              "asset": "ReaderMangaSans600.otf",
-              "fontNames": [
-                "ReaderMangaSans600"
-              ],
-              "weight": 600,
-              "unicodeCount": 30890,
-              "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54"
-            }
-          ]
-        }
+        "caseId": "fonts-carriers",
+        "directLog": "evidence/reader-ui-verification-plan-20261119/implementation/phase-1/confluence-20261123/s5-wo-probe-01-direct-final.log",
+        "directLogSha256": "aedf9a82e1fa32334ef8fe43480481a36008fb7e5ca4c161c53e520030de537d",
+        "reviewReceipt": "evidence/reader-ui-verification-plan-20261119/implementation/phase-1/confluence-20261123/s5-wo-probe-01-review.json"
       },
-      "evidenceBoundary": "Actual SDK attributes/callbacks and ordinary Index receipt policy; font tables/registration binding do not prove native glyph raster, platform layout or device acceptance.",
+      "evidenceBoundary": "Actual font tables and SDK-emitted attributes and callbacks. Native font rasterization, measured platform layout and device acceptance remain separate.",
       "nestedActions": [
         {
           "kind": "read-only-python-subprocess",
@@ -157064,7 +157143,7 @@
         }
       ],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "2957ed56a120dcef36a9918ef35aef27d13c0bed91cac41c9515633fd0929466",
+      "resourceDefinitionSha256": "774434814ef2ad19e6fa298d1a65ee78faeb9216b69ac6a7de7d393804f08f8a",
       "overlayAssemblyMethodReview": {
         "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
         "decision": "REVIEW_NEEDED",
@@ -157081,15 +157160,15 @@
         "detail opening authority",
         "group pending cleanup"
       ],
-      "productionBinding": "真实bundled字体表、ReaderRecoveryNotice/Action/PageState/Dialog SDK；Index实际methods，domain操作fake；bounded helper只有typography结构隐含。",
+      "productionBinding": "Index.messageSafeTop feeds ReaderJourneyRecoveryNotices, which mounts BookshelfDetailNotice and the shared native action. BookshelfDetailPresentation owns reconcile admission.",
       "overlap": "message-lifecycle关notice事实；本项字体物理表及SDKcarrier独有，但detail/group业务不属于style。",
       "minimumTrigger": "字体资源/消息SDK载体、detail action或group completion各自修改时按需分层。; exact case: detail-notice",
       "necessityReason": "真实字体表比provenance自报强；实际SDK回调充分保护carrier层，186行跨业务需拆。",
-      "limitations": "Actual SDK attributes/callbacks and ordinary Index receipt policy; font tables/registration binding do not prove native glyph raster, platform layout or device acceptance.",
+      "limitations": "Actual SDK-emitted builders and ordinary presentation methods with finite host I/O ports. This does not measure touch, device layout, SQLite or network behavior.",
       "id": "H-reader-message-style-sdk#detail-notice",
       "parentId": "H-reader-message-style-sdk",
       "caseId": "detail-notice",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
@@ -157101,27 +157180,83 @@
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Actual Index detail notice original identity and single safe-top ownership",
+      "protectedBehavior": "Retain one admitted safe top and the original detail opening, Runtime and pending removal generation for a read-only reconcile.",
       "prerequisites": [
         "Node",
         "installed ETS compiler/emitter"
       ],
-      "mechanism": "Actual Index detail notice original identity and single safe-top ownership; owner implementation record: [\"Separate physical fonts/current message carriers, actual detail notice identity and group receipt completion.\", \"Replace handwritten sfnt binary-table parser with upstream fontTools; inspect static weights/cmap/names/hash and bind app aliases to files through actual ReaderFonts registrar.\", \"Remove unexplained fixed14/17/etc geometry tuple locks; validate actual current role propagation. Native18/32 loader values derive approved-scope rule.\", \"Use exact actual Index methods for safe top/group receipt; each case has no implicit sibling import/run.\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "Mount current recovery components through the SDK and invoke the actual Button callback against an injected unknown receipt. Assert root inset, current one-read admission and stale opening, generation, navigation, Runtime and input rejection.",
+      "failureExample": "A retained action borrowing a successor opening or generation increments the read count; the fixture fails on any repeat removal.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "6bbe0a0a915abe5692a94773518ec0157c49e7b375e22496cbdbe13e682e5335",
+      "reviewedSourceSha256": "9dca1d1d134f53742bc64a12499750856dc5874f8a51afb696ccae2231c3b4d4",
       "definitionInputs": [
+        {
+          "path": "../Reader-UI/theme/registry.json",
+          "sha256": "335d2306c2836fabf896b479082a1287303b59dbe890b766c048ceb9277a0ebd"
+        },
+        {
+          "path": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets",
+          "sha256": "675b8a39b677504503aa2b271908189fe04ad85d3a221746123fec8cc45bbd6e"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/presentation/BookshelfDetailPresentation.ets",
+          "sha256": "0033c9aa2269ba7d838db763373f4d994b26caef3d61c4853133cedc9308417d"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfDetailNotice.ets",
+          "sha256": "9259ed4b5a8692da4a5b6709c4c4fc4321b3a147b49828a34a1fdf4a94bd6e64"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "sha256": "80e22579db21bb36cc94f40a0792562992670c6b79aec7f3f85ff3f8c1785aee"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+          "sha256": "97d9e3110385eb22a1cb2bfdb611fd9cf399b2decf2560864551b982ef403510"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryGroup.ets",
+          "sha256": "cb9d9f31d80511db2e289d17b75a38495fc47c544a52c7948726d5ff5157b3a8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
+          "sha256": "b199a36b0f5470184278b65a190e2ea195869e1e960efcd0e002ff5fd0761a8e"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts",
+          "sha256": "17c5d22883961c65039302c3b151de7f2fe7804f0568fe1f2496faa3439f37e8"
+        },
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "34c4eb7537bb8f833e642be3073ecc42858d7addfd46047c6de746faa23ba407"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "da8b553bb30c3a12c9179ea70815541b6890b3d26da3feab4124411d01942fc7"
+        },
+        {
+          "path": "tools/contract-test-tiers.json",
+          "sha256": "2780d9c415f270b93bcf0f65ebcc049ddf3b2af7de70fffc50ffb9ee357cd85b"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
-          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "afb664199b380d9247101acbc689451243af87df61e65cb7d9a8d8da68a8fee6"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+          "sha256": "a9300ad871060c6b13dae66deebd5dc8f1ea3acae432a626ac4b841d21358f8c"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
         },
         {
           "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -157132,28 +157267,40 @@
           "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
         },
         {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+        },
+        {
           "path": "tools/lib/manga-directory-entry-row-probe.mjs",
-          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
         },
         {
           "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
-          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+          "sha256": "fc90aa42ce87ff148d00df32558131886938747f46f29840a26a571c5c1adfa9"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+        },
+        {
+          "path": "tools/lib/reader-editing-sdk-probe.mjs",
+          "sha256": "56b83d626463aae3063904461ba63d1d9b262bc25f24434f94defd8284f7e45b"
         },
         {
           "path": "tools/lib/reader-foundation-control-probe.mjs",
-          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+          "sha256": "e72e426c4317fe60c0e570f2aed6cad827a9143a937c6e1fc0701ffda084e70f"
         },
         {
           "path": "tools/lib/reader-icon-button-probe.mjs",
-          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+          "sha256": "9fe39afcf36450870215be306e71b95f64c354bc6c1d9b2892687290227a5b43"
         },
         {
           "path": "tools/lib/reader-page-builder-slots.mjs",
@@ -157161,23 +157308,43 @@
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/reader-post-layout-frame-probe.mjs",
+          "sha256": "71df317460573bc02b549fe42d297053af2dfe5a457d8536216fd95de2fd04ce"
         },
         {
           "path": "tools/lib/reader-press-feedback-probe.mjs",
-          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+          "sha256": "c4e9b74924dcdb1ba5b5284c6c581b9ccfaba54493ab60b59996e1f4fededb36"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "68148fe92754e8bd674d542296b09bf2f958b7f0c9d21e012b585be0dd33e2ec"
         },
         {
           "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a"
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -157189,11 +157356,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-message-style-sdk.mjs",
-          "sha256": "6bbe0a0a915abe5692a94773518ec0157c49e7b375e22496cbdbe13e682e5335"
+          "sha256": "9dca1d1d134f53742bc64a12499750856dc5874f8a51afb696ccae2231c3b4d4"
         }
       ],
       "definitionInputProblems": [],
@@ -157202,61 +157369,16 @@
       "repair": null,
       "implementation": "COMPLETE",
       "validationEvidence": {
-        "plan": "READING-060/061/062",
         "status": "PASS",
-        "passedCases": [
-          "fonts-carriers",
-          "detail-notice",
-          "group-receipt"
-        ],
-        "notRun": [],
-        "failures": [
-          "READ060 all message cases unreached because layout geometry fixture failed. READ061 fonts real parse rejected incorrect fixture assumption app alias==embedded sfnt name. Actual loader registration permits independent alias; READ062 asserts actual alias→physical file and records embedded names, all3 PASS."
-        ],
-        "toolEvidence": {
-          "python": "3.12.14",
-          "fontTools": "4.60.1",
-          "interpreter": "/Users/minliny/Documents/Reader/.reader-artifacts/gate-audit-20261019/reaudit/implementation/tooling-venv/bin/python",
-          "faces": [
-            {
-              "familyAlias": "ReaderNotoSansSCUIRegular",
-              "asset": "NotoSansSC-UIRegular.otf",
-              "fontNames": [
-                "Noto Sans SC",
-                "NotoSansSC-Thin"
-              ],
-              "weight": 400,
-              "unicodeCount": 30890,
-              "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
-            },
-            {
-              "familyAlias": "ReaderNotoSansSCUIMedium",
-              "asset": "NotoSansSC-UIMedium.otf",
-              "fontNames": [
-                "Noto Sans SC",
-                "NotoSansSC-Thin"
-              ],
-              "weight": 500,
-              "unicodeCount": 30890,
-              "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d"
-            },
-            {
-              "familyAlias": "ReaderMangaSans600",
-              "asset": "ReaderMangaSans600.otf",
-              "fontNames": [
-                "ReaderMangaSans600"
-              ],
-              "weight": 600,
-              "unicodeCount": 30890,
-              "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54"
-            }
-          ]
-        }
+        "caseId": "detail-notice",
+        "directLog": "evidence/reader-ui-verification-plan-20261119/implementation/phase-1/confluence-20261123/s5-wo-probe-01-direct-final.log",
+        "directLogSha256": "aedf9a82e1fa32334ef8fe43480481a36008fb7e5ca4c161c53e520030de537d",
+        "reviewReceipt": "evidence/reader-ui-verification-plan-20261119/implementation/phase-1/confluence-20261123/s5-wo-probe-01-review.json"
       },
-      "evidenceBoundary": "Actual SDK attributes/callbacks and ordinary Index receipt policy; font tables/registration binding do not prove native glyph raster, platform layout or device acceptance.",
+      "evidenceBoundary": "Actual SDK-emitted builders and ordinary presentation methods with finite host I/O ports. This does not measure touch, device layout, SQLite or network behavior.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "2957ed56a120dcef36a9918ef35aef27d13c0bed91cac41c9515633fd0929466",
+      "resourceDefinitionSha256": "774434814ef2ad19e6fa298d1a65ee78faeb9216b69ac6a7de7d393804f08f8a",
       "overlayAssemblyMethodReview": {
         "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
         "decision": "REVIEW_NEEDED",
@@ -157273,15 +157395,15 @@
         "detail opening authority",
         "group pending cleanup"
       ],
-      "productionBinding": "真实bundled字体表、ReaderRecoveryNotice/Action/PageState/Dialog SDK；Index实际methods，domain操作fake；bounded helper只有typography结构隐含。",
+      "productionBinding": "BookshelfGroupPresentation.assignDefault calls the feedback port from Index.libraryJourneyPorts, backed by the actual ReaderTransientFeedback state publisher.",
       "overlap": "message-lifecycle关notice事实；本项字体物理表及SDKcarrier独有，但detail/group业务不属于style。",
       "minimumTrigger": "字体资源/消息SDK载体、detail action或group completion各自修改时按需分层。; exact case: group-receipt",
       "necessityReason": "真实字体表比provenance自报强；实际SDK回调充分保护carrier层，186行跨业务需拆。",
-      "limitations": "Actual SDK attributes/callbacks and ordinary Index receipt policy; font tables/registration binding do not prove native glyph raster, platform layout or device acceptance.",
+      "limitations": "Actual ordinary methods and shared AppStorage publication under a finite platform port. This does not test device rendering, Core disk writes or native accessibility.",
       "id": "H-reader-message-style-sdk#group-receipt",
       "parentId": "H-reader-message-style-sdk",
       "caseId": "group-receipt",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
@@ -157293,27 +157415,63 @@
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Actual Index group presentation obeys original receipt/unfinished cleanup",
+      "protectedBehavior": "Close only a confirmed unblocked default-group write and publish the one shared refresh-failure notice with current admission.",
       "prerequisites": [
         "Node",
         "installed ETS compiler/emitter"
       ],
-      "mechanism": "Actual Index group presentation obeys original receipt/unfinished cleanup; owner implementation record: [\"Separate physical fonts/current message carriers, actual detail notice identity and group receipt completion.\", \"Replace handwritten sfnt binary-table parser with upstream fontTools; inspect static weights/cmap/names/hash and bind app aliases to files through actual ReaderFonts registrar.\", \"Remove unexplained fixed14/17/etc geometry tuple locks; validate actual current role propagation. Native18/32 loader values derive approved-scope rule.\", \"Use exact actual Index methods for safe top/group receipt; each case has no implicit sibling import/run.\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "Inject the original receipt; assert one write, close/refresh only for confirmed unblocked receipts, and actual shared generation/message/extended duration only for confirmed refresh failure.",
+      "failureExample": "Closing blocked cleanup or unknown completion, emitting duplicate feedback or an incorrect extended duration fails the receipt matrix.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "6bbe0a0a915abe5692a94773518ec0157c49e7b375e22496cbdbe13e682e5335",
+      "reviewedSourceSha256": "9dca1d1d134f53742bc64a12499750856dc5874f8a51afb696ccae2231c3b4d4",
       "definitionInputs": [
+        {
+          "path": "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+          "sha256": "85a2e8b3b71679af5904a2ba1520297a752c41cb6d9daaa83fc6869731156f3b"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/presentation/BookshelfGroupPresentation.ets",
+          "sha256": "b8c4c1b03ccde0e4959e2ee61dd7484b9f89e847010cba467cd67b30d34ac5f4"
+        },
+        {
+          "path": "entry/src/main/ets/pages/Index.ets",
+          "sha256": "80e22579db21bb36cc94f40a0792562992670c6b79aec7f3f85ff3f8c1785aee"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
+          "sha256": "2ed176af30616a768b07bd53b2a6c03dad9a1b315b7bac861d647c20bdbc6fb4"
+        },
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "34c4eb7537bb8f833e642be3073ecc42858d7addfd46047c6de746faa23ba407"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "da8b553bb30c3a12c9179ea70815541b6890b3d26da3feab4124411d01942fc7"
+        },
+        {
+          "path": "tools/contract-test-tiers.json",
+          "sha256": "2780d9c415f270b93bcf0f65ebcc049ddf3b2af7de70fffc50ffb9ee357cd85b"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
-          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "afb664199b380d9247101acbc689451243af87df61e65cb7d9a8d8da68a8fee6"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+          "sha256": "a9300ad871060c6b13dae66deebd5dc8f1ea3acae432a626ac4b841d21358f8c"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
         },
         {
           "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -157324,28 +157482,40 @@
           "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
         },
         {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+        },
+        {
           "path": "tools/lib/manga-directory-entry-row-probe.mjs",
-          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
         },
         {
           "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
-          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+          "sha256": "fc90aa42ce87ff148d00df32558131886938747f46f29840a26a571c5c1adfa9"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+        },
+        {
+          "path": "tools/lib/reader-editing-sdk-probe.mjs",
+          "sha256": "56b83d626463aae3063904461ba63d1d9b262bc25f24434f94defd8284f7e45b"
         },
         {
           "path": "tools/lib/reader-foundation-control-probe.mjs",
-          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+          "sha256": "e72e426c4317fe60c0e570f2aed6cad827a9143a937c6e1fc0701ffda084e70f"
         },
         {
           "path": "tools/lib/reader-icon-button-probe.mjs",
-          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+          "sha256": "9fe39afcf36450870215be306e71b95f64c354bc6c1d9b2892687290227a5b43"
         },
         {
           "path": "tools/lib/reader-page-builder-slots.mjs",
@@ -157353,23 +157523,43 @@
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/reader-post-layout-frame-probe.mjs",
+          "sha256": "71df317460573bc02b549fe42d297053af2dfe5a457d8536216fd95de2fd04ce"
         },
         {
           "path": "tools/lib/reader-press-feedback-probe.mjs",
-          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+          "sha256": "c4e9b74924dcdb1ba5b5284c6c581b9ccfaba54493ab60b59996e1f4fededb36"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "68148fe92754e8bd674d542296b09bf2f958b7f0c9d21e012b585be0dd33e2ec"
         },
         {
           "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a"
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -157381,11 +157571,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-message-style-sdk.mjs",
-          "sha256": "6bbe0a0a915abe5692a94773518ec0157c49e7b375e22496cbdbe13e682e5335"
+          "sha256": "9dca1d1d134f53742bc64a12499750856dc5874f8a51afb696ccae2231c3b4d4"
         }
       ],
       "definitionInputProblems": [],
@@ -157394,61 +157584,16 @@
       "repair": null,
       "implementation": "COMPLETE",
       "validationEvidence": {
-        "plan": "READING-060/061/062",
         "status": "PASS",
-        "passedCases": [
-          "fonts-carriers",
-          "detail-notice",
-          "group-receipt"
-        ],
-        "notRun": [],
-        "failures": [
-          "READ060 all message cases unreached because layout geometry fixture failed. READ061 fonts real parse rejected incorrect fixture assumption app alias==embedded sfnt name. Actual loader registration permits independent alias; READ062 asserts actual alias→physical file and records embedded names, all3 PASS."
-        ],
-        "toolEvidence": {
-          "python": "3.12.14",
-          "fontTools": "4.60.1",
-          "interpreter": "/Users/minliny/Documents/Reader/.reader-artifacts/gate-audit-20261019/reaudit/implementation/tooling-venv/bin/python",
-          "faces": [
-            {
-              "familyAlias": "ReaderNotoSansSCUIRegular",
-              "asset": "NotoSansSC-UIRegular.otf",
-              "fontNames": [
-                "Noto Sans SC",
-                "NotoSansSC-Thin"
-              ],
-              "weight": 400,
-              "unicodeCount": 30890,
-              "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
-            },
-            {
-              "familyAlias": "ReaderNotoSansSCUIMedium",
-              "asset": "NotoSansSC-UIMedium.otf",
-              "fontNames": [
-                "Noto Sans SC",
-                "NotoSansSC-Thin"
-              ],
-              "weight": 500,
-              "unicodeCount": 30890,
-              "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d"
-            },
-            {
-              "familyAlias": "ReaderMangaSans600",
-              "asset": "ReaderMangaSans600.otf",
-              "fontNames": [
-                "ReaderMangaSans600"
-              ],
-              "weight": 600,
-              "unicodeCount": 30890,
-              "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54"
-            }
-          ]
-        }
+        "caseId": "group-receipt",
+        "directLog": "evidence/reader-ui-verification-plan-20261119/implementation/phase-1/confluence-20261123/s5-wo-probe-01-direct-final.log",
+        "directLogSha256": "aedf9a82e1fa32334ef8fe43480481a36008fb7e5ca4c161c53e520030de537d",
+        "reviewReceipt": "evidence/reader-ui-verification-plan-20261119/implementation/phase-1/confluence-20261123/s5-wo-probe-01-review.json"
       },
-      "evidenceBoundary": "Actual SDK attributes/callbacks and ordinary Index receipt policy; font tables/registration binding do not prove native glyph raster, platform layout or device acceptance.",
+      "evidenceBoundary": "Actual ordinary methods and shared AppStorage publication under a finite platform port. This does not test device rendering, Core disk writes or native accessibility.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "2957ed56a120dcef36a9918ef35aef27d13c0bed91cac41c9515633fd0929466",
+      "resourceDefinitionSha256": "774434814ef2ad19e6fa298d1a65ee78faeb9216b69ac6a7de7d393804f08f8a",
       "overlayAssemblyMethodReview": {
         "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
         "decision": "REVIEW_NEEDED",
@@ -447923,8 +448068,8 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 1451,
-    "REVIEW_NEEDED": 1009,
+    "QUALIFIED": 1454,
+    "REVIEW_NEEDED": 1006,
     "DIAGNOSTIC_ONLY": 22,
     "NEEDS_EVIDENCE": 1
   },

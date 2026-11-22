@@ -2812,19 +2812,19 @@
       }
     },
     "test-reader-message-style-sdk.mjs": {
-      "sourceSha256": "b3d3fad0ed9a0162ede1591e3b40aec5099433fc292c3fd3776236112879464c",
+      "sourceSha256": "9dca1d1d134f53742bc64a12499750856dc5874f8a51afb696ccae2231c3b4d4",
       "cases": {
         "fonts-carriers": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "detail-notice": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "group-receipt": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         }
       }
     },
