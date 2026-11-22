@@ -52,6 +52,17 @@ function parseEndpoint(serverKey) {
   return { host, port: raw.port };
 }
 
+function parseTargetState(listing, target) {
+  const rows = listing.split(/\r?\n/).map(line => line.trim().split(/\s+/))
+    .filter(columns => columns[0] === target);
+  if (rows.length === 0) return 'absent';
+  if (rows.length !== 1) return 'ambiguous';
+  const columns = rows[0];
+  // Verbose HDC listings can include a transport column before the state.
+  const state = /^(TCP|USB|UART|SERIAL)$/i.test(columns[1]) ? columns[2] : columns[1];
+  return /^(Connected|Disconnected|Connecting|Offline|Unknown)$/i.test(state) ? state.toLowerCase() : 'unknown';
+}
+
 function probeTcp(host, port, timeoutMs = 1500) {
   return new Promise(done => {
     const socket = createConnection({ host, port });
@@ -178,19 +189,15 @@ async function inspect(option) {
     if (result.status !== 0) {
       note('targets', 'block', `list targets failed (exit ${result.status}): ${text.trim() || 'no output'}`);
     } else {
-      let found;
-      for (const line of text.split(/\r?\n/)) {
-        const cols = line.trim().split(/\s+/);
-        if (cols[0] === target) { found = cols; break; }
-      }
-      if (!found) {
+      targetState = parseTargetState(text, target);
+      if (targetState === 'absent') {
         note('targets', 'warn', `target ${target} not listed`,
           `tconn to attach it: node tools/reader-hdc-lease.mjs --hdc <hdc> --target ${target} -- tconn ${target}`);
-        targetState = 'absent';
+      } else if (targetState === 'ambiguous') {
+        note('targets', 'block', `multiple rows report the exact target ${target}`);
       } else {
-        targetState = (found[1] || 'Unknown').toLowerCase();
         if (targetState === 'connected') note('targets', 'ok', `${target} Connected`);
-        else note('targets', 'warn', `${target} reported ${found[1] || 'Unknown'}`,
+        else note('targets', 'warn', `${target} reported ${targetState}`,
           'Offline/Unknown does not prove the phone denied authorization. Check device TCP and authorization separately; do not reconnect in a loop.');
       }
     }
@@ -275,4 +282,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     .catch(error => { console.error(`reader-hdc-preflight: ${error.message}`); process.exitCode = 3; });
 }
 
-export { inspect, parseEndpoint };
+export { inspect, parseEndpoint, parseTargetState };
