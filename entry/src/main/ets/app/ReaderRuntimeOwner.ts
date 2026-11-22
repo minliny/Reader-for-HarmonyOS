@@ -126,7 +126,7 @@ type LegacyCoreStorageCapabilities = {
   webdavConfigRestore: boolean;
   activeLibrarySync: false;
   logicalExportRequiresDataPreflight: true;
-  logicalRestoreRequiresCompleteCoverage: true;
+  logicalRestoreRequiresCompleteCoverage: boolean;
   resourceEvidenceOnly: true;
   externalFilesIncluded: false;
 };
@@ -2339,6 +2339,7 @@ export class ReaderRuntimeOwner {
     if (fields['capabilities'] === undefined) return { format, portableSnapshotSupported: portable };
     const capabilities = this.requireCoreStorageCapabilities(fields['capabilities']);
     if (portable !== (capabilities.logicalExport && capabilities.logicalRestore && capabilities.legacyHostImport) ||
+      (format === 'library47' && !capabilities.logicalRestoreRequiresCompleteCoverage) ||
       (format !== 'library47' && (capabilities.physicalBackup || capabilities.physicalRestore))) {
       throw new Error('core.info returned invalid storage format capability');
     }
@@ -2355,14 +2356,15 @@ export class ReaderRuntimeOwner {
       'logicalRestoreRequiresCompleteCoverage', 'resourceEvidenceOnly', 'externalFilesIncluded'];
     if (Object.keys(fields).length !== keys.length || keys.some((key: string): boolean => typeof fields[key] !== 'boolean') ||
       fields['activeLibrarySync'] !== false || fields['logicalExportRequiresDataPreflight'] !== true ||
-      fields['logicalRestoreRequiresCompleteCoverage'] !== true || fields['resourceEvidenceOnly'] !== true ||
+      fields['resourceEvidenceOnly'] !== true ||
       fields['externalFilesIncluded'] !== false) {
       throw new Error('core.info returned invalid storage format capability');
     }
     return { logicalExport: fields['logicalExport'] as boolean, logicalRestore: fields['logicalRestore'] as boolean,
       legacyHostImport: fields['legacyHostImport'] as boolean, physicalBackup: fields['physicalBackup'] as boolean,
       physicalRestore: fields['physicalRestore'] as boolean, webdavConfigRestore: fields['webdavConfigRestore'] as boolean,
-      activeLibrarySync: false, logicalExportRequiresDataPreflight: true, logicalRestoreRequiresCompleteCoverage: true,
+      activeLibrarySync: false, logicalExportRequiresDataPreflight: true,
+      logicalRestoreRequiresCompleteCoverage: fields['logicalRestoreRequiresCompleteCoverage'] as boolean,
       resourceEvidenceOnly: true, externalFilesIncluded: false };
   }
 
