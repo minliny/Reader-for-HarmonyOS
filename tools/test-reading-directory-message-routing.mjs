@@ -17,7 +17,18 @@ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/Rea
 function mount(recovery){
  const sdk=boundedSurfaceSdk(),messages=[],calls=[];
  const owner=sdk.consumer(source,undefined,{EMPTY_READING_DIRECTORY_RECOVERY});
- Object.assign(owner,{recovery,getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
+ Object.assign(owner,{
+  recovery,
+  transientFeedback: {
+   show(context, options, admitted) {
+    if (!admitted()) return false;
+    context();
+    messages.push(options.message);
+    return true;
+   },
+   reset() {},
+  },
+  getUIContext: () => ({}),
   onReconcileBookmarks:(g,p)=>calls.push(['bookmarks',g,p]),onReconcileOffline:(g,p)=>calls.push(['offline',g,p])});
  owner.aboutToAppear();owner.initialRender();sdk.properties.flush();
  const actions=()=>sdk.walk(owner).filter(child=>child instanceof sdk.deps.ReaderRecoveryAction);
@@ -54,10 +65,10 @@ for(const family of ['bookmarks','offline']){
  const ui=mount(recovery),label=family==='bookmarks'?'重新载入核对书签':'核对离线结果';
  const action=ui.actions().find(action=>action.label===label);assert.ok(action,'busy retains the original label and action geometry');
  assert.equal(action.isBusy,true);
- const stack=[...action.nodes.values()].find(node=>node.onClick),text=[...action.nodes.values()].find(node=>node.type==='Text');
- assert.equal(stack.constraintSize.minHeight,28);assert.equal(stack.enabled,false);assert.equal(text.create,label);assert.equal(text.opacity,0);
+ const button=[...action.nodes.values()].find(node=>node.type==='Button'&&node.onClick),text=[...action.nodes.values()].find(node=>node.type==='Text');
+ assert.equal(button.constraintSize.minHeight,44);assert.equal(button.enabled,false);assert.equal(text.create,label);assert.equal(text.opacity,0);
  const spinner=[...action.nodes.values()].find(node=>node.type==='LoadingProgress');assert.ok(spinner);assert.equal(spinner.width,18);assert.equal(spinner.height,18);
- stack.onClick();stack.onClick();assert.deepEqual(ui.calls,[],'busy physical actor does not dispatch again');
+ button.onClick();button.onClick();assert.deepEqual(ui.calls,[],'busy physical actor does not dispatch again');
  const blocked=family==='bookmarks'?directory('unknown','failed',{completion:'unknown',projection:receipt('unknown','failed',false)}):
   offline('unknown','failed',{projection:receipt('unknown','failed',false)});
  blocked.projection.facts.blocked=true;blocked.projection.facts.blockedReason='unsupported';

@@ -31,8 +31,8 @@ let cases=0;
  const gate=deferred();f.hangRead(gate);x.native('核对设置')();x.sdk.properties.flush();
  assert.equal(x.page.operation.receipt.receipt.confirmation,'unknown');assert.equal(x.page.operation.receipt.receipt.readback,'reading');
  const actor=x.sdk.walk(x.page).findLast(c=>c instanceof x.sdk.deps.ReaderRecoveryAction&&c.label==='核对设置');assert.ok(actor,'readback reading keeps the action despite canRetry=false');
- const nodes=x.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'),loader=nodes.find(n=>n.type==='LoadingProgress'),native=nodes.find(n=>n.type==='Stack'&&n.onClick);
- assert.equal(label.create,'核对设置');assert.equal(label.opacity,0);assert.deepEqual([loader.width,loader.height],[18,18]);assert.equal(native.constraintSize.minHeight,28);assert.equal(native.enabled,false);
+ const nodes=x.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'),loader=nodes.find(n=>n.type==='LoadingProgress'),native=nodes.find(n=>n.type==='Button'&&n.onClick);
+ assert.equal(label.create,'核对设置');assert.equal(label.opacity,0);assert.deepEqual([loader.width,loader.height],[18,18]);assert.equal(native.constraintSize.minHeight,44);assert.equal(native.enabled,false);
  const puts=f.events.filter(e=>e[0]==='put').length;native.onClick();gate.resolve();await settle();assert.equal(f.events.filter(e=>e[0]==='put').length,puts,'busy query never retries the write');
  assert.equal(x.idx.settingsOperation.receipt.receipt.confirmation,'unknown');cases++;
 }

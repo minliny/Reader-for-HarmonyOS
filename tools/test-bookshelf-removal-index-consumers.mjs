@@ -45,7 +45,7 @@ function render(f,index) {
  const shell=sdk.consumer(read('features/bookshelf/ui/BookshelfShell.ets'),boundedMembers(read('features/bookshelf/ui/BookshelfShell.ets')),
   {bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{},...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}},params);
  shell.aboutToAppear();shell.recoveryNoticeContent(shell.recovery,false);
- const nodes=()=>sdk.nodes(shell),action=label=>{const actor=sdk.walk(shell).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label);return actor&&sdk.nodes(actor).find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===28&&n.onClick);};
+ const nodes=()=>sdk.nodes(shell),action=label=>{const actor=sdk.walk(shell).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label);return actor&&sdk.nodes(actor).find(n=>n.type==='Button'&&n.constraintSize?.minHeight===44&&n.onClick);};
  return{parent,params,sdk,shell,nodes,action};
 }
 async function unknown(before=true) {
@@ -60,9 +60,9 @@ async function unknown(before=true) {
  const check=(view,busy)=>{
   assert.equal(view.params.recoveryBusy,busy,'actual Index forwards only reconcileBusy');
   const actor=view.sdk.walk(view.shell).find(c=>c instanceof view.sdk.deps.ReaderRecoveryAction&&c.label==='核对操作结果');assert.ok(actor,'native action remains rendered');
-  const nodes=view.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'&&n.create==='核对操作结果'),hit=nodes.find(n=>n.type==='Stack'&&n.onClick);
+  const nodes=view.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'&&n.create==='核对操作结果'),hit=nodes.find(n=>n.type==='Button'&&n.onClick);
   assert.equal(label.opacity,busy?0:1,'label keeps its geometry while native loader covers it');
-  assert.equal(hit.constraintSize.minHeight,28);assert.equal(hit.enabled,!busy);
+  assert.equal(hit.constraintSize.minHeight,44);assert.equal(hit.enabled,!busy);
   const loaders=nodes.filter(n=>n.type==='LoadingProgress');assert.equal(loaders.length,busy?1:0);
   if(busy)assert.deepEqual([loaders[0].width,loaders[0].height],[18,18]);
   return hit;

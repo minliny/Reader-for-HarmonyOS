@@ -129,7 +129,7 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
   assert.ok(composition.walk(p).some(owner=>owner instanceof composition.deps.ReaderBoundedSurface&&owner.specId==='local-import-result-content'),'the result panel remains independent of whether its original operation needs a Notice');
   return{view:notice?.view??props.recovery,pending:notice!==undefined,feedback,action:notice===undefined?undefined:sdkActors(notice).filter(a=>a.label==='核对导入结果').flatMap(a=>[...(a.nodes?.values()??[])]).find(n=>n.type==='Button'&&n.onClick),nodes:new Map(composition.nodes(p).map((n,i)=>[i,n])),readOnly:()=>props.onReconcile(generation)};};
  const retry=async p=>{const action=p.pending?p.action:undefined;
-  if(p.pending){assert.ok(action,'actual SDK pending read action uses the shared native Button');assert.equal(action.constraintSize?.minHeight,28,'the original pending Notice minimum-height guard survives the Native Button migration');}const start=reconciliationCalls.length;
+  if(p.pending){assert.ok(action,'actual SDK pending read action uses the shared native Button');assert.equal(action.constraintSize?.minHeight,44,'the pending Notice retains a 44vp native recovery target');}const start=reconciliationCalls.length;
   if(action){action.onClick();action.onClick();}else{p.readOnly();p.readOnly();}await Promise.all(reconciliationCalls.slice(start));
   assert.equal(current.operation().current().reconcileBusy,false,'the real owner releases readback admission after its actual task settles');};
  const remove=async(kind='single')=>{const owner=current.operation();

@@ -180,6 +180,18 @@ console.log('PASS message host safe top: ordinary App padding is not counted twi
 // A confirmed write can still own unfinished durable cleanup. Closing its
 // presentation then would hide the original check/continuation entry.
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const feedbackStorage = new Map();
+const { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, READER_TRANSIENT_TOAST_STORAGE_KEY } = pureModuleProbe(
+  readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts', import.meta.url), 'utf8'),
+  'ReaderTransientFeedback.ts', {
+    AppStorage: {
+      get: key => feedbackStorage.get(key),
+      setOrCreate: (key, value) => feedbackStorage.set(key, value),
+    },
+  }, ['ReaderTransientFeedback', 'READER_FEEDBACK_EXTENDED_MS', 'READER_TRANSIENT_TOAST_STORAGE_KEY']);
+const LibraryPorts = selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'Index',
+  ['libraryJourneyPorts'], { READER_FEEDBACK_EXTENDED_MS });
 const GroupCompletion = selectedProductionMethods(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfGroupPresentation.ets', import.meta.url),'BookshelfGroupPresentation',
   ['assignDefault','isCurrent','retire'], { hilog: { error() {} }, errorMessageOf: String,
     EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT: {busy:false} });
@@ -187,12 +199,16 @@ for (const [confirmation, blocked, fact] of [
   ['confirmed', false, 'succeeded'], ['confirmed', false, 'confirmedRefreshFailed'],
   ['confirmed', true, 'confirmedRefreshFailed'], ['unknown', true, 'pendingReconciliation'],
 ]) {
-  let closes = 0, refreshes = 0, writes = 0; const toasts = [];
+  let closes = 0, refreshes = 0, writes = 0;
+  feedbackStorage.clear();
+  const index = Object.assign(new LibraryPorts(), { searchAppForeground: true,
+    transientFeedback: new ReaderTransientFeedback(), getUIContext: () => ({}) });
+  const onNotice = index.libraryJourneyPorts().feedback;
   const identity = 'original-group-opening', book = { sourceId: 'source', bookId: 'book' };
   const presentation = Object.assign(new GroupCompletion(), {
     identity, assigning: false,
     opening: { owner: runtime, book, identity, isRouteCurrent: () => true,
-      onApplied() { refreshes++; }, onNotice(message, current) { if (current()) toasts.push(message); } },
+      onApplied() { refreshes++; }, onNotice },
     host: { isManagementPresentationCurrent: (owner, currentIdentity) => owner === runtime && currentIdentity === identity,
       detachManagementPresentation() { closes++; },
       assignDefaultGroup: async (currentBook, currentIdentity) => {
@@ -205,7 +221,14 @@ for (const [confirmation, blocked, fact] of [
   assert.equal(closes, confirmation === 'confirmed' && !blocked ? 1 : 0,
     'unfinished original cleanup and unknown receipts retain their pending presentation');
   assert.equal(refreshes, closes);
-  assert.equal(toasts.length, confirmation === 'confirmed' && !blocked && fact === 'confirmedRefreshFailed' ? 1 : 0);
+  const feedback = feedbackStorage.get(READER_TRANSIENT_TOAST_STORAGE_KEY);
+  const expectedFeedback = confirmation === 'confirmed' && !blocked && fact === 'confirmedRefreshFailed';
+  assert.equal(feedback?.generation ?? 0, expectedFeedback ? 1 : 0);
+  if (expectedFeedback) {
+    assert.equal(feedback.visible, true);
+    assert.equal(feedback.message, '分组已保存，列表刷新失败');
+    assert.equal(feedback.duration, READER_FEEDBACK_EXTENDED_MS);
+  }
   assert.equal(presentation.assigning, false);
 }
 console.log('PASS actual group completion: confirmed refresh failure closes with feedback; confirmed blocked/unknown retain original pending entry');

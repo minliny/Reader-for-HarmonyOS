@@ -13,6 +13,7 @@ const properties = createArkUIPropertyRuntimeProbe();
 const rows = sourceSwitchRowSdk(properties, source);
 const transition = { animation() { return this; } };
 const deps = { ...properties.sdk, SynchedPropertyNesedObjectPU: properties.sdk.SynchedPropertyNestedObjectPU,
+  motionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
   ...rows, ...readerTypographyRoles, SOURCE_SWITCH_VISUAL, sourceSwitchNovelChapter, sourceSwitchNovelLatency,
   TouchType: { Down: 0, Up: 1, Move: 2, Cancel: 3 },
   TransitionEffect: { IDENTITY: transition, OPACITY: transition },
