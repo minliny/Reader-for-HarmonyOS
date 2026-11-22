@@ -1,4 +1,5 @@
 import type { RemoteReadingFailureKind } from '../application/RemoteContentAdmission';
+import { READING_CATALOG_SOURCE_SWITCH_PENDING } from '../application/RemoteReadingContract';
 
 /** Public copy only. The owning operation retains the original diagnostic. */
 export function readingFailureHint(code: string, kind?: RemoteReadingFailureKind): string {
@@ -14,6 +15,7 @@ export function readingFailureHint(code: string, kind?: RemoteReadingFailureKind
     case 'NETWORK_ENVIRONMENT': return '当前网络无法获取正文，请检查网络连接后重试。';
     case 'SOURCE_PARSE_FAILED': return '书源暂时无法解析本章，请重试或切换书源。';
     case 'POSITION_CONTEXT_STALE': return '章节内容已变化，原位置暂时无法对应，请重新打开本章。';
+    case 'SOURCE_SWITCH_PENDING': return READING_CATALOG_SOURCE_SWITCH_PENDING;
     case 'STORAGE_FAILED': return '本地内容暂时无法读写，请检查存储空间后重试。';
     case 'PAGINATION_FAILED':
     case 'LAYOUT_FAILED':

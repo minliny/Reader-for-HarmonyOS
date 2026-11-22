@@ -16,6 +16,7 @@ import {
   decodeRemoteReadingVariables,
   encodeRemoteReadingVariables,
   mergeRemoteReadingVariables,
+  READING_CATALOG_SOURCE_SWITCH_PENDING,
   remoteReadingHttpSummary,
   RemoteReadingGatewayError,
   type RemoteReadingTocDiagnostic,
@@ -292,6 +293,10 @@ export class RemoteReadingFlowGateway {
     const tocVersion = this.optionalString(tocResult.data, 'sourceVersion', 'book.toc');
     if (tocVersion !== undefined && detailVersion !== undefined && tocVersion !== detailVersion) {
       throw new RemoteReadingGatewayError('sourceVersionChanged', '详情与目录的书源版本不一致', 'book.toc');
+    }
+    if (tocResult.data['catalogInstalled'] === false &&
+        tocResult.data['catalogDeferredReason'] === 'sourceSwitchPending') {
+      throw new RemoteReadingGatewayError('sourceSwitchPending', READING_CATALOG_SOURCE_SWITCH_PENDING, 'book.toc');
     }
     const snapshot = this.decodeCatalogSnapshot(tocResult.data, 'book.toc');
     const entries = this.decodeToc(tocResult.data['toc']);

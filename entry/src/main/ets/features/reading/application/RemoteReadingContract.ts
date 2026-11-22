@@ -1,6 +1,8 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { catalogCurrentChapterRecoveryMessage, errorMessageOf, isNetworkEnvironmentFailure } from '../../../app/ErrorMessage.ts';
 
+export const READING_CATALOG_SOURCE_SWITCH_PENDING = '正在处理换源，请在换源完成后重试打开目录。';
+
 export type RemoteReadingCommand =
   'book.detail' | 'book.toc' | 'chapter.content' |
   'reading.progress.get' | 'reader.location.resolve' | 'reading.progress.update' |
@@ -11,10 +13,10 @@ export type RemoteReadingErrorCode =
   'identityMismatch' | 'missingTocUrl' | 'emptyToc' |
   'chapterNotFound' | 'chapterNotDownloaded' | 'cachedSessionUnavailable' |
   'nonTextChapter' | 'commandFailed' | 'cancelled' | 'storageFailure' |
-  'sourceVersionChanged' | 'cacheDerivedCorrupt' | 'positionContextStale' | 'networkEnvironment';
+  'sourceVersionChanged' | 'sourceSwitchPending' | 'cacheDerivedCorrupt' | 'positionContextStale' | 'networkEnvironment';
 
 export type RemoteReadingFailureCategory = 'CACHE_MISSING' | 'CACHE_DERIVED_CORRUPT' |
-  'STORAGE_FAILURE' | 'CANCELLED' | 'IDENTITY_MISMATCH' | 'SOURCE_VERSION_CHANGED' |
+  'STORAGE_FAILURE' | 'CANCELLED' | 'IDENTITY_MISMATCH' | 'SOURCE_VERSION_CHANGED' | 'SOURCE_SWITCH_PENDING' |
   'SOURCE_HTTP_FAILED' | 'SOURCE_RESPONSE_FORMAT' | 'SOURCE_RULE_FAILED' |
   'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY' | 'POSITION_CONTEXT_STALE' | 'NETWORK_ENVIRONMENT';
 
@@ -121,6 +123,7 @@ function remoteReadingCategoryForCode(code: RemoteReadingErrorCode): RemoteReadi
     case 'cancelled': return 'CANCELLED';
     case 'storageFailure': return 'STORAGE_FAILURE';
     case 'sourceVersionChanged': return 'SOURCE_VERSION_CHANGED';
+    case 'sourceSwitchPending': return 'SOURCE_SWITCH_PENDING';
     case 'identityMismatch': return 'IDENTITY_MISMATCH';
     case 'cachedSessionUnavailable': case 'chapterNotDownloaded': return 'CACHE_MISSING';
     case 'cacheDerivedCorrupt': return 'CACHE_DERIVED_CORRUPT';

@@ -27,6 +27,7 @@ export type RemoteReadingFailureKind =
   | 'RENDER_FAILED'
   | 'STORAGE_FAILED'
   | 'POSITION_CONTEXT_STALE'
+  | 'SOURCE_SWITCH_PENDING'
   | 'NETWORK_ENVIRONMENT';
 
 const SOURCE_FAILURE_KINDS: RemoteReadingFailureKind[] = [
@@ -211,6 +212,8 @@ export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailure
     switch (error.code) {
       case 'positionContextStale':
         return 'POSITION_CONTEXT_STALE';
+      case 'sourceSwitchPending':
+        return 'SOURCE_SWITCH_PENDING';
       case 'emptyToc':
         return 'SOURCE_TOC_EMPTY';
       case 'invalidResponse':
