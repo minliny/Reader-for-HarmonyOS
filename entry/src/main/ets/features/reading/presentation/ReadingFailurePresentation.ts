@@ -1,5 +1,5 @@
 import type { RemoteReadingFailureKind } from '../application/RemoteContentAdmission';
-import { READING_CATALOG_SOURCE_SWITCH_PENDING } from '../application/RemoteReadingContract';
+import { READING_CATALOG_SOURCE_SWITCH_PENDING } from '../application/RemoteReadingContract.ts';
 
 /** Public copy only. The owning operation retains the original diagnostic. */
 export function readingFailureHint(code: string, kind?: RemoteReadingFailureKind): string {
