@@ -8695,7 +8695,8 @@ export struct ReadingExperience {
       .catch((error: Error): void => { if (current()) this.logTtsFailure('audio-session', error); });
     this.ttsCoordinator?.setFailurePolicy(preferences.failurePolicy);
     if (!this.ttsVoicePreferencePending) {
-      this.ttsCoordinator?.setVoiceForNextSpeech(language, person);
+      this.ttsCoordinator?.setVoiceForNextSpeech(language, person,
+        (): boolean => current() && this.ttsLanguage === language && this.ttsPerson === person);
       if (repairedVoice) this.acceptTtsPreferencesPatch({ voice: { language, person } });
     }
     this.reconcileTtsWindowAwake(wasAwake);
@@ -11173,13 +11174,16 @@ export struct ReadingExperience {
     if (state.status === 'error' || state.status === 'failed' || state.status === 'unavailable') {
       this.cancelSessionLaunch('failure'); return;
     }
-    if (state.status === 'playing') this.sessionLaunchController.acknowledgeBusiness(launch.generation, 'playing');
-    else if (state.status === 'paused' || state.status === 'interrupted') this.sessionLaunchController.acknowledgeBusiness(launch.generation, 'paused');
-    else if (state.status === 'completed' || (state.status === 'idle' && launch.businessStatus !== 'preparing')) { this.cancelSessionLaunch('stop'); return; }
-    this.sessionLaunch = this.sessionLaunchController.snapshot();
-    if (this.sessionLaunch !== undefined && (state.status === 'playing' || state.status === 'paused' || state.status === 'interrupted')) {
-      this.capsuleVerification.ownerState('business-ack', this.sessionLaunch, this.sessionLaunchSpeechFacts(this.sessionLaunch, state));
+    if (state.status === 'completed' || (state.status === 'idle' && launch.businessStatus !== 'preparing')) {
+      this.cancelSessionLaunch('stop'); return;
     }
+    const status = state.status === 'playing' ? 'playing' :
+      state.status === 'paused' || state.status === 'interrupted' ? 'paused' : undefined;
+    if (status === undefined || !this.sessionLaunchController.acknowledgeBusiness(launch.generation, status)) return;
+    const acknowledged = this.sessionLaunchController.snapshot();
+    if (acknowledged === undefined) return;
+    if (acknowledged !== launch) this.sessionLaunch = acknowledged;
+    this.capsuleVerification.ownerState('business-ack', acknowledged, this.sessionLaunchSpeechFacts(acknowledged, state));
   }
 
   private sessionLaunchSpeechFacts(launch: ReaderSessionLaunchTransaction,

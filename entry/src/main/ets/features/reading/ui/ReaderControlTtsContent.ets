@@ -284,6 +284,9 @@ export struct ReaderControlTtsContent {
   private cachedFrame: ReaderControlTtsFrame = sampleReaderControlTts(0, 286);
   private cachedMinimumKey: string = '';
   private cachedMinimumProfile: ReaderTtsMinimumProfile | undefined = undefined;
+  private cachedTextMinimumProfile: ReaderTtsMinimumProfile | undefined = undefined;
+  private cachedTextMinimumProgress: number = -1;
+  private cachedTextMinimum: ReaderTtsTextMinimum | undefined = undefined;
   private minimumProfiles: Map<string, ReaderTtsMinimumProfile> = new Map<string, ReaderTtsMinimumProfile>();
   private minimumProfileTicket: string = '';
   private minimumMeasurer: ReaderControlModuleMeasurer | undefined = undefined;
@@ -350,7 +353,14 @@ export struct ReaderControlTtsContent {
   }
   private textMinimum(): ReaderTtsTextMinimum | undefined {
     const profile = this.selectedMinimum();
-    return profile === undefined ? undefined : sampleReaderTtsTextMinimum(profile, this.p());
+    const progress = this.p();
+    // The mounted text and motion actors share one natural-layout sample for this pose.
+    if (profile !== this.cachedTextMinimumProfile || progress !== this.cachedTextMinimumProgress) {
+      this.cachedTextMinimumProfile = profile;
+      this.cachedTextMinimumProgress = progress;
+      this.cachedTextMinimum = profile === undefined ? undefined : sampleReaderTtsTextMinimum(profile, progress);
+    }
+    return this.cachedTextMinimum;
   }
   private onMinimumIdentityChanged(): void { this.publishMinimumMeasurer(); }
   private onMinimumInputsChanged(): void {
@@ -1019,11 +1029,17 @@ export struct ReaderControlTtsContent {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.sourceOnly !== 'full') { this.sectionSurface('playback'); }
       Stack({ alignContent: Alignment.TopStart }) {
-        Row().width(3).height(42).borderRadius(2)
-          .backgroundColor(this.isActivelySpeaking() ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.B4A697', this.appScheme))
-          .position({ x: 0, y: 12 }).opacity(1 - this.p()).hitTestBehavior(HitTestMode.None);
+        // The retained Full endpoint has a fixed actor extent. Its transparent
+        // Quick accents do not need to mount in either source copy.
+        if (this.sourceOnly !== 'full' || this.p() !== 1) {
+          Row().width(3).height(42).borderRadius(2)
+            .backgroundColor(this.isActivelySpeaking() ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.B4A697', this.appScheme))
+            .position({ x: 0, y: 12 }).opacity(1 - this.p()).hitTestBehavior(HitTestMode.None);
+        }
         this.moduleHeader('playback');
-        this.quickLabel('playback');
+        if (this.sourceOnly !== 'full' || this.p() !== 1 || this.quickLabelActor('playback').opacity !== 0) {
+          this.quickLabel('playback');
+        }
         this.waveform();
         this.roundControl('previous'); this.roundControl('toggle');
         this.roundControl('stop'); this.roundControl('next');

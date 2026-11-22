@@ -120,9 +120,9 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     return this.active.isAvailable();
   }
 
-  probe(): Promise<ReaderTtsHostProbe> {
+  probe(language?: string, person?: number): Promise<ReaderTtsHostProbe> {
     if (this.closed) return Promise.resolve({ available: false, reason: '朗读服务已关闭' });
-    return this.active.probe();
+    return this.active === this.system ? this.system.probe(language, person) : this.http.probe();
   }
 
   async activateAudioSession(allowMixing: boolean): Promise<void> {

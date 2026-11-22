@@ -128,11 +128,13 @@ export class ReaderControlCapsuleVerification {
   private readonly owner: ReaderControlVerificationSession;
   private capture: ReaderControlCapsuleCapture | undefined = undefined;
   private fade: ReaderControlCapsuleFadeCapture | undefined = undefined;
+  private lastSpeechAck: ReaderControlCapsuleOwnerState | undefined = undefined;
 
   constructor(owner: ReaderControlVerificationSession) { this.owner = owner; }
 
   begin(launch: ReaderSessionLaunchTransaction, source: ReaderControlLocation, reducedMotion: boolean): void {
     if (!this.owner.observing()) return;
+    this.lastSpeechAck = undefined;
     const previousTiming = this.capture?.ttsTiming;
     const trace = launch.geometry.type === 'tts' || previousTiming !== undefined ? ReaderStartupTrace.currentTts() : undefined;
     if (previousTiming !== undefined) trace?.closeTtsCapsuleTiming(previousTiming);
@@ -204,6 +206,18 @@ export class ReaderControlCapsuleVerification {
       controlsPresented: launch.sample.controlsPresented, sourceNeeded: launch.sample.sourceNeeded,
       tts: tts, autoPageStatus: autoPageStatus,
     };
+    if (phase === 'business-ack' && launch.geometry.type === 'tts') {
+      const previous = this.lastSpeechAck;
+      // The timeline emits its own milestones. Repeated slice progress with
+      // the same speech facts must not advance the semantic capture sequence.
+      if (previous !== undefined && previous.generation === facts.generation &&
+        previous.status === facts.status && previous.desiredPlaying === facts.desiredPlaying &&
+        previous.ownership === facts.ownership && previous.tts?.engine === tts?.engine &&
+        previous.tts?.sessionGeneration === tts?.sessionGeneration && previous.tts?.status === tts?.status &&
+        previous.tts?.audioStarted === tts?.audioStarted && previous.tts?.audioSession === tts?.audioSession &&
+        previous.tts?.pauseReason === tts?.pauseReason) return;
+      this.lastSpeechAck = facts;
+    }
     this.owner.effect('capsule-launch', phase, facts);
   }
 

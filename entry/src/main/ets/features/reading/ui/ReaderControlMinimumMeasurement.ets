@@ -407,9 +407,17 @@ export function readerControlModuleFactsDisplayEqual(first: ReaderControlModuleF
   }
   if (first.module === 'search') return first.search?.readViewState?.() === second.search?.readViewState?.() &&
     first.search?.resultScope === second.search?.resultScope;
-  if (first.module === 'tts') return first.tts?.readViewState?.() === second.tts?.readViewState?.() &&
-    first.tts?.viewTimerMode === second.tts?.viewTimerMode && first.tts?.viewTimerMinutes === second.tts?.viewTimerMinutes &&
-    first.tts?.viewTimerSeconds === second.tts?.viewTimerSeconds && first.tts?.viewRate === second.tts?.viewRate;
+  if (first.module === 'tts') {
+    const firstState = first.tts?.readViewState?.();
+    const secondState = second.tts?.readViewState?.();
+    // Compare the playback fields read by the controls. Transport and page-follow
+    // facts are still delivered to their owners without republishing this layout.
+    return firstState?.status === secondState?.status && firstState?.rate === secondState?.rate &&
+      firstState?.totalSlices === secondState?.totalSlices && firstState?.sliceIndex === secondState?.sliceIndex &&
+      firstState?.errorMessage === secondState?.errorMessage &&
+      first.tts?.viewTimerMode === second.tts?.viewTimerMode && first.tts?.viewTimerMinutes === second.tts?.viewTimerMinutes &&
+      first.tts?.viewTimerSeconds === second.tts?.viewTimerSeconds && first.tts?.viewRate === second.tts?.viewRate;
+  }
   if (first.module === 'replace') return first.replace?.readViewState?.() === second.replace?.readViewState?.() &&
     first.replace?.viewLayer === second.replace?.viewLayer && first.replace?.viewLocalError === second.replace?.viewLocalError;
   if (first.module === 'appearance') {

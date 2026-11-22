@@ -146,7 +146,7 @@ export class ReaderSessionLaunchController {
     if (value === undefined || !this.isCurrent(generation)) return false;
     // An old play ACK must not override a preparing pause intent.
     if (status === 'playing' && !value.desiredPlaying) return false;
-    this.current = { ...value, businessStatus: status };
+    if (value.businessStatus !== status) this.current = { ...value, businessStatus: status };
     return true;
   }
 

@@ -179,6 +179,7 @@ export class ReaderTtsSessionCoordinator {
   private desiredPlaying: boolean = true;
   private controlGeneration: number = 0;
   private voicePreferenceGeneration: number = 0;
+  private idleVoicePreparationGeneration: number = 0;
   private pendingVoicePreference: number | undefined = undefined;
   private mixingPreferenceGeneration: number = 0;
   private pendingMixingPreference: number | undefined = undefined;
@@ -779,12 +780,23 @@ export class ReaderTtsSessionCoordinator {
 
   /** Saved metadata can arrive after first play. Reconcile its desired voice
    * at the next speech boundary without stealing an accepted seek or pause. */
-  setVoiceForNextSpeech(language: string, person: number): void {
+  setVoiceForNextSpeech(language: string, person: number, isAdmitted: () => boolean = (): boolean => true): void {
     const normalizedLanguage = language.trim();
     if (normalizedLanguage.length === 0 || !Number.isSafeInteger(person) || person < 0)
       throw new Error('Reader TTS voice requires a language and non-negative person');
-    if (this.active !== undefined)
+    if (!isAdmitted()) return;
+    if (this.active !== undefined) {
       this.active.input = { ...this.active.input, language: normalizedLanguage, person };
+      return;
+    }
+    const generation = this.nextGeneration(this.idleVoicePreparationGeneration);
+    this.idleVoicePreparationGeneration = generation;
+    this.voidLogged(this.enqueue(async (): Promise<void> => {
+      if (this.disposed || this.active !== undefined || this.audition !== undefined ||
+        this.transport.engine !== 'system' || generation !== this.idleVoicePreparationGeneration || !isAdmitted()) return;
+      // Prepare only the device voice. Explicit play still owns audio and speech.
+      await this.host.probe(normalizedLanguage, person);
+    }), 'voice.prepare');
   }
 
   setVoice(language: string, person: number): Promise<boolean> {
@@ -983,13 +995,15 @@ export class ReaderTtsSessionCoordinator {
         ...this.transport,
         engine: active.config?.engine?.startsWith('http-tts:') ? 'http' : 'system',
       };
-      const probe = await this.host.probe();
+      const probe = await this.host.probe(active.input.language ?? 'zh-CN', active.input.person ?? 0);
       if (!this.isSessionCurrent(identity)) return;
       if (!probe.available) {
         this.abandonSessionTo('unavailable', 'engineUnavailable', probe.reason ?? '当前朗读引擎不可用');
         return;
       }
-      this.setState({ ...this.state, stopReason: undefined, errorMessage: undefined });
+      if (this.state.stopReason !== undefined || this.state.errorMessage !== undefined) {
+        this.setState({ ...this.state, stopReason: undefined, errorMessage: undefined });
+      }
       const trace = active.traceOperationId === undefined ? undefined : ReaderStartupTrace.currentTts();
       trace?.markTtsCapsule('tts.core-slice.enter', active.traceOperationId);
       const slice = this.gateway.slice(active.input.chapter, active.input.content, 'paragraph-then-sentence');
@@ -1864,8 +1878,9 @@ export class ReaderTtsSessionCoordinator {
   private configureTimer(durationMs: number | undefined): void {
     this.clearTimer();
     if (durationMs === undefined) {
-      this.transport = { ...this.transport, timerDeadlineMs: undefined };
-      this.setState({ ...this.state, timerDeadlineMs: undefined });
+      if (this.state.timerDeadlineMs !== undefined) {
+        this.setState({ ...this.state, timerDeadlineMs: undefined });
+      }
       return;
     }
     if (!Number.isSafeInteger(durationMs) || durationMs <= 0) {

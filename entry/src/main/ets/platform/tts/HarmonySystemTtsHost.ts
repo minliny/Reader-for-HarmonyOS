@@ -118,10 +118,11 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
    * Capability + language + voice check. The reason text is preserved for the
    * coordinator so an unavailable engine never reports without a cause.
    */
-  async probe(): Promise<ReaderTtsHostProbe> {
+  async probe(language?: string, person?: number): Promise<ReaderTtsHostProbe> {
     if (this.closed) return { available: false, reason: '朗读服务已关闭' };
     try {
-      await this.ensureEngine(DEFAULT_LANGUAGE, DEFAULT_PERSON);
+      await this.ensureEngine(language ?? this.engineRequestedLanguage ?? DEFAULT_LANGUAGE,
+        person ?? this.engineRequestedPerson ?? DEFAULT_PERSON);
       return { available: true };
     } catch (error) {
       this.logError('system TTS engine probe failed', error);
