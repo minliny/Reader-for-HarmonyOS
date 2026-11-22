@@ -52,6 +52,7 @@ const DEFAULT_RETAIN_RUNS = 10;
 const LOCK_ROOT = resolve(process.env.READER_LOCK_DIR || tmpdir());
 const DEFAULT_SIGNING_PROFILE = resolve(REPO_ROOT, '.reader-local/signing/build-profile.json5');
 const HDC_LEASE_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-lease.mjs');
+const HDC_PREFLIGHT_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-preflight.mjs');
 const LOCAL_HDC_SERVER = '127.0.0.1:8710';
 const REMOTE_VM_HDC_SERVER = '192.168.1.10:8710';
 const BUNDLE_NAME = 'io.reader.minliny';
@@ -181,11 +182,16 @@ export function runTargetHdc(hdc, target, serverKey, args, options = {}, runner 
     timeoutMs: options.timeoutMs === undefined ? undefined : (options.waitMs ?? 30000) + options.timeoutMs + 2000 });
 }
 
-export async function withDeploymentHdcSession(options, action) {
+export async function withDeploymentHdcSession(options, action, { preflight = false } = {}) {
   if (activeHdcSession) fail('nested HDC deployment session');
   const targetKind = requiredOption(options, '--target-kind');
   const route = resolveHdcServer({ targetKind, vmLocation: option(options, '--vm-location'), configuredServer: process.env.READER_HDC_SERVER_KEY });
-  return withHdcCommandSession({ hdc: hdcBinary(), target: requiredOption(options, '--target'), serverKey: route.serverKey }, async session => {
+  const hdc = hdcBinary();
+  const target = requiredOption(options, '--target');
+  // The read-only preflight acquires the server lease for its own commands.
+  // Complete it before opening the bounded deployment session on that server.
+  if (preflight) assertHdcPreflight(hdc, target, route.serverKey);
+  return withHdcCommandSession({ hdc, target, serverKey: route.serverKey }, async session => {
     if (activeHdcSession) fail('nested HDC deployment session');
     activeHdcSession = session;
     try { return await action(session); } finally { activeHdcSession = undefined; }
@@ -2032,6 +2038,29 @@ function assertTargetConnected(hdc, target, serverKey) {
   if (match === undefined || !/Connected/i.test(match)) fail('the exact HDC target is not connected');
 }
 
+// Read-only readiness gate before a real install. It reports and stops only:
+// it never starts, kills, retargets, changes ports or rewrites proxies, and
+// every HDC call inside the preflight still routes through the lease wrapper.
+// The preflight adds the attribution layer assertTargetConnected lacks (server
+// reachability, listener ownership, stale foreground ledger) so a failure is
+// pinned to the right layer instead of "target not connected". Set
+// READER_HDC_PREFLIGHT=off for a deliberate one-off bypass.
+export function assertHdcPreflight(hdc, target, serverKey, runner = run) {
+  if (process.env.READER_HDC_PREFLIGHT === 'off') return;
+  const result = runner(process.execPath, [HDC_PREFLIGHT_SCRIPT,
+    '--hdc', hdc, '--target', target, '--server-key', serverKey, '--json'],
+    { allowFailure: true, timeoutMs: 120_000 });
+  if (result.status === 0) return;
+  let report;
+  try { report = JSON.parse(result.stdout); } catch { report = undefined; }
+  const notable = (report?.steps ?? []).filter((step) => step.severity === 'block' || step.severity === 'warn');
+  const detail = notable.length
+    ? notable.map((step) => `${step.id}: ${step.detail}`).join('; ')
+    : `${result.stderr ?? result.stdout ?? `exit ${result.status}`}`.trim();
+  const next = report?.next?.length ? ` Next: ${report.next.join(' | ')}` : '';
+  fail(`HDC preflight ${report?.result ?? 'FAILED'} before install: ${detail}.${next}`, 3);
+}
+
 function installedMetadata(hdc, target, serverKey) {
   const result = runTargetHdc(hdc, target, serverKey, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { allowFailure: true });
   const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
@@ -2323,7 +2352,7 @@ async function main() {
     }));
   } else if (command === 'inspect') await withDeploymentHdcSession(options, () => inspectDeployment(options));
   else if (command === 'install') await withDeploymentHdcSession(options, () => withHapRunLock(dirname(resolve(requiredOption(options, '--manifest'))),
-    () => installDeployment(options)));
+    () => installDeployment(options)), { preflight: true });
   else if (command === 'prune') {
     const plan = planHapRetention(resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT)), retentionLimit(options));
     console.log(JSON.stringify(options.get('--apply') === true ? applyHapRetention(plan) : plan, null, 2));
