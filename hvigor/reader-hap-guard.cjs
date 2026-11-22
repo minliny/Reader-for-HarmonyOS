@@ -12,6 +12,18 @@ function isBuildResourceTask(name) {
   return isPackageTask(name) || /(?:^|[:@])(?:compileArkTS|compileTS|compileJS|compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|ProcessLibs|DoNativeStrip|CacheNativeLibs|cleanNative|clean)$/i.test(name);
 }
 
+function isSingleArkTsCompile(tasks) {
+  return tasks.length === 1 && /^(?::?entry:)?default@CompileArkTS$/i.test(tasks[0]);
+}
+
+function assertArkTsOnlyTaskAllowed(entryTasks, task) {
+  if (!isSingleArkTsCompile(entryTasks)) return;
+  const compileSource = /(?:^|[:@])(?:compileArkTS|compileTS|compileJS)$/i.test(task);
+  if (isBuildResourceTask(task) && !compileSource) {
+    throw new Error(`Standalone CompileArkTS cannot run Native, clean, packaging or signing task: ${task}`);
+  }
+}
+
 // An accidental IDE Run must fail before deployment can uninstall the app.
 // This is an invocation guard, not an authentication/security boundary.
 function assertCanonicalHapInvocation(tasks, cwd = process.cwd(), env = process.env) {
@@ -58,7 +70,7 @@ function verifyIdeOutput(ide, cwd = process.cwd()) {
 }
 
 module.exports = { assertCanonicalHapInvocation, isPackageTask, isBuildResourceTask, configureIdeSigning,
-  assertReaderHapInvocation, verifyIdeOutput };
+  assertReaderHapInvocation, verifyIdeOutput, isSingleArkTsCompile, assertArkTsOnlyTaskAllowed };
 
 let buildLease, buildLeaseReady, buildEnvironmentBefore, buildGeneration = 0;
 async function beginIdeBuild(ide) {

@@ -1,7 +1,9 @@
 import { appTasks, OhosPluginId, OhosAppContext } from '@ohos/hvigor-ohos-plugin';
 import { hvigor } from '@ohos/hvigor';
 
-const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginIdeBuild, finishIdeBuild, isBuildResourceTask, isPackageTask, configureAppBuildIdentity } = require('./hvigor/reader-hap-guard.cjs');
+const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginIdeBuild, finishIdeBuild,
+  isBuildResourceTask, isPackageTask, configureAppBuildIdentity, isSingleArkTsCompile,
+  assertArkTsOnlyTaskAllowed } = require('./hvigor/reader-hap-guard.cjs');
 
 type IdeSigningSession = {
   pipeline: {
@@ -55,13 +57,15 @@ hvigor.taskGraphResolved(async () => {
   await ensureIdeSigning();
   const tasks = hvigor.getCommandEntryTask() || [];
   assertReaderHapInvocation(tasks, ideSigning);
+  const standaloneArkTs = isSingleArkTsCompile(tasks);
   const needsBuild = tasks.some((name: string) => isBuildResourceTask(name));
   if (ideSigning && needsBuild) {
     const buildEnv = await beginIdeBuild(ideSigning);
-    try { ideSigning.pipeline.preflightIdeNative(buildEnv); }
+    try { if (!standaloneArkTs) ideSigning.pipeline.preflightIdeNative(buildEnv); }
     catch (error) { finishIdeBuild(); throw error; }
   }
-  if (tasks.some((name: string) => isPackageTask(name) || /(?:compileArkTS|compileTS|compileJS)$/i.test(name))) {
+  if (!standaloneArkTs &&
+      tasks.some((name: string) => isPackageTask(name) || /(?:compileArkTS|compileTS|compileJS)$/i.test(name))) {
     const nodes = hvigor.getAllNodes();
     const appNode = nodes.find(node => node.getContext(OhosPluginId.OHOS_APP_PLUGIN));
     const appContext = appNode?.getContext(OhosPluginId.OHOS_APP_PLUGIN) as OhosAppContext;
@@ -84,6 +88,7 @@ hvigor.nodesEvaluated(() => {
   for (const node of hvigor.getAllNodes()) {
     for (const task of node.getAllTasks()) {
       task.beforeRun(async () => {
+        assertArkTsOnlyTaskAllowed(hvigor.getCommandEntryTask() || [], task.getName());
         assertReaderHapInvocation([task.getName()], ideSigning);
         if (ideSigning && isBuildResourceTask(task.getName())) await beginIdeBuild(ideSigning);
       });
