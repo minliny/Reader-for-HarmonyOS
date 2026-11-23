@@ -1617,10 +1617,13 @@ export struct ReaderControlPanel {
     this.onPageChange(page, origin);
   }
 
-  private controlActionInputEnabled(allowInlineEditor: boolean = false): boolean {
+  private controlActionInputEnabled(allowInlineEditor: boolean = false, forAppearance: boolean = false): boolean {
+    const blockedByTemporaryInput = allowInlineEditor ? this.hasCurrentModalInput() : this.hasCurrentTemporaryInput();
+    const moreOwnsInput = this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu';
     return this.runtimeMounted && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
       (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
-      !(allowInlineEditor ? this.hasCurrentModalInput() : this.hasCurrentTemporaryInput()) && !this.moreMenuVisible && this.visualVisibilityProgress > 0 &&
+      (!blockedByTemporaryInput || (forAppearance && this.temporaryInputKind === 'moreMenu')) &&
+      (forAppearance || !moreOwnsInput) && this.visualVisibilityProgress > 0 &&
       this.visualHeldPointerId < 0;
   }
 
@@ -1778,7 +1781,8 @@ export struct ReaderControlPanel {
           .zIndex(2)
           .hitTestBehavior(this.temporaryLayerKind === '' && (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace') ?
             HitTestMode.Default : HitTestMode.None)
-          .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0 && this.temporaryLayerKind === '' &&
+          .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0 &&
+            (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') &&
             (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace'))
           .accessibilityLevel((this.temporaryLayerKind !== '') ? 'no-hide-descendants' : 'auto');
         this.headerAction();
@@ -1788,7 +1792,8 @@ export struct ReaderControlPanel {
           .opacity(this.frame().brightness.opacity)
           // HitTestMode.None excludes only this container, not its children.
           // Retain the authored actors, but retire the whole faded subtree.
-          .enabled(this.contentInputEnabled() && this.temporaryLayerKind === '' && this.frame().brightness.opacity > 0)
+          .enabled(this.contentInputEnabled() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') &&
+            this.frame().brightness.opacity > 0)
           .hitTestBehavior(this.temporaryLayerKind === '' && this.frame().brightness.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
           .accessibilityLevel(this.contentInputEnabled() && this.temporaryLayerKind === '' &&
             this.frame().brightness.opacity > 0 ? 'auto' : 'no-hide-descendants');
@@ -1796,8 +1801,11 @@ export struct ReaderControlPanel {
           .width(this.frame().navigation.width).height(this.frame().navigation.height)
           .position({ x: this.frame().navigation.x, y: this.frame().navigation.y })
           .opacity(this.frame().navigation.opacity)
-          .enabled(this.navigationInputEnabled())
-          .accessibilityLevel(!this.hasCurrentModalInput() && this.frame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
+          // The modal Popup owns background input. Keep the native Button
+          // paint stable while dispatch and accessibility are suspended.
+          .enabled(this.navigationInputEnabled(true))
+          .accessibilityLevel(!this.moreMenuVisible && !this.hasCurrentModalInput() &&
+            this.frame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
         // The cap and central grabber retain their one gesture owner.
         this.headerGrabCap();
@@ -1895,7 +1903,7 @@ export struct ReaderControlPanel {
     this.verificationSession?.layer('more', visible, this.moreMenuGeneration, this.visualSession);
     this.observeMoreMenuFrames(visible, this.moreMenuGeneration);
     this.syncProgressInput();
-    this.onTemporaryLayerChange(visible);
+    this.onTemporaryLayerChange(visible, 'moreMenu');
   }
 
   private observeMoreMenuFrames(visible: boolean, generation: number): void {
@@ -2685,7 +2693,9 @@ export struct ReaderControlPanel {
     .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .responseRegion(readerActionTouchRegion(44, 44))
     .attributeModifier(new ReaderActionAccessibility('退出阅读，返回上一页',
-      this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible, false, true, undefined, 'nativeButton'))
+      this.topBarInputEnabled() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu'),
+      false, true, undefined, 'nativeButton'))
+    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
     .onClick(this.controlActionHandler((): void => {
       if (this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible) this.onExitReading();
     }));
@@ -2726,7 +2736,9 @@ export struct ReaderControlPanel {
     .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control'))
     .responseRegion(readerActionTouchRegion(62, this.sourceActionHeight()))
     .attributeModifier(new ReaderActionAccessibility('换源',
-      this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook(), false, true, undefined, 'nativeButton'))
+      this.topBarInputEnabled() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') && !this.isLocalBook(),
+      false, true, undefined, 'nativeButton'))
+    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
     .onClick(this.controlActionHandler((): void => {
       // 本地书籍换源置灰不可点; 仅在线书籍可换源。
       if (this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook()) {
@@ -2762,7 +2774,8 @@ export struct ReaderControlPanel {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back')).width(24).height(24);
       }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
-        .enabled(this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible)
+        .enabled(this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu'))
+        .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
         .accessibilityText('退出阅读，返回上一页')
         .onClick(this.controlActionHandler((): void => {
           if (this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible) this.onExitReading();
@@ -2777,7 +2790,8 @@ export struct ReaderControlPanel {
         }.justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
       }.width(76).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
         .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control-short'))
-        .enabled(this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook())
+        .enabled(this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') && !this.isLocalBook())
+        .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
         .accessibilityText('换源')
         .onClick(this.controlActionHandler((): void => {
           if (this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook())
@@ -2838,7 +2852,8 @@ export struct ReaderControlPanel {
     .padding(0)
     .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
     .borderRadius(8)
-    .enabled(this.progressInputEnabled())
+    .enabled(this.progressInputEnabled(true))
+    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
     .accessibilityText(label)
     .onClick(this.controlActionHandler((): void => {
       if (!this.progressInputEnabled()) return;
@@ -2893,7 +2908,7 @@ export struct ReaderControlPanel {
     Row({ space: 8 }) {
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_left_theme_night' : 'app.media.rc_chevron_left'),
-        accessibilityLabel: '上一章', actionEnabled: this.progressInputEnabled() && this.canStepChapter(-1),
+        accessibilityLabel: '上一章', actionEnabled: this.progressInputEnabled(true) && this.canStepChapter(-1),
         actionScope: this.controlActionScope(),
         onTap: (): void => { if (this.progressInputEnabled() && this.canStepChapter(-1)) this.onPreviousChapter(); },
       });
@@ -2914,7 +2929,7 @@ export struct ReaderControlPanel {
 
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_right_theme_night' : 'app.media.rc_chevron_right'),
-        accessibilityLabel: '下一章', actionEnabled: this.progressInputEnabled() && this.canStepChapter(1),
+        accessibilityLabel: '下一章', actionEnabled: this.progressInputEnabled(true) && this.canStepChapter(1),
         actionScope: this.controlActionScope(),
         onTap: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
       });
@@ -2922,7 +2937,8 @@ export struct ReaderControlPanel {
     .width('100%')
     .height(this.homeMetric('chapterRowHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT)))
     .padding({ left: 11, right: 11, top: 10 })
-    .alignItems(VerticalAlign.Center);
+    .alignItems(VerticalAlign.Center)
+    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto');
   }
 
   @Builder
@@ -2991,9 +3007,10 @@ export struct ReaderControlPanel {
     return this.progressPreviewPercent >= 0 ? this.progressPreviewPercent : this.clampPercent(this.progressPercent);
   }
 
-  private progressInputEnabled(): boolean {
+  private progressInputEnabled(forAppearance: boolean = false): boolean {
     return this.runtimeMounted && this.contentLocation().level === 'home' && this.contentInputEnabled() &&
-      this.temporaryLayerKind === '' && !this.moreMenuVisible;
+      (this.temporaryLayerKind === '' || (forAppearance && this.temporaryLayerKind === 'moreMenu')) &&
+      (forAppearance || !this.moreMenuVisible);
   }
 
   private invalidateProgressInput(): void {
@@ -3275,8 +3292,8 @@ export struct ReaderControlPanel {
     const stepped = Math.round(value / READER_CONTROL_BRIGHTNESS_STEP) * READER_CONTROL_BRIGHTNESS_STEP;
     return this.clampBrightness(stepped);
   }
-  private navigationInputEnabled(): boolean {
-    return this.controlActionInputEnabled(true) && (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
+  private navigationInputEnabled(forAppearance: boolean = false): boolean {
+    return this.controlActionInputEnabled(true, forAppearance) && (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
       (!this.preparedMinimumRequired || this.presentationReceipt?.environmentKey === this.minimumEnvironmentKey) &&
       this.frame().navigation.opacity > 0 && this.frame().navigation.height > 0;
   }
@@ -3338,7 +3355,7 @@ export struct ReaderControlPanel {
     .padding(0).backgroundColor(Color.Transparent)
     .borderRadius(12)
     .opacity(module === 'tts' && this.ttsState.status === 'unavailable' ? 0.72 : 1)
-    .attributeModifier(new ReaderActionAccessibility(label, this.navigationInputEnabled(), this.isActiveModule(module), true, undefined, 'nativeButton'))
+    .attributeModifier(new ReaderActionAccessibility(label, this.navigationInputEnabled(true), this.isActiveModule(module), true, undefined, 'nativeButton'))
     .onClick(this.controlActionHandler((): void => {
       if (this.navigationInputEnabled()) void this.activateModule(module);
     }));

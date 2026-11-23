@@ -6,6 +6,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts';
 import * as session from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
+import { readerControlHostClosing } from '../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts';
 import * as headerGeometry from '../entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts';
 import { registerHooks } from 'node:module';
 import { ReaderPageInputClock } from '../entry/src/main/ets/features/reading/ui/ReaderPageInputClock.ts';
@@ -28,7 +29,8 @@ const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPan
 const source = readFileSync(file, 'utf8');
 const headerTextModifier = selectedProductionClasses(file, ['ReaderControlHeaderLineHeight']);
 const { readerControlMotionMs } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts', import.meta.url), 'utf8').replace(/export \{[^}]+\} from '[^']+';/g, ''), 'ReaderControlMotionPolicy.ts', { readerMotionValueDurationMs }, ['readerControlMotionMs']);
-const names = ['secondaryModuleInputEnabled', 'contentLocation', 'contentInputEnabled', 'controlActionInputEnabled', 'progressInputEnabled', 'brightnessInputEnabled',
+const names = ['secondaryModuleInputEnabled', 'contentLocation', 'contentInputEnabled', 'controlActionInputEnabled',
+  'hasCurrentModalInput', 'currentTemporaryInputScope', 'progressInputEnabled', 'brightnessInputEnabled',
   'homeChapterCardHeight', 'homeContentMinimumHeight', 'presentedHomeChapterTitle', 'presentedHomeTotalChapters', 'progressRow', 'effectiveProgressPercent', 'progressChangeHandler', 'clampPercent', 'quickAction', 'quickActionPanel', 'quickActionIcon', 'chapterRow', 'canStepChapter', 'homeMetric',
   'moduleButton', 'moduleNavBar', 'moduleIcon', 'isActiveModule', 'activateModule', 'requestPage',
   'accessibleBrightnessActions', 'stepBrightness', 'navigationInputEnabled', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'brightnessRequiresChildClip',
@@ -57,7 +59,7 @@ function fixture(text = source) {
   const Component = compiled.get(text);
   const owner = new Component(undefined, {});
   Object.assign(owner, {
-    runtimeMounted: true, inputEnabled: true, controlObscured: false, temporaryLayerActive: false, moreMenuVisible: false,
+    runtimeMounted: true, inputEnabled: true, controlObscured: false, temporaryLayerKind: '', moreMenuVisible: false,
     visualVisibilityProgress: 1, visualHeldPointerId: -1, visualTransitionKind: '', visualExpansionProgress: 0,
     lastVisibleContentLocation: { level: 'home', module: 'home', form: 'quick', directoryTab: 'directory' },
     visualSession: session.openReaderControlSession(session.createReaderControlSessionState(), 0), reduceMotion: false,
@@ -69,7 +71,7 @@ function fixture(text = source) {
     currentLayout: function() { return this.layout; }, controlPanelHeight: () => 736,
     geo: { moduleNavH: 80, moduleNavRadiusTop: 14 },
     ttsState: { status: 'unavailable' }, selectedMinimumProfile: () => undefined,
-    minimumInputReady: () => true, hasCurrentTemporaryInput: function() { return this.temporaryLayerActive; },
+    minimumInputReady: () => true, hasCurrentTemporaryInput: function() { return this.temporaryLayerKind !== ''; },
     frame: () => ({ visibility: 1, progress: 0, content: { x: 13, y: 57, width: 264, height: 190 }, header: { x: 13, y: 19, width: 338, height: 30, opacity: 1 }, shell: { x: 0, y: 0, width: 364, height: 736 }, topBar: { opacity: 1 },
       brightness: { width: 46, height: 190, opacity: 1 }, navigation: { opacity: 1, height: 80 } }),
     contentTitle: () => '目录',
@@ -83,6 +85,7 @@ function fixture(text = source) {
     applySemanticSession: next => events.push(['session', next]),
     onExitReading: () => events.push('exit'), onSourceSwitch: id => events.push(['source', id]),
   });
+  Object.defineProperty(owner, 'temporaryInputKind', { get: () => owner.temporaryLayerKind });
   function nodes(parent = owner) { return [...parent.nodes.values(), ...[...parent.children.values()].flatMap(nodes)]; }
   return { owner, events, nodes, button: label => nodes().findLast(node => node.type === 'Button' && node.accessibilityText === label) };
 }
@@ -143,7 +146,7 @@ function runInput(text = source) {
     owner => { owner.runtimeMounted = false; },
     owner => { owner.inputEnabled = false; },
     owner => { owner.controlObscured = true; },
-    owner => { owner.temporaryLayerActive = true; },
+    owner => { owner.temporaryLayerKind = 'modal'; },
     owner => { owner.moreMenuVisible = true; },
     owner => { owner.visualVisibilityProgress = 0; },
     owner => { owner.visualTransitionKind = 'morph'; },
@@ -180,7 +183,7 @@ function runInput(text = source) {
   for (const module of ['directory', 'tts', 'appearance', 'settings', 'search', 'autoPage', 'replace']) {
     const child = fixture(text); child.owner.lastVisibleContentLocation = { level: 'secondary', module, form: 'quick' };
     assert.equal(child.owner.secondaryModuleInputEnabled(module), true);
-    child.owner.temporaryLayerActive = true; assert.equal(child.owner.secondaryModuleInputEnabled(module), true, 'the current module retains its own editor');
+    child.owner.temporaryLayerKind = 'inlineEditor'; assert.equal(child.owner.secondaryModuleInputEnabled(module), true, 'the current module retains its own editor');
     child.owner.moreMenuVisible = true; assert.equal(child.owner.secondaryModuleInputEnabled(module), false, 'shared More cannot become a module-local input permission');
     child.owner.moreMenuVisible = false; child.owner.runtimeMounted = false; assert.equal(child.owner.secondaryModuleInputEnabled(module), false, 'retired shared owner cannot admit a retained child');
   }
@@ -192,15 +195,18 @@ function runInput(text = source) {
   const shortExit = short.button('退出阅读，返回上一页').onClick; short.owner.runtimeMounted = false; shortExit(); assert.deepEqual(short.events, []);
   short.owner.runtimeMounted = true;
   const shortSource = short.button('换源').onClick;
-  for (const key of ['temporaryLayerActive', 'moreMenuVisible']) {
-    short.owner[key] = true; shortExit(); shortSource(); assert.deepEqual(short.events, [], 'old short-window ordinary actions cannot pass the explicit temporary/More guards'); short.owner[key] = false;
-  }
+  short.owner.temporaryLayerKind = 'modal';
+  shortExit(); shortSource(); assert.deepEqual(short.events, [], 'old short-window ordinary actions reject a temporary layer');
+  short.owner.temporaryLayerKind = '';
+  short.owner.moreMenuVisible = true;
+  shortExit(); shortSource(); assert.deepEqual(short.events, [], 'old short-window ordinary actions reject More');
+  short.owner.moreMenuVisible = false;
   shortExit(); assert.deepEqual(short.events, ['exit']);
   short.owner.moreMenuVisible = true; short.button('更多').onClick(); assert.deepEqual(short.events.at(-1), ['more', false], 'the current popup trigger still closes its own menu');
   const a11y = fixture(text); a11y.owner.accessibleControlActions();
   const close = a11y.nodes().find(node => node.create === '关闭控制栏并返回阅读'); assert.ok(close.onClick);
-  a11y.owner.temporaryLayerActive = true; close.onClick(); assert.deepEqual(a11y.events, []);
-  a11y.owner.temporaryLayerActive = false; close.onClick(); assert.deepEqual(a11y.events, ['dismiss']);
+  a11y.owner.temporaryLayerKind = 'modal'; close.onClick(); assert.deepEqual(a11y.events, []);
+  a11y.owner.temporaryLayerKind = ''; close.onClick(); assert.deepEqual(a11y.events, ['dismiss']);
   a11y.owner.sourceId = 'successor'; close.onClick(); assert.deepEqual(a11y.events, ['dismiss'], 'old virtual close cannot act for a successor book owner');
   const virtual = fixture(text); virtual.owner.lastVisibleContentLocation = { level: 'secondary', module: 'directory', form: 'full' };
   virtual.owner.accessibleControlActions();
@@ -262,9 +268,15 @@ function runInput(text = source) {
     assert.equal(legacyCalls, 2, 'default-scope existing consumer behavior remains usable');
   }
   const Activity = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
-    'ReadingExperience', ['cancelControlNavigationIntent', 'onControlInputActivity']);
-  const activity = Object.assign(new Activity(), { controlNavigationIntent: { generation: 1 },
-    controlNavigationGeneration: 1, controlMinimumGeneration: 1, invalidateControlBackdrop() {} });
+    'ReadingExperience', ['activeControlNavigationIntent', 'controlMinimumOwnerKey', 'controlMinimumCommittedIdentity',
+      'cancelControlNavigationIntent', 'onControlInputActivity'],
+    { readerControlHostClosing, readerControlContentLocation: session.readerControlContentLocation });
+  const activity = Object.assign(new Activity(), {
+    controlSession: session.openReaderControlSession(session.createReaderControlSessionState(), 0),
+    controlNavigationGeneration: 1, controlMinimumGeneration: 1, invalidateControlBackdrop() {},
+  });
+  activity.controlNavigationIntent = { generation: 1, ownerKey: activity.controlMinimumOwnerKey(),
+    sourceIdentity: activity.controlMinimumCommittedIdentity() };
   const retiredDrag = fixture(text); retiredDrag.owner.onInputActivity = () => activity.onControlInputActivity();
   retiredDrag.owner.beginBrightnessDrag();
   assert.equal(activity.controlNavigationIntent, undefined, 'admitted PanStart cancels pending navigation through the existing actual Host activity');
@@ -277,6 +289,25 @@ function runInput(text = source) {
   full.owner.visualTransitionKind = 'morph'; full.owner.collapseControl();
   assert.equal(full.events[0][0], 'session', 'the current visible secondary still retargets collapse during its morph');
   full.owner.moreMenuVisible = true; full.owner.collapseControl(); assert.equal(full.events.length, 1);
+  {
+    const current = fixture(text);
+    current.owner.topBarBack(); current.owner.topBarActions();
+    current.owner.moduleButton('rc_list', '目录', 'directory');
+    homeHandlers(current);
+    const background = ['退出阅读，返回上一页', '换源', '目录', '上一章', '下一章', '搜索', '自动翻页', '替换'];
+    current.owner.moreMenuVisible = true;
+    current.owner.temporaryLayerKind = 'moreMenu';
+    current.owner.replay();
+    for (const label of background) {
+      const button = current.button(label);
+      assert.equal(button.enabled, true, `More preserves the native paint of ${label}`);
+      button.onClick();
+    }
+    assert.deepEqual(current.events, [], 'More still blocks the painted background actions');
+    current.owner.readableChapterPosition = 0;
+    current.owner.replay();
+    assert.equal(current.button('上一章').enabled, false, 'More preserves a genuinely unavailable action');
+  }
   const hidden = fixture(text); hidden.owner.topBarBack(); const exit = hidden.button('退出阅读，返回上一页');
   hidden.owner.visualVisibilityProgress = 0; hidden.owner.frame = () => ({ topBar: { opacity: 0 } }); exit.onClick();
   assert.deepEqual(hidden.events, [], 'hidden top bar cannot dispatch a retained Back callback');
@@ -410,7 +441,7 @@ async function runHeaderRoles() {
         navigationHeightVp: profile.navigationHeight,
       } });
     Object.assign(owner, { appScheme: 'day', runtimeMounted: true, inputEnabled: true, controlObscured: false,
-      temporaryLayerActive: false, moreMenuVisible: false, visualVisibilityProgress: 1, visualHeldPointerId: -1,
+      temporaryLayerKind: '', moreMenuVisible: false, visualVisibilityProgress: 1, visualHeldPointerId: -1,
       contentLocation: () => location, contentTitle: () => title, frame: () => frame,
       currentLayout: () => ({ fullPanelWidth: panelWidth }), controlPanelHeight: () => 736,
       hasCurrentTemporaryInput: () => false,
