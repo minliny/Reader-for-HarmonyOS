@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const { isBuildResourceTask, isPackageTask, beginIdeBuild, finishIdeBuild } = createRequire(import.meta.url)('../hvigor/reader-hap-guard.cjs');
-import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, verifyPublishedCoreGate, targetReadiness } from '../scripts/lib/hap-delivery-evidence.mjs';
+import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, verifyPublishedCoreGate, targetReadiness, assertSameTargetBoot } from '../scripts/lib/hap-delivery-evidence.mjs';
 import { contractToolchainLoaders, buildContractScope, prepareIdeNativeInputs, ideNativeBuildEnvironment, ideNativeInputState, releaseContractBuildWorkspace } from '../scripts/hap-pipeline.mjs';
 import { hapStageReceipt } from '../scripts/lib/hap-stage-receipt.mjs';
 import { reconcileIdeNativeCache } from '../scripts/lib/ide-native-cache.mjs';
@@ -787,11 +787,11 @@ function vmClockFixtures() {
   let fixtureNumber = 0;
   function fixture(options = {}) {
     const commands = [];
-    let elapsed = 0, wallOffset = 0, second = false;
+    let elapsed = options.startElapsedMs ?? 0, wallOffset = options.hostOffsetMs ?? 0, second = false;
     const query = command => {
       commands.push(command);
       if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : 'true';
-      if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1370' : '1370';
+      if (command === 'pidof com.ohos.sceneboard') return (second ? options.finalPid : undefined) ?? options.pid ?? '1370';
       if (command === 'cat /proc/sys/kernel/random/boot_id') return '/bin/sh: cat: /proc/sys/kernel/random/boot_id: Permission denied';
       if (command === 'cat /proc/uptime') return '/bin/sh: cat: /proc/uptime: Permission denied';
       assert.equal(command, batch, 'VM sample stays a single readonly shell');
@@ -801,7 +801,7 @@ function vmClockFixtures() {
       wallOffset += options.queryHostJumpMs ?? 0;
       const end = Math.floor((hostEpoch + elapsed + offset + (options.queryGuestJumpMs ?? 0)) / 1000);
       return [options.frozenDate ?? start, utcStamp(bootEpoch + (options.guestOffsetMs ?? 0) +
-        (second ? options.secondBootOffsetMs ?? 0 : 0)),
+        (options.bootOffsetMs ?? 0) + (second ? options.secondBootOffsetMs ?? 0 : 0)),
         ...(second ? options.secondMilestones ?? milestones : milestones), options.frozenDate ?? end].join('\n');
     };
     let vmLog;
@@ -826,6 +826,19 @@ function vmClockFixtures() {
     assert.equal(current.commands.some(command => /\bbm\b|\baa\b|install|param set|chmod|\bsu\b/.test(command)), false);
   }
   assert.equal(fixture({ withLog: true }).run().status, 'PASS', 'explicit host log still uses its original instance association');
+  const guestOffsetMs = 86_400_000;
+  const beforeInstall = fixture({ guestOffsetMs }).run();
+  const recheck = options => fixture({ startElapsedMs: 12000, guestOffsetMs, ...options }).run();
+  const quantized = recheck({ bootOffsetMs: 1000 });
+  assert.notEqual(beforeInstall.bootIdSha256, quantized.bootIdSha256);
+  assert.doesNotThrow(() => assertSameTargetBoot(beforeInstall, quantized),
+    'the same remote boot is valid through storage admission despite one-second uptime quantization');
+  assert.throws(() => assertSameTargetBoot(beforeInstall, recheck({ bootOffsetMs: 2000 })), /target boot changed/);
+  assert.throws(() => assertSameTargetBoot(beforeInstall, recheck({ guestOffsetMs: guestOffsetMs + 5000, bootOffsetMs: -5000 })),
+    /target boot changed/, 'cross-admission guest clock jumps are rejected even when the estimated boot looks the same');
+  assert.throws(() => assertSameTargetBoot(beforeInstall, recheck({ hostOffsetMs: 5000 })), /target boot changed/);
+  assert.throws(() => assertSameTargetBoot(beforeInstall, recheck({ pid: '1371' })), /target boot changed/);
+  assert.throws(() => assertSameTargetBoot(beforeInstall, { ...quantized, vmGuestBootWitness: undefined }), /target boot changed/);
   for (const [label, options, expected] of [
     ['forward jump within query', { queryGuestJumpMs: 5000 }, /guest\/host clock or observation is inconsistent/],
     ['backward jump within query', { queryGuestJumpMs: -2000 }, /guest\/host clock or observation is inconsistent/],

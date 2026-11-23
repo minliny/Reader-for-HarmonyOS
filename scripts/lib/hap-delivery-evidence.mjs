@@ -204,20 +204,25 @@ function physicalBootSample(query, now, monotonicNow) {
 // Only minimal read-only system queries are allowed until this succeeds.
 // An explicitly provided emulator log adds host-instance evidence. Guest
 // readiness can also be established from the selected HDC target alone.
-// A physical uptime -s estimate is quantized to seconds. Its digest identifies
-// an observation, not an exact boot UUID; retain the clock witnesses instead.
+// The uptime -s estimate is quantized to seconds. On procfs-restricted
+// targets compare the clock witnesses across the entire deployment interval.
 export function assertSameTargetBoot(initial, current) {
   const fail = () => { throw new Error('target boot changed during storage admission'); };
+  const source = initial?.bootIdentitySource;
   if (initial?.status !== 'PASS' || current?.status !== 'PASS' ||
       !initial.bootCompleted || !current.bootCompleted || !initial.sceneBoardStable || !current.sceneBoardStable ||
-      initial.bootIdentitySource !== current.bootIdentitySource ||
-      !['physical-boot-milestones-v1', 'kernel-boot-id', 'vm-startup-fingerprint-v1'].includes(initial.bootIdentitySource) ||
+      source !== current.bootIdentitySource ||
+      !['physical-boot-milestones-v1', 'vm-guest-boot-milestones-v1', 'kernel-boot-id', 'vm-startup-fingerprint-v1'].includes(source) ||
       !initial.sceneBoardPidSha256 || initial.sceneBoardPidSha256 !== current.sceneBoardPidSha256) fail();
-  if (initial.bootIdentitySource !== 'physical-boot-milestones-v1') {
+  const physical = source === 'physical-boot-milestones-v1';
+  const guestOnly = source === 'vm-guest-boot-milestones-v1';
+  if (!physical && !guestOnly) {
     if (!initial.bootIdSha256 || initial.bootIdSha256 !== current.bootIdSha256) fail();
     return;
   }
-  const before = initial.physicalBootWitness, after = current.physicalBootWitness;
+  if (guestOnly && (initial.evidenceScope !== 'guest-only' || current.evidenceScope !== 'guest-only')) fail();
+  const before = physical ? initial.physicalBootWitness : initial.vmGuestBootWitness;
+  const after = physical ? current.physicalBootWitness : current.vmGuestBootWitness;
   if (before?.version !== 1 || after?.version !== 1 ||
       !Array.isArray(before.samples) || !Array.isArray(after.samples) ||
       before.samples.length !== 2 || after.samples.length !== 2) fail();
@@ -225,19 +230,24 @@ export function assertSameTargetBoot(initial, current) {
   const first = samples[0];
   for (const sample of samples) {
     if (!sample || !['bootStart', 'guestStart', 'guestEnd', 'hostStart', 'hostEnd', 'monotonicStart', 'monotonicEnd'].every(key => Number.isFinite(sample[key])) ||
-        !Array.isArray(sample.milestones) || sample.milestones.length !== 6 ||
+        !Array.isArray(sample.milestones) || sample.milestones.length !== BOOT_MILESTONES.length ||
         sample.milestones.some(value => !/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) <= 0) ||
         digest(JSON.stringify(sample.milestones)) !== before.milestonesSha256 ||
         before.milestonesSha256 !== after.milestonesSha256 ||
         Math.abs(sample.bootStart - first.bootStart) > 1000 ||
         sample.guestEnd < sample.guestStart || sample.hostEnd < sample.hostStart || sample.monotonicEnd < sample.monotonicStart ||
         sample.monotonicEnd - sample.monotonicStart > 10000 ||
-        sample.guestStart < sample.hostStart - 1000 || sample.guestStart > sample.hostEnd + 1000 ||
-        sample.guestEnd < sample.hostStart - 1000 || sample.guestEnd > sample.hostEnd + 1000 ||
+        (physical && (sample.guestStart < sample.hostStart - 1000 || sample.guestStart > sample.hostEnd + 1000 ||
+          sample.guestEnd < sample.hostStart - 1000 || sample.guestEnd > sample.hostEnd + 1000)) ||
+        (guestOnly && sample.guestEnd - sample.guestStart > sample.monotonicEnd - sample.monotonicStart + 1000) ||
         Math.abs(sample.hostEnd - sample.hostStart - (sample.monotonicEnd - sample.monotonicStart)) > 1000 ||
         Math.abs(sample.guestStart - first.guestStart - (sample.monotonicStart - first.monotonicStart)) > 2000 ||
         Math.abs(sample.hostStart - first.hostStart - (sample.monotonicStart - first.monotonicStart)) > 1000) fail();
   }
+  if (guestOnly && [[initial, before], [current, after]].some(([readiness, witness]) => {
+    const { bootStart, milestones } = witness.samples[0];
+    return readiness.bootIdSha256 !== digest(JSON.stringify([bootStart, milestones]));
+  })) fail();
   for (let i = 1; i < samples.length; i++) {
     const prior = samples[i - 1], next = samples[i];
     const elapsed = next.monotonicStart - prior.monotonicEnd;
@@ -259,7 +269,7 @@ export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now 
   const sceneBoard = query('pidof com.ohos.sceneboard').trim();
   if (!/^\d+$/.test(sceneBoard)) throw new Error('SceneBoard is not running as one stable process');
   const physicalSample = physicalFallback ? physicalBootSample(query, now, monotonicNow) : undefined;
-  let physicalSecond;
+  let physicalSecond, guestSecond;
   const guestOnly = targetKind === 'vm' && !vmLog;
   let logRecord, firstBytes, firstStat, fallback, firstSample, instance;
   if (targetKind === 'vm') {
@@ -298,6 +308,7 @@ export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now 
   if ((guestOnly || fallback) && (observationMs < (guestOnly || instance.snapshotLog ? 2000 : 1000) || observationMs > 10_000 || Math.abs(now() - wallStart - observationMs) > 1000)) throw new Error('VM readiness observation interval or clock is invalid');
   if (guestOnly && fallback) {
     const second = vmBootSample(query, now, monotonicNow);
+    guestSecond = second;
     if (JSON.stringify(second.milestones) !== JSON.stringify(firstSample.milestones) ||
       Math.abs(second.bootStart - firstSample.bootStart) > 1000 ||
       second.guestStart <= firstSample.guestEnd ||
@@ -335,6 +346,8 @@ export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now 
     bootIdentitySource: physicalFallback ? 'physical-boot-milestones-v1' : bootId.denied ? (guestOnly ? 'vm-guest-boot-milestones-v1' : instance.snapshotLog ? 'vm-snapshot-resume-fingerprint-v1' : 'vm-startup-fingerprint-v1') : 'kernel-boot-id',
     ...(physicalFallback ? { physicalBootWitness: { version: 1, milestonesSha256: digest(JSON.stringify(physicalSample.milestones)),
       samples: [physicalSample, physicalSecond] } } : {}),
+    ...(guestOnly && bootId.denied ? { vmGuestBootWitness: { version: 1, milestonesSha256: digest(JSON.stringify(firstSample.milestones)),
+      samples: [firstSample, guestSecond] } } : {}),
     ...(physicalFallback || fallback || guestOnly ? { uptimeSource: physicalFallback || fallback ? 'toybox-sysinfo' : 'procfs', observationMs } : {}),
     ...(targetKind === 'vm' ? { evidenceScope: guestOnly ? 'guest-only' : 'guest-and-emulator-log' } : {}),
     sceneBoardPidSha256: digest(sceneBoard), bootCompleted: true, sceneBoardStable: true, emulatorLog: logRecord };

@@ -56,6 +56,9 @@ function checkFacts(context, facts) {
   const layout = contract.layouts.find(value => value.schemaVersion === facts.layout.schemaVersion && value.layoutId === facts.layout.layoutId);
   if (!layout || !contract.normalOpen.acceptedLayouts.includes(layout.schemaVersion) || !layout.read || !layout.write ||
       layout.syncEpochOwner !== facts.layout.syncEpochOwner) throw new Error('candidate cannot read and write the observed storage layout');
+  if (layout.schemaProfileSha256 !== undefined && layout.schemaProfileSha256 !== facts.layout.schemaFingerprint) {
+    throw new Error('observed storage layout does not match the candidate schema profile');
+  }
   if (facts.layout.directoryPolicyId !== undefined && !contract.acceptedDirectoryPolicies?.includes(facts.layout.directoryPolicyId)) throw new Error('candidate cannot preserve the observed directory policy');
   if (facts.layout.syncProtocolVersion !== undefined && !layout.syncProtocolVersions.includes(facts.layout.syncProtocolVersion)) throw new Error('candidate cannot preserve observed sync protocol');
   if (facts.layout.syncProtocolVersions !== undefined && (!Array.isArray(facts.layout.syncProtocolVersions) ||
