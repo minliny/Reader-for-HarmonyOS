@@ -14,10 +14,10 @@ for (const id of selectContractCases(definitions)) {
   // claiming that the production layout producer or native collection ran.
   const fingerprint = path => path === producer ? 'a'.repeat(64) : digest(path);
   const paths = [page.source.path, producer,
-    'entry/src/main/ets/features/common/ReaderButton.ets',
-    'entry/src/main/ets/features/common/ReaderControlSpecs.ets',
-    'entry/src/main/ets/features/common/ReaderTypography.ets',
-    'entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts'];
+    'entry/src/main/ets/ui/controls/ReaderButton.ets',
+    'entry/src/main/ets/ui/controls/ReaderControlSpecs.ets',
+    'entry/src/main/ets/ui/foundation/ReaderTypography.ets',
+    'entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts'];
   const report = { schemaVersion:'1.0', pageId:page.pageId,
     command:{entry:producer,cases:['matrix']},
     inputs:paths.map(path=>({path,sha256:fingerprint(path)})), widths:[320,366],fontScales:[1,1.3,1.6,2],

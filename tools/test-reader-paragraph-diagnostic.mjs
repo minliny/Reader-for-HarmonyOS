@@ -13,7 +13,7 @@ const ts = require(`${sdk}/node_modules/typescript`);
 const eraseTypes = value => ts.transpileModule(value, { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
 } }).outputText;
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8');
+const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8');
 const ReadingSurfaceLayoutMap = new Function(`${eraseTypes(mapSource).replace(/^export /gm, '')}; return ReadingSurfaceLayoutMap;`)();
 const prefix = source.slice(0, source.indexOf('@Component'));
 const component = source.slice(source.indexOf('@Component'), source.indexOf('  build() {'))

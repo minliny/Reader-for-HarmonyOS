@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 
 function timers() {
   let serial = 0; const pending = new Map(), issued = [];
@@ -15,7 +15,9 @@ async function actual(names, dependencies = {}) {
   const constants = selectedProductionValues(file, ['FIRST_PAGE_COMPLETION_DEADLINE_MS', 'FIRST_PAGE_COMPLETION_MAX_RETRIES',
     'PAGE_TURN_PREPARATION_RETRY_BASE_MS', 'PAGE_TURN_PREPARATION_RETRY_MAX_MS', 'PAGE_TURN_PREPARATION_RETRY_LIMIT']);
   for (const [name, value] of Object.entries(constants)) assert.ok(Number.isSafeInteger(value) && value > 0, `valid actual policy ${name}`);
-  return { Type: selectedProductionMethods(file, 'ReadingExperience', names, { ...constants, ...dependencies }), constants };
+  const { drainReaderPagePreparation } = await import('../entry/src/main/ets/features/reading/ui/ReaderPagePreparationCoordinator.ts');
+  if (names.includes('drainPageTurnPreparationQueue') && !names.includes('retryPageTurnPreparation')) names = [...names, 'retryPageTurnPreparation'];
+  return { Type: selectedProductionMethods(file, 'ReadingExperience', names, { ...constants, drainReaderPagePreparation, ...dependencies }), constants };
 }
 async function preparationContextCase() {
   class Preparation { constructor(...args) { this.args = args; } }
@@ -51,7 +53,7 @@ async function preparationContextCase() {
   }
 }
 async function retryQueueCase() {
-  const { readerPageTransitionUsesPreparedPages } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+  const { readerPageTransitionUsesPreparedPages } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
   async function fixture(outcome = 'retry') {
     const clock = timers(), attempts = [], refreshes = [];
     const { Type, constants } = await actual(['drainPageTurnPreparationQueue', 'cancelPageTurnPreparationRetry'],

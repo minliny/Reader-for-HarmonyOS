@@ -3,7 +3,7 @@ const selected=selectContractCases({'property-authority':{description:'Actual re
 async function runCase(){
 const {default:assert}=await import('node:assert/strict');
 
-const file = new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets', import.meta.url);
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
 const Surface=selectedProductionMethods(file,'ReadingSurface',['renderFragments']);
 const surface = new Surface();

@@ -30,10 +30,12 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectListeners } from './reader-hdc-foreground.mjs';
+import { parseTargetState } from './reader-hdc-lease.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LEASE = resolve(HERE, 'reader-hdc-lease.mjs');
 const DEFAULT_SERVER_KEY = '127.0.0.1:8710';
+const REMOTE_VM_SERVER_KEY = '192.168.1.10:8710';
 const TARGET_RE = /^[A-Za-z0-9._:\[\]-]{1,256}$/;
 const SERVER_RE = /^[A-Za-z0-9._:\[\]-]{1,256}$/;
 const PROXY_VARS = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'SOCKS_PROXY',
@@ -154,8 +156,7 @@ async function inspect(option) {
       note('consistency', 'warn', `local server ${serverKey} with LAN-looking target ${target}`,
         'Confirm the device actually attaches to this server; a LAN target is not a local-server device by default.');
     } else if (!localServer && /^127\./.test(target)) {
-      note('consistency', 'warn', `remote server ${serverKey} with loopback target ${target}`,
-        'A loopback target identifies a device on the remote host, not a local device.');
+      note('consistency', 'note', `loopback target ${target} is scoped to remote server ${serverKey}`);
     }
   }
 
@@ -178,19 +179,17 @@ async function inspect(option) {
     if (result.status !== 0) {
       note('targets', 'block', `list targets failed (exit ${result.status}): ${text.trim() || 'no output'}`);
     } else {
-      let found;
-      for (const line of text.split(/\r?\n/)) {
-        const cols = line.trim().split(/\s+/);
-        if (cols[0] === target) { found = cols; break; }
-      }
-      if (!found) {
-        note('targets', 'warn', `target ${target} not listed`,
-          `tconn to attach it: node tools/reader-hdc-lease.mjs --hdc <hdc> --target ${target} -- tconn ${target}`);
-        targetState = 'absent';
+      targetState = parseTargetState(text, target);
+      if (targetState === 'absent') {
+        note('targets', 'warn', `target ${target} not listed on server ${serverKey}`,
+          serverKey === REMOTE_VM_SERVER_KEY
+            ? 'Verify the requested remote VM is running and registered with its remote HDC server. Refresh the exact target on that server through the lease.'
+            : 'Refresh the exact target on the selected server through the lease. For the remote VM, select its remote server explicitly. For a local physical device, verify its USB or direct debugging connection.');
+      } else if (targetState === 'ambiguous') {
+        note('targets', 'block', `multiple rows report the exact target ${target}`);
       } else {
-        targetState = (found[1] || 'Unknown').toLowerCase();
         if (targetState === 'connected') note('targets', 'ok', `${target} Connected`);
-        else note('targets', 'warn', `${target} reported ${found[1] || 'Unknown'}`,
+        else note('targets', 'warn', `${target} reported ${targetState}`,
           'Offline/Unknown does not prove the phone denied authorization. Check device TCP and authorization separately; do not reconnect in a loop.');
       }
     }
@@ -260,7 +259,10 @@ function render(report) {
 async function main(argv) {
   const option = parseArgs(argv);
   if (option.help) {
-    console.log('Usage: node tools/reader-hdc-preflight.mjs --hdc <abs hdc> --target <exact target> [--server-key 127.0.0.1:8710] [--json]');
+    console.log(`Usage: node tools/reader-hdc-preflight.mjs --hdc <abs hdc> --target <exact target> [--server-key <server>] [--json]
+  Remote VM:    --server-key ${REMOTE_VM_SERVER_KEY}
+  Local VM or physical device: --server-key ${DEFAULT_SERVER_KEY} (default)
+  Select the exact target from the chosen server through reader-hdc-lease.mjs. A remote VM target can be a loopback address on its remote server.`);
     return 0;
   }
   const report = await inspect(option);
@@ -275,4 +277,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     .catch(error => { console.error(`reader-hdc-preflight: ${error.message}`); process.exitCode = 3; });
 }
 
-export { inspect, parseEndpoint };
+export { inspect, parseEndpoint, parseTargetState };

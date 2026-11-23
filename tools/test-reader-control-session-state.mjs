@@ -16,7 +16,7 @@ import {
   setReaderControlDirectoryTab,
   toggleReaderControlSession,
   trackReaderControlTransition,
-} from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 
 const duration = 400; // Deterministic test clock, not a product animation token.
 const modules = ['directory', 'tts', 'appearance', 'settings', 'search', 'autoPage', 'replace'];

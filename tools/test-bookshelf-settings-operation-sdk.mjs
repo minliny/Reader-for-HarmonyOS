@@ -4,7 +4,7 @@ import {fixture,defaults,settle,deferred} from './lib/general-settings-persisten
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const read=path=>readFileSync(new URL('../entry/src/main/ets/'+path,import.meta.url),'utf8');
-const pageSource=read('features/bookshelf/BookshelfSettingsPage.ets');
+const pageSource=read('features/bookshelf/ui/BookshelfSettingsPage.ets');
 const leafNames=['autoCheckUpdate','onAutoCheckUpdate','operation','navigationGeneration','presentationRevision','mounted','onRetryAccepted','onReconcile',
  'settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery','settingsPending','retrySettingsAccepted',
  'onOperationChanged','lastSettingsFeedback'];
@@ -31,7 +31,7 @@ let cases=0;
  const gate=deferred();f.hangRead(gate);x.native('核对设置')();x.sdk.properties.flush();
  assert.equal(x.page.operation.receipt.receipt.confirmation,'unknown');assert.equal(x.page.operation.receipt.receipt.readback,'reading');
  const actor=x.sdk.walk(x.page).findLast(c=>c instanceof x.sdk.deps.ReaderRecoveryAction&&c.label==='核对设置');assert.ok(actor,'readback reading keeps the action despite canRetry=false');
- const nodes=x.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'),loader=nodes.find(n=>n.type==='LoadingProgress'),native=nodes.find(n=>n.type==='Stack'&&n.onClick);
+ const nodes=x.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'),loader=nodes.find(n=>n.type==='LoadingProgress'),native=nodes.find(n=>n.type==='Button'&&n.onClick);
  assert.equal(label.create,'核对设置');assert.equal(label.opacity,0);assert.deepEqual([loader.width,loader.height],[18,18]);assert.equal(native.constraintSize.minHeight,44);assert.equal(native.enabled,false);
  const puts=f.events.filter(e=>e[0]==='put').length;native.onClick();gate.resolve();await settle();assert.equal(f.events.filter(e=>e[0]==='put').length,puts,'busy query never retries the write');
  assert.equal(x.idx.settingsOperation.receipt.receipt.confirmation,'unknown');cases++;
@@ -60,7 +60,7 @@ for(const failure of ['before','after']) {
  // The probe executes real V1 props, but does not model native branch removal.
  // Replay only the real parent observer so the existing Page receives terminal Props.
  x.idx.replayOnly([x.page.id]);
- assert.equal(f.events.filter(event=>event[0]==='put').length,puts+6,'current explicit retry uses exactly one complete six-field accepted snapshot setter');
+ assert.equal(f.events.filter(event=>event[0]==='put').length,puts+5,'current explicit retry uses exactly one complete five-field accepted snapshot setter');
  assert.equal(x.page.operation.receipt.receipt.confirmation,'confirmed');
  assert.equal(x.page.operation.canRetryAccepted,false);assert.deepEqual(Object.fromEntries(f.disk),{...defaults,autoCheckUpdate:false},'bookshelf settings retry preserves developer mode and every unrelated setting');cases++;
 }

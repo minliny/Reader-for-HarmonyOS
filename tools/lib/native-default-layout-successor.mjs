@@ -13,7 +13,7 @@ assert.equal(contract.schema,1);assert.equal(contract.previousFixture,'tools/fix
 assert.equal(digest(read(contract.previousFixture)),contract.previousFixtureSha256,'native-default original witness bytes remain immutable');
 assert.equal(digest(JSON.stringify(previous)),contract.previousRowSha256,'the exact native family is unchanged');
 assert.deepEqual([contract.id,contract.file,contract.previousMethod,contract.currentMethod,contract.host,contract.variant,contract.header,contract.content],
- ['NATIVE-DEFAULT-01','features/bookshelf/BookDirectoryPage.ets','standardPage','standardToolbar','ReaderPageScaffold','directory','standardHeader','standardContent']);
+ ['NATIVE-DEFAULT-01','features/reading/ui/BookDirectoryPage.ets','standardPage','standardToolbar','ReaderPageScaffold','directory','standardHeader','standardContent']);
 assert.equal(contract.onClick,'(): void => { this.rulesExpanded = !this.rulesExpanded; }','the finite successor retains the original local display-state action');
 assert.equal(contract.sdkProof,'tools/test-native-default-control-contracts.mjs');
 }

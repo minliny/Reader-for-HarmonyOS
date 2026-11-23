@@ -68,7 +68,7 @@ function slot(provider, revision = 1, params = {}) {
   return { owner, params: forwarded };
 }
 function surface(params, source = surfaceSource) {
-  const owner = createReaderBuilderProbe(source, ['build', 'renderFragments', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend'], {
+  const owner = createReaderBuilderProbe(source, ['build', 'renderFragments', 'currentFragment', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend'], {
     ReaderPageChrome: Child, ReaderNativeParagraphView: Child, ReaderReadingTextFragment: Child, ReaderPaperBackground: Child,
     readerNativeTextGeometryKey,
     TYPE_READER_CHAPTER_TITLE: { fontFamily: 'ReaderNotoSansSC', fontWeight: 500, fontSizeFp: 24 },
@@ -126,23 +126,17 @@ assert.deepEqual([firstOrigin, secondOrigin], [158.5, 191.75]);
 // A prepared next-chapter first page already occupies physical slot b during
 // the turn. Exercise production role selection and both actual SDK component
 // call boundaries when the same resident slot is promoted to current.
-const StageMethods = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url),
+const StageMethods = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets', import.meta.url),
   ['slotPage', 'refreshRenderPages', 'currentRenderPage', 'adjacentRenderPage']);
 const stageOnly = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
-const stage = createReaderBuilderProbe(stageOnly, ['build', 'slotBookmarkMode', 'slotBookmarkOpacity'], { ReaderPageTurnSurface: Child }).owner;
-const emptyBookmark = { mode: 'hidden', opacity: 0, topAccessoryX: 0, topAccessoryY: 0,
-  topAccessoryWidth: 0, topAccessoryHeight: 0 };
-let currentPage = { identity: 'origin', renderRevision: 10, fragments: [], showChapterTitle: false, bookmark: emptyBookmark };
+const stage = createReaderBuilderProbe(stageOnly, ['build'], { ReaderPageTurnSurface: Child }).owner;
+let currentPage = { identity: 'origin', renderRevision: 10, fragments: [], showChapterTitle: false };
 const preparedFragments = fragments(title('prepared next chapter', 2));
 let nextPage = { identity: 'prepared-next', renderRevision: 10, fragments: preparedFragments,
-  chapterTitle: 'prepared next chapter', showChapterTitle: true, bookmark: emptyBookmark };
+  chapterTitle: 'prepared next chapter', showChapterTitle: true };
 Object.assign(stage, { contentRevision: 10, renderPagesRevision: -1, currentPageSlot: 'a', turnDirection: 'next',
   currentPageProvider: () => currentPage, previousPageProvider: () => undefined, nextPageProvider: () => nextPage,
-  emptyPage: { fragments: [], bookmark: emptyBookmark }, bookmarkPresentationRevision: 0,
-  bookmarkVisible: true, bookmarkMode: 'hidden', bookmarkOpacity: 0, bookmarkHintText: '', bookmarkHintVisible: false,
-  bookmarkHintX: 0, bookmarkHintY: 0, bookmarkHintWidth: 0, bookmarkHintHeight: 0,
-  bookmarkHintArrowVisible: false, bookmarkHintArrowRotation: 0,
-  layout, appearance: { activeTheme: 'paper', paragraphSpacing: 16 },
+  emptyPage: { fragments: [] }, layout, appearance: { activeTheme: 'paper', paragraphSpacing: 16 },
   slotIdentity: value => value, slotSnapshotId: () => '', slotX: () => 0, slotLayer: () => 0,
   slotVisible: () => true, slotShadow: () => 0, hasActiveTurn: () => true, hasLiveTurnWidth: () => true });
 for (const name of ['slotPage', 'refreshRenderPages', 'currentRenderPage', 'adjacentRenderPage']) stage[name] = StageMethods.prototype[name];

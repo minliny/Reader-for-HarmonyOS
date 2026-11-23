@@ -1,0 +1,442 @@
+{
+  "id": "source-management.inline-import-touch-edges",
+  "version": 2,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-inline-import-touch-edges-v1",
+    "description": "Open the normal populated public Source catalog from Settings. Measure the full native 44vp inline import response, then touch its four cardinal edges outside the button paint and its center inside the paint. Each touch opens the real book-source JSON dialog. Use system Back to return to the same untouched Source opening. Never select or import any document.",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-header-tools",
+        "reader-source-list",
+        "reader-source-search",
+        "reader-source-editor",
+        "reader-source-footer"
+      ],
+      "keyboard": false,
+      "afterAction": "open-sources",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current"
+          }
+        }
+      ],
+      "quietMs": 500
+    },
+    {
+      "id": "tap-inline-import-top",
+      "kind": "action",
+      "op": "click",
+      "from": "source-ready",
+      "target": "reader-source-search-import-button",
+      "tapEdge": "top"
+    },
+    {
+      "id": "inline-import-dialog-top",
+      "kind": "sample",
+      "afterAction": "tap-inline-import-top",
+      "anchors": [
+        "reader-source-inline-import-dialog"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "back-inline-import-top",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "inline-import-dialog-top",
+      "key": "Back"
+    },
+    {
+      "id": "inline-import-returned-top",
+      "kind": "sample",
+      "afterAction": "back-inline-import-top",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-search"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "tap-inline-import-bottom",
+      "kind": "action",
+      "op": "click",
+      "from": "inline-import-returned-top",
+      "target": "reader-source-search-import-button",
+      "tapEdge": "bottom"
+    },
+    {
+      "id": "inline-import-dialog-bottom",
+      "kind": "sample",
+      "afterAction": "tap-inline-import-bottom",
+      "anchors": [
+        "reader-source-inline-import-dialog"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "back-inline-import-bottom",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "inline-import-dialog-bottom",
+      "key": "Back"
+    },
+    {
+      "id": "inline-import-returned-bottom",
+      "kind": "sample",
+      "afterAction": "back-inline-import-bottom",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-search"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "tap-inline-import-left",
+      "kind": "action",
+      "op": "click",
+      "from": "inline-import-returned-bottom",
+      "target": "reader-source-search-import-button",
+      "tapEdge": "left"
+    },
+    {
+      "id": "inline-import-dialog-left",
+      "kind": "sample",
+      "afterAction": "tap-inline-import-left",
+      "anchors": [
+        "reader-source-inline-import-dialog"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "back-inline-import-left",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "inline-import-dialog-left",
+      "key": "Back"
+    },
+    {
+      "id": "inline-import-returned-left",
+      "kind": "sample",
+      "afterAction": "back-inline-import-left",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-search"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "tap-inline-import-right",
+      "kind": "action",
+      "op": "click",
+      "from": "inline-import-returned-left",
+      "target": "reader-source-search-import-button",
+      "tapEdge": "right"
+    },
+    {
+      "id": "inline-import-dialog-right",
+      "kind": "sample",
+      "afterAction": "tap-inline-import-right",
+      "anchors": [
+        "reader-source-inline-import-dialog"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "back-inline-import-right",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "inline-import-dialog-right",
+      "key": "Back"
+    },
+    {
+      "id": "inline-import-returned-right",
+      "kind": "sample",
+      "afterAction": "back-inline-import-right",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-search"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "tap-inline-import-center",
+      "kind": "action",
+      "op": "click",
+      "from": "inline-import-returned-right",
+      "target": "reader-source-search-import-button"
+    },
+    {
+      "id": "inline-import-dialog-center",
+      "kind": "sample",
+      "afterAction": "tap-inline-import-center",
+      "anchors": [
+        "reader-source-inline-import-dialog"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "back-inline-import-center",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "inline-import-dialog-center",
+      "key": "Back"
+    },
+    {
+      "id": "inline-import-returned-center",
+      "kind": "sample",
+      "afterAction": "back-inline-import-center",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-search"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/JsonImportDialog.ets",
+    "entry/src/main/ets/app/composition/JsonImportPresentation.ets",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/ui/chrome/PageBackBar.ets",
+    "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+    "entry/src/main/ets/ui/controls/ReaderButton.ets",
+    "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
+    "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
+    "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets"
+  ],
+  "assertions": [
+    {
+      "id": "source.route.entry",
+      "evaluator": "source",
+      "kind": "route",
+      "expected": {
+        "action": "open",
+        "from": "settings",
+        "to": "source",
+        "anchor": "reader-source-back"
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderSourceJourney.ets#ReaderSourceJourney",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "sample": "source-ready",
+      "action": "open-sources"
+    },
+    {
+      "id": "source.import.top-touch-edge",
+      "evaluator": "source",
+      "kind": "source-inline-import-edge",
+      "expected": {
+        "target": "reader-source-search-import-button",
+        "tapEdge": "top"
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#importAction",
+      "entryAction": "open-sources",
+      "action": "tap-inline-import-top",
+      "baseline": "source-ready",
+      "dialogSample": "inline-import-dialog-top",
+      "returnAction": "back-inline-import-top",
+      "sample": "inline-import-returned-top",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ]
+    },
+    {
+      "id": "source.import.bottom-touch-edge",
+      "evaluator": "source",
+      "kind": "source-inline-import-edge",
+      "expected": {
+        "target": "reader-source-search-import-button",
+        "tapEdge": "bottom"
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#importAction",
+      "entryAction": "open-sources",
+      "action": "tap-inline-import-bottom",
+      "baseline": "inline-import-returned-top",
+      "dialogSample": "inline-import-dialog-bottom",
+      "returnAction": "back-inline-import-bottom",
+      "sample": "inline-import-returned-bottom",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ]
+    },
+    {
+      "id": "source.import.left-touch-edge",
+      "evaluator": "source",
+      "kind": "source-inline-import-edge",
+      "expected": {
+        "target": "reader-source-search-import-button",
+        "tapEdge": "left"
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#importAction",
+      "entryAction": "open-sources",
+      "action": "tap-inline-import-left",
+      "baseline": "inline-import-returned-bottom",
+      "dialogSample": "inline-import-dialog-left",
+      "returnAction": "back-inline-import-left",
+      "sample": "inline-import-returned-left",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ]
+    },
+    {
+      "id": "source.import.right-touch-edge",
+      "evaluator": "source",
+      "kind": "source-inline-import-edge",
+      "expected": {
+        "target": "reader-source-search-import-button",
+        "tapEdge": "right"
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#importAction",
+      "entryAction": "open-sources",
+      "action": "tap-inline-import-right",
+      "baseline": "inline-import-returned-left",
+      "dialogSample": "inline-import-dialog-right",
+      "returnAction": "back-inline-import-right",
+      "sample": "inline-import-returned-right",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ]
+    },
+    {
+      "id": "source.import.target-area",
+      "evaluator": "source",
+      "kind": "source-inline-import-area",
+      "expected": {
+        "target": "reader-source-search-import-button"
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#importAction",
+      "action": "open-sources",
+      "sample": "source-ready",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ]
+    },
+    {
+      "id": "source.import.center-touch",
+      "evaluator": "source",
+      "kind": "source-inline-import-center",
+      "expected": {
+        "target": "reader-source-search-import-button"
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#importAction",
+      "entryAction": "open-sources",
+      "action": "tap-inline-import-center",
+      "baseline": "inline-import-returned-right",
+      "dialogSample": "inline-import-dialog-center",
+      "returnAction": "back-inline-import-center",
+      "sample": "inline-import-returned-center",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ]
+    }
+  ],
+  "structure": {
+    "source-ready": "source-ready",
+    "inline-import-dialog-top": "inline-import-dialog-top",
+    "inline-import-returned-top": "inline-import-returned-top",
+    "inline-import-dialog-bottom": "inline-import-dialog-bottom",
+    "inline-import-returned-bottom": "inline-import-returned-bottom",
+    "inline-import-dialog-left": "inline-import-dialog-left",
+    "inline-import-returned-left": "inline-import-returned-left",
+    "inline-import-dialog-right": "inline-import-dialog-right",
+    "inline-import-returned-right": "inline-import-returned-right",
+    "inline-import-dialog-center": "inline-import-dialog-center",
+    "inline-import-returned-center": "inline-import-returned-center"
+  }
+}

@@ -3,10 +3,10 @@ const definitions={"role-registry": {"description": "本地role alpha/颜色格�
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const {switchControls,segmentSource} = await import('./lib/reader-switch-control-probe.mjs');
+const {switchControls,switchSpecs,segmentSource} = await import('./lib/reader-switch-control-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 const { foundationControls, foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
@@ -16,67 +16,13 @@ const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mj
 
 // Snapshot of the actual replaced local constants, captured before migration.
 // Verify authored Day/alpha and the live consumers, not just registry presence.
-// Exact 2026-10-26 migration from Reader-UI/theme/semantic-role-migration.
-const legacyRoleMigration = {
-  'app.ReaderSegmentedControl.SEG_TEXT_ACTIVE': 'app.segment.activeText',
-  'app.ReaderSegmentedControl.SEG_TEXT_INACTIVE': 'app.segment.inactiveText',
-  'app.ReaderSegmentedControl.SEG_SELECTED_BG': 'app.segment.selected',
-  'app.ReaderSegmentedControl.SEG_SELECTED_BORDER': 'TOK_GREEN',
-  'app.ReaderSegmentedControl.SEG_BG': 'app.segment.surface',
-  'app.ReaderSegmentedControl.SEG_BORDER': 'app.segment.border',
-  'app.SyncPage.ROW_BG': 'app.surface.syncRow',
-  'app.SyncPage.ROW_BORDER': 'app.border.contentCard',
-  'app.SyncPage.GHOST_BG': 'app.sync.ghostSurface',
-  'app.SyncPage.GHOST_BORDER': 'app.sync.ghostBorder',
-  'app.SyncPage.SOLID_BG': 'app.sync.actionSurface',
-  'app.SyncPage.CARD_BORDER_SOFT': 'app.border.statusCard',
-  'app.SyncPage.BADGE_BG': 'app.sync.badgeSurface',
-  'app.SourceManagementPage.STATUS_ERROR_DOT': 'app.status.checkError',
-  'app.SourceManagementPage.STATUS_ERROR_BG': 'app.status.checkErrorSoft',
-  'app.SourceManagementPage.CHIP_BORDER': 'app.border.sourceGroup',
-  'app.SourceManagementPage.SEARCH_FIELD_BORDER': 'app.border.searchField',
-  'app.SourceManagementPage.STATUS_GOOD_BG': 'app.status.goodSoft',
-  'app.SourceManagementPage.STATUS_MUTED_BG': 'app.status.mutedSoft',
-  'app.SourceManagementPage.STATUS_GOOD_DOT': 'app.status.good',
-  'app.SourceManagementPage.STATUS_MUTED_DOT': 'app.status.mutedDot',
-  'app.DiscoverPage.ICON_BOX_BG': 'app.discover.sourceIconSurface',
-  'app.DiscoverPage.CURRENT_SOURCE_BORDER': 'app.discover.sourceBorder',
-  'app.DiscoverPage.CHIP_BG': 'app.discover.categorySurface',
-  'app.DiscoverPage.FILTER_BORDER': 'app.border.filter',
-  'app.DiscoverPage.APPLY_BORDER': 'app.action.applyBorder',
-  'app.RssEntryDetailPage.CARD_BORDER': 'app.border.contentCard',
-  'app.RssEntryDetailPage.ACTION_BG': 'app.feed.actionSoft',
-  'app.RssSourceFeedPage.CARD_BORDER': 'app.border.contentCard',
-  'app.RssSourceFeedPage.ACTION_BG': 'app.feed.actionSoft',
-  'app.RssPage.PILL_BG': 'app.feed.pillSurface',
-  'app.RssPage.PILL_BORDER': 'app.feed.pillBorder',
-  'app.RssPage.SOFT_PILL_BG': 'app.feed.actionSoft',
-  'app.RssPage.CARD_BORDER': 'app.border.contentCard',
-  'app.RssPage.FILTER_TEXT': 'app.text.filter',
-  'app.RssPage.FILTER_BORDER': 'app.border.filter',
-  'app.RssPage.VIEW_ALL_BG': 'TOK_PRIMARY_SOFT',
-  'app.RssPage.MUTED_DEEP': 'app.text.feedMeta',
-  'app.RssPage.ERROR_CARD_BG': 'app.feed.errorSurface',
-  'app.RssPage.STATUS_DISABLED_BG': 'app.feed.disabledSurface',
-  'app.RssPage.STATUS_ENABLED_BG': 'app.feed.enabledSurface',
-  'app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR': 'app.directory.edgeFade',
-  'app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR': 'app.directory.edgeFadeTransparent',
-  'app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT': 'app.bookmark.excerptAccent',
-  'app.ReaderBookmarkEmptyState.EMPTY_STATE_BUTTON_COLOR': 'app.bookmark.emptyAction',
-  'app.BookshelfSettingsPage.modeOption.onSelected': 'app.selection.onMode',
-};
 const rows = JSON.parse(readFileSync(new URL('./fixtures/design/theme-consumers.json', import.meta.url)))
-  .filter(row => row.originalConstant !== undefined)
-  .map(row => {
-    const role = legacyRoleMigration[row.role];
-    assert.equal(typeof role, 'string', `semantic migration covers ${row.file}:${row.originalConstant}`);
-    return { ...row, role };
-  });
+  .filter(row => row.originalConstant !== undefined);
 
 // Migrated Sync actions consume these same roles through the actual shared
 // Button. Execute the SDK-emitted parent and child, then retain the authored
 // palette checks below; registry presence or a new whitelist is insufficient.
-const syncFile = 'features/sync/SyncPage.ets';
+const syncFile = 'features/sync/ui/SyncPage.ets';
 const syncSource = readFileSync(new URL(`../entry/src/main/ets/${syncFile}`, import.meta.url), 'utf8');
 const sharedRoles = new Set();
 function syncActions(specs = foundationSpecs()) {
@@ -102,13 +48,12 @@ function checkSyncActions(probe, scheme) {
     const node = probe.shared.nodes(child).find(n => n.onClick);
     const surface = child.primary ? spec.primarySurface : spec.secondarySurface;
     const border = child.primary ? spec.primaryBorder : spec.secondaryBorder;
-    const authoredSurface = legacyRoleMigration[child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BG'];
+    const authoredSurface = child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BG';
     assert.equal(surface, authoredSurface, 'authored Sync surface role retained through finite spec');
     assert.equal(node.backgroundColor, readerAppColor(authoredSurface, scheme), 'live shared surface follows current scheme');
     sharedRoles.add(surface);
     if (spec.hasBorder && (!child.primary || spec.primaryHasBorder)) {
-      assert.equal(border, legacyRoleMigration[child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BORDER'],
-        'authored Sync border role retained');
+      assert.equal(border, child.primary ? 'app.SyncPage.SOLID_BG' : 'app.SyncPage.GHOST_BORDER', 'authored Sync border role retained');
       assert.equal(node.border.color, readerAppColor(border, scheme), 'live shared border follows current scheme');
       sharedRoles.add(border);
     }
@@ -129,8 +74,7 @@ function captureSharedConsumer(file, methods, render) {
   Object.assign(owner, { appThemeScheme: 'day', activeMode: 'all', filterValue: 'all',
     filterControlWidth: () => 280, contentFrame: () => ({ width: 350 }), actionBottomInset: () => 0,
     onOpenTools: () => {}, onAddSource: () => {}, onModeRequested: () => {},
-    presentation:{activeKindIndex:0,activeSourceIndex:0,sources:[{name:'默认'}],
-      kinds:[{title:'默认'},{title:'其他'}],filterKey:'all',loading:false,page:1},
+    presentation:{activeKindIndex:0,kinds:[{title:'默认'},{title:'其他'}],filterKey:'all',loading:false},
     onSelectKind:()=>{},onCycleFilter:()=>{},onRefresh:()=>{} });
   render(owner);
   const roles = new Set(rows.filter(row => row.file === file).map(row => row.role));
@@ -153,24 +97,23 @@ function captureSharedConsumer(file, methods, render) {
   }
   sharedBindings.set(file, new Set([...witnesses].filter(([, schemes]) => schemes.size === 2).map(([role]) => role)));
 }
-if(selectedCase==='source') captureSharedConsumer('features/source/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
-  // Finite measured geometry port at this palette fixture's scale1. The
-  // selected case proves live colors; Source layout has its separate probe.
-  owner.layoutBudget = () => ({ footerHeight: 44 });
-  owner.statusValue = '全部'; owner.chip('未检测', 58, true); owner.bottomActionBar();
+if(selectedCase==='source') captureSharedConsumer('features/source/ui/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
+  owner.chip('未检测', 58, false, true); owner.bottomActionBar();
 });
-if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
-if(selectedCase==='rss') captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
+if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/ui/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', () => 'icon', () => {}));
+if(selectedCase==='rss') captureSharedConsumer('features/rss/ui/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
   owner.statusTab('未读', 'unread'); owner.filterPill('未读'); owner.recentUnreadHeader();
 });
-if(selectedCase==='discover') captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','currentSourceCard','rankingHeader','currentFilterText','kindTitles'], owner => {
-  owner.currentSourceCard();owner.categoryChips();owner.rankingHeader();
+if(selectedCase==='discover') captureSharedConsumer('features/discover/ui/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
+  owner.categoryChips();owner.filterRow();
 });
 // F04's same theme palette now belongs to the actual finite enum producer.
 function captureSegmentTheme(source = segmentSource) {
   const control = switchControls({ segmentDefinition: source });
   const owner = control.mount(control.segment, { inputIdentity: 'theme-palette', options: ['跟随','浅色','深色'], optionIds: ['system','day','night'], selectedIndex: 0 });
-  const roles = new Set(rows.filter(row => row.file === 'features/common/ReaderSegmentedControl.ets').map(row => row.role));
+  const {activeText,inactiveText,selectedSurface,selectedBorder,surface,border}=switchSpecs().resolveReaderSegmentSpec('app-theme-segment');
+  const roles = new Set([activeText,inactiveText,selectedSurface,selectedBorder,surface,border]);
+  for(const role of roles) assert.match(readerAppColor(role,'day'),/^#[0-9A-Fa-f]{8}$/, 'current finite segmented palette role');
   const witnessed = new Map();
   for (const scheme of ['day', 'night', 'day']) {
     owner.appThemeScheme = scheme; control.properties.flush();
@@ -183,14 +126,14 @@ function captureSegmentTheme(source = segmentSource) {
   return new Set([...witnessed].filter(([,schemes])=>schemes.size===2).map(([role])=>role));
 }
 if(selectedCase==='segment') {
-sharedBindings.set('features/common/ReaderSegmentedControl.ets', captureSegmentTheme());
-assert.notDeepEqual(captureSegmentTheme(segmentSource.replaceAll('this.appThemeScheme', "'day'")), sharedBindings.get('features/common/ReaderSegmentedControl.ets'), 'frozen Day shared enum cannot qualify Night role consumption');
+sharedBindings.set('ui/controls/ReaderSegmentedControl.ets', captureSegmentTheme());
+assert.notDeepEqual(captureSegmentTheme(segmentSource.replaceAll('this.appThemeScheme', "'day'")), sharedBindings.get('ui/controls/ReaderSegmentedControl.ets'), 'frozen Day shared enum cannot qualify Night role consumption');
 }
 if(selectedCase==='bookmark-empty') {
 // C03 intentionally replaces this one historical empty-state button color
 // with the approved message family. Keep its original registry tuple above,
 // and prove the real wrapper -> PageState -> Action and both live schemes.
-const bookmarkEmptyFile='features/reading/ReaderBookmarkEmptyState.ets';
+const bookmarkEmptyFile='features/reading/ui/ReaderBookmarkEmptyState.ets';
 const bookmarkEmptySource=readFileSync(new URL(`../entry/src/main/ets/${bookmarkEmptyFile}`,import.meta.url),'utf8');
 const bookmarkMessages=boundedSurfaceSdk();let returned=0;
 const bookmarkEmpty=bookmarkMessages.consumer(bookmarkEmptySource,undefined,{}, {onReturnToDirectory:()=>returned++});bookmarkEmpty.initialRender();
@@ -205,18 +148,7 @@ for(const scheme of ['day','night','day']){
 }
 assert.equal(returned,3);
 }
-if(selectedCase==='role-registry') {
- for(const row of rows) {
-  assert.match(row.day,/^#[0-9A-Fa-f]{8}$/);assert.match(row.night,/^#[0-9A-Fa-f]{8}$/);
-  assert.equal(row.day.slice(1,3),row.night.slice(1,3),
-   row.file+':'+row.originalConstant+': archived local-role alpha remains an explicit invariant');
- }
- for(const role of new Set(rows.map(row=>row.role))) {
-  const day=readerAppColor(role,'day'),night=readerAppColor(role,'night');
-  assert.match(day,/^#[0-9A-Fa-f]{8}$/,role+': current Day role resolves');
-  assert.match(night,/^#[0-9A-Fa-f]{8}$/,role+': current Night role resolves');
- }
-}
+if(selectedCase==='role-registry') for(const role of new Set(rows.map(row=>row.role))){const day=readerAppColor(role,'day'),night=readerAppColor(role,'night');assert.match(day,/^#[0-9A-Fa-f]{8}$/);assert.match(night,/^#[0-9A-Fa-f]{8}$/);assert.equal(day.slice(1,3),night.slice(1,3),'local-role alpha is an explicit semantic invariant; color values may evolve');}
 // Negative controls prove that a hard-coded Day scheme or wrong finite role
 // cannot be admitted as a successfully migrated consumer.
 if(selectedCase==='sync-actions') {
@@ -232,7 +164,7 @@ assert.throws(() => checkSyncActions(wrongRole, 'day'), /authored Sync surface r
 
 }
 if(selectedCase==='status-semantics') {
-const SourcePage = selectedProductionMethods(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets', import.meta.url),'SourceManagementPage',
+const SourcePage = selectedProductionMethods(new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url),'SourceManagementPage',
   ['statusBadgeBackground', 'statusBadgeDot'],{readerAppColor});
 const page = new SourcePage();
 for (const scheme of ['day', 'night']) {

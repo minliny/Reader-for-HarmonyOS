@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 
 import { ReadingChapterWindow } from
-  '../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
-import { readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
+  '../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts';
+import { readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts';
 
 function chapter(chapterIndex, contentVersion = `body-${chapterIndex}`) {
   return {

@@ -1,6 +1,6 @@
-import { ReadingPaginationIndex } from '../../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
-import { ReaderParagraphLayoutOwner } from '../../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts';
-import { ReaderPhysicalPaginationOwner } from '../../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
+import { ReadingPaginationIndex } from '../../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
+import { ReaderParagraphLayoutOwner } from '../../entry/src/main/ets/features/reading/ui/ReaderParagraphLayoutOwner.ts';
+import { ReaderPhysicalPaginationOwner } from '../../entry/src/main/ets/features/reading/ui/ReaderPhysicalPaginationOwner.ts';
 
 export function installReaderLayoutOwners(subject) {
   subject.paragraphLayout ??= new ReaderParagraphLayoutOwner();

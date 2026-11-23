@@ -8,14 +8,14 @@ const { readFileSync } = await import('node:fs');
 const { dirname, resolve } = await import('node:path');
 const { fileURLToPath } = await import('node:url');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const { createRequire } = await import('node:module');
 
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const page = readFileSync(resolve(
   repo,
-  'entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets',
+  'entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets',
 ), 'utf8');
 
 // Actual page -> standard body slot -> native Scroll retains the original
@@ -25,21 +25,17 @@ const page = readFileSync(resolve(
  const sdk=boundedSurfaceSdk(),scrolls=[],bodies=[],queue=[];
  class Scroller{scrollTo(value){scrolls.push(value);}}
  class Header{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
- sdk.childSources.PageBackBar=readFileSync(resolve(repo,'entry/src/main/ets/features/common/PageBackBar.ets'),'utf8');
+ sdk.childSources.PageBackBar=readFileSync(resolve(repo,'entry/src/main/ets/ui/chrome/PageBackBar.ets'),'utf8');
  const loader=resolveEtsLoaderRoot();
  createRequire(import.meta.url)(loader+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
  const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=393;metrics.systemInsets.left=24;metrics.cutoutInsets.right=30;
  const owner=sdk.consumer(page,['build','pageContent','backBar','pageScroller','focusSubscriptionIfNeeded','expandedSubscriptionId','focusedSubscriptionId'],
   {Scroller,PageBackBar:Header,ReaderWindowCoordinator:{metrics:()=>metrics},setTimeout:action=>queue.push(action)});
- Object.assign(owner,{focusedSubscriptionId:'feed',resultMessage:'',stats:()=>bodies.push('stats'),operationFeedback:()=>bodies.push('operationFeedback'),subscriptionList:()=>bodies.push('subscriptionList')});owner.initialRender();
+ Object.assign(owner,{focusedSubscriptionId:'feed',stats:()=>bodies.push('stats'),operationFeedback:()=>bodies.push('operationFeedback'),subscriptionList:()=>bodies.push('subscriptionList')});owner.initialRender();
  const child=sdk.walk(owner).find(actor=>actor.variant==='rssManagement');assert.ok(child);assert.equal(child.scroller,owner.pageScroller);
- const host=sdk.walk(owner).find(actor=>actor.scroller===owner.pageScroller&&actor.layout);assert.ok(host,'actual shared Scroll host consumes the page scroller');
- const allNodes=sdk.walk(owner).flatMap(actor=>[...(actor.nodes?.values()??[])]);
- const scroll=allNodes.find(node=>node.type==='Scroll'&&node.create===owner.pageScroller);assert.ok(scroll);assert.equal(scroll.height,'100%');
+ const scroll=[...child.nodes.values()].find(node=>node.type==='Scroll');assert.ok(scroll);assert.equal(scroll.create,owner.pageScroller);assert.equal(scroll.height,'100%');
  assert.deepEqual(bodies,['stats','operationFeedback','subscriptionList']);
- const scaffoldNode=[...child.nodes.values()].find(node=>typeof node.onAreaChange==='function');assert.ok(scaffoldNode,'actual standard page receives the native viewport');
- scaffoldNode.onAreaChange({}, {width:393,height:800});sdk.properties.flush();
- const body=allNodes.find(node=>node.type==='Column'&&node.padding?.left===24&&node.padding?.right===30);assert.ok(body);assert.deepEqual([body.padding.left,body.padding.right],[24,30]);
+ const body=[...child.nodes.values()].find(node=>node.type==='Column'&&node.padding);assert.deepEqual([body.padding.left,body.padding.right],[24,30]);
  owner.focusSubscriptionIfNeeded({subscriptionId:'feed'},3);queue.shift()();assert.equal(scrolls.length,1);assert.equal(scrolls[0].xOffset,0);assert.ok(scrolls[0].yOffset>0);assert.equal(scrolls[0].animation,false,'focus restores through actual native controller without invented layout timing');
  assert.equal(owner.expandedSubscriptionId,'feed');sdk.properties.flush();assert.equal(child.scroller,owner.pageScroller);assert.equal(scroll.create,owner.pageScroller);assert.deepEqual(bodies,['stats','operationFeedback','subscriptionList']);
 }

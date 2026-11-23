@@ -9,29 +9,25 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderWriteEvidence} from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import {projectOperationFacts,projectCommitReadback} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import {READER_FEEDBACK_BRIEF_MS} from '../entry/src/main/ets/features/common/ReaderTransientFeedback.ts';
 import {readerFloatingTabContentInset} from './lib/reader-floating-bar-metrics-probe.mjs';
-import {createDefaultReaderWindowMetrics} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {createDefaultReaderWindowMetrics} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 const file=p=>new URL('../entry/src/main/ets/'+p,import.meta.url),source=p=>readFileSync(file(p),'utf8');
 const projectPersistedReceipt=new Function('projectOperationFacts','projectCommitReadback',stripTypeScriptTypes(source('app/ReaderPersistedReceiptProjection.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return projectPersistedReceipt;')(projectOperationFacts,projectCommitReadback);
 const tick=()=>new Promise(resolve=>setImmediate(resolve)),defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
-const until=async(predicate,detail=()=>'')=>{for(let i=0;i<200;i++){if(predicate())return;await tick();}throw Error('fixture boundary did not settle '+detail());};
 let runtime;
-const Store=productionMotionMethods(file('features/sync/WebDavCredentialStore.ts'),['attachContext','currentBookshelfViewMode','bookshelfModeContextGeneration',
+const Store=productionMotionMethods(file('features/sync/application/WebDavCredentialStore.ts'),['attachContext','currentBookshelfViewMode','bookshelfModeContextGeneration',
  'loadBookshelfViewMode','saveBookshelfViewMode','readOrMigrateViewMode','writeLocalViewMode','validateRestoreJournal'],
- {LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal',
-  ReaderThemeHost:{settingsWriteGeneration:()=>0,assertSettingsWritable:()=>{}}});
+ {LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal'});
 const Host=new Function('WebDavCredentialStore','ReaderThemeHost','ReaderRuntimeOwner','ReaderWriteEvidence','errorMessageOf','projectOperationFacts','projectPersistedReceipt',
- stripTypeScriptTypes(source('features/bookshelf/BookshelfViewModeHost.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return BookshelfViewModeHost;')(
- {instance:{}},{prepareUserChange:async()=>{},settingsWriteGeneration:()=>0,assertSettingsWritable:()=>{}},
- runtimeOwnerIdentityProbe(()=>runtime),ReaderWriteEvidence,e=>e.message,projectOperationFacts,projectPersistedReceipt);
+ stripTypeScriptTypes(source('features/bookshelf/application/BookshelfViewModeHost.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return BookshelfViewModeHost;')(
+ {instance:{}},{prepareUserChange:async()=>{}},runtimeOwnerIdentityProbe(()=>runtime),ReaderWriteEvidence,e=>e.message,projectOperationFacts,projectPersistedReceipt);
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js'),maps=require(sdk+'/lib/component_map.js');
-for(const name of ['ReaderRecoveryNotice','ReaderRecoveryAction','PageBackBar']){
+for(const [name,directory] of [['ReaderRecoveryNotice','ui/feedback'],['ReaderRecoveryAction','ui/feedback'],['PageBackBar','ui/chrome']]){
  syntax.componentCollection.customComponents.add(name);
- syntax.propCollection.set(name,new Set([...source('features/common/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
+ syntax.propCollection.set(name,new Set([...source(directory+'/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 }
-for(const path of ['features/bookshelf/BookshelfPage.ets','features/bookshelf/BookshelfSettingsPage.ets'])
+for(const path of ['features/bookshelf/ui/BookshelfPage.ets','features/bookshelf/ui/BookshelfSettingsPage.ets'])
  for(const m of source(path).matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))maps.CUSTOM_BUILDER_METHOD.add(m[1]);
 class Child {constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 function fixture(){
@@ -44,21 +40,16 @@ function fixture(){
   context:{},ensureLocalPreferences:async()=>backend,load:async()=>null});
  const host=new Host(store,()=>prepare());
  const page=(settings=false)=>{
-  const path=settings?'features/bookshelf/BookshelfSettingsPage.ets':'features/bookshelf/BookshelfPage.ets';
+  const path=settings?'features/bookshelf/ui/BookshelfSettingsPage.ets':'features/bookshelf/ui/BookshelfPage.ets';
   const toasts=[];
-  const names=settings?['selectMode','persistRequestedMode','viewModeRecovery','applyModeSnapshot','retryMode','loadMode','aboutToDisappear','modePending','modeFeedback']:
-   ['setViewMode','persistRequestedViewMode','viewModeRecovery','applyViewModeSnapshot','retryViewMode','loadViewMode','aboutToDisappear','viewModePending','modeFeedback',
-    'publishContinueCardRect','continueCardBookKey'];
-  const Model=productionMotionMethods(file(path),names,{readerRecoveryView,READER_FEEDBACK_BRIEF_MS});
-  const p=Object.assign(new Model(),{viewModeHost:host,viewModeSnapshot:{canonical:undefined},mounted:true,revision:0,viewModeRevision:0,mode:'cover',viewMode:'cover',
+  const names=settings?['selectMode','persistRequestedMode','userInputIsCurrent','preferenceControlIdentity','viewModeRecovery','applyModeSnapshot','retryMode','loadMode','aboutToDisappear','modePending','modeFeedback']:
+   ['setViewMode','persistRequestedViewMode','isShelfPresentationCurrent','viewModeRecovery','applyViewModeSnapshot','retryViewMode','loadViewMode','aboutToDisappear','viewModePending','modeFeedback'];
+  const Model=productionMotionMethods(file(path),names,{readerRecoveryView});
+  const p=Object.assign(new Model(),{viewModeHost:host,viewModeSnapshot:{canonical:undefined},mounted:true,revision:0,viewModeRevision:0,navigationGeneration:7,presentationRevision:0,isInputAllowed:()=>true,feedbackEnabled:true,isCurrentShelfInput:()=>true,mode:'cover',viewMode:'cover',
    storedViewMode:'cover',confirmed:'cover',confirmedViewMode:'cover',requestedMode:'cover',requestedViewMode:'cover',error:'',viewModeError:'',reduceMotion:true,
    viewSwitchRunning:false,projectionGeneration:0,viewportRestoreGeneration:0,viewState:{},resetViewSwitchMotion(){this.viewSwitchRunning=false;},
    setRestingProjectionOpacity(){},rebuildShelfProjection(){},saveShelfViewport(){},webDavCredentials:store,
-   transientFeedback:{show:(_context,options)=>{toasts.push(options.message);return true;},reset(){}},
-   getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>toasts.push(message)})}),lastModeFeedback:'',
-   feedbackEnabled:true,onContinueCardRect:()=>{},navigationGeneration:0,continueReading:undefined,
-   continueCardPublishedNavigation:-1,continueCardPublishedKey:'',continueCardPublishedRect:undefined,
-   actionSheetChromeId:'',actionSheetId:'',actionBook:undefined,isCurrentChromeHost:()=>true});
+   getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>toasts.push(message)})}),lastModeFeedback:''});
   return{p,select:mode=>p[settings?'selectMode':'setViewMode'](mode),load:()=>p[settings?'loadMode':'loadViewMode'](),
    retry:g=>p[settings?'retryMode':'retryViewMode'](g),close:()=>p.aboutToDisappear(),
    // Receipt safety is checked through the actual page methods. The new
@@ -74,11 +65,11 @@ function fixture(){
 // Mount the actual settings lifecycle and SDK content together: selecting a
 // mode before rendering would warm the Host and hide this first-mount defect.
 function settingsLifecycleSdk(f){
- const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),definition=source('features/bookshelf/BookshelfSettingsPage.ets');
+ const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),definition=source('features/bookshelf/ui/BookshelfSettingsPage.ets');
  const names=['appThemeScheme','mode','autoCheckUpdate','operation','navigationGeneration','presentationRevision','error','viewModeSnapshot',
   'viewModeHost','revision','confirmed','requestedMode','mounted','modeLoadBusy','modeReconcileBusy','lastModeFeedback','lastSettingsFeedback',
   'aboutToAppear','aboutToDisappear','settingsPending','modePending','onOperationChanged','viewModeRecovery','modeFeedback','loadMode',
-  'applyModeSnapshot','pageContent','modeOption','selectMode','persistRequestedMode','pendingOverlay','settingsRecovery','retryMode'];
+  'applyModeSnapshot','pageContent','preferenceControlIdentity','selectMode','persistRequestedMode','pendingOverlay','settingsRecovery','retryMode'];
  const page=sdk.consumer(definition,names,{readerRecoveryView,BookshelfViewModeHost:{instance:f.host},WebDavCredentialStore:{instance:f.store},registerReaderFonts(){}},
   {operation:{action:'load',readFacts:projectOperationFacts({phase:'idle'})}});
  Object.assign(page,{getUIContext:()=>({getFont:()=>({}),getPromptAction:()=>({showToast(){}})})});
@@ -103,10 +94,8 @@ for(const canonical of ['cover','list']){
  startupLifecycleCases++;
 }
 {
- const f=fixture(),gate=f.gate(),work=f.host.save('list',()=>true);
- await until(()=>f.calls.some(call=>call[0]==='flush'),()=>JSON.stringify(f.calls));runtime={};gate.reject(Error('lost flush ACK'));await work;
- assert.equal(f.host.current().canonical,undefined);
- assert.equal(f.host.current().receipt.receipt.confirmation,'unknown');
+ const f=fixture(),gate=f.gate(),work=f.host.save('list',()=>true);await tick();runtime={};gate.reject(Error('lost flush ACK'));await work;
+ assert.equal(f.host.current().canonical,undefined);assert.equal(f.host.current().receipt.receipt.confirmation,'unknown');
  await f.store.loadBookshelfViewMode(false);const original=f.host.current(),calls=f.calls.length,x=settingsLifecycleSdk(f);
  assert.deepEqual(x.options().map(node=>node.create),['封面','列表']);assert.equal(x.rawSnapshot(),original,'any unresolved owner snapshot remains the exact original object under the real SDK State proxy');
  assert.equal(x.page.viewModeSnapshot.canonical,undefined,'the Store value cannot overwrite an unresolved owner snapshot');
@@ -163,15 +152,14 @@ for(const unknown of [false,true]){
 
 // Actual SDK page → Notice → native action during the real preference read.
 function modeSdk(f,settings){
- const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),path=settings?'features/bookshelf/BookshelfSettingsPage.ets':'features/bookshelf/BookshelfPage.ets';
+ const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),path=settings?'features/bookshelf/ui/BookshelfSettingsPage.ets':'features/bookshelf/ui/BookshelfPage.ets';
  const common=['modeReconcileBusy','viewModeSnapshot','viewModeRecovery','mounted','lastModeFeedback','modeFeedback'];
  const names=settings?[...common,'pendingOverlay','modePending','retryMode','revision','applyModeSnapshot','aboutToDisappear']:
   [...common,'bookshelfTabContent','viewModePending','retryViewMode','viewModeRevision','applyViewModeSnapshot','aboutToDisappear'];
  const owner=sdk.consumer(source(path),names,{readerRecoveryView});
- Object.assign(owner,{viewModeHost:f.host,viewModeSnapshot:f.host.current(),mounted:true,revision:0,viewModeRevision:0,
+ Object.assign(owner,{viewModeHost:f.host,viewModeSnapshot:f.host.current(),mounted:true,revision:0,viewModeRevision:0,navigationGeneration:7,presentationRevision:0,isInputAllowed:()=>true,feedbackEnabled:true,isCurrentShelfInput:()=>true,
   settingsRecovery(){},isWideViewport:()=>false,phoneContent(){},tabletContent(){},bookActionSheetContent(){},bookActionSheetOptions:()=>({}),
   headerClearance:74,noticeTopInset:0,viewState:{},saveShelfViewport(){},resetViewSwitchMotion(){},setRestingProjectionOpacity(){},rebuildShelfProjection(){},
-  actionSheetChromeId:'',actionSheetId:'',actionBook:undefined,isCurrentChromeHost:()=>true,
   getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
  owner[settings?'pendingOverlay':'bookshelfTabContent']();
  const action=()=>sdk.walk(owner).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label==='核对显示方式');
@@ -184,7 +172,7 @@ for(const settings of[false,true]){
  const gate=f.readGate(),reads=f.calls.filter(c=>c[0]==='read').length;hit.onClick();hit.onClick();
  assert.equal(x.owner.modeReconcileBusy,true);x.sdk.properties.flush();
  assert.equal(x.action(),action);assert.equal(x.native(),hit,'same-generation busy update keeps the actual action target');
- const nodes=x.sdk.nodes(action);assert.equal(nodes.find(n=>n.type==='Text').opacity,0);assert.equal(hit.constraintSize.minHeight,44);
+ const nodes=x.sdk.nodes(action);assert.equal(nodes.find(n=>n.type==='Text').opacity,0);assert.equal(hit.constraintSize.minHeight,28);
  const loader=nodes.find(n=>n.type==='LoadingProgress');assert.deepEqual([loader.width,loader.height],[18,18]);
  assert.equal(hit.enabled,false);await tick();assert.equal(f.calls.filter(c=>c[0]==='read').length,reads+1,'duplicate native tap does not start another read');
  gate.resolve();await tick();await tick();await tick();assert.equal(x.owner.modeReconcileBusy,false);

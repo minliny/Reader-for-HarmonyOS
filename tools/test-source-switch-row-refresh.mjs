@@ -5,10 +5,10 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { sourceSwitchRowSdk } from './lib/source-switch-row-sdk-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
-import { sourceSwitchNovelChapter, sourceSwitchNovelLatency } from '../entry/src/main/ets/features/source/SourceSwitchNovelPresentation.ts';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts';
+import { sourceSwitchNovelChapter, sourceSwitchNovelLatency } from '../entry/src/main/ets/features/source/ui/SourceSwitchNovelPresentation.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets', import.meta.url), 'utf8');
 const properties = createArkUIPropertyRuntimeProbe();
 const rows = sourceSwitchRowSdk(properties, source);
 const transition = { animation() { return this; } };

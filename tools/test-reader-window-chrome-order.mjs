@@ -1,30 +1,28 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"manga-toggle": {"description": "manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars", "resources": []}, "manga-forced-ui": {"description": "manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive", "resources": []}, "manga-auth-viewport": {"description": "manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars", "resources": []}, "manga-panel-props": {"description": "manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive", "resources": []}, "manga-mask-lifecycle": {"description": "actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner", "resources": []}, "manga-mask-resize": {"description": "actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity", "resources": []}, "manga-mask-negative": {"description": "negative: original opaque phone bars cannot pass authored mask composition", "resources": []}, "manga-viewport-negative": {"description": "negative: omitted viewport chrome refresh leaves the opened mask native style stale", "resources": []}, "manga-area-negative": {"description": "negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale", "resources": []}, "manga-metric-retry": {"description": "production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount", "resources": []}, "manga-metric-negative": {"description": "negative: omitted metrics chrome refresh strands the failed native wide color", "resources": []}, "manga-inactive": {"description": "manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it", "resources": []}, "manga-old-identity": {"description": "manga old identity State/dispose cannot overwrite a newer chapter reader owner", "resources": []}, "manga-late-native": {"description": "manga late native status-hide completion after actual SDK inactive/exit converges to captured App", "resources": []}, "manga-theme": {"description": "manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion", "resources": []}, "manga-shell-props": {"description": "ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff", "resources": []}, "historical-manga": {"description": "negative: missing immersion policy call fails the native three-bar assertion", "resources": []}, "historical-shell": {"description": "negative: missing Shell active prop fails actual child window ownership", "resources": []}, "manga-watch-negative": {"description": "negative: missing control State Watch is rejected by actual production toggle", "resources": []}, "manga-bars-negative": {"description": "negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion", "resources": []}, "manga-dispose-negative": {"description": "negative: stale identity dispose guard removal is rejected after new chapter owner mount", "resources": []}, "coordinator-transparency": {"description": "explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated", "resources": []}, "novel-palettes": {"description": "eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator", "resources": []}, "coordinator-color-queue": {"description": "new theme is drained after the previous native color write rejects", "resources": []}, "coordinator-reapply-color": {"description": "failed latest request stays pending without an automatic retry loop and explicit reapply recovers", "resources": []}, "coordinator-visible-retry": {"description": "showing controls retries a failed color even when visible-bar policy and geometry are unchanged", "resources": []}, "novel-setting-cutout": {"description": "actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes", "resources": []}, "novel-status-controls": {"description": "actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode", "resources": []}, "novel-setting-status": {"description": "actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent", "resources": []}, "novel-setting-rollback": {"description": "failed status preference requests reflow after restoring the original setting", "resources": []}, "novel-cutout-negative": {"description": "old cutout-dependent novel policy is rejected by the actual SDK immersive regression", "resources": []}, "novel-default-negative": {"description": "old unconditional immersive status policy is rejected by the actual SDK default-visible regression", "resources": []}, "coordinator-geometry": {"description": "pending status reveal never borrows another window geometry or replacement window measurement", "resources": []}, "coordinator-show-ack": {"description": "early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it", "resources": []}, "coordinator-reader-reapply": {"description": "explicit reader policy reapply repairs native drift for independent status and navigation choices", "resources": []}, "coordinator-app-reapply": {"description": "explicit App policy reapply restores captured orientation awake and visible system bars", "resources": []}, "coordinator-reapply-failure": {"description": "native policy reapply rejection is handled without looping and a later explicit retry converges", "resources": []}, "coordinator-owner-queue": {"description": "forced reapply joins pending rapid owner requests and preserves the latest complete policy", "resources": []}, "coordinator-rotation": {"description": "show superseded by hide converges and same-size rotation does not reuse the pending band", "resources": []}, "coordinator-old-window-reject": {"description": "old window reject cannot strand new window chrome", "resources": []}, "coordinator-old-window-success": {"description": "old window success cannot strand new window chrome", "resources": []}};
+const definitions={"manga-toggle": {"description": "manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars", "resources": []}, "manga-forced-ui": {"description": "manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive", "resources": []}, "manga-auth-viewport": {"description": "manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars", "resources": []}, "manga-panel-props": {"description": "manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive", "resources": []}, "manga-mask-lifecycle": {"description": "actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner", "resources": []}, "manga-mask-resize": {"description": "actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity", "resources": []}, "manga-mask-negative": {"description": "negative: original opaque phone bars cannot pass authored mask composition", "resources": []}, "manga-viewport-negative": {"description": "negative: omitted viewport chrome refresh leaves the opened mask native style stale", "resources": []}, "manga-area-negative": {"description": "negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale", "resources": []}, "manga-metric-retry": {"description": "production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount", "resources": []}, "manga-metric-negative": {"description": "negative: omitted metrics chrome refresh strands the failed native wide color", "resources": []}, "manga-inactive": {"description": "manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it", "resources": []}, "manga-old-identity": {"description": "manga old identity State/dispose cannot overwrite a newer chapter reader owner", "resources": []}, "manga-late-native": {"description": "manga late native status-hide completion after actual SDK inactive/exit converges to captured App", "resources": []}, "manga-theme": {"description": "manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion", "resources": []}, "manga-shell-props": {"description": "ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff", "resources": []}, "historical-manga": {"description": "negative: frozen R5 production source fails immersive native three-bar assertion", "resources": []}, "historical-shell": {"description": "negative: frozen R5 Shell fails actual active-child propagation", "resources": []}, "manga-watch-negative": {"description": "negative: missing control State Watch is rejected by actual production toggle", "resources": []}, "manga-bars-negative": {"description": "negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion", "resources": []}, "manga-dispose-negative": {"description": "negative: stale identity dispose guard removal is rejected after new chapter owner mount", "resources": []}, "coordinator-transparency": {"description": "explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated", "resources": []}, "novel-palettes": {"description": "eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator", "resources": []}, "coordinator-color-queue": {"description": "new theme is drained after the previous native color write rejects", "resources": []}, "coordinator-reapply-color": {"description": "failed latest request stays pending without an automatic retry loop and explicit reapply recovers", "resources": []}, "coordinator-visible-retry": {"description": "showing controls retries a failed color even when visible-bar policy and geometry are unchanged", "resources": []}, "novel-setting-cutout": {"description": "actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes", "resources": []}, "novel-status-controls": {"description": "actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode", "resources": []}, "novel-setting-status": {"description": "actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent", "resources": []}, "novel-setting-rollback": {"description": "failed status preference requests reflow after restoring the original setting", "resources": []}, "novel-cutout-negative": {"description": "old cutout-dependent novel policy is rejected by the actual SDK immersive regression", "resources": []}, "novel-default-negative": {"description": "old unconditional immersive status policy is rejected by the actual SDK default-visible regression", "resources": []}, "coordinator-geometry": {"description": "pending status reveal never borrows another window geometry or replacement window measurement", "resources": []}, "coordinator-show-ack": {"description": "early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it", "resources": []}, "coordinator-reader-reapply": {"description": "explicit reader policy reapply repairs native drift for independent status and navigation choices", "resources": []}, "coordinator-app-reapply": {"description": "explicit App policy reapply restores captured orientation awake and visible system bars", "resources": []}, "coordinator-reapply-failure": {"description": "native policy reapply rejection is handled without looping and a later explicit retry converges", "resources": []}, "coordinator-owner-queue": {"description": "forced reapply joins pending rapid owner requests and preserves the latest complete policy", "resources": []}, "coordinator-rotation": {"description": "show superseded by hide converges and same-size rotation does not reuse the pending band", "resources": []}, "coordinator-old-window-reject": {"description": "old window reject cannot strand new window chrome", "resources": []}, "coordinator-old-window-success": {"description": "old window success cannot strand new window chrome", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
-const {createRequire, registerHooks} = await import('node:module');
-registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {pureModuleProbe} = await import('./lib/ets-pure-module-probe.mjs');
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
-const { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } = await import('./lib/manga-directory-adaptive-probe.mjs');
+const { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies, mangaPanelOpeningMembers } = await import('./lib/manga-directory-adaptive-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
+const {createRequire, registerHooks} = await import('node:module');
 const {createHash} = await import('node:crypto');
 const {ReaderBrightnessWriter} = await import('../entry/src/main/ets/app/ReaderBrightnessWriter.ts');
-const metrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const {readerAppearanceThemeStyle, readerAppearanceChromeTone} = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const metrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const {readerAppearanceThemeStyle, readerAppearanceChromeTone} = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
 const {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls} = await import('./lib/manga-surface-sdk-probe.mjs');
 
+registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const controlSession=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const {readerControlHostVisible}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const readerSettingsState=await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const controlSession=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const {readerControlHostVisible}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const readerSettingsState=await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const {createDefaultReaderSettingsSnapshot}=readerSettingsState;
-const {createDefaultReaderTtsPreferencesSnapshot}=await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
 const require=createRequire(import.meta.url);
 const ts=require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
 const base=new URL('../entry/src/main/ets/',import.meta.url);
@@ -33,13 +31,13 @@ async function settle(){for(let i=0;i<8;i++)await tick();}
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};}
 async function confirmedSettingsGateway(initial,saved){
  const runtime={getUIAbilityContext:()=>({})},Runtime=runtimeOwnerIdentityProbe(()=>runtime),cache=new Map(),durable=new Map();
+ const source=readFileSync(new URL('features/reading/application/ReaderSettingsGateway.ts',base),'utf8').replace(/^import[\s\S]*?;\n/gm,'');
+ const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});
+ assert.deepEqual(out.diagnostics,[],'the complete production settings Gateway supplies accepted/saved facts');
  const store={async get(key,fallback){return cache.get(key)??fallback;},async put(key,value){cache.set(key,value);saved.push(JSON.parse(value));},
    async flush(){for(const[key,value]of cache)durable.set(key,value);}};
- const {ReaderThemeHost}=pureModuleProbe(readFileSync(new URL('app/ReaderThemeHost.ts',base),'utf8'),
-   'ReaderThemeHost.ts',{ReaderRuntimeOwner:Runtime},['ReaderThemeHost']);
- const exported=pureModuleProbe(readFileSync(new URL('features/reading/ReaderSettingsGateway.ts',base),'utf8'),
-   'ReaderSettingsGateway.ts',{...readerSettingsState,ReaderRuntimeOwner:Runtime,ReaderThemeHost,
-     preferences:{getPreferences:async()=>store}},['ReaderSettingsGateway']);
+ const exported={};new Function('exports',...Object.keys(readerSettingsState),'ReaderRuntimeOwner','ReaderThemeHost','preferences',out.outputText)(
+   exported,...Object.values(readerSettingsState),Runtime,{prepareUserChange:async()=>{}},{getPreferences:async()=>store});
  const gateway=new exported.ReaderSettingsGateway(runtime);await gateway.update(initial);saved.length=0;
  assert.equal(gateway.writeFacts().pendingReconciliation,false);assert.deepEqual(gateway.writeFacts().saved,JSON.parse(durable.get('snapshot')));
  return gateway;
@@ -48,19 +46,28 @@ const {createWindowCoordinatorFixture}=await import('./lib/reader-window-coordin
 const allFixtures=[];
 try{
 async function fixture(){const f=await createWindowCoordinatorFixture();allFixtures.push(f);
- let E;if(selectedCase.startsWith('novel-setting-')){const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');E=productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets',base),['applyWindowChrome','changeReaderSetting','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending','persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,readerAppearanceThemeStyle,readerAppearanceChromeTone,AppStorage:f.appStorage,setReaderSettingsToggle:readerSettingsState.setReaderSettingsToggle});}
- else{const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');E=selectedProductionMethods(new URL('features/reading/LocalReadingExperience.ets',base),'ReadingExperience',['applyWindowChrome'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,readerAppearanceThemeStyle,readerAppearanceChromeTone,AppStorage:f.appStorage});}
+ let E;if(selectedCase.startsWith('novel-setting-')){const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');E=productionMotionMethods(new URL('features/reading/ui/LocalReadingExperience.ets',base),['applyWindowChrome','changeReaderSetting','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending','persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,readerAppearanceThemeStyle,readerAppearanceChromeTone,setReaderSettingsToggle:readerSettingsState.setReaderSettingsToggle});}
+ else{const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');E=selectedProductionMethods(new URL('features/reading/ui/LocalReadingExperience.ets',base),'ReadingExperience',['applyWindowChrome'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,readerAppearanceThemeStyle,readerAppearanceChromeTone});}
  return{...f,E,theme(id,overlay=true){const e=Object.assign(new E(),{windowChromeActive:true,windowChromeOverlayActive:overlay,appearanceSnapshot:{activeTheme:id}});e.applyWindowChrome();}};
 }
-const caseNames={"manga-toggle": "manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars", "manga-forced-ui": "manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive", "manga-auth-viewport": "manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars", "manga-panel-props": "manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive", "manga-mask-lifecycle": "actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner", "manga-mask-resize": "actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity", "manga-mask-negative": "negative: original opaque phone bars cannot pass authored mask composition", "manga-viewport-negative": "negative: omitted viewport chrome refresh leaves the opened mask native style stale", "manga-area-negative": "negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale", "manga-metric-retry": "production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount", "manga-metric-negative": "negative: omitted metrics chrome refresh strands the failed native wide color", "manga-inactive": "manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it", "manga-old-identity": "manga old identity State/dispose cannot overwrite a newer chapter reader owner", "manga-late-native": "manga late native status-hide completion after actual SDK inactive/exit converges to captured App", "manga-theme": "manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion", "manga-shell-props": "ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff", "historical-manga": "negative: missing immersion policy call fails the native three-bar assertion", "historical-shell": "negative: missing Shell active prop fails actual child window ownership", "manga-watch-negative": "negative: missing control State Watch is rejected by actual production toggle", "manga-bars-negative": "negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion", "manga-dispose-negative": "negative: stale identity dispose guard removal is rejected after new chapter owner mount", "coordinator-transparency": "explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated", "novel-palettes": "eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator", "coordinator-color-queue": "new theme is drained after the previous native color write rejects", "coordinator-reapply-color": "failed latest request stays pending without an automatic retry loop and explicit reapply recovers", "coordinator-visible-retry": "showing controls retries a failed color even when visible-bar policy and geometry are unchanged", "novel-setting-cutout": "actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes", "novel-status-controls": "actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode", "novel-setting-status": "actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent", "novel-setting-rollback": "failed status preference requests reflow after restoring the original setting", "novel-cutout-negative": "old cutout-dependent novel policy is rejected by the actual SDK immersive regression", "novel-default-negative": "old unconditional immersive status policy is rejected by the actual SDK default-visible regression", "coordinator-geometry": "pending status reveal never borrows another window geometry or replacement window measurement", "coordinator-show-ack": "early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it", "coordinator-reader-reapply": "explicit reader policy reapply repairs native drift for independent status and navigation choices", "coordinator-app-reapply": "explicit App policy reapply restores captured orientation awake and visible system bars", "coordinator-reapply-failure": "native policy reapply rejection is handled without looping and a later explicit retry converges", "coordinator-owner-queue": "forced reapply joins pending rapid owner requests and preserves the latest complete policy", "coordinator-rotation": "show superseded by hide converges and same-size rotation does not reuse the pending band", "coordinator-old-window-reject": "old window reject cannot strand new window chrome", "coordinator-old-window-success": "old window success cannot strand new window chrome"};
+const caseNames={"manga-toggle": "manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars", "manga-forced-ui": "manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive", "manga-auth-viewport": "manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars", "manga-panel-props": "manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive", "manga-mask-lifecycle": "actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner", "manga-mask-resize": "actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity", "manga-mask-negative": "negative: original opaque phone bars cannot pass authored mask composition", "manga-viewport-negative": "negative: omitted viewport chrome refresh leaves the opened mask native style stale", "manga-area-negative": "negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale", "manga-metric-retry": "production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount", "manga-metric-negative": "negative: omitted metrics chrome refresh strands the failed native wide color", "manga-inactive": "manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it", "manga-old-identity": "manga old identity State/dispose cannot overwrite a newer chapter reader owner", "manga-late-native": "manga late native status-hide completion after actual SDK inactive/exit converges to captured App", "manga-theme": "manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion", "manga-shell-props": "ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff", "historical-manga": "negative: frozen R5 production source fails immersive native three-bar assertion", "historical-shell": "negative: frozen R5 Shell fails actual active-child propagation", "manga-watch-negative": "negative: missing control State Watch is rejected by actual production toggle", "manga-bars-negative": "negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion", "manga-dispose-negative": "negative: stale identity dispose guard removal is rejected after new chapter owner mount", "coordinator-transparency": "explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated", "novel-palettes": "eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator", "coordinator-color-queue": "new theme is drained after the previous native color write rejects", "coordinator-reapply-color": "failed latest request stays pending without an automatic retry loop and explicit reapply recovers", "coordinator-visible-retry": "showing controls retries a failed color even when visible-bar policy and geometry are unchanged", "novel-setting-cutout": "actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes", "novel-status-controls": "actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode", "novel-setting-status": "actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent", "novel-setting-rollback": "failed status preference requests reflow after restoring the original setting", "novel-cutout-negative": "old cutout-dependent novel policy is rejected by the actual SDK immersive regression", "novel-default-negative": "old unconditional immersive status policy is rejected by the actual SDK default-visible regression", "coordinator-geometry": "pending status reveal never borrows another window geometry or replacement window measurement", "coordinator-show-ack": "early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it", "coordinator-reader-reapply": "explicit reader policy reapply repairs native drift for independent status and navigation choices", "coordinator-app-reapply": "explicit App policy reapply restores captured orientation awake and visible system bars", "coordinator-reapply-failure": "native policy reapply rejection is handled without looping and a later explicit retry converges", "coordinator-owner-queue": "forced reapply joins pending rapid owner requests and preserves the latest complete policy", "coordinator-rotation": "show superseded by hide converges and same-size rotation does not reuse the pending band", "coordinator-old-window-reject": "old window reject cannot strand new window chrome", "coordinator-old-window-success": "old window success cannot strand new window chrome"};
 async function check(name,run){if(name!==caseNames[selectedCase])return;await run();}
-const mangaPath=new URL('features/manga/MangaReadingSurface.ets',base);
-const shellPath=new URL('features/shell/ReaderShell.ets',base);
+const mangaPath=new URL('features/manga/ui/MangaReadingSurface.ets',base);
+const shellPath=new URL('features/reading/ui/ReaderShell.ets',base);
 const mangaSource=readFileSync(mangaPath,'utf8');
 const shellSource=readFileSync(shellPath,'utf8');
-const novelSource=readFileSync(new URL('features/reading/LocalReadingExperience.ets',base),'utf8');
+const novelSource=readFileSync(new URL('features/reading/ui/LocalReadingExperience.ets',base),'utf8');
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 const sdkEvidence={mangaSourceSHA:sha256(mangaSource),shellSourceSHA:sha256(shellSource)};
+let baselineManga,baselineShell;
+if(selectedCase==='historical-manga'||selectedCase==='historical-shell'){
+baselineManga=readFileSync(new URL('./fixtures/manga-system-bars-r5/MangaReadingSurface.ets',import.meta.url),'utf8');
+baselineShell=readFileSync(new URL('./fixtures/manga-system-bars-r5/ReaderShell.ets',import.meta.url),'utf8');
+// Exact first-party R5 source, including every original import/comment and any
+// source notice. The referenced vendor licensing remains in the project tree.
+assert.equal(sha256(baselineManga),'0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897','exact pre-R6 Manga baseline');
+assert.equal(sha256(baselineShell),'ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba','exact pre-R6 Shell baseline');
+}
 const sdkRoot=resolveEtsLoaderRoot();
 function componentMembers(source){
  const file=ts.createSourceFile(virtualFilePath('MangaChromeMemberSelection.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions);
@@ -82,10 +89,10 @@ function novelSdkFixture(f,theme,extendIntoCutout,text=novelSource){
  const {owner,output}=createReaderBuilderProbe(text,names,{
   ...properties.sdk,...controlSession,createDefaultReaderSettingsSnapshot,readerControlHostVisible,
   ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,
-  readerAppearanceThemeStyle,readerAppearanceChromeTone,AppStorage:f.appStorage,
+  readerAppearanceThemeStyle,readerAppearanceChromeTone,AppStorage:globalThis.AppStorage,
  },{...properties.hooks,initialParams:{windowChromeActive:true,windowChromeOverlayActive:false,
   isReaderIdentityCurrent:()=>identity}});
- Object.assign(owner,{appearanceSnapshot:{activeTheme:theme},screenAwakeKeepScreenOn:false,ttsPreferences:createDefaultReaderTtsPreferencesSnapshot(),
+ Object.assign(owner,{appearanceSnapshot:{activeTheme:theme},screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,
   onControlInputBoundaryChanged(){},syncVolumeKeyPolicy(){}});
  owner.readerSettingsSnapshot={...createDefaultReaderSettingsSnapshot(),extendIntoCutout};
  if(!sdkEvidence.novelEmittedSHA)sdkEvidence.novelEmittedSHA=sha256(output);
@@ -101,7 +108,8 @@ function novelSdkFixture(f,theme,extendIntoCutout,text=novelSource){
 }
 // Select unchanged production members; the R5 negative selects only members it
 // actually has so its failure is the observed native visibility, not missing code.
-const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isReaderIdentityCurrent','windowChromeOwned',
+const mangaChromeMembers=[...mangaPanelOpeningMembers,'appForeground','readerPanelForeground',
+ 'windowChromeActive','windowChromeOverlayActive','isReaderIdentityCurrent','windowChromeOwned',
  'mounted','runtime','settingsGateway','appThemeScheme','controlsVisible','error','openingRetry','recovering','chapterEnd','panel',
  'backgroundPreference','loginRequiredForControls','aboutToAppear','aboutToDisappear','toggleControls','controlsPresentedForWindow',
  'refreshLoginRequiredForControls','onWindowChromeChanged','applyWindowChrome','applyWindowPolicyForChromeOwner','restoreAppWindowChrome',
@@ -109,7 +117,9 @@ const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isRe
  'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth',
  'rollbackChapterController','rollbackChapterImages','previousChapterPixels'];
 const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'mutedColor','displayError','chapterLoadState','build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
- 'isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody',
+ 'actionPanelPresentationGeneration','panelInputCurrent','phonePanelBackgroundEnabled',
+ 'isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody','actionHeaderHeight','actionHeaderMeasuredHeight',
+ 'directorySheet','directoryBottomHeader','directorySideHeader','measureDirectorySheetHeader','chromeScheme',
  'panelActionGeneration','panelCloseTask','panelCloseResolve','reduceMotion','windowMetricsRevision','onDirectoryMetricsChanged',
  'quickHeaderMeasured','quickToolsMeasured','quickFooterMeasured','openPanel','closePanel','invalidatePanelMotion','settlePanel',
  'beginPanelDrag','updatePanelDrag','finishPanelDrag','panelTravel','panelHeight','panelWidth','panelContentHeight',
@@ -117,8 +127,6 @@ const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAd
  'directoryFontScale','directoryHeaderChrome','resizeViewport','previousChapterPixels','boundaryBusy','boundaryFailure'];
 function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntimeProbe(),maskScene=false){
  let identity=true;
- const {ReaderTransientFeedback}=pureModuleProbe(readFileSync(new URL('features/common/ReaderTransientFeedback.ts',base),'utf8'),
-  'ReaderTransientFeedback.ts',{AppStorage:{...f.appStorage,get:key=>f.app.get(key)}},['ReaderTransientFeedback']);
  const frames=[],animations=[],restores=[];
  let owner;
  const uiContext={postFrameCallback:frame=>frames.push(frame),animateTo(params,apply){
@@ -145,7 +153,7 @@ function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntim
   hilog:{warn(){}},AppStorage:globalThis.AppStorage,
   uiContext,curves:{interpolatingSpring:(...args)=>({kind:'native-spring',args})},Curve:{EaseInOut:'easeInOut'},
   MangaBookPresentation:{revision:0,useOwner(){}},MangaSessionController:SessionPort};
- const built=createReaderBuilderProbe(text,[...mangaChromeMembers,...(maskScene?mangaMaskSceneMembers:[])].filter(n=>available.has(n)),deps,
+ const built=createReaderBuilderProbe(text,[...new Set([...mangaChromeMembers,...(maskScene?mangaMaskSceneMembers:[])])].filter(n=>available.has(n)),deps,
   // Preserve the existing retained-scene boundary: native occupied-branch
   // removal is outside this chrome probe; shared children use actual code.
   {...shared.hooks,allowEmptyBranchAdmission:false,
@@ -156,7 +164,7 @@ function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntim
  function initialize(instance){
   const rows=[];
   Object.assign(instance,{runtime:{},sourceId:'real-source',bookId:'real-book',offline:false,first:0,last:0,
-   viewportWidth:390,viewportHeight:844,stageWidth:390,stageHeight:844,transientFeedback:new ReaderTransientFeedback(),
+   viewportWidth:390,viewportHeight:844,stageWidth:390,stageHeight:844,
    publishedRowKeys:new Map(),layoutGeneration:0,viewportGeneration:0,loginGeneration:0,presentationGeneration:0,
    brightnessOwner:0,brightnessGeneration:0,panelFontGeneration:0,horizontal:false,pendingTurnOrdinal:undefined,
    settingsGateway:{current:()=>prefs},onExitRequestHandler(){},
@@ -451,17 +459,11 @@ async function shellToMangaActualSdk(text=shellSource){
  children[1].aboutToDisappear();await settle();assertBars(w,true);assert.equal(w.orientation,2);assert.equal(w.keepScreenOn,true);f.C.detach();
 }
 await check('ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff',()=>shellToMangaActualSdk());
-await check('negative: missing immersion policy call fails the native three-bar assertion',async()=>{
- const policyCall='    this.applyWindowPolicyForChromeOwner();';
- assert.equal(mangaSource.split(policyCall).length,2,'one actual chrome owner to window policy call');
- const withoutPolicy=mangaSource.replace(policyCall,'');
- await assert.rejects(immersiveActualSdk(withoutPolicy),/mount with no control UI must hide all three/);
+await check('negative: frozen R5 production source fails immersive native three-bar assertion',async()=>{
+ await assert.rejects(immersiveActualSdk(baselineManga),/mount with no control UI must hide all three/);
 });
-await check('negative: missing Shell active prop fails actual child window ownership',async()=>{
- const activeProp='MangaReadingSurface({\n        windowChromeActive: this.visible,';
- assert.equal(shellSource.split(activeProp).length,2,'one actual manga child activation edge');
- const withoutActiveProp=shellSource.replace(activeProp,'MangaReadingSurface({');
- await assert.rejects(shellToMangaActualSdk(withoutActiveProp),/actual parent first child receives active reader flag/);
+await check('negative: frozen R5 Shell fails actual active-child propagation',async()=>{
+ await assert.rejects(shellToMangaActualSdk(baselineShell),/actual parent first child receives active reader flag/);
 });
 await check('negative: missing control State Watch is rejected by actual production toggle',async()=>{
  const counterfactual=mangaSource.replace("@State @Watch('onWindowChromeChanged') private controlsVisible",'@State private controlsVisible');
@@ -542,8 +544,8 @@ await check('actual cutout setting true to false preserves explicitly selected i
    const gateway=await confirmedSettingsGateway(initial,saved);
    const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,appearanceSnapshot:{activeTheme:t.id},
      readerSettingsSnapshot:initial,readerSettingsMutationGeneration:0,
-     lifecycleToken:1,screenAwakeKeepScreenOn:false,ttsPreferences:createDefaultReaderTtsPreferencesSnapshot(),controlsPresentedForWindow:()=>controls,
-     configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,pageTurnInputPhase:()=> 'idle',
+     lifecycleToken:1,screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,controlsPresentedForWindow:()=>controls,
+     configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,
      readerSettingsGateway:gateway,reflowAfterWindowGeometryChange(){this.applyWindowChrome();},
      showReaderSettingsFailure(){assert.fail('unexpected settings failure');}});
    e.applyWindowChrome();await e.applyReaderWindowPolicy(e.readerSettingsSnapshot);await settle();
@@ -577,14 +579,13 @@ await check('actual novel SDK status preference and controls stay independent of
  for(const hideStatusBar of[false,true])for(const extend of[false,true])for(const hideNavigationBar of[false,true])for(const mode of['none','slide','cover','simulation','continuous']){
   const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
   const n=novelSdkFixture(f,'paper',extend);
-  let feedbackRetirements=0;n.owner.transientFeedback={reset(){feedbackRetirements++;}};
   n.owner.readerSettingsSnapshot={...n.owner.readerSettingsSnapshot,hideStatusBar,hideNavigationBar,
    navigationMode:mode==='continuous'?'continuous':'paged',pageTransition:mode==='continuous'?'none':mode};
   await n.controls(false);
   assert.equal(w.barEnabled.status,!hideStatusBar,'only the explicit status preference may hide the native top bar');
   assert.equal(w.barEnabled.navigation,!hideNavigationBar,'navigation preference stays independent');
   assert.equal(w.barEnabled.navigationIndicator,!hideNavigationBar,'bottom gesture indicator has its own independent preference');
-  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),false);
+  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),!hideStatusBar);
   await n.controls(true);
   assert.equal(w.barEnabled.status,true,'the real control session exposes the native status bar');
   assert.equal(w.barEnabled.navigation,!hideNavigationBar,'opening controls cannot change the bottom preference');
@@ -594,9 +595,8 @@ await check('actual novel SDK status preference and controls stay independent of
   assert.equal(w.barEnabled.status,!hideStatusBar,'closing controls restores the explicit top-bar choice');
   assert.equal(w.barEnabled.navigation,!hideNavigationBar);
   assert.equal(w.barEnabled.navigationIndicator,!hideNavigationBar);
-  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),false);
+  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),!hideStatusBar);
   await n.props({windowChromeActive:false});
-  assert.equal(feedbackRetirements,1,'the retained reader retires its feedback when its window owner becomes inactive');
   assert.equal(w.barEnabled.status,true,'actual inactive @Prop/@Watch returns the native bar to App');
   n.setIdentity(false);w.calls.length=0;await n.controls(false);
   assert.equal(w.calls.length,0,'an obsolete reader cannot issue any native request over App');
@@ -611,8 +611,8 @@ await check('actual LRE status toggle false to true to false persists while cont
   const gateway=await confirmedSettingsGateway(initial,saved);
   const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,
    readerSettingsSnapshot:initial,readerSettingsMutationGeneration:0,lifecycleToken:1,pageTurnRenderRevision:0,
-   screenAwakeKeepScreenOn:false,ttsPreferences:createDefaultReaderTtsPreferencesSnapshot(),controlsPresentedForWindow:()=>controlsPresented,
-   configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,pageTurnInputPhase:()=> 'idle',
+   screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,controlsPresentedForWindow:()=>controlsPresented,
+   configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,
    readerSettingsGateway:gateway,reflowAfterWindowGeometryChange(){reflows.push(this.readerSettingsSnapshot.hideStatusBar);},
    showReaderSettingsFailure(){assert.fail('unexpected status setting failure');}});
   await e.applyReaderWindowPolicy(initial);await settle();assert.equal(w.barEnabled.status,true);
@@ -642,8 +642,8 @@ await check('failed status preference requests reflow after restoring the origin
  const gateway=await confirmedSettingsGateway(initial,saved);
  const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,
   readerSettingsSnapshot:initial,readerSettingsMutationGeneration:0,lifecycleToken:1,pageTurnRenderRevision:0,
-  screenAwakeKeepScreenOn:false,ttsPreferences:createDefaultReaderTtsPreferencesSnapshot(),controlsPresentedForWindow:()=>false,
-  configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,pageTurnInputPhase:()=> 'idle',
+  screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,controlsPresentedForWindow:()=>false,
+  configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,
   readerSettingsGateway:gateway,reflowAfterWindowGeometryChange(){reflows.push(this.readerSettingsSnapshot.hideStatusBar);},
   showReaderSettingsFailure(message,error){failures.push({message,error});}});
  await e.applyReaderWindowPolicy(initial);await settle();

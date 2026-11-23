@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { harmonyBuildEnvironment, portableSpawnSync, resolveHarmonyTool } from './lib/harmony-toolchain.mjs';
+import { portableSpawnSync, resolveHarmonyTool } from './lib/harmony-toolchain.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -14,7 +14,7 @@ if (args.includes('--help') || args.includes('-h')) {
       '--mode', 'module', '-p', 'module=entry@default', '-p', 'product=default',
       '-p', 'requiredDeviceType=phone', '-p', 'buildMode=debug', 'assembleHap',
       '--analyze=normal', '--parallel', '--incremental', '--daemon',
-    ], { cwd: root, env: harmonyBuildEnvironment({ cwd: root }), stdio: 'inherit' });
+    ], { cwd: root, env: process.env, stdio: 'inherit' });
     if (result.error) throw result.error;
     process.exitCode = result.status || (result.signal ? 1 : 0);
   } catch (error) {

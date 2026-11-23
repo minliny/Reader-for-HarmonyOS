@@ -16,10 +16,10 @@ registerHooks({ resolve(specifier, context, next) {
   }
 } });
 const root = new URL('../', import.meta.url);
-const { ReadingOfflineGateway } = await import(new URL('entry/src/main/ets/features/reading/ReadingOfflineGateway.ts', root));
-const { ReadingOfflineMaterializationError } = await import(new URL('entry/src/main/ets/features/reading/ReadingOfflineContract.ts', root));
+const { ReadingOfflineGateway } = await import(new URL('entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts', root));
+const { ReadingOfflineMaterializationError } = await import(new URL('entry/src/main/ets/features/reading/application/ReadingOfflineContract.ts', root));
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const source = readFileSync(new URL('entry/src/main/ets/app/ReadingImageDiskCache.ts', root), 'utf8');
+const source = readFileSync(new URL('entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts', root), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 // Whole production disk cache; only Harmony platform APIs are adapted to a
 // real temporary filesystem, as in test-reading-offline-image-cache-runtime.

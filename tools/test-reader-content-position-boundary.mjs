@@ -7,8 +7,8 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const chapterData = { sourceId: 'local', bookId: 'book', chapterIndex: 3, chapterTitle: '章', content: '正确正文',
   bodyVersion: 'body', processingVersion: 'rules' };
 for (const scope of ['valid', 'legacy', 'half', 'empty', 'stale']) {
@@ -30,7 +30,7 @@ for (const scope of ['valid', 'legacy', 'half', 'empty', 'stale']) {
   assert.equal(actual.content, data.content);
 }
 
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const Host = productionMotionMethods(file, ['persistBeforeContentMutation', 'reloadMigratedContentPosition',
   'showReaderRecovery', 'reconcileReaderRecovery'], {
   hilog: { error() {} },

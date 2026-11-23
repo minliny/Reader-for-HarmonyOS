@@ -22,14 +22,14 @@ const {
   READER_CONTROL_PROGRESS_MIN,
   READER_CONTROL_PROGRESS_STEP,
   READER_CONTROL_REGULAR_DOCK_HEIGHT,
-}=await import('../entry/src/main/ets/features/reading/ReaderControlGeometry.ts');
+}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
 const {
   READER_FULL_PANEL_TOP,
   resolveReaderControlLayout,
-}=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+}=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {
   createDefaultReaderWindowMetrics,
-}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {
   READER_TTS_RATE_MAX,
   READER_TTS_RATE_MIN,
@@ -38,7 +38,7 @@ const {
   READER_TTS_TIMER_MAX_MINUTES,
   READER_TTS_TIMER_MAX_SECONDS,
   READER_TTS_TIMER_MIN,
-}=await import('../entry/src/main/ets/features/reading/ReaderTtsState.ts');
+}=await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
 
 if(selectedCase==='shared-layout'){
 const phoneLayout = resolveReaderControlLayout(390, 844, false, createDefaultReaderWindowMetrics());
@@ -46,6 +46,26 @@ const tabletLayout = resolveReaderControlLayout(760, 960, true, createDefaultRea
 assert.equal(phoneLayout.topBarTop, 19);
 assert.equal(READER_FULL_PANEL_TOP, 88);
 assert.equal(phoneLayout.fullPanelTop, READER_FULL_PANEL_TOP);
+const shortTabletLayout = resolveReaderControlLayout(1080, 800, true, createDefaultReaderWindowMetrics());
+assert.equal(shortTabletLayout.viewportHeight - shortTabletLayout.dockBottomGap - shortTabletLayout.fullPanelHeight,
+  shortTabletLayout.fullPanelTop, 'the expanded sheet respects its top budget at the actual dock anchor');
+const measuredPhone = createDefaultReaderWindowMetrics();
+measuredPhone.densityPixels = 2;
+measuredPhone.statusBarHeight = 39;
+measuredPhone.gestureInsets.bottom = 28;
+const baseline = resolveReaderControlLayout(390, 844, false, measuredPhone);
+assert.deepEqual([baseline.fullPanelWidth, baseline.quickPanelHeight, baseline.fullPanelHeight], [364, 330, 705]);
+for (const [width, height] of [[360, 800], [390, 844], [430, 932]]) {
+  const layout = resolveReaderControlLayout(width, height, false, measuredPhone);
+  const {fullPanelWidth:panelWidth,quickPanelHeight:quick,fullPanelHeight:full} = layout;
+  assert.ok(panelWidth >= width * 0.91 && panelWidth <= width * 0.96);
+  assert.ok(quick >= height * 0.37 && quick <= height * 0.42);
+  assert.ok(full >= height * 0.8 && full <= height * 0.87);
+  assert.ok(panelWidth / quick >= 1.05 && panelWidth / quick <= 1.15);
+  assert.ok(panelWidth / full >= 0.49 && panelWidth / full <= 0.55);
+  assert.ok(height - layout.dockBottomGap - full >= layout.fullPanelTop);
+  assert.equal(panelWidth * measuredPhone.densityPixels, Math.round(panelWidth * measuredPhone.densityPixels));
+}
 assert.equal(READER_CONTROL_REGULAR_DOCK_HEIGHT, 330);
 assert.equal(READER_CONTROL_CONTENT_SLOT_HEIGHT, 196);
 assert.equal(READER_CONTROL_HOME_TOP_ROW_HEIGHT, 190);
@@ -67,7 +87,7 @@ assert.deepEqual({ ...phone }, {
   moduleNavRadiusTop: 12,
 });
 assert.deepEqual({ ...tablet }, {
-  sheetH: 252,
+  sheetH: READER_CONTROL_REGULAR_DOCK_HEIGHT,
   sheetRadiusBottom: 0,
   moduleNavH: 79,
   moduleNavBottomGap: 0,

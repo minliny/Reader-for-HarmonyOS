@@ -1,10 +1,42 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions = {"toolbar-retained": {"description": "真实view-switch采样下工具actor不重建", "resources": []}, "detail-admission": {"description": "实际detail节点稳定与mutation优先shield", "resources": []}};
+definitions['detail-action-semantics'] = { description: '实际详情阅读与书架动作焦点、禁用与原准入意图', resources: [] };
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
 }
 async function runSelectedCase(selectedCase) {
+if (selectedCase === 'detail-action-semantics') {
+  const {default: assert} = await import('node:assert/strict');
+  const {readFileSync} = await import('node:fs');
+  const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+  const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalBookDetail.ets', import.meta.url), 'utf8');
+  const DETAIL_DOCK_HEIGHT = Number(source.match(/const DETAIL_DOCK_HEIGHT = (\d+);/)[1]);
+  const {owner} = createReaderBuilderProbe(source, ['actionSurface', 'readingActionLabel', 'shelfActionLabel', 'detailBookAvailable', 'detailColor', 'mangaFontScale'], { DETAIL_DOCK_HEIGHT });
+  const intents = [];
+  Object.assign(owner, {appThemeScheme: 'day', book: {sourceId:'remote',contentKind:'text'},
+    admissionIdentity:'detail-lease', inBookshelf:false, removalEnabled:true, removing:false, adding:false, cancellingAdd:false,
+    onContinue:()=>intents.push('continue'),onRemove:id=>intents.push(id),onCancelAdd:id=>intents.push(`cancel:${id}`)});
+  owner.actionSurface();
+  const dock = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.height === DETAIL_DOCK_HEIGHT);
+  assert.equal(dock.borderRadius, 24);
+  assert.equal(dock.width, '100%', 'scaffold owns the horizontal dock frame');
+  const control = label => [...owner.nodes.values()].find(node => node.accessibilityText === label);
+  for (const label of ['开始阅读','加入书架']) {
+    const action = control(label);
+    assert.equal(action?.type,'Button','the actual detail command is carried by a native Button');
+    assert.equal(action?.accessibilityRole,'AccessibilityRoleType.BUTTON');
+    assert.equal(action.focusable,true);assert.equal(action.height,48);action.onClick();
+  }
+  owner.adding=true;owner.replay();control('取消加入').onClick();
+  owner.cancellingAdd=true;owner.replay();
+  assert.equal(control('取消加入').focusable,false);assert.equal(control('取消加入').enabled,false);
+  control('取消加入').onClick();
+  assert.deepEqual(intents,['continue','detail-lease','cancel:detail-lease']);
+  assert.ok(![...owner.nodes.values()].some(node=>node.type==='Text'&&typeof node.onClick==='function'),
+    'visual labels cannot dispatch a second detail action');
+  return;
+}
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
@@ -12,22 +44,22 @@ const { fileURLToPath } = await import('node:url');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
-const { readerInteractiveSafeBottom } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
+const { readerInteractiveSafeBottom } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { localBookDetailSdk, localBookDetailSource } = await import('./lib/local-book-detail-sdk-probe.mjs');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { ReaderWindowMetricsSnapshot, ReaderRectVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 
 const file = path => fileURLToPath(new URL(`../entry/src/main/ets/${path}`, import.meta.url));
-const shelfFile = file('features/bookshelf/BookshelfPage.ets');
+const shelfFile = file('features/bookshelf/ui/BookshelfPage.ets');
 const shelfSource = readFileSync(shelfFile, 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const builderMethods = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const name of ['continueReadingCard', 'filterRow', 'projectionRow']) builderMethods.add(name);
-const specSource = readFileSync(file('features/common/MotionSpec.ets'), 'utf8');
+const specSource = readFileSync(file('ui/foundation/MotionSpec.ets'), 'utf8');
 const declaration = specSource.slice(specSource.indexOf('const BOOKSHELF_VIEW_MOTION:'), specSource.indexOf('\nconst ENTRIES:'));
 const curve = { interpolate: value => value };
 const viewMotion = new Function('curves', 'Curve',
@@ -95,7 +127,7 @@ for (const theme of ['day', 'night']) {
 if(selectedCase==='detail-admission') {
 // Detail is a presentation component. Metadata/progress refreshes must keep
 // its two existing actors; only an active shelf mutation gates reading.
-const detailSource = readFileSync(file('features/bookshelf/LocalBookDetail.ets'), 'utf8');
+const detailSource = readFileSync(file('features/reading/ui/LocalBookDetail.ets'), 'utf8');
 const actionAreaSource = detailSource.slice(detailSource.indexOf('private actionArea()'), detailSource.indexOf('\n  private contentFrame()'));
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */

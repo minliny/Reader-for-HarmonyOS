@@ -17,41 +17,170 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  accessSync, appendFileSync, constants, lstatSync, mkdirSync,
-  readFileSync, realpathSync, statSync, writeFileSync,
+  accessSync, appendFileSync, chmodSync, constants, lstatSync, mkdirSync,
+  readFileSync, realpathSync, renameSync, statSync, writeFileSync,
 } from 'node:fs';
 import { isIP } from 'node:net';
 import { tmpdir } from 'node:os';
 import { basename, isAbsolute, parse, resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
-import { acquireLease, canonicalServerKey, releaseLease, targetRef as serverRefHash } from './reader-hdc-lease.mjs';
+import {parseRunnerInstalledMetadata, publicRunnerInstalledMetadata} from '../scripts/lib/runner-installed-metadata.mjs';
+import { acquireLease, canonicalServerKey, hdcDirectEnvironment, releaseLease, targetRef as serverRefHash } from './reader-hdc-lease.mjs';
+import { inspectNativePng } from './lib/native-ui-evidence.mjs';
+import { capsuleCenterDispatch, clickThenBackArgs, clickThenReaderCenterArgs, crossoverTouchArgs,
+  searchMorphDispatchWindowMs, uiInputKeyArgument } from './ui-contract/lib/control-input.mjs';
+import { popupRenderAcknowledged, popupRenderArgs, popupRenderBaselineAcknowledged, popupRenderBaselineArgs,
+  popupRenderJournal } from './ui-contract/lib/popup-render.mjs';
+import { guestSchedulingClientTimeoutMs, guestSchedulingCommands, guestSchedulingLocalTarget, guestSchedulingRemoteTarget,
+  guestSchedulingReceipt, guestSchedulingTraceFile, guestSchedulingVmLog,
+  observeGuestSchedulingChild } from './ui-contract/collectors/harmonyos/guest-scheduling.mjs';
 
 const BUNDLE = 'io.reader.minliny';
 const TIMEOUT_MS = 30000;
+const TRANSFER_TIMEOUT_MS = 120000;
+const IDLE_MS = 60000;
+const SESSION_MS = 600000;
+const hdcEnvironment = hdcDirectEnvironment();
 const MAX_OUTPUT = 4 * 1024 * 1024;
+// One More action streams 36 complete RenderService trees before the host
+// filters the Reader nodes. A remote capture crossed 16 MiB on its last tree.
+const POPUP_RENDER_OUTPUT_BYTES = 32 * 1024 * 1024;
+const RUNNER_OUTPUT_BYTES = 64 * 1024;
+const RUNNER_CLOCK_ARGS = ['shell','date','+%s'];
+const UI_CONTRACT_LOG_ARGS = ['shell','hilog','-x','-T','ReaderUIContract'];
+const runnerInstallArgs = bundleName => ['shell','bm','dump','-n',bundleName];
+const sameArgs = (actual,expected) => Array.isArray(actual) && actual.length === expected.length &&
+  expected.every((value,index) => value === actual[index]);
 // Reviewed standalone diagnostic only; never accept an arbitrary executable
 // merely because its caller knows a hash. Updating this pin needs code review.
 const TOUCH_ELF_SHA256 = 'cc1b581bc6cf16449f5f535917fe68cc31cbb031cbc1a00caff8a4a87b02de00';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const fatalOutput = /Connect server failed|Device not found|No devices|LIFECYCLE_TIMEOUT|SceneBoard exits 4times|kernel panic|guest reset|9568332|9568320|Error loading shared library|Error relocating|\berror\s*:|\bfailed\b/i;
-const commandOK = result => !result.error && result.status === 0 &&
-  !fatalOutput.test(`${result.stdout ?? ''}\n${result.stderr ?? ''}`);
+const fatalLogTransportOutput = /Connect server failed|Device not found|No devices|LIFECYCLE_TIMEOUT|SceneBoard exits 4times|kernel panic|guest reset|9568332|9568320|Error loading shared library|Error relocating/i;
+const logRead = args => Array.isArray(args) && args[0] === 'shell' && args[1] === 'hilog' && args[2] === '-x';
+const inputDispatch = args => Array.isArray(args) && args[0] === 'shell' && args[1] === 'uitest' &&
+  args[2] === 'uiInput' && args[3] !== 'help';
+const inputDispatchOK = result => String(result.stdout ?? '').trim() === 'No Error' &&
+  String(result.stderr ?? '').trim() === '';
+const commandOK = (result, args = []) => !result.error && result.status === 0 &&
+  (!inputDispatch(args) || inputDispatchOK(result)) &&
+  !(logRead(args) ? fatalLogTransportOutput : fatalOutput).test(`${result.stdout ?? ''}\n${result.stderr ?? ''}`);
 const targetReference = target => createHash('sha256').update(target).digest('hex').slice(0, 12);
 const fail = message => { throw new Error(message); };
+
+function readOperation(line) {
+  try { return JSON.parse(line); }
+  catch { fail('invalid device operation JSON'); }
+}
+
+function publicCommandResult(args, result, redact, privateBundleOutput = false) {
+  const isInput = args[0] === 'shell' && args[1] === 'uitest' && args[2] === 'uiInput' && args[3] === 'inputText';
+  const publicArgs = isInput ? [...args.slice(0, -1), `[length:${args.at(-1).length}]`] : args;
+  const sensitive = isInput || privateBundleOutput;
+  return {
+    args: publicArgs, status: result.status, signal: result.signal ?? null,
+    error: result.error ? (sensitive ? 'device-command-error' : redact(result.error.message)) : null,
+    stdout: sensitive ? '' : redact(result.stdout),
+    stderr: sensitive ? '' : redact(result.stderr),
+  };
+}
+
+function publicRunnerInstall(installed, bundleName) {
+  if (installed?.bundleName !== bundleName || installed.appProvisionType !== 'debug') {
+    fail('The exact independent debug Runner installation is unavailable');
+  }
+  return publicRunnerInstalledMetadata(installed);
+}
+
+function runnerClockOutput(result) {
+  const stdout = result.stdout;
+  if (!commandOK(result) || result.signal || typeof stdout !== 'string' || !/^[1-9][0-9]{0,12}(?:\r?\n)?$/u.test(stdout) ||
+      String(result.stderr ?? '').trim() !== '') return null;
+  const milliseconds = Number(stdout) * 1000;
+  return Number.isSafeInteger(milliseconds) && milliseconds > 0 ? stdout : null;
+}
+
+function rememberRunnerRow(state, row) {
+  const {seq,targetRef,event,args,status,signal,error,ok,startedAt,recordedAt,elapsedMs,installed,stdout} = row;
+  state.recent.push({seq,targetRef,event,args,status,signal,error,ok,startedAt,recordedAt,elapsedMs,installed,
+    ...(sameArgs(args,RUNNER_CLOCK_ARGS) ? {stdout} : {})});
+  if (state.recent.length > 3) state.recent.shift();
+}
+
+async function runnerInvocation(plan, state, targetRef, runnerMode, now = Date.now) {
+  if (runnerMode !== 'dry' && runnerMode !== 'dispatch') fail('Runner invocation is disabled for this probe session');
+  const [{parseReversalRequest},{reversalCommandArgs}] = await Promise.all([
+    import('./ui-contract/collectors/harmonyos/pointer-matrix-runner/entry/src/ohosTest/ets/testrunner/ReversalPlan.ts'),
+    import('./ui-contract/collectors/harmonyos/reversal-dispatch.mjs'),
+  ]);
+  if (state.invoked) fail('The probe session already attempted its one Runner invocation');
+  const [install,clock,before] = state.recent;
+  const installed = install?.installed;
+  const currentRows = state.recent.length === 3 && state.recent.every((row,index) =>
+    row.targetRef === targetRef && row.event === 'command' && row.ok === true && row.status === 0 &&
+    row.signal === null && row.error === null && row.seq === install.seq + index);
+  if (!currentRows || installed?.appProvisionType !== 'debug' || installed.moduleName !== 'entry_test' ||
+      !sameArgs(install.args,runnerInstallArgs(installed.bundleName)) ||
+      !sameArgs(clock.args,RUNNER_CLOCK_ARGS) || !sameArgs(before.args,UI_CONTRACT_LOG_ARGS)) {
+    fail('A Runner invocation requires its exact install, clock and immediate app-log readbacks on the leased target');
+  }
+  const nowMs = now();
+  const times = state.recent.map(row => ({start:Date.parse(row.startedAt),end:Date.parse(row.recordedAt)}));
+  if (!times.every(({start,end},index) => Number.isFinite(start) && Number.isFinite(end) && start <= end &&
+      end - start <= TIMEOUT_MS && Number.isFinite(state.recent[index].elapsedMs) &&
+      state.recent[index].elapsedMs >= 0 && state.recent[index].elapsedMs <= TIMEOUT_MS &&
+      (!index || times[index-1].end <= start)) ||
+      !Number.isFinite(nowMs) || nowMs < times[2].end || nowMs - times[0].end > TIMEOUT_MS ||
+      nowMs - times[1].start + 1000 >= TIMEOUT_MS) {
+    fail('The Runner install and device clock evidence is outside the current command interval');
+  }
+  const deviceClock = runnerClockOutput(clock);
+  const deviceNowMs = Number(deviceClock) * 1000;
+  const request = deviceClock && parseReversalRequest(plan.argument,deviceNowMs);
+  if (!request || request.runnerBundle !== installed.bundleName || request.versionName !== installed.versionName ||
+      request.versionCode !== installed.versionCode || request.updateTime !== installed.updateTime ||
+      request.expiresAtMs !== deviceNowMs + TIMEOUT_MS) {
+    fail('The Runner request does not bind the current independent installation and device clock');
+  }
+  if (request.mode !== runnerMode) fail('The Runner request mode differs from this probe session');
+  state.invoked = true;
+  return {...plan,kind:'command',args:reversalCommandArgs({request,argument:plan.argument}),runnerOutput:true};
+}
+
+function boundedRunnerOutput(result) {
+  if ([result.stdout,result.stderr].some(value => Buffer.byteLength(value ?? '', 'utf8') > RUNNER_OUTPUT_BYTES)) {
+    return {...result,stdout:'',stderr:'',error:new Error('Runner output exceeded its capture limit')};
+  }
+  return result;
+}
+
 
 function optionsFrom(argv) {
   const options = {};
   const keys = ['--target', '--hdc', '--server', '--output-dir'];
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index];
-    if (!keys.includes(key) || options[key] !== undefined || argv[index + 1] === undefined) fail('invalid/duplicate startup option');
+    if ((!keys.includes(key) && key !== '--runner-mode' && key !== '--guest-scheduling') ||
+      options[key] !== undefined || argv[index + 1] === undefined) {
+      fail('invalid/duplicate startup option');
+    }
     options[key] = argv[index + 1];
   }
   if (keys.some(key => typeof options[key] !== 'string' || options[key].length === 0)) fail('all four startup options are required');
+  const runnerMode = options['--runner-mode'];
+  if (runnerMode !== undefined && runnerMode !== 'dry' && runnerMode !== 'dispatch') {
+    fail('Runner mode must be dry or dispatch');
+  }
   if (!/^[A-Za-z0-9._:\[\]-]{1,256}$/.test(options['--target']) || options['--target'].startsWith('-')) fail('invalid exact target');
   const server = options['--server'];
+  const guestScheduling = options['--guest-scheduling'];
+  if (guestScheduling !== undefined &&
+    (guestScheduling !== 'full-handoff' || !(guestSchedulingLocalTarget(server, options['--target']) ||
+      guestSchedulingRemoteTarget(server, options['--target'])))) {
+    fail('Guest scheduling requires a Full handoff VM probe session');
+  }
   const colon = server.lastIndexOf(':');
   const host = server.slice(0, colon).replace(/^\[|\]$/g, '');
   const port = server.slice(colon + 1);
@@ -61,7 +190,8 @@ function optionsFrom(argv) {
   }
   const outputDir = resolve(options['--output-dir']);
   if (outputDir === parse(outputDir).root) fail('output directory cannot be filesystem root');
-  return { target: options['--target'], hdc: options['--hdc'], server, outputDir };
+  return { target: options['--target'], hdc: options['--hdc'], server, outputDir,
+    ...(runnerMode === undefined ? {} : {runnerMode}), guestScheduling:guestScheduling === 'full-handoff' };
 }
 
 function exactFields(operation, names) {
@@ -72,14 +202,6 @@ function exactFields(operation, names) {
 function integer(value, min, max, name) {
   if (!Number.isInteger(value) || value < min || value > max) fail(`${name} must be an integer in ${min}..${max}`);
   return String(value);
-}
-function verifyScene(value) {
-  if (typeof value !== 'string' || !/^[a-z][a-z0-9-]{0,31}$/.test(value)) fail('verify scene must match ^[a-z][a-z0-9-]{0,31}$');
-  return value;
-}
-function verifyRun(value) {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(value)) fail('verify run must match ^[A-Za-z0-9-]{8,64}$');
-  return value;
 }
 function remotePath(path, extension) {
   if (typeof path !== 'string' || !/^\/data\/local\/tmp\/reader-control-[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(png|json)$/.test(path)) fail('device path must be a reader-control-* png/json file directly in /data/local/tmp');
@@ -128,13 +250,34 @@ function touchPlanText(events, width, height) {
 }
 function operationPlan(operation, outputDir) {
   exactFields(operation, ['x', 'y', 'fromX', 'fromY', 'toX', 'toY', 'velocity', 'key', 'path', 'text', 'explicitPermit', 'sampleDelaysMs',
-    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs', 'scene', 'run']);
+    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs', 'targetKind', 'vmLog', 'vmLocation',
+    'centerX', 'centerY', 'bundleName', 'argument', 'renderPid', 'renderSurface', 'renderDepth', 'observeGuestSchedule']);
   if (operation.op === 'quit') {
     exactFields(operation, []);
     return { kind: 'quit' };
   }
+  if (operation.op === 'uiContractReadiness') {
+    exactFields(operation, ['targetKind', 'vmLog', 'vmLocation']);
+    const remote = operation.targetKind === 'vm' && operation.vmLocation === 'remote' && operation.vmLog === undefined;
+    const local = operation.targetKind === 'vm' && operation.vmLocation === undefined &&
+      typeof operation.vmLog === 'string' && isAbsolute(operation.vmLog);
+    const physical = operation.targetKind === 'physical' && operation.vmLog === undefined && operation.vmLocation === undefined;
+    if (!remote && !local && !physical) fail('Readiness requires an exact target kind and VM location or current emulator log');
+    return { kind:'uiContractReadiness', vmLog:operation.vmLog, targetKind:operation.targetKind,
+      ...(remote ? {vmLocation:'remote'} : {}) };
+  }
   if (operation.preflightConfirmed !== true) fail('fresh external boot/SceneBoard/exact-target preflight confirmation is required');
   const shell = (...args) => ({ kind: 'command', args: ['shell', ...args] });
+  if (operation.op === 'popupRenderBaseline') {
+    exactFields(operation, []);
+    return {kind:'command',args:popupRenderBaselineArgs,popupRender:'baseline'};
+  }
+  if (operation.op === 'popupRenderOpen' || operation.op === 'popupRenderClose') {
+    exactFields(operation, ['renderPid','renderSurface','renderDepth',...(operation.op === 'popupRenderOpen' ? ['x','y'] : [])]);
+    const args = popupRenderArgs(operation);
+    if (!args) fail('Invalid native More Popup action');
+    return {kind:'command',args,popupRender:true};
+  }
   if (operation.op === 'prepareTouchSequence') {
     exactFields(operation, ['elfPath', 'elfSha256', 'width', 'height', 'display', 'plan']);
     if (typeof operation.elfPath !== 'string' || !isAbsolute(operation.elfPath) || /[\0\r\n]/.test(operation.elfPath) ||
@@ -155,8 +298,26 @@ function operationPlan(operation, outputDir) {
       ...(execute ? { sampleDelaysMs: sampleDelays(operation.sampleDelaysMs) } : {}) };
   }
   if (operation.op === 'click' || operation.op === 'longClick') {
+    exactFields(operation, ['x', 'y', ...(operation.op === 'click' ? ['observeGuestSchedule'] : [])]);
+    const click = shell('uitest', 'uiInput', operation.op, integer(operation.x, 0, 16384, 'x'), integer(operation.y, 0, 16384, 'y'));
+    if (!Object.hasOwn(operation, 'observeGuestSchedule')) return click;
+    if (operation.observeGuestSchedule !== true) fail('guest scheduler observation requires an explicit true flag');
+    return { ...click, kind:'guestSchedulingClick' };
+  }
+  if (operation.op === 'clickThenBack') {
     exactFields(operation, ['x', 'y']);
-    return shell('uitest', 'uiInput', operation.op, integer(operation.x, 0, 16384, 'x'), integer(operation.y, 0, 16384, 'y'));
+    integer(operation.x, 0, 16384, 'x');
+    integer(operation.y, 0, 16384, 'y');
+    const [clickArgs, backArgs] = clickThenBackArgs(operation);
+    return { kind: 'clickThenBack', clickArgs, backArgs };
+  }
+  if (operation.op === 'clickThenReaderCenter') {
+    const keys = ['x','y','centerX','centerY'];
+    exactFields(operation, keys);
+    for (const key of keys) integer(operation[key], 0, 16384, key);
+    const [clickArgs,centerArgs] = clickThenReaderCenterArgs(operation);
+    if (operation.x === operation.centerX && operation.y === operation.centerY) fail('launch and reader center cannot be the same pixel');
+    return {kind:'clickThenReaderCenter',clickArgs,centerArgs};
   }
   if (operation.op === 'sampledClick') {
     exactFields(operation, ['x', 'y', 'sampleDelaysMs']);
@@ -175,6 +336,11 @@ function operationPlan(operation, outputDir) {
     return operation.sampleDelaysMs === undefined ? { kind: 'command', args } :
       { kind: 'sampledHeldTouch', args, sampleDelaysMs: sampleDelays(operation.sampleDelaysMs) };
   }
+  if (operation.op === 'inputSourceFixtureUrl') {
+    exactFields(operation, ['x', 'y']);
+    return { kind: 'command', args: ['shell', 'uitest', 'uiInput', 'inputText', String(operation.x), String(operation.y),
+      'http://192.168.1.29:18084/phase1-public-sources.json'] };
+  }
   if (operation.op === 'inputDirectoryFixtureUrl') {
     exactFields(operation, ['x', 'y']);
     // Fixed self-authored loopback fixture only. No arbitrary URL/text reaches
@@ -187,11 +353,18 @@ function operationPlan(operation, outputDir) {
     // Verified from this target's uiInput help. A search-only word allowlist
     // excludes every shell metacharacter, option prefix and argument separator;
     // HDC shell must never receive unrestricted interpolated text.
-    if (typeof operation.text !== 'string' || !/^[\p{L}\p{N}]{1,64}$/u.test(operation.text)) {
-      fail('inputText accepts only a 1..64 character letter/number search word');
+    const text = operation.text;
+    const limit = typeof text === 'string' && text.startsWith('http') ? 256 : 64;
+    if (typeof text !== 'string' || !/^[\p{L}\p{N}][\p{L}\p{N}:/._~?=&%#+\-]*$/u.test(text) ||
+      text.length > limit || /[\s'"`;|$<>()\\[\]{}*!\\]/.test(text)) {
+      fail('inputText accepts a 1..256 character word or URL without shell metacharacters');
     }
     return shell('uitest', 'uiInput', 'inputText', integer(operation.x, 0, 16384, 'x'),
       integer(operation.y, 0, 16384, 'y'), operation.text);
+  }
+  if (operation.op === 'timedCrossover') {
+    exactFields(operation, ['x','fromY','toY']);
+    return { kind:'command',args:crossoverTouchArgs(operation) };
   }
   if (['drag', 'swipe', 'sampledDrag'].includes(operation.op)) {
     exactFields(operation, ['fromX', 'fromY', 'toX', 'toY', 'velocity', ...(operation.op === 'sampledDrag' ? ['sampleDelaysMs'] : [])]);
@@ -204,12 +377,20 @@ function operationPlan(operation, outputDir) {
   }
   if (operation.op === 'keyEvent') {
     exactFields(operation, ['key']);
-    if (!['Back', 'Home'].includes(operation.key)) fail('only Back/Home key events are allowed');
-    return shell('uitest', 'uiInput', 'keyEvent', operation.key);
+    const key = uiInputKeyArgument(operation.key);
+    if (key === null) fail('only Back/Home/Enter key events are allowed');
+    return shell('uitest', 'uiInput', 'keyEvent', key);
   }
   if (operation.op === 'dumpLayout' || operation.op === 'screenCap') {
     exactFields(operation, ['path']);
     return shell('uitest', operation.op, '-p', remotePath(operation.path, operation.op === 'screenCap' ? '.png' : '.json'));
+  }
+  if (operation.op === 'dumpAppLayout') {
+    exactFields(operation, ['path']);
+    // Keep the default dumpLayout capture unchanged. The package-scoped form
+    // is only for setup/diagnostics where the IME owns focus but the target
+    // app window still needs to be inspected.
+    return shell('uitest', 'dumpLayout', '-b', BUNDLE, '-p', remotePath(operation.path, '.json'));
   }
   if (operation.op === 'recv') {
     exactFields(operation, ['path']);
@@ -217,22 +398,16 @@ function operationPlan(operation, outputDir) {
     return { kind: 'command', args: ['file', 'recv', path, resolve(outputDir, basename(path))], localPath: resolve(outputDir, basename(path)) };
   }
   if (operation.op === 'start') {
-    exactFields(operation, []);
-    return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry', '--pb', 'readerControlMotionVerification', 'true');
+    fail('retired diagnostic launch; enter the complete app with startNormal');
   }
   if (operation.op === 'startNormal') {
     exactFields(operation, []);
     return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry');
   }
-  if (operation.op === 'verifyStart') {
-    exactFields(operation, ['scene', 'width', 'run']);
-    // Debug-only cold route reads these string parameters. Values are already
-    // schema-limited and never reach a shell as caller-composed text.
-    if (operation.width !== 320 && operation.width !== 366) fail('verify width must be 320 or 366');
-    return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
-      '--ps', 'readerVerifyScene', verifyScene(operation.scene),
-      '--ps', 'readerVerifyWidth', String(operation.width),
-      '--ps', 'readerVerifyRun', verifyRun(operation.run));
+  if (operation.op === 'startRemoteEmptyShelf') {
+    exactFields(operation, []);
+    return { ...shell('aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
+      '--ps','readerPublicFixture','empty-shelf'), kind:'startRemoteEmptyShelf' };
   }
   if (operation.op === 'clearRebuildableCache') {
     exactFields(operation, []);
@@ -257,9 +432,41 @@ function operationPlan(operation, outputDir) {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'ReaderControlMotionProbe');
   }
-  if (operation.op === 'verifyLog') {
+  if (operation.op === 'uiContractLog') {
     exactFields(operation, []);
-    return shell('hilog', '-x', '-T', 'ReaderVerify');
+    return {kind:'command',args:UI_CONTRACT_LOG_ARGS.slice()};
+  }
+  if (operation.op === 'uiContractFocusWindow') {
+    exactFields(operation, []);
+    return shell('hidumper', '-s', 'WindowManagerService', '-a', '-a');
+  }
+  if (operation.op === 'uiContractInstalledIdentity') {
+    exactFields(operation, []);
+    return { ...shell('bm', 'dump', '-n', BUNDLE), privateBundleOutput: true };
+  }
+  if (operation.op === 'uiContractRunnerInstalledIdentity') {
+    exactFields(operation, ['bundleName']);
+    const {bundleName} = operation;
+    if (typeof bundleName !== 'string' || bundleName === BUNDLE || bundleName.length > 128 ||
+        !/^[A-Za-z][A-Za-z\d_]*(?:\.[A-Za-z][A-Za-z\d_]*)+$/u.test(bundleName)) {
+      fail('Runner readback requires an exact independent bundle name');
+    }
+    return {kind:'command',args:runnerInstallArgs(bundleName),privateBundleOutput:true,runnerBundle:bundleName};
+  }
+  if (operation.op === 'uiContractRunnerClock') {
+    exactFields(operation, []);
+    return {kind:'command',args:RUNNER_CLOCK_ARGS.slice(),runnerClock:true};
+  }
+  if (operation.op === 'uiContractRunnerInvoke') {
+    exactFields(operation, ['argument']);
+    if (typeof operation.argument !== 'string' || operation.argument.length === 0 || operation.argument.length > 384) {
+      fail('A Runner invocation requires its bounded request argument');
+    }
+    return {kind:'uiContractRunnerInvoke',argument:operation.argument};
+  }
+  if (operation.op === 'developerLayoutLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-e', 'READER_DEVELOPER_LAYOUT');
   }
   if (operation.op === 'force-stop') {
     exactFields(operation, ['explicitPermit']);
@@ -280,22 +487,7 @@ function evidenceEntryExists(path) {
   catch (error) { if (error.code === 'ENOENT') return false; throw error; }
 }
 function pngExtent(bytes) {
-  if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) fail('capture is not PNG');
-  let offset = 8;
-  let chunks = 0;
-  while (offset + 12 <= bytes.length) {
-    const length = bytes.readUInt32BE(offset);
-    const type = bytes.toString('ascii', offset + 4, offset + 8);
-    const next = offset + length + 12;
-    if (next > bytes.length) fail('truncated PNG chunk');
-    chunks += 1;
-    if (type === 'IEND') {
-      if (length !== 0 || next !== bytes.length) fail('PNG has invalid end or trailing bytes; evidence rejected');
-      return { bytes: bytes.length, chunks };
-    }
-    offset = next;
-  }
-  fail('PNG has no complete IEND');
+  return { bytes: bytes.length, chunks: inspectNativePng(bytes).chunks };
 }
 async function acquireTargetLock(target, hdc, configuredServer) {
   const targetRef = targetReference(target);
@@ -310,8 +502,17 @@ async function acquireTargetLock(target, hdc, configuredServer) {
   const configuredWait = Number(process.env.READER_HDC_LEASE_WAIT_MS || '30000');
   const waitMs = Number.isInteger(configuredWait) && configuredWait >= 0 && configuredWait <= 3600000 ? configuredWait : 30000;
   const lease = await acquireLease({ root, target, targetRefValue: targetRef, lockRefValue: serverRef, waitMs, owner });
+  const ownerFile = resolve(lease.lockDir, 'owner.json');
+  function recordClient(startPending, childPid = owner.childPid) {
+    owner.commandStartPending = startPending;
+    owner.childPid = childPid;
+    const pendingFile = resolve(lease.lockDir, 'owner.pending.json');
+    writeFileSync(pendingFile, JSON.stringify(owner), {mode:0o600});
+    renameSync(pendingFile, ownerFile);
+  }
   return {
     targetRef,
+    recordClient,
     release() { releaseLease(root, lease.lockDir, owner); },
   };
 }
@@ -319,22 +520,25 @@ async function acquireTargetLock(target, hdc, configuredServer) {
 async function probe(options) {
   accessSync(options.hdc, constants.X_OK);
   if (!statSync(options.hdc).isFile()) fail('hdc must be an executable file');
-  const idleMs = Number(process.env.READER_HDC_PROBE_IDLE_MS ?? 60000);
-  if (!Number.isInteger(idleMs) || idleMs < 1 || idleMs > 60000) fail('probe idle timeout must be 1..60000 ms');
   const lock = await acquireTargetLock(options.target, options.hdc, options.server);
   let input;
   let activeChild;
+  let finishGuestScheduling;
+  const closeGuestScheduling = async transfer => {
+    const finish = finishGuestScheduling;
+    finishGuestScheduling = undefined;
+    await finish?.(transfer);
+  };
   let stopping = false;
   let frameIndex = 0;
+  let idleTimer;
+  const deadline = performance.now() + SESSION_MS;
   // A reused remote name cannot establish capture provenance across runs.
   // Give every probe a unique namespace; never overwrite earlier evidence.
   const frameRunNonce = randomUUID();
   const abort = new AbortController();
-  let idleTimer, stopReason = 'signal';
-  const stop = () => { stopping = true; abort.abort(); activeChild?.kill('SIGKILL'); input?.close(); };
-  const expire = reason => { stopReason = reason; process.exitCode = 1; stop(); };
-  const sessionTimer = setTimeout(() => expire('session-timeout'), 600000);
-  const armIdle = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => expire('idle-timeout'), idleMs); };
+  const stop = () => { stopping = true; abort.abort(); activeChild?.kill('SIGTERM'); input?.close(); };
+  const sessionTimer = setTimeout(stop, SESSION_MS);
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
   process.on('SIGHUP', stop);
@@ -344,29 +548,98 @@ async function probe(options) {
     const log = resolve(options.outputDir, `reader-control-probe-${Date.now()}-${randomUUID()}.jsonl`);
     writeFileSync(log, '', { flag: 'wx', mode: 0o600 });
     const redact = value => String(value ?? '').split(options.target).join(`[target:${lock.targetRef}]`);
+    let seq = 0;
+    const runnerState = {recent:[],invoked:false};
     const record = value => {
-      const line = `${JSON.stringify({ recordedAt: new Date().toISOString(), targetRef: lock.targetRef, ...value })}\n`;
+      const row = {recordedAt:new Date().toISOString(),targetRef:lock.targetRef,seq:++seq,...value};
+      rememberRunnerRow(runnerState,row);
+      const line = `${JSON.stringify(row)}\n`;
       appendFileSync(log, line);
       process.stdout.write(line);
     };
     const prefix = ['-p', '-s', options.server, '-t', options.target];
-    const assess = (args, result, startedAt, elapsedMs) => {
-      const stdout = redact(result.stdout);
-      const stderr = redact(result.stderr);
-      const ok = commandOK(result);
-      record({ event: 'command', args, startedAt, elapsedMs, ok, status: result.status,
-        signal: result.signal ?? null, error: result.error ? redact(result.error.message) : null, stdout, stderr });
+    let traceVmReady = false;
+    let remoteVmReady = false;
+    let parseBundleMetadata;
+    const assess = (args, result, startedAt, elapsedMs, {privateBundleOutput = false,runnerBundle,runnerClock,popupRender} = {}) => {
+      let installed;
+      const clock = runnerClock ? runnerClockOutput(result) : null;
+      let ok = runnerClock ? clock !== null : popupRender ?
+        !result.error && result.status === 0 && !result.signal && !String(result.stderr ?? '').trim() &&
+          (popupRender === 'baseline' ? popupRenderBaselineAcknowledged(result.stdout) : popupRenderAcknowledged(result.stdout)) : commandOK(result, args);
+      if (ok && privateBundleOutput) {
+        try {
+          installed = runnerBundle ? publicRunnerInstall(parseRunnerInstalledMetadata(String(result.stdout),runnerBundle),runnerBundle) :
+            parseBundleMetadata(String(result.stdout));
+        } catch { ok = false; }
+        if (!runnerBundle && !installed?.appVersion) ok = false;
+      }
+      // A failed input command can echo its arguments. Drop all echoed
+      // fields before serialization through the persistent log and IPC sink.
+      record({ event: 'command', startedAt, elapsedMs, ok, ...publicCommandResult(args, result, redact, privateBundleOutput || runnerClock),
+        ...(clock === null ? {} : {stdout:clock}),
+        ...(installed ? { installed } : {}) });
       if (!ok) fail('device command failed or stop-condition output observed; no automatic retry');
     };
-    const run = plan => {
-      if (stopping) fail('probe is stopping');
-      if (plan.localPath && evidenceEntryExists(plan.localPath)) fail('refusing to overwrite existing local evidence or symlink');
+    const invoke = (args, latestStart = deadline, maxBuffer = MAX_OUTPUT, client) => {
       const start = performance.now();
+      if (stopping || deadline <= start || latestStart <= start) return null;
       const startedAt = new Date().toISOString();
-      const result = spawnSync(options.hdc, [...prefix, ...plan.args], {
-        shell: false, encoding: 'utf8', timeout: TIMEOUT_MS, killSignal: 'SIGKILL', maxBuffer: MAX_OUTPUT, stdio: ['ignore', 'pipe', 'pipe'],
+      const transfer = args[0] === 'file';
+      const timeout = Math.min(client?.timeout ?? (transfer ? TRANSFER_TIMEOUT_MS : TIMEOUT_MS),
+        Math.max(1, Math.floor(deadline - start)));
+      if (client) lock.recordClient(true);
+      const result = spawnSync(options.hdc, [...prefix, ...args], {
+        shell: false, encoding: 'utf8', timeout, env: hdcEnvironment, maxBuffer, stdio: ['ignore', 'pipe', 'pipe'],
+        ...(client ? {killSignal:'SIGKILL'} : {}),
       });
-      assess(plan.args, result, startedAt, performance.now() - start);
+      if (client) lock.recordClient(false);
+      return { result, startedAt, start, elapsedMs: performance.now() - start };
+    };
+    const publicDispatch = (args, dispatch) => dispatch && ({
+      ...publicCommandResult(args, dispatch.result, redact),
+      startedAt:dispatch.startedAt, hostStartMs:dispatch.start, elapsedMs:dispatch.elapsedMs,
+    });
+    const clickThenBack = plan => {
+      const click = invoke(plan.clickArgs);
+      if (!click) fail('probe is stopping');
+      const back = commandOK(click.result, plan.clickArgs) ? invoke(plan.backArgs, click.start + searchMorphDispatchWindowMs) : null;
+      const ok = Boolean(back && commandOK(back.result, plan.backArgs));
+      record({ event: 'click-then-back', ok, click: publicDispatch(plan.clickArgs, click),
+        back: publicDispatch(plan.backArgs, back),
+        reason: ok ? null : !commandOK(click.result, plan.clickArgs) ? 'click-failed' : back ? 'back-failed' : 'dispatch-window-closed' });
+      if (!ok) fail('paired Search input stopped before a successful Back receipt; no automatic retry');
+    };
+    const clickThenReaderCenter = async plan => {
+      const click = invoke(plan.clickArgs);
+      if (!click) fail('probe is stopping');
+      let center;
+      if (commandOK(click.result, plan.clickArgs)) {
+        const remainingMs = Math.ceil(click.start + capsuleCenterDispatch.earliestMs - performance.now());
+        if (remainingMs > 0) {
+          try { await delay(remainingMs,null,{signal:abort.signal}); }
+          catch (error) { if (!stopping) throw error; }
+        }
+        if (performance.now() >= click.start + capsuleCenterDispatch.earliestMs) {
+          center = invoke(plan.centerArgs,click.start + capsuleCenterDispatch.latestMs);
+        }
+      }
+      const ok = Boolean(center && commandOK(center.result, plan.centerArgs));
+      record({event:'click-then-reader-center',ok,click:publicDispatch(plan.clickArgs,click),
+        center:publicDispatch(plan.centerArgs,center),
+        reason:ok ? null : !commandOK(click.result, plan.clickArgs) ? 'click-failed' : center ? 'center-failed' :
+          stopping ? 'probe-stopped' : 'dispatch-window-closed'});
+      if (!ok) fail('paired playback input stopped before a successful center tap receipt; no automatic retry');
+    };
+    const run = plan => {
+      if (plan.localPath && evidenceEntryExists(plan.localPath)) fail('refusing to overwrite existing local evidence or symlink');
+      const dispatched = invoke(plan.args,deadline,plan.runnerOutput ? RUNNER_OUTPUT_BYTES :
+        plan.popupRender ? POPUP_RENDER_OUTPUT_BYTES : MAX_OUTPUT,
+      plan.kind === 'guestSchedulingClick' ? {timeout:4000} : undefined);
+      if (!dispatched) fail('probe is stopping');
+      const { result, startedAt, elapsedMs } = dispatched;
+      assess(plan.args,plan.runnerOutput ? boundedRunnerOutput(result) :
+        plan.popupRender ? {...result,stdout:popupRenderJournal(result.stdout)} : result,startedAt,elapsedMs,plan);
       if (plan.localPath) {
         if (plan.artifactSha256 && (!lstatSync(plan.localPath).isFile() || lstatSync(plan.localPath).isSymbolicLink())) fail('touch artifact readback is not a regular file');
         const bytes = readFileSync(plan.localPath);
@@ -382,6 +655,90 @@ async function probe(options) {
           meaning: 'file extent/parse and identity only; not visual or interaction acceptance' });
       }
       return result;
+    };
+    const guestSchedulingClick = async plan => {
+      if (!traceVmReady || finishGuestScheduling || stopping) fail('guest scheduler observation requires one ready VM click');
+      const receiptPath = resolve(options.outputDir, guestSchedulingReceipt);
+      const tracePath = resolve(options.outputDir, guestSchedulingTraceFile);
+      if (evidenceEntryExists(receiptPath) || evidenceEntryExists(tracePath)) fail('guest scheduler evidence already exists');
+      const {armArgs, remote, cleanupArgs} = guestSchedulingCommands(frameRunNonce, BUNDLE, remoteVmReady ? 'remote' : 'local');
+      const traceStarted = performance.now();
+      if (deadline - traceStarted < guestSchedulingClientTimeoutMs) fail('not enough probe time remains to start the guest trace');
+      lock.recordClient(true);
+      const child = spawn(options.hdc, [...prefix, ...armArgs], {
+        timeout:guestSchedulingClientTimeoutMs, killSignal:'SIGKILL', env:hdcEnvironment, stdio:['ignore','pipe','pipe'],
+      });
+      child.once('spawn', () => lock.recordClient(false, child.pid));
+      const collector = observeGuestSchedulingChild(child);
+      let dispatch;
+      finishGuestScheduling = async transfer => {
+        const {arming, savedFile, captured, finishedAt} = await collector.completed;
+        lock.recordClient(false, null);
+        const evidence = { targetRef:lock.targetRef, traceClock:'mono', traceDurationSeconds:5,
+          status:arming ? 'TRACE_INCOMPLETE' : 'NOT_ARMED', finishedAt,
+          readerPid:arming?.readerPid, armedAt:arming?.armedAt, dispatch, cleanup:'NOT_RUN' };
+        if (savedFile && !stopping) {
+          try {
+            if (transfer && captured && dispatch?.completedAt && !evidenceEntryExists(tracePath)) {
+              const received = invoke(['file','recv',remote,tracePath], deadline, MAX_OUTPUT, {timeout:8000});
+              const file = lstatSync(tracePath, {throwIfNoEntry:false});
+              if (file?.isFile()) chmodSync(tracePath, 0o600);
+              if (received && commandOK(received.result) && file?.isFile() &&
+                file.size === savedFile.bytes && sha256(readFileSync(tracePath)) === savedFile.sha256) {
+                evidence.status = 'TRACE_BYTES_SAVED';
+                evidence.trace = { path:guestSchedulingTraceFile, bytes:savedFile.bytes, sha256:savedFile.sha256 };
+              }
+            }
+          } finally {
+            // Let any signal received during synchronous file recv reach stop().
+            await new Promise(resolveImmediate => setImmediate(resolveImmediate));
+            const cleanup = invoke(cleanupArgs, deadline, MAX_OUTPUT, {timeout:5000});
+            if (cleanup) evidence.cleanup = commandOK(cleanup.result) ? 'PASS' : 'FAIL';
+          }
+        }
+        if (evidence.cleanup !== 'PASS') evidence.guestTracePathIfRetained = remote;
+        writeFileSync(receiptPath, JSON.stringify(evidence, null, 2) + '\n', {flag:'wx',mode:0o600});
+      };
+      const arming = await collector.armed;
+      if (!arming || stopping || child.exitCode !== null || child.signalCode !== null ||
+        performance.now() - arming.hostArmedMs > 1000 || performance.now() - traceStarted > 4000) {
+        fail('guest scheduler trace did not arm for the current playback action');
+      }
+      dispatch = { commandSeq:seq + 1, beganAt:new Date().toISOString() };
+      run(plan);
+      dispatch.completedAt = new Date().toISOString();
+    };
+    const readiness = async plan => {
+      const remote = plan.vmLocation === 'remote';
+      if (remote && !guestSchedulingRemoteTarget(options.server, options.target)) {
+        fail('Remote VM readiness requires the configured LAN server and its loopback target');
+      }
+      const { readinessQueryOutput, targetReadiness } = await import('../scripts/lib/hap-delivery-evidence.mjs');
+      const query = command => {
+        if (stopping || deadline <= performance.now()) fail('probe is stopping');
+        const result = spawnSync(options.hdc, [...prefix, 'shell', command], {
+          shell: false, encoding: 'utf8', env: hdcEnvironment, timeout: Math.min(10000, Math.max(1, Math.floor(deadline - performance.now()))),
+          maxBuffer: 1024 * 1024,
+        });
+        return readinessQueryOutput(command, result);
+      };
+      const listing = spawnSync(options.hdc, ['-p','-s',options.server,'list','targets','-v'],
+        { shell: false, encoding: 'utf8', env: hdcEnvironment, timeout: 10000, maxBuffer: 1024 * 1024 });
+      const exact = (listing.stdout ?? '').split(/\r?\n/u).filter(line => line.split(/\s+/u)[0] === options.target);
+      if (!commandOK(listing) || exact.length !== 1 || !/\bConnected\b/u.test(exact[0])) fail('Exact target is not independently confirmed Connected');
+      const checked = targetReadiness({ targetKind: plan.targetKind, vmLog: plan.vmLog, targetEndpoint: options.target, query });
+      remoteVmReady = remote && checked.status === 'PASS' && checked.bootCompleted === true &&
+        checked.sceneBoardStable === true && checked.evidenceScope === 'guest-only' &&
+        checked.emulatorLog?.status === 'NOT_PROVIDED' &&
+        ['kernel-boot-id','vm-guest-boot-milestones-v1'].includes(checked.bootIdentitySource);
+      const instanceReady = remote
+        ? remoteVmReady
+        : guestSchedulingLocalTarget(options.server, options.target) && guestSchedulingVmLog(plan.vmLog) &&
+          checked.emulatorLog?.bootMarker === true && checked.emulatorLog.instabilityAfterMarker === false;
+      traceVmReady = options.guestScheduling && checked.status === 'PASS' && checked.bootCompleted === true &&
+        checked.sceneBoardStable === true && plan.targetKind === 'vm' && instanceReady;
+      record({ event:'readiness', ...checked, hdcServer:options.server, targetKind:plan.targetKind, exactConnected:true,
+        ...(remote ? {vmLocation:'remote'} : {}) });
     };
     const touchTickets = new Map();
     const verifyTouchArtifacts = ticket => {
@@ -466,7 +823,7 @@ async function probe(options) {
       record({ event: 'touch-execute-admitted', ticket: ticket.id, requestAuth: true, artifacts: ticket.artifacts,
         meaning: 'fresh caller preflight asserted; helper must obtain its own new authorization, never reuse another owner' });
       activeChild = spawn(options.hdc, [...prefix, ...args], { shell: false,
-        stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS, killSignal: 'SIGKILL' });
+        stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS });
       const child = activeChild;
       const nativeEvents = [];
       const completed = new Promise(resolveDone => {
@@ -497,7 +854,7 @@ async function probe(options) {
         child.on('error', error => { childError = error; });
         child.on('close', (status, signal) => {
           const result = { status, signal, stdout, stderr, error: childError };
-          if (!commandOK(result)) stop();
+          if (!commandOK(result, args)) stop();
           originReady(undefined);
           resolveDone(result);
         });
@@ -528,7 +885,7 @@ async function probe(options) {
       } catch (error) {
         child.kill('SIGTERM');
         const result = await completed;
-        if (!commandOK(result)) assess(args, result, startedAt, performance.now() - commandStart);
+        if (!commandOK(result, args)) assess(args, result, startedAt, performance.now() - commandStart);
         throw error;
       } finally { activeChild = undefined; }
     };
@@ -541,7 +898,7 @@ async function probe(options) {
       let stderr = '';
       let childError;
       activeChild = spawn(options.hdc, [...prefix, ...plan.args], {
-        shell: false, stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS, killSignal: 'SIGKILL',
+        shell: false, env: hdcEnvironment, stdio: ['ignore', 'pipe', 'pipe'], timeout: TIMEOUT_MS,
       });
       const child = activeChild;
       const completed = new Promise(resolveDone => {
@@ -556,7 +913,7 @@ async function probe(options) {
         child.on('error', error => { childError = error; });
         child.on('close', (status, signal) => {
           const dragResult = { status, signal, stdout, stderr, error: childError };
-          if (!commandOK(dragResult)) stop();
+          if (!commandOK(dragResult, plan.args)) stop();
           resolveDone(dragResult);
         });
       });
@@ -580,40 +937,60 @@ async function probe(options) {
         const result = await completed;
         // Preserve the failing drag's output even when it aborts a pending
         // screenshot delay, rather than reporting only a timer AbortError.
-        if (!commandOK(result)) assess(plan.args, result, startedAt, performance.now() - start);
+        if (!commandOK(result, plan.args)) assess(plan.args, result, startedAt, performance.now() - start);
         throw error;
       } finally { activeChild = undefined; }
     };
     record({ event: 'ready', log, warning: 'Lock acquired only; boot readiness/authorization must already be established externally. No retries or service startup.' });
     input = createInterface({ input: process.stdin, crlfDelay: Infinity });
-    armIdle();
+    const waitForInput = () => { idleTimer = setTimeout(stop, IDLE_MS); };
+    waitForInput();
     for await (const line of input) {
       if (stopping) break;
       if (line.length > 32768) fail('operation line exceeds limit');
       if (line.trim() === '') continue;
       clearTimeout(idleTimer);
-      const plan = operationPlan(JSON.parse(line), options.outputDir);
+      const plan = operationPlan(readOperation(line), options.outputDir);
       if (plan.kind === 'quit') break;
       if (['sampledDrag', 'sampledClick', 'sampledHeldTouch'].includes(plan.kind)) await sampledDrag(plan);
+      else if (plan.kind === 'clickThenBack') clickThenBack(plan);
+      else if (plan.kind === 'clickThenReaderCenter') await clickThenReaderCenter(plan);
       else if (plan.kind === 'prepareTouchSequence') prepareTouchSequence(plan);
       else if (plan.kind === 'dryRunTouchSequence') dryRunTouchSequence(plan);
       else if (plan.kind === 'sampledTouchSequence') await sampledTouchSequence(plan);
-      else run(plan);
-      armIdle();
+      else if (plan.kind === 'uiContractReadiness') await readiness(plan);
+      else if (plan.kind === 'guestSchedulingClick') await guestSchedulingClick(plan);
+      else if (plan.kind === 'startRemoteEmptyShelf') {
+        if (!remoteVmReady) fail('Remote public storage launch requires this probe’s verified remote VM');
+        run(plan);
+      }
+      else if (plan.kind === 'uiContractRunnerInvoke') run(await runnerInvocation(plan,runnerState,lock.targetRef,options.runnerMode));
+      else {
+        if (plan.privateBundleOutput && !plan.runnerBundle) {
+          ({parseBundleMetadata} = await import('../scripts/hap-pipeline.mjs'));
+        }
+        run(plan);
+      }
+      waitForInput();
     }
-    record({ event: 'closed', reason: stopping ? stopReason : 'quit-or-eof' });
+    await closeGuestScheduling(!stopping);
+    record({ event: 'closed', reason: stopping ? 'signal' : 'quit-or-eof' });
   } finally {
-    clearTimeout(idleTimer); clearTimeout(sessionTimer);
-    input?.close(); process.stdin.pause();
-    process.off('SIGINT', stop);
-    process.off('SIGTERM', stop);
-    process.off('SIGHUP', stop);
-    lock.release();
+    clearTimeout(idleTimer);
+    clearTimeout(sessionTimer);
+    input?.close();
+    try { await closeGuestScheduling(false); }
+    finally {
+      process.off('SIGINT', stop);
+      process.off('SIGTERM', stop);
+      process.off('SIGHUP', stop);
+      lock.release();
+    }
   }
 }
 
 function selfTest() {
-  const png = Buffer.from('89504e470d0a1a0a0000000049454e44ae426082', 'hex');
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNg+M/wHwAEAQH/cetH5QAAAABJRU5ErkJggg==', 'base64');
   assert.equal(pngExtent(png).bytes, png.length);
   assert.throws(() => pngExtent(Buffer.concat([png, Buffer.from('stale tail')])));
   assert.throws(() => pngExtent(png.subarray(0, png.length - 1)));
@@ -621,10 +998,19 @@ function selfTest() {
   const plan = value => operationPlan({ preflightConfirmed: true, ...value }, directory);
   const validArgs = ['--target', 'test-serial', '--hdc', resolve(tmpdir(), 'fixture-hdc'), '--server', '::ffff:127.0.0.1:8710', '--output-dir', directory];
   assert.equal(optionsFrom(validArgs).server, '::ffff:127.0.0.1:8710');
+  assert.equal(optionsFrom(validArgs).guestScheduling, false);
+  assert.throws(() => optionsFrom([...validArgs,'--guest-scheduling','full-handoff']));
+  const tracedArgs = validArgs.map(value => value === 'test-serial' ? '127.0.0.1:5561' :
+    value === '::ffff:127.0.0.1:8710' ? '127.0.0.1:8710' : value);
+  assert.equal(optionsFrom([...tracedArgs,'--guest-scheduling','full-handoff']).guestScheduling, true);
   assert.throws(() => optionsFrom([...validArgs, '--target', 'other']));
   assert.throws(() => optionsFrom(validArgs.map(value => value === 'test-serial' ? 'x; reboot' : value)));
   assert.throws(() => operationPlan({ op: 'click', x: 1, y: 2 }, directory));
   assert.deepEqual(plan({ op: 'click', x: 1, y: 2 }).args, ['shell', 'uitest', 'uiInput', 'click', '1', '2']);
+  const observedClick = plan({op:'click',x:1,y:2,observeGuestSchedule:true});
+  assert.deepEqual(observedClick, {kind:'guestSchedulingClick',args:plan({op:'click',x:1,y:2}).args});
+  assert.throws(() => plan({op:'click',x:1,y:2,observeGuestSchedule:false}));
+  assert.throws(() => plan({op:'longClick',x:1,y:2,observeGuestSchedule:true}));
   assert.deepEqual(plan({ op: 'inputDirectoryFixtureUrl', x: 1, y: 2 }).args,
     ['shell', 'uitest', 'uiInput', 'inputText', '1', '2', 'http://127.0.0.1:18084/reading-directory-sources.json']);
   assert.throws(() => plan({ op: 'inputDirectoryFixtureUrl', x: 1, y: 2, text: 'other' }));
@@ -640,6 +1026,13 @@ function selfTest() {
     assert.throws(() => plan({ op, fromX: 1, fromY: 2, toX: 3, toY: 4, velocity: 199 }));
   }
   assert.deepEqual(plan({ op: 'keyEvent', key: 'Back' }).args, ['shell', 'uitest', 'uiInput', 'keyEvent', 'Back']);
+  assert.deepEqual(plan({ op: 'keyEvent', key: 'Enter' }).args, ['shell', 'uitest', 'uiInput', 'keyEvent', '2054']);
+  assert.deepEqual(plan({ op: 'clickThenBack', x: 641, y: 1636 }), {
+    kind: 'clickThenBack', clickArgs: ['shell', 'uitest', 'uiInput', 'click', '641', '1636'],
+    backArgs: ['shell', 'uitest', 'uiInput', 'keyEvent', 'Back'],
+  });
+  assert.throws(() => plan({ op: 'clickThenBack', x: 641, y: 1636, key: 'Home' }));
+  assert.throws(() => plan({ op: 'clickThenBack', x: '641; reboot', y: 1636 }));
   assert.deepEqual(plan({ op: 'motionLog' }).args, ['shell', 'hilog', '-x', '-e', 'ReaderControlMotionProbe']);
   const clickSample = { op: 'sampledClick', x: 100, y: 200, sampleDelaysMs: [0, 50, 10000] };
   assert.deepEqual(plan(clickSample).args, ['shell', 'uitest', 'uiInput', 'click', '100', '200']);
@@ -666,23 +1059,19 @@ function selfTest() {
   }
   assert.equal(plan({ op: 'recv', path: '/data/local/tmp/reader-control-ok.png' }).localPath, join(directory, 'reader-control-ok.png'));
   assert.throws(() => plan({ op: 'screenCap', path: '/data/local/tmp/reader-control-ok.json' }));
-  assert.deepEqual(plan({ op: 'start' }).args.slice(-3), ['--pb', 'readerControlMotionVerification', 'true']);
+  assert.deepEqual(plan({ op: 'dumpLayout', path: '/data/local/tmp/reader-control-ok.json' }).args,
+    ['shell', 'uitest', 'dumpLayout', '-p', '/data/local/tmp/reader-control-ok.json']);
+  assert.deepEqual(plan({ op: 'dumpAppLayout', path: '/data/local/tmp/reader-control-ok.json' }).args,
+    ['shell', 'uitest', 'dumpLayout', '-b', BUNDLE, '-p', '/data/local/tmp/reader-control-ok.json']);
+  assert.throws(() => plan({ op: 'dumpAppLayout', path: '/data/local/tmp/reader-control-ok.png' }));
+  assert.throws(() => plan({ op: 'dumpAppLayout', path: '/data/local/tmp/reader-control-ok.json', bundle: 'other' }));
+  assert.throws(() => plan({ op: 'start' }), /retired diagnostic launch/);
   assert.throws(() => plan({ op: 'start', bundle: 'other' }));
   assert.deepEqual(plan({ op: 'startNormal' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry']);
   assert.throws(() => plan({ op: 'startNormal', bundle: 'other' }));
-  const verifyStart = { op: 'verifyStart', scene: 'directory-control-expanded', width: 366, run: 'run-20261118-01' };
-  assert.deepEqual(plan(verifyStart).args,
-    ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
-      '--ps', 'readerVerifyScene', 'directory-control-expanded',
-      '--ps', 'readerVerifyWidth', '366', '--ps', 'readerVerifyRun', 'run-20261118-01']);
-  for (const invalid of [{ scene: 'Directory' }, { scene: 'dir_x' }, { scene: 'a'.repeat(33) },
-    { scene: 'x;reboot' }, { width: 320.5 }, { width: '366' }, { width: 200 },
-    { run: 'short' }, { run: 'bad run' }, { run: `${'a'.repeat(64)}b` }, { path: '/tmp/x' }]) {
-    assert.throws(() => plan({ ...verifyStart, ...invalid }));
-  }
-  assert.throws(() => operationPlan({ ...verifyStart, preflightConfirmed: false }, directory));
-  assert.deepEqual(plan({ op: 'verifyLog' }).args, ['shell', 'hilog', '-x', '-T', 'ReaderVerify']);
+  assert.deepEqual(plan({op:'startRemoteEmptyShelf'}).args, ['shell','aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
+    '--ps','readerPublicFixture','empty-shelf']);
   assert.deepEqual(plan({ op: 'startColdEntryMemoryMiss' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
       '--pb', 'readerDisableOptionalEntryMemory', 'true']);
@@ -722,18 +1111,182 @@ function selfTest() {
   assert.throws(() => plan({ op: 'dryRunTouchSequence', ticket, requestAuth: true }));
   assert.throws(() => operationPlan({ ...execute, preflightConfirmed: false }, directory));
   assert.equal(targetReference('test-serial'), createHash('sha256').update('test-serial').digest('hex').slice(0, 12));
+  const privateMarker = 'PRIVATEINPUTSHOULDNOTBEWRITTEN';
+  const privatePlan = plan({ op: 'inputText', x: 1, y: 2, text: privateMarker });
+  const echoedFailure = { status: 1, stdout: privateMarker, stderr: privateMarker, error: new Error(privateMarker) };
+  const safeEvidence = publicCommandResult(privatePlan.args, echoedFailure, value => String(value ?? ''));
+  assert.equal(safeEvidence.args.at(-1), `[length:${privateMarker.length}]`);
+  assert.ok(!JSON.stringify(safeEvidence).includes(privateMarker));
+  assert.throws(() => readOperation(`{"text":"${privateMarker}",invalid`), /^Error: invalid device operation JSON$/);
+  assert.deepEqual(plan({ op: 'uiContractLog' }).args, ['shell','hilog','-x','-T','ReaderUIContract']);
+  assert.throws(() => plan({op:'uiContractReadiness', targetKind:'physical', vmLog:'/tmp/vm.log'}));
   const owner = { pid: 123, targetRef: 'abc', probeNonce: 'owned' };
   assert.equal(ownerMatches(owner, owner), true);
   for (const changed of [{ pid: 124 }, { targetRef: 'other' }, { probeNonce: 'other' }]) assert.equal(ownerMatches({ ...owner, ...changed }, owner), false);
   assert.equal(commandOK({ status: 0, stdout: 'done', stderr: '' }), true);
+  const failedBusinessLog = '{"outcome":"failed","failedCount":1}';
+  assert.equal(commandOK({ status: 0, stdout: failedBusinessLog, stderr: '' }, UI_CONTRACT_LOG_ARGS),
+    true, 'contract-log business failures remain readable data');
+  assert.equal(commandOK({ status: 0, stdout: failedBusinessLog, stderr: '' }),
+    false, 'non-log commands retain their existing failed-output stop condition');
+  assert.equal(commandOK({ status: 1, stdout: failedBusinessLog, stderr: '' }, UI_CONTRACT_LOG_ARGS),
+    false, 'a failed log command remains a failed HDC command');
+  assert.equal(commandOK({ status: 0, stdout: '', stderr: 'Connect server failed' }, UI_CONTRACT_LOG_ARGS),
+    false, 'transport failures remain fatal for log reads');
   for (const output of ['Connect server failed', 'Device not found or connected', 'LIFECYCLE_TIMEOUT', 'Error: gesture failed',
     'Error loading shared library libark_jsruntime.so', 'Error relocating libace_napi.z.so: symbol not found']) {
     assert.equal(commandOK({ status: 0, stdout: output }), false, 'zero exit status cannot conceal stop-condition output');
   }
+  const enterArgs = ['shell', 'uitest', 'uiInput', 'keyEvent', '2054'];
+  assert.equal(commandOK({ status: 0, stdout: 'No Error\n', stderr: '' }, enterArgs), true);
+  assert.equal(commandOK({ status: 0, stdout: 'Invalid parameters. \n\nUSAGE : ', stderr: '' }, enterArgs), false,
+    'uiInput accepts no status-0 error text as a successful dispatch');
+  runnerReadbacksSelfTest();
   process.stdout.write('reader control device probe pure argument/allowlist/ownership self-test: PASS (no HDC, no lock/device/filesystem writes)\n');
 }
 
-if (process.argv.length === 3 && process.argv[2] === '--self-test') selfTest();
+function runnerReadbacksSelfTest() {
+  const directory = resolve(tmpdir(), 'probe-self-test-evidence');
+  const plan = op => operationPlan({preflightConfirmed:true,...op},directory);
+  const bundleName = 'io.reader.minliny.fixture';
+  const readback = {op:'uiContractRunnerInstalledIdentity',bundleName};
+  const clock = {op:'uiContractRunnerClock'};
+  const runner = plan(readback);
+  assert.deepEqual(runner,{kind:'command',args:['shell','bm','dump','-n',bundleName],privateBundleOutput:true,runnerBundle:bundleName});
+  assert.deepEqual(plan(clock),{kind:'command',args:['shell','date','+%s'],runnerClock:true});
+  assert.deepEqual(plan({op:'uiContractInstalledIdentity'}),
+    {kind:'command',args:['shell','bm','dump','-n',BUNDLE],privateBundleOutput:true});
+  for (const invalid of [undefined,'',BUNDLE,'single','-x.test','io..test','io.reader;id','io.reader\nother','io.'+'a'.repeat(128)]) {
+    assert.throws(() => plan({...readback,bundleName:invalid}),/exact independent bundle name/);
+  }
+  assert.throws(() => plan({...readback,args:['shell','aa','test']}));
+  assert.throws(() => plan({...clock,bundleName}));
+  for (const op of [readback,clock]) {
+    assert.throws(() => operationPlan(op,directory),/preflight confirmation/);
+  }
+  for (const op of ['uiContractRunnerDispatch','grabberReversal','aa test']) {
+    assert.throws(() => plan({op}),/diagnostic whitelist/);
+  }
+
+  const fields = {bundleName,moduleName:'entry_test',appProvisionType:'debug',appIdSha256:'a'.repeat(64),
+    appIdentifierSha256:'b'.repeat(64),versionName:'0.2.0',versionCode:1,updateTime:1800000000000};
+  const present = {bundlePresent:true,uid:10001,raw:'private',...fields};
+  assert.deepEqual(publicRunnerInstall(present,bundleName),fields);
+  for (const changed of [{bundlePresent:false},{bundleName:BUNDLE},{moduleName:'entry'},{appProvisionType:'release'}]) {
+    assert.throws(() => publicRunnerInstall({...present,...changed},bundleName),/Runner/);
+  }
+  const privateOutput = {status:1,stdout:'runner-private-id',stderr:'runner-private-echo',error:new Error('runner-private-error')};
+  const redacted = publicCommandResult(runner.args,privateOutput,String,runner.privateBundleOutput);
+  assert.deepEqual(redacted,{args:runner.args,status:1,signal:null,error:'device-command-error',stdout:'',stderr:''});
+
+  const seconds = {status:0,stdout:'1800000000\r\n',stderr:''};
+  assert.equal(runnerClockOutput(seconds),seconds.stdout);
+  for (const changed of [{stdout:'1800000000 extra'},{stdout:'01800000000'},{stdout:'9999999999999'},
+    {stdout:'0'},{stderr:'unexpected output'},{status:1},{signal:'SIGTERM'}]) {
+    assert.equal(runnerClockOutput({...seconds,...changed}),null);
+  }
+  assert.deepEqual(publicCommandResult(plan(clock).args,privateOutput,String,plan(clock).runnerClock),
+    {args:['shell','date','+%s'],status:1,signal:null,error:'device-command-error',stdout:'',stderr:''});
+}
+
+async function runnerInvocationSelfTest() {
+  const directory = resolve(tmpdir(),'probe-self-test-evidence');
+  const bundleName = 'io.reader.minliny.fixture';
+  const targetRef = '012345abcdef';
+  const clockMs = 1800000000000;
+  const wallTime = offset => new Date(clockMs + offset).toISOString();
+  const now = () => clockMs + 300;
+  const installed = {bundleName,moduleName:'entry_test',appProvisionType:'debug',versionName:'0.2.0',
+    versionCode:1000000,updateTime:clockMs - 1000};
+  const requestFields = ['be120ec6-08d5-4330-a576-83d46fcb67cc','dry',installed.versionName,
+    String(installed.versionCode),String(installed.updateTime),String(clockMs + TIMEOUT_MS),'a'.repeat(64),
+    '160','670','232','698','196','274',bundleName];
+  const plan = (fields=requestFields,extra={}) => operationPlan({op:'uiContractRunnerInvoke',
+    argument:fields.join(','),preflightConfirmed:true,...extra},directory);
+  const startArgs = ['--target','test-serial','--hdc',resolve(tmpdir(),'fixture-hdc'),
+    '--server','127.0.0.1:8710','--output-dir',directory];
+  assert.equal(optionsFrom(startArgs).runnerMode,undefined);
+  assert.equal(optionsFrom([...startArgs,'--runner-mode','dry']).runnerMode,'dry');
+  assert.equal(optionsFrom([...startArgs,'--runner-mode','dispatch']).runnerMode,'dispatch');
+  assert.throws(() => optionsFrom([...startArgs,'--runner-mode','qualify']),/Runner mode must be dry or dispatch/);
+  assert.throws(() => optionsFrom([...startArgs,'--runner-mode','dry','--runner-mode','dispatch']),/duplicate startup option/);
+  assert.throws(() => optionsFrom([...startArgs,'--runner-mode']),/startup option/);
+  assert.deepEqual(operationPlan({op:'uiContractRunnerInstalledIdentity',bundleName,preflightConfirmed:true},directory).args,
+    runnerInstallArgs(bundleName));
+  assert.deepEqual(operationPlan({op:'uiContractRunnerClock',preflightConfirmed:true},directory).args,RUNNER_CLOCK_ARGS);
+  const command = (seq,args,offset,extra) => ({seq,targetRef,event:'command',args,status:0,
+    signal:null,error:null,ok:true,startedAt:wallTime(offset),recordedAt:wallTime(offset+25),elapsedMs:25,...extra});
+  const triplet = [
+    command(8,runnerInstallArgs(bundleName),-100,{installed}),
+    command(9,RUNNER_CLOCK_ARGS,0,{stdout:`${clockMs/1000}\n`}),
+    command(10,UI_CONTRACT_LOG_ARGS,100),
+  ];
+  function stateFor(rows=triplet) {
+    const state = {recent:[],invoked:false};
+    rememberRunnerRow(state,command(7,['shell','uitest','dumpLayout'],-200));
+    for (const row of rows) rememberRunnerRow(state,row);
+    return state;
+  }
+  const dispatch = requestFields.map((value,index) => index === 1 ? 'dispatch' : value);
+  await assert.rejects(() => runnerInvocation(plan(),stateFor(),targetRef,undefined,now),/disabled for this probe session/);
+  await assert.rejects(() => runnerInvocation(plan(dispatch),stateFor(),targetRef,'dry',now),/mode differs/);
+  await assert.rejects(() => runnerInvocation(plan(),stateFor(),targetRef,'dispatch',now),/mode differs/);
+  for (const fields of [requestFields,dispatch]) {
+    const scoped = stateFor();
+    const prepared = plan(fields);
+    const runnerMode = optionsFrom([...startArgs,'--runner-mode',fields[1]]).runnerMode;
+    assert.deepEqual(prepared,{kind:'uiContractRunnerInvoke',argument:fields.join(',')});
+    const actual = await runnerInvocation(prepared,scoped,targetRef,runnerMode,now);
+    assert.deepEqual(actual.args,['shell','aa','test','-b',bundleName,'-m','entry_test','-s','unittest',
+      'ReaderGrabberReversalRunner','-s','readerReversal',fields.join(','),'-s','timeout','20000']);
+    assert.equal(actual.runnerOutput,true);
+    await assert.rejects(() => runnerInvocation(prepared,scoped,targetRef,runnerMode,now),/one Runner invocation/);
+  }
+  assert.throws(() => plan(requestFields,{preflightConfirmed:false}),/preflight confirmation/);
+  for (const extra of [{args:['shell','id']},{bundleName},{mode:'dispatch'},{argument:'a'.repeat(385)}]) {
+    assert.throws(() => plan(requestFields,extra));
+  }
+  for (const [index,bad] of [[1,'shell'],[2,'0.2.1'],[3,'1000001'],[4,String(clockMs-2000)],
+    [5,String(clockMs+31000)],[6,'not-a-digest'],[13,BUNDLE],[13,'other.runner']]) {
+    const fields = requestFields.map((value,i) => i === index ? bad : value);
+    await assert.rejects(() => runnerInvocation(plan(fields),stateFor(),targetRef,'dry',now),/does not bind/);
+  }
+  for (const rows of [
+    [triplet[0],triplet[2],triplet[1]], triplet.slice(1),
+    [triplet[0],triplet[1],{...triplet[2],targetRef:'unexpected'}],
+    [triplet[0],{...triplet[1],seq:10},triplet[2]],
+    [triplet[0],{...triplet[1],ok:false},triplet[2]],
+    [...triplet,command(11,UI_CONTRACT_LOG_ARGS,200)],
+    [...triplet,{event:'capture-integrity',seq:11,targetRef}],
+  ]) {
+    await assert.rejects(() => runnerInvocation(plan(),stateFor(rows),targetRef,'dry',now),/on the leased target/);
+  }
+  await assert.rejects(() => runnerInvocation(plan(),stateFor(),targetRef,'dry',() => clockMs+TIMEOUT_MS),
+    /outside the current command interval/);
+  await assert.rejects(() => runnerInvocation(plan(),stateFor(),targetRef,'dry',() => clockMs+100),
+    /outside the current command interval/);
+  await assert.rejects(() => runnerInvocation(plan(),stateFor([triplet[0],{...triplet[1],stdout:'invalid'},triplet[2]]),
+    targetRef,'dry',now),/does not bind/);
+
+  const raw = {status:0,stdout:'Runner start\r\nREADER_GRABBER_REVERSAL_RECEIPT {}\r\n',stderr:''};
+  assert.equal(boundedRunnerOutput(raw),raw);
+  const bounded = '字'.repeat(Math.floor(RUNNER_OUTPUT_BYTES/3));
+  assert.equal(boundedRunnerOutput({...raw,stdout:bounded}).stdout,bounded);
+  for (const channel of ['stdout','stderr']) {
+    const excess = boundedRunnerOutput({...raw,[channel]:bounded+'字'});
+    assert.equal(excess.stdout,'');
+    assert.equal(excess.stderr,'');
+    assert.match(excess.error.message,/capture limit/);
+  }
+}
+
+if (process.argv.length === 3 && process.argv[2] === '--self-test=runner-invocation') {
+  await runnerInvocationSelfTest();
+  process.stdout.write('reader control device probe Runner invocation self-test: PASS (no HDC, no lock/device/filesystem writes)\n');
+} else if (process.argv.length === 3 && process.argv[2] === '--self-test=runner-readbacks') {
+  runnerReadbacksSelfTest();
+  process.stdout.write('reader control device probe Runner readbacks self-test: PASS (no HDC, no lock/device/filesystem writes)\n');
+} else if (process.argv.length === 3 && process.argv[2] === '--self-test') selfTest();
 else {
   try { await probe(optionsFrom(process.argv.slice(2))); }
   catch (error) { process.stderr.write(`reader-control device probe stopped: ${error.message}\n`); process.exitCode = 1; }

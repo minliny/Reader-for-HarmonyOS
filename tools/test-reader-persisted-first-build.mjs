@@ -3,9 +3,9 @@ import { registerHooks } from 'node:module';
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(s + '.ts', c); throw e;
 } } });
-const { readPreparedReadingEntrySnapshot } = await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { readingParagraphBoundaryMode } = await import('../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts');
+const { readPreparedReadingEntrySnapshot } = await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { readingParagraphBoundaryMode } = await import('../entry/src/main/ets/features/reading/application/ReadingParagraphProjection.ts');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 
 function fixture(text = '原段甲😀乙\n第二段正文。') {
@@ -73,7 +73,7 @@ for (const mutation of [d => { d.bookId = 'wrong'; }, d => { d.positionScope.pro
 // Execute the real initial-admission method with the real synchronous DTO and
 // gateway. Native shaping is an explicit fixture; it does NOT model pixels.
 let runtime, metrics, fontReady = true, titleFontReady = true;
-const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['restorePersistedFirstPresentation'], {
     ReaderRuntimeOwner: { current: () => runtime }, ReaderWindowCoordinator: { metrics: () => metrics },
     readerFontFamilyReady: family => family === 'title-font' ? titleFontReady : fontReady,

@@ -17,31 +17,31 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { ReaderRectVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { readerAppearanceThemeStyle } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { ReaderRectVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { readerAppearanceThemeStyle } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
-const { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
-const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { READER_CONTROL_PROGRESS_MAX } = await import('../entry/src/main/ets/features/reading/ReaderControlGeometry.ts');
+const { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
+const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { READER_CONTROL_PROGRESS_MAX } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;
 }}});
-const { createDefaultReaderReadingLayout, resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const { createDefaultReaderAppearanceSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
-const { createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
-const { readerRenderStageKind } = await import('../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts');
-const { ReaderWindowMetricsSnapshot, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { createDefaultReaderReadingLayout, resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const { createDefaultReaderAppearanceSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
+const { createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
+const { readerRenderStageKind } = await import('../entry/src/main/ets/features/reading/ui/ReaderRenderStageSpec.ts');
+const { ReaderWindowMetricsSnapshot, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 const read = file => readFileSync(new URL(`../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
-const paperSource = read('features/reading/ReaderPaperBackground.ets');
-const statusSource = read('features/reading/ReaderStatusBarPaper.ets');
-const surfaceSource = read('features/reading/ReadingSurface.ets');
-const shellSource = read('features/shell/ReaderShell.ets');
-const lreSource = read('features/reading/LocalReadingExperience.ets');
+const paperSource = read('features/reading/ui/ReaderPaperBackground.ets');
+const statusSource = read('features/reading/ui/ReaderStatusBarPaper.ets');
+const surfaceSource = read('features/reading/ui/ReadingSurface.ets');
+const shellSource = read('features/reading/ui/ReaderShell.ets');
+const lreSource = read('features/reading/ui/LocalReadingExperience.ets');
 const require = createRequire(import.meta.url);
 const sdkRoot = resolveEtsLoaderRoot();
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
@@ -139,7 +139,7 @@ for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 
   let metrics = { windowRect: new ReaderRectVp(0, 0, 390, 844), statusBarRect: new ReaderRectVp(2, 1, 386, 48) };
   const shell = createReaderBuilderProbe(shellSource, ['overlayStatusBarUnderlay', 'chromeMetrics'], {
     ReaderStatusBarPaper: Child, readerWidthClass, ReaderWindowCoordinator: { metrics: () => metrics },
-  }, {eagerChildren: false}).owner;
+  }).owner;
   Object.assign(shell, { visible: true, route, sourceSwitchVisible: route === 'reading', isTablet: false,
     chromePaperThemeId: theme.id, chromeUnderlayColor: theme.paperStart, windowMetricsRevision: 1 });
   shell.overlayStatusBarUnderlay();
@@ -156,12 +156,11 @@ for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 
   statusGeometry(status(updated), metrics.statusBarRect, [760, 960]);
 }
 
-const StatusUnderlayComponent = createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
-  ReaderStatusBarPaper: Child, readerAppearanceThemeStyle,
-  ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: new ReaderRectVp(0, 0, 390, 48) }) },
-}).Component;
 for (const extend of [false, true]) for (const controls of [false, true]) for (const hideStatusBar of [false, true]) {
-  const owner = new StatusUnderlayComponent(undefined, {});
+  const owner = createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
+    ReaderStatusBarPaper: Child, readerAppearanceThemeStyle,
+    ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: new ReaderRectVp(0, 0, 390, 48) }) },
+  }).owner;
   Object.assign(owner, { windowChromeActive: true, readerSettingsSnapshot: { extendIntoCutout: extend, hideStatusBar },
     windowControlsPresented: controls, readerWindowMetricsRevision: 1, appearanceSnapshot: { activeTheme: 'paper' },
     readingLayout: () => ({ viewportWidth: 390, viewportHeight: 844, widthClass: 'compact' }) });
@@ -184,32 +183,31 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { ReaderRectVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { readerAppearanceThemeStyle } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { ReaderRectVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { readerAppearanceThemeStyle } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
-const { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
-const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { READER_CONTROL_PROGRESS_MAX } = await import('../entry/src/main/ets/features/reading/ReaderControlGeometry.ts');
+const { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
+const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { READER_CONTROL_PROGRESS_MAX } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;
 }}});
-const { createDefaultReaderReadingLayout, resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const { createDefaultReaderAppearanceSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
-const { createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
-const { createDefaultReaderTtsPreferencesSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
-const { readerRenderStageKind } = await import('../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts');
-const { ReaderWindowMetricsSnapshot, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { createDefaultReaderReadingLayout, resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const { createDefaultReaderAppearanceSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
+const { createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
+const { readerRenderStageKind } = await import('../entry/src/main/ets/features/reading/ui/ReaderRenderStageSpec.ts');
+const { ReaderWindowMetricsSnapshot, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 const read = file => readFileSync(new URL(`../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
-const paperSource = read('features/reading/ReaderPaperBackground.ets');
-const statusSource = read('features/reading/ReaderStatusBarPaper.ets');
-const surfaceSource = read('features/reading/ReadingSurface.ets');
-const shellSource = read('features/shell/ReaderShell.ets');
-const lreSource = read('features/reading/LocalReadingExperience.ets');
+const paperSource = read('features/reading/ui/ReaderPaperBackground.ets');
+const statusSource = read('features/reading/ui/ReaderStatusBarPaper.ets');
+const surfaceSource = read('features/reading/ui/ReadingSurface.ets');
+const shellSource = read('features/reading/ui/ReaderShell.ets');
+const lreSource = read('features/reading/ui/LocalReadingExperience.ets');
 const require = createRequire(import.meta.url);
 const sdkRoot = resolveEtsLoaderRoot();
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
@@ -256,11 +254,11 @@ let cases = 0;
   const start=lreSource.indexOf('      if (readerRenderStageKind('),end=lreSource.indexOf('      this.sourceSwitchCompletionWash();',start);
   assert.ok(start>0&&end>start);
   const stageBlock=lreSource.slice(start,end);
-  const continuousSource=read('features/reading/ReaderContinuousReadingStage.ets');
+  const continuousSource=read('features/reading/ui/ReaderContinuousReadingStage.ets');
   const continuousTree=parse(continuousSource,'ContinuousStage.ets');
   const dataClass=continuousTree.statements.find(n=>n.name?.text==='ContinuousFragmentDataSource');
   const DataSource=new Function(stripTypeScriptTypes(dataClass.getText(continuousTree))+';return ContinuousFragmentDataSource;')();
-  const pageTree=parse(read('features/reading/ReaderPageTurnStage.ets'),'PageTurnStage.ets');
+  const pageTree=parse(read('features/reading/ui/ReaderPageTurnStage.ets'),'PageTurnStage.ets');
   const renderClass=pageTree.statements.find(n=>n.name?.text==='ReaderPageTurnRenderPage');
   const RenderPage=new Function('ReaderPageChromeSnapshot',stripTypeScriptTypes(renderClass.getText(pageTree)).replace(/^export /,'')+
     ';return ReaderPageTurnRenderPage;')(ReaderPageChromeSnapshot);
@@ -280,7 +278,7 @@ let cases = 0;
       getHostContext:()=>({resourceManager:{getNumber:()=>48}}),getMeasureUtils:()=>({
         measureTextSize:({textContent})=>({width:textContent.length*21,height:60}),
         measureText:({textContent})=>textContent.length*21})};
-    const chromeSource=read('features/reading/ReaderPageChrome.ets');
+    const chromeSource=read('features/reading/ui/ReaderPageChrome.ets');
     const deps={...properties.sdk,uiContext,createDefaultReaderReadingLayout,createDefaultReaderAppearanceSnapshot,
       ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE,resolveReaderPageChromeLayout,
       measureReaderPageChromeText,readerPageChromeTextMeasurements,readerPageChromeTopTextStyle};
@@ -311,11 +309,10 @@ let cases = 0;
       ReaderPageTurnRenderPage:RenderPage,ReaderPageChromeSnapshot,formatReaderPageOrdinal,formatReaderPageProgress,
       readerRenderStageKind,READER_CONTROL_PROGRESS_MAX,formatReaderPageClock:()=> '12:30',
     },{...hooks,childSources:{...hooks.childSources,ReaderContinuousReadingStage:continuousSource,
-      ReaderPageTurnStage:read('features/reading/ReaderPageTurnStage.ets'),
-      ReaderBookTurnSurface:read('features/reading/ReaderBookTurnSurface.ets')}});
+      ReaderPageTurnStage:read('features/reading/ui/ReaderPageTurnStage.ets'),
+      ReaderBookTurnSurface:read('features/reading/ui/ReaderBookTurnSurface.ets')}});
     const fragments=[{id:'visible-first',startScalar:0,endScalar:1000,text:'正文',imageHeight:0}];
     Object.assign(owner,{bookTitle:'连续书名',sourceId:'s',bookId:'b',readerSettingsSnapshot:{navigationMode:'continuous'},
-      ttsPreferences:createDefaultReaderTtsPreferencesSnapshot(),ttsState:{charStart:0,charEnd:0},
       chapter:cold?undefined:{chapterIndex:2,chapterTitle:'当前章'},chapterLayoutMap:{scalarCount:()=>1000},
       continuousFragments:fragments,continuousVisibleScalar:cold?0:250,continuousProgressRevision:0,
       continuousRenderChapterIdentity:'s:b:2',continuousRenderChapterTitle:'当前章',continuousRenderGeometryKey:'geometry',
@@ -326,8 +323,6 @@ let cases = 0;
       readingTocEntries:()=>[],readableChapterPosition:index=>index,shouldShowSessionCapsule:()=>false,
       activeSessionCapsuleWidth:()=>0,activeSessionCapsuleHeight:()=>0,
       autoPageHighlightStart:()=>undefined,autoPageHighlightEnd:()=>undefined,readerTextSelectionEnabled:()=>false,
-      pageBookmarkFeedbackMode:()=>'hidden',pageBookmarkFeedbackOpacity:()=>0,bookmarkPageOffsetY:0,
-      bookmarkSnapshotForCurrentPage:()=>({mode:'hidden',opacity:0}),
       isReaderPageInteractionEnabled:()=>true,sourceSwitchContinuousRangeObserver:()=>()=>{},
       usesBookTurnSimulation:()=>false,effectivePageTurnStyle:()=> 'none',pageTurnStageViewportWidth:()=>390,
       shouldMountBookTurnSurface:()=>false,resolveVisibleContinuousImages(){},hasPartialEntryWindow:()=>false,

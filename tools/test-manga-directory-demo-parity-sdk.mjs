@@ -1,22 +1,22 @@
-import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import * as fontFamilies from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderDirectoryNavigationGateway, decodeReaderDirectoryOpen, decodeReaderDirectoryPage,
-  readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
-import { readerDirectoryViewportAnchor } from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
+  readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import { readerDirectoryViewportAnchor } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts';
 
-import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
+import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
 import { mangaGridBuilderMembers, mangaGridProbeDependencies, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
 import { mangaDirectoryEntryRowSdk } from './lib/manga-directory-entry-row-probe.mjs';
 
-const listPath = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
+const listPath = new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url);
 const listSource = readFileSync(listPath, 'utf8');
-const fallbackSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets', import.meta.url), 'utf8');
+const fallbackSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets', import.meta.url), 'utf8');
 const identity = { sourceId: 'manga', bookId: 'book', catalogRevision: 'c1', structureRevision: 's1' };
 const wireGroup = { nodeId: 'g', title: '确定卷组', kind: 'group', depth: 0,
   hasChildren: true, expanded: true, readableDescendantCount: 318 };
@@ -51,12 +51,12 @@ assert.throws(() => decodeReaderDirectoryOpen({ ...wire, nodes: [{ ...wireChild,
 assert.throws(() => decodeReaderDirectoryPage({ viewId: 'v1', visibleTotal: 319,
   nodes: [{ ...wireChild, parentTitle: ' ' }] }, 'v1', 256), /parent title/);
 
-const rowNames = [...mangaGridBuilderMembers, 'mangaPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaFontScale', 'mangaFirstDisplayRow', 'mangaRowBody', 'mangaRow', 'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
+const rowNames = [...mangaGridBuilderMembers, 'currentPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaFontScale', 'mangaFirstDisplayRow', 'mangaRowBody', 'mangaRow', 'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
 const gridNames = [...new Set(['row', ...rowNames, ...mangaGridBuilderMembers])];
 function rowProbe(source, node, { scheme = 'day', current = false, search = false, index = 0, height = 58, catalog = false, narrow = false } = {}) {
   const { owner } = createReaderBuilderProbe(source, rowNames, { ...mangaGridProbeDependencies, ...fontFamilies });
   Object.assign(owner, { view, mangaScheme: scheme, appThemeScheme: 'day', mangaSearchActive: search,
-    mangaRowMinHeight: height, mangaCatalogDisplay: catalog, mangaCatalogNarrow: narrow, currentChapterIndex: current ? node.chapterIndex : -1, interactionEnabled: true, mangaPresentationRevision: 0,
+    mangaRowMinHeight: height, mangaCatalogDisplay: catalog, mangaCatalogNarrow: narrow, currentChapterIndex: current ? node.chapterIndex : -1, interactionEnabled: true, rowPresentationRevision: 0,
     dataSource: { loadedItemById: () => ({ node, index }), currentView: () => view, loadedNode: () => undefined },
     onSelectTarget() {}, toggleNode() {}, selectTarget() {} });
   owner.mangaRow({ node, index, key: node.nodeId });
@@ -125,7 +125,7 @@ async function checkRetainedGroup(source) {
     preparedPages: [{ offset: 256, page: { viewId: 'retained-expanded', visibleTotal: 300, nodes: [{ ...view.nodes[0] }] } }] };
   const hooks = { ...properties.hooks, initialParams: { view: initial } };
   const { owner } = createReaderBuilderProbe(source,
-    [...rowNames, 'rowKey', 'view', 'mangaPresentationRevision', 'onViewChanged', 'loadPage', 'admitMangaPages'],
+    [...rowNames, 'rowKey', 'view', 'rowPresentationRevision', 'onViewChanged', 'loadPage', 'admitMangaPages'],
     { ...mangaGridProbeDependencies, ...properties.sdk, ...fontFamilies, readerDirectoryViewportAnchor: () => undefined, readerDirectoryScopeKey, setTimeout: action => timers.push(action), cacheReaderDirectoryNavigationPage }, hooks);
   const clicks = [];
   Object.assign(owner, { mangaDisplay: true, mangaScheme: 'day', appThemeScheme: 'day', mangaSearchActive: false,

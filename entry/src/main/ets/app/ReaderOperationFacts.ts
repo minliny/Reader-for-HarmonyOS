@@ -77,8 +77,6 @@ export interface OperationFacts<T> {
   canRetry: boolean;
   canCancel: boolean;
   generation: number;
-  /** Short headline for a failed/blocked state; never raw platform text. */
-  title?: string;
   message?: string;
   blockedReason?: string;
 }
@@ -91,7 +89,6 @@ export interface OperationFactsInput<T> {
   canRetry?: boolean;
   canCancel?: boolean;
   generation?: number;
-  title?: string;
   message?: string;
 }
 
@@ -171,7 +168,6 @@ export function projectOperationFacts<T>(input: OperationFactsInput<T>): Operati
     canRetry,
     canCancel,
     generation,
-    title: input.title,
     message: input.message,
     blockedReason,
   };

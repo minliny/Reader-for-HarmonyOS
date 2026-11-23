@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor } from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { DIRECTORY_CHROME_VISUAL as MANGA_DIRECTORY_VISUAL, mangaDirectoryColor } from '../../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
 
 /** Execute the real finite modifier. Native press/cancel dispatch is the
  * platform seam, not a replacement gesture engine or compositor simulator. */
 export function productionMangaDirectoryPressFeedback(source = readFileSync(new URL(
-  '../../entry/src/main/ets/features/manga/MangaDirectoryPressFeedback.ets', import.meta.url), 'utf8'), {
+  '../../entry/src/main/ets/ui/foundation/MangaDirectoryPressFeedback.ets', import.meta.url), 'utf8'), {
   // These values expose arguments crossing the platform constructor boundary.
   // They do not model focus dispatch, drawing or native color composition.
   LengthMetrics = { vp: value => ({ value, unit: 'vp' }) },

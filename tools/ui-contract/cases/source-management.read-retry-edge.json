@@ -1,0 +1,194 @@
+{
+  "id": "source-management.read-retry-edge",
+  "version": 1,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-read-v1",
+    "description": "Observe a real cold read failure through normal Settings. Use the measured upper edge of the real Retry Button and record the new read generation and actual terminal result.",
+    "publicSources": true
+  },
+  "ownerSources": [
+    "entry/src/main/ets/app/ReaderOperationFacts.ts",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets"
+  ],
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-read",
+      "kind": "sample",
+      "afterAction": "open-sources",
+      "keyboard": false,
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list",
+        "reader-source-empty-state",
+        "reader-source-read-failure-title",
+        "reader-source-read-retry"
+      ],
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "readFailure"
+          }
+        }
+      ],
+      "quietMs": 500
+    },
+    {
+      "id": "retry-read-edge",
+      "kind": "action",
+      "op": "click",
+      "from": "source-read",
+      "target": "reader-source-read-retry",
+      "beforeEvent": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "readFailure"
+          }
+        }
+      ],
+      "waitFor": [
+        {
+          "kind": "source.read-retry",
+          "channel": "business",
+          "fields": {
+            "payload.phase": "started"
+          }
+        }
+      ],
+      "tapEdge": "top",
+      "requireFullContainment": true
+    },
+    {
+      "id": "retry-settled",
+      "kind": "sample",
+      "afterAction": "retry-read-edge",
+      "keyboard": false,
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list"
+      ],
+      "waitFor": [
+        {
+          "kind": "source.read-retry",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.phase": "settled"
+          }
+        }
+      ],
+      "quietMs": 750
+    }
+  ],
+  "assertions": [
+    {
+      "id": "source.load.readFailure",
+      "evaluator": "source",
+      "kind": "read-surface",
+      "required": false,
+      "condition": "The current source opening reports a failed read with no usable source rows.",
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#sourceList",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-sources",
+      "sample": "source-read",
+      "expected": {
+        "state": "readFailure"
+      }
+    },
+    {
+      "id": "source.load.retryRead.edge",
+      "evaluator": "source",
+      "kind": "read-retry",
+      "required": false,
+      "condition": "A real cold read failure occurs in the opening and presents the retry action.",
+      "source": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets#reconcile",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "entryAction": "open-sources",
+      "action": "retry-read-edge",
+      "baseline": "source-read",
+      "sample": "retry-settled",
+      "expected": {
+        "state": "readFailure",
+        "requireNativeTouchTarget": true,
+        "position": "top"
+      }
+    }
+  ],
+  "structure": {
+    "source-read": "source-read",
+    "retry-settled": "retry-settled"
+  }
+}

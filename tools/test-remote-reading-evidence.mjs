@@ -9,14 +9,14 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
 } });
 const { sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches, withPreparedRemoteChapter, copyRemoteReadingSession } =
-  await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-const { captureRemotePositionContext } = await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+  await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
+const { captureRemotePositionContext } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingPositionMigration.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve)); };
 let productionMotionMethods,compileHost,setRuntime,switchFixture,switchSession,settleSwitch,makeSwitchIndex;const pages=[];
 if(id!=='prepared-handoff'){({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));({compileHost,setRuntime}=await import('./lib/reading-entry-owner-probe.mjs'));}
-if(id==='switch-catalog'){({fixture:switchFixture,session:switchSession,settle:settleSwitch}=await import('./lib/source-switch-owner-probe.mjs'));({makeIndex:makeSwitchIndex}=await import('./lib/source-switch-sdk-consumer.mjs'));}
+if(id==='switch-catalog'){({fixture:switchFixture,session:switchSession,settle:settleSwitch}=await import('./lib/source-switch-owner-probe.mjs'));({makeSourceSwitchFixture:makeSwitchIndex}=await import('./lib/source-switch-sdk-consumer.mjs'));}
 let revision = 0; let load = async (session, index) => chapter(session, index);
 const owner = { bookAcquisitions: () => ({ readingProjectionRevision: () => revision,
   acquireBook: async () => selectedSession,setPreparationVisible(){} }) };
@@ -132,14 +132,14 @@ if(id==='late-directory'){
 if(id==='switch-catalog'){
 {
   const f=switchFixture({shared:true,open:false,preview:true}),x=makeSwitchIndex(f);
-  try{x.index.detailReturnRoute='search';x.index.openDetailSourceSwitch();await settleSwitch();
+  try{x.navigation.returns.completeDetailEntry('search','search',false);x.switchJourney.openDetail();await settleSwitch();
   const before=f.calls.filter(c=>c[0]==='chapter.content').length;
   x.mount();const row=x.rows().find(r=>r.candidate.sourceId==='new');assert.ok(row);row.onSelect();await settleSwitch();await settle();
-  const opened=x.index.effects.find(e=>typeof e==='object'&&e.validated);assert.ok(opened);
+  const opened=x.entry;assert.ok(opened.session);
   assert.equal(f.calls.filter(c=>c[0]==='chapter.content').length,before,'source selection transfers its catalog without a preliminary body probe');
-  assert.equal(opened.resume,true);assert.equal(opened.parent,'search');
-  assert.equal(opened.validated,switchSession,'original acquired full catalog/context is retained exactly');
-  assert.equal(opened.validated.preparedChapter,undefined);}finally{f.host.retire();}
+  assert.equal(opened.sessionActive,true);assert.equal(x.navigation.snapshot().route,'reading');assert.equal(x.navigation.returns.snapshot().detailParent,'search');
+  assert.equal(opened.session,switchSession,'original acquired full catalog/context is retained exactly');
+  assert.equal(opened.session.preparedChapter,undefined);}finally{f.host.retire();}
 }
 }
 if(id==='prepared-handoff'){

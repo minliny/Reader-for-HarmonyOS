@@ -2,10 +2,10 @@ import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mj
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
 
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
-function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8')
+function load(name, dependencies = {}, file = mangaSourceUrl(`${name}.ts`)) {
+  const source = readFileSync(file, 'utf8')
     .replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '')
     .replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name.split('/').at(-1)};`)(...Object.values(dependencies));
@@ -291,7 +291,7 @@ console.log('PASS explicit download repairs a missing ref from a descriptor-free
 
 {
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Decode=load('../../app/MangaImageDecodeHost');
+ const Decode=load('MangaImageDecodeHost', {}, new URL('../entry/src/main/ets/platform/reading-resources/MangaImageDecodeHost.ts', import.meta.url));
  const Runtime=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),
   ['prefetchReadingImageOwned','prepareReadingImageBytes','mangaStorageChapter','assertReadingImageCurrent'],
   {MangaImageDecodeHost:Decode,ReadingBodyImageHost:{instance:{prepareMangaDisplay:()=>assert.fail('disabled source cannot decode newly fetched pixels')}}});
@@ -491,7 +491,7 @@ console.log('PASS actual Controller ordinary refresh waits for full cache receip
  const original=c.chapter;await c.refreshChapter();assert.equal(c.chapter,original);assert.equal(c.replacementRecoveryRequired,true);
  assert.equal(f.calls.some(call=>call.method==='reading.progress.update'),false);
  const phases=[];
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['confirmRecovery']);
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['confirmRecovery']);
  const surface=Object.assign(new Surface(),{controller:c,recovering:true,mounted:true,presentationGeneration:0,first:0,error:'',
   data:{totalCount:()=>1,getData:()=>({ordinal:2})},publish(){phases.push('published');assert.equal(c.chapter.manifest.manifestVersion,'unmapped-v2');},
   restore(...args){phases.push('restored');assert.deepEqual(args,[0,0,0]);},async saveVisible(){phases.push('save');await c.savePosition(0,0,0);}});
@@ -535,7 +535,7 @@ console.log('PASS cancelled different/same-version refresh restores the still-vi
  assert.equal(c.visiblePages().find(page=>page.ordinal===0)?.status,'ready');assert.equal(c.chapter.manifest.manifestVersion,a.manifest.manifestVersion);
  assert.deepEqual(f.prefetches.filter(item=>item.chapterId==='/c84').map(item=>item.ordinal),[0,1,2],'real capacity failure stops fill immediately and preserves acquired pages');
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['publish','displayChapterTitle','displayError']);
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['publish','displayChapterTitle','displayError']);
  const messages=[];
  const surface=Object.assign(new Surface(),{controller:c,mounted:true,opened:true,error:'',publishedManifestVersion:a.manifest.manifestVersion,layoutGeneration:0,viewportGeneration:0,
   mountedTurnRowKey:'',horizontal:false,rememberVisible(){},notifyPublishedRows(){},

@@ -23,7 +23,6 @@ export function assertCoreInputs(core = CORE, app = ROOT) {
       '--native-so', resolve(base, 'package/libs/arm64-v8a/libreader_core_napi.so'),
       '--app-native-so', resolve(app, 'entry/libs/arm64-v8a/libreader_core_napi.so'),
       '--harmony-vendor', resolve(app, 'entry/vendor/core-harmony'),
-      '--storage-bootstrap-identity', resolve(app, 'entry/src/main/resources/rawfile/reader-core-storage-identity.v1.json'),
       '--core-build-evidence', resolve(base, 'harmony-napi-build-evidence.txt'), '--output', output,
     ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     const checked = JSON.parse(readFileSync(output, 'utf8'));

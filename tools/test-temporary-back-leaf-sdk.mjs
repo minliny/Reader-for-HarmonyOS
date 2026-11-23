@@ -6,18 +6,16 @@ const {default: assert} = await import('node:assert/strict');
 const {createTemporaryBackLeafFixtures} = await import('./lib/temporary-back-leaf-fixture.mjs');
 
 const {harness,settingsFixture,sourceFixture,shelfFixture,settingsSource,sourceSource,shelfSource,read,child}=await createTemporaryBackLeafFixtures();
-function moreSheet(f){const sheet=f.p.walk(f.o).filter(x=>x instanceof f.p.deps.BookshelfMoreActionSheet).at(-1);assert.ok(sheet,'actual More action sheet mounted');return sheet;}
-function actionNode(f,sheet,label){const surface=f.p.walk(sheet).find(x=>Array.isArray(x.actions)&&[...x.nodes.values()].some(n=>n.accessibilityText));assert.ok(surface,`actual More action surface for ${label}`);const node=[...surface.nodes.values()].find(n=>String(n.accessibilityText??'').startsWith(label));assert.ok(node,`actual More action row ${label}`);return node;}
 function assertCycle(factory){
-  const f=factory(),old=f.events.at(-1);assert.equal(typeof old.handler,'function');assert.equal(old.handler(),true);
+  const f=factory(),old=f.events.at(-1),nativeClose=f.native?.()[2].onDisappear;assert.equal(typeof old.handler,'function');assert.equal(old.handler(),true);
   if(factory===sourceFixture){f.p.properties.flush();f.finishes.at(-1)();}
+  if(nativeClose!==undefined){assert.equal(old.handler(),true,'native exit still owns Back');nativeClose();}
   assert.equal(old.handler(),false,'normal page must fall through to Index route handling');
-  if(factory===shelfFixture)f.o.moreSheetOptions(f.o.moreSheetCurrentId).onDisappear();
   f.o.aboutToDisappear();assert.deepEqual(f.events.at(-1),old.generation===undefined?{handler:undefined,identity:old.identity}:{handler:undefined,identity:old.identity,generation:old.generation});assert.equal(old.handler(),false);
   f.o.aboutToAppear();const current=f.events.at(-1);assert.notEqual(current.identity,old.identity,'every appearance gets a new lease');
   if(factory===settingsFixture)f.o.toggleSelection('startup');
   else if(factory===sourceFixture)f.o.toggleGroupSelection();
-  else f.moreEvents.at(-1).handler();
+  else f.o.moreOpenAction(current.identity)();
   assert.equal(old.handler(),false,'old registered handler cannot close a new opening on the same instance');
   assert.equal(current.handler(),true);
   return f;
@@ -36,35 +34,25 @@ if(selectedCase==='source'){
   const queuedId=panel.selectionId;o.aboutToDisappear();panel.onCommit('B',queuedId);panel.onDismiss(queuedId);assert.equal(o.groupValue,'A');assert.equal(o.groupOpen,false);
 }
 if(selectedCase==='shelf'){
-  const f=shelfFixture(),o=f.o;let sheet=moreSheet(f);
-  const oldId=sheet.presentationId,oldDismiss=sheet.onDismiss,oldImport=sheet.onLocalImport,oldUpdate=sheet.onCheckUpdates;
-  const oldUpdateNode=actionNode(f,sheet,'检查更新').onClick,oldOpen=f.moreEvents[0].handler;
-  const back=f.events.at(-1).handler;assert.equal(back(),true);assert.equal(o.moreMenuVisible,false);
-  // Native removal is outside the SDK recorder. Execute the actual sheet
-  // onDisappear plus child teardown, then construct a fresh production sheet.
-  const oldOptions=o.moreSheetOptions(oldId);oldOptions.onDisappear();sheet.aboutToDisappear();assert.equal(o.moreSheetCurrentId,'');
-  f.moreEvents.at(-1).handler();o.moreSheetContent();let next=moreSheet(f);assert.notEqual(next.presentationId,oldId);
-  oldDismiss();oldImport();oldUpdate();oldUpdateNode();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[],'old sheet ACKs cannot operate the replacement');
-  o.updateRunning=true;f.p.properties.flush();const updateNode=actionNode(f,next,'检查更新').onClick;
-  updateNode();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[],'busy update row remains inert');
-  o.updateRunning=false;f.p.properties.flush();updateNode();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update']);
-  o.moreSheetOptions(next.presentationId).onDisappear();next.aboutToDisappear();
-  f.moreEvents.at(-1).handler();o.moreSheetContent();next=moreSheet(f);
-  actionNode(f,next,'本地导入').onClick();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update','import']);
-  o.moreSheetOptions(next.presentationId).onDisappear();
-  o.aboutToDisappear();o.aboutToAppear();oldOpen();assert.equal(o.moreMenuVisible,false,'old trigger rejects a replaced mounting');
-  f.moreEvents.at(-1).handler();assert.equal(o.moreMenuVisible,true);oldDismiss();oldImport();oldUpdate();assert.equal(o.moreMenuVisible,true,'old ACKs reject the current sheet after remount');
+  const f=shelfFixture(),o=f.o,old=f.sheet(),oldOpen=o.moreOpenAction(f.events.at(-1).identity);
+  const oldImport=old.row('本地导入').onClick,oldUpdate=old.row('检查更新').onClick;
+  const back=f.events.at(-1).handler;assert.equal(back(),true);assert.equal(back(),true);
+  // The SDK probe retains old physical rows and allows an explicit native ACK.
+  old.options.onDisappear();f.open();const current=f.sheet();
+  old.options.onDisappear();oldImport();oldUpdate();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[],'old sheet cannot execute business work');
+  o.updateRunning=true;f.sheet();current.row('检查更新中').onClick();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[]);
+  o.updateRunning=false;f.sheet();current.row('检查更新').onClick();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update']);
+  current.options.onDisappear();f.open();const next=f.sheet();
+  next.row('本地导入').onClick();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update']);
+  next.options.onDisappear();next.options.onDisappear();assert.deepEqual(f.calls,['update','import']);
+  o.aboutToDisappear();o.aboutToAppear();oldOpen();old.options.onDisappear();assert.equal(o.moreMenuVisible,false,'old trigger and ACK reject a replaced mounting');
 }
 // Counterexamples exercise the actual production members, not a parallel model.
 for(const [factory,source] of [[factoryByCase[selectedCase],{settings:settingsSource,source:sourceSource,shelf:shelfSource}[selectedCase]]]){
-  const weakened=factory===settingsFixture
-    ?source.replace('if (!this.mounted || identity !== this.temporaryBackIdentity) return false;','if (!this.mounted) return false;')
-    :source.replace('identity !== this.temporaryBackIdentity || ','');
-  assert.notEqual(weakened,source);
-  const f=factory(weakened),old=f.events.at(-1);
-  if(factory===shelfFixture)f.o.moreSheetOptions(f.o.moreSheetCurrentId).onDisappear();
-  f.o.aboutToDisappear();f.o.aboutToAppear();
-  if(factory===settingsFixture)f.o.toggleSelection('language');else if(factory===sourceFixture)f.o.toggleGroupSelection();else f.moreEvents.at(-1).handler();
+  const weakened=source.replace('identity !== this.temporaryBackIdentity || ','');assert.notEqual(weakened,source);
+  const f=factory(weakened),old=f.events.at(-1),nativeClose=f.native?.()[2].onDisappear;
+  f.o.aboutToDisappear();nativeClose?.();f.o.aboutToAppear();
+  if(factory===settingsFixture)f.o.toggleSelection('language');else if(factory===sourceFixture)f.o.toggleGroupSelection();else f.o.moreOpenAction(f.events.at(-1).identity)();
   assert.equal(old.handler(),true,'removed epoch admission admits an obsolete handler (negative control)');
 }
 if(selectedCase==='source'){
@@ -72,10 +60,11 @@ if(selectedCase==='source'){
   f.o.dismissGroupSelection(oldId);f.o.toggleGroupSelection();panel.onDismiss(oldId);assert.equal(f.o.groupOpen,false,'removed opening identity lets old ACK close replacement');
 }
 if(selectedCase==='shelf'){
-  const source=shelfSource.replace(' || identity !== this.moreSelectionId',''),f=shelfFixture(source),o=f.o,oldSheet=moreSheet(f),oldImport=oldSheet.onLocalImport,oldId=oldSheet.presentationId;
+  const source=shelfSource.replace(' || presentationId !== this.moreSheetCurrentId) return;',') return;');
   assert.notEqual(source,shelfSource);
-  f.events.at(-1).handler();o.moreSheetOptions(oldId).onDisappear();f.moreEvents.at(-1).handler();o.moreSheetContent();assert.notEqual(moreSheet(f).presentationId,oldId);
-  oldImport();assert.equal(o.moreMenuVisible,false,'removed menu admission lets old ACK close replacement');assert.deepEqual(f.calls,['import']);
+  const f=shelfFixture(source),old=f.sheet().options;
+  f.events.at(-1).handler();old.onDisappear();f.open();assert.notEqual(f.o.moreSheetCurrentId,'');
+  old.onDisappear();assert.equal(f.o.moreSheetCurrentId,'','removed native ACK identity lets old close retire replacement');
 }
 console.log('temporary back leaves SDK PASS: real settings phone/tablet choice and source collapse, shelf menu actions, live registered handlers, same-instance reentry, late callback/ACK rejection, no route consumption without a temporary layer; Index priority/native scheduling remain separate');
 

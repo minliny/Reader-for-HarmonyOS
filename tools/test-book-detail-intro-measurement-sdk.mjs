@@ -7,7 +7,7 @@ for (const id of selectContractCases(definitions)) {
 async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
-const {ReaderWindowMetricsSnapshot, ReaderRectVp} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderWindowMetricsSnapshot, ReaderRectVp} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 
 const tick = () => new Promise(done => setImmediate(done));

@@ -57,7 +57,7 @@ await assert.rejects(unavailable.readBundledRawFileText(itemPath), /is unavailab
 const sha256Hex = async text => createHash('sha256').update(text).digest('hex');
 const document = JSON.stringify({ bookSourceUrl: 'https://fixture.invalid', bookSourceName: 'Fixture' });
 const itemDigest = await sha256Hex(document);
-const index = { schemaVersion: 1, bundleId: 'reader-tested-book-sources', digest: 'fixture',
+const index = { schemaVersion: 1, bundleId: 'reader-tested-book-sources-v2', digest: 'fixture',
   collectionRecords: 1, items: [{ sourceId: 'https://fixture.invalid', itemDigest, file: itemPath }] };
 const indexText = JSON.stringify(index);
 const resources = new Map([['bundled-sources/index.json', indexText], [itemPath, document]]);
@@ -69,8 +69,8 @@ const supplyHost = new Host({ getRawFileContent: async file => {
 } });
 const source = readFileSync(new URL('../entry/src/main/ets/app/IncrementalBundledSourceSupply.ts', import.meta.url), 'utf8')
   .replace(/^import .*;\n/gm, '').replace(/export /g, '');
-const supply = new Function('sha256Hex', 'BUNDLED_SOURCE_INDEX_SHA256',
-  `${stripTypeScriptTypes(source)}; return supplyBundledSources;`)(sha256Hex, await sha256Hex(indexText));
+const supply = new Function('sha256Hex', 'BUNDLED_SOURCE_INDEX_SHA256', 'BUNDLED_SOURCE_BUNDLE_ID',
+  `${stripTypeScriptTypes(source)}; return supplyBundledSources;`)(sha256Hex, await sha256Hex(indexText), index.bundleId);
 const calls = [];
 const summary = await supply({ digest: index.digest, current: () => true, legacyIds: async () => [],
   read: file => supplyHost.readBundledRawFileText(file), request: async params => {
@@ -80,7 +80,7 @@ const summary = await supply({ digest: index.digest, current: () => true, legacy
     return { data: { accepted: true, changed: true, complete: true } };
   } });
 assert.deepEqual(supplyReads, ['bundled-sources/index.json', itemPath]);
-assert.deepEqual(calls.map(call => call.operation), ['status', 'apply', 'finish']);
+assert.deepEqual(calls.map(call => call.operation), ['status', 'status', 'apply', 'finish']);
 assert.equal(summary.failed, 0);
 assert.equal(summary.installedOrUpgraded, 1);
 console.log('Bundled source Host boundary: controlled paths, unchanged I/O guards, real supply-to-Host wiring PASS');

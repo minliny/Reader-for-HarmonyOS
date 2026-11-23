@@ -1,24 +1,16 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-import {registerHooks} from 'node:module';
+import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
+import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
+import {productionMangaDirectoryNavigationDataSource} from './lib/manga-directory-navigation-data-source-probe.mjs';
+import {ReaderScrollLayout,readerScrollStartOffset,readerScrollEndOffset} from '../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts';
+import {readerDirectoryScopeKey} from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
 
 const selected=selectContractCases({indices:'Real SDK native List prefix and native/data mappings; unchanged canonical DataSource count/page ranks.',anchors:'Real production rect/position/prefix retirement methods with bounded timers; header is never a Core anchor.',states:'Actual Surface loading/error and Tree empty retain one List prefix and clear-query entry.', 'default-consumer':'Default0 native mapping and existing header-free START/CENTER behavior remain unchanged.'});
 if(selected.length){
- const productionRoot=new URL('../entry/src/main/ets/',import.meta.url).href;
- const resolver=registerHooks({resolve(specifier,context,next){if(context.parentURL?.startsWith(productionRoot)&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);return next(specifier,context);}});
- try {
-const {createReaderComponentProbe}=await import('./lib/reader-component-probe.mjs');
-const {directoryControlSdk}=await import('./lib/directory-control-sdk-probe.mjs');
-const {productionMangaDirectoryNavigationDataSource}=await import('./lib/manga-directory-navigation-data-source-probe.mjs');
-const {ReaderScrollLayout,readerScrollStartOffset,readerScrollEndOffset}=await import('../entry/src/main/ets/features/common/ReaderScrollLayout.ts');
-const {readerDirectoryScopeKey}=await import('../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts');
-
- const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets',import.meta.url),'utf8');
- const surface=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets',import.meta.url),'utf8');
- const stateSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderPageState.ets',import.meta.url),'utf8');
- class StatePort {constructor(owner,params,_storage,id){Object.assign(this,params,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);Object.assign(this,params);}}
- const recoverySource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderRecoveryAction.ets',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets',import.meta.url),'utf8');
+ const surface=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets',import.meta.url),'utf8');
  const production=productionMangaDirectoryNavigationDataSource(source);
  const node=index=>({nodeId:`node${index}`,kind:'target',chapterIndex:index,title:`Chapter${index}`,displayTitle:`Chapter${index}`,depth:0,level:1});
  const view=count=>({viewId:`view${count}`,navigationRevision:'rev',visibleTotal:count,nodes:Array.from({length:Math.min(256,count)},(_,i)=>node(i)),currentVisibleIndex:2,locateCurrent:false});
@@ -28,9 +20,9 @@ const {readerDirectoryScopeKey}=await import('../entry/src/main/ets/features/rea
  // deep renderer at this finite native seam; do not replace the Builder body.
  function materialize(owner){const seen=new Set();for(;;){const next=[...owner.nodes.values()].find(n=>n.type==='ListItem'&&!seen.has(n.id));if(!next)break;seen.add(next.id);const renderer=next.create?.[0];if(typeof renderer==='function')renderer(next.id,true);}}
  function fixture(count=8,headers=1){
-  const sdk=directoryControlSdk(),timers=[],anchors=[],scrolls=[],rects=[],requests=[];let prefixCalls=0,emptyCalls=0;
+  const sdk=boundedSurfaceSdk(),timers=[],anchors=[],scrolls=[],rects=[],requests=[];let prefixCalls=0,emptyCalls=0;
   const data=new production.ReaderDirectoryNavigationDataSource(offset=>requests.push(offset)),v=view(count);data.replace(v);
-  const {owner}=createReaderComponentProbe(source,names,{...sdk.deps,ReaderPageState:StatePort,ReaderRecoveryAction:StatePort,ViewStackProcessor:stackPort,readerScrollStartOffset,readerScrollEndOffset,readerDirectoryScopeKey,
+  const {owner}=createReaderBuilderProbe(source,names,{...sdk.deps,ViewStackProcessor:stackPort,readerScrollStartOffset,readerScrollEndOffset,readerDirectoryScopeKey,
    readerDirectoryViewportAnchor:()=>anchors.at(-1),readerDirectorySaveViewportAnchor:a=>anchors.push(a),readerDirectoryObserveScrollIntent:()=>()=>{},
    setTimeout:fn=>{timers.push(fn);return timers.length;},LazyForEach:new Proxy({},{get:()=>()=>{}}),
    ScrollAlign:{START:'start',CENTER:'center'},LengthMetrics:{vp:value=>({value})}},sdk.hooks);
@@ -77,15 +69,15 @@ const {readerDirectoryScopeKey}=await import('../entry/src/main/ets/features/rea
   const emptyItems=[...e.owner.nodes.values()].filter(n=>n.type==='ListItem');assert.equal(emptyItems[1].constraintSize.minHeight,44);assert.equal(emptyItems[1].height,undefined,'state has natural extent, never viewport-minus-prefix or percentage item height');
   assert.equal(e.owner.dataIndex(0),-1);assert.equal(e.owner.dataIndex(1),-1);assert.deepEqual(e.requests,[]);assert.deepEqual(e.anchors,[],'neither prefix nor empty status becomes a Core rank');
   const emptyList=[...e.owner.nodes.values()].find(n=>n.type==='List');emptyList.onScrollIndex(0,1,0);emptyList.onScrollIndex(1,1,1);assert.equal(e.owner.firstVisibleIndex,-1);assert.deepEqual(e.requests,[]);assert.deepEqual(e.anchors,[],'actual native header/status callbacks cannot publish chapter0');
-  for(const failed of[false,true]){const sdk=directoryControlSdk();let prefix=0;
-   const {owner}=createReaderComponentProbe(surface,['build','hasPrefix','emptyPrefix','prefixBuilder','fallbackBuilder','treePrefixEmptyState','prefixClearAction','prefixRetryAction','headerCount','prefixHeight','prefixIdentity','prefixRevealRevision'],{...sdk.deps,ReaderPageState:StatePort,ReaderRecoveryAction:StatePort,ViewStackProcessor:stackPort,ReaderDirectoryNavigationList:class{}},
-    {...sdk.hooks,childSources:{ReaderDirectoryNavigationList:source,ReaderPageState:stateSource,ReaderRecoveryAction:recoverySource}});
+  for(const failed of[false,true]){const sdk=boundedSurfaceSdk();let prefix=0;
+   const {owner}=createReaderBuilderProbe(surface,['build','hasPrefix','emptyPrefix','prefixBuilder','fallbackBuilder','treeEmptyState','prefixClearAction','prefixRetryAction','headerCount','prefixHeight','prefixIdentity','prefixRevealRevision'],{...sdk.deps,ViewStackProcessor:stackPort,ReaderDirectoryNavigationList:class{}},
+    {...sdk.hooks,childSources:{...sdk.hooks.childSources,ReaderDirectoryNavigationList:source}});
    Object.assign(owner,{headerCount:1,prefixHeight:180,prefixIdentity:'s',mangaDisplay:false,mangaFontsReady:true,showLoadStatus:true,loadPending:!failed,loadFailed:failed,
     interactionEnabled:true,query:'query',hasRetainedContent:()=>false,prefixBuilder:()=>prefix++,onFirstLayout(){},retryOpen(){},onClearSearch(){},onTreeUserScrollIntent(){},view:undefined});
    owner.initialRender();materialize(owner);assert.equal(prefix,1);assert.equal([...owner.nodes.values()].filter(n=>n.type==='List').length,1);const items=[...owner.nodes.values()].filter(n=>n.type==='ListItem');assert.equal(items.length,2);assert.equal(items[1].constraintSize.minHeight,44);assert.equal(items[1].height,undefined,'loading/error remains natural and scrollable when prefix180 exceeds available122');
   }
-  const sdk=directoryControlSdk();let clears=0;const {owner}=createReaderComponentProbe(surface,['treePrefixEmptyState','prefixClearAction'],{...sdk.deps,ReaderPageState:StatePort,ReaderRecoveryAction:StatePort},{...sdk.hooks,childSources:{ReaderPageState:stateSource,ReaderRecoveryAction:recoverySource}});
-  Object.assign(owner,{query:'query',interactionEnabled:true,mounted:true,generation:1,bookId:'book',sourceId:'local',view:{viewId:'empty'},onClearSearch:()=>clears++});owner.treePrefixEmptyState();
+  const sdk=boundedSurfaceSdk();let clears=0;const {owner}=createReaderBuilderProbe(surface,['treeEmptyState','prefixClearAction'],sdk.deps,sdk.hooks);
+  Object.assign(owner,{query:'query',interactionEnabled:true,mounted:true,generation:1,bookId:'book',sourceId:'local',view:{viewId:'empty'},onClearSearch:()=>clears++});owner.treeEmptyState();
   const state=[...owner.children.values()].find(c=>c.message==='没有匹配的目录项');assert(state);state.onAction();assert.equal(clears,1);owner.generation++;state.onAction();assert.equal(clears,1,'old empty-state clear callback cannot enter a successor presentation');
  }
  function defaultConsumer(){
@@ -94,5 +86,4 @@ const {readerDirectoryScopeKey}=await import('../entry/src/main/ets/features/rea
   o.mangaDisplay=true;o.headerCount=1;assert.equal(o.nativeHeaderCount(),0,'opt-in is text-only; manga path retains its native indices');
  }
  for(const id of selected){await({indices,anchors,states,'default-consumer':defaultConsumer}[id]());recordContractCasePass(id);}
- } finally { resolver.deregister(); }
 }

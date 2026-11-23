@@ -1,6 +1,6 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import type { BookRequestOptions, BookRequestPriority } from './BookRequestScheduler';
-import { RemoteReadingGatewayError } from '../features/reading/RemoteReadingContract';
+import { RemoteReadingGatewayError } from '../features/reading/application/RemoteReadingContract';
 
 export interface ReadingPreparationIntent {
   schemaVersion: number;

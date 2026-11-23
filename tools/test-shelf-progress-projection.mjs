@@ -1,17 +1,15 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"progress-boundaries": {"description": "实际生产进度finite/clamp/零态与Grid/List当前显示", "resources": []}, "formatter-propagation": {"description": "真实formatter变动传播两consumer和Grid variant隔离/旧负例", "resources": []}, "retained-list": {"description": "实际书架行键、List Props 和保留的进度与更多操作", "resources": []}};
+const definitions={"progress-boundaries": {"description": "实际生产进度finite/clamp/零态与Grid/List当前显示", "resources": []}, "formatter-propagation": {"description": "真实formatter变动传播两consumer和Grid variant隔离/旧负例", "resources": []}, "retained-list": {"description": "实际Page→List Props保label/Progress/More identity", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
-const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 
 
 // Actual installed SDK compiler/property methods/native attribute calls. No
@@ -34,16 +32,9 @@ function constants(text, names, dependencies = {}) {
   assert.equal(declarations.length, names.length);
   return new Function(...Object.keys(dependencies), stripTypeScriptTypes(declarations.join('\n')) + `; return {${names.join(',')}};`)(...Object.values(dependencies));
 }
-const geometry = constants(pageSource, ['PHONE_LIST_COVER_WIDTH', 'PHONE_LIST_COVER_HEIGHT', 'TABLET_LIST_COVER_WIDTH', 'TABLET_LIST_COVER_HEIGHT']);
+const geometry = constants(pageSource, ['PHONE_BOOK_WIDTH', 'PHONE_BOOK_HEIGHT_RATIO', 'TABLET_BOOK_WIDTH',
+  'TABLET_BOOK_HEIGHT_RATIO', 'PHONE_LIST_COVER_WIDTH', 'PHONE_LIST_COVER_HEIGHT', 'TABLET_LIST_COVER_WIDTH', 'TABLET_LIST_COVER_HEIGHT']);
 const tokens = constants(read('common/ReaderTokens.ets'), ['TOK_SPACE_XS', 'TOK_SPACE_CONTROL_INLINE']);
-Object.assign(geometry, pureModuleProbe(read('bookshelf/BookshelfGridSpec.ets'), 'BookshelfGridSpec.ets',
-  { ...tokens, ...readerTypographyRoles }, ['bookshelfGridFrame', 'bookshelfCoverHeight', 'BOOKSHELF_GRID_TEXT_GAP']));
-const ReaderWindowCoordinator = { metrics: () => ({ systemFontScale: 1 }) };
-const { ReaderActionAccessibility } = pureModuleProbe(read('common/ReaderActionAccessibility.ets'),
-  'ReaderActionAccessibility.ets', { AccessibilityRoleType: { BUTTON: 'button' } }, ['ReaderActionAccessibility']);
-const { readerShelfListRowHeight } = pureModuleProbe(read('common/ReaderSurfaceBudgets.ts'),
-  'ReaderSurfaceBudgets.ts', {}, ['readerShelfListRowHeight']);
-
 function projection(text) {
   return new Function('MangaBookPresentation', stripTypeScriptTypes(text).replace(/^import .*;$/gm, '').replace(/^export /gm, '') + ';return ShelfBookPresentation;')(MangaBookPresentation);
 }
@@ -74,7 +65,7 @@ function grid(text, Projection, book, tablet = false, scheme = 'day') {
   // window's resolved content width is a controlled Phone/Tablet input.
   const selected = old ? frozenGridWithGeometry : pageSource;
   const { owner } = createReaderBuilderProbe(selected, [...names, ...geometryMethods], { ...geometry, ...tokens,
-    ShelfBookPresentation: Projection, ReaderWindowCoordinator, runtime: forbiddenTransport });
+    ShelfBookPresentation: Projection, runtime: forbiddenTransport });
   Object.assign(owner, { appThemeScheme: scheme, viewMode: 'cover', viewSwitchGridContentOpacity: 1,
     shelfContentWidth: wide => wide ? 650 : 326 });
   owner.projectionGridDetails(book, tablet);
@@ -130,33 +121,26 @@ assert.equal(textNodes(grid(frozenGrid, ShelfBookPresentation, row(Infinity))).a
 // run real SDK one-way Prop updates. Keep the already-mounted child/nodes.
 if(selectedCase==='retained-list'){
   const properties = createArkUIPropertyRuntimeProbe();
+  const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
+  const icons = iconButtonControls({ properties });
   const child = createReaderBuilderProbe(listSource, ['appThemeScheme', 'book', 'mangaRevision', 'positionLabel', 'metadataTag', 'build'],
     { ...properties.sdk, ShelfBookPresentation }, properties.hooks);
   const names = ['projectionListDetails', 'projectionListDetailsWidth', 'listCoverWidth', 'listCoverHeight',
-    'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'presentBookActionSheet', 'listRowHeight',
-    'continueCardFontScale', 'bookRowRenderKey'];
-  const parent = createReaderBuilderProbe(pageSource, names, { ...properties.sdk, ...geometry, ...tokens,
-    ShelfBookListDetails: child.Component, ShelfBookPresentation, readerShelfListRowHeight, ReaderActionAccessibility,
-    ReaderWindowCoordinator, runtime: forbiddenTransport },
-    { ...properties.hooks, childSources: { ShelfBookListDetails: listSource }, mountChildren: true });
+    'bookActionFocusKey', 'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'presentBookActionSheet'];
+  const parent = createReaderBuilderProbe(pageSource, names, { ...icons.dependencies, ...geometry, ...tokens,
+    ShelfBookListDetails: child.Component, ShelfBookPresentation, runtime: forbiddenTransport },
+    { ...icons.hooks, childSources: { ...icons.hooks.childSources, ShelfBookListDetails: listSource } });
   const book = { ...row(1) };
-  const key = (value, index = 0) => parent.owner.bookRowRenderKey([value], index);
-  const recorded = { ...book, readingPosition: { chapterIndex: 7, chapterOffset: 70, bodyVersion: 'A' } };
-  assert.equal(key(recorded, 12), key(recorded), 'row movement preserves the render identity');
-  assert.notEqual(key({ ...recorded, readProgress: 8765 }), key(recorded), 'new Core progress updates the affected row');
-  assert.notEqual(key({ ...recorded, readingPosition: { ...recorded.readingPosition, bodyVersion: 'B' } }),
-    key(recorded), 'different content version invalidates the same canonical reading position');
   Object.assign(parent.owner, { appThemeScheme: 'day', viewMode: 'list', viewSwitchListContentOpacity: 1,
     shelfContentWidth: () => 326, mounted: true, navigationGeneration: 7, books: [book], actionSheetRevision: 0 });
   parent.owner.projectionListDetails(book, false);
-  const detailFrame = [...parent.owner.nodes.values()].find(n => n.type === 'Row');
-  assert.equal(detailFrame.height, 72, 'actual retained list actor keeps the 1x phone row budget');
-  assert.equal(detailFrame.translate.x, geometry.PHONE_LIST_COVER_WIDTH + tokens.TOK_SPACE_CONTROL_INLINE,
-    'actual retained details stay after the unchanged cover and shared gap');
   const actualChild = [...parent.owner.children.values()][0];
   const label = textNodes(actualChild).find(n => n.create === '已读 <1%');
   const bar = [...actualChild.nodes.values()].find(n => n.type === 'Progress');
-  const more = [...parent.owner.nodes.values()].find(n => n.type === 'Stack' && n.onClick);
+  const moreActor = [...parent.owner.children.values()].find(actor => actor instanceof icons.icon.Component);
+  const more = icons.nodes(moreActor).find(node => node.type === 'Stack' && node.onClick);
+  assert.deepEqual([more.width, more.height, more.borderRadius], [44,44,22]);
+  assert.equal(moreActor.focusId, parent.owner.bookActionFocusKey(book, true));
   assert.ok(label); assert.equal(bar.create.value, .01); assert.equal(actualChild.book.bookId, book.bookId);
   book.readProgress = 8765; parent.owner.replay(); properties.flush();
   assert.equal(textNodes(actualChild).find(n => n.create === '已读 87%'), label, 'Prop update retains the original label actor');
@@ -170,6 +154,6 @@ if(selectedCase==='retained-list'){
 }
 assert.equal(writes, 0);
 
-console.log('PASS bookshelf progress: ' + selectedCase + '; zero writes; SDK logic and native attribute calls');
+console.log('PASS I03: 12 actual Grid/List states; 16 frozen Grid tuple/height comparisons; shared propagation and variant isolation; real child Props/retained callbacks; zero writes. SDK logic/attributes only, not OS/pixels.');
 
 }

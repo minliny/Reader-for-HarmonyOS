@@ -24,18 +24,18 @@ const { readerReplaceSdkFixture, compileReaderReplaceSdkMethods, untilReaderRepl
 const actualSdk = await readerReplaceSdkFixture();
 const RulesMutationOwner = actualSdk.Owner;
 let activeRuntime;
-const statePolicy = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
-const quickPolicy = await import('../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts');
+const statePolicy = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const ReaderControlReplaceGatewayError = actualSdk.FullError;
 const { copyReaderControlSessionState } =
-  await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const {readerControlHostClosing}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
+  await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const {readerControlHostClosing}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 // This exact platform module contains only type imports; execute its real body.
 const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
-  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
+  readFileSync(new URL('../entry/src/main/ets/features/reading/presentation/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
 const names = ['openQuickReplace', 'controlReplaceCurrent', 'reloadControlReplace', 'runControlReplaceMutation',
+  'requestControlReplacePage', 'prepareControlReplacePage', 'controlMinimumCommittedIdentity',
   'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'beginReplaceMutation', 'isReplaceMutationCurrent', 'finishReplaceMutation', 'invalidateReplaceMutationOwner',
   'onControlSessionChanged','admitSessionControlClosing','publishQuickSearchState'];
 function method(name) {
@@ -51,7 +51,7 @@ function method(name) {
   assert.equal(depth, 0);
   return source.slice(match.index, end);
 }
-const deps = { ReaderRuntimeOwner: { current: () => activeRuntime }, ...statePolicy, ...quickPolicy, copyReaderControlSessionState, ReaderControlReplaceGatewayError, readerControlHostClosing,
+const deps = { ReaderRuntimeOwner: { current: () => activeRuntime }, ...statePolicy, copyReaderControlSessionState, ReaderControlReplaceGatewayError, readerControlHostClosing,
   readerControlContentLocation: session => session.location,
   readerControlHostCloseCommitted: (session, revision) => session.closeRevision > revision,
   ReaderWindowCoordinator: { metrics: () => ({}) }, readerControlKeyboardVisible: () => false,
@@ -59,7 +59,7 @@ const deps = { ReaderRuntimeOwner: { current: () => activeRuntime }, ...statePol
 };
 function Host(mutate = code => code, sdk = actualSdk) {
   const code = mutate(names.map(method).join('\n'));
-  return compileReaderReplaceSdkMethods('features/reading/LocalReadingExperience.methods.ts', 'ReplaceHostProbe', { ...deps, ReaderControlReplaceGatewayError: sdk.FullError }, true,
+  return compileReaderReplaceSdkMethods('features/reading/ui/LocalReadingExperience.methods.ts', 'ReplaceHostProbe', { ...deps, ReaderControlReplaceGatewayError: sdk.FullError }, true,
     'export class ReplaceHostProbe {' + code + '}');
 }
 const rule = (id, enabled = true) => ({ id, order: id, name: '规则' + id, pattern: 'old', replacement: 'new',
@@ -81,8 +81,8 @@ function owner(Type = Host(), sdk = actualSdk) {
     replaceMutationGeneration: 0, replaceMutationActiveGeneration: -1,
     replaceMutationActiveLifecycleToken: -1, replaceMutationActiveBookId: '', replaceMutationActiveRuleId: -1,
     controlReplaceState: ready('source:book:1', [rule(1)]),
-    replaceState: quickPolicy.createReaderReplaceQuickState([rule(1)]),
     controlSession: { closeRevision: 0, location: { level: 'secondary', module: 'replace' } },
+    controlMinimumReady: true, controlMinimumProfileReader: undefined, controlPresentationReceipt: undefined,
     latestControlVisualSession: { closeRevision: 0, location: { level: 'secondary', module: 'replace' } },
     observedControlPage: 'quickReplace', observedControlModule: 'replace', observedControlCloseRevision: 0,
     searchGeneration: 0, quickSearchQuery: '', quickSearchState: { kind: 'idle' },
@@ -99,8 +99,12 @@ function owner(Type = Host(), sdk = actualSdk) {
     invalidateControlBackdrop() {}, dismissControlTemporaryLayers() {}, prepareControlPage() {},
     drainPageTurnPreparationQueue() {}, suspendAdjacentMeasurement() {},
     setControlPage(page) {
+      // This legacy write-owner fixture deliberately assumes an already
+      // committed synchronous page. The real async entry is covered by
+      // test-reader-control-replace-navigation#committed-entry-load.
       this.page = page; this.controlSession.location = { level: 'secondary', module: 'replace' };
       this.onControlSessionChanged();
+      this.prepareControlReplacePage();
     },
     replaceGateway: sdk === actualSdk ? Object.assign(new sdk.Full(runtime), { loadRules: async () => { host.loadCalls++; return [rule(1), rule(2)]; } }) : new sdk.Full(runtime),
   });

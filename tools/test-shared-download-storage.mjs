@@ -16,7 +16,7 @@ const { createMangaAtomicPayloadReaderFixture }=await import('./lib/manga-atomic
 // Full production methods, real temporary files. The sparse quota fixtures
 // report their real stat.size without allocating gigabytes of test payload.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = readFileSync(join(repo, 'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
+const source = readFileSync(join(repo, 'entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts'), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const handles = new Map();
 let rejectUnlink = () => false;
@@ -51,7 +51,7 @@ const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonical
   (free,bytes,reserve)=>{if(free<bytes+reserve)throw new MaterializationError('storage_full','MANGA_CACHE_STORAGE_FULL');},MaterializationError,readMangaAtomicPayload,
 );
 
-const storageSource = readFileSync(join(repo, 'entry/src/main/ets/features/downloads/SharedDownloadStorageGateway.ts'), 'utf8');
+const storageSource = readFileSync(join(repo, 'entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts'), 'utf8');
 const Storage = new Function('SharedDownloadIntentPreferences', 'ReaderCoreRequestError', 'isReaderCoreTransactionPendingError',
   stripTypeScriptTypes(storageSource.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, '')) + '\nreturn SharedDownloadStorageGateway;')(class {}, ReaderCoreRequestError, isReaderCoreTransactionPendingError);
 const root = await fs.mkdtemp(join(tmpdir(), 'reader-global-storage-'));

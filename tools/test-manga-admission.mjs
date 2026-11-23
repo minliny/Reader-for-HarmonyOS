@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const { MangaAdmissionGateway } = await import('../entry/src/main/ets/features/manga/MangaAdmissionGateway.ts');
-const {readBookAuthorIdentity}=await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+const { MangaAdmissionGateway } = await import('../entry/src/main/ets/features/manga/application/MangaAdmissionGateway.ts');
+const {readBookAuthorIdentity}=await import('../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
 const pageId=`mp1:${'a'.repeat(64)}`;
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/chapter'},sourceRuleVersion:'v',manifestVersion:'m',decodeRevision:'identity-v1',pages:[{ordinal:0,pageId,resourceRef:`manga:${pageId}`}]};
 const session={contentKind:'manga',sourceVersion:'v',identity:{sourceId:'s',bookId:'b'},detailUrl:'b',
@@ -36,37 +36,29 @@ console.log('PASS manga admission: exact intent/manifest/page/source scope, deco
 { const f=fixture();await f.gateway.verify(session,f.current);assert.equal(f.calls.some(c=>c[0]==='bookshelf.add'),false);assert.deepEqual(f.released,['file://first']); }
 console.log('PASS manga preview and one bounded cached-resource renewal');
 
-const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { ProductionHost: ReadingEntryHost, setRuntime: setEntryRuntime } = await import('./lib/reading-entry-owner-probe.mjs');
-const { sameRemoteSessionEvidence } = await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-const { captureRemotePositionContext } = await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
+const { readingEntryActionFixture } = await import('./lib/reading-entry-action-fixture.mjs');
+const { actualReaderDirectoryOperations } = await import('./lib/reader-directory-operations-probe.mjs');
+const { mangaCurrentJourney } = await import('./lib/manga-current-journey-probe.mjs');
 for (const fails of [false,true]) {
  const f=fixture();f.runtime.bookAcquisitions=()=>({readingProjectionRevision:()=>1,setPreparationVisible(){}});if(fails)f.failImage();
- setEntryRuntime(f.runtime);
- const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-  ['probeRemoteContentVerdict','getReadingEntryHost','bindReadingEntryReader','applyReadingEntrySnapshot'],
-  {ReadingEntryHost,MangaAdmissionGateway,sameRemoteSessionEvidence,captureRemotePositionContext,
-   LOCAL_SOURCE_ID:'local',EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'},
-   ReaderRuntimeOwner:{current:()=>f.runtime}});
- const owner=Object.assign(new Index(),{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,
-  navigationGeneration:0,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailBook:{...book,contentKind:'manga'},
-  detailInBookshelf:false,detailToc:[],shelfOperation:{generation:0,busy:false,removalKey:''},readableAdmissions:[],
-  remoteReadingSession:session,remoteContentProbeGeneration:0,remoteContentVerdict:'verifying'});
- owner.bindReadingEntryReader();
- await owner.probeRemoteContentVerdict({},session,()=>true);
- assert.equal(owner.remoteContentVerdict,fails?'contentUnavailable':'readable');
- assert.equal(f.calls.some(c=>c[0]==='chapter.content'||c[0]==='bookshelf.add'),false);
+ const x=readingEntryActionFixture({runtime:f.runtime,route:'detail'});
+ Object.assign(x.entry,{book:{...book,contentKind:'manga'},session,toc:[],inBookshelf:false});
+ x.bindReader();await x.host().probe(x.entry.scopeId);
+ assert.equal(x.entry.verdict,fails?'contentUnavailable':'readable');
+ assert.equal(f.calls.some(c=>c[0]==='chapter.content'||c[0]==='bookshelf.add'),false);x.retire();
 }
-console.log('PASS actual Index manga detail gate follows image success/failure without novel body or shelf writes');
+console.log('PASS actual ReadingEntryPresentation/Host manga detail gate follows image success/failure without novel body or shelf writes');
 {
  const messages=[];
  const runtime={supportsCoreCapability:()=>false,request:()=>assert.fail('unsupported manga must not dispatch any text/download RPC')};
- const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['downloadDirectoryChapter','downloadDirectoryBook'],{ReaderRuntimeOwner:{current:()=>runtime}});
- const owner=Object.assign(new Index(),{mountedRuntimeOwner:runtime,remoteReadingSession:session,
-  isKnownDetailChapter:index=>index===4,showOfflineDownloadFeedback:message=>messages.push(message)});
- owner.downloadDirectoryChapter(4);owner.downloadDirectoryBook();
+ const Operations=actualReaderDirectoryOperations();
+ const scene={owner:runtime,session,book:{...book,contentKind:'manga'},retired:false,mount:1,navigation:1,presentation:1,
+  sessionGeneration:1,directoryVisible:true,acceptsProjection:true,foreground:true,reading:false,offlineBusy:false};
+ const operations=new Operations({scene:()=>scene,ownsRuntime:owner=>owner===runtime,feedback:message=>messages.push(message)});
+ operations.downloadChapter(4);operations.downloadBook();
  assert.equal(messages.length,2);assert.ok(messages.every(m=>m.includes('漫画离线下载尚未开放')));
- assert.equal(owner.offlineMutationActiveKey,undefined,'no legacy text queue admission');
+ assert.equal(operations.offlineOperation,undefined,'no legacy text queue admission');
 }
 console.log('PASS manga detail rejects legacy text download actions before queue mutation');
 {
@@ -79,7 +71,7 @@ console.log('PASS manga admission skips non-readable groups even with URLs and r
 
 // The real coordinator wrapper is part of admission. A direct Admission mock
 // alone would miss an optional tail argument dropped by that wrapper.
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 for(const decodeRevision of ['identity-v1','bytes-v1']) {
  const selectedManifest={...manifest,decodeRevision},f=fixture(selectedManifest);
  const coordinator=new BookAcquisitionCoordinator((...args)=>f.runtime.request(...args),()=>true,f.runtime);
@@ -93,11 +85,10 @@ for(const decodeRevision of ['identity-v1','bytes-v1']) {
 }
 console.log('PASS actual BookAcquisitionCoordinator manga admission wrapper preserves both manifest decode revisions to owner argument 13 and admission receipt');
 
-const { fixture: sourceSwitchFixture, setCurrentRuntime: setSourceSwitchRuntime, gatewayExports } = await import('./lib/source-switch-owner-probe.mjs');
-const { MangaSwitchChapterSelectionRequired } = await import('../entry/src/main/ets/features/manga/MangaSourceSwitchGateway.ts');
 for(const mode of ['success','image-fail','cancel','route-away','identity-away','login-cancel']){
- const f=fixture();const opened=[];let imageResolve;
- f.runtime.bookAcquisitions=()=>({sourceRegistryRevision:()=>1,acquireBook:async()=>session});
+ const f=fixture();let imageResolve;
+ f.runtime.bookAcquisitions=()=>({sourceRegistryRevision:()=>1,acquireBook:async()=>session,hasCurrentCatalogProjection:()=>true,
+  readingProjectionRevision:()=>1,setPreparationVisible(){}});
  const request=f.runtime.request;f.runtime.request=async(method,params,options)=>{
   if(method==='source.list')return{data:{sources:['old','s'].map(sourceId=>
    ({sourceId,name:sourceId,enabled:true,sourceVersion:session.sourceVersion,bookSource:{bookSourceType:2}}))}};
@@ -112,50 +103,37 @@ for(const mode of ['success','image-fail','cancel','route-away','identity-away',
    return load(...args);
   };
  }
- const switchOwner=sourceSwitchFixture({open:false});setSourceSwitchRuntime(f.runtime);
- const host=new switchOwner.Constructor(f.runtime);
- const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-  ['onPickSource','switchMangaSource','getSourceSwitchHost','getSourceSwitchGateway','sourceSwitchProbeQuery','performMangaPreviewSourceSwitch',
-   'presentMangaSourceSwitchAcquisitionFailure','mangaSourceSwitchFailureMessage',
-   'clearMangaSourceSwitchSelection','closeSourceSwitch','canCancelMangaSourcePreparation'],{
-   SourceSwitchHost:switchOwner.Constructor,MangaSwitchChapterSelectionRequired,
-   sourceSwitchCandidateKey:gatewayExports.sourceSwitchCandidateKey,
-   MangaAdmissionGateway,ReaderRuntimeOwner:{current:()=>f.runtime},readBookAuthorIdentity,
-  });
  const original={sourceId:'old',bookId:'old-book',title:'Book',author:'Author',contentKind:'manga'},originalToc=[{index:9,title:'原目录'}];
  const candidate={sourceId:'s',bookUrl:'b',bookName:'Book',author:'Author',sourceVersion:session.sourceVersion,category:'comic'};
- const owner=Object.assign(new Index(),{detailBook:original,detailToc:originalToc,detailReturnRoute:'search',
-  mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,sourceSwitchHost:host,detailInBookshelf:false,
-  route:'detail',readingSessionActive:false,sourceSwitchVisible:true,sourceSwitchState:{kind:'candidates',candidates:[candidate]},
-  sourceSwitchScopeId:0,mangaSourceSwitchSelectionVisible:false,mangaSourceSwitchPreparationGeneration:0,
-  navigationGeneration:0,mangaChapterRequestGeneration:0,mangaSourceSwitchCommitGeneration:-1,consumeSystemFileOpen:()=>{},
-  openRemoteBookDetail:(...args)=>opened.push(args),openReading:()=>assert.fail('failed detail switch must not start reading')});
- let work,failure;
- const switchSource=owner.switchMangaSource.bind(owner),presentFailure=owner.presentMangaSourceSwitchAcquisitionFailure.bind(owner);
- owner.switchMangaSource=(...args)=>{work=switchSource(...args);return work;};
- owner.presentMangaSourceSwitchAcquisitionFailure=(...args)=>{failure=args[2];return presentFailure(...args);};
- owner.onPickSource(candidate,0);assert.ok(work,'the actual Index candidate callback admitted its captured manga operation');
+ const x=mangaCurrentJourney({runtime:f.runtime,book:original,toc:originalToc,candidate,reading:false,inShelf:false});
+ const work=x.begin();assert.ok(work,'actual manga candidate callback admitted its captured operation');
  if(['cancel','route-away','identity-away','login-cancel'].includes(mode)){
   for(let i=0;i<20&&!imageResolve;i++)await new Promise(resolve=>setImmediate(resolve));
   assert.ok(imageResolve,'wait for the real first-image preparation boundary');
-  if(mode==='cancel'){assert.equal(owner.canCancelMangaSourcePreparation(),true);owner.closeSourceSwitch();assert.equal(owner.sourceSwitchVisible,false);}
-  if(mode==='route-away')owner.route='bookshelf';
-  if(mode==='identity-away')owner.detailBook={...original,bookId:'newer'};
+  if(mode==='cancel'){assert.equal(x.manga.canCancelPreparation(),true);x.manga.close();assert.equal(x.source.visible,false);}
+  if(mode==='route-away')x.navigation.show('bookshelf');
+  if(mode==='identity-away')x.entry.book={...original,bookId:'newer'};
   imageResolve();
  }
  await work;
- assert.equal(opened.length,mode==='success'?1:0);
+ assert.equal(x.opened.length,mode==='success'?1:0);
  assert.equal(f.calls.some(call=>['bookshelf.add','manga.sourceSwitch.commit','reading.progress.update','chapter.content'].includes(call[0])),false);
- assert.equal(owner.detailToc,originalToc);
- if(mode!=='identity-away')assert.equal(owner.detailBook,original);
+ if(mode!=='success'){
+  assert.equal(x.entry.toc,originalToc);
+  if(mode!=='identity-away')assert.equal(x.entry.book,original);
+ }
  if(['image-fail','login-cancel'].includes(mode)){
-  assert.ok(failure);assert.equal(owner.route,'detail');assert.equal(owner.readingSessionActive,false);
-  assert.equal(owner.sourceSwitchVisible,true);assert.equal(owner.sourceSwitchState.kind,'candidates');
-  assert.equal(owner.sourceSwitchState.refreshError,failure);
+  const failure=x.failures.at(-1);assert.ok(failure);assert.equal(x.navigation.snapshot().route,'detail');assert.equal(x.entry.sessionActive,false);
+  assert.equal(x.source.visible,true);assert.equal(x.source.state.kind,'candidates');
+  assert.equal(x.source.state.refreshError,failure);
   assert.equal(failure,mode==='image-fail'?'IMAGE_FAILED':'漫画换源失败，请重试');
  }
- if(mode==='success'){assert.equal(opened[0][6],'search');assert.equal(opened[0][7],session);
-  assert.deepEqual(f.released,['file://first']);assert.equal(owner.requestedChapterIndex,4);
-  assert.equal(owner.mangaChapterStartRequestGeneration,owner.mangaChapterRequestGeneration);}
+ if(mode==='success'){
+  assert.equal(x.opened[0].retainedParent,'search');assert.equal(x.opened[0].input.validatedSession,session);
+  assert.deepEqual(f.released,['file://first']);assert.equal(x.entry.requestedChapterIndex,4);
+  assert.equal(x.entry.mangaChapterStartRequestGeneration,x.entry.mangaChapterRequestGeneration);
+  assert.equal(x.entry.book.sourceId,'s');assert.equal(x.entry.sessionActive,true);assert.equal(x.navigation.snapshot().route,'reading');
+ }
+ x.close();
 }
-console.log('PASS actual Index candidate callback → captured SourceSwitchHost → Admission → preview seam: first-image verification before unread detail replacement, exact route/identity/cancel fences, failed/login-cancel keeps old detail and picker, no old-progress requirement or progress/shelf/text mutation');
+console.log('PASS current manga candidate → SourceSwitchHost → Admission → SourceSwitchJourney → EntryActions/Host: first-image before real preview replacement, exact route/identity/cancel fences, failed/login-cancel keeps original detail/picker, no progress or shelf writes');

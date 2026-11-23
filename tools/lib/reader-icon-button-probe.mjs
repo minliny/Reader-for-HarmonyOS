@@ -1,14 +1,27 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { virtualFilePath } from './tool-environment.mjs';
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { foundationIconSpec } from './reader-foundation-control-probe.mjs';
+import { readerFoundationTokens } from './reader-foundation-control-probe.mjs';
+import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { createReaderComponentProbe as createReaderBuilderProbe } from './reader-component-probe.mjs';
-import { builderComponentMembers as boundedMembers } from './ets-builder-probe.mjs';
+import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
+import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
 
-const read = name => readFileSync(new URL('../../entry/src/main/ets/features/common/' + name + '.ets', import.meta.url), 'utf8');
-export const iconButtonSource = read('ReaderIconButton'), iconButtonSpecSource = read('ReaderControlSpecs');
+const { ts, options } = installedEtsCompiler();
+export const iconButtonSource = readFileSync(new URL('../../entry/src/main/ets/ui/controls/ReaderIconButton.ets', import.meta.url), 'utf8');
+export const iconButtonSpecSource = readFileSync(new URL('../../entry/src/main/ets/ui/controls/ReaderControlSpecs.ets', import.meta.url), 'utf8');
 export function compileIconButtonSpecs(source = iconButtonSpecSource) {
-  return foundationIconSpec(source);
+  const tree = ts.createSourceFile(virtualFilePath('ReaderControlSpecs.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(tree.parseDiagnostics.length, 0, 'actual finite icon specification parses');
+  const resolverIndex = tree.statements.findIndex(node => ts.isFunctionDeclaration(node) && node.name?.text === 'resolveReaderIconButtonSpec');
+  assert.ok(resolverIndex >= 0, 'actual finite icon resolver exists');
+  source = tree.statements.slice(0, resolverIndex + 1).filter(node => !ts.isImportDeclaration(node))
+    .map(node => node.getText(tree)).join('\n');
+  const js = ts.transpileModule(source.replace(/^export /gm, ''), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+  const values = { ...readerFoundationTokens, ...readerTypographyRoles };
+  return new Function(...Object.keys(values), js + ';return resolveReaderIconButtonSpec;')(...Object.values(values));
 }
 /** Actual whole shipping component, finite resolver and normal/pressed
  * modifier. Only ArkUI properties and ColorMetrics use platform seams. */

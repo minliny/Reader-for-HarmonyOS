@@ -7,17 +7,17 @@ const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
 const { localFilePath }=await import('./lib/tool-environment.mjs');
 const {default:assert}=await import('node:assert/strict');
-const autoPolicy=await import('../entry/src/main/ets/features/reading/ReaderAutoPageState.ts');
-const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts');
-const { readerTtsSessionBlocksAutoPageStart }=await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
-const { buildReaderSessionLaunchGeometry }=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { ReaderSessionLaunchController }=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage }=await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const { ReaderPageChromeSnapshot }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { copyReaderControlSessionState, createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { ReaderPageChromeMeasurements }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const autoPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageState.ts');
+const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageCoordinator.ts');
+const { readerTtsSessionBlocksAutoPageStart }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
+const { buildReaderSessionLaunchGeometry }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { ReaderSessionLaunchController }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const { ReaderPageChromeSnapshot }=await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { copyReaderControlSessionState, createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { ReaderPageChromeMeasurements }=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const file=localFilePath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
+const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url));
 if(selectedCase==='business-intent'){
 const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
   'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',
@@ -28,9 +28,9 @@ function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve
 async function drain(){for(let i=0;i<10;i++)await Promise.resolve();}
 function owner(){
  const host=new Host(),availability=deferred(),calls=[];
- Object.assign(host,{mounted:true,appForeground:true,windowChromeActive:true,transientFeedback:{show:(_context,_options,current)=>{if(current())calls.push('notice');}},exitRequested:false,lifecycleToken:1,sourceId:'src',bookId:'book',
+ Object.assign(host,{mounted:true,appForeground:true,exitRequested:false,lifecycleToken:1,sourceId:'src',bookId:'book',
   chapterSelectionToken:1,phase:'ready',chapter:{content:'正文',chapterIndex:4},visiblePage:{startScalar:20},materializedContentVersion:'v1',
-  ttsAvailabilityResolved:true,ttsPlayIntentGeneration:0,ttsState:{status:'idle',rate:1},ttsPreferences:{version:1,language:'zh-CN',person:0},
+  ttsAvailabilityResolved:true,ttsPlayIntentGeneration:0,ttsState:{status:'idle',rate:1},ttsLanguage:'zh-CN',ttsPerson:0,
   ttsPauseOnInterruption:true,ttsAllowMixing:false,ttsFailurePolicy:'stop',autoPageState:autoPolicy.createReaderAutoPageState(8),
   autoPageStartGeneration:0,autoPageStartPending:false,controlOpenRevision:1,controlModuleVisitRevision:1,
   controlSession:{location:{level:'secondary',module:'tts',form:'quick'}},visible:true,sessionLaunch:undefined,
@@ -44,6 +44,8 @@ function owner(){
   armAutoPageTimer:()=>calls.push('autoTimer'),armAutoPageSessionTimer:()=>{},clearAutoPageTimer:()=>{},clearAutoPageSessionTimer:()=>{},resetAutoPageSessionDuration:()=>{},
   pauseAutoPage(reason){this.autoPageCoordinator.pause(reason);},
   pageTurnInputPhase:()=> 'idle',sessionCapsuleSnapshot:()=>undefined,
+  readerInputIsCurrent:()=>true,
+  transientFeedback:{show:(_context,options)=>calls.push(`feedback:${options.message}`)},
   getUIContext:()=>({getPromptAction:()=>({showToast:()=>{}})}),
  });
  host.autoPageCoordinator = new ReaderAutoPageCoordinator({ now:()=>10000,

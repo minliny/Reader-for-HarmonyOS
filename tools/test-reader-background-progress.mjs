@@ -7,9 +7,9 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { ReadingProgressJournal } = await import('../entry/src/main/ets/features/reading/ReadingProgressJournal.ts');
-const { ReadingSessionFlowGateway, recoverReadingProgress } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const { ReadingProgressJournal } = await import('../entry/src/main/ets/features/reading/application/ReadingProgressJournal.ts');
+const { ReadingSessionFlowGateway, recoverReadingProgress } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const layout = { viewportWidth: 390, viewportHeight: 800, fontScale: 1 };
 const anchor = offset => ({ chapterIndex: 2, chapterOffset: offset, chapterProgress: offset / 100,
   bodyVersion: 'body', processingVersion: 'processing' });

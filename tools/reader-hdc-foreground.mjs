@@ -6,6 +6,14 @@ import { basename, resolve } from 'node:path';
 import { createConnection } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 
+export function hdcDirectEnvironment(environment = process.env) {
+  const direct = { ...environment };
+  for (const name of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'SOCKS_PROXY']) {
+    delete direct[name]; delete direct[name.toLowerCase()];
+  }
+  return { ...direct, NO_PROXY: '*', no_proxy: '*' };
+}
+
 /** Only the observed WebDAV stat warning concerns a separate mounted file
  * system. Unknown warnings, partial socket records and errors remain fatal. */
 export function validateLsofWarning(stderr) {
@@ -92,7 +100,7 @@ export async function startForegroundServer({ hdc, command, root, serverRef, tim
   const processMatches = deps.processMatches ?? ownedProcessNameMatches;
   const spawnServer = deps.spawnServer ?? ((path, args, logPath) => {
     const fd = openSync(logPath, 'a', 0o600);
-    try { return spawn(path, args, { detached: true, stdio: ['ignore', fd, fd], env: process.env }); }
+    try { return spawn(path, args, { detached: true, stdio: ['ignore', fd, fd], env: hdcDirectEnvironment() }); }
     finally { closeSync(fd); }
   });
   const stop = deps.stop ?? stopOwned;

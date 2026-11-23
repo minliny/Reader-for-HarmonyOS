@@ -6,21 +6,14 @@ let ProductionHost,setRuntime;if(id.startsWith('index-'))({ProductionHost,setRun
 
 const { readFileSync }=await import('node:fs');
 const { registerHooks, stripTypeScriptTypes }=await import('node:module');
-let productionMotionMethods;if(id.startsWith('index-')||id==='visible-range')({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
+let productionMotionMethods;if(id==='visible-range')({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
 registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e}}});
-const {resolveBookshelfBook}=await import('../entry/src/main/ets/features/bookshelf/BookshelfBookIdentity.ts');
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const path=p=>new URL(p,base);
-const {BookAcquisitionProjectionGateway}=await import(path('app/BookAcquisitionProjectionGateway.ts'));
-const {BookAcquisitionCoordinator}=await import(path('app/BookAcquisitionCoordinator.ts'));
-const {RemoteReadingFlowGateway,RemoteChapterCacheRefreshError}=await import(path('features/reading/RemoteReadingFlowGateway.ts'));
-const {RemoteReadingGatewayError,remoteReadingFailureRecord}=await import(path('features/reading/RemoteReadingContract.ts'));
-const {remoteReadingFailureKindOf,verdictForFailureKind}=await import(path('features/reading/RemoteContentAdmission.ts'));
-const {searchCandidateRank}=await import(path('features/search/SearchCandidatePolicy.ts'));
-const {sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,withPreparedRemoteChapter,copyRemoteReadingSession}=await import(path('features/reading/RemoteReadingEvidence.ts'));
-const {captureRemotePositionContext}=await import(path('features/reading/RemoteReadingPositionMigration.ts'));
-const {errorMessageOf}=await import(path('app/ErrorMessage.ts'));
-const {readerSourceCategoryIsText}=await import(path('features/source/ReaderSourceCategory.ts'));
+const {BookAcquisitionCoordinator}=await import(path('features/reading/application/BookAcquisitionCoordinator.ts'));
+const {RemoteReadingFlowGateway}=await import(path('features/reading/application/RemoteReadingFlowGateway.ts'));
+const {RemoteReadingGatewayError}=await import(path('features/reading/application/RemoteReadingContract.ts'));
+const {withPreparedRemoteChapter}=await import(path('features/reading/application/RemoteReadingEvidence.ts'));
 const pause=()=>new Promise(r=>setImmediate(r));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}};
 async function until(p){for(let i=0;i<300;i++){if(p())return;await pause()}assert.fail('did not settle')}
@@ -78,15 +71,16 @@ function fixture({cooperativeCancellation=false}={}){
 const outcomes=[];
 async function check(name,body){await body();outcomes.push({name,status:'PASS'});}
 const authorProof=(raw,version='v1',field='search')=>({schemaVersion:1,sourceVersion:version,field,raw,label:raw.slice(1),rule:'author-nickname-at-v1'});
+let searchReadingJourneyFixture;if(id.startsWith('index-'))({searchReadingJourneyFixture}=await import('./lib/search-reading-journey-owner-probe.mjs'));
 function indexFixture(f){
  setRuntime(f.owner);
- const SearchVisibility=productionMotionMethods(path('features/search/SearchHost.ets'),['visibilityChanged']);
- const searchHost=Object.assign(new SearchVisibility(),{publication:{shelfAt:()=>[]},updateShelf(){}});
- const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{ resolveBookshelfBook,BookAcquisitionProjectionGateway,
- sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,captureRemotePositionContext,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,ReadingEntryHost:ProductionHost,searchCandidateRank,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},
- ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
- const page=Object.assign(new Index(),{mountedRuntimeOwner:f.owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),route:'search',searchPublication:{shelfAt:()=>[]},searchHost,searchPublicationRevision:0,shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});ownedPages.push(page);return{page,errors};
+ const errors=[];
+ const current=searchReadingJourneyFixture({runtime:f.owner,ReadingHost:ProductionHost,
+  sourceName:(_id,name)=>name??'Source',failure:(...args)=>errors.push(args)});
+ ownedPages.push(current);
+ return{...current,errors};
 }
+
 const timed=['deadline','cancel-wait','orphan-cancel','shared-consumer','same-book-reopen','change-notification'].includes(id),clock=timed?(await import('./fixtures/flows/controlled-timers.mjs')).controlledTimers():undefined,savedNow=Date.now,epoch=savedNow();if(clock)Date.now=()=>epoch+clock.now;
 
 try{
@@ -412,8 +406,8 @@ await check('change notification batches actual identities and source mutation r
 }
 if(id==='index-empty'){
 await check('real selected search group primary empty TOC admits second and probes only selected body; no shelf write',async()=>{
- const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);
- await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);assert.equal(page.detailBook.sourceId,'s2');assert.equal(page.detailBook.sourceName,'s2名称');assert.equal(page.detailReturnRoute,'search');assert.equal(page.detailInBookshelf,false);
+ const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const x=indexFixture(f),{errors}=x;x.journey.selectResult(book(0),[book(0),book(0,'s2')]);
+ await until(()=>x.entry.verdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);assert.equal(x.entry.book.sourceId,'s2');assert.equal(x.entry.book.sourceName,'s2名称');assert.equal(x.navigation.returns.snapshot().detailParent,'search');assert.equal(x.entry.inBookshelf,false);
  assert.deepEqual(f.calls.filter(c=>c.method==='chapter.content').map(c=>c.params.sourceId),['s2']);assert.equal(f.calls.some(c=>/bookshelf.put|source.switch|progress.update/.test(c.method)),false);
  }finally{f.runtime.close()}
 });
@@ -421,8 +415,8 @@ await check('real selected search group primary empty TOC admits second and prob
 if(id==='index-body-fallback'){
 await check('real search body failure tries second source and reuses admitted body exactly once',async()=>{
  const f=fixture();try{f.modes.set(`body:${f.key('s1','/b0')}`,new RemoteReadingGatewayError('invalidResponse','bad extraction','chapter.content'));
- const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);
- await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);assert.equal(page.detailBook.sourceId,'s2');
+ const x=indexFixture(f),{errors}=x;x.journey.selectResult(book(0),[book(0),book(0,'s2')]);
+ await until(()=>x.entry.verdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);assert.equal(x.entry.book.sourceId,'s2');
  assert.deepEqual(f.calls.filter(c=>c.method==='chapter.content').map(c=>c.params.sourceId),['s1','s2']);
  assert.equal(f.calls.some(c=>/bookshelf.put|source.switch|progress.update/.test(c.method)),false);
  assert.equal(f.rows.get(f.key('s1','/b0')).acquisition.failureStage,undefined,'a chapter failure does not invalidate entire book');
@@ -431,38 +425,40 @@ await check('real search body failure tries second source and reuses admitted bo
 }
 if(id==='index-catalog-first'){
 await check('real search catalog is visible before delayed body completes',async()=>{
- const f=fixture();try{const gate=deferred();f.gates.set(`chapter.content:${f.key('s1','/b0')}`,gate);const {page,errors}=indexFixture(f);
- page.onSearchResultSelected(book(0),[book(0,'s2')]);await until(()=>f.calls.some(c=>c.method==='chapter.content'));
- assert.equal(page.detailBook.sourceId,'s1');assert.equal(page.detailToc.length,1);assert.equal(page.remoteContentVerdict,'verifying');const calls=f.calls.length;await page.refreshDetailAcquisitionProjection();assert.equal(f.calls.length,calls,'catalog notification cannot duplicate active body probe');gate.resolve();
- await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);
+ const f=fixture();try{const gate=deferred();f.gates.set(`chapter.content:${f.key('s1','/b0')}`,gate);const x=indexFixture(f),{errors}=x;
+ x.journey.selectResult(book(0),[book(0,'s2')]);await until(()=>f.calls.some(c=>c.method==='chapter.content'));
+ assert.equal(x.entry.book.sourceId,'s1');assert.equal(x.entry.toc.length,1);assert.equal(x.entry.verdict,'verifying');const calls=f.calls.length;await x.actions.refreshDetailAcquisition();assert.equal(f.calls.length,calls,'catalog notification cannot duplicate active body probe');gate.resolve();
+ await until(()=>x.entry.verdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);
  }finally{f.runtime.close()}
 });
 }
 if(id==='index-storage'){
 await check('real body storage failure stops group and preserves visible admitted catalog',async()=>{
  const f=fixture();try{f.modes.set(`body:${f.key('s1','/b0')}`,new RemoteReadingGatewayError('storageFailure','storage unavailable','chapter.content'));
- const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0,'s2')]);await until(()=>page.detailLoadingMessage?.length>0 && page.remoteContentVerdict!=='verifying');assert.deepEqual(errors,[]);
- assert.equal(page.detailBook.sourceId,'s1');assert.equal(page.detailToc.length,1);assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);await pause();const calls=f.calls.length;await page.refreshDetailAcquisitionProjection();assert.equal(f.calls.length,calls,'terminal failure does not trigger automatic notification retries');
+ const x=indexFixture(f),{errors}=x;x.journey.selectResult(book(0),[book(0,'s2')]);await until(()=>x.entry.loadingMessage?.length>0 && x.entry.verdict!=='verifying');assert.deepEqual(errors,[]);
+ assert.equal(x.entry.book.sourceId,'s1');assert.equal(x.entry.toc.length,1);assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);await pause();const calls=f.calls.length;await x.actions.refreshDetailAcquisition();assert.equal(f.calls.length,calls,'terminal failure does not trigger automatic notification retries');
  }finally{f.runtime.close()}
 });
 }
 if(id==='index-fixed-source'){
 for(const mode of ['shelf','explicit'])await check(`${mode} fixed source never auto-falls back`,async()=>{
- const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const {page,errors}=indexFixture(f);const primary=book(0),other=book(0,'s2');page.searchDetailCandidates=[primary,other];
- if(mode==='explicit')page.route='detail';const shelf=mode==='shelf'?primary:undefined;
- page.openRemoteBookDetail(seed(0),'s1名称',shelf,false,[seed(0,'s2')],['s2名称']);await until(()=>page.detailLoadingMessage?.length>0 && page.remoteContentVerdict!=='verifying');assert.deepEqual(errors,[]);
- assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);assert.equal(page.detailBook.sourceId,'s1');
+ const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const x=indexFixture(f),{errors}=x;const primary=book(0),other=book(0,'s2');x.publish({kind:'results',keyword:'鸣龙',results:[primary,other],searching:false});
+ if(mode==='explicit')x.navigation.show('detail');const shelf=mode==='shelf'?primary:undefined;
+ x.actions.openRemoteDetail({seed:seed(0),sourceName:'s1名称',shelfSnapshot:shelf,resumeImmediately:false,
+  fallbackSeeds:[seed(0,'s2')],fallbackSourceNames:['s2名称']});
+ await until(()=>x.entry.loadingMessage?.length>0 && x.entry.verdict!=='verifying');assert.deepEqual(errors,[]);
+ assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);assert.equal(x.entry.book.sourceId,'s1');
  }finally{f.runtime.close()}
 });
 }
 if(id==='visible-range'){
 await check('visible range callback bounds group count, skips unchanged rows and clears stopped view',async()=>{
- const Page=productionMotionMethods(path('features/search/SearchPage.ets'),['publishVisibleGroups']);const calls=[];const page=Object.assign(new Page(),{presentation:{kind:'results'},visibleStart:0,visibleEnd:0,warmupGroups:[],visibleGroups:Array.from({length:2000},(_,i)=>({book:book(i),variants:[book(i)]})),onVisibleGroups:g=>calls.push(g)});
+ const Page=productionMotionMethods(path('features/search/ui/SearchPage.ets'),['publishVisibleGroups']);const calls=[];const page=Object.assign(new Page(),{presentation:{kind:'results'},visibleStart:0,visibleEnd:0,warmupGroups:[],visibleGroups:Array.from({length:2000},(_,i)=>({book:book(i),variants:[book(i)]})),onVisibleGroups:g=>calls.push(g)});
  page.publishVisibleGroups(10,25);assert.equal(calls[0].length,6);assert.equal(calls[0][0][0].bookId,'/b10');page.publishVisibleGroups(10,25);assert.equal(calls.length,1);
  page.presentation={kind:'results',stopped:true};page.publishVisibleGroups();assert.equal(calls.at(-1).length,0);
 });
 }
-}finally{for(const page of ownedPages)page.readingEntryHost?.retire();setRuntime?.(undefined);if(clock){Date.now=savedNow;clock.restore();}}
+}finally{for(const page of ownedPages)page.close();setRuntime?.(undefined);if(clock){Date.now=savedNow;clock.restore();}}
 }
 const definitions={"catalog-contract": "catalog-contract actual scoped owner/gateway/storage path; controlled Core/OS ports", "volume-fallback": "volume-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "superseded-catalog": "superseded-catalog actual scoped owner/gateway/storage path; controlled Core/OS ports", "visible-budget": "visible-budget actual scoped owner/gateway/storage path; controlled Core/OS ports", "visible-fallback": "visible-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "preempt": "preempt actual scoped owner/gateway/storage path; controlled Core/OS ports", "same-book-join": "same-book-join actual scoped owner/gateway/storage path; controlled Core/OS ports", "candidate-budget": "candidate-budget actual scoped owner/gateway/storage path; controlled Core/OS ports", "fatal-fallback": "fatal-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "capability-fallback": "capability-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "environment": "environment actual scoped owner/gateway/storage path; controlled Core/OS ports", "deadline": "deadline actual scoped owner/gateway/storage path; controlled Core/OS ports", "cancel-wait": "cancel-wait actual scoped owner/gateway/storage path; controlled Core/OS ports", "orphan-cancel": "orphan-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "shared-consumer": "shared-consumer actual scoped owner/gateway/storage path; controlled Core/OS ports", "same-book-reopen": "same-book-reopen actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-author": "unknown-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-labels": "author-labels actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-proof": "author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "invalid-proof": "invalid-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "empty-author": "empty-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "detail-proof": "detail-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "bounded-author": "bounded-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "detail-author": "detail-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "hidden-wait": "hidden-wait actual scoped owner/gateway/storage path; controlled Core/OS ports", "query-replacement": "query-replacement actual scoped owner/gateway/storage path; controlled Core/OS ports", "stale-refresh": "stale-refresh actual scoped owner/gateway/storage path; controlled Core/OS ports", "change-notification": "change-notification actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-empty": "index-empty actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-body-fallback": "index-body-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-catalog-first": "index-catalog-first actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-storage": "index-storage actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-fixed-source": "index-fixed-source actual scoped owner/gateway/storage path; controlled Core/OS ports", "visible-range": "visible-range actual scoped owner/gateway/storage path; controlled Core/OS ports"};
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

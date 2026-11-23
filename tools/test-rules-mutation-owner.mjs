@@ -6,7 +6,7 @@ const { fixture,compile,deferred,until,ReaderWriteEvidence }=await import("./lib
 const { boundedSurfaceSdk }=await import("./lib/bounded-surface-sdk-probe.mjs");
 const facts=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const projection=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
-const state=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const state=await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 let cases=0;
 const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));let passed=false;try{
 const official=!id.endsWith('-strip-diagnostic'),key=official?id:id.slice(0,-17);
@@ -40,7 +40,7 @@ if(key==='orchestrator-readback'){
 {
   const f=await fixture(official);f.options.afterMethod='rules.mutation.apply';await assert.rejects(f.save());
   const snapshots=[];
-  const Orchestrator=compile('features/settings/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',{
+  const Orchestrator=compile('features/settings/application/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',{
    ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence,RulesManagementGateway:f.Gateway,
    SourceGateway:class{observeWrites(){}},RssGateway:class{observeWrites(){}},...facts,...projection,hilog:{error(){}}},true);
   const host=new Orchestrator(s=>snapshots.push(s),()=>true,f.runtime);host.open();await host.operationTail;
@@ -53,7 +53,7 @@ if(key==='orchestrator-continuation'){
 {
   const f=await fixture(official),snapshots=[];
   f.options.beforeMethod='rules.mutation.apply';await assert.rejects(f.save());
-  const Orchestrator=compile('features/settings/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',{
+  const Orchestrator=compile('features/settings/application/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',{
    ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence,RulesManagementGateway:f.Gateway,SourceGateway:class{observeWrites(){}},RssGateway:class{observeWrites(){}},...facts,...projection,hilog:{error(){}}},true);
   const host=new Orchestrator(s=>snapshots.push(s),()=>true,f.runtime);host.open();await host.operationTail;
   const pending=snapshots.at(-1);assert.equal(pending.ruleMutation.canRetryOriginal,true);
@@ -65,13 +65,13 @@ passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed}
 }
 async function pageGuards(){const {readFileSync}=await import('node:fs');const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
 {
- const sdk=boundedSurfaceSdk(),page=sdk.consumer(readFileSync(new URL('../entry/src/main/ets/features/settings/RulesManagementPage.ets',import.meta.url),'utf8'),['actionButton','smallButton','recoveryAction','recovery','statusCard']);
+ const sdk=boundedSurfaceSdk(),page=sdk.consumer(readFileSync(new URL('../entry/src/main/ets/features/settings/ui/RulesManagementPage.ets',import.meta.url),'utf8'),['actionButton','smallButton','recoveryAction','recovery','statusCard']);
  let writes=0,reads=0,edits=0;
  page.snapshot={busy:false,receipt:{receipt:{confirmation:'unknown'}},ruleMutation:{blocked:true}};
  page.actionButton('save',true,()=>writes++);page.actionButton('read',false,()=>reads++,false);page.smallButton('edit',()=>edits++,false);
  for(const n of sdk.nodes(page))n.onClick?.();assert.equal(writes,0);assert.equal(reads,1);assert.equal(edits,1,'retain drafts, read and export while write blocked');
  const save=sdk.nodes(page).find(n=>n.create==='save');assert.equal(save.opacity,0.62);
- page.snapshot={busy:false,receipt:{receipt:{confirmation:'confirmed'}},ruleMutation:{blocked:false}};page.replay();sdk.properties.flush();save.onClick();assert.equal(writes,1);assert.equal(save.opacity,1);
+ page.snapshot={busy:false,receipt:{receipt:{confirmation:'confirmed'}},ruleMutation:{blocked:false}};page.replay();save.onClick();assert.equal(writes,1);assert.equal(save.opacity,1);
 }
 }
 const definitions={"page-guards":{"description":"Actual Page write/read/draft guards without CLI","resources":[]},"shared-lock": {"description": "shared-lock actual production owner/SDK scope", "resources": []}, "accepted-lock": {"description": "accepted-lock actual production owner/SDK scope", "resources": []}, "bad-ack": {"description": "bad-ack actual production owner/SDK scope", "resources": []}, "orchestrator-readback": {"description": "orchestrator-readback actual production owner/SDK scope", "resources": []}, "orchestrator-continuation": {"description": "orchestrator-continuation actual production owner/SDK scope", "resources": []}, "shared-lock-strip-diagnostic": {"description": "shared-lock explicit strip differential diagnostic", "resources": []}, "accepted-lock-strip-diagnostic": {"description": "accepted-lock explicit strip differential diagnostic", "resources": []}, "bad-ack-strip-diagnostic": {"description": "bad-ack explicit strip differential diagnostic", "resources": []}, "orchestrator-readback-strip-diagnostic": {"description": "orchestrator-readback explicit strip differential diagnostic", "resources": []}, "orchestrator-continuation-strip-diagnostic": {"description": "orchestrator-continuation explicit strip differential diagnostic", "resources": []}};

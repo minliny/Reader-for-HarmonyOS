@@ -1,31 +1,38 @@
-import { loadReaderFontChecked } from './ReaderFontLoadHost';
+import { readerHostFilesDirectory } from './diagnostics/ReaderPublicFixtureScope';
+import { loadReaderFontChecked } from '../ui/platform/ReaderFontLoadHost';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import picker from '@ohos.file.picker';
+import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerActivity';
 import fileUri from '@ohos.file.fileuri';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import { Font } from '@ohos.arkui.UIContext';
 import {
   ReaderCustomFontDescriptor,
   normalizeReaderCustomFontDescriptor,
-} from '../features/reading/ReaderAppearanceState';
+} from '../features/reading/application/ReaderAppearanceState';
 
 /** App-private, validated custom-font import boundary. */
 export class ReaderCustomFontHost {
   private static readonly MaximumFontBytes = 32 * 1024 * 1024;
   private static readonly HashChunkBytes = 1024 * 1024;
+  private static fileTail: Promise<void> = Promise.resolve();
+  private static importSequence: number = 0;
   private readonly context: common.UIAbilityContext;
-  private importSequence: number = 0;
 
   constructor(context: common.UIAbilityContext) {
     this.context = context;
   }
 
-  async selectAndRegister(font: Font): Promise<ReaderCustomFontDescriptor | undefined> {
+  async selectAndRegister(font: Font,
+    admit?: (descriptor: ReaderCustomFontDescriptor) => Promise<void>): Promise<ReaderCustomFontDescriptor | undefined> {
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = ['字体文件|.ttf,.otf'];
     options.maxSelectNumber = 1;
-    const uris = await new picker.DocumentViewPicker(this.context).select(options);
+    const pickerActivity = ReaderDocumentPickerActivity.begin();
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).select(options); }
+    finally { pickerActivity.finish(); }
     if (uris.length === 0) {
       return undefined;
     }
@@ -38,33 +45,37 @@ export class ReaderCustomFontHost {
     const selectedSize = (await fileIo.stat(selectedUri)).size;
     this.requireFontSize(selectedSize);
     await this.ensureDirectory(this.fontDirectory());
-    this.importSequence += 1;
-    const temporaryPath = `${this.fontDirectory()}/.${Date.now()}-${this.importSequence}.font`;
-    let newlyCreatedFinalPath: string | undefined;
+    ReaderCustomFontHost.importSequence += 1;
+    const temporaryPath = `${this.fontDirectory()}/.${Date.now()}-${ReaderCustomFontHost.importSequence}.font`;
     try {
       await this.stageBoundedFont(selectedUri, temporaryPath, selectedSize);
       await this.validateFontFile(temporaryPath);
       const fingerprint = await this.sha256File(temporaryPath);
       const finalPath = `${this.fontDirectory()}/${fingerprint}.${extension}`;
-      if (await fileIo.access(finalPath)) {
-        await this.unlinkIfPresent(temporaryPath);
-      } else {
-        await fileIo.rename(temporaryPath, finalPath);
-        newlyCreatedFinalPath = finalPath;
-      }
-      const descriptor = new ReaderCustomFontDescriptor(
-        this.displayName(selectedName),
-        `ReaderCustom_${fingerprint.substring(0, 16)}`,
-        finalPath,
-        fingerprint,
-      );
-      await loadReaderFontChecked(descriptor.familyName, `file://${descriptor.filePath}`);
-      return descriptor;
+      // Keep the final-file decision, native check and appearance admission
+      // in the same file lane as retirement. A checked-family cache entry
+      // alone cannot keep a previously selected private file alive.
+      return await this.withFontFiles(async (): Promise<ReaderCustomFontDescriptor> => {
+        let newlyCreated = false;
+        let checked = false;
+        try {
+          if (await fileIo.access(finalPath)) await this.unlinkIfPresent(temporaryPath);
+          else { await fileIo.rename(temporaryPath, finalPath); newlyCreated = true; }
+          const descriptor = new ReaderCustomFontDescriptor(this.displayName(selectedName),
+            `ReaderCustom_${fingerprint.substring(0, 16)}`, finalPath, fingerprint);
+          await loadReaderFontChecked(descriptor.familyName, `file://${descriptor.filePath}`);
+          checked = true;
+          await admit?.(descriptor);
+          return descriptor;
+        } catch (error) {
+          // Admission can already have accepted a durable intent before a
+          // later error. Only a failed native check owns removal here.
+          if (newlyCreated && !checked) await this.unlinkIfPresent(finalPath);
+          throw error;
+        }
+      });
     } catch (error) {
       await this.unlinkIfPresent(temporaryPath);
-      // A pre-existing hash may be the user's active font. Only this attempt's
-      // newly created file can be removed after checked native loading fails.
-      if (newlyCreatedFinalPath !== undefined) await this.unlinkIfPresent(newlyCreatedFinalPath);
       throw error;
     }
   }
@@ -72,11 +83,23 @@ export class ReaderCustomFontHost {
   /** Called only after the replacement descriptor has been durably saved. */
   async retireUnusedFont(
     retired: ReaderCustomFontDescriptor | undefined,
-    active: ReaderCustomFontDescriptor | undefined,
+    isUnused: () => boolean,
   ): Promise<void> {
     const old = normalizeReaderCustomFontDescriptor(retired);
-    if (old === undefined || !this.isOwnedFontPath(old.filePath) || old.filePath === active?.filePath) return;
-    await this.unlinkIfPresent(old.filePath);
+    if (old === undefined || !this.isOwnedFontPath(old.filePath)) return;
+    await this.withFontFiles(async (): Promise<void> => {
+      if (!isUnused()) return;
+      if (await fileIo.access(old.filePath) && isUnused()) await fileIo.unlink(old.filePath);
+    });
+  }
+
+  private async withFontFiles<T>(operation: () => Promise<T>): Promise<T> {
+    const prior = ReaderCustomFontHost.fileTail;
+    let release: (() => void) | undefined;
+    ReaderCustomFontHost.fileTail = new Promise<void>((resolve: () => void): void => { release = resolve; });
+    await prior;
+    try { return await operation(); }
+    finally { release?.(); }
   }
 
   async registerPersisted(_font: Font | undefined, descriptor: ReaderCustomFontDescriptor | undefined): Promise<boolean> {
@@ -208,7 +231,7 @@ export class ReaderCustomFontHost {
   }
 
   private fontDirectory(): string {
-    return `${this.context.filesDir}/reader-fonts`;
+    return `${readerHostFilesDirectory(this.context.filesDir)}/reader-fonts`;
   }
 
   private isOwnedFontPath(path: string): boolean {

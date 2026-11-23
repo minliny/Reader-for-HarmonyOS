@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import * as sessionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+import * as sessionPolicy from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 
 const readingRoot = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const hostSource = readFileSync(new URL('LocalReadingExperience.ets', readingRoot), 'utf8');
@@ -11,7 +11,7 @@ assert.match(prepare, /page === 'moduleDirectory'[\s\S]*loadControlBookmarks\(\)
   'opening the in-reader directory must request its bookmark projection');
 
 const { loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjection } =
-  await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
+  await import('../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
 const row = (index, bookmarks, downloadState = 'unknown', title = `Chapter ${index}`) =>
   ({ index, title, level: index + 1, downloadState, bookmarks });
 const bookmark = (time) => ({ time, chapterIndex: 1, chapterOffset: 12,
@@ -191,18 +191,20 @@ assert.match(panel, /onRetryBookmarkLoad:.*this\.onRetryBookmarkLoad\(\)/);
 assert.match(hostSource, /bookmarkLoadFailed: this\.controlBookmarkLoadFailed/);
 assert.match(hostSource, /onRetryBookmarkLoad:.*this\.loadControlBookmarks\(\)/);
 const index = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-const loader=index.slice(index.indexOf('  private loadControlBookmarks('),index.indexOf('  @Builder\n  private sourceSwitchOverlayContent('));
-assert.match(loader,/host\.load\(this\.directoryBinding\(owner, book, isRequestCurrent\)\)/);
+const operationSource=readFileSync(new URL('presentation/ReaderDirectoryOperations.ts',readingRoot),'utf8');
+const loader=operationSource.slice(operationSource.indexOf('  loadControlBookmarks('),operationSource.indexOf('  clearOffline('));
+assert.match(index,/this\.directoryOperations\.loadControlBookmarks\(sourceId, bookId, isRequestCurrent\)/);
+assert.match(loader,/host\.load\(this\.bookmarkBinding\(owner, book, isRequestCurrent\)\)/);
 assert.match(loader,/book\.sourceId !== sourceId \|\| book\.bookId !== bookId/);
-assert.match(loader,/!this\.readingSessionActive \|\| !isRequestCurrent\(\)/);assert.doesNotMatch(loader,/this\.route\s*=/);
-const directoryOwner=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryHost.ts',import.meta.url),'utf8');
-const offlineOwner=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingOfflineHost.ts',import.meta.url),'utf8');
+assert.match(loader,/!reading \|\| !isRequestCurrent\(\)/);assert.doesNotMatch(loader,/this\.route\s*=/);
+const directoryOwner=readFileSync(new URL('ReaderDirectoryHost.ts',readingRoot),'utf8');
+const offlineOwner=readFileSync(new URL('ReadingOfflineHost.ts',readingRoot),'utf8');
 assert.match(directoryOwner,/loadReaderControlBookmarkProjection\(\{ isCurrent: current, currentEntries: binding\.currentEntries/);
 assert.match(directoryOwner,/this\.bookmarkProjectionStale = true/);
-assert.match(index,/navigation === this\.navigationGeneration/,'physical page scope is still a captured admission');
-assert.match(index,/host\.createChapterStart\(request\.chapterIndex, this\.directoryBinding\(owner, book\)\)/);
-assert.match(index,/host\.deleteBookmarks\(bookmarkTimes, this\.directoryBinding\(owner, book\)\)/);
-assert.match(index,/void host\.createPosition\(\{/);assert.doesNotMatch(index,/performDirectoryBookmarkDeletion/);
+assert.match(operationSource,/identity === this\.bindingId\(scene\)/,'physical page scope is still a captured admission');
+assert.match(operationSource,/host\.createChapterStart\(request\.chapterIndex, this\.bookmarkBinding\(owner, book\)\)/);
+assert.match(operationSource,/host\.deleteBookmarks\(times, this\.bookmarkBinding\(owner, book\)\)/);
+assert.match(operationSource,/void host\.createPosition\(\{/);assert.doesNotMatch(index,/performDirectoryBookmarkDeletion/);
 assert.doesNotMatch(offlineOwner,/loadBookmarkProjection/,'offline download has no second bookmark read producer');
 assert.match(offlineOwner,/source === undefined \? entry : \{ \.\.\.entry, downloadState: source\.downloadState \}/,'offline facts preserve current bookmark metadata');
 const refresh = hostSource.slice(hostSource.indexOf('  private onControlDirectoryDataChanged('),

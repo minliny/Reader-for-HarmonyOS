@@ -1,0 +1,214 @@
+{
+  "id": "source-management.row-detect-offline-edge",
+  "version": 1,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-row-detect-offline-v1",
+    "description": "Use a separately prepared isolated public catalog containing the exact disabled, as yet unchecked Offline Detect fixture without searchUrl or login. Open Source Management from Settings and tap the measured upper edge of the real native Detect Button. Require L1 to pass and L2 to fail before HTTP on that same row. Do not reset a previous result to prepare this case.",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-footer",
+        "reader-source-row-detect-control",
+        "reader-source-offline-detect-ready"
+      ],
+      "keyboard": false,
+      "afterAction": "open-sources",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.count": 1,
+            "payload.projected": 1,
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.queryLength": 0,
+            "payload.allGroups": true
+          }
+        },
+        {
+          "kind": "source.row-detect",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.definition": "missing-search-url"
+          }
+        }
+      ],
+      "quietMs": 500
+    },
+    {
+      "kind": "action",
+      "id": "detect-source-top",
+      "op": "click",
+      "from": "source-ready",
+      "target": "reader-source-row-detect-control",
+      "beforeEvent": [
+        {
+          "kind": "source.row-detect",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.phase": "ready",
+            "payload.definition": "missing-search-url"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "sample",
+      "id": "detect-settled",
+      "afterAction": "detect-source-top",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-row-detect-control",
+        "reader-source-offline-detect-failed"
+      ],
+      "keyboard": false,
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "source.row-detect",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.phase": "settled"
+          }
+        }
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "id": "source.route.entry",
+      "evaluator": "source",
+      "kind": "route",
+      "expected": {
+        "action": "open",
+        "from": "settings",
+        "to": "source",
+        "anchor": "reader-source-back"
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderSourceJourney.ets#ReaderSourceJourney",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "sample": "source-ready",
+      "action": "open-sources"
+    },
+    {
+      "id": "source.row.detect.offline-top",
+      "evaluator": "source",
+      "kind": "source-offline-detect",
+      "expected": {
+        "target": "reader-source-row-detect-control",
+        "l1": "pass",
+        "l2": "pre-request-fail",
+        "position": "top"
+      },
+      "source": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets#checkSource",
+      "entryAction": "open-sources",
+      "action": "detect-source-top",
+      "baseline": "source-ready",
+      "sample": "detect-settled",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ]
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
+    "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
+    "entry/src/main/ets/ui/controls/ReaderButton.ets",
+    "entry/src/main/ets/ui/controls/ReaderFormRow.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+    "entry/src/main/ets/ui/foundation/ReaderTokens.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/layout/ReaderScrollLayout.ts",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets"
+  ],
+  "structure": {
+    "source-ready": "source-ready",
+    "detect-settled": "detect-settled"
+  }
+}

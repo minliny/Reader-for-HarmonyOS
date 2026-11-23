@@ -6,7 +6,7 @@ const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { registerHooks, stripTypeScriptTypes }=await import('node:module');
 const { selectedProductionMethods }=await import('./lib/selected-production-methods.mjs');
-const { ReadingChapterWindow, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+const { ReadingChapterWindow, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
 
 const hooks=registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
@@ -16,7 +16,7 @@ const hooks=registerHooks({ resolve(specifier, context, next) {
   }
 } });
 try{
-const { materializeReadingDocument } = await import('../entry/src/main/ets/features/reading/ReadingDocumentProjection.ts');
+const { materializeReadingDocument } = await import('../entry/src/main/ets/features/reading/application/ReadingDocumentProjection.ts');
 const base = '../entry/src/main/ets/features/reading/';
 const file = name => new URL(`${base}${name}`, import.meta.url);
 const document = width => ({ content: '甲😀\n\uFFFC\n乙', blocks: [

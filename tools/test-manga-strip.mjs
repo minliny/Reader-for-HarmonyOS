@@ -1,8 +1,9 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
-const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(source)};return MangaStripProjection`)();
 const p=new Projection();const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},manifestVersion:'strip-v1',pages:[{ordinal:0,pageId:'a'},{ordinal:1,pageId:'b'}]};
 const sizes=new Map([[0,{width:1000,height:4500,tileHeight:1000}]]);
@@ -18,16 +19,16 @@ assert.throws(()=>p.index(1,NaN),/ANCHOR_INVALID/);
 console.log('PASS manga strip: last crop, unknown geometry, original-image position, stable anchors after geometry expansion');
 // Execute the actual ArkUI owner's anchor methods against a changing viewport.
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const surfaceURL=new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url);
+const surfaceURL=new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url);
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
 const tree=ts.createSourceFile(virtualFilePath('MangaStripAnchorProbe.ets'),readFileSync(surfaceURL,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
 const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
-const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
+const MangaLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const timers=[],scrolls=[],frames=[],measurements=[],native={index:2,offset:237.5};
-function renderFrame(){const frame=frames.shift();assert.ok(frame instanceof MangaLayoutFrame);frame.onFrame(0);frame.onIdle(2_000_000);}
+function renderFrame(){const frame=frames.shift();assert.ok(frame instanceof MangaLayoutFrame);frame.onFrame(0);frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames);}
 const Surface=productionMotionMethods(surfaceURL,
   ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','positionIdentity','rememberVisible','resizeViewport','restore','finishLayout','onViewportScroll','measureVisibleWindow'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},
     LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame});

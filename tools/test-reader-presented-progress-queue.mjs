@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 import { ReaderCoreRequestError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
-import { classifyRemoteReadingCommandFailure } from '../entry/src/main/ets/features/reading/RemoteReadingContract.ts';
+import { classifyRemoteReadingCommandFailure } from '../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts';
 
 const layout = { viewportWidth: 390, viewportHeight: 800, fontScale: 1 };
 const anchor = offset => ({ chapterIndex: 1, chapterOffset: offset, chapterProgress: offset / 1000,

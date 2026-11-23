@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
 
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
-function load(name, dependencies = {}, file = new URL(`${name}.ts`, root)) {
+function load(name, dependencies = {}, file = mangaSourceUrl(`${name}.ts`)) {
   const source = readFileSync(file, 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway'), MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway, MangaRetainedTileCache },
-  process.env.READER_BASELINE_CONTROLLER ?? new URL('MangaSessionController.ts', root));
+  process.env.READER_BASELINE_CONTROLLER ?? mangaSourceUrl('MangaSessionController.ts'));
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function fixture(count = 1, tall = true, regionCount = 16) {
   const calls = [], released = [], pending = [], control = { current: true, defer: false, fail: false };

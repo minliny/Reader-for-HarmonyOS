@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { readerControlHeaderFrame } from '../entry/src/main/ets/features/reading/ReaderControlHeaderGeometry.ts';
+import * as headerGeometry from '../entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { selectedProductionClasses } from './lib/selected-production-methods.mjs';
 
 const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const search = JSON.parse(read('tools/fixtures/reader-control-search-settings-live-20260905.json'));
@@ -22,24 +24,27 @@ for (const [nodes, id] of [[searchNodes, '1938:5075'], [playback.autoPage.motion
   assert.match(css, /0% \{ translate: 0px 18px;/);
   assert.match(css, /100% \{ translate: 0px 0px;/);
 }
-const collapseSource=read('entry/src/main/ets/features/reading/ReaderPanelChrome.ets');
-class CollapseCapture{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}initialRender(){}updateStateVars(params){Object.assign(this.params,params);}}
-const source = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
+const fileSource = read('entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets');
+const headerTextModifier = selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), ['ReaderControlHeaderLineHeight']);
+const source = fileSource.slice(fileSource.indexOf('@Component\nexport struct ReaderControlPanel'));
 const members = ['contentLocation', 'controlHeader', 'replaceHeader', 'replaceHeaderFrame',
-  'headerFrame', 'directoryHeaderScale', 'headerIcon', 'headerInter', 'contentTitle'];
+  'headerFrame', 'headerPaintLayout', 'headerRole', 'headerTitleStyle', 'headerActionStyle', 'headerActionPaint',
+  ...(source.includes('private headerIcon(') ? ['headerIcon', 'headerInter', 'contentTitle'] : [])];
 const near = (a, b, reason) => assert.ok(Math.abs(a - b) < 1e-8, `${reason}: ${a} != ${b}`);
 for (const [module, tab, expectedTitle] of [['search', 'toc', '内容搜索'], ['autoPage', 'toc', '自动翻页'],
   ['directory', 'toc', '目录'], ['directory', 'bookmarks', '书签'], ['tts', 'toc', '朗读'],
   ['appearance', 'toc', '界面'], ['settings', 'toc', '设置']]) {
   const { owner } = createReaderBuilderProbe(source, members, {
-    readerControlContentLocation: session => ({ module: session.module, directoryTab: session.tab }), readerControlHeaderFrame,ReaderPanelCollapseButton:CollapseCapture,
-  },{componentName:'ReaderControlPanel',childSources:{ReaderPanelCollapseButton:collapseSource}});
+    ...headerGeometry, ...readerTypographyRoles, ...headerTextModifier,
+    readerControlContentLocation: session => ({ module: session.module, directoryTab: session.tab }),
+  });
   owner.visualSession = { module, tab };
   owner.controlSession = { module, tab };
   owner.lastVisibleContentLocation = { module, directoryTab:tab, level:'secondary', form:'quick' };
   owner.p = 0;
   owner.width = 338;
   owner.frame = () => ({ progress: owner.p, header: { width: owner.width } });
+  owner.selectedMinimumProfile = () => undefined;
   owner.collapseControl = () => {};
   owner.controlHeader();
   const identities = [...owner.nodes.keys()];
@@ -51,25 +56,28 @@ for (const [module, tab, expectedTitle] of [['search', 'toc', '内容搜索'], [
       `${module} retains the authored 16px header icon`);
     const title = [...owner.nodes.values()].find(n => n.type === 'Text' && n.fontSize === 14);
     assert.equal(title.create, expectedTitle, 'actual module/tab source title is retained');
-    assert.equal(title.position.x, 24);
-    assert.equal(title.position.y, module === 'directory' ? 12 : module === 'search' || module === 'autoPage' ? 6.5 : 5);
     assert.equal(title.fontFamily, module === 'search' || module === 'autoPage' ? 'ReaderInter' : 'ReaderNotoSansSCUIBold');
     const special = module === 'search' || module === 'autoPage';
     // Independent source chain: shared shell+header slot -> local source offset.
     const expectedY = special ? 1 + (18 + .443) * (1 - p) : 0;
-    near(row.position?.y ?? 0, expectedY, `${module} missing source header Y at p=${p}`);
-    near(row.position?.x ?? 0, special ? 1 - .448 * (1 - p) : 0, 'header X');
-    near(row.width, special ? 336 : 338, 'header width');
+    const expectedX = special ? 1 - .448 * (1 - p) : 0;
+    // The passive wrapper is the Stage slot. The real child paint now owns
+    // the original local offset, independently of the dock action sibling.
+    near(title.position.x, expectedX + 24, 'title follows original header X');
+    near(title.position.y, expectedY + (special ? 6.5 : 5), 'title follows original header Y');
+    near(owner.headerFrame().y, expectedY, `${module} missing source header Y at p=${p}`);
+    near(owner.headerFrame().x, expectedX, 'header X');
+    near(owner.headerFrame().width, special ? 336 : 338, 'header width');
     assert.equal(row.opacity ?? 1, 1, 'Stage owns p once');
     assert.deepEqual([...owner.nodes.keys()], identities, 'same mounted header actors');
   }
 }
 for (const p of [NaN, -1, 0, .5, 1, 2]) {
   for (const width of [0, 120, 338, 700, NaN]) {
-    const f = readerControlHeaderFrame('search', p, width);
+    const f = headerGeometry.readerControlHeaderFrame('search', p, width);
     for (const value of Object.values(f)) assert.ok(Number.isFinite(value));
     assert.ok(f.width >= 0);
   }
 }
-assert.doesNotMatch(read('entry/src/main/ets/features/reading/ReaderControlHeaderGeometry.ts'), /setTimeout|animateTo/);
+assert.doesNotMatch(read('entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts'), /setTimeout|animateTo/);
 console.log('reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS');

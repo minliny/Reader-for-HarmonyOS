@@ -126,7 +126,7 @@ if(id==='retained-actor'){
   const f=fresh(),x=f.fixture();await open(x);f.asset.failAdd=true;await save(f,x);const calls=[];
   const sdk=resolveEtsLoaderRoot();
   const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
-  const text=f.source('features/common/ReaderRecoveryAction.ets'),tree=ts.createSourceFile(virtualFilePath('ReaderRecoveryAction.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  const text=f.source('ui/feedback/ReaderRecoveryAction.ets'),tree=ts.createSourceFile(virtualFilePath('ReaderRecoveryAction.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   const names=tree.statements.find(n=>n.members&&n.name?.text==='ReaderRecoveryAction').members.map(n=>n.name?.getText(tree)).filter(Boolean);
   const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const actionSdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   class ActualAction{

@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as selection from '../entry/src/main/ets/features/common/ReaderThemeSelection.ts';
-import * as registry from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as appearance from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import * as selection from '../entry/src/main/ets/app/ReaderThemeSelection.ts';
+import * as registry from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 const sourceRoot=process.env.READER_PREDECESSOR_PROBE_ROOT===undefined?new URL('../',import.meta.url):
   pathToFileURL(`${resolve(process.env.READER_PREDECESSOR_PROBE_ROOT)}/`);
@@ -25,7 +25,7 @@ const until=async predicate=>{for(let i=0;i<50;i++){if(predicate())return;await 
 function fixture(productionThemeSource=themeSource) {
   const events=[],storage=new Map(),initial=JSON.stringify(appearance.createDefaultReaderAppearanceSnapshot());
   const disk={cache:initial,raw:initial,loadGate:undefined,flushGate:undefined};
-  const Store=compile(read('features/reading/ReaderAppearanceStore.ts'),'ReaderAppearanceStore',appearance);
+  const Store=compile(read('features/reading/application/ReaderAppearanceStore.ts'),'ReaderAppearanceStore',appearance);
   const Preferences=compile(read('app/ReaderAppearancePreferences.ts'),'ReaderAppearancePreferences',{...appearance,preferences:{
     async getPreferences(context){return{
       async get(){events.push(['get',context.id]);if(disk.loadGate){const gate=disk.loadGate;disk.loadGate=undefined;await gate.promise;}return disk.cache;},

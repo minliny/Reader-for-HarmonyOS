@@ -5,8 +5,8 @@ import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-const sourcePage = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
-const bookshelfPage = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
+const sourcePage = read('entry/src/main/ets/features/source/ui/SourceManagementPage.ets');
+const bookshelfPage = read('entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets');
 
 assert.match(sourcePage,
   /@Prop @Watch\('onSourcesChanged'\) sources: BookSource\[\];/,
@@ -35,10 +35,10 @@ assert.match(bookshelfPage,
 
 console.log('dynamic ArkUI list refresh contracts: PASS');
 
-const Page = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url)), ['bookRowRenderKey']);
+const Page = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url)), ['bookRowRenderKey']);
 const page = new Page();
 const classSource=bookshelfPage.slice(bookshelfPage.indexOf('class BookshelfRowDataSource'),bookshelfPage.indexOf('/**',bookshelfPage.indexOf('class BookshelfRowDataSource')));
-const DS=new Function('DataOperationType',stripTypeScriptTypes(classSource)+';return BookshelfRowDataSource;')({ADD:'add',DELETE:'delete'});
+const DS=new Function('DataOperationType',stripTypeScriptTypes(classSource)+';return BookshelfRowDataSource;')({ADD:'add',DELETE:'delete',RELOAD:'reload'});
 const notices=[];const ds=new DS(row=>page.bookRowRenderKey(row,0));
 ds.registerDataChangeListener({onDataReloaded:()=>notices.push('reload'),onDatasetChange:ops=>notices.push(...ops)});
 const book=id=>({sourceId:'s',bookId:id,title:id,author:'author'});
@@ -47,7 +47,7 @@ ds.replace([a,b]);notices.length=0;
 ds.replace([[{...a[0]}],[{...b[0]}]]);assert.deepEqual(notices,[],'equal projection does not invalidate mounted rows');
 ds.replace([a,b,c]);assert.deepEqual(notices.map(n=>[n.type,n.index,n.count]),[['add',2,1]]);
 notices.length=0;ds.replace([a,b]);assert.deepEqual(notices,[{type:'delete',index:2,count:1}]);
-notices.length=0;ds.replace([b,a]);assert.deepEqual(notices,['reload'],'arbitrary permutations belong to native keyed comparison');
+notices.length=0;ds.replace([b,a]);assert.deepEqual(notices,[{type:'reload'}],'arbitrary permutations use the same batch notification API');
 assert.equal(page.bookRowRenderKey(a,0),page.bookRowRenderKey(a,16),'row position never changes content identity');
 assert.notEqual(page.bookRowRenderKey(a,0),page.bookRowRenderKey([{...a[0],readProgress:0.5}],0));
 assert.notEqual(page.bookRowRenderKey([{...a[0],sourceId:'a:b',bookId:'c'}],0),page.bookRowRenderKey([{...a[0],sourceId:'a',bookId:'b:c'}],0));

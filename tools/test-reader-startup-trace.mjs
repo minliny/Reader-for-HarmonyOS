@@ -1,4 +1,4 @@
-import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
+import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryTrace.ts';
 import assert from 'node:assert/strict';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';

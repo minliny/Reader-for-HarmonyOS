@@ -10,8 +10,8 @@ async function runCase(selectedCase){
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { stripTypeScriptTypes }=await import('node:module');
-const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
-const { sampleReaderControlSearch }=await import('../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts');
+const { sampleReaderControlSearch }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts');
 
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < 1e-7,
   `${label}: ${actual} != ${expected}`);
@@ -331,7 +331,7 @@ for (const invalid of [layout(0, -1), { ...layout(0), rowHeightVp: 0 },
 
 }
 if(selectedCase==='mutation-controls'){
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts', import.meta.url), 'utf8');
 assert.doesNotMatch(source, /(?:setTimeout|setInterval|animateTo|scrollTo|postFrameCallback)\s*\(/,
   'pure policy cannot own a clock or execute native scrolling');
 function mutated(from, to) {

@@ -1,5 +1,7 @@
 # 页面结构契约框架与书源页修复实施方案（2026-11-02）
 
+> 当前执行入口已转入2026-11-12的[框架合流实施记录](../architecture/framework-confluence-20261112.md)。本文件以下内容保留2026-11-02至11-04的原时点代码、候选和失败；本轮当前状态、登记修订和统一候选以合流记录及实际JSON为准。
+
 > 当前状态：Stage 1–3已按本轮范围完成；Stage 4共享规格/预算、完整目标代码清单与本地定向验证已落地，原生验收仍OPEN，见14.13。19项消息扫描/登记差异已独立收口，运行生命周期不因此通过；下载页D3常态列表已实现并通过SDK验证，见14.15；Stage 5目录/下载已完成本批active登记与引用校验，已知FAIL/NOT_RUN保留，见14.16。Stage 3字体证据限制已追加纠正，历史冻结产物不覆写。页面全层合规、设备与用户验收未完成。
 > 依据：[`../architecture/PAGE_STRUCTURE_CONTRACT.md`](../architecture/PAGE_STRUCTURE_CONTRACT.md) v0.2。
 > 上游依赖：契约地图与路由/控件/平台宿主登记（已落地 `tools/contracts/*`）、消息框架 [`../message-ui/FRAMEWORK.md`](../message-ui/FRAMEWORK.md) 与 `tools/message-entrypoints.json`、导航矩阵 [`../architecture/interaction-wiring-20261019/navigation-comparison.md`](../architecture/interaction-wiring-20261019/navigation-comparison.md)、控件规格 `ReaderControlSpecs.ets`、操作事实 `ReaderOperationFacts.ts`。只引用 ID 和事实源，不重定义。
@@ -2449,3 +2451,49 @@ Minimal scope: only sourceGroup Panel requested outer minimum becomes44+2*TOK_BO
 14.47 Corrected final freeze for candidate15: SourceGroup outer46−two1vp borders pays actual inner44; new proof176/22refs has independent old44→42 rejection, actualSDK16 parent-chain contexts and10adapter negatives. Final register1230f585.../control9272482f...rev12, Panel6f639352... and report47e0699c... bind current code/proofs; refsPASS and exact38old diagnostics remain with no stale/ref/model/new error. Prior12ce formalPASS boundary stays revoked for its eight group-option samples. All repository production/tools/active/docs freeze during canonical15; artifacts only. Candidate14 remains published/uninstalled history, never silently substituted.
 
 Current-session original system font has been restored: actual Settings sliders2/1/1, followed by foreground App and aa config readback1.000000. New receipts font-final-restore-ui/font-final-verify bind this session (not older HAP7 restoration); mutable font-restoration-required ledger is RESTORED_CONFIRMED. Large1.45 Native scopes remain retained; final changed-host/policy tests will run at original1.0, no more system setting changes. Raw restore evidence remains local/private.
+
+
+## 全量 UI 对比修复补充（2026-11-13）
+
+当前代码侧实施与独立审修详见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)。审计15个当前条目及1个保留条目已完成源侧修复，包含共享恢复表面、阅读/目录/TTS、下载/导入/徽标、主题行与书源统计，另补旧书签元数据兼容和精确原记录核对。独立审修发现的装配、目标归属、回执分类与测量代次遗漏已纳入对应准确回归。完整页批准、Native尺寸/字形/触摸/焦点/系统返回及用户接受继续按各层记录。
+
+2026-11-13 最终进度补记。代码侧15个当前项与1个保留项、通用圆角40个入口及16个规格、同类clip库存和阅读两处补修均完成开发与独立审修。最终冻结生产973ec49a，App18805b72930f已指定证书签名并在现有远程VM保数据安装启动。Home亮度和快捷到完整目录的四步最小原生核对完成，当前帧未出现自动恢复卡占位。详细候选SHA、失败假设、复用范围及证据见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)。21个全页visual继续NOT_RUN，Source E2/E3与完整页来源批准、大字号、读屏、全页交互及用户接受继续开放。
+
+
+## 控制栏全元素后继执行补充（2026-11-13）
+
+用户在App18805b指出Home进入目录时外壳变化，并扩大要求到控制栏全部元素。本批继承全量UI修复，重新登记共享51项、目录/书签/TTS105项和其余模块48项。共壳、独立paint/target、旧回调准入、短窗自然流、备用预算与字体真实覆盖的代码原因及逐域修复见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)。三域开发后交叉独审，全部冻结后才进入新候选实际编译、保数据更新与原生画面核对。
+
+当前登记source/sourceInputs按最终字节刷新，历史证据各守原输入。Source E2/E3、全页visual、整页来源批准与未执行原生维度维持原判定。具体候选和原生执行追加于同一修复记录。原书签未决记录本批未核对、未继续，所有业务数据沿原owner保留。
+
+
+## 体系性重审状态（2026-11-14）
+
+控制栏全量完成结论重新开放。当前明确两组框架问题，包括模块/profile两阶段交付及测量代际耦合，以及31536cfb将44响应预算映射进默认paint/slot。此前目录调整随全部模块共同重审，代码原因、七域量化、历史合流契约与同包Tab原生边界见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)最新补充。204项清单和既有局部SDK只在原准确范围内保留。后续先完成统一语义及生命周期修复、默认macro与中间帧代码验收和独立审修，再绑定一个实际源码候选。当前原生Tab根因仍OPEN，当前候选全页visual与Source E2/E3维持原判定。
+
+2026-11-14 体系性修复已完成代码与选定SDK独立审修。七模块的paint/slot/response和父支付已分离，默认比例恢复冻结原稿。Host预先准备只读facts与profile，原子提交目标模块，元信息采用保留原logical pair。Runtime形态及时钟继续由原owner持有。共享Header、Home、Pan及Search/Directory恢复动作通过当前身份交接保留实例回调。Recovery14覆盖真实SDK代理与装饰器，源码范围、失败历史和复用结果详见同一修复文档。
+
+正式控制登记已从19更新到20，四族21项source/sourceInputs绑定266个唯一当前文件，各项revision本批递增一次。最终refs03通过，register03保留39项既有开放诊断。紧凑目录部分响应小于44，E2继续FAIL，旧44绘制证据保留历史判定并退出当前证明。全页visual、Source E2/E3及原生大字号等范围各守原判定。当前仅书架Tab首测量0宽原生材料缺陷在代码侧闭合，523首帧扇形原因继续OPEN。下次必要候选复用实际安装机会取得首次书架同期帧与RS，所有agent开发和独审完成后才进入该阶段。
+
+后继实际编译类型缺口已补齐，34ea候选完成指定证书签名和远程VM保数据安装。其ready Tab当前正常，历史扇形归因继续OPEN。已采Home/Directory/TTS Quick具有相同外壳与内容边界。新增原生中间帧同时定位嵌套目录加载行使旧章节位移88px，以及Full TTS秒数加号仅2px可见。暂停后续Native后，已从共享Surface私有状态和真实子组合预算修复两条链，并补Search/Replace/AutoPage三处真实扣款。准确回归、独审、控制登记21及21页面当前绑定均已完成，269唯一源/2311pin，refsPASS/register39开放结果保持。当前安装34ea为本补修之前的候选，后继交付及原生端点另记。[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)
+## 控制栏体系重审的边框组合后继收口
+
+2026-11-14。全量重审已进一步定位d8ad88ef原生包装的父边框与子Text外盒重复、31536cfb有限宽度扣款缺边框，以及Replace旧行外壳和自然增长预算的复合欠付。八个模块及三个嵌套宿主的46个border站点、共享57文件与34个原生Button构造、AutoPage/Replace全部38个Builder链已完成源侧逐项审读。五类私有模板缺口分别修复，默认原稿角色保持，真实文字增长沿实际内容盒计算。逐项历史、准确回归和独立审修见[控制栏体系修复记录](../architecture/ui-design-full-fix-20261113.md)。
+
+本批正式register为9c96a9e0，九登记各revision22→23，274唯一输入、2356处pin，control21保持。refs单次PASS0，register单次保留原39项完整诊断，Primary独审23881e00接受。此前App081已在现有远程VM保数据更新，Home真实657px内容和视口相等且Scroll为false，首次ready Tab正常。该包Appearance两枚主题动作Text越界继续保留FAIL，后继已修源码须由新准确候选另行记录。全部生产与独立审修冻结后才继续安装或设备步骤，历史Tab扇形因果、全页visual和Source E2/E3仍按原开放判定。
+
+全应用原生Button顺序后继批已完成代码与独立审修。当前SDK要求显式borderRadius位于border之后，268ETS/207构造及66modifier闭包内九坏序模板已按原值调整，八生产文件保持其他几何和业务。373TS无对应构造或modifier声明，207构造的内容盒同型账本没有额外精确outer重复。正式72fee70d/control21为当前冻结，16受影响own登记各递增一次，277唯一输入、2388pin，refsPASS0/register原39项保持，Primary终核9bc073c4接受。Appb5e6的两个主题Text已实际完整包含并获独审，圆角材质与尚未采样的AutoPage/Replace端点由后继候选单列核对。[完整修复与历史归因记录](../architecture/ui-design-full-fix-20261113.md)
+
+共同绘制owner及导航提交副作用后继批已完成独立审修。公共Quick框仅Dir/Appearance/Settings，Search/Auto/Replace保原child单框；独立上层Full描边严格使用FullSurface原矩形与透明度，41Panel与41参考Stage合法样本、五负例通过。Replace读取接到完整receipt/ready后，真实入口及busy解除、metadata/环境快径、Recovery、旧请求和去重经准确叶05与独审接受。当前正式da88a15f/control21为冻结结果，13own递增、282唯一输入、2453pin，refsPASS0/register原39项保持，Primary终核4498870c接受。App6e已证明主题圆角与内容盒、设置端点，旧Quick双框与Replace idle帧保留，当前新字节Native单独核对。
+
+
+2026-11-14 当前候选为源码4ca0d6af / App16f2c3829b3b，signed HAP46889b6e07e8039706c74bed3b58b1801d9ee51ae8719e7ffb7605a1030e4a20。所有开发及独立代码审修完成后，实际ArkTS编译、指定证书签名、现有远程x86_64 VM保数据更新和启动通过。选定AutoPage Quick/Full、Replace Quick/Full、Search Quick及返回Home已完成原PNG与树核对，Replace当前真实空集合读取完成，ready Tab正常。原首装动画保持原判定，历史Tab扇形物理因果继续OPEN。完整记录见[体系修复当前交付](../architecture/ui-design-full-fix-20261113.md)。正式登记da88a15f/control21、原39诊断、Source E2/E3和21visual NOT_RUN均保持，当前全动作连续闪烁、大字号/窄宽原生、全目标命中和整页接受继续开放。原书签未决核对及继续本批为0。
+
+
+2026-11-14 当前formal共壳组合补充。既有module-shell-sdk已接当前真实producer和Host提交链，第05次180提交/540轨迹/51自然高度/20metadata/20环境/20实际Back通过并获独审。生产只补LocalReadingExperience失活intent清理与Back消费语义，inactive-back-cleanup03含真实hide/open后的首次Back终点。Auto未挂载QuickBack误判、临时源与新增仅dead测试已撤回并保历史，真实build可达性继续逐项核对。支持范围正式3f5c4b9b/control21，13own递增、283unique/2470pins，refs02PASS0/register原39对象保持。App16f为本次取消补修前的已安装候选。准确边界及历史Tab图像拟合见[体系修复记录](../architecture/ui-design-full-fix-20261113.md)。
+
+
+2026-11-14 支持范围候选45f30d32已实际编译、指定签名、原远程VM保数据更新和启动，当前App23dcb7399460，HAPbbdd8706。普通Back与Home/Directory往返五帧、初始ready Tab/RS获ae4749b6离线独审，四可见帧共同外壳边界一致。pending hide/open仍归SDK03，所有动作连续视觉与历史Tab因果继续OPEN。当前交付清单及撤回的dead Builder、正文预览初判见[体系修复记录](../architecture/ui-design-full-fix-20261113.md)。所有设备会话已释放，后继仅提交文档，不重编同字节App。
+
+
+2026-11-14 完成审计按当前23dc与12条明确要求核对。已识别代码修复、current formal共壳回归、独审及VM交付结果有准确证据。剩余G05连续像素和G10历史坏态物理归因需要取帧接入口/视频与坏态同期数据；17份既有宿主记录及一次SSH22四秒只读观察没有建立可直接使用的现有通道。没有据此否定宿主录制能力，没有增加安装条件。G10缺失在连续三goal轮重复，按完成独审进入blocked处置，整体完成仍为false。详见[当前完成审计](../architecture/ui-design-full-fix-20261113.md)。

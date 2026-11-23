@@ -9,9 +9,9 @@ import { stripTypeScriptTypes } from 'node:module';
 const app = new URL('../entry/src/main/ets/app/', import.meta.url);
 const lower = name => stripTypeScriptTypes(readFileSync(new URL(name, app), 'utf8')
   .replace(/^import[\s\S]*?;\n/gm, '')).replace(/^export /gm, '');
-const transportSource = lower('HttpTransportPolicy.ts');
-const routeSource = lower('NetworkRoutePolicy.ts');
-const hostSource = lower('HttpExecuteHost.ts');
+const transportSource = lower('../platform/network/HttpTransportPolicy.ts');
+const routeSource = lower('../platform/network/NetworkRoutePolicy.ts');
+const hostSource = lower('../platform/network/HttpExecuteHost.ts');
 const errorSource = lower('ErrorMessage.ts');
 const hostname = 'source.example';
 const requestUrl = `https://${hostname}/book`;

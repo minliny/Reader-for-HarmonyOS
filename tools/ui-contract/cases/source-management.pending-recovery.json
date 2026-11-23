@@ -1,0 +1,122 @@
+{
+  "id": "source-management.pending-recovery",
+  "version": 1,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-read-v1",
+    "description": "Isolated public VM with a preexisting unresolved source operation. Observe the current surface without retrying or changing the operation.",
+    "publicSources": true
+  },
+  "ownerSources": [
+    "entry/src/main/ets/app/ReaderOperationFacts.ts",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts",
+    "entry/src/main/ets/app/ReaderRecoveryProjection.ts",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets"
+  ],
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-read",
+      "kind": "sample",
+      "afterAction": "open-sources",
+      "keyboard": false,
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list",
+        "reader-source-pending-recovery",
+        "reader-source-recovery-message"
+      ],
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "recovery"
+          }
+        }
+      ],
+      "quietMs": 500
+    }
+  ],
+  "assertions": [
+    {
+      "id": "source.load.recovery",
+      "evaluator": "source",
+      "kind": "read-surface",
+      "required": false,
+      "condition": "The current source opening reports pending recovery from a blocked original operation or unknown confirmation.",
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#pendingRecovery",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-sources",
+      "sample": "source-read",
+      "expected": {
+        "state": "recovery"
+      }
+    }
+  ],
+  "structure": {
+    "source-read": "source-read"
+  }
+}

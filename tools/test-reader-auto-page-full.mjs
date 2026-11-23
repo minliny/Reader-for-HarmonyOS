@@ -9,7 +9,7 @@ import {
   setReaderAutoPageFullFollowHighlight,
   setReaderAutoPageFullSpeed,
   stepReaderAutoPageFullTimer,
-} from '../entry/src/main/ets/features/reading/ReaderAutoPageFullState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderAutoPageFullState.ts';
 
 async function configurationCase() {
 const initial = createDefaultReaderAutoPageFullConfiguration();
@@ -54,7 +54,7 @@ assert.equal(formatReaderAutoPageFullTimerSummary(initial), '15:00');
 }
 async function chapterAdmissionCase() {
 const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
-const StepOwner = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'ReaderControlPanel', ['canStepChapter']);
+const StepOwner = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), 'ReaderControlPanel', ['canStepChapter']);
 const stepOwner = Object.assign(new StepOwner(), { currentChapterIndex: 1, readableChapterPosition: 0,
   totalChapters: 53, tocEntries: [{index:0,navigable:false},{index:1,navigable:true}] });
 assert.equal(stepOwner.canStepChapter(-1), false, 'first real chapter after a volume cannot step into the group');
@@ -70,8 +70,8 @@ assert.equal(stepOwner.canStepChapter(1), false, 'disabled tail does not enable 
 async function sharedContentCase() {
   const { readFile } = await import('node:fs/promises');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-  const source = await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'utf8');
-  const childSource = await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), 'utf8');
+  const childSource = await readFile(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
   let captured;
   class ContentBoundary { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); captured = this; } }
   const { owner } = createReaderBuilderProbe(source, ['autoPageModuleContent'], {

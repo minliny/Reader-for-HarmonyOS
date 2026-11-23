@@ -1,0 +1,149 @@
+{
+  "schema": "reader.framework-closure.p2-reference-retirement.v1",
+  "status": "COMPLETE_REFERENCE_ONLY_INDEXED_THREE_CASES_PASS",
+  "decision": "REFERENCE_ONLY",
+  "productionOwner": "ReaderControlPanel -> ReaderControlRuntime",
+  "retiredPage": "pages/ReaderControlMotionVerification",
+  "archive": "docs/reference/reader-control-motion/ReaderControlMotionVerification.ets.reference",
+  "referenceStage": "Stage source retained only for comparison cases; no entry consumer.",
+  "reopenConditions": [
+    "Explicit new consumer decision",
+    "Current real-module minimum/temporary layer/IME/Back/playback/reduce-motion/lifecycle proof",
+    "One production clock/gesture owner"
+  ],
+  "definitionReview": {
+    "onlyGate": "H-reader-control-verification-launch,3 exact children",
+    "prior": [
+      {
+        "id": "H-reader-control-verification-launch",
+        "source": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+        "changedInputs": [
+          {
+            "path": "tools/lib/selected-production-methods.mjs",
+            "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a",
+            "actualSha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+          },
+          {
+            "path": "tools/run-contract-tests.mjs",
+            "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074",
+            "actualSha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+          },
+          {
+            "path": "tools/test-reader-control-verification-launch.mjs",
+            "sha256": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+            "actualSha256": "ed5dec814b8fd7be2183bb5498d34fcf6a5442c65d2b822882cff7293a187318"
+          }
+        ]
+      },
+      {
+        "id": "H-reader-control-verification-launch#admission",
+        "source": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+        "changedInputs": [
+          {
+            "path": "tools/lib/selected-production-methods.mjs",
+            "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a",
+            "actualSha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+          },
+          {
+            "path": "tools/run-contract-tests.mjs",
+            "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074",
+            "actualSha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+          },
+          {
+            "path": "tools/test-reader-control-verification-launch.mjs",
+            "sha256": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+            "actualSha256": "ed5dec814b8fd7be2183bb5498d34fcf6a5442c65d2b822882cff7293a187318"
+          }
+        ]
+      },
+      {
+        "id": "H-reader-control-verification-launch#ability-consumer",
+        "source": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+        "changedInputs": [
+          {
+            "path": "tools/lib/selected-production-methods.mjs",
+            "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a",
+            "actualSha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+          },
+          {
+            "path": "tools/run-contract-tests.mjs",
+            "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074",
+            "actualSha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+          },
+          {
+            "path": "tools/test-reader-control-verification-launch.mjs",
+            "sha256": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+            "actualSha256": "ed5dec814b8fd7be2183bb5498d34fcf6a5442c65d2b822882cff7293a187318"
+          }
+        ]
+      },
+      {
+        "id": "H-reader-control-verification-launch#registration",
+        "source": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+        "changedInputs": [
+          {
+            "path": "tools/lib/selected-production-methods.mjs",
+            "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a",
+            "actualSha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+          },
+          {
+            "path": "tools/run-contract-tests.mjs",
+            "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074",
+            "actualSha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+          },
+          {
+            "path": "tools/test-reader-control-verification-launch.mjs",
+            "sha256": "01e3c5521cf057b4621bc30a45b6abb99e89f2eb17569fef4b2469d54c76ec8d",
+            "actualSha256": "ed5dec814b8fd7be2183bb5498d34fcf6a5442c65d2b822882cff7293a187318"
+          }
+        ]
+      }
+    ],
+    "reviewedChangedClosure": {
+      "tools/test-reader-control-verification-launch.mjs": "Actual retirement policy/remaining route matrix, 3 production mutants and 2 registration negative controls;3 direct exact cases passed.",
+      "tools/lib/selected-production-methods.mjs": "Read full AST-selected ordinary method adapter and git8a..HEAD delta: emits unchanged members; new readerWindowMetrics binding is conditional and unused by selected ability methods. No Builder/Native coverage.",
+      "tools/run-contract-tests.mjs": "Read old/current delta and explicit selected entry: gate supplies --tests/--cases so CLI workers=1 and adaptiveResources branch is not entered. Existing case receipt/process-tree checks remain; no implicit test import/suite extension.",
+      "tools/lib/reader-window-environment-probe.mjs": "Read whole newly transitive helper: lazy SDK transpile of actual read port, exact require of pure ReaderWindowMetrics, per-fixture binding. Static import is pure; no device/window acquisition."
+    },
+    "resourceDefinitionSha256": "f6cbd204d6af7be1300a9155be510cce6eaaef588dff93ff55b0506220bcf4e6",
+    "negativeControls": [
+      "restore old motion destination",
+      "bypass exact debug admission",
+      "ignore diagnostic conflict",
+      "restore motion registration",
+      "remove renderer registration"
+    ],
+    "directCases": [
+      "admission",
+      "ability-consumer",
+      "registration"
+    ],
+    "priorFailures": ".local/framework-closure-implementation-20261111/p2-attempts.json",
+    "historicalReceipts": "Unchanged; no old result relabeled",
+    "manifestReview": "Only this file sourceSha256 rebound after the same3-case semantic review; all3 resources remain empty, case names/qualifications unchanged. Runner admission failure retained."
+  },
+  "evidenceBoundary": "Pure policy/AST-selected ordinary ability methods/route JSON. No window, rendering, package or device claim.",
+  "indexedReceipts": [
+    {
+      "case": "admission",
+      "result": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p2-indexed/admission/results.json",
+      "sha256": "fb98391a45dca69e8397387b7fcd24e0fd6415625e94d4f8f4d1ff11240da3d7",
+      "selectedPassed": null,
+      "fullSuite": "NOT_RUN"
+    },
+    {
+      "case": "registration",
+      "result": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p2-indexed/registration/results.json",
+      "sha256": "74bcdd5bba06ac0527578c350a7220171462d306c0fb0498f1f81481dd357802",
+      "selectedPassed": null,
+      "fullSuite": "NOT_RUN"
+    },
+    {
+      "case": "ability-consumer",
+      "result": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p2-indexed/ability-consumer/results.json",
+      "sha256": "3f5e246fe7ce8c3ac7aa2556cd1ebaf9f79c484f8372cbf0e1c8e157b5e9b190",
+      "selectedPassed": null,
+      "fullSuite": "NOT_RUN"
+    }
+  ]
+}

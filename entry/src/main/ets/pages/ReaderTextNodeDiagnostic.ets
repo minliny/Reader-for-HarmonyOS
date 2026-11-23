@@ -3,8 +3,8 @@ import { FrameNode, NodeController, typeNode } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import text from '@ohos.graphics.text';
-import { ReaderNativeTextWindow } from '../features/reading/ReaderNativeTextWindow';
-import { ReaderNativeTextMeasurement } from '../features/reading/ReaderNativeTextMeasurement';
+import { ReaderNativeTextWindow } from '../features/reading/ui/ReaderNativeTextWindow';
+import { ReaderNativeTextMeasurement } from '../features/reading/ui/ReaderNativeTextMeasurement';
 
 const TEXT_NODE_FONT = 'ReaderTextNodeDiagnosticNoto';
 const TEXT_NODE_SAMPLES: string[] = [

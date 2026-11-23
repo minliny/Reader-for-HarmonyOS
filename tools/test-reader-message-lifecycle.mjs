@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readingFailureHint } from '../entry/src/main/ets/features/reading/ReadingFailurePresentation.ts';
-import { mangaUserError } from '../entry/src/main/ets/features/manga/MangaUserError.ts';
+import { readingFailureHint } from '../entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts';
+import { mangaUserError } from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
 
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const Reader = productionMotionMethods(file, ['showReaderRecovery', 'settleReaderRecovery',
   'setReaderPreferenceNotice', 'settleReaderPreferenceNotice', 'retryReaderPreferenceNotice',
   'admitCommittedProgress', 'onBookTurnArkUIContentReady'], {

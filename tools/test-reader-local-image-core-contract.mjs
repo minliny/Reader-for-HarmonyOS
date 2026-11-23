@@ -5,12 +5,12 @@ const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { registerHooks }=await import('node:module');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const { hasImmutableLocalReadingImageSource, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+const { hasImmutableLocalReadingImageSource, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
 
 const hooks=registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (error) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw error;
 } } });
-const { readPreparedReadingEntrySnapshot } = await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+const { readPreparedReadingEntrySnapshot } = await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
 let ioCalls = 0;
 const util = { TextDecoder: { create: (_encoding, options) => ({
   decodeToString: bytes => new TextDecoder('utf-8', options).decode(bytes),
@@ -18,7 +18,7 @@ const util = { TextDecoder: { create: (_encoding, options) => ({
 Type: { BASIC_URL_SAFE: 1 } };
 // Execute the existing adapter and its decoded identity/path checks. Node's
 // codec supplies only the platform boundary; no second production parser.
-const Adapter = productionMotionMethods(new URL('../entry/src/main/ets/app/LocalEpubResourceHost.ts', import.meta.url),
+const Adapter = productionMotionMethods(new URL('../entry/src/main/ets/platform/reading-resources/LocalEpubResourceHost.ts', import.meta.url),
   ['load', 'assertCurrent', 'parseLocator', 'assertSafeArchivePath'], { util,
     LOCAL_EPUB_SCHEME: 'reader-local-epub://', LOCAL_MOBI_SCHEME: 'reader-local-mobi://',
     MAX_LOCAL_IMAGE_BOOK_ID_BASE64_CHARS: 96,

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { loadInputs } from './lib.mjs';
+import { loadInputs, readJSON, schemaValidator } from './lib.mjs';
 import { validateModel } from './validate-model.mjs';
 import { checkContractRefs } from './check-contract-refs.mjs';
 import { evaluatePage, checkRegister } from './check-register.mjs';
@@ -21,6 +21,39 @@ function fixture() {
   return { inputs, source, page, variant: source.variants[0] };
 }
 const cases = {
+  'dynamic-scroll-compensation'() {
+    const inputs = loadInputs();
+    const directory = inputs.register.pages.find(page => page.pageId === 'directory');
+    const variants = directory.variants.filter(variant => variant.variantId.includes('manga'));
+    assert.equal(variants.length, 8);
+    inputs.register.pages = [{ ...directory, variants }];
+    const validate = schemaValidator().ajv.compile(readJSON('tools/page-structure/schema/register.schema.json'));
+    assert.ok(validate(inputs.register), JSON.stringify(validate.errors));
+    assert.deepEqual(checkContractRefs(inputs), []);
+    for (const { registration: page } of variants) {
+      const facts = page.layers.scroll.facts;
+      assert.equal(facts.underlap, true);
+      assert.equal(facts.obscurationCompensation, null);
+      assert.equal(facts.obscurationCompensationSource.symbol, 'refreshGeometry');
+      assert(!evaluatePage(page, inputs.model).some(diagnostic => diagnostic.ruleId === 'G-03'));
+    }
+    const original = variants[0].registration;
+    const change = update => {
+      const page = clone(original);
+      update(page.layers.scroll.facts);
+      return evaluatePage(page, inputs.model).find(diagnostic => diagnostic.ruleId === 'G-03');
+    };
+    assert.equal(change(facts => { delete facts.obscurationCompensationSource; }).result, 'NOT_RUN');
+    assert.equal(change(facts => {
+      delete facts.obscurationCompensationSource;
+      facts.obscurationCompensation = 0;
+    }).result, 'FAIL');
+    assert.equal(change(facts => { facts.obscurationCompensation = 15; }).result, 'FAIL');
+    assert.equal(change(facts => { facts.obscurationCompensationSource.path = 'unbound.ets'; }).result, 'FAIL');
+    const altered = clone(inputs);
+    altered.register.pages[0].variants[0].registration.layers.scroll.facts.obscurationCompensationSource.symbol = 'MissingScrollCalculation';
+    assert(checkContractRefs(altered).some(diagnostic => diagnostic.field === 'facts.obscurationCompensationSource'));
+  },
   'host-variants'() {
     const { inputs, page, source, variant } = fixture();
     assert.deepEqual(validateModel(inputs).diagnostics, []);
@@ -45,7 +78,7 @@ const cases = {
     bad.register.pages[0].variants[0].host.factSource.symbol = 'MissingMountDeclaration';
     assert(checkContractRefs(bad).some(d => d.pageId === page.pageId && d.field === 'host.factSource'));
     bad = clone(inputs);
-    bad.register.pages[0].variants[0].host.factSource = {path:'entry/src/main/ets/features/common/ReaderPageScaffold.ets',symbol:'ReaderPageScaffold'};
+    bad.register.pages[0].variants[0].host.factSource = {path:'entry/src/main/ets/ui/layout/ReaderPageScaffold.ets',symbol:'ReaderPageScaffold'};
     assert(checkContractRefs(bad).some(d => d.pageId === page.pageId && d.message.includes('source fingerprint')));
     bad = clone(inputs);
     bad.register.pages[0].variants[0].registration.sourceInputs[0].sha256 = '0'.repeat(64);
@@ -138,7 +171,7 @@ const args = process.argv.slice(2);
 if (!args.length || args[0] === '--list') {
   console.log(JSON.stringify({result:'NOT_RUN',cases:Object.keys(cases)}));
 } else {
-  if (args.length !== 2 || args[0] !== '--case') throw Error('Use --case host-variants,footer-placement');
+  if (args.length !== 2 || args[0] !== '--case') throw Error('Use --case <selected case>');
   const selected = args[1].split(',');
   if (new Set(selected).size !== selected.length || selected.some(id => !cases[id])) throw Error('Unknown or duplicate case');
   for (const id of selected) {

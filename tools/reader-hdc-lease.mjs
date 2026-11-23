@@ -27,7 +27,7 @@ import {
 import { isAbsolute, parse, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { startForegroundServer } from './reader-hdc-foreground.mjs';
+import { hdcDirectEnvironment, startForegroundServer } from './reader-hdc-foreground.mjs';
 
 const DEFAULT_ROOT = resolve(process.env.READER_LOCK_DIR || tmpdir(), 'reader-hdc-target-leases');
 const DEFAULT_WAIT_MS = 30000;
@@ -39,6 +39,17 @@ const targetRef = target => createHash('sha256').update(target).digest('hex').sl
 const canonicalServerKey = value => String(value).trim()
   .replace(/^\[::ffff:([^\]]+)\]:/, '$1:').replace(/^::ffff:/, '')
   .replace(/^localhost:/, '127.0.0.1:').replace(/^\[::1\]:/, '127.0.0.1:');
+
+export function parseTargetState(listing, target) {
+  const rows = listing.split(/\r?\n/u).map(line => line.trim().split(/\s+/u))
+    .filter(columns => columns[0] === target);
+  if (rows.length === 0) return 'absent';
+  if (rows.length !== 1) return 'ambiguous';
+  const columns = rows[0];
+  // Verbose HDC listings can include a transport column before the state.
+  const state = /^(TCP|USB|UART|SERIAL)$/iu.test(columns[1]) ? columns[2] : columns[1];
+  return /^(Connected|Disconnected|Connecting|Offline|Unknown)$/iu.test(state) ? state.toLowerCase() : 'unknown';
+}
 
 // Bind service operations to their server-wide lease and device operations to
 // their exact target. Callers decide whether maintenance is appropriate and
@@ -200,14 +211,6 @@ function releaseLease(root, lockDir, owner) {
   }
 }
 
-export function hdcDirectEnvironment(environment = process.env) {
-  const direct = { ...environment };
-  for (const name of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'SOCKS_PROXY']) {
-    delete direct[name]; delete direct[name.toLowerCase()];
-  }
-  return { ...direct, NO_PROXY: '*', no_proxy: '*' };
-}
-
 // A bounded synchronous batch can retain the exact same server lease across
 // observation, a real application write barrier, final recheck and install.
 // The HDC binary is only invoked here, with the same command admission rules.
@@ -250,6 +253,13 @@ export async function withHdcCommandSession({ hdc, target, serverKey, waitMs = D
 
 function runChild(hdc, command, owner, root, lockDir, timeoutMs) {
   return new Promise((resolveRun, rejectRun) => {
+    // Cover the interval before Node emits spawn and the child PID is recorded.
+    // A crashed wrapper must leave an uncertain lease instead of exposing a
+    // potentially live HDC client to a successor.
+    owner.commandStartPending = true;
+    const starting = resolve(lockDir, 'owner.pending.json');
+    writeFileSync(starting, JSON.stringify(owner), { mode: 0o600 });
+    renameSync(starting, resolve(lockDir, 'owner.json'));
     const child = spawn(hdc, command, { stdio: 'inherit', env: hdcDirectEnvironment() });
     let timedOut = false, cancelled = false, killTimer, spawnError;
     const stop = () => {
@@ -266,6 +276,7 @@ function runChild(hdc, command, owner, root, lockDir, timeoutMs) {
     }, timeoutMs);
     child.once('spawn', () => {
       owner.childPid = child.pid;
+      owner.commandStartPending = false;
       const pending = resolve(lockDir, 'owner.pending.json');
       writeFileSync(pending, JSON.stringify(owner), { mode: 0o600 });
       renameSync(pending, resolve(lockDir, 'owner.json'));
@@ -321,4 +332,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   main(process.argv.slice(2)).catch(error => { console.error(`reader-hdc-lease: ${error.message}`); process.exitCode = 2; });
 }
 
-export { admitCommand, acquireLease, canonicalServerKey, releaseLease, targetRef };
+export { admitCommand, acquireLease, canonicalServerKey, hdcDirectEnvironment, releaseLease, targetRef };

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readerControlActor, readerControlLerp, readerControlUnit, sampleReaderControlActor }
-  from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
+  from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
   `${actual} != ${expected}`);

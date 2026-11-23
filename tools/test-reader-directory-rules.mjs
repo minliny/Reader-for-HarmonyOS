@@ -12,7 +12,7 @@ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.m
 const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
 const {foundationControls}=await import('./lib/reader-foundation-control-probe.mjs');
 
-const sourceUrl=new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets',import.meta.url);
+const sourceUrl=new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets',import.meta.url);
 const source=readFileSync(sourceUrl,'utf8'),require=createRequire(import.meta.url);
 const loader=resolveEtsLoaderRoot();
 const ts=require(loader+'/node_modules/typescript'),tree=ts.createSourceFile('ReaderDirectoryRules.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
@@ -26,13 +26,11 @@ async function setup(prior) {
  const f=await fixture(true,prior);if(!toolRecorded){console.log(JSON.stringify({kind:'existing-cli-tool-evidence',...f.toolEvidence()}));toolRecorded=true;}
  const caps=(await f.command('core.info')).data.capabilities;
  f.runtime.supportsCoreCapability=name=>caps.includes(name);
- if(readOnlyOldCore&&caps.includes('rules.mutation.directory-rules.v1'))
-  throw Error('ENVIRONMENT_GAP MISSING_LEGACY_DIRECTORY_RULES_CLI: legacy-preview requires an actual old Core selected by READER_RULES_RECEIPT_CORE_ROOT');
- if(readOnlyOldCore)assert.equal(caps.includes('rules.mutation.directory-rules.v1'),false);
+ if(readOnlyOldCore)assert.equal(caps.includes('rules.mutation.directory-rules.v1'),false,'read-only mode requires an actual old Core without the new capability');
  else assert.ok(caps.includes('rules.mutation.directory-rules.v1'),'select current paired Core CLI; legacy cannot acknowledge directory applies');
  f.id='local:'+createHash('sha256').update(body).digest('hex');
  if(!prior){const file=resolve(f.root,'source.txt');writeFileSync(file,body);await f.command('local_book.import',{bookId:f.id,filePath:file,format:'txt'});}
- f.DirectoryGateway=compile('features/reading/ReaderDirectoryRulesGateway.ts','ReaderDirectoryRulesGateway',{ReaderRuntimeOwner:f.Runtime,RulesMutationOwner:f.Owner},true);
+ f.DirectoryGateway=compile('features/reading/application/ReaderDirectoryRulesGateway.ts','ReaderDirectoryRulesGateway',{ReaderRuntimeOwner:f.Runtime,RulesMutationOwner:f.Owner},true);
  f.directoryGateway=new f.DirectoryGateway(f.runtime);
  return f;
 }
@@ -44,9 +42,8 @@ async function nonTxt(f) {
 function editor(f,alternate=source) {
  const methods=alternate===source?sourceUrl:localFileUrl(resolve(f.root,'mutated-directory.ets'));
  if(alternate!==source)writeFileSync(methods,alternate);
- const Editor=productionMotionMethods(methods,['loadRules','changed','edit','run','publishRecovery','recover','aboutToDisappear','canEdit','actorIdentity','ownsActor','recoveryIdentity','ownsRecovery','recoveryView','canContinueOriginal','notifyApplied','retryDirectoryRefresh','onRecoveryChanged','originalBelongsToBook'],{DirectoryRuleDraft:Draft,ReaderRuntimeOwner:f.Runtime});
+ const Editor=productionMotionMethods(methods,['loadRules','changed','edit','run','recover','aboutToDisappear','canEdit','actorIdentity','ownsActor','recoveryIdentity','ownsRecovery','recoveryView','canContinueOriginal','notifyApplied','retryDirectoryRefresh'],{DirectoryRuleDraft:Draft,ReaderRuntimeOwner:f.Runtime});
  return Object.assign(new Editor(),{bookId:f.id,mounted:true,generation:0,presentationGeneration:1,nextRuleId:1,
-  feedback:{events:[],show(_context,options){this.events.push(options);return true;},reset(){}},
   rules:[new Draft(1,'第一卷.*','0','title')],preview:[],previewReady:false,loaded:true,busy:false,message:'',
   directoryRefreshFailed:false,operation:f.owner.snapshot(),gateway:f.directoryGateway,applied:0,onApplied(){this.applied++;}});
 }
@@ -58,19 +55,6 @@ function ui(f,alternate=source,rules=[new Draft(1,'第一卷.*','0','title')]) {
  Object.assign(sdk.childSources,controls.hooks.childSources);
  const enter=sdk.hooks.onObserverEnter;sdk.hooks.onObserverEnter=(...args)=>{enter?.(...args);controls.hooks.onObserverEnter?.(...args);};sdk.hooks.lifecycleChildren=true;
  const owner=sdk.consumer(alternate,boundedMembers(alternate),{ReaderDirectoryRulesGateway:f.DirectoryGateway,ReaderRuntimeOwner:f.Runtime,DirectoryRuleDraft:Draft},{bookId:f.id});
- let recoveryNotice,recoverySerial=10000;
- owner.onRecoveryChanged=(projection)=>{
-  if(!projection?.view.visible)return;
-  const params={view:projection.view,tag:'目录规则',actionLabel:projection.actionLabel,
-   secondaryActionLabel:projection.secondaryActionLabel,busy:projection.busy,
-   onReconcile:projection.onReconcile,onSecondaryAction:projection.onSecondaryAction};
-  if(recoveryNotice===undefined){
-   recoveryNotice=new sdk.deps.ReaderRecoveryNotice(owner,params,undefined,++recoverySerial);
-   owner.children.set(recoveryNotice.id,recoveryNotice);recoveryNotice.appThemeScheme='day';recoveryNotice.initialRender();
-  }else{
-   recoveryNotice.updateStateVars(params);Object.assign(recoveryNotice,params);sdk.properties.flush();
-  }
- };
  // Deliver the constructor's actual book Prop watcher before mounting the
  // controlled loaded-editor fixture. Otherwise its first late flush starts a
  // real loadRules in the middle of the test's accepted apply/recovery action.
@@ -83,10 +67,9 @@ try {
  if(readOnlyOldCore){
   const f=await setup(),e=editor(f);e.loadRules();await until(()=>!e.busy);assert.equal(e.loaded,true);assert.match(e.message,/仅可预览/);
   const u=ui(f,source,[new Draft(1,'第一卷.*','0','title'),new Draft(2,'第二章.*','1','head')]);
-  const nodes=u.nodes(),fields=nodes.filter(n=>n.type==='TextInput'),buttons=nodes.filter(n=>n.type==='Button');
-  const selects=u.sdk.walk(u.owner).filter(actor=>actor instanceof u.sdk.deps.ReaderInlineSelect);
-  assert.equal(fields.length,4);assert.deepEqual(selects.map(actor=>actor.selectedIndex),[0,1]);
-  fields[0].onChange('第一卷.*');fields[1].onChange('3');selects[1].onSelect(3,'独立行边界');
+  const nodes=u.nodes(),fields=nodes.filter(n=>n.type==='TextInput'),selects=nodes.filter(n=>n.type==='Select'),buttons=nodes.filter(n=>n.type==='Button');
+  assert.equal(fields.length,4);assert.deepEqual(selects.map(n=>n.selected),[0,1]);
+  fields[0].onChange('第一卷.*');fields[1].onChange('3');selects[1].onSelect(3);
   assert.deepEqual(u.owner.rules.map(r=>[r.pattern,r.level,r.boundary]),[['第一卷.*','3','title'],['第二章.*','1','any']]);
   assert.ok(nodes.some(n=>typeof n.create==='string'&&n.create.includes('完整标题')&&n.create.includes('第一卷.*')));
   buttons.find(n=>n.createWithLabel==='删除').onClick();assert.deepEqual(u.owner.rules.map(r=>r.id),[2]);
@@ -214,8 +197,8 @@ if(selectedCase==="sdk-actors"){
   buttons.find(n=>n.createWithLabel==='预览').onClick();await until(()=>!u.owner.busy);assert.equal(u.owner.previewReady,true);
   f.options.afterMethod='rules.mutation.apply';buttons.find(n=>n.createWithLabel==='应用').onClick();await until(()=>!u.owner.busy);assert.equal(u.owner.operation.confirmation,'unknown');u.flush();
   assert.ok(u.nodes().some(n=>n.type==='Text'&&typeof n.create==='string'&&n.create.includes('原操作')),'real shared notice/actions render');
-  const physical=(label,refresh=true)=>{
-   if(refresh)u.flush();
+  const physical=label=>{
+   u.flush();
    // Historical ForEach keys remain in this probe's child inventory; native
    // removal is outside its scope. Select the one current, admitted actor,
    // while preserving old physical callbacks for the retirement assertion.
@@ -225,9 +208,9 @@ if(selectedCase==="sdk-actors"){
    const node=[...actors[0].nodes.values()].find(node=>typeof node.onClick==='function');assert.equal(node.enabled,true);return node;
   };
   const action=physical('核对原操作回执');const bytes=f.disk(),n=f.writes().length,reads=f.calls.filter(call=>call.method==='rules.mutation.query').length;
-  action.onClick();await until(()=>!u.owner.busy);assert.equal(f.disk(),bytes);assert.equal(f.writes().length,n);
+  action.onClick();await until(()=>!u.owner.busy);u.flush();assert.equal(f.disk(),bytes);assert.equal(f.writes().length,n);
   assert.ok(f.calls.filter(call=>call.method==='rules.mutation.query').length>reads,'actual shared native action dispatches the original pure query');
-  const continueAction=physical('继续原操作',false);continueAction.onClick();await until(()=>!u.owner.busy);assert.equal(f.writes().length,n);assert.equal(f.disk(),'');
+  const continueAction=physical('继续原操作');continueAction.onClick();await until(()=>!u.owner.busy);assert.equal(f.writes().length,n);assert.equal(f.disk(),'');
   u.owner.aboutToDisappear();action.onClick();assert.equal(u.owner.busy,false,'retired physical recovery cannot borrow a new owner');groups++;
  }
 }
@@ -235,16 +218,14 @@ if(selectedCase==="sdk-actors"){
 
  {
   const f=await setup(),u=ui(f,source,[new Draft(1,'第一卷.*','0','title'),new Draft(2,'第二章.*','1','head')]);
-  const nodes=u.nodes(),fields=nodes.filter(n=>n.type==='TextInput'),buttons=nodes.filter(n=>n.type==='Button');
-  const selects=u.sdk.walk(u.owner).filter(actor=>actor instanceof u.sdk.deps.ReaderInlineSelect);
-  assert.equal(fields.length,4);assert.deepEqual(selects.map(actor=>actor.selectedIndex),[0,1]);
-  fields[0].onChange('第一卷.*');fields[1].onChange('3');selects[1].onSelect(3,'独立行边界');
+  const nodes=u.nodes(),fields=nodes.filter(n=>n.type==='TextInput'),selects=nodes.filter(n=>n.type==='Select'),buttons=nodes.filter(n=>n.type==='Button');
+  assert.equal(fields.length,4);assert.deepEqual(selects.map(n=>n.selected),[0,1]);fields[0].onChange('第一卷.*');fields[1].onChange('3');selects[1].onSelect(3);
   assert.deepEqual(u.owner.rules.map(r=>[r.pattern,r.level,r.boundary]),[['第一卷.*','3','title'],['第二章.*','1','any']]);
   assert.ok(nodes.some(n=>typeof n.create==='string'&&n.create.includes('完整标题')&&n.create.includes('第一卷.*')));
   buttons.find(n=>n.createWithLabel==='删除').onClick();assert.deepEqual(u.owner.rules.map(r=>r.id),[2]);
   buttons.find(n=>n.createWithLabel==='添加规则').onClick();assert.deepEqual(u.owner.rules.map(r=>r.id),[2,3]);assert.equal(u.owner.rules[1].level,'0');assert.equal(u.owner.rules[1].boundary,'title');
   u.owner.rules[1].pattern='第一卷.*';buttons.find(n=>n.createWithLabel==='预览').onClick();await until(()=>!u.owner.busy);assert.equal(u.owner.previewReady,true);
-  const draft=JSON.stringify(u.owner.rules);fields[0].onChange('deleted physical row');selects[0].onSelect(2,'章尾独立行');buttons.find(n=>n.createWithLabel==='删除').onClick();
+  const draft=JSON.stringify(u.owner.rules);fields[0].onChange('deleted physical row');selects[0].onSelect(2);buttons.find(n=>n.createWithLabel==='删除').onClick();
   assert.equal(JSON.stringify(u.owner.rules),draft);assert.equal(u.owner.previewReady,true,'retired row does not revoke a new successful preview');
   buttons.find(n=>n.createWithLabel==='应用').onClick();await until(()=>!u.owner.busy);assert.equal(u.owner.operation.confirmation,'confirmed');groups++;
  }
@@ -315,11 +296,7 @@ if(selectedCase==="durable"){
   const f=await setup(),e=editor(f);await e.run(false);e.onApplied=()=>{throw Error('current directory projection callback failed');};
   if(recovery){f.options.afterMethod='rules.mutation.apply';await e.run(true);await e.recover(e.recoveryIdentity(),false);await e.recover(e.recoveryIdentity(),true);}
   else await e.run(true);
-  assert.equal(e.operation.confirmation,'confirmed');assert.equal(e.operation.blocked,false);assert.equal(e.directoryRefreshFailed,true);
-  assert.equal(e.message, recovery ? '原目录规则操作已核对完成，请重新预览当前草稿' : '目录层级规则已应用，正文和分章保持原样',
-    'the primary result remains owned by the current operation while short feedback reports refresh failure');
-  assert.match(e.feedback.events.at(-1)?.message ?? '',/目录规则已应用，当前目录刷新失败/);
-  assert.doesNotMatch(e.feedback.events.at(-1)?.message ?? '',/清理尚未完成/);assert.equal(f.disk(),'');
+  assert.equal(e.operation.confirmation,'confirmed');assert.equal(e.operation.blocked,false);assert.equal(e.directoryRefreshFailed,true);assert.match(e.message,/当前目录刷新尚未完成/);assert.doesNotMatch(e.message,/清理尚未完成/);assert.equal(f.disk(),'');
   const n=f.writes().length;e.onApplied=()=>{e.applied++;};e.retryDirectoryRefresh(e.recoveryIdentity());assert.equal(e.directoryRefreshFailed,false);assert.equal(f.writes().length,n,'refresh retry does not repeat durable apply');groups++;
  }
 }

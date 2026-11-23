@@ -44,9 +44,10 @@ function fixture(candidate = source) {
     PanDirection: { Up: 1, Down: 2 }, Edge: { Top: 0, Bottom: 1 },
     Gesture: boundary, PanGesture: boundary, GesturePriority: { Parallel: 0 }, globalThis: { Gesture: boundary }, TouchType: { Down: 0, Up: 1, Move: 2, Cancel: 3 },
     Date: { now: () => now },
-    animateTo: (options, callback) => { animations.push(options); callback(); },
+
   }, runtime.hooks);
   const owner = built.owner;
+  owner.getUIContext = () => ({ animateTo: (options, callback) => { animations.push(options); callback(); } });
   owner.onPull = (...args) => pulls.push(args);
   owner.onActivity = value => activity.push(value);
   owner.mHeightNumber = 800;

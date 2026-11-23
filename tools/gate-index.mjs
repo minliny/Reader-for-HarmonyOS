@@ -6,7 +6,6 @@ import { dirname, resolve, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
-import { readContractView, EXECUTION_RUNTIME_PATHS } from './lib/contract-registry.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const definitionRoots = [root, resolve(root, '../Reader-Core'), resolve(root, '../Reader-UI')];
@@ -33,8 +32,6 @@ const usage = `Gate index (no tests run by default):
 --need only searches the reviewed catalog. --run requires exact --id and the
 current change. Unqualified or changed test definitions stop that selection;
 they never fall back to a scope/full suite. --release-plan is planning only.
---include-proposals explicitly adds historical proposal annotations to lookup;
-ordinary lookup and execution do not read or depend on that proposal file.
 Ordinary feature/bug-fix builds do not run full gates. Formal release testing
 and a user-requested whole-product acceptance have their own explicit plans.`;
 
@@ -42,17 +39,15 @@ const { values } = parseArgs({ options: {
   need: { type: 'string' }, id: { type: 'string', multiple: true },
   run: { type: 'boolean', default: false }, change: { type: 'string' },
   'release-plan': { type: 'boolean', default: false },
-  'include-proposals': { type: 'boolean', default: false },
   'include-unqualified': { type: 'boolean', default: false },
   limit: { type: 'string', default: '6' }, help: { type: 'boolean', default: false },
 }, allowPositionals: false });
 
 function stop(message) { throw new Error(message); }
-if (values.run && values['include-proposals']) stop('Optimization proposals are lookup annotations only; they cannot participate in execution admission.');
 let optimizationPlans = new Map();
 function readCatalog() {
   let catalog;
-  try { catalog = readContractView(root, 'catalog'); }
+  try { catalog = JSON.parse(readFileSync(resolve(root, 'tools/gate-index.json'), 'utf8')); }
   catch { stop('The reviewed catalog is not published yet. Do not use the invalidated old inventory as execution approval.'); }
   if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.entries)) stop('Invalid gate index schema.');
   const parents = new Set(catalog.entries.map(entry => entry.id));
@@ -71,7 +66,7 @@ function readCatalog() {
     if (catalog.allEntries.some(active => active.id === entry.id || active.file === `tools/${entry.file}` || active.tests?.includes(entry.file))) stop('Retired gate cannot appear in the active index.');
   }
   catalog.retired = retired.entries;
-  if (values['include-proposals'] && catalog.optimizationPlanFile) {
+  if (catalog.optimizationPlanFile) {
     if (catalog.optimizationPlanFile !== 'tools/gate-optimization-plan.json') stop('Invalid optimization plan path.');
     const plan = JSON.parse(readFileSync(resolve(root, catalog.optimizationPlanFile), 'utf8'));
     if (plan.schemaVersion !== 1 || !['PLAN_ONLY', 'IMPLEMENTING', 'IMPLEMENTED'].includes(plan.status) || !Array.isArray(plan.entries)) stop('Invalid optimization proposal.');
@@ -120,47 +115,28 @@ function view(entry) {
       { details: `node tools/gate-index.mjs --id ${entry.id}` }) };
 }
 function stableJSON(value) { return JSON.stringify(value, (_key,item) => item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])) : item); }
-function verifyDefinitions(entries, executionRuntime, helperTransitions = []) {
+function verifyDefinitions(entries) {
   const checked = new Map();
-  const usedTransitions = new Map();
-  const verifyInput = (input, owner) => {
-    const path = resolve(root, input.path);
-    const boundary = definitionRoots.find(base => path.startsWith(base + sep) || path === base);
-    if (!boundary || relative(boundary, path).split(/[\\/]/).some(part => ['.reader-local', '.git'].includes(part))) stop('Invalid gate-definition path.');
-    for (let current = path; ; current = dirname(current)) {
-      const stat = lstatSync(current);
-      if (stat.isSymbolicLink()) stop(`${owner}: symlink definition input requires review: ${input.path}`);
-      if (current === path && !stat.isFile()) stop(`${owner}: definition input must be a regular file: ${input.path}`);
-      if (current === boundary) break;
-    }
-    if (!checked.has(path)) checked.set(path, createHash('sha256').update(readFileSync(path)).digest('hex'));
-    if (checked.get(path) !== input.sha256) stop(`${owner}: REVIEW_NEEDED for changed definition ${input.path}. Review this affected item; do not run a broader suite.`);
-  };
-  const runtimePaths = new Set();
-  if (executionRuntime) {
-    if (!Array.isArray(executionRuntime.definitionInputs) ||
-        JSON.stringify(executionRuntime.definitionInputs.map(input => input.path).sort()) !== JSON.stringify([...EXECUTION_RUNTIME_PATHS].sort())) stop('Invalid exact execution runtime definition.');
-    for (const input of executionRuntime.definitionInputs) { verifyInput(input, 'EXECUTION_RUNTIME'); runtimePaths.add(input.path); }
-  }
-  const resources=readContractView(root, 'cases');
-  const transitions = new Map(helperTransitions.map(record => [`${record.from.path}\0${record.from.sha256}`, record]));
+  const resources=JSON.parse(readFileSync(resolve(root,'tools/contract-case-manifest.json'),'utf8'));
   for (const entry of entries) {
     if (entry.qualification !== 'QUALIFIED') stop(`${entry.id}: ${entry.qualification}; ${entry.repairAction}: ${entry.repair}`);
     const resourceDefinition=entry.caseSelection ? resources.files?.[entry.file.split('/').at(-1)] : resources.legacy?.[entry.file.split('/').at(-1)];
     if (entry.resourceDefinitionSha256 && createHash('sha256').update(stableJSON(resourceDefinition)).digest('hex') !== entry.resourceDefinitionSha256) stop(`${entry.id}: REVIEW_NEEDED for changed resource/case declaration; no broader fallback.`);
     if (!Array.isArray(entry.definitionInputs) || !entry.definitionInputs.length) stop(`${entry.id}: missing reviewed test-definition identity.`);
     for (const input of entry.definitionInputs) {
-      // The exact same physical runtime has already been checked once above.
-      // All other reviewed inputs retain their own historical expected SHA.
-      if (runtimePaths.has(input.path)) continue;
-      const transition = transitions.get(`${input.path}\0${input.sha256}`);
-      if (transition) {
-        for (const proofInput of transition.proofInputs) verifyInput(proofInput, `HELPER_TRANSITION ${input.path}`);
-        verifyInput(transition.to, `HELPER_TRANSITION ${input.path}`);
-        usedTransitions.set(`${input.path}\0${input.sha256}`, {
-          path: input.path, from: input.sha256, to: transition.to.sha256, reviewEvidence: transition.reviewEvidence,
-        });
-      } else verifyInput(input, entry.id);
+      const path = resolve(root, input.path);
+      const boundary = definitionRoots.find(base => path.startsWith(base + sep) || path === base);
+      if (!boundary || relative(boundary, path).split(/[\\/]/).some(part => ['.reader-local', '.git'].includes(part))) stop('Invalid gate-definition path.');
+      for (let current = path; ; current = dirname(current)) {
+        const stat = lstatSync(current);
+        if (stat.isSymbolicLink()) stop(`${entry.id}: symlink definition input requires review: ${input.path}`);
+        if (current === path && !stat.isFile()) stop(`${entry.id}: definition input must be a regular file: ${input.path}`);
+        if (current === boundary) break;
+      }
+      if (!checked.has(path)) checked.set(path, createHash('sha256').update(readFileSync(path)).digest('hex'));
+      if (checked.get(path) !== input.sha256) {
+        stop(`${entry.id}: REVIEW_NEEDED for changed definition ${input.path}. Review this affected item; do not run a broader suite.`);
+      }
     }
     for (const [name, expected] of Object.entries(entry.executionEnvRoots ?? {})) {
       if (process.env[name] !== undefined && resolve(root, process.env[name]) !== resolve(root, expected)) {
@@ -168,7 +144,6 @@ function verifyDefinitions(entries, executionRuntime, helperTransitions = []) {
       }
     }
   }
-  return [...usedTransitions.values()];
 }
 
 if (values.help) { console.log(usage); }
@@ -217,7 +192,7 @@ else if (!values.need && !values.id && !values['release-plan']) {
       if (selected.some(entry => entry.entryPoint)) stop('This Core/action entry requires its exact selector and action inputs; use the displayed entryPoint. No Host suite is substituted.');
       if (catalog.reviewedDefinitionsFrozen !== true) stop('Reviewed definition identities are not finalized; no execution is admitted and no broader suite is substituted.');
       if (!values.change?.trim()) stop('Provide --change with this actual change; the catalog supplies the reviewed necessity evidence.');
-      const helperVersionTransitions = verifyDefinitions(selected, catalog.executionRuntime, catalog.helperTransitions);
+      verifyDefinitions(selected);
       const tests = [...new Set(selected.flatMap(entry => entry.tests ?? []))];
       if (!tests.length || tests.some(name => !/^test-[A-Za-z0-9._-]+\.mjs$/.test(name))) stop('Invalid reviewed test selection.');
       const rationale = `Change: ${values.change.trim()}\n` + selected.map(entry => `${entry.id}: ${entry.necessityReason}`).join('\n');
@@ -231,8 +206,6 @@ else if (!values.need && !values.id && !values['release-plan']) {
       const args = [resolve(root, 'tools/run-contract-tests.mjs'), '--tests', tests.join(','), '--rationale', rationale];
       if (selections.size) args.push('--cases', [...selections].flatMap(([file, ids]) => [...ids].map(id => `${file}#${id}`)).join(','));
       console.log(JSON.stringify({ stage: 'explicitGateSelection', ids: selected.map(entry => entry.id), tests, rationale,
-        executionRuntimeDefinition: catalog.executionRuntime?.definitionSet ?? null,
-        helperVersionTransitions,
         fullSuiteRequested: false, caseSelection: Object.fromEntries([...selections].map(([file,ids])=>[file,[...ids]])), qualification: 'QUALIFIED' }));
       const environment = { ...process.env };
       const unset = [...new Set([...variantEnvironment, ...selected.flatMap(entry => entry.executionEnvUnset ?? [])])];
@@ -247,14 +220,6 @@ else if (!values.need && !values.id && !values['release-plan']) {
       const limit = Number(values.limit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 1000) stop('--limit must be 1..1000.');
       console.log(JSON.stringify({ status: 'NOT_RUN', completeReview: catalog.completeReview,
-        helperVersionTransitions: (catalog.helperTransitions ?? []).map(record => ({
-          path: record.from.path, from: record.from.sha256, to: record.to.sha256, reviewEvidence: record.reviewEvidence,
-        })),
-        ...(catalog.executionRuntime ? { executionRuntime: {
-          definitionSet: catalog.executionRuntime.definitionSet,
-          reviewEvidence: catalog.executionRuntime.reviewEvidence,
-          verification: 'Current shared dispatcher checked once only on explicit --run; all non-runtime check inputs retain their reviewed identities.',
-        } } : {}),
         reviewedFiles: catalog.reviewedFiles, auditBaselineFiles: catalog.auditBaselineFiles,
         inventoryFiles: catalog.inventoryFiles, retiredFiles: catalog.retired.length,
         qualificationCounts: catalog.qualificationCounts,

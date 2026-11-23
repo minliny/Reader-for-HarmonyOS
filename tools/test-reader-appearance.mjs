@@ -17,7 +17,7 @@ import {
   setReaderAppearanceMetric,
   setReaderAppearanceNightTheme,
   setReaderAppearanceTheme,
-} from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
+} from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
 import {
   readerAppearanceFontFamily,
   readerAppearanceFontSlotFamily,
@@ -26,10 +26,10 @@ import {
   readerAppearanceLineHeight,
   readerAppearanceParagraphIndent,
   readerAppearanceThemeStyle,
-} from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
 import {
   createReadingPaginationLayoutSignature,
-} from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+} from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
 
 
 async function stateCase() {
@@ -229,9 +229,9 @@ assert.equal(readerAppearanceParagraphIndent(18, 'firstLine'), 36);
 async function sharedContentCase() {
   const { readFile } = await import('node:fs/promises');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-  const { readerPageTurnStyle, createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
-  const source = await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'utf8');
-  const childSource = await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
+  const { readerPageTurnStyle, createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
+  const source = await readFile(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), 'utf8');
+  const childSource = await readFile(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
   let captured;
   class ContentBoundary {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); captured = this; }

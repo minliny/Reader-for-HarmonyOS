@@ -1,7 +1,0 @@
-PASS valid safe generation exactness and zero sentinel
-PASS invalid generation rejected before typed conversion
-PASS typed reader failure and negative typed result rejected
-PASS actual programmatic and automatic callbacks retain valid domains
-PASS actual callbacks retain invalid-domain refusal and no host effects
-PASS original percentile rounding differential 3581 cases
-PASS invalid diagnostic inputs rejected without selection

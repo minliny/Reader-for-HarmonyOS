@@ -1,0 +1,736 @@
+{
+  "id": "bookshelf.search-submit-crop-reopen",
+  "version": 3,
+  "phase": 1,
+  "pageId": "bookshelf",
+  "fixture": {
+    "id": "public-search-submit-crop-directory-v1",
+    "description": "The confirmed public local directory TXT remains visible on the bookshelf. Open search three times, measure the native submit button before and after typing, then dismiss the IME and return to the bookshelf without submitting any query.",
+    "inputs": {
+      "a": "公共长目录"
+    },
+    "bookTitle": "Reader Phase 1 公共长目录",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "before",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "open-search-1",
+      "kind": "action",
+      "op": "click",
+      "from": "before",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [
+        {
+          "kind": "search-open-accepted"
+        }
+      ]
+    },
+    {
+      "id": "ime-ready-1",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-field",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "open-search-1",
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "input"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ],
+      "keyboard": true,
+      "focus": "reader-book-search-input",
+      "quietMs": 125
+    },
+    {
+      "id": "type-a-1",
+      "kind": "action",
+      "op": "inputText",
+      "from": "ime-ready-1",
+      "target": "reader-book-search-input",
+      "waitFor": [
+        {
+          "kind": "search-editor-edit",
+          "fields": {
+            "payload.length": 5
+          }
+        },
+        {
+          "kind": "search-editor-selection",
+          "fields": {
+            "payload.start": 5,
+            "payload.end": 5
+          }
+        },
+        {
+          "kind": "search-draft-accepted",
+          "fields": {
+            "payload.length": 5
+          }
+        }
+      ],
+      "inputRole": "a"
+    },
+    {
+      "id": "submit-a-ready-1",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "type-a-1",
+      "keyboard": true,
+      "focus": "reader-book-search-input"
+    },
+    {
+      "id": "back-ime-1",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "submit-a-ready-1",
+      "key": "Back"
+    },
+    {
+      "id": "input-ime-hidden-1",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-library-search-back"
+      ],
+      "afterAction": "back-ime-1",
+      "keyboard": false,
+      "quietMs": 125
+    },
+    {
+      "id": "back-to-shelf-1",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "input-ime-hidden-1",
+      "waitFor": [
+        {
+          "kind": "search-back-consumed"
+        }
+      ],
+      "key": "Back"
+    },
+    {
+      "id": "bookshelf-again-1",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "afterAction": "back-to-shelf-1",
+      "waitFor": [
+        {
+          "kind": "search-route-released",
+          "fields": {
+            "payload.route": "bookshelf"
+          }
+        }
+      ],
+      "keyboard": false,
+      "quietMs": 125,
+      "book": true
+    },
+    {
+      "id": "open-search-2",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf-again-1",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [
+        {
+          "kind": "search-open-accepted"
+        }
+      ]
+    },
+    {
+      "id": "ime-ready-2",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-field",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "open-search-2",
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "input"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ],
+      "keyboard": true,
+      "focus": "reader-book-search-input",
+      "quietMs": 125
+    },
+    {
+      "id": "type-a-2",
+      "kind": "action",
+      "op": "inputText",
+      "from": "ime-ready-2",
+      "target": "reader-book-search-input",
+      "waitFor": [
+        {
+          "kind": "search-editor-edit",
+          "fields": {
+            "payload.length": 5
+          }
+        },
+        {
+          "kind": "search-editor-selection",
+          "fields": {
+            "payload.start": 5,
+            "payload.end": 5
+          }
+        },
+        {
+          "kind": "search-draft-accepted",
+          "fields": {
+            "payload.length": 5
+          }
+        }
+      ],
+      "inputRole": "a"
+    },
+    {
+      "id": "submit-a-ready-2",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "type-a-2",
+      "keyboard": true,
+      "focus": "reader-book-search-input"
+    },
+    {
+      "id": "back-ime-2",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "submit-a-ready-2",
+      "key": "Back"
+    },
+    {
+      "id": "input-ime-hidden-2",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-library-search-back"
+      ],
+      "afterAction": "back-ime-2",
+      "keyboard": false,
+      "quietMs": 125
+    },
+    {
+      "id": "back-to-shelf-2",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "input-ime-hidden-2",
+      "waitFor": [
+        {
+          "kind": "search-back-consumed"
+        }
+      ],
+      "key": "Back"
+    },
+    {
+      "id": "bookshelf-again-2",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "afterAction": "back-to-shelf-2",
+      "waitFor": [
+        {
+          "kind": "search-route-released",
+          "fields": {
+            "payload.route": "bookshelf"
+          }
+        }
+      ],
+      "keyboard": false,
+      "quietMs": 125,
+      "book": true
+    },
+    {
+      "id": "open-search-3",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf-again-2",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [
+        {
+          "kind": "search-open-accepted"
+        }
+      ]
+    },
+    {
+      "id": "ime-ready-3",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-field",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "open-search-3",
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "input"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ],
+      "keyboard": true,
+      "focus": "reader-book-search-input",
+      "quietMs": 125
+    },
+    {
+      "id": "type-a-3",
+      "kind": "action",
+      "op": "inputText",
+      "from": "ime-ready-3",
+      "target": "reader-book-search-input",
+      "waitFor": [
+        {
+          "kind": "search-editor-edit",
+          "fields": {
+            "payload.length": 5
+          }
+        },
+        {
+          "kind": "search-editor-selection",
+          "fields": {
+            "payload.start": 5,
+            "payload.end": 5
+          }
+        },
+        {
+          "kind": "search-draft-accepted",
+          "fields": {
+            "payload.length": 5
+          }
+        }
+      ],
+      "inputRole": "a"
+    },
+    {
+      "id": "submit-a-ready-3",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "type-a-3",
+      "keyboard": true,
+      "focus": "reader-book-search-input"
+    },
+    {
+      "id": "back-ime-3",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "submit-a-ready-3",
+      "key": "Back"
+    },
+    {
+      "id": "input-ime-hidden-3",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-library-search-back"
+      ],
+      "afterAction": "back-ime-3",
+      "keyboard": false,
+      "quietMs": 125
+    },
+    {
+      "id": "back-to-shelf-3",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "input-ime-hidden-3",
+      "waitFor": [
+        {
+          "kind": "search-back-consumed"
+        }
+      ],
+      "key": "Back"
+    },
+    {
+      "id": "bookshelf-again-3",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "afterAction": "back-to-shelf-3",
+      "waitFor": [
+        {
+          "kind": "search-route-released",
+          "fields": {
+            "payload.route": "bookshelf"
+          }
+        }
+      ],
+      "keyboard": false,
+      "quietMs": 125,
+      "book": true
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+    "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets",
+    "entry/src/main/ets/features/search/ui/SearchPage.ets",
+    "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
+    "entry/src/main/ets/features/search/presentation/SearchPresentation.ts",
+    "entry/src/main/ets/features/search/presentation/SearchViewState.ts",
+    "entry/src/main/ets/features/search/application/SearchOrchestrator.ets",
+    "entry/src/main/ets/features/search/application/SearchHost.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchTaskPanel.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets",
+    "entry/src/main/ets/features/search/application/SearchGateway.ts"
+  ],
+  "assertions": [
+    {
+      "id": "search.layout.submit-visible.1",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1,
+        "enabled": false
+      },
+      "source": "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets#bar",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "ime-ready-1",
+      "a": "reader-bookshelf-search-submit",
+      "basis": "rectangular",
+      "includeKeyboard": true,
+      "required": true
+    },
+    {
+      "id": "search.input.a.1",
+      "evaluator": "search",
+      "kind": "phase-edit",
+      "required": true,
+      "expected": {
+        "initialLength": 0,
+        "length": 5,
+        "start": 5,
+        "end": 5
+      },
+      "source": "entry/src/main/ets/ui/controls/ReaderSearchField.ets#onTextSelectionChange",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-input",
+        "app-owner"
+      ],
+      "action": "type-a-1",
+      "sample": "ime-ready-1",
+      "entryAction": "open-search-1"
+    },
+    {
+      "id": "search.layout.submit-a-enabled-visible.1",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1,
+        "enabled": true
+      },
+      "source": "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets#bar",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "submit-a-ready-1",
+      "a": "reader-bookshelf-search-submit",
+      "basis": "rectangular",
+      "includeKeyboard": true,
+      "required": true
+    },
+    {
+      "id": "search.back.ime.1",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": true,
+      "expected": {
+        "consumer": "keyboard",
+        "requireSameNativeEditor": true
+      },
+      "source": "entry/src/main/ets/app/ReaderWindowCoordinator.ts#keyboardAreaVp",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-input",
+        "app-owner"
+      ],
+      "action": "back-ime-1",
+      "baseline": "submit-a-ready-1",
+      "sample": "input-ime-hidden-1"
+    },
+    {
+      "id": "search.back.input.1",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": true,
+      "expected": {
+        "consumer": "route",
+        "previousMode": "input",
+        "publicBook": true
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets#returnToBookshelf",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "back-to-shelf-1",
+      "baseline": "input-ime-hidden-1",
+      "sample": "bookshelf-again-1"
+    },
+    {
+      "id": "search.layout.submit-visible.2",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1,
+        "enabled": false
+      },
+      "source": "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets#bar",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "ime-ready-2",
+      "a": "reader-bookshelf-search-submit",
+      "basis": "rectangular",
+      "includeKeyboard": true,
+      "required": true
+    },
+    {
+      "id": "search.input.a.2",
+      "evaluator": "search",
+      "kind": "phase-edit",
+      "required": true,
+      "expected": {
+        "initialLength": 0,
+        "length": 5,
+        "start": 5,
+        "end": 5
+      },
+      "source": "entry/src/main/ets/ui/controls/ReaderSearchField.ets#onTextSelectionChange",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-input",
+        "app-owner"
+      ],
+      "action": "type-a-2",
+      "sample": "ime-ready-2",
+      "entryAction": "open-search-2"
+    },
+    {
+      "id": "search.layout.submit-a-enabled-visible.2",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1,
+        "enabled": true
+      },
+      "source": "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets#bar",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "submit-a-ready-2",
+      "a": "reader-bookshelf-search-submit",
+      "basis": "rectangular",
+      "includeKeyboard": true,
+      "required": true
+    },
+    {
+      "id": "search.back.ime.2",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": true,
+      "expected": {
+        "consumer": "keyboard",
+        "requireSameNativeEditor": true
+      },
+      "source": "entry/src/main/ets/app/ReaderWindowCoordinator.ts#keyboardAreaVp",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-input",
+        "app-owner"
+      ],
+      "action": "back-ime-2",
+      "baseline": "submit-a-ready-2",
+      "sample": "input-ime-hidden-2"
+    },
+    {
+      "id": "search.back.input.2",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": true,
+      "expected": {
+        "consumer": "route",
+        "previousMode": "input",
+        "publicBook": true
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets#returnToBookshelf",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "back-to-shelf-2",
+      "baseline": "input-ime-hidden-2",
+      "sample": "bookshelf-again-2"
+    },
+    {
+      "id": "search.layout.submit-visible.3",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1,
+        "enabled": false
+      },
+      "source": "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets#bar",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "ime-ready-3",
+      "a": "reader-bookshelf-search-submit",
+      "basis": "rectangular",
+      "includeKeyboard": true,
+      "required": true
+    },
+    {
+      "id": "search.input.a.3",
+      "evaluator": "search",
+      "kind": "phase-edit",
+      "required": true,
+      "expected": {
+        "initialLength": 0,
+        "length": 5,
+        "start": 5,
+        "end": 5
+      },
+      "source": "entry/src/main/ets/ui/controls/ReaderSearchField.ets#onTextSelectionChange",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-input",
+        "app-owner"
+      ],
+      "action": "type-a-3",
+      "sample": "ime-ready-3",
+      "entryAction": "open-search-3"
+    },
+    {
+      "id": "search.layout.submit-a-enabled-visible.3",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1,
+        "enabled": true
+      },
+      "source": "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets#bar",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "submit-a-ready-3",
+      "a": "reader-bookshelf-search-submit",
+      "basis": "rectangular",
+      "includeKeyboard": true,
+      "required": true
+    },
+    {
+      "id": "search.back.ime.3",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": true,
+      "expected": {
+        "consumer": "keyboard",
+        "requireSameNativeEditor": true
+      },
+      "source": "entry/src/main/ets/app/ReaderWindowCoordinator.ts#keyboardAreaVp",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-input",
+        "app-owner"
+      ],
+      "action": "back-ime-3",
+      "baseline": "submit-a-ready-3",
+      "sample": "input-ime-hidden-3"
+    },
+    {
+      "id": "search.back.input.3",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": true,
+      "expected": {
+        "consumer": "route",
+        "previousMode": "input",
+        "publicBook": true
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets#returnToBookshelf",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "back-to-shelf-3",
+      "baseline": "input-ime-hidden-3",
+      "sample": "bookshelf-again-3"
+    }
+  ],
+  "structure": {
+    "before": "before",
+    "ime-ready-1": "ime-ready-1",
+    "submit-a-ready-1": "submit-a-ready-1",
+    "input-ime-hidden-1": "input-ime-hidden-1",
+    "bookshelf-again-1": "bookshelf-again-1",
+    "ime-ready-2": "ime-ready-2",
+    "submit-a-ready-2": "submit-a-ready-2",
+    "input-ime-hidden-2": "input-ime-hidden-2",
+    "bookshelf-again-2": "bookshelf-again-2",
+    "ime-ready-3": "ime-ready-3",
+    "submit-a-ready-3": "submit-a-ready-3",
+    "input-ime-hidden-3": "input-ime-hidden-3",
+    "bookshelf-again-3": "bookshelf-again-3"
+  }
+}

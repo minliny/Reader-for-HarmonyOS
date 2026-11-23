@@ -1,9 +1,10 @@
-import { MangaImageGraphicsHost } from './MangaImageGraphicsHost';
+import { MangaImageGraphicsHost } from '../platform/reading-resources/MangaImageGraphicsHost';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import statvfs from '@ohos.file.statvfs';
-import { localImportFailure, type LocalImportFailure } from './LocalImportFailure';
+import { localImportFailure, LocalBookSelectionFailure, type LocalImportFailure } from './LocalImportFailure';
 import picker from '@ohos.file.picker';
+import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerActivity';
 import fileUri from '@ohos.file.fileuri';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
@@ -15,13 +16,16 @@ import {
   type ReaderCoreAssetBridge,
   type ReaderCoreHostRequestEvent,
 } from '@reader/core-harmony';
-import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from './HttpExecuteHost';
-import { CookieSessionStore } from './CookieSessionStore';
-import { ArkWebExecutor } from './ArkWebExecutor';
-import { MangaImageDecodeHost, type MangaImageDecodeTransport } from './MangaImageDecodeHost';
-import { MangaImageMetadataHost } from './MangaImageMetadataHost';
-import { ReadingBodyImageHost } from './ReadingBodyImageHost';
+import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from '../platform/network/HttpExecuteHost';
+import { CookieSessionStore } from '../platform/network/CookieSessionStore';
+import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
+import { MangaImageDecodeHost, type MangaImageDecodeTransport } from '../platform/reading-resources/MangaImageDecodeHost';
+import { MangaImageMetadataHost } from '../platform/reading-resources/MangaImageMetadataHost';
+import { ReadingBodyImageHost } from '../platform/reading-resources/ReadingBodyImageHost';
 import type { MangaOfflineNetworkProbe } from './MangaOfflineNetworkProbe';
+import { buildReaderPublicFixtureDirectory, type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
+import { admitReaderPublicSearchHttpFixtureRequest, readerPublicSearchHttpFixtureMode,
+  type ReaderPublicSearchHttpFixture } from './diagnostics/ReaderPublicSearchHttpFixture';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
@@ -97,7 +101,7 @@ export class ReaderHostRegistry {
   // mutable so a transient filesystem/permission failure can be retried by a
   // later picker invocation in the same UIAbility instead of poisoning that
   // instance with one permanently rejected Promise.
-  private stageRecovery: Promise<void> | undefined;
+  private stageRecovery: Promise<void>;
   private static readonly JsonDocumentLimitBytes = 16 * 1024 * 1024;
   private static readonly JsonDocumentReadChunkBytes = 64 * 1024;
   private static readonly HashChunkBytes = 1024 * 1024;
@@ -113,72 +117,30 @@ export class ReaderHostRegistry {
   private readonly context: common.UIAbilityContext;
   private responseAssetBridge: ReaderCoreAssetBridge | undefined;
   private readonly mangaOfflineProbe: MangaOfflineNetworkProbe | undefined;
+  private readonly fixtureDirectory: string | undefined;
+  private readonly publicSearchHttpFixture: ReaderPublicSearchHttpFixture | undefined;
+  private readonly publicSearchHttpIsCurrent: (() => boolean) | undefined;
   private writeTail: Promise<void> = Promise.resolve();
   /** Serializes read/modify/write operations on the finalize queue. */
   private pendingFinalizeWriteTail: Promise<void> = Promise.resolve();
 
-  private libraryRestoreQuiescing: boolean = false;
-  private libraryRestoreDrain: Promise<void> | undefined;
-  private libraryRestoreFailure: Error | undefined;
-  private readonly activeLibraryFileOperations = new Set<Promise<void>>();
-
-  /** Seal this old Host synchronously; completion means the actual admitted
-   * file-operation promises (including their finally/close) have settled. */
-  quiesceForLibraryRestore(): Promise<void> {
-    if (this.libraryRestoreDrain !== undefined) return this.libraryRestoreDrain;
-    this.libraryRestoreQuiescing = true;
-    this.libraryRestoreDrain = this.drainLibraryFileOperations();
-    return this.libraryRestoreDrain;
-  }
-
-  private assertLibraryFileIoOpen(): void {
-    if (this.libraryRestoreQuiescing) throw new Error('HOST_LIBRARY_RESTORE_QUIESCED');
-  }
-
-  private knownRetiredFileOperation(error: Error): boolean {
-    return ['HOST_LIBRARY_RESTORE_QUIESCED', 'OUTPUT_LIBRARY_RESTORE_QUIESCED',
-      'OUTPUT_RETIRED', 'ORIGINAL_SAVE_RETIRED', 'IMAGE_OUTPUT_RETIRED',
-      'LIBRARY_PACKAGE_SELECTION_RETIRED', 'Local book import preparation cancelled'].includes(error.message);
-  }
-
-  private recordLibraryFileFailure(error: Error): void {
-    if (this.libraryRestoreQuiescing && !this.knownRetiredFileOperation(error) && this.libraryRestoreFailure === undefined) {
-      this.libraryRestoreFailure = error;
-    }
-  }
-
-  private trackLibraryFileOperation<T>(operation: () => Promise<T>): Promise<T> {
-    // Register before invoking work: even a synchronous caller callback may
-    // start quiescence. This promise releases only after the real work ends.
-    let release: (() => void) | undefined;
-    const completed = new Promise<void>((resolve: () => void): void => { release = resolve; });
-    this.activeLibraryFileOperations.add(completed);
-    const finish = (): void => { this.activeLibraryFileOperations.delete(completed); release?.(); };
-    let work: Promise<T>;
-    try { work = operation(); }
-    catch (error) { this.recordLibraryFileFailure(error as Error); finish(); return Promise.reject(error); }
-    return work.then((value: T): T => { finish(); return value; }, (error: Error): Promise<never> => {
-      this.recordLibraryFileFailure(error); finish(); return Promise.reject(error);
-    });
-  }
-
-  private async drainLibraryFileOperations(): Promise<void> {
-    const capture = (error: Error): void => { this.recordLibraryFileFailure(error); };
-    await Promise.all([...(this.stageRecovery === undefined ? [] : [this.stageRecovery.catch(capture)]),
-      this.writeTail.catch(capture), this.pendingFinalizeWriteTail.catch(capture)]);
-    while (this.activeLibraryFileOperations.size > 0) await Promise.all(Array.from(this.activeLibraryFileOperations));
-    if (this.libraryRestoreFailure !== undefined) throw this.libraryRestoreFailure;
-  }
-
-  beginLocalBookStageRecovery(): Promise<void> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(() => this.ensureStageRecovery());
-  }
-
-  constructor(context: common.UIAbilityContext, mangaOfflineProbe?: MangaOfflineNetworkProbe) {
+  constructor(context: common.UIAbilityContext, mangaOfflineProbe?: MangaOfflineNetworkProbe,
+    publicFixture?: ReaderPublicFixtureScope, publicSearchHttpIsCurrent?: () => boolean) {
     this.context = context;
     this.mangaOfflineProbe = mangaOfflineProbe;
-
+    this.publicSearchHttpFixture = readerPublicSearchHttpFixtureMode(publicFixture?.id);
+    this.publicSearchHttpIsCurrent = publicSearchHttpIsCurrent;
+    this.fixtureDirectory = publicFixture === undefined ? undefined :
+      buildReaderPublicFixtureDirectory(context.filesDir, publicFixture.id);
+    if (publicFixture !== undefined && this.fixtureDirectory === undefined) {
+      throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
+    }
+    const directory = this.localBookStageDirectory();
+    this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
+      directory,
+      (): Promise<void> => this.recoverAbandonedStages(),
+    );
+    void this.stageRecovery.catch((): void => {});
   }
 
   private static stageRecoveryFor(directory: string, recover: () => Promise<void>): Promise<void> {
@@ -244,16 +206,10 @@ export class ReaderHostRegistry {
   }
 
   async needsLegacySnapshotMigration(): Promise<boolean> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     return await fileIo.access(this.snapshotPath()) && !(await fileIo.access(this.snapshotMigrationMarkerPath()));
-  
-    });
   }
 
   async markLegacySnapshotMigrated(): Promise<void> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     await this.ensureDirectory(this.snapshotDirectory());
     const marker = new fileIo.AtomicFile(this.snapshotMigrationMarkerPath());
     try {
@@ -271,8 +227,6 @@ export class ReaderHostRegistry {
       }
       throw error;
     }
-  
-    });
   }
 
   createCapabilityRouter(): CapabilityRouter {
@@ -284,6 +238,16 @@ export class ReaderHostRegistry {
       return this.writeSnapshot(event);
     });
     router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      if (this.fixtureDirectory !== undefined) {
+        const fixture = this.publicSearchHttpFixture;
+        const current = this.publicSearchHttpIsCurrent;
+        const request = fixture !== undefined && current?.() === true ?
+          admitReaderPublicSearchHttpFixtureRequest(fixture, event.params) : undefined;
+        if (request === undefined || current === undefined) {
+          return Promise.reject(new Error('PUBLIC_FIXTURE_NETWORK_DISABLED'));
+        }
+        return HttpExecuteHost.instance.execute(request, event.requestId, (): boolean => !current());
+      }
       this.mangaOfflineProbe?.beforeCoreHttp(event.requestId);
       if (this.responseAssetBridge !== undefined && event.params['responseAsset'] === true) {
         return HttpExecuteHost.instance.executeForCore(
@@ -335,9 +299,8 @@ export class ReaderHostRegistry {
    * deliberately confined here because DocumentViewPicker requires a
    * UIAbilityContext. ArkUI pages only ask their gateway to begin an import.
    */
-  async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
+  async selectLocalBookInputs(canOpenPicker: () => boolean): Promise<LocalBookPreparation[]> {
+    const pickerWindowEpoch = ReaderDocumentPickerActivity.windowEpoch();
     await this.ensureStageRecovery();
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = [
@@ -345,18 +308,20 @@ export class ReaderHostRegistry {
     ];
     options.maxSelectNumber = ReaderHostRegistry.LocalBookSelectionLimit;
 
-    const uris = await new picker.DocumentViewPicker(this.context).select(options);
-    // Picker implementations normally honor maxSelectNumber, but a provider
-    // can still return an oversized/malformed result.  Bound the work before
-    // allocating the preparation array or starting staging workers.  The
-    // picker UI remains the source of the user-visible limit; this is a
-    // defensive Host boundary, not a second parser.
-    const selectedUris = uris.slice(0, ReaderHostRegistry.LocalBookSelectionLimit);
-    if (uris.length > selectedUris.length) {
-      hilog.warn(LOG_DOMAIN, 'Reader',
-        'Local picker returned %{public}d entries; truncating to %{public}d',
-        uris.length, selectedUris.length);
+    if (!canOpenPicker()) throw new Error('Local book picker opening is no longer current');
+    const pickerActivity = ReaderDocumentPickerActivity.begin(pickerWindowEpoch);
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).select(options); }
+    finally { pickerActivity.finish(); }
+    // Reject the complete provider response before parsing, allocating workers
+    // or touching staged files. A truncated batch would silently lose choices.
+    if (!Array.isArray(uris)) throw new LocalBookSelectionFailure('invalidSelection');
+    if (uris.length > ReaderHostRegistry.LocalBookSelectionLimit) throw new LocalBookSelectionFailure('selectionLimit');
+    for (const uri of uris) {
+      if (typeof uri !== 'string' || uri.length === 0) throw new LocalBookSelectionFailure('invalidSelection');
     }
+    const selectedUris = uris;
+    if (selectedUris.length === 0) return [];
     const prepared: LocalBookPreparation[] = new Array<LocalBookPreparation>(selectedUris.length);
     let nextIndex = 0;
     const workers: Promise<void>[] = [];
@@ -391,14 +356,10 @@ export class ReaderHostRegistry {
     }
     await Promise.all(workers);
     return prepared;
-  
-    });
   }
 
   /** Same bounded read/hash/private staging as the picker, using the OS URI grant. */
   async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     let fileName = '未命名文件';
     try {
       if (uri.length > 8192 || !uri.startsWith('file://') || /[\u0000\r\n]/.test(uri)) {
@@ -411,13 +372,9 @@ export class ReaderHostRegistry {
     } catch (error) {
       return { state: 'failed', fileName, failure: localImportFailure(errorMessageOf(error)) };
     }
-  
-    });
   }
 
   private async ensureStageRecovery(): Promise<void> {
-    if (this.stageRecovery === undefined) this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
-      this.localBookStageDirectory(), (): Promise<void> => this.recoverAbandonedStages());
     try {
       await this.stageRecovery;
       return;
@@ -441,28 +398,16 @@ export class ReaderHostRegistry {
    * `source.import` semantics remain in the source feature gateway / Rust Core.
    */
   async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     return this.selectBoundedJsonDocument('Legado 书源 JSON');
-  
-    });
   }
 
   /** Select one Core-owned portable rule bundle; Host only transports bytes. */
   async selectRuleBundleJson(): Promise<BookSourceJsonSelection | undefined> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     return this.selectBoundedJsonDocument('Reader 规则包 JSON');
-  
-    });
   }
 
   async selectRssSourceJson(): Promise<BookSourceJsonSelection | undefined> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     return this.selectBoundedJsonDocument('Legado RSS 源 JSON');
-  
-    });
   }
 
   /**
@@ -471,8 +416,6 @@ export class ReaderHostRegistry {
    * source requests; feature gateways still own JSON schema and persistence.
    */
   async loadOnlineJsonDocument(onlineUrl: string): Promise<JsonImportDocument> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     const response = await HttpExecuteHost.instance.executeBounded({
       url: onlineUrl.trim(),
       method: 'GET',
@@ -494,7 +437,7 @@ export class ReaderHostRegistry {
       throw new Error('在线 JSON 响应为空');
     }
     let text = typeof body === 'string' ? body : '';
-    let bytes: Uint8Array = new util.TextEncoder('utf-8').encode(text);
+    let bytes: Uint8Array = new util.TextEncoder('utf-8').encodeInto(text);
     if (text.length === 0 && typeof bodyBase64 === 'string') {
       try {
         bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
@@ -511,8 +454,6 @@ export class ReaderHostRegistry {
       throw new Error('在线地址返回网页而不是 JSON；GitHub 仓库文件请使用 Raw 链接');
     }
     return { fileName: 'online.json', text };
-  
-    });
   }
 
   private async selectBoundedJsonDocument(label: string): Promise<BookSourceJsonSelection | undefined> {
@@ -520,7 +461,10 @@ export class ReaderHostRegistry {
     options.fileSuffixFilters = [`${label}|.json`];
     options.maxSelectNumber = 1;
 
-    const uris = await new picker.DocumentViewPicker(this.context).select(options);
+    const pickerActivity = ReaderDocumentPickerActivity.begin();
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).select(options); }
+    finally { pickerActivity.finish(); }
     if (uris.length === 0) {
       return undefined;
     }
@@ -541,28 +485,16 @@ export class ReaderHostRegistry {
    * destination selection and byte-exact UTF-8 I/O.
    */
   async saveBookSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     return this.saveBoundedJsonDocument(text, suggestedFileName, 'Legado 书源 JSON', 'Book-source');
-  
-    });
   }
 
   /** Save a byte-exact Core rule bundle through the system document picker. */
   async saveRuleBundleJson(text: string, suggestedFileName: string): Promise<string | undefined> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     return this.saveBoundedJsonDocument(text, suggestedFileName, 'Reader 规则包 JSON', 'Rule-bundle');
-  
-    });
   }
 
   async saveRssSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     return this.saveBoundedJsonDocument(text, suggestedFileName, 'Legado RSS 源 JSON', 'RSS-source');
-  
-    });
   }
 
   private async saveBoundedJsonDocument(
@@ -571,7 +503,7 @@ export class ReaderHostRegistry {
     label: string,
     subject: string,
   ): Promise<string | undefined> {
-    const bytes = new util.TextEncoder('utf-8').encode(text);
+    const bytes = new util.TextEncoder('utf-8').encodeInto(text);
     if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
       throw new Error(
         `${subject} export must contain 1-${ReaderHostRegistry.JsonDocumentLimitBytes} UTF-8 bytes`,
@@ -581,7 +513,10 @@ export class ReaderHostRegistry {
     const options = new picker.DocumentSaveOptions();
     options.newFileNames = [safeFileName];
     options.fileSuffixChoices = [`${label}|.json`];
-    const uris = await new picker.DocumentViewPicker(this.context).save(options);
+    const pickerActivity = ReaderDocumentPickerActivity.begin();
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).save(options); }
+    finally { pickerActivity.finish(); }
     if (uris.length === 0) {
       return undefined;
     }
@@ -613,8 +548,6 @@ export class ReaderHostRegistry {
    * for resources, parser upgrades and interruption recovery.
    */
   async commitLocalBookInput(input: LocalBookInput): Promise<LocalBookAssetCommit> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     const hash = this.requireLocalBookHash(input.bookId);
     const stagedPath = this.requireLocalBookStagePath(input, hash);
     await this.ensureDirectory(this.localBookAssetDirectory());
@@ -635,15 +568,11 @@ export class ReaderHostRegistry {
       }
       throw error;
     }
-  
-    });
   }
 
   /** Optional parser-upgrade input, confined to the retained immutable archive.
    * No picker permission, copying, hashing or parsing belongs on this Host path. */
   async retainedLocalBookSourcePath(bookId: string, isCurrent: () => boolean): Promise<string | undefined> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     if (!isCurrent() || !/^local:[0-9a-f]{64}$/.test(bookId)) return undefined;
     const hash = this.requireLocalBookHash(bookId);
     for (const extension of ['source', 'epub']) {
@@ -653,28 +582,18 @@ export class ReaderHostRegistry {
       if (exists) return path;
     }
     return undefined;
-  
-    });
   }
 
   async discardLocalBookInput(input: LocalBookInput): Promise<void> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     const hash = this.requireLocalBookHash(input.bookId);
     const stagedPath = this.requireLocalBookStagePath(input, hash);
     await this.unlinkIfPresent(stagedPath);
-  
-    });
   }
 
   async rollbackLocalBookAsset(commit: LocalBookAssetCommit): Promise<void> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     if (commit.created) {
       await this.unlinkIfPresent(this.requireLocalBookAssetPath(commit));
     }
-  
-    });
   }
 
   /**
@@ -682,13 +601,9 @@ export class ReaderHostRegistry {
    * book deletion. The legacy EPUB name remains eligible for cleanup after migration.
    */
   async releaseLocalBookAsset(bookId: string): Promise<void> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     const hash = this.requireLocalBookHash(bookId);
     await this.unlinkIfPresent(`${this.localBookAssetDirectory()}/${hash}.source`);
     await this.unlinkIfPresent(`${this.localBookAssetDirectory()}/${hash}.epub`);
-  
-    });
   }
 
   /**
@@ -698,8 +613,6 @@ export class ReaderHostRegistry {
    * written to logs, diagnostics, page state, or user export files.
    */
   async enqueuePendingLocalImportFinalize(rollbackToken: JsonObject): Promise<void> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     const pending = this.decodePendingLocalImportFinalizeToken(rollbackToken);
     await this.withPendingFinalizeWrite(async (): Promise<void> => {
       const entries = await this.readPendingLocalImportFinalizesUnsafe();
@@ -716,27 +629,19 @@ export class ReaderHostRegistry {
       }
       await this.writePendingLocalImportFinalizesUnsafe(entries);
     });
-  
-    });
   }
 
   /** Read validated opaque cleanup work for the runtime startup drain. */
   async readPendingLocalImportFinalizes(): Promise<PendingLocalImportFinalize[]> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     let entries: PendingLocalImportFinalize[] = [];
     await this.withPendingFinalizeWrite(async (): Promise<void> => {
       entries = await this.readPendingLocalImportFinalizesUnsafe();
     });
     return entries;
-  
-    });
   }
 
   /** Remove one cleanup entry only after Core has accepted `import.finalize`. */
   async removePendingLocalImportFinalize(transactionId: string): Promise<void> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     const normalized = this.requirePendingFinalizeTransactionId(transactionId);
     await this.withPendingFinalizeWrite(async (): Promise<void> => {
       const entries = await this.readPendingLocalImportFinalizesUnsafe();
@@ -749,13 +654,9 @@ export class ReaderHostRegistry {
         await this.writePendingLocalImportFinalizesUnsafe(remaining);
       }
     });
-  
-    });
   }
 
   private async readSnapshot(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     this.assertSnapshotAddress(event.params);
     const snapshot = await this.readStoredSnapshot();
     if (snapshot === null) {
@@ -773,8 +674,6 @@ export class ReaderHostRegistry {
       value: snapshot.payload,
       revision: `${snapshot.revision}`,
     };
-  
-    });
   }
 
   private requireSelectedFileName(uri: string): string {
@@ -1019,11 +918,11 @@ export class ReaderHostRegistry {
   }
 
   private localBookStageDirectory(): string {
-    return `${this.context.filesDir}/reader-import/staging`;
+    return `${this.pendingLocalImportFinalizeDirectory()}/staging`;
   }
 
   private localBookAssetDirectory(): string {
-    return `${this.context.filesDir}/reader-import/books`;
+    return `${this.pendingLocalImportFinalizeDirectory()}/books`;
   }
 
   private requireLocalBookHash(bookId: string): string {
@@ -1105,8 +1004,6 @@ export class ReaderHostRegistry {
   }
 
   private async writeSnapshot(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {
-    this.assertLibraryFileIoOpen();
-    return this.trackLibraryFileOperation(async () => {
     this.assertSnapshotAddress(event.params);
 
     // A Core mutation waits for this host response. Serialize writes so a
@@ -1136,8 +1033,6 @@ export class ReaderHostRegistry {
         releaseWrite();
       }
     }
-  
-    });
   }
 
   private assertSnapshotAddress(params: JsonObject): void {
@@ -1176,7 +1071,7 @@ export class ReaderHostRegistry {
   }
 
   private snapshotDirectory(): string {
-    return `${this.context.filesDir}/reader-core`;
+    return this.fixtureDirectory ?? `${this.context.filesDir}/reader-core`;
   }
 
   private snapshotPath(): string {
@@ -1188,7 +1083,7 @@ export class ReaderHostRegistry {
   }
 
   private pendingLocalImportFinalizeDirectory(): string {
-    return `${this.context.filesDir}/reader-import`;
+    return `${this.fixtureDirectory ?? this.context.filesDir}/reader-import`;
   }
 
   private pendingLocalImportFinalizePath(): string {

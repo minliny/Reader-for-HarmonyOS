@@ -20,7 +20,7 @@ const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
 try {
 const { sampleReaderControlReplace: sample, readerControlReplaceEndpoint: endpoint,
   sampleReaderControlReplaceHeader: header } =
-  await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
+  await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
 const q = sample(0, 286, 190);
 const f = sample(1, 338, 666);
 if(selectedCase==='historical-motion'){
@@ -109,7 +109,7 @@ for (const width of [240, 262, 286, 338, 520]) {
 }
 }
 if(selectedCase==='recovery-actor'){
-const content=await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url),'utf8');
+const content=await readFile(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets',import.meta.url),'utf8');
 const { checkReaderReplaceRecoveryActor } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 await checkReaderReplaceRecoveryActor(content);
 const identityGuard = 'if (operationId !== undefined && this.state.writeOperationId !== operationId) return;';

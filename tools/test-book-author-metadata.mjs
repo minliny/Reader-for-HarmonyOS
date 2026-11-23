@@ -4,16 +4,16 @@ import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { resolve } from 'node:path';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const {bookAuthorLabel,bookAuthorIdentity,bookTitleAuthorKey}=await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
-const {CachedBookIdentityResolver}=await import('../entry/src/main/ets/features/common/CachedBookIdentity.ts');
-const {SearchResultProjection}=await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
-const {SearchViewState}=await import('../entry/src/main/ets/features/search/SearchViewState.ts');
-const {searchResultRelevance}=await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
+const {bookAuthorLabel,bookAuthorIdentity,bookTitleAuthorKey}=await import('../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
+const {CachedBookIdentityResolver}=await import('../entry/src/main/ets/app/library/CachedBookIdentity.ts');
+const {SearchResultProjection}=await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
+const {SearchViewState}=await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
+const {searchResultRelevance}=await import('../entry/src/main/ets/features/search/presentation/SearchResultRelevance.ts');
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/${name}`,import.meta.url),'utf8');
 const clean=source=>source.replace(/^import[\s\S]*?;\n/gm,'');
-const combined=['features/common/BookAuthorMetadata.ts','features/common/BookSearchTiming.ts','features/source/ReaderSourceCategory.ts','features/source/SourceSwitchProviderFamily.ts','app/ErrorMessage.ts',
-  'features/search/SearchBookProjection.ts','features/search/SearchGateway.ts','app/BookRequestScheduler.ts',
-  'features/common/BookAcquisitionPresentation.ts','features/source/SourceSwitchGateway.ts'].map(n=>clean(read(n))).join('\n');
+const combined=['app/library/BookAuthorMetadata.ts','app/library/BookSearchTiming.ts','features/source/application/ReaderSourceCategory.ts','features/source/application/SourceSwitchProviderFamily.ts','app/ErrorMessage.ts',
+  'features/search/application/SearchBookProjection.ts','features/search/application/SearchGateway.ts','app/BookRequestScheduler.ts',
+  'app/library/BookAcquisitionPresentation.ts','features/source/application/SourceSwitchGateway.ts'].map(n=>clean(read(n))).join('\n');
 const {SearchGateway,SourceSwitchGateway}=await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(combined)).toString('base64')}`);
 
 // Core executes these same expectations against its actual SQLite alias key,

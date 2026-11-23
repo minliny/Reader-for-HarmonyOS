@@ -3,6 +3,7 @@ const definitions={"detail": {"description": "实际detail目录动作Night强�
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { sourceManagementRecoveryProbe, sourceRecoveryNativeAction } = await import('./lib/source-management-recovery-probe.mjs');
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
 const {foundationControls} = await import('./lib/reader-foundation-control-probe.mjs');
@@ -13,25 +14,45 @@ const {readFileSync,readdirSync,writeFileSync} = await import('node:fs');
 const {default: path} = await import('node:path');
 const {createRequire} = await import('node:module');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {readerAppColor} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const {readerAppColor} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
 
 const root=path.resolve(import.meta.dirname,'..'), ets=path.join(root,'entry/src/main/ets');
-const source=file=>readFileSync(path.join(ets,'features',file),'utf8');
+const sourcePaths = new Map([
+  ['bookshelf/BookshelfManagementPage.ets', 'bookshelf/ui/BookshelfManagementPage.ets'],
+  ['bookshelf/BookshelfEmptyPage.ets', 'bookshelf/ui/BookshelfEmptyPage.ets'],
+  ['bookshelf/LocalBookDetail.ets', 'reading/ui/LocalBookDetail.ets'],
+  ['settings/RulesManagementPage.ets', 'settings/ui/RulesManagementPage.ets'],
+  ['source/SourceToolsPage.ets', 'source/ui/SourceToolsPage.ets'],
+  ['source/SourceManagementPage.ets', 'source/ui/SourceManagementPage.ets'],
+]);
+const source=file=>readFileSync(path.join(ets,'features',sourcePaths.get(file) ?? file),'utf8');
 const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[],sharedConsumers:[]};
 if(selectedCase==='detail'){
-const {owner:detail}=localBookDetailSdk();
-Object.assign(detail,{appThemeScheme:'day',book:{sourceId:'source',bookId:'book',contentKind:'novel',title:'标准小说'},toc:[],removing:false,collapsedGroups:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],onOpenDirectory:()=>{}});
+const shared=labeledIconControls();let directoryOpens=0;
+const {owner:detail,properties}=localBookDetailSdk({ReaderLabeledIconAction:shared.component},shared.hooks,shared.properties);
+Object.assign(detail,{appThemeScheme:'day',book:{sourceId:'source',bookId:'book',contentKind:'novel',title:'标准小说'},toc:[],removing:false,collapsedGroups:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],onOpenDirectory:()=>directoryOpens++});
 detail.catalog();
+const directory=[...detail.children.values()].find(child=>child instanceof shared.component);
+assert.ok(directory,'the actual detail mounts the shared directory action');
+assert.equal(directory.focusId,detail.directoryFocusKey());
 for(const scheme of ['day','night','day']){
-  detail.appThemeScheme=scheme;detail.replay();
-  const text=[...detail.nodes.values()].find(n=>n.type==='Text'&&n.create==='完整目录');
+  detail.appThemeScheme=scheme;detail.replay();properties.flush();
+  const nodes=shared.nodes(directory);
+  const text=nodes.find(n=>n.type==='Text'&&n.create==='完整目录');
   const expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);
   output.builder.push({method:'LocalBookDetail.catalog',scheme,actual:text.fontColor,expected});
   assert.equal(text.fontColor,expected,'outlined directory action text uses Night emphasis, not solid-fill foreground');
-  const icon=[...detail.nodes.values()].find(n=>n.type==='Image');
+  const icon=nodes.find(n=>n.type==='Image');
   assert.equal(icon.create,`app.media.book_detail_directory${scheme==='night'?'_theme_night':''}`);
 }
+const directoryNodes=shared.nodes(directory);
+const hit=directoryNodes.find(node=>node.type==='Stack'&&node.onClick);
+const capsule=directoryNodes.find(node=>node.type==='Row');
+assert.deepEqual([hit.width,hit.height,capsule.width,capsule.height],[94,44,94,30]);
+hit.onClick();assert.equal(directoryOpens,1);
+detail.removing=true;detail.replay();properties.flush();
+hit.onClick();assert.equal(directoryOpens,1,'pending removal blocks directory activation through the shared control');
 }
 for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.ets','bookshelf/BookshelfManagementPage.ets'].filter(file=>'buttons-'+file.split('/')[0]===selectedCase)){
   const shared=foundationControls();const {owner}=createReaderBuilderProbe(source(file),['actionButton'],shared.dependencies,shared.hooks);
@@ -42,10 +63,9 @@ for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.et
     const text=shared.nodes(owner).filter(n=>n.type==='Text');
     assert.equal(text[0].fontColor,readerAppColor('TOK_ON_PRIMARY',scheme),'solid action keeps its independent onPrimary');
     assert.equal(text[0].backgroundColor,readerAppColor('TOK_PRIMARY_DARK',scheme),'solid primaryDark fill is unchanged');
-    const secondaryRole=file.startsWith('source/')?'TOK_CONTROL_INK':scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK';
-    assert.equal(text[1].fontColor,readerAppColor(secondaryRole,scheme),'secondary action uses its actual current role');
+    assert.equal(text[1].fontColor,readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme));
     assert.equal(text[1].backgroundColor,readerAppColor('TOK_SURFACE_PANEL_SOFT',scheme));
-    output.builder.push({method:file+'.actionButton',scheme,busy,primary:{font:text[0].fontColor,fill:text[0].backgroundColor},secondary:{role:secondaryRole,font:text[1].fontColor,fill:text[1].backgroundColor}});
+    output.builder.push({method:file+'.actionButton',scheme,busy,primary:{font:text[0].fontColor,fill:text[0].backgroundColor},secondary:{font:text[1].fontColor,fill:text[1].backgroundColor}});
   }
 }
 // Inspect the actual SDK AST for every foreground consumer. Restrict this gate
@@ -67,11 +87,11 @@ function scanFile(file){
     }ts.forEachChild(node,visit);
   }visit(tree);
 }
-const directFiles={rss:['rss/RssSubscriptionEditorPage.ets','rss/RssPage.ets','rss/RssSubscriptionManagementPage.ets','rss/RssEntryDetailPage.ets'],sync:['sync/SyncPage.ets'],settings:['settings/RulesManagementPage.ets'],source:['source/SourceToolsPage.ets'],bookshelf:['bookshelf/LocalBookDetail.ets'],common:['common/ReaderSelect.ets']};
+const directFiles={rss:['rss/RssSubscriptionEditorPage.ets','rss/RssPage.ets','rss/RssSubscriptionManagementPage.ets','rss/RssEntryDetailPage.ets'],sync:['sync/SyncPage.ets'],settings:['settings/RulesManagementPage.ets'],source:['source/SourceToolsPage.ets'],bookshelf:['bookshelf/LocalBookDetail.ets'],common:['../ui/controls/ReaderSelect.ets']};
 if(selectedCase.startsWith('direct-'))for(const file of directFiles[selectedCase.slice(7)])scanFile(path.join(ets,'features',file));
 // Four former foreground sites now belong to reviewed message consumers.
 // Bind each original owner to its actual emitted current native foreground.
-const recoverySource=source('common/ReaderRecoveryAction.ets');
+const recoverySource=source('../ui/feedback/ReaderRecoveryAction.ets');
 
 output.messageConsumers=[];const messageColors=[];
 if(selectedCase==='message-action') for(const variant of ['compact','rssManagement','notice','text']){
@@ -82,10 +102,12 @@ if(selectedCase==='message-action') for(const variant of ['compact','rssManageme
   assert.equal(native.fontColor,expected,'actual approved message foreground and current scheme');messageColors.push({variant,scheme,color:native.fontColor});
  }
 }
-output.messageConsumers.push({file:'features/common/ReaderRecoveryAction.ets',colors:messageColors});
+output.messageConsumers.push({file:'ui/feedback/ReaderRecoveryAction.ets',colors:messageColors});
 if(selectedCase==='empty-shelf'){
- const file='bookshelf/BookshelfEmptyCard.ets',sdk=boundedSurfaceSdk();let imported=0,searched=0;
- const owner=sdk.consumer(source(file),undefined,{}, {onImportRequested:()=>imported++,onSearchRequested:()=>searched++});owner.initialRender();
+ const file='bookshelf/BookshelfEmptyPage.ets',sdk=boundedSurfaceSdk();let imported=0,searched=0;
+ const owner=sdk.consumer(source(file),['build','emptyCardWidth','importFocusId']);
+ Object.assign(owner,{headerBottom:0,contentFrame:()=>({left:19,right:19,width:352}),bottomContentInset:()=>0,
+  sectionHeader(){},onImportRequested:()=>imported++,onSearchRequested:()=>searched++});owner.initialRender();
  const actions=sdk.walk(owner).filter(actor=>actor instanceof sdk.deps.ReaderRecoveryAction);
  assert.deepEqual(actions.map(actor=>actor.label),['导入本地书籍','搜索书籍']);
  const colors=[];
@@ -116,7 +138,7 @@ for(const file of ['bookshelf/BookshelfManagementPage.ets','source/SourceToolsPa
  }
  output.messageConsumers.push({file:'features/'+file,method:'statusCard',colors});
 }
-// Ten former foreground sites moved into finite public Button/Icon specs in
+// Eleven former foreground sites moved into finite public Button/Icon specs in
 // the fourth, fifth and Source action migrations. Bind exact actual owner/spec/native edges; a raw AST total
 // alone cannot prove their semantic color or retained theme propagation.
 const moved=[
@@ -128,16 +150,46 @@ const moved=[
  {file:'rss/RssPage.ets',method:'managePill',specId:'rss-manage',label:'管理',arguments:[],methods:['managePill'],icon:true},
  {file:'rss/RssPage.ets',method:'recentUnreadHeader',specId:'rss-view-all',label:'查看全部',arguments:[],methods:['recentUnreadHeader'],icon:true},
  {file:'rss/RssSourceFeedPage.ets',method:'entrySectionHeader',specId:'rss-source-operations',label:'源操作',arguments:[],methods:['entrySectionHeader'],icon:true},
- {file:'source/SourceManagementPage.ets',method:'loginButton',specId:'source-management-login',label:'登录',arguments:[{sourceId:'source1',name:'实际书源',checkState:'idle'}],methods:['loginButton','sourceActionEnabled','sourceActionLabel']},
+ {file:'source/SourceManagementPage.ets',method:'loginButton',specId:'source-management-login',label:'登录',arguments:[{sourceId:'source1',loginUrl:'https://source.test/login'}],methods:['loginButton','sourceRowCommand']},
  {file:'sync/SyncPage.ets',method:'configActions',specId:'sync-config-test',label:'测试网络连通性',arguments:[],methods:['configActions','canMutate','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath']},
 ];
 for(const edge of moved.filter(edge=>'shared-'+edge.file.split('/')[0]===selectedCase)){
  const shared=edge.icon?labeledIconControls():foundationControls(),{owner}=createReaderBuilderProbe(source(edge.file),edge.methods,{...shared.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62,readerRecoveryView},shared.hooks);
- Object.assign(owner,{mounted:true,operation:{receipt:undefined,readFacts:undefined,confirmedParts:0},statusKind:'error',statusMessage:'加载失败',readFacts:{fact:'failed',message:'离线',canRetry:true,generation:1},onRetryLoad:()=>{},onReconcile:()=>{},onLoginSource:()=>{},appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0,facts:{canMutate:true}},onManage:()=>{},onModeRequested:()=>{},onSourceOperations:()=>{},onSaveConfig:()=>{},onTestConnection:()=>{},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
+ Object.assign(owner,{operation:{receipt:undefined,readFacts:undefined,confirmedParts:0},statusKind:'error',statusMessage:'加载失败',readFacts:{fact:'failed',message:'离线',canRetry:true,generation:1},onRetryLoad:()=>{},onReconcile:()=>{},onLoginSource:()=>{},appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0,facts:{canMutate:true}},onManage:()=>{},onModeRequested:()=>{},onSourceOperations:()=>{},onSaveConfig:()=>{},onTestConnection:()=>{},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
  owner[edge.method](...edge.arguments);const actors=[...owner.children.values()].filter(c=>c instanceof (edge.icon?shared.component:shared.button.Component)&&c.specId===edge.specId&&c.label===edge.label);assert.equal(actors.length,1,'exact current owner -> finite shared class: '+edge.file+'/'+edge.method);
  const actor=actors[0];if(!edge.icon)assert.equal(actor.primary,false,'the original emphasis branch remains secondary');const native=shared.nodes(actor).find(n=>n.type==='Text');assert.ok(native);
- const colors=[];for(const scheme of ['day','night','day']){owner.appThemeScheme=scheme;shared.flush(owner);const role=edge.role??(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK'),expected=readerAppColor(role,scheme);assert.equal(native.fontColor,expected,'real shared theme propagation: '+edge.file+'/'+edge.method);colors.push(native.fontColor);}
+ const colors=[];for(const scheme of ['day','night','day']){owner.appThemeScheme=scheme;shared.flush(owner);const expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);assert.equal(native.fontColor,expected,'real shared theme propagation: '+edge.file+'/'+edge.method);colors.push(native.fontColor);}
  output.sharedConsumers.push({file:'features/'+edge.file,method:edge.method,specId:edge.specId,label:edge.label,colors});
+}
+if(selectedCase==='shared-source') {
+ const pageSource=source('source/SourceManagementPage.ets');
+ assert.doesNotMatch(pageSource,/\bstatusBanner\b/,'retired private banner is not a current foreground producer');
+ const projection=sourceManagementRecoveryProbe(pageSource,{sources:[{sourceId:'retained-source'}],
+  operation:{action:'load',sourceId:'',readFacts:{fact:'failed',generation:1,canRetry:true,message:'read unavailable'}},
+  statusKind:'error',statusMessage:'read unavailable',onReconcile(){},onRetryLoad(){}});
+ const {actor}=sourceRecoveryNativeAction(projection,'刷新列表');
+ const native=projection.sdk.nodes(actor).find(n=>n.type==='Text'&&n.create==='刷新列表');assert.ok(native);
+ // StorageLink is a platform store subscription, not a parent @Prop. The
+ // bounded recorder has independent SDK property objects for these links;
+ // drive the declared subscribers with one simulated platform store event.
+ const actionSource=readFileSync(path.join(ets,'ui/feedback/ReaderRecoveryAction.ets'),'utf8');
+ for(const text of [pageSource,actionSource]) {
+  const tree=ts.createSourceFile('SourceSchemeSubscriber.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  const component=tree.statements.find(node=>node.members&&node.members.some(member=>member.name?.getText(tree)==='appThemeScheme'));
+  const field=component.members.find(member=>member.name?.getText(tree)==='appThemeScheme');
+  assert.ok(ts.getAllDecorators(field).some(decorator=>ts.isCallExpression(decorator.expression)&&
+   decorator.expression.expression.getText(tree)==='StorageLink'&&decorator.expression.arguments[0]?.text==='readerAppScheme'),
+  'actual producer and retained action subscribe to the same platform scheme key');
+ }
+ const colors=[];
+ for(const scheme of ['day','night','day']) {
+  projection.owner.appThemeScheme=scheme;actor.appThemeScheme=scheme;projection.sdk.properties.flush();
+  const expected=readerAppColor('TOK_MESSAGE_SOFT_INK',scheme);
+  assert.equal(native.fontColor,expected,'actual Source sourceList -> ReaderRecoveryAction semantic ink');
+  colors.push(native.fontColor);
+ }
+ output.sharedConsumers.push({file:'features/source/ui/SourceManagementPage.ets',method:'sourceList',
+  sharedComponent:'ReaderRecoveryAction',label:'刷新列表',colors});
 }
 console.log('selected primary foreground actual SDK/AST case PASS: '+selectedCase);
 

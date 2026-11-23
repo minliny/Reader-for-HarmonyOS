@@ -1,0 +1,216 @@
+{
+  "id": "source-management.original-recovery-expand-touch-edge",
+  "version": 1,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-read-v1",
+    "description": "Open normal Source Management on an isolated public target with the existing genuine blocked original operation. Observe the folded recovery body at the current window. Use only the top edge of the actual local Expand button. Preserve the current notice and pending operation.",
+    "publicSources": true
+  },
+  "ownerSources": [
+    "entry/src/main/ets/app/ReaderOperationFacts.ts",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts",
+    "entry/src/main/ets/app/ReaderRecoveryProjection.ts",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
+    "entry/src/main/ets/pages/ReaderSourceTextMetrics.ets"
+  ],
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "recovery-collapsed",
+      "kind": "sample",
+      "afterAction": "open-sources",
+      "keyboard": false,
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list"
+      ],
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "recovery",
+            "payload.recovery.branch": "original"
+          }
+        },
+        {
+          "kind": "source.recovery-title",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.branch": "original"
+          }
+        }
+      ],
+      "quietMs": 600
+    },
+    {
+      "id": "expand-recovery-edge",
+      "kind": "action",
+      "op": "click",
+      "from": "recovery-collapsed",
+      "target": "reader-source-original-expand",
+      "beforeEvent": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.state": "recovery",
+            "payload.recovery.branch": "original"
+          }
+        },
+        {
+          "kind": "source.recovery-title",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.branch": "original",
+            "payload.title": "clipped"
+          }
+        }
+      ],
+      "waitFor": [
+        {
+          "kind": "source.recovery-body-state",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.branch": "original",
+            "payload.phase": "expanded"
+          }
+        }
+      ],
+      "tapEdge": "top"
+    },
+    {
+      "id": "recovery-expanded",
+      "kind": "sample",
+      "afterAction": "expand-recovery-edge",
+      "keyboard": false,
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list"
+      ],
+      "waitFor": [
+        {
+          "kind": "source.recovery-body-state",
+          "channel": "business",
+          "match": "latest",
+          "fields": {
+            "payload.branch": "original",
+            "payload.phase": "expanded"
+          }
+        }
+      ],
+      "quietMs": 500
+    }
+  ],
+  "assertions": [
+    {
+      "id": "source.recovery.original.expand-edge-target",
+      "evaluator": "source",
+      "kind": "recovery-native-control",
+      "required": false,
+      "condition": "The current source opening shows a blocked original operation with a title that needs folding at the measured native width.",
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#originalRecovery",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-sources",
+      "sample": "recovery-collapsed",
+      "expected": {
+        "target": "reader-source-original-expand",
+        "requireNativeTouchTarget": true
+      }
+    },
+    {
+      "id": "source.recovery.original.expand-top-edge",
+      "evaluator": "source",
+      "kind": "recovery-expand-edge",
+      "required": false,
+      "condition": "The current original Source recovery notice is folded in the native window and presents its current Expand control.",
+      "source": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets#build",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "entryAction": "open-sources",
+      "baseline": "recovery-collapsed",
+      "action": "expand-recovery-edge",
+      "sample": "recovery-expanded",
+      "expected": {
+        "branch": "original",
+        "target": "reader-source-original-expand",
+        "tapEdge": "top"
+      }
+    }
+  ],
+  "structure": {
+    "recovery-collapsed": "recovery-collapsed",
+    "recovery-expanded": "recovery-expanded"
+  }
+}

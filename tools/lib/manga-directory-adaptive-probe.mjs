@@ -1,10 +1,12 @@
-import { mangaDirectoryQuickMinimumListHeight } from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { mangaDirectoryQuickMinimumListHeight } from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 
 export const mangaDirectoryAdaptiveFields = ['directoryOuterScroller', 'quickOuterViewportHeight', 'quickOuterContentHeight',
   'quickOuterListReady', 'quickOuterPositioned', 'quickOuterOverflow', 'quickOuterUserScrolled', 'quickOuterPositionRevision'];
+export const mangaPanelOpeningMembers = ['onReaderWindowOwnershipChanged', 'onPanelForegroundChanged', 'panelOpeningCurrent', 'cancelPanelOpening'];
 export const mangaDirectoryAdaptiveMembers = ['directoryOuterIdentity', 'resetDirectoryOuterLayout', 'onDirectoryOuterArea',
   'onDirectoryOuterContentArea', 'onDirectoryListFirstLayout', 'onDirectoryOuterUserScroll', 'scheduleDirectoryOuterPosition',
-  'directoryQuickToolsHeight', 'directoryQuickRemainingHeight', 'directoryCurrentOpenInset', 'directoryCurrentCatalogEntry'];
+  'directoryQuickToolsHeight', 'directoryQuickRemainingHeight', 'directoryCurrentOpenInset', 'directoryCurrentCatalogEntry',
+  'directorySheetInputCurrent', 'openDirectoryDestination', 'readerPanelForeground', ...mangaPanelOpeningMembers];
 // Only the platform scroll writer is a port. Production layout, timing,
 // identity, measured-area and current-inset helpers execute unchanged.
 export class MangaDirectoryScrollPort {

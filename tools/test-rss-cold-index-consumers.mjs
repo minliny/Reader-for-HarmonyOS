@@ -1,24 +1,27 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
-const { createIndexProductBuilderProbe, productSurfaceDescendants }=await import('./lib/reader-extended-product-surface-probe.mjs');
+const { resolveEtsLoaderRoot }=await import("./lib/tool-environment.mjs");
+const {createRequire}=await import("node:module");
 const {readFileSync}=await import("node:fs");
 const {fixture,seedEntry,draft,settle}=await import("./lib/rss-management-durable-probe.mjs");
 const {createReaderBuilderProbe}=await import("./lib/reader-control-builder-probe.mjs");
 const {boundedSurfaceSdk,boundedMembers}=await import("./lib/bounded-surface-sdk-probe.mjs");
 const {projectOperationFacts}=await import("../entry/src/main/ets/app/ReaderOperationFacts.ts");
-const {RssPresentationProjection}=await import("../entry/src/main/ets/features/rss/RssPresentationProjection.ts");
+const {RssPresentationProjection}=await import("../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts");
 const {readerRecoveryView}=await import("../entry/src/main/ets/app/ReaderRecoveryProjection.ts");
 const {actualReaderPageShell}=await import("./lib/reader-page-shell-runtime-probe.mjs");
-const {pageFrameSdkFixture}=await import('./lib/reader-page-frame-sdk-fixture.mjs');
-const {selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
-const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
-const productionFile=p=>new URL('../entry/src/main/ets/'+p,import.meta.url);
-const read=p=>readFileSync(productionFile(p),'utf8');
+const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));syntax.builderParamObjectCollection.set('MainTabShell',new Set(['content']));
+const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const routes={main:'rss',management:'rssSubscriptionManagement',editor:'rssSubscriptionEditor',feed:'rssSourceFeed',entry:'rssEntryDetail'};
 const pages={main:'RssPage',management:'RssSubscriptionManagementPage',editor:'RssSubscriptionEditorPage',feed:'RssSourceFeedPage',entry:'RssEntryDetailPage'};
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-const methods=["rssProduct","rssUi","expandedLayout",'getRssOrchestrator','retireRssPresentation','getRssEditorOrchestrator','retireRssEditorPresentation','isCurrentRssEditorPresentation','isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','isCurrentRuntime','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems','rssPageContent','rssPageSurface','loadRss','rssFeedBinding','reconcileRssFeedOriginal','rssSubscriptionManagementContent','rssSubscriptionManagementSurface','rssEditorContent','rssEditorSurface','rssSourceFeedContent','rssSourceFeedSurface','rssEntryDetailContent','rssEntryDetailSurface','rssSourceBinding','rssEntryBinding','applyRssSourceSnapshot','applyRssEntrySnapshot','failRssEntryOperation'];
+const methods=['getRssOrchestrator','retireRssPresentation','getRssEditorOrchestrator','retireRssEditorPresentation','isCurrentRssEditorPresentation',
+ 'isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','isCurrentRuntime','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems',
+ 'rssPageContent','rssPageSurface','loadRss','rssFeedBinding','reconcileRssFeedOriginal',
+ 'rssSubscriptionManagementContent','rssSubscriptionManagementSurface','rssEditorContent','rssEditorSurface',
+ 'rssSourceFeedContent','rssSourceFeedSurface','rssEntryDetailContent','rssEntryDetailSurface','rssSourceBinding','rssEntryBinding',
+ 'applyRssSourceSnapshot','applyRssEntrySnapshot','failRssEntryOperation'];
 // Compilation is immutable; the cold Core, Runtime authority, orchestrators,
 // SDK instance/property cells and physical callbacks remain per-fixture. Both
 // original and guard-mutant Index sources get their own actual SDK emission.
@@ -33,17 +36,20 @@ function index(f,kind='management',instance=1,indexSource=read('pages/Index.ets'
  if(compiled===undefined){
   const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   for(const name of Object.values(pages))sdk.childSources[name]=read('features/rss/'+name+'.ets');
-  compiled=createIndexProductBuilderProbe(indexSource,methods,{...sdk.deps,ReaderRuntimeOwner:runtimePort,RssOrchestrator:rssPort,
+  compiled=createReaderBuilderProbe(indexSource,methods,{...sdk.deps,ReaderRuntimeOwner:runtimePort,RssOrchestrator:rssPort,
    RssSubscriptionEditorOrchestrator:editorPort,projectOperationFacts,RssPresentationProjection,
    ...Object.fromEntries(Object.values(pages).map(n=>[n,Child])),isReaderProductSurfaceEnabled:()=>true,deviceInfo:{deviceType:'phone'},hilog:{error(){}}},sdk.hooks);
-  compiled.properties=sdk.properties;indexTypes.set(indexSource,compiled);
+  indexTypes.set(indexSource,compiled);
  }
  const p=new compiled.Component(undefined,{});
  assert.notEqual(p.nodes,compiled.owner.nodes,'each cold Index owns fresh native nodes');
- Object.assign(p,{route:routes[kind],readerWindowMetricsRevision:-1,mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:1,rssInstanceIdentity:instance,rssPresentationIdentity:'',rssEditorPresentationIdentity:'',rssProduct:{rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:projectOperationFacts({phase:'idle'}),rssEditorSnapshot:f.emptyEditor,rssSourceRead:projectOperationFacts({phase:'idle'}),rssEntryRead:projectOperationFacts({phase:'idle'}),selectedRssSubscription:{subscriptionId:'s',title:'Feed s'},selectedRssItem:{subscriptionId:'s',guid:'g',title:'Entry g'},selectedRssItems:[],selectedRssFavoriteState:'loading'}});
+ Object.assign(p,{route:routes[kind],mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:1,
+  rssInstanceIdentity:instance,rssPresentationIdentity:'',rssEditorPresentationIdentity:'',rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},
+  rssManagementRead:projectOperationFacts({phase:'idle'}),rssEditorSnapshot:f.emptyEditor,rssSourceRead:projectOperationFacts({phase:'idle'}),rssEntryRead:projectOperationFacts({phase:'idle'}),
+  selectedRssSubscription:{subscriptionId:'s',title:'Feed s'},selectedRssItem:{subscriptionId:'s',guid:'g',title:'Entry g'},selectedRssItems:[],selectedRssFavoriteState:'loading'});
  const host=p.getRssOrchestrator(),editor=kind==='editor'?p.getRssEditorOrchestrator():undefined;
  const name={main:'rssPageContent',management:'rssSubscriptionManagementContent',editor:'rssEditorContent',feed:'rssSourceFeedContent',entry:'rssEntryDetailContent'}[kind];let rendered=false;
- const params=()=>{if(rendered)p.replay();else{p[name]();rendered=true;}compiled.properties.flush();return productSurfaceDescendants(p).filter(c=>c instanceof Child).at(-1).params;};
+ const params=()=>{if(rendered)p.replay();else{p[name]();rendered=true;}return [...p.children.values()].filter(c=>c instanceof Child).at(-1).params;};
  const open=()=>{if(kind==='main')p.loadRss(1);else if(kind==='management')host.open();else if(kind==='editor')editor.openCreate();else {const b=kind==='entry'?p.rssEntryBinding(1,'s','g'):p.rssSourceBinding(1,'s');
   if(kind==='entry')host.openEntry('s','g',b.emit,b.failed,b.current,b.emitOperation,b.emitRead,b.emitOriginal);
   else host.loadSourceFeed('s',b.emit,b.failed,b.current,b.emitOperation,b.emitRead,b.emitOriginal);}};
@@ -52,22 +58,18 @@ function index(f,kind='management',instance=1,indexSource=read('pages/Index.ets'
 function page(f,x,kind){
  let compiled=pageTypes.get(kind);
  if(compiled===undefined){
-  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),source=read('features/rss/'+pages[kind]+'.ets'),shared=read('features/rss/RssOriginalRecoverySurface.ets');
-  const frame=pageFrameSdkFixture({properties:sdk.properties,dependencies:sdk.deps});
-  Object.assign(sdk.deps,frame.deps);
-  Object.assign(sdk.childSources,frame.hooks.childSources);
+  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),source=read('features/rss/'+pages[kind]+'.ets'),shared=read('features/rss/ui/RssOriginalRecoverySurface.ets');
   sdk.childSources.RssOriginalRecoverySurface=shared;
   const Surface=createReaderBuilderProbe(shared,boundedMembers(shared),sdk.deps,sdk.hooks).Component;sdk.deps.RssOriginalRecoverySurface=Surface;
-  for(const n of ['ReaderButton','ReaderLabeledIconAction','ReaderToggle','ReaderFormField','PageBackBar','ReaderSearchField','StatusBadge'])sdk.childSources[n]=read('features/common/'+n+'.ets');
+  sdk.childSources.PageBackBar=read('ui/chrome/PageBackBar.ets');
+  for(const n of ['ReaderSearchField','StatusBadge','ReaderButton','ReaderLabeledIconAction','ReaderToggle','ReaderFormField'])sdk.childSources[n]=read('ui/controls/'+n+'.ets');
   sdk.childSources.MainTabShell=read('features/shell/MainTabShell.ets');
-  const constants=kind==='main'
-   ? selectedProductionValues(productionFile('features/rss/RssPage.ets'),['RSS_FLOATING_HEADER_HEIGHT'],{
-       readerPageContentStartInset:actualReaderPageShell().readerPageContentStartInset,TOK_SPACE_XS:sdk.deps.TOK_SPACE_XS})
-   : kind==='entry'
-    ? selectedProductionValues(productionFile('features/rss/RssEntryDetailPage.ets'),['RSS_DETAIL_ACTION_AREA_HEIGHT'])
-    : {};
+  const constants={};if(kind==='main'){
+   const declaration=source.match(/^const RSS_FLOATING_HEADER_HEIGHT = ([^;]+);/m);assert.ok(declaration,'actual RSS header fallback declaration');
+   constants.RSS_FLOATING_HEADER_HEIGHT=new Function('readerPageContentStartInset','TOK_SPACE_XS','return ('+declaration[1]+');')(actualReaderPageShell().readerPageContentStartInset,sdk.deps.TOK_SPACE_XS);
+  }
   const template=sdk.consumer(source,boundedMembers(source),{...constants,projectOperationFacts,readerRecoveryView,EMPTY_RSS_EDITOR_SNAPSHOT:f.emptyEditor,
-   Scroller:class{},registerReaderFonts(){}},x.params());
+   RSS_DETAIL_ACTION_AREA_HEIGHT:62,Scroller:class{},registerReaderFonts(){}},x.params());
   compiled={sdk,Component:template.constructor,template};pageTypes.set(kind,compiled);
  }
  const {sdk}=compiled,child=new compiled.Component(undefined,x.params());
@@ -85,141 +87,134 @@ async function pending(kind,failure='beforeMethod'){
  if(kind==='entry'||kind==='feed'||kind==='main')await assert.rejects(f.rss.persistFavorite('s','g',10));
  const original=JSON.parse(f.disk());f.retire();return{f:await fixture(f),original};
 }
-function editToggleGuard(source, mode) {
- const {ts,options}=installedEtsCompiler();
- const tree=ts.createSourceFile('Index.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
- assert.deepEqual(tree.parseDiagnostics,[]);
- const owner=tree.statements.find(node=>ts.isStructDeclaration(node)&&node.name.text==='Index');
- const method=owner?.members.find(node=>ts.isMethodDeclaration(node)&&node.name?.text==='rssSubscriptionManagementSurface');
- assert.ok(method?.body,'actual RSS management Builder');
- const guards=[];
- function visit(node) {
-  if(ts.isPropertyAssignment(node)&&node.name.text==='onToggle'&&ts.isArrowFunction(node.initializer)&&ts.isBlock(node.initializer.body)) {
-   for(const statement of node.initializer.body.statements) {
-    if(!ts.isIfStatement(statement)||statement.elseStatement)continue;
-    const effect=ts.isBlock(statement.thenStatement)&&statement.thenStatement.statements.length===1
-     ? statement.thenStatement.statements[0] : statement.thenStatement;
-    if(ts.isExpressionStatement(effect)&&ts.isCallExpression(effect.expression)&&
-       ts.isPropertyAccessExpression(effect.expression.expression)&&effect.expression.expression.name.text==='toggleSubscription') {
-     guards.push({statement,effect});
-    }
-   }
-  }
-  ts.forEachChild(node,visit);
- }
- visit(method.body);
- assert.equal(guards.length,1,'one management toggle admission around the real effect');
- const {statement,effect}=guards[0];
- const replacement=mode==='remove'?effect.getText(tree):'if ('+statement.expression.getText(tree)+') { '+effect.getText(tree)+' }';
- return source.slice(0,statement.getStart(tree))+replacement+source.slice(statement.end);
-}
-async function coldReadAndContinue(kind) {
- const {f,original}=await pending(kind),x=index(f,kind);
- x.open();
- await x.settled();
- const v=page(f,x,kind);
+let cases=0;
+const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));let passed=false;try{
+const key=id;
+if(key==='management'){
+for(const kind of ['management']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
  assert.equal(f.writes().length,0,'cold opening only exact query and current read');
- v.action('核对原操作回执').click();
- await x.settled();
- assert.equal(f.writes().length,0);
- v.update();
- if(kind==='feed'||kind==='main') {
-  assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');
-  return;
- }
- const old=v.action('继续原操作');
- v.action('核对原操作回执').click();
- await x.settled();
- v.update();
- old.click();
- await x.settled();
- assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
- v.action('继续原操作').click();
- v.action('继续原操作').click();
- await x.settled();
- assert.equal(f.writes().length,1);
- assert.equal(f.writes()[0].params.operationId,original.operationId);
- assert.deepEqual(f.writes()[0].params.mutation,original.mutation);
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
 }
-async function retiredCallback(kind) {
- for(const retired of ['nav','mount','runtime','route','physical']) {
-  const {f}=await pending(kind),x=index(f,kind);
-  x.open();
-  await x.settled();
-  const v=page(f,x,kind),old=v.action('继续原操作'),before=f.calls.length;
-  if(retired==='nav')x.p.navigationGeneration++;
-  if(retired==='mount')x.p.detailShelfAdmissionMount++;
-  if(retired==='runtime')f.retire();
-  if(retired==='route')x.p.route='bookshelf';
-  if(retired==='physical')v.sdk.walk(v.child).filter(c=>c instanceof v.sdk.deps.RssOriginalRecoverySurface).forEach(c=>c.aboutToDisappear());
-  old.click();
-  await x.settled();
-  assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');
- }
 }
-async function replacedPresentation(kind) {
- const {f}=await pending(kind),a=index(f,kind,1);
- a.open();
- await a.settled();
- const old=page(f,a,kind).action('继续原操作');
- const b=index(f,kind,2);
- b.open();
- await b.settled();
- const current=page(f,b,kind),before=f.calls.length;
- old.click();
- await a.settled();
- assert.equal(f.calls.length,before);
- a.p.getRssOrchestrator();
- assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old alive getter cannot steal successor');
- a.p.retireRssPresentation();
- assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old detach preserves new lease');
- current.action('继续原操作').click();
- await b.settled();
- assert.equal(f.writes().length,1);
+if(key==='editor'){
+for(const kind of ['editor']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
 }
-async function toggleAdmissionControl() {
- const source=read('pages/Index.ets');
- const equivalent=editToggleGuard(source,'braces');
- assert.notEqual(equivalent,source,'equivalent guard syntax control');
- for(const variant of [source,equivalent,editToggleGuard(equivalent,'remove')]) {
-  const mutated=variant!==source&&variant!==equivalent;
-  const f=await fixture();
-  await seedEntry(f);
-  const a=index(f,'management',1,variant);
-  a.open();
-  await a.settled();
-  const old=a.params().onToggle;
-  const b=index(f,'management',2);
-  b.open();
-  await b.settled();
-  old('s',false);
-  await a.settled();
-  assert.equal(f.writes().length,mutated?1:0,'actual last physical admission guard negative control');
-  if(!mutated) {
-   b.params().onToggle('s',false);
-   await b.settled();
-   assert.equal(f.writes().length,1,'current physical callback succeeds');
-  }
- }
 }
-const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
-console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));
-let passed=false;
-try {
- const [kind,scenario]=id.split('-');
- if(id==='admission-negative')await toggleAdmissionControl();
- else if(scenario==='retirement')await retiredCallback(kind);
- else if(scenario==='replacement')await replacedPresentation(kind);
- else {
-  assert.equal(scenario,undefined);
-  assert.ok(Object.hasOwn(routes,kind));
-  await coldReadAndContinue(kind);
- }
- passed=true;
-} finally {
- const cleanup=await cleanupDurableFixtures({retain:!passed});
- if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));
+if(key==='entry'){
+for(const kind of ['entry']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
 }
+}
+if(key==='feed'){
+for(const kind of ['feed']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
+}
+}
+if(key==='main'){
+for(const kind of ['main']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
+}
+}
+if(key==='management-retirement'){
+for(const kind of ['management'])for(const retired of ['nav','mount','runtime','route','physical']){
+ const {f}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind),old=v.action('继续原操作'),before=f.calls.length;
+ if(retired==='nav')x.p.navigationGeneration++;
+ if(retired==='mount')x.p.detailShelfAdmissionMount++;
+ if(retired==='runtime')f.retire();
+ if(retired==='route')x.p.route='bookshelf';
+ if(retired==='physical')v.sdk.walk(v.child).filter(c=>c instanceof v.sdk.deps.RssOriginalRecoverySurface).forEach(c=>c.aboutToDisappear());
+ old.click();await x.settled();assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');
+}
+}
+if(key==='management-replacement'){
+for(const kind of ['management']){
+ const {f}=await pending(kind),a=index(f,kind,1);a.open();await a.settled();const va=page(f,a,kind),old=va.action('继续原操作');
+ const b=index(f,kind,2);b.open();await b.settled();const vb=page(f,b,kind),before=f.calls.length;old.click();await a.settled();assert.equal(f.calls.length,before);
+ a.p.getRssOrchestrator();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old alive getter cannot steal successor');
+ a.p.retireRssPresentation();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old detach preserves new lease');
+ vb.action('继续原操作').click();await b.settled();assert.equal(f.writes().length,1);
+}
+}
+if(key==='editor-retirement'){
+for(const kind of ['editor'])for(const retired of ['nav','mount','runtime','route','physical']){
+ const {f}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind),old=v.action('继续原操作'),before=f.calls.length;
+ if(retired==='nav')x.p.navigationGeneration++;
+ if(retired==='mount')x.p.detailShelfAdmissionMount++;
+ if(retired==='runtime')f.retire();
+ if(retired==='route')x.p.route='bookshelf';
+ if(retired==='physical')v.sdk.walk(v.child).filter(c=>c instanceof v.sdk.deps.RssOriginalRecoverySurface).forEach(c=>c.aboutToDisappear());
+ old.click();await x.settled();assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');
+}
+}
+if(key==='editor-replacement'){
+for(const kind of ['editor']){
+ const {f}=await pending(kind),a=index(f,kind,1);a.open();await a.settled();const va=page(f,a,kind),old=va.action('继续原操作');
+ const b=index(f,kind,2);b.open();await b.settled();const vb=page(f,b,kind),before=f.calls.length;old.click();await a.settled();assert.equal(f.calls.length,before);
+ a.p.getRssOrchestrator();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old alive getter cannot steal successor');
+ a.p.retireRssPresentation();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old detach preserves new lease');
+ vb.action('继续原操作').click();await b.settled();assert.equal(f.writes().length,1);
+}
+}
+if(key==='entry-retirement'){
+for(const kind of ['entry'])for(const retired of ['nav','mount','runtime','route','physical']){
+ const {f}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind),old=v.action('继续原操作'),before=f.calls.length;
+ if(retired==='nav')x.p.navigationGeneration++;
+ if(retired==='mount')x.p.detailShelfAdmissionMount++;
+ if(retired==='runtime')f.retire();
+ if(retired==='route')x.p.route='bookshelf';
+ if(retired==='physical')v.sdk.walk(v.child).filter(c=>c instanceof v.sdk.deps.RssOriginalRecoverySurface).forEach(c=>c.aboutToDisappear());
+ old.click();await x.settled();assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');
+}
+}
+if(key==='entry-replacement'){
+for(const kind of ['entry']){
+ const {f}=await pending(kind),a=index(f,kind,1);a.open();await a.settled();const va=page(f,a,kind),old=va.action('继续原操作');
+ const b=index(f,kind,2);b.open();await b.settled();const vb=page(f,b,kind),before=f.calls.length;old.click();await a.settled();assert.equal(f.calls.length,before);
+ a.p.getRssOrchestrator();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old alive getter cannot steal successor');
+ a.p.retireRssPresentation();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old detach preserves new lease');
+ vb.action('继续原操作').click();await b.settled();assert.equal(f.writes().length,1);
+}
+}
+if(key==='admission-negative'){
+for(const mutated of [false,true]){
+ const f=await fixture();await seedEntry(f);let source=read('pages/Index.ets');
+ if(mutated){const before="if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.toggleSubscription(id, enabled);";assert.ok(source.includes(before));source=source.replace(before,'host?.toggleSubscription(id, enabled);');}
+ const a=index(f,'management',1,source);a.open();await a.settled();const old=a.params().onToggle;
+ const b=index(f,'management',2);b.open();await b.settled();old('s',false);await a.settled();assert.equal(f.writes().length,mutated?1:0,'actual last physical admission guard negative control');
+ if(!mutated){b.params().onToggle('s',false);await b.settled();assert.equal(f.writes().length,1,'current physical callback succeeds');}
+}
+}
+passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
 }
 const definitions={"management": {"description": "management actual production owner/SDK scope", "resources": []}, "editor": {"description": "editor actual production owner/SDK scope", "resources": []}, "entry": {"description": "entry actual production owner/SDK scope", "resources": []}, "feed": {"description": "feed actual production owner/SDK scope", "resources": []}, "main": {"description": "main actual production owner/SDK scope", "resources": []}, "management-retirement": {"description": "management-retirement actual production owner/SDK scope", "resources": []}, "management-replacement": {"description": "management-replacement actual production owner/SDK scope", "resources": []}, "editor-retirement": {"description": "editor-retirement actual production owner/SDK scope", "resources": []}, "editor-replacement": {"description": "editor-replacement actual production owner/SDK scope", "resources": []}, "entry-retirement": {"description": "entry-retirement actual production owner/SDK scope", "resources": []}, "entry-replacement": {"description": "entry-replacement actual production owner/SDK scope", "resources": []}, "admission-negative": {"description": "admission-negative actual production owner/SDK scope", "resources": []}};
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

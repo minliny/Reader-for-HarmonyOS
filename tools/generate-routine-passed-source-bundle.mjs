@@ -16,6 +16,7 @@ import {
   collectInsecureUrlFindings,
   collectPaywallFindings,
   collectSecretFindings,
+  isExternalBundledSource,
   ruleFingerprint,
   sha256Hex,
   SUITE_VERSION,
@@ -124,6 +125,7 @@ for (let index = 0; index < rules.length; index += 1) {
     ...collectSecretFindings(source).map(item => ({ kind: 'fixed-secret', ...item })),
     ...collectPaywallFindings(source).map(item => ({ kind: 'paywall-placeholder', ...item })),
   ];
+  if (isExternalBundledSource(source)) findings.push({ kind: 'external-media' });
   try { assertSourceLoginDefault(source); }
   catch (error) { findings.push({ kind: 'login-default', message: error.message }); }
   if (findings.length > 0) {

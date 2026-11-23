@@ -11,9 +11,9 @@ export const digest = path => createHash('sha256').update(readFileSync(safePath(
 export function safePath(path) {
   if (typeof path !== 'string' || !path || isAbsolute(path)) throw Error(`Repository-relative path required: ${path}`);
   const absolute = resolve(root, path), rel = relative(root, absolute);
-  // The two workspace governance documents are explicit owning sources. This
+  // The two generated workspace governance documents are explicit owning sources. This
   // does not permit arbitrary parent traversal or private signing paths.
-  if (['../VERSION_POLICY.md', '../GATE_INDEX.md'].includes(path) && (!existsSync(absolute) || realpathSync(absolute) === absolute)) return absolute;
+  if (['../AGENTS.md', '../GATE_INDEX.md'].includes(path) && (!existsSync(absolute) || realpathSync(absolute) === absolute)) return absolute;
   if (rel.startsWith('..') || isAbsolute(rel)) throw Error(`Path escapes repository: ${path}`);
   if (existsSync(absolute) && relative(root, realpathSync(absolute)).startsWith('..')) throw Error(`Symlink escapes repository: ${path}`);
   return absolute;
@@ -21,6 +21,7 @@ export function safePath(path) {
 export function loadInputs() {
   return {
     model: readJSON('tools/page-structure/model.json'),
+    designAuthority: readJSON('tools/contracts/design-authority.json'),
     register: readJSON('tools/page-structure/register.json'),
     exceptions: readJSON('tools/page-structure/exceptions.json'),
     contracts: readJSON('tools/contracts/contract-map.json'),

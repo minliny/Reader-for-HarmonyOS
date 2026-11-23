@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {registerHooks} from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReadingSessionDocuments,readingSessionDocuments}=await import('../entry/src/main/ets/features/reading/ReadingSessionDocuments.ts');
-const {releaseReadingEntryMemory,registerReadingEntryMemoryRelease}=await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
-const {readingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const {ReadingSessionDocuments,readingSessionDocuments}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionDocuments.ts');
+const {releaseReadingEntryMemory,registerReadingEntryMemoryRelease}=await import('../entry/src/main/ets/features/reading/application/ReadingEntryHandoff.ts');
+const {readingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const body=(index=20)=>({sourceId:'s',bookId:'b',chapterIndex:index,chapterTitle:'正文',chapterUrl:'/c',content:'甲😀乙',contentVersion:'host',bodyVersion:'body',processingVersion:'process',extractionVia:'rule',images:[]});
 {
  let valid=true; const owner=new ReadingSessionDocuments(), original=body();

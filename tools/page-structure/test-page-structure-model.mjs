@@ -25,7 +25,9 @@ test('real-reference-closure', () => assert.deepEqual(checkContractRefs(inputs),
 test('selected-message-entry-integrity', () => {
   const inventory=inventoryMessageEntrypoints({files:[page.source.path]});
   assert.ok(inventory.entries.every(e=>e.file===page.source.path));
-  const requiredRetainedScopes = page.retainedScopeRefs;
+  const requiredRetainedScopes = inputs.messages.retainedScopes
+    .filter(row => row.authority === page.source.path).map(row => row.scope);
+  assert.ok(requiredRetainedScopes.length, 'the retired legacy banner remains explicitly accounted for');
   assert.equal(compareMessageEntrypoints(inventory,inputs.messages,{requiredRetainedScopes}).status,'PASS');
   const missing=structuredClone(inputs.messages);missing.entries=missing.entries.filter(e=>e.id!==page.messageSurfaces[0].entryId);
   assert.equal(compareMessageEntrypoints(inventory,missing,{requiredRetainedScopes}).status,'FAIL');
@@ -38,8 +40,8 @@ test('selected-message-entry-integrity', () => {
 });
 test('real-page-detects-known-gaps', () => {
   const { diagnostics } = checkRegister(inputs);
-  // Repairs may retire B4/E1/G07, but the explicitly deferred navigation gap remains.
-  assert.ok(diagnostics.some(d => d.ruleId === 'S8' && d.layer === 'route' && d.result === 'FAIL'));
+  for (const ruleId of ['E2', 'E3']) assert.ok(diagnostics.some(d => d.ruleId === ruleId && d.result === 'FAIL'),
+    'current SDK evidence preserves the remaining native acceptance failures');
   assert.ok(!diagnostics.some(d => d.ruleId === 'SOURCE_DRIFT'));
 });
 test('six-prototype-oracles', () => {
@@ -108,12 +110,20 @@ for (const [name, mutate, expected] of [
   ['dangling-action-state-control', i=>i.register.pages[0].layers.interaction.facts.actionStates[0].controlRef='missing-control','REFERENCE'],
   ['platform-business-owner-conflict', i=>i.register.pages[0].platformHosts[0].businessOwner='WrongOwner','REFERENCE'],
   ['platform-result-policy-conflict', i=>i.register.pages[0].platformHosts[0].resultPolicy=['completed'],'REFERENCE'],
-  ['retention-basis-conflict', i=>i.register.pages[0].layers.route.facts.retention.basis='observed','REFERENCE'],
-  ['removed-retained-scope', i=>i.messages.retainedScopes=i.messages.retainedScopes.filter(r=>r.scope!==i.register.pages[0].retainedScopeRefs[0]),'REFERENCE'],
+  ['retention-basis-conflict', i=>i.register.pages[0].layers.route.facts.retention.basis=i.register.pages[0].layers.route.facts.retention.basis==='observed'?'declared':'observed','REFERENCE'],
+  ['removed-retained-scope', i=>{
+    const retained = i.messages.retainedScopes.find(r=>r.authority===i.register.pages[0].source.path);
+    assert.ok(retained);
+    i.register.pages[0].retainedScopeRefs=[retained.scope];
+    i.messages.retainedScopes=i.messages.retainedScopes.filter(r=>r.scope!==retained.scope);
+  },'REFERENCE'],
 ]) test(name,()=>{const altered=structuredClone(inputs);mutate(altered);assert.ok(checkContractRefs(altered).some(d=>d.ruleId===expected));});
 for (const [name, mutate] of [
   ['unknown-policy-enum', i=>i.register.pages[0].operationRefs[0].unknownPolicy='arbitrary-policy'],
-  ['not-exposed-requires-partial', i=>i.register.pages[0].operationRefs[1].bindingStatus='bound'],
+  ['not-exposed-requires-partial', i=>{
+    i.register.pages[0].operationRefs[1].unknownPolicy='not-exposed';
+    i.register.pages[0].operationRefs[1].bindingStatus='bound';
+  }],
   ['not-exposed-requires-known-gap', i=>delete i.register.pages[0].operationRefs[1].knownGap],
   ['refresh-policy-enum', i=>i.register.pages[0].operationRefs[0].refreshPolicy='replay-write'],
   ['platform-result-enum', i=>i.register.pages[0].platformHosts[0].resultPolicy=['unknown']],

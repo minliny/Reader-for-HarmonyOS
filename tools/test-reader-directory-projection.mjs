@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import {
   projectReaderDirectoryEntries,
-} from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
+} from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
 
 const entries = Array.from({ length: 25 }, (_unused, index) => ({
   index,

@@ -1,4 +1,11 @@
-import type { LocalReadingTocEntry, LocalReadingDownloadState } from '../features/reading/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry, LocalReadingDownloadState } from '../features/reading/application/LocalReadingFlowGateway';
+
+let directoryFixtureInstanceSequence: number = 0;
+
+/** Shared across DEBUG fixture actors, retained throughout one actor's HUD changes. */
+export function nextReaderDirectoryFixtureInstanceId(): number {
+  return ++directoryFixtureInstanceSequence;
+}
 
 /** Deterministic, process-local samples. No persisted identity or user record. */
 export function readerDirectoryFixtureEntries(manga: boolean): LocalReadingTocEntry[] {
@@ -19,7 +26,7 @@ export function readerDirectoryFixtureEntries(manga: boolean): LocalReadingTocEn
 }
 
 import type { ReaderDirectoryNavigationQuery, ReaderDirectoryNavigationOpen, ReaderDirectoryNavigationPage,
-  ReaderDirectoryNavigationTarget, ReaderDirectoryNavigationNode, ReaderDirectoryNavigationPort } from '../features/reading/ReaderDirectoryNavigation';
+  ReaderDirectoryNavigationTarget, ReaderDirectoryNavigationNode, ReaderDirectoryNavigationPort } from '../features/reading/application/ReaderDirectoryNavigation';
 
 /** Static renderer sample through the public navigation API. It deliberately
  * does not implement Core filtering, sorting, folding, paging or proof logic. */
@@ -30,11 +37,24 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
   private readonly entries: () => LocalReadingTocEntry[];
   private readonly active: () => boolean;
   private readonly observe: (kind: string, chapterIndex: number) => void;
+  private readonly flatCatalog: boolean;
+  private readonly emptyRetry: boolean;
+  private pendingTimer: number = -1;
+  private rejectPending: ((reason: Error) => void) | undefined = undefined;
+  private failedQueryAttempted: boolean = false;
 
   constructor(sourceId: string, bookId: string, viewId: string, entries: () => LocalReadingTocEntry[],
-    active: () => boolean, observe: (kind: string, chapterIndex: number) => void) {
+    active: () => boolean, observe: (kind: string, chapterIndex: number) => void, flatCatalog: boolean = false, emptyRetry: boolean = false) {
     this.sourceId = sourceId; this.bookId = bookId; this.viewId = viewId;
-    this.entries = entries; this.active = active; this.observe = observe;
+    this.entries = entries; this.active = active; this.observe = observe; this.flatCatalog = flatCatalog; this.emptyRetry = emptyRetry;
+  }
+
+  close(): void {
+    if (this.pendingTimer >= 0) clearTimeout(this.pendingTimer);
+    this.pendingTimer = -1;
+    const reject = this.rejectPending;
+    this.rejectPending = undefined;
+    reject?.(new Error('directory fixture pending read retired'));
   }
 
   private admit(bookId: string, isCurrent?: () => boolean): void {
@@ -64,19 +84,37 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
   async open(query: ReaderDirectoryNavigationQuery, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationOpen> {
     this.admit(query.bookId, isCurrent);
     if (query.sourceId !== this.sourceId) throw new Error('directory fixture source changed');
-    this.observe('tree-open-static-snapshot', query.chapterIndex ?? -1);
-    const nodes = this.nodes();
-    const current = nodes.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === query.chapterIndex);
+    if (this.flatCatalog) return { status: 'unavailable', reason: 'NoStructure' };
+    // Explicit finite public-port responses. These two strings select UI states
+    // and deliberately implement no Core filtering or query semantics.
+    if (this.emptyRetry && query.query === 'MissingB' && !this.failedQueryAttempted) {
+      this.failedQueryAttempted = true;
+      this.observe('tree-query-pending', -1);
+      await new Promise<void>((_resolve, reject): void => {
+        this.rejectPending = reject;
+        this.pendingTimer = setTimeout((): void => {
+          this.pendingTimer = -1;
+          this.rejectPending = undefined;
+          if (this.active() && isCurrent?.() !== false) this.observe('tree-query-failed', -1);
+          reject(new Error('directory fixture explicit query read failure'));
+        }, 12000);
+      });
+    }
+    const empty = this.emptyRetry && (query.query === 'MissingA' || query.query === 'MissingB');
+    this.observe(empty ? 'tree-query-empty' : 'tree-open-static-snapshot', query.chapterIndex ?? -1);
+    const nodes = empty ? [] : this.nodes();
+    const current = query.chapterIndex === undefined ? -1 :
+      nodes.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === query.chapterIndex);
     return { status: 'ready', identity: { sourceId: this.sourceId, bookId: this.bookId,
       catalogRevision: this.viewId, structureRevision: this.viewId },
-      viewId: this.viewId, navigationRevision: this.viewId, visibleTotal: nodes.length,
+      viewId: empty ? `${this.viewId}:${query.query}` : this.viewId, navigationRevision: this.viewId, visibleTotal: nodes.length,
       currentVisibleIndex: current >= 0 ? current : undefined,
       nodes: nodes };
   }
 
   async page(bookId: string, viewId: string, offset: number, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationPage> {
     this.admit(bookId, isCurrent);
-    if (viewId !== this.viewId || offset !== 0) throw new Error('static directory fixture has one bounded page');
+    if (this.flatCatalog || viewId !== this.viewId || offset !== 0) throw new Error('static directory fixture has one bounded page');
     const nodes = this.nodes();
     return { viewId: this.viewId, visibleTotal: nodes.length, nodes: nodes };
   }
@@ -85,7 +123,7 @@ export class ReaderDirectoryFixturePort implements ReaderDirectoryNavigationPort
     isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationTarget> {
     this.admit(bookId, isCurrent);
     const node = this.nodes().find((candidate: ReaderDirectoryNavigationNode): boolean => candidate.nodeId === nodeId);
-    if (viewId !== this.viewId || node?.kind !== 'target' || node.chapterIndex === undefined)
+    if (this.flatCatalog || viewId !== this.viewId || node?.kind !== 'target' || node.chapterIndex === undefined)
       throw new Error('static directory fixture target changed');
     this.observe('tree-target-intent', node.chapterIndex);
     return { kind: 'chapterStart', chapterIndex: node.chapterIndex, chapterOffsetScalar: 0 };

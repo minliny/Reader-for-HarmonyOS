@@ -10,11 +10,11 @@ const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url),'utf8');
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const builders=require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;

@@ -13,15 +13,15 @@ const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(s
   ? siblingCore : resolve(repo, '../../Reader-Core'));
 const coreSdkUrl = pathToFileURL(resolve(core, 'bindings/harmony/sdk/reader_core.ts')).href;
 const { ReaderCoreRequestError } = await import(coreSdkUrl);
-const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
-const searchTimingModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookSearchTiming.ts'), 'utf8');
-const sharedSearchDecoderModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchGateway.ts'), 'utf8')
+const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/app/library/BookAuthorMetadata.ts'), 'utf8');
+const searchTimingModule = readFileSync(resolve(repo, 'entry/src/main/ets/app/library/BookSearchTiming.ts'), 'utf8');
+const sharedSearchDecoderModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/search/application/SearchGateway.ts'), 'utf8')
   .replace(/^import[\s\S]*?;\n/gm, '');
-const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAcquisitionPresentation.ts'), 'utf8'));
+const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/app/library/BookAcquisitionPresentation.ts'), 'utf8'));
 const { acquisitionCandidateRank } = await import(`data:text/javascript;base64,${Buffer.from(factModule).toString('base64')}`);
 const searchCandidateRank = (book, now) => acquisitionCandidateRank(book.acquisition, book.sourceRuleVersion, now);
 const gateway = readFileSync(
-  resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchGateway.ts'),
+  resolve(repo, 'entry/src/main/ets/features/source/application/SourceSwitchGateway.ts'),
   'utf8',
 );
 
@@ -29,34 +29,38 @@ const errorMessageModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/app/ErrorMessage.ts'), 'utf8'),
 ).replace('export function errorMessageOf', 'function errorMessageOf');
 const sourceCategoryModule = stripTypeScriptTypes(
-  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/ReaderSourceCategory.ts'), 'utf8'),
+  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'), 'utf8'),
 ).replace(/^export /gm, '');
 const providerFamilyModule = stripTypeScriptTypes(
-  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchProviderFamily.ts'), 'utf8'),
+  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/application/SourceSwitchProviderFamily.ts'), 'utf8'),
 ).replace(/^export /gm, '');
 
 const executable = stripTypeScriptTypes(
-  (authorMetadataModule + '\n' + searchTimingModule + '\n' + sharedSearchDecoderModule + '\n' + gateway
+  (authorMetadataModule + '\n' + readFileSync(resolve(repo,'entry/src/main/ets/app/library/BookSearchPageProgress.ts'),'utf8') + '\n' + searchTimingModule + '\n' + sharedSearchDecoderModule + '\n' + gateway
+    .replace(/^import \{ decodeReaderDirectoryDisplayMetadata \} from .*;$/m, () =>
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/reading/application/ReaderDirectoryDisplayMetadata.ts'), 'utf8')
+        .replace(/^import type .*;$/m, '').replace(/^export /gm, ''))
     .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/app/BookRequestScheduler.ts'), 'utf8'))
-    .replace(/^import \{[^}]+\} from ['"]\.\.\/common\/BookAcquisitionPresentation['"];$/m,
+    .replace(/^import \{[^}]+\} from ['"][^'\"]*app\/library\/BookAcquisitionPresentation['"];$/m,
       () => factModule.replace(/^export /gm, ''))
     .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
-      readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
+      readFileSync(resolve(repo, 'entry/src/main/ets/app/library/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
     .replace(/^import \{ errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ isReaderCoreTransactionPendingError \} from ['"]@reader\/core-harmony['"];$/m,
       `import { isReaderCoreTransactionPendingError } from '${coreSdkUrl}';`)
-    .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
+    .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'\"]*app\/ReaderRuntimeOwner['"];$/m, '')
     .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, '')
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\/ReaderSourceCategory['"];$/m,
       () => sourceCategoryModule)
     .replace(/^import \{[^\n]+\} from ['"]\.\/SourceSwitchProviderFamily['"];$/m,
       () => providerFamilyModule))
+    .replace(/^import .*BookSearchPageProgress['"];\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookSearchTiming(?:\.ts)?['"];?\n/gm, '')
-    .replace(/^import \{[^\n]+\} from ['"]\.\.\/search\/SearchGateway['"];?\n/gm, ''),
+    .replace(/^import \{[^\n]+\} from ['"][^'\"]*search\/(?:application\/)?SearchGateway['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
 const { SourceSwitchGateway, sourceSwitchCandidateKey, buildSourceSwitchCommitParams, readBookSearchTiming } = await import(moduleUrl);
@@ -79,9 +83,9 @@ function relatedData(books, extra = {}) {
 const cachedAt=Date.now();
 const ownedHosts=[];let sourceOwnerFixture,setCurrentRuntime,productionMotionMethods;
 
-if(['progressive','host-known','host-failed-delta','host-live-retention'].includes(id)){const loaded=await import('./lib/source-switch-owner-probe.mjs');setCurrentRuntime=loaded.setCurrentRuntime;sourceOwnerFixture=(...args)=>{const f=loaded.fixture(...args);ownedHosts.push(f.host);return f;};}
-if(['host-known','candidate-retry'].includes(id))({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
-const clock=['progressive','cancellation','host-live-retention'].includes(id)?controlledClock():undefined;try{
+if(['progressive','host-known','host-failed-delta'].includes(id)){const loaded=await import('./lib/source-switch-owner-probe.mjs');setCurrentRuntime=loaded.setCurrentRuntime;sourceOwnerFixture=(...args)=>{const f=loaded.fixture(...args);ownedHosts.push(f.host);return f;};}
+
+const clock=['progressive','cancellation'].includes(id)?controlledClock():undefined;try{
 if(id==='identity-family'){
 assert.notEqual(
   sourceSwitchCandidateKey('a', 'bc'),
@@ -256,7 +260,7 @@ for (const scenario of ['all-http', 'all-rule-failed', 'successful-empty', 'mixe
     ] : [] } };
   } };
   const gw = new SourceSwitchGateway(owner);
-  const run = gw.discoverCandidates(query.sourceId, query.bookId, query.bookName, () => true, [], 'text',
+  const run = gw.discoverCandidates(query.sourceId, query.bookId, query.bookName, () => true, 'text',
     async rows => { published.push(rows); }, query);
   if (scenario === 'all-http' || scenario === 'all-rule-failed' || scenario === 'failure-and-empty') {
     await assert.rejects(run, error => {
@@ -306,7 +310,7 @@ for (const late of ['success', 'failure']) {
     if (late === 'failure') throw Error('late private failure');
     return searchResult(params.sourceId, [{ bookId: '/book', title: '大明望族', author: '府天' }]);
   } };
-  const run = new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族', () => current, [], 'text',
+  const run = new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族', () => current, 'text',
     async rows => { published.push(rows); });
   await dispatch; current = false; release();
   assert.deepEqual(await run, { kind: 'noSources' });
@@ -731,84 +735,6 @@ if(id==='progressive'){
   }
 }
 }
-if(id==='host-live-retention'){
- for(const authorKind of ['plain','proof']){
- const f=sourceOwnerFixture({open:false});const requests=[];
- const names=Array.from({length:7},(_,i)=>`live-${i}`);
- let revision=1;const disabled=new Set(),versions=new Map();
- const row=(sourceId)=>({origin:sourceId,bookUrl:`/${sourceId}`,name:'还不起学贷的我只好兼职猎魔',author:'小夕岁',
-  time:Date.now(),acquisition:{sourceVersion:'v1'},relationKey:'relation',relationRevision:'1'});
- const proof={schemaVersion:1,sourceVersion:'v1',field:'search',raw:'@小夕岁',label:'小夕岁',rule:'author-nickname-at-v1'};
- const durable=new Map(names.slice(0,3).map(id=>[id,row(id)]));
- durable.set('old',{...row('old'),bookUrl:'book',author:authorKind==='proof'?'@小夕岁':'小夕岁',
-  acquisition:{sourceVersion:'v1',...(authorKind==='proof'?{authorIdentity:proof}:{})}});
- const original=f.runtime.request.bind(f.runtime),oldAcquisition=f.runtime.bookAcquisitions();
- f.runtime.bookAcquisitions=()=>({...oldAcquisition,sourceRegistryRevision:()=>revision});
- f.context.query={...f.context.query,bookName:'还不起学贷的我只好兼职猎魔',author:authorKind==='proof'?'@小夕岁':'小夕岁',
-  ...(authorKind==='proof'?{sourceVersion:'old-rules'}:{})};
- f.context.readKnownCandidates=()=>[];
- f.runtime.request=async(method,params,options)=>{
-  requests.push({method,params});
-  if(method==='source.list')return{data:{sources:['old',...names].map(sourceId=>({sourceId,name:sourceId,
-   enabled:!disabled.has(sourceId),sourceVersion:versions.get(sourceId)??'v1'}))}};
-  if(method==='search-book.get'&&params.origin==='old'&&params.bookUrl==='book')return{data:{book:durable.get('old')}};
-  if(method==='search-book.related')return{data:relatedData([...durable.values()])};
-  if(method==='search-book.batch.get'){
-   const books=[],missing=[];
-   for(const identity of params.identities){const saved=durable.get(identity.sourceId);
-    if(saved&&saved.bookUrl===identity.bookId)books.push({...saved});else missing.push(identity);}
-   return{data:{books,missing,complete:true}};
-  }
-  if(method==='book.search')return searchResult(params.sourceId,params.sourceId==='old'?[]:[{
-   bookId:`/${params.sourceId}`,title:f.context.query.bookName,author:'小夕岁'}]);
-  if(method==='search-book.put')throw Error('controlled timing persistence unavailable; live result remains admitted');
-  return original(method,params,options);
- };
- const wait=async predicate=>{for(let i=0;i<250&&!predicate();i++)await new Promise(setImmediate);
-  assert.ok(predicate(),'actual Host+Gateway state settles');};
- const alternatives=()=>f.host.current().state.candidates.filter(candidate=>candidate.isCurrent!==true);
- const ready=()=>f.host.current().state.kind==='candidates'&&f.host.current().state.refreshing===false;
- assert.equal(f.host.open(f.context,f.lease),true);await wait(ready);
- assert.equal(f.host.current().state.candidates.filter(c=>c.isCurrent===true).length,1,'the exact current binding remains context, not an alternate row');
- if(authorKind==='proof')assert.deepEqual(f.host.context.query.authorIdentity,proof,'registry-bound author proof is restored before cache/discovery predicates');
- assert.equal(alternatives().length,3,'shelf entry starts with its three real durable relations');
- f.host.refresh(f.host.current().scopeId);
- await wait(()=>requests.filter(r=>r.method==='book.search').length===8);
- await clock.advance(150);await wait(ready);
- assert.equal(alternatives().length,7,'explicit refresh admits all seven same-book source identities');
- let related=requests.filter(r=>r.method==='search-book.related').length;
- f.publish({reset:false,identities:[{sourceId:names[0],bookId:`/${names[0]}`}]});
- await wait(()=>requests.filter(r=>r.method==='search-book.related').length>related);await settleHost();
- assert.equal(alternatives().length,7,
-  'an acquisition delta cannot discard four live candidates only because shelf-origin known seeds are empty');
- durable.set(names[3],row(names[3]));
- f.publish({reset:false,identities:[{sourceId:names[3],bookId:`/${names[3]}`}]});await settleHost();
- assert.equal(alternatives().length,7);
- durable.delete(names[3]);
- f.publish({reset:false,identities:[{sourceId:names[3],bookId:`/${names[3]}`}]});await settleHost();
- assert.equal(alternatives().length,6);
- assert.ok(f.host.current().state.candidates.every(c=>c.sourceId!==names[3]),'a confirmed persistent relation that was deleted cannot be revived by its visible seed');
- disabled.add(names[4]);revision++;
- f.publish({reset:true,identities:[]});await settleHost();
- assert.equal(alternatives().length,5);
- disabled.delete(names[4]);versions.set(names[4],'v2');revision++;
- f.publish({reset:true,identities:[]});await settleHost();
- assert.equal(alternatives().length,5,'removed prior-rule seeds are not held permanently for later registry changes');
- const oldCallbacks=[...f.subscriptions];f.host.retire();
- f.context.query={...f.context.query,sourceId:'another-binding',bookId:'another-book',author:'小夕岁',authorIdentity:undefined,sourceVersion:'v1'};
- f.setIdentity({sourceId:'another-binding',bookId:'another-book'});
- const newLease={...f.lease,isCurrent:()=>true};
- assert.equal(f.host.open(f.context,newLease),true);await wait(ready);
- const afterNew=f.host.current();
- assert.equal(afterNew.state.candidates.length,4,'a new journey starts from its own durable relation, never old live seeds');
- for(const callback of oldCallbacks)callback({reset:true,identities:[]});await settleHost();
- assert.equal(f.host.current(),afterNew,'retired journey callbacks cannot replace a same-title differently bound journey');
- assert.equal(requests.some(r=>['book.detail','book.toc','chapter.content','source.switch.commit','search-book.delete'].includes(r.method)),false,
-  'discovery and seed retention neither pre-acquire a book nor mutate user content or binding');
- f.host.retire();
- async function settleHost(){for(let i=0;i<35;i++)await new Promise(setImmediate);}
- }
-}
 if(id==='transaction'){
 const runtime = {
   async request(method, params) {
@@ -920,7 +846,7 @@ if(id==='missing-only'){
     if(method==='source.list')return{data:{sources:['a','b','c'].map(sourceId=>({sourceId,name:sourceId,enabled:true}))}};
     assert.equal(method,'book.search');searched.push(params.sourceId);return searchResult(params.sourceId,[]);
   }};const gateway=new SourceSwitchGateway(owner);
-  await gateway.discoverCandidates('a','/book','鸣龙',()=>true,['a','b']);assert.deepEqual(searched,['c']);
+  await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c'],'title discovery visits every enabled source without cross-query exclusions');
   searched.length=0;await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c']);
 }
 }
@@ -936,12 +862,15 @@ if(id==='host-known'){
   }};
   const gateway=new SourceSwitchGateway(owner);
   const query={sourceId:'a',bookId:'/book',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
-  const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'), ['knownSearchSourceCandidates'], {searchCandidateRank,readBookSearchTiming});
-  const page=Object.assign(new Index(),{detailReturnRoute:'search',sourceSwitchState:{kind:'discovering'},
-    searchDetailCandidates:['a'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
-      bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))});
+  const {actualSourceSwitchPresentation}=await import('./lib/source-switch-presentation-probe.mjs');
+  const Presentation=actualSourceSwitchPresentation({});
+  const presenter=new Presentation();
+  const page={sourceSwitchState:{kind:'discovering'},searchDetailCandidates:['a'].map(sourceId=>({
+    sourceId,sourceName:sourceId,sourceRuleVersion:'v1',bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))};
+  const context=presenter.workflowContext({entry:()=>({book:{sourceId:'a',bookId:'/book',title:'鸣龙',author:'关关公子'},
+    inBookshelf:false,toc:[],sessionActive:false}),shelfBook:()=>undefined,searchCandidates:()=>page.searchDetailCandidates});
   const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
-  const host=new f.Constructor(owner);ownedHosts.push(host);host.open({query,inBookshelf:false,toc:[],knownCandidates:page.knownSearchSourceCandidates(query),readKnownCandidates:()=>page.knownSearchSourceCandidates(query),searchedSourceIds:[]},
+  const host=new f.Constructor(owner);ownedHosts.push(host);host.open(context,
     {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
   // Intent authority admission happens first; known rows still paint before registry/cache RPC completes.
   for(let i=0;i<4;i++)await new Promise(r=>setImmediate(r));
@@ -950,11 +879,11 @@ if(id==='host-known'){
   page.searchDetailCandidates.push({sourceId:'b',sourceName:'b',sourceRuleVersion:'v1',bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'});
   listener({reset:false,identities:[{sourceId:'b',bookId:'/book'}]});
   assert.deepEqual(calls,['source.list'],'late candidate waits behind initial cache I/O');
-  release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
+  release();await new Promise(r=>setTimeout(r,150));
   assert.equal(page.sourceSwitchState.candidates.length,2);
   assert.deepEqual(calls.slice(0,3),['source.list','search-book.related','search-book.batch.get']);
-  assert.ok(calls.includes('book.search') || calls.includes('search-book.related'),
-    'the seeded candidates continue through the real incremental refresh path');
+  assert.equal(calls.includes('book.search'),false,
+    'qualified cached alternatives avoid unnecessary fresh discovery without excluding attempted sources');
 }
 }
 if(id==='host-failed-delta'){
@@ -982,7 +911,7 @@ for (const reset of [false, true]) {
   const page={sourceSwitchState:{kind:'discovering'}};
   const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
   const host=new f.Constructor(owner);ownedHosts.push(host);
-  host.open({query,inBookshelf:false,toc:[],knownCandidates:[],searchedSourceIds:[]},
+  host.open({query,inBookshelf:false,toc:[],knownCandidates:[]},
     {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
   const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)); };
   await settle(); calls.length = 0;
@@ -1024,12 +953,12 @@ for (const phase of ['debounce', 'in-flight']) {
   };
   const gateway = new SourceSwitchGateway(owner);
   gateway.loadCachedCandidates = async () => [];
-  gateway.discoverCandidates = async (_source, _book, _keyword, _current, _excluded, _kind, completed) => {
+  gateway.discoverCandidates = async (_source, _book, _keyword, _current, _kind, completed) => {
     await completed([candidate]);
     return { kind: 'sources', candidates: [candidate] };
   };
   const run = gateway.refreshCandidates({ sourceId: 'a', bookId: '/book', bookName: '鸣龙', author: '关关公子',
-    currentChapterIndex: 0, currentChapterTitle: '' }, () => current, [], rows => progress.push(rows));
+    currentChapterIndex: 0, currentChapterTitle: '' }, () => current, rows => progress.push(rows));
   for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve));
   listener({ reset: false, identities: [{ sourceId: 'a', bookId: '/book' }] });
   if (phase === 'in-flight'){await clock.advance(100);await started;}
@@ -1139,7 +1068,8 @@ if(id==='direct-target-session'){
     assert.equal(method, 'book.toc'); assert.deepEqual(params.variables, { token: 'detail token' });
     return { data: { sourceId: 'target', bookId: '/book', sourceVersion: 'rule-v2', catalogAt: 43,
       catalogVersion: 'catalog-proof', contextVersion: 'context-proof',
-      toc: [{ index: 0, title: '第一章', url: '/chapter', variables: { chapterToken: 'chapter token' } }] } };
+      toc: [{ index: 0, title: '第一章', displayTitle: '确认展示标题', isVip: true, isPay: false, contextTitle: '第一卷',
+        level: 2, navigable: false, url: '/chapter', variables: { chapterToken: 'chapter token' } }] } };
   } };
   const toc = await new SourceSwitchGateway(owner).fetchTargetToc('target', '/book');
   assert.deepEqual(calls, ['book.detail', 'book.toc']);
@@ -1148,6 +1078,10 @@ if(id==='direct-target-session'){
   assert.equal(toc.readingSession.book.title, '详情书名');
   assert.deepEqual(toc.readingSession.continuationVariables, [{ name: 'token', value: 'detail token' }]);
   assert.deepEqual(toc.readingSession.entries[0].variables, [{ name: 'chapterToken', value: 'chapter token' }]);
+  assert.deepEqual(toc.readingSession.entries[0], { index: 0, title: '第一章', displayTitle: '确认展示标题',
+    isVip: true, isPay: false, contextTitle: '第一卷', level: 2, navigable: false, url: '/chapter',
+    variables: [{ name: 'chapterToken', value: 'chapter token' }] });
+  assert.deepEqual(Object.keys(toc.entries[0]).sort(), ['index', 'title', 'url', 'variables']);
 }
 }
 if(id==='live-candidate'){
@@ -1172,17 +1106,24 @@ if(id==='live-candidate'){
 }
 if(id==='candidate-retry'){
 {
-  const Candidate = productionMotionMethods(resolve(repo, 'entry/src/main/ets/features/source/CandidateRow.ets'),
-    ['selectCandidate'], {});
-  for (const offline of [false, true]) for (const timeout of [false, true]) for (const isCurrent of [false, true]) {
+  const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+  const {sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs');
+  const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p);
+  for (const acquisitionState of ['discovered','attemptFailed','failed','stale'])
+    for (const isCurrent of [false,true]) for (const rowEnabled of [false,true]) {
     let selected = 0;
-    const row = Object.assign(new Candidate(), { offline, timeout, isCurrent, onSelect: () => selected++ });
-    row.selectCandidate();
-    assert.equal(selected, isCurrent ? 0 : 1, 'historical availability feedback must not lock source selection');
+    const row = new deps.SourceSwitchCandidateRow({sourceId:'source-a',bookUrl:'/book',bookName:'Book',
+      category:'novel',acquisitionState,isCurrent});
+    const owner = new deps.SourceSwitchNovelRow(undefined,{row,rowEnabled,reduceMotion:true,onSelect:()=>selected++});
+    owner.initialRender();
+    const hit=p.nodes(owner).find(node=>node.type==='Row'&&node.onClick);
+    assert.equal(hit.enabled,rowEnabled&&!isCurrent);
+    hit.onClick();
+    assert.equal(selected,rowEnabled&&!isCurrent?1:0,'historical availability cannot replace the live row admission');
   }
 }
 }
 }finally{for(const host of ownedHosts)host.retire();clock?.restore();}
 }
-const definitions={"host-live-retention": "actual Host+Gateway shelf-origin refresh retains unpersisted live candidates across deltas while respecting deletion, registry and journey guards", "identity-family": "identity-family actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-concurrency": "discovery-concurrency actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "slow-lane": "slow-lane actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "environment": "environment actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "dns": "dns actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "source-failure": "source-failure actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "invalid-search": "invalid-search actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "late-discovery": "late-discovery actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-qualification": "target-qualification actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "author-proof": "author-proof actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-identity": "discovery-identity actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-basic": "cache-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-timing": "cache-timing actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-scope": "relation-scope actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "refresh-basic": "refresh-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "progressive": "progressive actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "transaction": "transaction actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "known-delta": "known-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "missing-only": "missing-only actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-known": "host-known actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-failed-delta": "host-failed-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cancellation": "cancellation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "manga-relation": "manga-relation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-pagination": "relation-pagination actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-session": "target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "direct-target-session": "direct-target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "live-candidate": "live-candidate actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "candidate-retry": "candidate-retry actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases"};
+const definitions={"identity-family": "identity-family actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-concurrency": "discovery-concurrency actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "slow-lane": "slow-lane actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "environment": "environment actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "dns": "dns actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "source-failure": "source-failure actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "invalid-search": "invalid-search actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "late-discovery": "late-discovery actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-qualification": "target-qualification actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "author-proof": "author-proof actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-identity": "discovery-identity actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-basic": "cache-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-timing": "cache-timing actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-scope": "relation-scope actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "refresh-basic": "refresh-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "progressive": "progressive actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "transaction": "transaction actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "known-delta": "known-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "missing-only": "missing-only actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-known": "host-known actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-failed-delta": "host-failed-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cancellation": "cancellation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "manga-relation": "manga-relation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-pagination": "relation-pagination actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-session": "target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "direct-target-session": "direct-target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "live-candidate": "live-candidate actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "candidate-retry": "candidate-retry actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases"};
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

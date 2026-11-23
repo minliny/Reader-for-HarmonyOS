@@ -1,12 +1,12 @@
 import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
-const selected=selectContractCases({'search-action':{description:'Actual shared search/stop action admission, feedback and retirement',resources:[]},'shelf-clearance':{description:'Actual SDK native shelf List consumes live header/bottom policy without viewport shrink',resources:[]},'source-status':{description:'Actual SDK source discovery spinner props, foreground and reduced motion',resources:[]}});
+const selected=selectContractCases({'search-action':{description:'Phone portrait current native search/stop Button admission, feedback and model lease retirement; wide EXCLUDED',resources:[]},'shelf-clearance':{description:'Actual SDK native shelf List consumes live header/bottom policy without viewport shrink',resources:[]},'source-status':{description:'Actual SDK source discovery spinner props, foreground and reduced motion',resources:[]}});
 async function run(id){
  const {default:assert}=await import('node:assert/strict');const{readFileSync}=await import('node:fs');
  const{createRequire,registerHooks,stripTypeScriptTypes}=await import('node:module');
  const hooks=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
  try{
  const{resolveEtsLoaderRoot}=await import('./lib/tool-environment.mjs');
- const{readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+ const{readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
  const{createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
  const read=relative=>readFileSync(new URL('../'+relative,import.meta.url),'utf8');
  if(id==='search-action'){
@@ -14,7 +14,74 @@ async function run(id){
  const{projectOperationFacts}=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
  const{sharedActionFeedbackReset}=await import('./lib/shared-action-feedback-state-probe.mjs');
  const{readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
-for(const isTablet of[false,true])for(const busy of[false,true]){
+ const{pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+ const{compileTailConsumer}=await import('./lib/foundation-tail-consumer-probe.mjs');
+ const headerMetrics=await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+ const searchGeometry=await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
+ const windowMetrics=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+ const fonts=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+ const surfaceSource=read('entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets');
+ const portraitMetrics=new windowMetrics.ReaderWindowMetricsSnapshot(new windowMetrics.ReaderRectVp(0,0,390,844));
+ const currentMethods=['bar','headerActionFrame','headerActionGlyph','surfaceProgress','resultsProgress','historyProgress',
+  'inputInteractive','controlHeight','fontScale','blend','surfaceValue','titleOpacity','barHeight','horizontalInset',
+  'fieldIdentity','acceptsField','focusAction','textAction','submitAction','searchAction','leadingAction','moreAction',
+  'cardContentWidth','actionWidth','searchLaneLeft','searchLaneWidth','fieldWidth','laneTop','presentedSearch',
+  'actionInteractive','headerActionTop','moreInteractive','applyTargets','aboutToDisappear'];
+ const currentFields=['scheme','metricsRevision','model','mode','expandedLayout','identity','navigationGeneration','mounting',
+  'moreIdentity','mounted','searchMounted','transitionKind','toSurface','toHistory','toResults','spec','fieldFocused',
+  'onOpen','onBack','onMore','onInputRequested','generation','unbindInputBack'];
+ function phoneAction(busy){
+  const f=searchSharedActionFixture(busy?{kind:'results',operation:projectOperationFacts({phase:'partial',canCancel:true,canRetry:false})}:{kind:'initial'});
+  f.page.taskStatusExpanded=false;f.page.keyword=busy?'':'原关键词';
+  f.page.publishSurfacePanelInput();f.page.publishSurface();
+  const specs=pureModuleProbe(read('entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets'),'ReaderHeaderSpecs.ets',
+   {...f.controls.dependencies,...headerMetrics},['bookshelfHeaderSpec','searchHeaderSpec']);
+  const modelContract=pureModuleProbe(read('entry/src/main/ets/features/search/presentation/ReaderLibrarySearchModel.ets'),
+   'ReaderLibrarySearchModel.ets',{Observed:value=>value},['READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
+  const {owner:bar}=compileTailConsumer(surfaceSource,[...currentFields,...currentMethods],{
+   ...f.controls.dependencies,...specs,...searchGeometry,...windowMetrics,...fonts,...modelContract,
+   ReaderWindowCoordinator:{metrics:()=>portraitMetrics},
+  },f.controls.hooks);
+  Object.assign(bar,{model:f.library.model,mode:busy?'results':'input',expandedLayout:false,mounted:true,searchMounted:true,
+   identity:f.library.identity,navigationGeneration:f.navigation.snapshot().generation,mounting:f.index.detailShelfAdmissionMount});
+  bar.applyTargets(bar.mode);bar.bar();
+  const native=()=>f.controls.nodes(bar).find(node=>node.type==='Button'&&node.accessibilityText===(busy?'停止搜索':'搜索'));
+  assert.ok(native(),'actual current Surface.bar mounts its native search/stop Button');
+  return{...f,bar,native,click:native().onClick};
+ }
+ for(const busy of[false,true]){
+  const f=phoneAction(busy),action=f.native(),name=busy?'stopSearch':'performSearch';
+  assert.equal(action.padding,0,'native action preserves the exact zero-padding chrome');
+  assert.equal(action.backgroundColor,readerAppColor('app.action.fill','day'));
+  assert.equal(action.opacity,1);assert.equal(action.enabled,true);
+  const label=f.controls.nodes(f.bar).find(node=>node.type==='Text'&&node.create===(busy?'停止':'搜索'));
+  assert.ok(label);assert.equal(label.accessibilityLevel,'no','native Button owns the single accessible action label');
+  assert.equal(action.onKeyEvent,undefined,'native Button owns keyboard activation without a parallel business callback');
+  assert.equal(action.onTouch,undefined,'press feedback has no separate touch-based business dispatch');
+  assert.equal(f.calls.length,0);f.click();
+  assert.equal(f.calls.filter(call=>call[0]===name).length,1,'one native click dispatches the actual live owner once');
+  if(busy)assert.equal(f.library.model.keyword,'','a sweep remains stoppable after the input is cleared');
+
+  const disabled=phoneAction(busy);
+  disabled.page.keyword='';disabled.page.publishSurface();
+  if(busy){assert.equal(disabled.native().enabled,true,'empty input cannot disable the active stop action');disabled.library.model.suspend();}
+  disabled.bar.replay();
+  assert.equal(disabled.native().enabled,false);
+  assert.equal(disabled.native().opacity,busy?1:.38,'current Surface cue replaces the retired shared Button .4 cue');
+  disabled.click();assert.equal(disabled.calls.length,0,'actual disabled/model-ineligible action cannot dispatch');
+
+  const covered=phoneAction(busy);covered.page.taskStatusExpanded=true;covered.page.publishSurfacePanelInput();
+  covered.bar.replay();assert.equal(covered.native().enabled,false);covered.click();
+  assert.equal(covered.calls.length,0,'actual temporary-panel model lease suppresses the retained header action');
+  const replaced=phoneAction(busy);replaced.library.model.claim(replaced.library.model.currentOwner()+1);replaced.click();
+  assert.equal(replaced.calls.length,0,'an action captured by an old model owner cannot dispatch');
+  const retired=phoneAction(busy);retired.bar.aboutToDisappear();retired.click();
+  assert.equal(retired.calls.length,0,'retired current Surface rejects its retained native callback');
+ }
+ // EXCLUDED: preserve the deferred historical wide branch without invoking it
+ // or counting its old ReaderButton .4 / leading-spinner assertions as phone coverage.
+ async function deferredWideSearchAction(){
+ const isTablet=true;for(const busy of[false,true]){
  const f=searchSharedActionFixture(busy?{kind:'results',operation:projectOperationFacts({phase:'partial',canCancel:true,canRetry:false})}:{kind:'initial'});
  f.page.isTablet=isTablet;
  f.page.searchBar();const action=f.action(isTablet?'search-field-wide':'search-field-phone',busy?'停止':'搜索');
@@ -43,14 +110,15 @@ for(const isTablet of[false,true])for(const busy of[false,true]){
  updateActualReaderButton(f,action.actor,{actionEnabled:true});action.actor.aboutToDisappear();action.click();
  assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,1,'retired actual shared actor cannot dispatch');
 }
+ }
 
  }else if(id==='shelf-clearance'){
  const{productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
  const{createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
- const{ReaderWindowMetricsSnapshot,ReaderRectVp,ReaderInsetsVp}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
- const{readerFloatingTabContentInset}=await import('../entry/src/main/ets/features/common/ReaderFloatingBarMetrics.ts');
- const shelf=read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
-const shelfBreakpoint = Number(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets')
+ const{ReaderWindowMetricsSnapshot,ReaderRectVp,ReaderInsetsVp}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+ const{readerFloatingTabContentInset}=await import('./lib/reader-floating-bar-metrics-probe.mjs');
+ const shelf=read('entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets');
+const shelfBreakpoint = Number(read('entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets')
   .match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]);
 let shelfMetrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 844));
 const builderMethods = createRequire(import.meta.url)(`${resolveEtsLoaderRoot()}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
@@ -70,7 +138,7 @@ Object.assign(shelfLayout, {readerWindowMetricsRevision: 0, viewportWidth: 0,
   shelfScrollHandler: () => () => {}, shelfPageHandler: () => () => {},
   saveShelfViewport() {}, restoreShelfViewport() {},
 });
-const ShelfShell = productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookshelfShell.ets', import.meta.url),
+const ShelfShell = productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets', import.meta.url),
   ['showBottomNav'], {BOOKSHELF_WIDE_BREAKPOINT: shelfBreakpoint, ReaderWindowCoordinator: {metrics: () => shelfMetrics}});
 const shelfShellLayout = Object.assign(new ShelfShell(), {populated: true, readerWindowMetricsRevision: 0, viewportWidth: 0});
 shelfLayout.bookshelfList(false);
@@ -92,14 +160,14 @@ for (const [width, safeBottom] of [[390, 0], [390, 34], [599, 48], [600, 34], [1
 }
 
  }else{
- const{SOURCE_SWITCH_VISUAL}=await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+ const{SOURCE_SWITCH_VISUAL}=await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('SourceSwitchSpinner');syntax.propCollection.set('SourceSwitchSpinner',new Set(['active','diameter','reduceMotion']));
 class SpinnerChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-const switchSource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets',import.meta.url),'utf8');
+const switchSource=readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets',import.meta.url),'utf8');
 const windowStruct=switchSource.slice(switchSource.indexOf('@Component\nexport struct SourceSwitchWindow'));
-const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchGateway.ts',import.meta.url),'utf8');
+const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/source/application/SourceSwitchGateway.ts',import.meta.url),'utf8');
 const countStart=gatewaySource.indexOf('export function sourceSwitchSourceCount'),countEnd=gatewaySource.indexOf('\nfunction deduplicateSourceSwitchCandidates',countStart);
 assert.ok(countStart>=0&&countEnd>countStart,'actual distinct-source count remains bound to production');
 const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(gatewaySource.slice(countStart,countEnd)).replace(/^export /gm,'')+';return sourceSwitchSourceCount;')();

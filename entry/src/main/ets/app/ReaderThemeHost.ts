@@ -1,16 +1,16 @@
 import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from './ReaderWindowCoordinator';
-import { ReaderAppearanceStore } from '../features/reading/ReaderAppearanceStore';
+import { ReaderAppearanceStore, ReaderAppearanceSaveUnconfirmedError } from '../features/reading/application/ReaderAppearanceStore';
 import {
   appearanceThemeSelection, applyAppearanceThemeSelection, changeAppearanceThemeSelection,
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
-} from '../features/reading/ReaderAppearanceState';
+} from '../features/reading/application/ReaderAppearanceState';
 import {
   effectiveAppScheme, encodeReaderThemeSelection, restoreReaderThemeSelection,
   type ReaderThemeSelectionBackup,
-} from '../features/common/ReaderThemeSelection';
-import { readerAppColor, readerThemeDefinition, type ReaderThemeScheme, type ReaderAppThemeMode } from '../features/common/ReaderThemeRegistry';
+} from './ReaderThemeSelection';
+import { readerAppColor, readerThemeDefinition, type ReaderThemeScheme, type ReaderAppThemeMode } from '../ui/foundation/ReaderThemeRegistry';
 
 /** One platform publisher. Rendering consumers never write a second theme preference. */
 export class ReaderThemeHost {
@@ -19,7 +19,6 @@ export class ReaderThemeHost {
   private static generation: number = 0;
   private static recoveryBarrier: (() => Promise<void>) | undefined = undefined;
   private static unsubscribe: (() => void) | undefined = undefined;
-  private static settingsSealed: boolean = false;
 
   static async install(owner: ReaderRuntimeOwner, scheme: ReaderThemeScheme): Promise<void> {
     ReaderThemeHost.detach();
@@ -47,7 +46,6 @@ export class ReaderThemeHost {
   }
 
   static detach(): void {
-    ReaderThemeHost.settingsSealed = false;
     ReaderThemeHost.generation += 1;
     ReaderThemeHost.unsubscribe?.();
     ReaderThemeHost.unsubscribe = undefined;
@@ -59,23 +57,6 @@ export class ReaderThemeHost {
     ReaderThemeHost.recoveryBarrier = barrier;
   }
 
-  /** Seal first dispatch before draining the existing local settings owners. */
-  static async sealForLibraryRestore(owner: ReaderRuntimeOwner): Promise<void> {
-    if (!ReaderRuntimeOwner.isCurrent(owner)) throw new Error('THEME_OWNER_CHANGED');
-    ReaderThemeHost.settingsSealed = true;
-    ReaderThemeHost.generation += 1;
-    ReaderThemeHost.unsubscribe?.(); ReaderThemeHost.unsubscribe = undefined;
-    ReaderThemeHost.recoveryBarrier = (): Promise<void> => Promise.reject(new Error('LIBRARY_RESTORE_SETTINGS_SEALED'));
-    await ReaderThemeHost.store?.sealForLibraryRestore();
-  }
-
-  static settingsWriteGeneration(): number { return ReaderThemeHost.generation; }
-
-  static assertSettingsWritable(generation: number = ReaderThemeHost.generation): void {
-    if (ReaderThemeHost.settingsSealed || generation !== ReaderThemeHost.generation)
-      throw new Error('LIBRARY_RESTORE_SETTINGS_SEALED');
-  }
-
   /** Runtime observation only; never part of a theme-selection backup. */
   static observedSystemScheme(): ReaderThemeScheme { return ReaderThemeHost.systemScheme; }
 
@@ -83,7 +64,6 @@ export class ReaderThemeHost {
    * Sync restore itself does not enter this barrier, so it cannot await itself. */
   static async prepareUserChange(): Promise<void> {
     const generation = ReaderThemeHost.generation;
-    ReaderThemeHost.assertSettingsWritable(generation);
     await ReaderThemeHost.recoveryBarrier?.();
     if (generation !== ReaderThemeHost.generation) throw new Error('THEME_OWNER_CHANGED');
   }
@@ -103,17 +83,18 @@ export class ReaderThemeHost {
     await commit?.saved;
   }
 
-  static async selectApp(mode: ReaderAppThemeMode): Promise<void> {
+  static async selectApp(mode: ReaderAppThemeMode, isInputCurrent: () => boolean = (): boolean => true): Promise<void> {
     const generation = ReaderThemeHost.generation;
+    if (!isInputCurrent()) throw new Error('THEME_OWNER_CHANGED');
     await ReaderThemeHost.prepareUserChange();
-    if (generation !== ReaderThemeHost.generation) throw new Error('THEME_OWNER_CHANGED');
+    if (generation !== ReaderThemeHost.generation || !isInputCurrent()) throw new Error('THEME_OWNER_CHANGED');
     const store = ReaderThemeHost.store;
     if (store === undefined) throw new Error('THEME_NOT_READY');
     const commit = await store.change((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
       changeAppearanceThemeSelection(current, 'app', mode, ReaderThemeHost.systemScheme),
-      (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store);
+      (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store && isInputCurrent());
     if (commit === undefined) throw new Error('THEME_OWNER_CHANGED');
-    await commit.saved;
+    await commit.saved.catch((error: Error): void => { throw new ReaderAppearanceSaveUnconfirmedError(error); });
   }
 
   static async durableBackup(): Promise<ReaderThemeSelectionBackup> {

@@ -9,11 +9,11 @@ const {readFileSync} = await import('node:fs');
 const {createRequire,stripTypeScriptTypes} = await import('node:module');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
-const {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const {mangaUserError} = await import('../entry/src/main/ets/features/manga/MangaUserError.ts');
+const {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const {mangaUserError} = await import('../entry/src/main/ets/features/manga/presentation/MangaUserError.ts');
 
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),'utf8');
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
@@ -60,7 +60,7 @@ assert.ok(imageArgumentDiagnostics("'async'").some(item=>item.code===2345),'the 
 
 return;
 }
-const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(projectionSource)};return MangaStripProjection`)();
 const dataSourceText=tree.statements.find(node=>node.name?.getText(tree)==='MangaStripDataSource').getText(tree);
 const DataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataSourceText)};return MangaStripDataSource`)(Projection);

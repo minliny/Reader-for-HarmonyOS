@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryHeaderHeight } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-const source=readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets',import.meta.url),'utf8');
+import {readerAppColor} from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import * as fonts from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryHeaderHeight } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
+const source=readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets',import.meta.url),'utf8');
 const {owner}=createReaderBuilderProbe(source,['trailing','build'],{TYPE_PAGE_TITLE:{fontFamily:'title',fontWeight:400,fontSizeFp:24,lineHeightFp:30}});
 // Initialize the actual regular field expression from the production declaration;
 // the original implementation captures Day here and then never recalculates it.

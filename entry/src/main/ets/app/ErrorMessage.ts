@@ -54,8 +54,6 @@ export function localReadFailureSummary(error: unknown): string {
   let cause = 'other';
   if (message.includes('migration backup slots exhausted')) cause = 'migration-backup-slots';
   else if (message.includes('migration backup time budget exhausted')) cause = 'migration-backup-time';
-  else if (message.includes('storage schema too new')) cause = 'storage-schema-too-new';
-  else if (message.includes('storage data format too new')) cause = 'storage-data-format-too-new';
   else if (message.includes('failed to open Core SQLite database')) cause = 'native-sqlite-open';
   else if (message.includes('source switch rollback conflict') ||
     message.includes('source switch transaction state is stale')) cause = 'source-switch-rollback-conflict';
@@ -160,6 +158,18 @@ export function httpTransportFailureSummary(error: unknown): HttpTransportFailur
 function errorObject(value: unknown): Record<string, Object> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, Object> : undefined;
+}
+
+/** Numeric status on Core's direct rejection of a completed HTTP response. */
+export function coreHttpResponseStatus(error: unknown, stage: string): number | undefined {
+  const raw = errorObject(error);
+  const event = errorObject(raw?.['event']);
+  const failure = errorObject(event?.['error']) ?? errorObject(raw?.['error']) ?? raw;
+  const details = errorObject(failure?.['details']);
+  if (failure?.['code'] !== 'INTERNAL' || details?.['category'] !== 'SOURCE_HTTP_FAILED' ||
+    details['stage'] !== stage) return undefined;
+  const status = details['httpStatus'];
+  return typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599 ? status : undefined;
 }
 
 /** Bounded response rejection evidence. Never serialize an error envelope,

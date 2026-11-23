@@ -2,50 +2,55 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 const definitions={"inflight-feed": {"description": "实际inflight Feed退役→返回新presentation与旧native拒绝", "resources": []}, "management": {"description": "实际management返回保原unknown/cleanup intent", "resources": []}, "entry": {"description": "实际entry返回保原unknown/cleanup intent", "resources": []}, "sourceFeed": {"description": "实际sourceFeed返回保原unknown/cleanup intent", "resources": []}, "shipping-scope": {"description": "实际L0关闭路由无新增Core work", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
-const { createIndexProductBuilderProbe, productSurfaceDescendants }=await import('./lib/reader-extended-product-surface-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
-const {readFileSync} = await import('node:fs');
+const {readFileSync, rmSync} = await import('node:fs');
 const {createHash} = await import('node:crypto');
 const {fixture,seedEntry,settle} = await import('./lib/rss-management-durable-probe.mjs');
-const {deferred,until,cleanupDurableFixtures,durableFixtureToolEvidence} = await import('./lib/rules-mutation-durable-probe.mjs');
+const {deferred,until} = await import('./lib/rules-mutation-durable-probe.mjs');
 const {rssRecoverySurfaceSdk} = await import('./lib/rss-recovery-surface-sdk-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {actualBookshelfOperationTypes,actualBookshelfHostField} = await import('./lib/bookshelf-operation-owner-probe.mjs');
-const {actualSourceManagementTypes,actualSourceManagementHostField} = await import('./lib/source-management-owner-probe.mjs');
+const {actualSourceJourneyTypes} = await import('./lib/source-management-owner-probe.mjs');
 const {actualGeneralSettingsTypes,actualGeneralSettingsHostField} = await import('./lib/general-settings-owner-probe.mjs');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
 const {projectOperationFacts} = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
-const {RssPresentationProjection} = await import('../entry/src/main/ets/features/rss/RssPresentationProjection.ts');
+const {RssPresentationProjection} = await import('../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts');
 const {isReaderProductSurfaceEnabled} = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
-const {ReaderTransientFeedback} = await import('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts');
 
 
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const indexSource=read('pages/Index.ets');
 const sourceHash=createHash('sha256').update(indexSource).digest('hex');
-const checks=[];
+const checks=[],roots=new Set();
 let instance=0;
-const indexMethods=["rssProduct","rssUi","expandedLayout","transientFeedback","clearShelfNavigationMotion","pendingShelfCoverExitId","shelfMotionSequence","clearIndexRecoveryNotice",'openRss','loadRss','rssFeedBinding','getRssOrchestrator','retireRssPresentation','retireRssEditorPresentation','nextNavigationGeneration','retireSettingsPresentation','retireSourceManagementPresentation','retireSourceSwitchPresentation','retireReadingEntryPresentation','retireBookshelfCatalogPresentation','isCurrentRuntime','isCurrentRoute','feedPresentation','isCurrentRssPresentation','isCurrentRssHostPresentation','rssPageContent','rssPageSurface','onRssManage','returnToRss','returnFromRssEntryDetail','returnFromRssSourceFeed','returnToRssSourceFeed'];
-const pageMembers=['appThemeScheme','presentation','expandedLayout','activeMode','original','presentationIdentity','readFacts',
+const indexMethods=['openRss','loadRss','rssFeedBinding','getRssOrchestrator','retireRssPresentation','retireRssEditorPresentation',
+ 'nextNavigationGeneration','retireSettingsPresentation','retireSourceManagementPresentation','retireSourceSwitchPresentation',
+ 'retireReadingEntryPresentation','retireBookshelfCatalogPresentation','isCurrentRuntime','isCurrentRoute','feedPresentation',
+ 'isCurrentRssPresentation','isCurrentRssHostPresentation','rssPageContent','rssPageSurface','onRssManage',
+ 'returnToRss','returnFromRssEntryDetail','returnFromRssSourceFeed','returnToRssSourceFeed'];
+const pageMembers=['appThemeScheme','presentation','isTablet','activeMode','original','presentationIdentity','readFacts',
  'onReconcileOriginal','onRetryRead','onBack','onRefresh','onManage','onSelectSubscription','onSelectItem','onModeRequested',
  'onSettingsRequested','onDiscoverRequested','managePill'];
 
 function composition(f,enabled=true){
- const sdk=rssRecoverySurfaceSdk(),pageSource=read('features/rss/RssPage.ets');
+ const sdk=rssRecoverySurfaceSdk(),pageSource=read('features/rss/ui/RssPage.ets');
  sdk.childSources.RssPage=pageSource;
  const Page=createReaderBuilderProbe(pageSource,pageMembers,{...sdk.deps,projectOperationFacts},sdk.hooks).Component;
- const dependencies={ReaderRuntimeOwner:f.Runtime,RssOrchestrator:f.Orchestrator,RssPage:Page,ReaderTransientFeedback,
-  RssPresentationProjection,projectOperationFacts,isReaderProductSurfaceEnabled:enabled?()=>true:isReaderProductSurfaceEnabled};
- const {owner:p}=createIndexProductBuilderProbe(indexSource,indexMethods,{...sdk.deps,...dependencies},sdk.hooks);
- Object.assign(p,{route:'bookshelf',readerWindowMetricsRevision:-1,mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:0,rssInstanceIdentity:++instance,rssPresentationIdentity:'',rssEditorPresentationIdentity:'',settingsPresentationIdentity:'',sourcePresentationIdentity:'',nativeAlertOwner:new ReaderNativeAlertOwner(),rssProduct:{rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssFeedRead:projectOperationFacts({phase:'idle'}),selectedRssItems:[]}});
+ const p=sdk.consumer(indexSource,indexMethods,{ReaderRuntimeOwner:f.Runtime,RssOrchestrator:f.Orchestrator,RssPage:Page,
+  RssPresentationProjection,projectOperationFacts,isReaderProductSurfaceEnabled:enabled?()=>true:isReaderProductSurfaceEnabled,
+  deviceInfo:{deviceType:'phone'} });
+ Object.assign(p,{route:'bookshelf',mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,
+  navigationGeneration:0,rssInstanceIdentity:++instance,rssPresentationIdentity:'',rssEditorPresentationIdentity:'',
+  settingsPresentationIdentity:'',sourcePresentationIdentity:'',rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},
+  rssFeedRead:projectOperationFacts({phase:'idle'}),selectedRssItems:[],nativeAlertOwner:new ReaderNativeAlertOwner()});
  p.bookshelfHost=actualBookshelfHostField(p,actualBookshelfOperationTypes({ReaderRuntimeOwner:f.Runtime}).Host,{setOrCreate(){}});
  p.settingsHost=actualGeneralSettingsHostField(p,actualGeneralSettingsTypes({ReaderRuntimeOwner:f.Runtime}).SettingsHost);
- p.sourceHost=actualSourceManagementHostField(p,actualSourceManagementTypes({ReaderRuntimeOwner:f.Runtime}).SourceHost);
+ p.sourceJourney=new (actualSourceJourneyTypes({ReaderRuntimeOwner:f.Runtime}).SourceJourneyPresentation)();
  let rendered=false;const painted=new WeakSet();
  function paint(){
   if(rendered)p.replay();else{p.rssPageContent();rendered=true;}
   sdk.properties.flush();
-  const page=productSurfaceDescendants(p).filter(x=>x instanceof Page).at(-1);assert.ok(page,'actual decorated RSS page');
+  const page=sdk.walk(p).filter(x=>x instanceof Page).at(-1);assert.ok(page,'actual decorated RSS page');
   if(!painted.has(page)){page.managePill();painted.add(page);}
   sdk.properties.flush();
   const action=sdk.walk(page).find(x=>x.specId==='rss-manage');assert.ok(action,'actual shared labeled action');
@@ -54,19 +59,13 @@ function composition(f,enabled=true){
  }
  return{p,sdk,paint,settled:()=>settle(f.Orchestrator.forRuntime(f.runtime))};
 }
-async function actualFixture(seed=true){
- const f=await fixture();
- if(seed)await seedEntry(f);
- return f;
-}
+async function actualFixture(){const f=await fixture();roots.add(f.root);console.log(JSON.stringify({kind:'reader-test-tool-evidence',tool:f.toolEvidence(),coreInfo:await f.readCoreIdentity()}));await seedEntry(f);return f;}
 function assertNoDurableReplay(f,beforeDisk,beforeWrites,beforeIo){
  assert.equal(f.writes().length,beforeWrites,'return/query never replays original apply');
  assert.equal(f.disk(),beforeDisk,'return/query never clears or replaces accepted original intent');
  assert.deepEqual(f.io,beforeIo,'return/query never performs Atomic cleanup');
 }
 
-console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));
-let passed=false;
 try{
  // The delayed operation is the real RSS Gateway list request; its original
  // binding is retired by the real Index navigation path, not by a fake flag.
@@ -74,18 +73,18 @@ try{
   const f=await actualFixture(),x=composition(f),gate=deferred();
   f.options.pauseMethod='rss-source.list';f.options.gate=gate;x.p.openRss();
   await until(()=>f.calls.some(c=>c.method==='rss-source.list'));
-  assert.equal(x.p.rssProduct.rssFeedRead.fact,'loading');
+  assert.equal(x.p.rssFeedRead.fact,'loading');
   const old=x.paint(),oldIdentity=old.page.presentationIdentity,oldGeneration=x.p.navigationGeneration;
   old.click();assert.equal(x.p.route,'rssSubscriptionManagement');
   x.p.returnToRss();assert.equal(x.p.route,'rss');assert.ok(x.p.navigationGeneration>oldGeneration);
   const returned=x.paint();
   gate.resolve();await x.settled();
-  const observations={identity:x.p.rssPresentationIdentity,feedRead:x.p.rssProduct.rssFeedRead,
+  const observations={identity:x.p.rssPresentationIdentity,feedRead:x.p.rssFeedRead,
    hostFeedRead:x.p.rssOrchestrator.feedRead,calls:f.calls.map(c=>c.method)};
   console.log(JSON.stringify({scenario:'actual-old-Feed-load-return',sourceHash,fixture:f.root,observations}));
   assert.notEqual(x.p.rssPresentationIdentity,'','return must attach the new RSS presentation');
   assert.notEqual(returned.page.presentationIdentity,oldIdentity);
-  assert.equal(x.p.rssProduct.rssFeedRead.fact,'current','retired old completion cannot leave current Feed loading');
+  assert.equal(x.p.rssFeedRead.fact,'current','retired old completion cannot leave current Feed loading');
   const before=f.calls.length,nav=x.p.navigationGeneration;old.click();await x.settled();
   assert.equal(x.p.navigationGeneration,nav);assert.equal(f.calls.length,before,'old physical callback cannot borrow reattached owner');
   returned.click();assert.equal(x.p.route,'rssSubscriptionManagement','fresh native callback is admitted');await x.settled();
@@ -98,18 +97,18 @@ try{
   const f=await actualFixture();f.options[failure]='rules.mutation.apply';
   await assert.rejects(f.rss.persistFavorite('s','g',10));
   const x=composition(f);x.p.openRss();await x.settled();const old=x.paint();
-  const beforeDisk=f.disk(),beforeWrites=f.writes().length,beforeIo={...f.io},beforeValue=structuredClone(x.p.rssProduct.rssPresentation);
+  const beforeDisk=f.disk(),beforeWrites=f.writes().length,beforeIo={...f.io},beforeValue=structuredClone(x.p.rssPresentation);
   old.click();await x.settled();
   if(origin==='entry'){
-   x.p.nextNavigationGeneration();x.p.route='rssEntryDetail';x.p.rssProduct.rssDetailReturnTarget='rss';x.p.returnFromRssEntryDetail();
+   x.p.nextNavigationGeneration();x.p.route='rssEntryDetail';x.p.rssDetailReturnTarget='rss';x.p.returnFromRssEntryDetail();
   }else if(origin==='sourceFeed'){
-   x.p.nextNavigationGeneration();x.p.route='rssSourceFeed';x.p.rssProduct.rssSourceFeedReturnTarget='rss';x.p.returnFromRssSourceFeed();
+   x.p.nextNavigationGeneration();x.p.route='rssSourceFeed';x.p.rssSourceFeedReturnTarget='rss';x.p.returnFromRssSourceFeed();
   }else x.p.returnToRss();
   await x.settled();assert.equal(x.p.route,'rss');assert.notEqual(x.p.rssPresentationIdentity,'');
-  assert.deepEqual(x.p.rssProduct.rssPresentation,beforeValue);assert.equal(x.p.rssProduct.rssFeedRead.fact,'current');
-  assert.equal(x.p.rssProduct.rssFeedOriginal.confirmation,failure==='beforeMethod'?'unknown':'confirmed');
-  assert.equal(x.p.rssProduct.rssFeedOriginal.blocked,true,'unknown and confirmed-pending-cleanup remain original-owner blocked');
-  assert.equal(x.p.rssProduct.rssFeedOriginal.writeStage,failure==='beforeMethod'?'core':'cleanup');
+  assert.deepEqual(x.p.rssPresentation,beforeValue);assert.equal(x.p.rssFeedRead.fact,'current');
+  assert.equal(x.p.rssFeedOriginal.confirmation,failure==='beforeMethod'?'unknown':'confirmed');
+  assert.equal(x.p.rssFeedOriginal.blocked,true,'unknown and confirmed-pending-cleanup remain original-owner blocked');
+  assert.equal(x.p.rssFeedOriginal.writeStage,failure==='beforeMethod'?'core':'cleanup');
   assertNoDurableReplay(f,beforeDisk,beforeWrites,beforeIo);
   const fresh=x.paint(),nav=x.p.navigationGeneration,calls=f.calls.length;
   old.click();await x.settled();assert.equal(x.p.navigationGeneration,nav);assert.equal(f.calls.length,calls);
@@ -121,17 +120,16 @@ try{
   checks.push('actual-'+origin+'-return-'+failure+'-original-preserved-native-current-old-mount-runtime-rejected');
  }
  if(selectedCase==='shipping-scope'){
-  const f=await actualFixture(false),x=composition(f,false),route=x.p.route,nav=x.p.navigationGeneration;
+  const f=await actualFixture(),x=composition(f,false),route=x.p.route,nav=x.p.navigationGeneration;
   assert.equal(isReaderProductSurfaceEnabled('rss'),false,'shipping L0 remains closed');
   x.p.openRss();x.p.returnToRss();x.p.returnFromRssEntryDetail();x.p.returnFromRssSourceFeed();
   assert.equal(x.p.route,route);assert.equal(x.p.navigationGeneration,nav);assert.equal(f.calls.length,0);
   checks.push('actual-L0-production-gate-no-op-no-new-entry');
  }
- passed=true;
+ for(const root of roots)rmSync(root,{recursive:true,force:true});
  console.log(JSON.stringify({status:'PASS',sourceHash,checks,scope:'actual Index retirement/return + real RSS Gateway/Orchestrator/Atomic/Core + SDK emitted RSS native action; native scheduling/device separate'}));
-}finally{
- const cleanup=await cleanupDurableFixtures({retain:!passed});
- if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',sourceHash,checks,...cleanup}));
+}catch(error){
+ console.error(JSON.stringify({status:'FAIL',sourceHash,checks,retainedFixtures:[...roots],error:error.message}));throw error;
 }
 
 }

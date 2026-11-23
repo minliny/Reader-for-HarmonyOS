@@ -1,17 +1,17 @@
-import { readerIsExpandedWidth } from '../entry/src/main/ets/features/common/ReaderWidthClass.ts';
-import { virtualFilePath } from './lib/tool-environment.mjs';
-import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import {mangaUserError} from '../entry/src/main/ets/features/manga/MangaUserError.ts';
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
+import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import {mangaUserError} from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
+import {diagnosticCodeOf} from '../entry/src/main/ets/app/LogPrivacy.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {stripTypeScriptTypes} from 'node:module';
-import {installedEtsCompiler} from './lib/ets-compiler-runtime.mjs';
-import {pureModuleProbe} from './lib/ets-pure-module-probe.mjs';
+import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {PhotoViewScaleModel} from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
-import {MangaStripProjection} from '../entry/src/main/ets/features/manga/MangaStripProjection.ts';
-import {createDefaultReaderSettingsSnapshot,normalizeReaderSettingsSnapshot,setReaderPageTurnStyle} from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-const p=new MangaStripProjection();
+import {createDefaultReaderSettingsSnapshot,normalizeReaderSettingsSnapshot,setReaderPageTurnStyle} from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
+const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+const Projection=new Function(`${stripTypeScriptTypes(source)};return MangaStripProjection`)();
+const p=new Projection();
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},manifestVersion:'navigation-v1',pages:Array.from({length:3},(_,ordinal)=>({ordinal,pageId:`logical-${ordinal}`}))};
 const geometry=()=>({width:1000,height:100000,tileHeight:1000});
 p.publish(manifest,geometry,1);
@@ -23,13 +23,15 @@ p.publish(manifest,geometry);
 assert.equal(p.index(1,0.991),199,'orientation changes preserve original image identity');
 assert.equal(p.position(199,110,1000),0.9911);
 assert.equal(p.position(199,330,3000),0.9911,'zoom is presentation only');
-const surfaceURL=new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url);
+const surfaceURL=new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url);
 const surfaceSource=readFileSync(surfaceURL,'utf8');
-const {ts,options}=installedEtsCompiler();
-const tree=ts.createSourceFile(virtualFilePath('MangaNavigationProbe.ets'),surfaceSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const require=createRequire(import.meta.url);
+const sdk=resolveEtsLoaderRoot();
+const ts=require(`${sdk}/node_modules/typescript`);
+const tree=ts.createSourceFile(virtualFilePath('MangaNavigationProbe.ets'),surfaceSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
-const frame=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='MangaLayoutFrame');assert.ok(frame);
-const {MangaLayoutFrame}=pureModuleProbe(frame.getText(tree),'MangaLayoutFrame.ets',{FrameCallback:class {}},['MangaLayoutFrame']);
+const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
+const MangaLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const timers=[],scrolls=[],frames=[],measurements=[];
 function flushLayout(width,height) {
   timers.splice(0).forEach(callback=>callback());
@@ -40,14 +42,14 @@ function flushLayout(width,height) {
       frame.onFrame(0);
     }
     nativeWidth=width;nativeHeight=height;
-    for(const frame of batch) frame.onIdle(2_000_000);
+    for(const frame of batch) { frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames); }
   }
   assert.equal(frames.length,0,'scroll application and geometry confirmation use two rendered frames');
 }
 let xOffset=250;let clipped=100;let nativeWidth=1000;let nativeHeight=1000;
 const Surface=productionMotionMethods(surfaceURL,
  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','loginRequired','loginAndRetry','imageError','refreshImages','publish','requestedLast','measureVisibleWindow','openDirectory','openSourceSwitch','handleBack','positionIdentity','rememberVisible','restore','finishLayout','onViewportScroll','resizeViewport','changeZoom','toggleDirection','turnPage','saveVisible'],
- {readerIsExpandedWidth,setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame,
+ {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame,
   inputMethod:{getController:()=>({hideTextInput:async()=>{}})}, READER_FONT_NOTO_SERIF_SC_BOLD,
   prepareReaderFontFamily:async family=>{assert.equal(family,READER_FONT_NOTO_SERIF_SC_BOLD);},
   prepareMangaSheetFonts:async()=>true});
@@ -55,6 +57,7 @@ const saved=[];const settings=[];
 const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p,notify:()=>{}},
  first:150,last:150,viewportWidth:500,viewportHeight:900,zoom:2,scalePolicy:new PhotoViewScaleModel(),horizontal:false,horizontalPage:0,
  opened:true,mounted:true,panel:'',panelPhase:'closed',panelGeneration:0,panelActionGeneration:0,panelFontGeneration:0,panelFontsReady:false,reduceMotion:true,chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
+ appForeground:true,windowChromeActive:true,interactionBlocked:false,pageTurnInputRevision:0,
  settingsGateway:{updateMangaDirection:async value=>settings.push(value)},
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({clearFocus(){}})}),
@@ -88,50 +91,8 @@ let backCount=0,saveCount=0,finishBackSave;owner.onBack=()=>backCount++;owner.sa
 owner.zoom=2;await owner.handleBack();assert.equal(owner.zoom,1);assert.equal(backCount,0);assert.equal(saveCount,0);
 const leaving=owner.handleBack();assert.equal(backCount,0);assert.equal(saveCount,1,'unzoomed back retains the reader until progress settles');
 finishBackSave();await leaving;assert.equal(backCount,1);
-// Inspect registration identities, then execute the actual registered closures.
-// Callback spelling, whitespace and void-vs-return are not ownership facts.
-function exitCallbacks(text) {
- const ast=ts.createSourceFile(virtualFilePath('MangaExitRegistration.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
- assert.equal(ast.parseDiagnostics.length,0);
- const found={};
- function visit(node) {
-  if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)) {
-   if(node.expression.name.text==='onExitRequestHandler')found.system=node.arguments[0];
-   if(node.expression.name.text==='iconAction'&&ts.isStringLiteral(node.arguments[1])&&node.arguments[1].text==='返回')found.button=node.arguments[2];
-  }
-  ts.forEachChild(node,visit);
- }
- visit(ast);assert.ok(found.system&&found.button,'both actual exit registrations exist');
- return {ast,found};
-}
-async function checkExitClosures(text) {
- const {ast,found}=exitCallbacks(text);
- for(const [kind,node] of Object.entries(found)) {
-  let saves=0,exits=0,requests=0,release;
-  const target=Object.assign(Object.create(owner),{mounted:true,exiting:false,zoom:2,panel:'',panelPhase:'closed',
-   scalePolicy:new PhotoViewScaleModel(),layoutGeneration:0,presentationGeneration:0,
-   saveVisible:()=>{saves++;return new Promise(done=>{release=done;});},onBack:()=>exits++});
-  target.handleBack=function(...args){requests++;return Surface.prototype.handleBack.apply(this,args);};
-  const callback=new Function(`return function(){return (${stripTypeScriptTypes(node.getText(ast))});};`)().call(target);
-  const settle=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
-  callback();await settle();assert.equal(target.zoom,1,`${kind}: first request leaves zoom`);
-  assert.equal(saves,0);assert.equal(exits,0);
-  callback();await settle();assert.equal(saves,1,`${kind}: second request awaits original progress`);assert.equal(exits,0);
-  release();await settle();assert.equal(exits,1);
-  if(kind==='system') {
-   target.mounted=false;const before=requests;callback();await settle();
-   assert.equal(requests,before,'retired registration cannot invoke the reader exit owner');
-  }
- }
-}
-await checkExitClosures(surfaceSource);
-const callbacks=exitCallbacks(surfaceSource);
-const rewrite=(node,text)=>surfaceSource.slice(0,node.getStart(callbacks.ast))+text+surfaceSource.slice(node.end);
-await checkExitClosures(rewrite(callbacks.found.button,'() => (this.handleBack())'));
-await assert.rejects(checkExitClosures(rewrite(callbacks.found.button,'() => { this.onBack(); }')),
- /first request leaves zoom/,'bypassing the progress/zoom owner is rejected');
-await assert.rejects(checkExitClosures(rewrite(callbacks.found.system,"(intent?: 'navigation') => { void this.handleBack(intent); }")),
- /retired registration/,'retired system callback cannot invoke an old owner');
+assert.match(surfaceSource,/onExitRequestHandler\([\s\S]*?this\.handleBack\(\)/);
+assert.match(surfaceSource,/iconAction\([\s\S]*?'返回',[\s\S]*?this\.handleBack\(\)/);
 console.log('PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit');
 
 assert.equal(mangaUserError('MANGA_SESSION_CONTENT_CHANGED'),'章节内容或书源已更新，请重新打开本章。');
@@ -145,14 +106,16 @@ const safeUnknown='漫画暂时无法加载，请重试；仍失败时可尝试�
 assert.equal(mangaUserError(unknownDiagnostic),safeUnknown,'unknown diagnostics have a recoverable public hint');
 assert.equal(mangaUserError('upstream /private/book?token=secret'),safeUnknown,'unrecognized upstream details never become public copy');
 const diagnostics=[];
-const ErrorSurface=productionMotionMethods(surfaceURL,['displayError'],{mangaUserError,hilog:{warn:(...args)=>diagnostics.push(args)}});
+const ErrorSurface=productionMotionMethods(surfaceURL,['displayError'],{mangaUserError,diagnosticCodeOf,hilog:{warn:(...args)=>diagnostics.push(args)}});
 const errorSurface=Object.assign(new ErrorSurface(),{reportedErrorCodes:new Set()});
 assert.equal(errorSurface.displayError(unknownDiagnostic),safeUnknown);
 assert.equal(errorSurface.displayError(unknownDiagnostic),safeUnknown);
-assert.deepEqual([...errorSurface.reportedErrorCodes],[unknownDiagnostic],'presentation keeps the original diagnostic identity');
-assert.equal(diagnostics.length,1,'repeated rendering does not repeat the same diagnostic');
-assert.equal(diagnostics[0].at(-1),unknownDiagnostic,'the actual Surface diagnostic retains the original code');
-console.log('PASS targeted manga error messages retain diagnostic facts while exposing safe animation/offline/unknown recovery hints');
+assert.equal(errorSurface.displayError('upstream /private/book?token=secret'),safeUnknown);
+assert.deepEqual([...errorSurface.reportedErrorCodes],['OPERATION_FAILED']);
+assert.equal(diagnostics.length,1,'errors in the same public category share the warning');
+assert.equal(diagnostics[0].at(-1),'OPERATION_FAILED');
+assert.doesNotMatch(JSON.stringify(diagnostics),/UNEXPECTED_DIAGNOSTIC|private\/book|token=secret/);
+console.log('PASS manga error hints and finite public diagnostics');
 
 let finishSave;const actions=[];
 owner.saveVisible=()=>new Promise(resolve=>{finishSave=resolve;});

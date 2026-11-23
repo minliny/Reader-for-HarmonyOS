@@ -1,9 +1,53 @@
 # Reader 页面结构契约（RPSCM v0.2）
 
+> 2026-11-12 合流补充适用于本批新目录和运行时 owner。执行状态见 [合流实施记录](framework-confluence-20261112.md)，历史试点保留原输入与结果。
+
+## 工程框架与页面契约的职责映射
+
+页面的16层定义负责设计、选型、预算、登记及检查。工程目录的应用装配、业务功能、公共UI三层负责源码依赖和运行时所有权。开发时同时满足两组合同，页面仍沿ArkUI原生声明式装配。
+
+| 合同范围 | 当前事实与实现归属 |
+| --- | --- |
+| 路由和返回 | app/navigation/ReaderNavigation保存唯一导航事实；具名Journey保存该旅程的有界展示状态；Index负责根装配及事件转交 |
+| Source返回 | SourceJourneyPresentation保存同Runtime的查询、状态、分类、分组、有效锚点及Tools返回上下文 |
+| 页面几何 | ui/layout/ReaderPageGeometry统一解析；StandardPage或具名领域页面拥有输入及当前代测量；Scaffold绘制已解析结果 |
+| 窗口事实 | ReaderWindowCoordinator接收当前Ability/Window事实，ui/foundation/ReaderWindowEnvironment提供只读入口 |
+| 控件及消息 | ui/controls与ui/feedback持有真实原生交互节点、语义及绘制；业务动作与原操作归原Host/Orchestrator |
+| 领域内容 | feature内保留真实List、Tree、阅读和漫画实现，通过有限接口消费公共能力 |
+| 机器登记 | tools/contracts与tools/page-structure分别记录上游owner和页面实例，引用当前文件、符号及修订 |
+
+每页声明唯一主滚动owner。有界结果列表和领域模块的内部滚动分别登记其宿主、边界和返回关系。采用Native Button的动作直接在该节点支付尺寸、语义和派发；标签Text保留排版职责。
+
+固定区域按当前测量代次支付避让。流内页头及普通dock由List消费，管理态固定dock按真实剩余内容预算准入。测量输入变化后只接受当前代回执，窗口配置中的fontSizeScale与Display的px/vp密度分别消费。
+
+检查定义随当前装配重新审阅，保留能捕获原缺口的负例。输入指纹用于检测漂移。方法、SDK、Native、安装及用户证据各自归属其固定候选，发生职责或交互节点变化时按影响范围重新验证。
+
+2026-11-13 的全页面代码审计补充以下装配约束。当前执行及独立验收范围见 [代码侧独立审计记录](code-side-ui-audit-20261113.md)。
+
+- 自定义组件的外部 `__Common__` 分配和内部 Native 节点分别支付尺寸。等分槽位需要内部控件填满已分配宽度，父容器的 44vp 高度也需要核对实际可交互叶节点。
+- 行预算使用实际宿主扣除安全区、padding、border、封面和固定动作后的剩余宽度。文字偏好最小宽度受实际剩余空间约束，动作可以换行，行高和虚拟化投影步长共同更新。
+- 短视口给当前可交互内容保留完整目标空间。固定区域占满预算时按当前宿主采用有界文档滚动或模块滚动，保持同一业务 owner、动作与返回入口可达。保留但隐藏的实例同时退出输入、命中和无障碍遍历。
+- 测量键包含宽度、字号、字体准备修订、内容与当前展示身份等真实输入。测量结果字段独立保存，首次冷测量及同一帧的多个合法回执可以依次发布。旧身份、旧宽度与退场实例的回执拒绝更新后继状态。
+- 共享控件变更沿真实 composition 追踪消费者。检查记录区分路由页、嵌入模块、诊断页和保留禁用页，控件构造或模块发现数量单独记录其统计口径。
+- 图标字形、可见背景、文字行盒和原生命中框分别保留各自的规格。扩大命中框时核对内部绘制居中、父级预算及相邻目标，逐一验证实际采用的 recipe 和默认变体。
+- 稳定 key 保留的原生节点读取当前事实。选中、禁用、忙碌、末项分隔线等状态更新须验证同一节点及其真实事件回调，数组重新构造和初次挂载检查不能覆盖这条路径。
+- 子组件 Prop Watch 或生命周期向上通知时，沿实际父链核对正在渲染的 View。需要延后父级发布的通知同时保留即时失效的输入准入，并在交付时核对原展示身份、代次和当前事实。组件自身的 State 更新按 SDK 的逐 View 渲染语义判断。
+- 临时选择器打开时保留被覆盖页面的路由、实体和阅读 session。选中目标后的提交或预览由既有业务 owner 执行明确交接。恢复消息只投射原实体的事实，读取失败、已知结果和未知写入回执分别使用所属类别的公共宿主。
+- 消息显隐、原操作回执及新写入准入分别消费业务 owner 的事实。跨实体共享的未决写锁通过独立只读准入传到实际写节点，原实体提示保持自身展示身份。首次读取已经产生的恢复回执也交付当前宿主，核对同一操作对象的后续变化能触发真实响应式发布。创建、删除及手势写入口共同核对准入，正文与目录的纯读取继续按各自资格执行。
+- 阅读恢复浮层与正文分页、控制栏高度分别装配。浮层暂时退绘时核对真实 State 订阅及关闭后的重新显示，快捷目录和完整目录保留可浏览空间与原实体锚点。恢复提示的自然高度及变化不得隐式占满列表或重置当前章节定位。
+- 数据类型未确认时保留准备状态，从既有数据 owner 取得类型事实后选择版式。兼容输入含缺失字段时，入口转换须验证旧数据及异步补型过程。
+- 主列表在固定区与滚动前缀之间切换时声明当前位置交接。字号、窗口和前缀高度变化时以当前有效实体锚点恢复，用户继续滚动、退场和旧回调均有失效条件。
+- Scroll的内容主轴对齐与子Column的内部排列分别核对。文档首区的位置同时包含容器对齐偏移、滚动偏移和已解析inset，短内容、长内容及内容更新都需符合该宿主的阅读起点。空态、横向控件和阅读专用宿主按各自语义登记，保留其有意居中与定位。
+
+书源原始 JSON 编辑当前要求 `source.import.conditional.v1`，将读取时完整 `sourceVersion` 固定进原操作，并在 Core 事务内核对前态。条件导入省略 canonical rules 时保留同一前态的规则。缺少完整 raw BookSource 的旧来源由编辑读取入口返回格式限制，现有规则与草稿保留。§14.3 中早期试点的能力结论继续绑定其历史输入。
+
+Builder slot 中依赖可变状态的 UI 控制流须放入具名 `@Builder`，由普通箭头转交，并核对真实编译输出包含结构化 `If` 观察与状态订阅。回归入口为 `node tools/test-reader-font-demand.mjs --case manga-publication`，覆盖初始准备态转入正文、页脚、覆盖层和页头菜单。
+
+
 > 状态：v0.2，开发指导文档。不是发布说明，不是视觉规范。
 > 适用：HarmonyOS ETS 页面；当前验收基线 366×844。
 > 配套：结构问题修复实施方案 [`../issues/page-structure-fix-20261102.md`](../issues/page-structure-fix-20261102.md)。
-> 更新：2026-11-03（含普通列表ScrollAway、直接单选装配、头尾独立放置，以及同实例状态、滚动坐标、触控父预算和平台字体继承的证据语义；整体进度以配套实施方案前部总览为准）。
+> 更新：2026-11-12。当前装配、生产输入及执行结果见合流实施记录。§14.3 保留早期试点的原时点结果。
 
 ## 0. 文档定位
 
@@ -66,14 +110,14 @@
 | P2 参数/几何 | `geometry` | [ui-parameter-contract-20261025.md](ui-parameter-contract-20261025.md)、`ReaderPageGeometry`/`ReaderMeasurementStore` | 成熟 | 层 4/5/13/15 引用 |
 | P2 表面/材质 | `surface` | [ui-surface-role-contract-20261028.md](ui-surface-role-contract-20261028.md)、`ReaderSurfaceSpecs` | 成熟（demo/设备待验） | 层 9/11/13 引用 |
 | P3 视觉表达 | `expression` | `Reader-UI/theme/registry.json`、`ReaderTypography`、`SVG_PROVENANCE`、`MotionSpec`、[STYLE_AND_MOTION.md](../ui-design/cross-platform-reference/STYLE_AND_MOTION.md) | 成熟 | 层 11/12/13 引用 token/spec |
-| P3 控件与状态 | `control` | [ReaderControlSpecs.ets](../../entry/src/main/ets/features/common/ReaderControlSpecs.ets)、`ReaderButton`/`ReaderFormField`/`ReaderChoiceRow`；[control-registry.json](../../tools/contracts/control-registry.json) | 部分 | 层 6/8/12/14 引用 `controlId` |
+| P3 控件与状态 | `control` | [ReaderControlSpecs.ets](../../entry/src/main/ets/ui/controls/ReaderControlSpecs.ets)、`ReaderButton`/`ReaderFormField`/`ReaderChoiceRow`；[control-registry.json](../../tools/contracts/control-registry.json) | 部分 | 层 6/8/12/14 引用 `controlId` |
 | P3 消息 | `message` | [FRAMEWORK.md](../message-ui/FRAMEWORK.md)、[message-entrypoints.json](../../tools/message-entrypoints.json) | 成熟 | 层 9/10 引用 `entryId` |
 | P4 操作与投影 | `operation` | [ReaderOperationFacts.ts](../../entry/src/main/ets/app/ReaderOperationFacts.ts)、Hosts/Orchestrators/Projection | 部分 | 层 10/16 引用 `operationId` |
-| P4 持久化/设置 | `persistence` | [storage-strong-compatibility-plan-20261030.md](storage-strong-compatibility-plan-20261030.md)、Settings owner | 成熟/部分 | 独立；页面只引用 |
-| P4 平台宿主 | `platform` | [ReaderSystemFileOpenHost.ts](../../entry/src/main/ets/app/ReaderSystemFileOpenHost.ts)、native Alert/登录 Web 宿主；[platform-host-registry.json](../../tools/contracts/platform-host-registry.json) | 部分 | 层 1/9/10 引用 `hostId` |
+| P4 持久化/设置 | `persistence` | [Core 存储能力契约](../../../Reader-Core/docs/architecture/storage-capabilities-contract-20261110.md)、Settings owner | 成熟/部分 | 独立；页面只引用 |
+| P4 平台宿主 | `platform` | [ReaderSystemFileOpenHost.ts](../../entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenHost.ts)、native Alert/登录 Web 宿主；[platform-host-registry.json](../../tools/contracts/platform-host-registry.json) | 部分 | 层 1/9/10 引用 `hostId` |
 | P5 适配 | `adaptation` | `ReaderPageGeometry`、`ReaderLayoutCapability`、`ReaderSurfaceResolvers` | 成熟/部分 | 层 13/15 引用 |
 | P5 无障碍 | `a11y` | 本文档 §6.10、E1–E6；独立审计待建 | 缺失/部分 | 层 14 引用 `a11y` block |
-| P6 版本/签名 | `release` | [VERSION_POLICY.md](../../../VERSION_POLICY.md)、AGENTS.md、签名权威 | 成熟 | 独立，不进入页面判定 |
+| P6 版本/签名 | `release` | [工作区治理](../../../AGENTS.md)、签名权威、当前 App release ledger | 成熟 | 独立，不进入页面判定 |
 | P6 门禁/证据 | `gate` | [GATE_INDEX.md](../../../GATE_INDEX.md)、`contract-test-tiers.json`、`hap-contract-evidence-policy.json` | 成熟 | 独立，只报告结果 |
 | P6 可观测性 | `observability` | 未正式化 | 缺失 | 后续；当前不阻塞页面 |
 | P6 国际化 | `i18n` | 未覆盖 | 缺失 | 后续；当前不阻塞页面 |
@@ -495,7 +539,7 @@ interface RouteContract {
 | 条件 | 结果 | 优先级 |
 |---|---|---|
 | `queryPriority=none` | None | 1 |
-| `queryPriority=primary` 且真实 `queryViewport.fixedChromeHeight + minimumContentHeight > availableHeight` | Inline，同一主列表内ScrollAway prefix | 2 |
+| `queryPriority=primary` 且真实 `queryViewport.fixedChromeHeight + minimumContentHeight > availableHeight` | Inline，默认同一主列表内的 ScrollAway 前缀。持续编辑的嵌入模块可以使用下述限高编辑区 | 2 |
 | `queryPriority=primary` 且预算足够或未声明响应预算 | HeaderSlot | 3 |
 | `queryComplexity=complex` 且 `queryFrequency=rare` | Overlay | 4 |
 | `queryPriority=complex` | Overlay | 5 |
@@ -508,6 +552,8 @@ interface RouteContract {
 `queryViewport`是可选的真实几何输入，包含有限数值`availableHeight>0`、`fixedChromeHeight>=0`、`minimumContentHeight>0`；fixedChromeHeight指候选固定装配在当前字号下所需的未clamp高度，不是降级后实扣的0。不能用`Math.max(0,listHeight)`掩盖欠账，也不能把降级后的0再送回选择器导致反复切换。它只适用于primary查询，推导器内部计算`queryHeightClass`，页面作者不得手填constrained布尔或降低查询优先级。缺输入不推定矮屏；availableHeight为0代表尚未就绪，不能伪造可用结构。原型不允许Inline时仍返回GRAMMAR错误。
 
 ScrollAway变体必须登记准确生效条件、测量/字号revision、唯一滚动owner、prefix与Core/data rank映射、锚点和焦点迁移。prefix不是第0章；分页/选择/下载仍用业务索引。空、加载、筛选空和错误时查询仍可达。嵌入模块只豁免整页原型外框，不豁免显式queryViewport的决策核对；`check-register`单独检查这一层。
+
+阅读内目录这类持续编辑的嵌入模块，在实际预算触发 Inline 时可以登记 `inlineComposition=boundedEditor`。查询在各高度下保持同一个原生编辑宿主。局部编辑 Scroll 与唯一主结果 List 各使用内容槽内不重叠的高度，编辑区可单独滚达查询，结果 List 保持自己的数据索引、滚动锚点和当前状态。登记提供实际首屏的内容槽及编辑区高度，并验证高度变化不重建同一输入及结果实例。没有可用结果空间时按模块的空间不足状态处理；可用状态需要实际可达的结果任务或状态回馈。此装配仍按 Inline 计入首屏预算及焦点验收。
 
 约束：
 
@@ -556,6 +602,36 @@ ScrollAway变体必须登记准确生效条件、测量/字号revision、唯一�
 - Dialog 不用于非阻断选择。
 - 消息跟随当前有效宿主，不设全局“永远最上层”的消息层；同一宿主去重和旧宿主退休按消息框架执行。
 - 浮层必须先消费返回，再允许路由退页。
+
+#### 6.4.1 全应用覆盖层装配
+
+覆盖层遵循同一份底页几何不变契约。相同viewport、系统字号和安全区下，打开、关闭、展开长文或更新busy，只更新覆盖表面及其输入资格。底页的页头实测、内容起点、可用高度、列表extent、滚动锚点、路由和控制栏展开预算保持。原业务动作产生的导航与数据更新继续由原owner发布。
+
+`ReaderPageScaffold` 已提供内容0、页头10、页脚20和覆盖30四个同作用域层。普通页面使用其 `overlayContent`，原生Dialog、bindSheet、bindPopup和bindContentCover使用各自已登记的分离宿主。页面登记分别说明实际phone、expanded及入口变体的挂载链。zIndex在当前窗口和父Stack作用域内解释，平台窗口层级由平台宿主负责。
+
+覆盖表面的测量用于自身限高、锚点和同层避让。页头与正文测量仅消费页面固定区域的事实。Recovery、Dialog和Sheet的内容、代次与busy字段保持在覆盖链内。书架两个浮层互相避让的测量属于覆盖层布局，须单独注明实际消费目标。
+
+标准页的有界覆盖表面使用 `ReaderStandardPage.boundedOverlayVisible` 和无参 `boundedOverlayContent`。StandardPage直接持有真实视口、当前页头与页脚几何、覆盖区宽度、位置、限高和输入边界。调用页仅发布当前可见资格与内容。SettingsShell和MainTabShell的standardScroll分支转交这两个字段。旧单参数overlayContent继续保留兼容转发，当前恢复表面的几何在实际持有者内读取。声明式Builder传递可变几何时须验证同一原生actor能随真实属性更新，首次参数值无法更新即为失败。
+
+#### 6.4.2 前景与输入归属
+
+用户主动打开的控制栏、选择面板、菜单、Sheet及平台前景拥有当前交互优先级。被动Recovery在这些前景占用期间暂退绘制、输入和无障碍遍历，原事项、回执和写准入仍归原业务owner。返回原可呈现宿主后按当前身份恢复。独立目录属于当前控制前景，详情来源的退出仍遵循原详情返回路径。
+
+Modal确认和Sheet独占其声明的输入范围，关闭后恢复原触发源焦点。非模态可交互表面在自身实际边界内独占同级命中，并按宿主要求处理祖先事件，区域外输入继续交原页面。Toast只呈现反馈。隐藏、暂退和已卸载的表面同步退出命中及无障碍遍历，已排队动作再次核对原宿主、实体和展示代次。
+
+布局验收同时核对控件与内容可达性。目录的拖拽柄、收起、查询、首章、末章、书签及页脚动作都有当前有效入口。窄窗与大字号下优先调整覆盖表面自身的有界滚动和前景协调。关闭提示只处理投影，原操作的核对、继续和取消资格继续沿原owner执行。
+
+#### 6.4.3 可执行边界与证据
+
+手动装配检查使用实际SDK AST追踪Scaffold、StandardPage和三个既有Shell的具名Builder槽，包括nativeListItems、Settings的homeContent/generalContent及boundedOverlayContent。通过本地与导入Builder、参数转交和集合Builder追踪到实际表面，原生分离宿主作为独立作用域。已知骨架中实际声明并提供的BuilderParam缺少装配角色时记录UNRESOLVED。正常PageState和覆盖表面内部测量保留原角色。
+
+受控清单为 `tools/page-structure/overlay-assembly-contracts.json`。已确认的几何消费链声明实际目标方法、覆盖事实和失效入口，检查按真实callee读链核对。动态目标解析失败、来源漂移或无法证明的装配保留对应诊断。该工具按任务手动选择，无参为NOT_RUN，默认关闭，未接入构建或CI。
+
+```sh
+node tools/check-overlay-assembly.mjs --check --inventory-file tools/page-structure/overlay-assembly-contracts.json
+```
+
+当前快照的字节一致、构造数量与单独叶节点属性分别记录。覆盖行为验收连接实际外层Watch、HeaderHost、Scaffold几何和原生动作actor，比较关闭、显示、busy、长文、已退场与后继展示。额外保留正常viewport或字号变化会更新页面几何的正例。Native视觉、触摸、平台返回和读屏继续绑定实际候选与目标。
 
 ### 6.5 行形态
 
@@ -658,12 +734,17 @@ ScrollAway变体必须登记准确生效条件、测量/字号revision、唯一�
 规则：
 
 - `busy`、`disabled`、`error` 必须来自 `OperationFacts` 或原 owner；不能从 `canRetry=false`、文案前缀或局部布尔推断。
-- 每个交互控件必须有 `controlId`，并解析到 [ReaderControlSpecs.ets](../../entry/src/main/ets/features/common/ReaderControlSpecs.ets) 或已登记控件；页面不得自建同语义控件。
+- 每个交互控件必须有 `controlId`，并解析到 [ReaderControlSpecs.ets](../../entry/src/main/ets/ui/controls/ReaderControlSpecs.ets) 或已登记控件；页面不得自建同语义控件。
 - 点击区不足 44vp 时必须有等效 response region；该例外必须有 owner 和到期条件。
 - 选中、危险、错误、禁用状态不得只靠颜色；必须有文字、图标或可访问状态。
 - 忙时重复点击不得触发第二次回调；禁用必须给出可理解的原因。
 - 事实变化后，保留同一控件实例，确认实际 SDK 生成的 child updater 从当前 owner 读取值，并经真实子组件 `updateStateVars` 同步视觉和语义状态。子组件字段已有 `@Prop`，不能证明父级 `@Builder` 闭包传入的 primitive 不是首次快照；不得用重建控件或重新运行整个 Builder 代替原实例更新验证。分别新建两份 selected 快照也不能证明这一链路成立。
 - 等效命中区必须由实际 carrier 和父级布局支付。自然高度 16vp 的 Text 声明 `y: 0, height: 44`，不等于该行已经获得 44vp 点击空间；须核对叶节点 bounds、response 的坐标基准、父级预算、clip、相邻目标及安全区。小 paint 可以居中于已付款的 44vp carrier，不能靠允许越父命中或放松 clip 掩盖缺口。
+- 紧凑文字动作的轮廓根据实际文字自然宽度、行高和内边距增长，规格宽高作为下限。背景、描边和圆角由内层绘制宿主承担，外层保留完整命中框。父行必须为增长后的动作与标题同时分配宽度，并声明长文案采用换行、增高或重新装配的边界。修改文案时验证真实字形及剩余标题空间。
+- pill规格的语义值由实际绘制宿主解析。固定或已知绘制盒使用有限圆角，最大为绘制盒短边的一半。自然尺寸的原生胶囊按钮使用受支持的Capsule形态。非按钮自然表面从当前绘制节点的有效尺寸取得半径，测量仍遵守当前展示、宽度、字号与退场身份。响应区或外部44vp载体的尺寸各自保留，不能替代内部绘制盒。选中、按下、禁用和同一节点的规格变化共同验证，直接把999交给原生borderRadius不能证明胶囊几何成立。
+- 自然表面区分已采用几何和新回执准入。窗口、配置或内容修订会拒绝旧闭包回执，同一原生节点已采用的有效尺寸可继续用于绘制，等待当前Area更新。尺寸未改变时平台可能不再触发Area，修订本身不能让已采用圆角长期退回首次布局值。重新展示时清理前一展示的测量，首次布局回落和实际原生材质各自记录。
+- 圆角表面的父级裁剪须声明具体职责，例如滚动视口、图片裁切、展开揭示或动画遮罩。取消父级裁剪前，以当前有效测量和真实子树证明文字、图标、背景及响应载体均包含于材料边界，未测量、陈旧、窄宽或超预算输入保留安全回落。分别核对背景描边和子树裁剪的实际原生结果。装饰性空绘制节点避免增加多余子树裁剪，内部百分比轨道和实际滚动视口继续持有各自遮罩。
+- 系统字号变化须到达实际持有原生尺寸属性的观察节点。跨View的geometry重算、key更新及Watch调用分别核对实际传递链，同一已挂载控件经真实属性刷新后应取得新尺寸。沿用静态metrics getter时，须在该观察路径消费既有响应式revision。
 - 原生命中证据须从当前目标树取得唯一目标和坐标，结合实际 response 声明，在可见且已付款的边缘验证当前实体只收到一次正确回调。paint 外点击与普通中心点击分别记录；某个模板通过不代表整页 E2 通过，未派发的点击不能记命中失败或成功。
 
 ### 6.10 无障碍
@@ -742,6 +823,7 @@ interface OperationRef {
 - 已确认写后的刷新失败只允许重读；不得重新保存、删除或导入来“刷新”。
 - 未知回执走 Recovery；不得用定时器或关闭浮层伪造成功。
 - 旧世代回调只能作用于原实体；页面、书籍、来源或章节身份变化后必须失效。
+- 编辑保存同时绑定读取时的完整实体版本与固定原操作 DTO。持久化 owner 在实际事务内核对前态，原操作重放复用原回执。编辑原文的格式必须保留既存规则及字段语义，缺少完整可编辑原文时由读取 owner 明确返回该格式限制并保留草稿。
 - `disabledProjection` 必须来自原操作事实或原 owner 投影，不能由页面文案猜测；generation 在层 16 的身份/世代字段登记。
 
 ### 6.12 滚动坐标与恢复
@@ -817,13 +899,15 @@ if textMin + trailingWidth > contentWidth:
 rowHeight = max(baseHeight, textStackHeight(scale), trailingHeight(scale))
 ```
 
+高度进入真实物理像素预算时，需求下界向外取整，可用容量向内取整并作为上界。光学优选尺寸在已支付需求与容量之间保留自己的取整规则。Geometry的高度fits与实际Scroll准入使用同一extent比较，数值容差只消除浮点算术误差。记录边界附近的原始需求、已付高度和pixel scale，避免同一微小欠付同时得到fits通过及可滚动两个结果。真实短窗和大字号溢出继续沿原自然流滚动。
+
 ### 8.2 校准流程
 
 1. 首先冻结366×844基线；发生响应式行形态或控件预算变更后，增加实际窄宽边界（本试点320），不无条件扩为全宽度矩阵。
 2. 用实际文本测量，取 `fontScale = 1.0 / 1.3 / 1.6 / 2.0`。
 3. 记录 title、meta、status、action 的宽度与高度。
 4. 生成行预算 spec，阈值由测量得出，不由页面作者填写。
-5. 若某字号下没有合法行形态，停止并请求设计决策；不允许缩字通过。
+5. 行形态空间不足时，评估按真实文字宽度换行、分层排版和有界滚动，并保持原动作与数据 owner。涉及移除业务动作或改变业务语义时取得对应产品裁决。
 
 ### 8.3 示例
 
@@ -837,7 +921,7 @@ rowHeight = max(baseHeight, textStackHeight(scale), trailingHeight(scale))
 
 同一页面族有多个真实装配宿主时，使用可选`variants[]`：每项必须声明`variantId`、生效`condition`、`host`及完整`registration`。`host`含`kind: route/embedded/selection`、唯一owner、继承的`routeContractRef`、`contextKinds`及实际装配`factSource: {path,symbol}`。每个registration独立具有16层、Brief、控件/操作/消息引用、22项不变量及消费修订，不允许递归variants；登记身份与variantId不得重复。它描述宿主差异，不增设业务路由。embedded模块不被强制画整页Header/Footer，整页原型推导记NOT_RUN；适用层的规则、引用和源码绑定仍照常校验。完整选择页的实际结构与Selection原型冲突则保留FAIL，不能改Brief或声明embedded来规避。
 
-embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚的内容模块，仍允许模块内部的inline工具/状态区；宿主装配源码必须纳入SHA绑定。动态补偿标量未知时用null并保留G-03 NOT_RUN，不能用0伪报无补偿或用任意正数伪报通过。已知不变量FAIL必须在所属层同步为FAIL，其他方面未验证不能把该层降回NOT_RUN。
+embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚的内容模块，仍允许模块内部的inline工具/状态区；宿主装配源码必须纳入SHA绑定。固定遮挡补偿登记测得的恒定值。动态补偿使用 `obscurationCompensation: null` 及 `obscurationCompensationSource: {path,symbol}`，绑定实际计算源码，并在 `headerInset` 写出其被滚动容器消费的方式。G-03 核对这项声明，S3 依原生几何、裁切和操作证据判定。常量及计算来源都未知时保留 G-03 NOT_RUN。已知不变量FAIL必须在所属层同步为FAIL，其他方面未验证不能把该层降回NOT_RUN。
 
 可选`sourceInputs[]: {path,sha256,symbol?}[]`固定登记实际审读的装配/控件/业务来源；路径须在允许范围，引用与摘要逐变体检查，不代表已经捕获全部动态依赖。上游路由的view/query/scroll/selection保留策略为null时原样继承，代表未知，不能由页面补成false，也不能据此把route或S8记PASS。
 
@@ -851,7 +935,7 @@ embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚�
 | 2 | `scaffold` | `prototype: string`；`regions: string[]` |
 | 3 | `informationArchitecture` | `blockOrder: string[]`；`firstScreenBudget: {viewportHeight: number, filterStackHeight: number|null, firstRowTop: number|null, unit: vp}`；`budgetStatus: declared/unverified/missing` |
 | 4 | `header` | `role: Back/Home/Contextual/None`；`presentation: Fixed/Floating/ScrollAway/None`；`composition: string[]`；`surface: string`；`height: number|null`；`safeAreaOwner: string`；`actions: Action[]` |
-| 5 | `scroll` | `owner: string`；`primaryCount: integer`；`headerInset` / `footerInset` / `restore` / `refresh: string`；`underlap: boolean`；`obscurationCompensation: number|null` |
+| 5 | `scroll` | `owner: string`；`primaryCount: integer`；`headerInset` / `footerInset` / `restore` / `refresh: string`；`underlap: boolean`；`obscurationCompensation: number|null`；动态值另有 `obscurationCompensationSource?: {path,symbol}` |
 | 6 | `content` | `unit: Row/Card/Grid/Canvas/Document/Form`；`rowForm: single-line/two-line/overflow-menu/detail-entry/none`；`slots` / `controlRefs: string[]`；`density` / `truncation: string`；`rowHeight` / `availableWidth` / `textMinWidth` / `trailingMaxWidth: number|null`；`budgetDeclared: boolean` |
 | 7 | `query` | `placement: Inline/HeaderSlot/Overlay/None`；`entryPlacements: (inline/headerSlot/overlay/none)[]`；`applyTiming: live/submit/explicit/none`；`filteredEmpty` / `reset: boolean`；`normalization: string`；`filterSemantics: {filterId: string, definition: string}[]`；`actions: Action[]` |
 | 8 | `footer` | `presence: boolean`；`placement?: fixed/inline/none`；`placementCondition?: string`；`actions: Action[]`；`safeAreaOwner` / `contentEndInset: string`；`controlRefs: string[]` |
@@ -1139,7 +1223,9 @@ embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚�
 - observability/性能预算与 i18n 契约。
 - 平台宿主的真实 Back 时序与系统调度验证。
 
-### 14.3 当前已知缺口
+### 14.3 历史试点结果与开放项
+
+以下记录保留早期源码、预览和方法证据的原时点结论。2026-11-12 合流采用新的 UI 目录、SourceJourney owner 和 Native Button carrier，当前登记及逐项复验结果以 [合流实施记录](framework-confluence-20261112.md) 为准。
 
 框架与试点的逐项执行结果见[实施方案](../issues/page-structure-fix-20261102.md)第14节。v0.2 已落地契约地图、13条可见/保留路由登记、书源控件/平台宿主最小集、16层schema、真实页面登记、推导及校验工具。前轮41-case结果保留；本次审计修正后，7组JSON/schema与引用校验通过，扩展为55个框架定向case通过，覆盖policy枚举、业务owner、保留策略basis、保留消息引用与失败项followUp等新增负对照。这些结果证明模型/引用与所测检查机制，不提高上游契约成熟度，也不证明平台或页面视觉通过。
 
@@ -1167,7 +1253,7 @@ Stage 4代码与本地验证结果见实施方案14.10：共享source控件由44
 
 14.12共享上限修复已通过四字号/两个宽度的三个消费者SDK快照、同一actor live1→2、草稿/Apply/关闭和退出observer回归；修复了嵌套ForEach旧action读取新opening的约束缺口。原生多行hint未知时等待实际Area，测量叶在限高视窗外；per-part key只含真实尺寸/内容输入，无关窗口高度/安全区变化不清同形状尺寸。SDK快照只证明key/回执协议，不证明原生reconciliation/字形。`SHARED-FONT-CAP-01`为代码修复/SDK通过、原生仍OPEN；register revision7，E2/E3继续FAIL。旧native快照是历史候选，不再代表当前common字节。
 
-继续引用Stage 3旧manifest/预览必须先读[当前阅读说明](../issues/page-structure-stage3-preview-notice-20261102.md)，以实施方案14.9更正为准。冻结原件保留其历史字节，不作为实际Reader字形证明。
+继续引用Stage 3旧manifest/预览时，以[实施方案](../issues/page-structure-fix-20261102.md)14.9的字体证据更正为准。冻结原件保留其历史字节，实际Reader字形仍需对应原生证据。
 
 ## 15. 术语
 
@@ -1247,13 +1333,13 @@ Stage 4代码与本地验证结果见实施方案14.10：共享source控件由44
 
 ### 页面与组件
 
-- 书源管理页：`../../entry/src/main/ets/features/source/SourceManagementPage.ets`
-- 书籍目录页：`../../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets`
-- 下载管理页：`../../entry/src/main/ets/features/downloads/SharedDownloadPage.ets`
-- 页面脚手架：`../../entry/src/main/ets/features/common/ReaderPageScaffold.ets`
-- 返回栏：`../../entry/src/main/ets/features/common/PageBackBar.ets`
-- 页面状态：`../../entry/src/main/ets/features/common/ReaderPageState.ets`
-- 控件规格：`../../entry/src/main/ets/features/common/ReaderControlSpecs.ets`
+- 书源管理页：`../../entry/src/main/ets/features/source/ui/SourceManagementPage.ets`
+- 书籍目录页：`../../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets`
+- 下载管理页：`../../entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets`
+- 页面脚手架：`../../entry/src/main/ets/ui/layout/ReaderPageScaffold.ets`
+- 返回栏：`../../entry/src/main/ets/ui/chrome/PageBackBar.ets`
+- 页面状态：`../../entry/src/main/ets/ui/feedback/ReaderPageState.ets`
+- 控件规格：`../../entry/src/main/ets/ui/controls/ReaderControlSpecs.ets`
 - 操作事实：`../../entry/src/main/ets/app/ReaderOperationFacts.ts`
 
 ### 上游契约
@@ -1272,3 +1358,82 @@ Stage 4代码与本地验证结果见实施方案14.10：共享source控件由44
 - 尺寸审计：`../issues/ui-dimensions-all-pages-20261101.md`
 - 书源布局审计：`../issues/source-management-layout-20261101.md`
 - 结构修复实施方案：`../issues/page-structure-fix-20261102.md`
+
+## 独立设计来源与局部宿主补充
+
+2026-11-13，全应用对比审计补充。层11的 `visual.facts.designContractRef` 解析到 `tools/contracts/design-authority.json`。登记局部批准范围、独立原稿、源码衍生画板、后继裁决和当前候选对比状态，引用文件保留SHA。当前四个页面族及21个宿主登记均保留原visual结果，局部批准不能升级成整页批准。整页PASS的comparison/native证据分别提供可解析path/SHA，证据JSON同时匹配pageId、sourcePath、主文件SHA、归一后的完整inputs及契约全部designInputs(path/SHA)。共享依赖、原稿或批准来源变化会使旧证据失效。
+
+`check-register` 在现有显式调用时校验设计引用，拒绝缺独立批准范围或当前候选证据的整页visual PASS。`test-design-authority --case authority` 是本次具体正反回归，默认不执行。20个业务路由均在来源登记中有处置，当前缺失的整页批准来源继续列为OPEN_APPROVAL。
+
+自定义临时表面需要分别登记自己的正文与覆盖区域。`overlay-assembly-contracts.json.localContentContracts` 指定file、owner及实际正文Builder，`check-overlay-assembly` 从这些正文Builder单独追踪。整个编辑器或cover采用position，不豁免其内部恢复提示的流内装配。当前登记TXT规则与TTS配置正文，准确回归 `test-overlay-assembly --case local-content` 包含真实宿主正例和插回Notice负例。检查范围仍是声明装配，原生实际几何、触摸与焦点各自取证。
+
+
+## 阅读控制栏共享外壳与逐元素预算补充
+
+2026-11-13，用户反馈从Home进入目录会改变快捷控制栏高度，随后要求全量检查控制栏元素。相同窗口、字体与安全区下，模块内容的自然最小高度用于内部流、滚动与输入可用性。共享外壳的宽度、Quick/Full端点、亮度条与共同锚点由共享布局事实决定。当前模块的测量回执继续使用当前实体、模块、世代和几何身份；切换内容不能通过替换外壳端点容纳自己的最小高度。窗口或字体改变时按新几何重新测量。
+
+每个按钮分别声明绘制盒、响应载体及父级实际支付的空间。44vp触控目标允许包裹原36、32、30或21vp绘制，但新增载体需要沿原绘制中心和现有间距分配，实际字形增长继续进入预算。备用测量分支也需要支付载体。隐藏、被遮挡或已退出当前模块的原生闭包在最终派发前复核当前owner；语义隐去与视觉透明各自保留自己的职责。
+
+逐元素登记覆盖共享元素及每个已挂载模块的Quick、Full、状态与临时层。代码审读、有限SDK属性/回调证据、原生绘制与用户接受分别记录。独立原稿与后继批准范围必须可追溯；源码衍生画板保留其比较用途。当前阅读控制栏的后继修复与实际执行证据见[全应用UI对比修复](ui-design-full-fix-20261113.md)。
+
+### 控制栏几何字段的消费边界
+
+2026-11-14，控制栏体系审计补充。每个动作同时描述独立的绘制盒、文字测量、父级槽位和实际响应矩形。`ReaderControlActorFrame` 提供当前矩形坐标，`paint`、`slot` 与 `response` 字段明确其角色。`ReaderControlResponseAllocation` 保存同一父空间内的这些矩形及 `requestedSize`、`complete` 与 `conflict`。原始图标、底色和卡片尺寸沿所属设计角色消费，文字宽高从当前实际内容及字体测量取得。行、卡片与相邻区域的坐标由自己的父预算推进。
+
+响应区从该父级已经分配的空白空间支付，相邻动作之间按明确边界分配。同一动作可以包含较小的可见图形。空间不足时报告实际矩形和 `host` 或 `neighbor` 冲突，E2继续保留FAIL及后续条件。调整行形态、布局密度或业务动作时，需要可追溯的设计来源或对应裁决。默认原稿比例、文字增长和触控覆盖分别保留证据。
+
+共享外壳优选值使用原始Quick330与Full736的参照关系，实际窗口、安全区、键盘、可用高度与当前文字共同决定可行端点。844vp窗口中，39vp状态栏与28vp手势区等真实约束可得到705vp完整高度。各端点同时记录优选值、实际约束与采用值，测量结果回到当前实体及几何身份。
+
+模块页头使用自身角色配方。目录、书签、外观、设置的UI标题，搜索与自动翻页的Inter标题，MakeV17朗读的自然宽收起动作，以及替换规则的独立标题和“完成”动作分别解析。标题单行策略、字号增长和真实可用宽度共同测量。响应载体与抓手区域在同一dock坐标内分配；同一native抓手host的响应矩形可以更新，按下到释放期间保持该host身份。
+
+### 控制栏测量请求与已提交呈现
+
+`ReaderControlModuleFacts` 从真实业务owner提取几何所需事实，七个模块复用各自纯测量函数。`ReaderControlModuleProfileData` 保存与模块对应的完整结果，封闭模块标识与实际字段共同校验。测量准备只读取事实和字体信息，业务读取、媒体操作、焦点与编辑动作继续由原owner按真实生命周期触发。
+
+导航准备请求绑定发起owner、目标模块、请求代次、相关事实和几何环境。已显示内容保持自己的已提交语义及完整profile；准备期间的Nav或Back可以替换或取消请求。结果采纳时核对这些身份，并共同提交模块session、profile、layout与receipt。普通模块导航沿现有零时长策略及唯一运动进度执行。
+
+相同几何事实保持已采用的profile、key与native动作身份，选中、忙碌和数值显示按当前业务事实更新。真正改变文字或空间的事实触发新测量，旧请求回执遵守其失效条件。旧模块在仍为当前已提交页面期间保留原有操作准入，提交后由原owner检查退役闭包。输入准入、临时编辑scope和异步业务回调分别核对自己所属身份。
+
+子组件Prop Watch可能在父组件render中执行，响应式呈现采纳须遵守当前ArkUI状态更新约束。同模块结构或长文案变化时，由同一已提交receipt保存必要的只读显示投影与对应profile，并共同交付下一份有效结果。业务状态仍归原owner，实际动作在最终派发处核对该owner。相同几何的显示更新复用几何对象与key，准备失败保留上一份完整呈现并允许现有Back处理。
+
+导航从同步赋值调整为准备与提交协议时，沿真实入口审查全部调用方的后继副作用。依赖目标页面身份的读取在完整receipt和ready采用后由原业务owner启动，metadata与环境重采纳快径执行相同资格判断。一次入口的初始化复用既有实体、opening、module visit和业务代次去重，已开始的canonical读取计入同一入口。取消、后继请求、关闭和换书各有失效条件，busy解除沿实际采纳链恢复待启动读取。SDK回归走真实入口、bind、frame和提交方法，核对实际请求次数与当前回执。
+
+包含目录、结果或规则集合的显示投影沿现有不可变快照传递。只读reader先捕获该事实时点的引用，再返回这份快照。SDK Prop递送的轻量tuple包含reader与几何标量，几何signature只消费实际测量输入；显示更新按原快照引用与必要标量去重。发布方实际存在原地修改时，按其变更边界固定必要字段。挂载后的Prop分批递送期间保留上一份完整的profile及显示投影，匹配的新tuple准备好后共同采用。首次挂载仍需完整有效tuple。
+
+公共页头、导航、快捷动作和辅助操作的闭包捕获所属书籍、opening与已提交呈现身份。真正的Down先交给既有输入活动owner处理待导航请求，再进入原Runtime指针链。后续Move、Up与Cancel继续核对该Runtime及原手势owner。分页重试等业务动作另绑定原查询或原操作身份，消息外框沿消息框架展示该owner的事实。
+
+ArkUI普通callback字段按长期receiver使用，可观察属性负责递送变化的操作上下文。`ReaderIconButton.actionScope`、`ReaderRecoveryAction.generation` 与 `ReaderPageState.actionGeneration` 等上下文由其原owner提供，当前native handler捕获本次值，在最终派发时核对。带expected参数的公共组件把该值交还长期receiver，调用方继续核对原实体、查询和操作。Builder与普通slot的捕获参数须核对实际SDK更新方式，变化的generation从当前owner的可观察事实取得。验证同时检查保留同一子组件后的当前动作可用性及旧handler退役，包含关闭再打开、同模块切tab、loading转失败和后继操作已开始等真实更新顺序。
+
+模块交付的几何责任延伸到真实嵌套宿主。内部异步owner的loading、失败和query更新须沿自己的实际装配链审查，记录其是否改变祖先已支付的内容盒、列表起点或anchor。已有有效内容时，后台读取状态继续保留原列表几何。首次无内容状态在原内容区呈现，既有失败重试可沿所属内容Stack的局部覆盖槽提供，实际按钮命中区和周围穿透分别核验。父profile与key保持相同只证明父级事实，子级私有状态仍须有明确的几何处置和当前身份。
+
+组合预算从实际子组件请求逐项回算。原生最小宽、paint、文字advance、间距、padding、border以及已有权重分配都须使用真实消费者的值。水平动作组默认需完整呈现的全部动作须在其实际可见viewport内得到支付，测量出的Scroll内容宽和profile字段只能作为中间输入。空间不足时按当前语义自然分行，行数与高度在同次profile中推进card和后继slot。横向滚动需有该组明确的适用依据与可发现性，默认遗漏必要动作保持FAIL。
+
+高度需求向外取整到物理像素，可用容量向内取整，再按既有优选值和真实安全区选择端点。父盒伸展量从同一子项总和扣除间距、边框及额外动作区，所有组合顺序使用同一份实际消费者尺寸。原稿导出的微小小数补偿归入其原始绘制坐标，伸展公式根据当前分配重新求解。滚动资格同时核对真实Column组合高度与视口，完整组合回归保留原生边框修饰器、条件子项和实际Builder链。空Builder端口的结果登记为声明或方法证据。
+
+Text或Row接入原生Button时，同步核对边框所属节点与真实内容盒。父Button拥有的边框及padding先从外盒扣除，显式子Text尺寸、加权文字列和文字增长测量均消费余下空间。沿实际border样式逐边计算，顶部单边框与四边框分别付款。条件边框的事实、标签、测量signature与已采纳绘制样式由同次呈现递送。默认绘制角色及其自然增长分别核对，原生包装前后的父子关系和边框迁移作为组件改造的准确回归输入。
+
+原生属性组合遵循当前实际SDK的组件规则。当前Button声明要求显式borderRadius在border之后施加，原radius值及其条件分支通过准确发射序列保留。审查覆盖直接调用、attributeModifier和Styles展开后的同一原生节点，祖先或子节点的属性单独归属。全应用同型审计登记实际构造总数、解析闭包、逐点处置及旧顺序负例，具体SDK规则沿其适用组件执行。
+
+表面的填充和描边绑定各自原始Surface的矩形、透明度与圆角。透明内容viewport、Quick表面、Full表面各有明确绘制owner，按原actor轨迹合成。已有不透明滚动内容需要上方描边时，纯paint节点与所属Surface严格共享矩形和透明度，保持原指针所有权。内容组件已经拥有外框的变体登记其归属，公共外壳仅绘制自己负责的表面。准确回归同时核对多进度点的实际actor坐标、alpha与绘制顺序。
+
+准确回归同时装配producer、profile和实际子Builder，核对所有必要动作的可见盒、响应盒和所属父盒。例行端点还须涵盖已有内容加loading、失败重试和新query的中间顺序。源字段、单个Builder和最终settled帧各自保留准确范围，实际ArkTS工程类型检查与原生逐帧采样分别记录。
+
+业务快照的原始引用及作用域由原publication或业务owner提供。SDK State/Prop生成的显示代理参与响应式绘制，原操作身份通过owner提供的引用或稳定scope核对。身份测试须启用生产实际使用的State/Prop装饰器并走真实接受方法，核对原快照、显示代理、当前busy与查询变化的完整链。
+
+验收须观察初次挂载、导航准备中间态、采纳帧、同几何业务更新、真实几何变化、旧请求晚到和Back取消。测试核对中间态的实际enabled、opacity与已采用布局。默认1×整组位置和层级直接与冻结独立原稿比较，字号与窗口矩阵核对增长及实际冲突。仅在frame队列耗尽后检查最终key的结果保留其有限范围。Home滚动能力变化保持同一个Scroll宿主及内容实例。
+
+
+### 导航取消与真实挂载入口
+
+准备请求的取消同时核对存储对象和当前有效身份。活跃请求的Back可以消费本次返回并退休请求代次。已因关闭、隐藏、opening或owner变化失活的对象完成清理后，同次Back继续当前页面的正常返回策略。所有取消调用方声明是否使用消费结果，普通清理继续退休旧测量回执。
+
+交互回归从真实build装配链到最终接收端核对可达性。直接调用私有Builder可以证明该方法的有限行为，当前挂载入口需要提供build或既有BuilderParam的实际接线。保留的未挂载Builder、只读sourceOnly预览和动态未解析入口分别记录，组件库存与当前UI入口的数量保留各自事实。
+
+
+## 2026-11-18 正常页面设备证据
+
+整页及模块 UI 验收从应用正常入口进入，保留实际父页面、公共页头页脚、原生弹层及操作链。测试时打开应用「设置 → 通用设置 → 开发者模式 → 显示组件边界」。复用同一 `ReaderWindowCoordinator` 的窗口、密度、安全区和键盘回执，以及 `ReaderLayoutDebugOverlay` 的 `READER_DEVELOPER_LAYOUT` 输出。节点原始与可见边界从当前正常页面的原生树取得。画布输出只用于定位组件盒，不能替代真实屏幕裁切或实际命中判断。
+
+每项在同一候选、同一应用窗口和同一稳定业务状态下绑定完整实屏、布局树、当前开发者参数及本场景必要回执。测量就绪、有效可见区域和预期场景必须吻合。任一必需参数缺失、过期、异常或轮廓被遮挡、实际文字裁切时判定不通过。未运行保留 `NOT_RUN`。隔离组件页、模拟窗口条带、内存替代回执及局部截图的原生验收全部撤销，不能用于整页或交互验收。 [验收撤销与当前证据](../../.reader-artifacts/app-ui-framework-audit-20261114/pass-screen-reaudit-20261118.md)
+
+显式运行现有登记检查时，页面层或规则的 `PASS` 引用 `kind=device`、`symbol=normal-page` 的同场景记录。记录注明 `pageId`、`routeContractRef` 和实际覆盖的 `claims`，用路径和 SHA-256 绑定签名清单、保数据部署回执、原始采集会话和实屏／布局树。每帧注明日志行、预期窗口／密度／生效字号／IME 状态及正常页锚点。平台字号与实际生效字号确有不同的场景应明确登记两项期望。登记检查读取这些现有证据，使用真实页面上的开发者模式及现有设备采集入口。通过绑定检查后，仍需按场景核对完整画面与实际动作结果。 [现有登记检查](../../tools/page-structure/check-register.mjs)

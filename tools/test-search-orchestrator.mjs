@@ -20,14 +20,6 @@ const definitions={
     "description": "history: history-reopen-clear actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
     "resources": []
   },
-  "history-clear-active-results": {
-    "description": "History clear publishes independently while the actual search keeps its run, result references and live sweep",
-    "resources": []
-  },
-  "history-delete-serial": {
-    "description": "Actual history delete reuses the Core keyword command, serializes with clear and rejects stale readback",
-    "resources": []
-  },
   "worker-concurrency-dedup": {
     "description": "worker-lifecycle: worker-concurrency-dedup actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
     "resources": []
@@ -279,7 +271,7 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(resolve(repo, rel), 'utf8');
-const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+const authorMetadataModule = read('entry/src/main/ets/app/library/BookAuthorMetadata.ts');
 
 // SearchOrchestrator imports SearchGateway by value and ReaderRuntimeOwner /
 // hilog from Harmony-only modules. Strip the runtime imports, concatenate the
@@ -292,7 +284,7 @@ const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/Err
 const errorMessageImport =
   /^import \{[^\n]*errorMessageOf[^\n]*\} from ['"][^'"]*ErrorMessage(\.ts)?['"];\n/m;
 const sourceCategoryModule = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+  read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'),
 ).replace(/^export /gm, '');
 const sourceCategoryImport =
   /^import \{\n(?:  [^\n]+\n)+\} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
@@ -303,15 +295,15 @@ const operationFactsModule = stripTypeScriptTypes(
 ).replace(/^export /gm, '');
 const operationFactsImport =
   /^import \{ projectOperationFacts \} from ['"][^'"]*ReaderOperationFacts['"];\n/m;
-const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
+const gatewaySource = read('entry/src/main/ets/features/search/application/SearchGateway.ts')
   .replace(/^import \{ readBookSearchTiming \} from .*;$/m, () =>
-    read('entry/src/main/ets/features/common/BookSearchTiming.ts'))
+    read('entry/src/main/ets/app/library/BookSearchTiming.ts'))
   .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
-      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/application/SearchBookProjection.ts'), 'utf8'))
   .replace(errorMessageImport, '')
   .replace(sourceCategoryImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
-const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrchestrator.ets')
+const orchestratorSource = read('entry/src/main/ets/features/search/application/SearchOrchestrator.ets')
   .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () => read('entry/src/main/ets/app/BookRequestScheduler.ts'))
   .replace(/^import \{[\s\S]*?from '\.\/SearchGateway';\n/m, '')
   .replace(errorMessageImport, '')
@@ -320,7 +312,8 @@ const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrches
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '');
 const combined = stripTypeScriptTypes(
-  `${authorMetadataModule}\n${sourceCategoryModule}\n${errorMessageModule}\n${operationFactsModule}\n${gatewaySource}\n${orchestratorSource}`
+  `${authorMetadataModule}\n${read('entry/src/main/ets/app/library/BookSearchPageProgress.ts')}\n${sourceCategoryModule}\n${errorMessageModule}\n${operationFactsModule}\n${gatewaySource}\n${orchestratorSource}`
+    .replace(/^import .*BookSearchPageProgress['"];\n/gm, '')
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(combined).toString('base64')}`;
@@ -373,13 +366,7 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
       }
       if (command === 'search.history.add') {
         state.historyWrites += 1;
-        state.historyKeywords = [params.keyword, ...state.historyKeywords.filter(word => word !== params.keyword)];
         return { data: {} };
-      }
-      if (command === 'search-keyword.delete') {
-        const deleted = state.historyKeywords.includes(params.word);
-        state.historyKeywords = state.historyKeywords.filter(word => word !== params.word);
-        return { data: { word: params.word, deleted } };
       }
       if (command !== 'book.search') {
         throw new Error(`unexpected command ${command}`);
@@ -634,67 +621,6 @@ case "history-reopen-clear": {
   assert.deepEqual(last(presentations).history, []);
   search.close();
 };break;
-case "history-clear-active-results": {
-  const owner = fakeOwner({ sources: makeSources(2),
-    resultsFor: sourceId => [{ bookId: `/${sourceId}`, title: '正在搜索的书', author: '作者' }],
-    delayForSource: sourceId => sourceId === 'source-0' ? 5 : 250 });
-  owner.state.historyKeywords = ['以前的记录'];
-  const { orchestrator, presentations } = capture();
-  const search = orchestrator(owner);
-  search.open(); await sleep(10); search.search('当前查询');
-  await waitUntil(owner.state, () => last(presentations).kind === 'results' && last(presentations).searching);
-  const before = last(presentations), run = search.run, work = search.work;
-  const generation = search.resultGeneration, calls = owner.state.calls.length;
-  search.clearHistory(); await sleep(10);
-  const after = last(presentations);
-  assert.equal(search.run, run); assert.equal(search.work, work);
-  assert.equal(search.resultGeneration, generation); assert.equal(search.sweepAlive, true);
-  assert.equal(owner.state.calls.length, calls);
-  assert.equal(after.kind, 'results'); assert.equal(after.keyword, '当前查询');
-  assert.equal(after.results, before.results); assert.equal(after.delta, before.delta);
-  assert.equal(after.operation, before.operation);
-  assert.equal(after.historyStatus, 'ready'); assert.deepEqual(after.history, []);
-  await settle(owner.state, 2);
-  assert.equal(last(presentations).results.length, 2, 'the admitted sweep still completes after history clear');
-  search.close();
-};break;
-case "history-delete-serial": {
-  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
-  owner.state.historyKeywords = ['第一条', '第二条', '第三条'];
-  const request = owner.request, writes = [];
-  let releaseDelete;
-  owner.request = async (method, params, options) => {
-    if (method === 'search-keyword.delete') {
-      writes.push(`delete:${params.word}`);
-      if (params.word === '第一条') await new Promise(resolve => { releaseDelete = resolve; });
-      if (params.word === '失败条目') throw Error('delete rejected');
-    }
-    if (method === 'search.history.clear') writes.push('clear');
-    return request(method, params, options);
-  };
-  const { orchestrator, presentations } = capture();
-  const search = orchestrator(owner);
-  search.open(); await sleep(10);
-  const work = search.work;
-  const first = search.deleteHistory('第一条');
-  search.clearHistory();
-  const lastDelete = search.deleteHistory('第三条');
-  await sleep(10);
-  assert.deepEqual(writes, ['delete:第一条'], 'later durable operations wait for the previous write');
-  releaseDelete(); await first; await lastDelete; await sleep(10);
-  assert.deepEqual(writes, ['delete:第一条', 'clear', 'delete:第三条']);
-  assert.deepEqual(owner.state.historyKeywords, []);
-  assert.deepEqual(last(presentations).history, []);
-  assert.equal(last(presentations).historyStatus, 'ready'); assert.equal(search.work, work);
-  owner.state.historyKeywords = ['保留条目'];
-  await assert.rejects(search.deleteHistory('失败条目'), /delete rejected/); await sleep(10);
-  assert.deepEqual(last(presentations).history, ['保留条目'], 'rejected mutation reads facts without replaying the write');
-  assert.equal(writes.filter(value => value === 'delete:失败条目').length, 1);
-  await assert.rejects(search.deleteHistory('  '), /non-blank/);
-  const count = writes.length;
-  search.close(); await search.deleteHistory('保留条目');
-  assert.equal(writes.length, count, 'retired sessions cannot admit delete intents');
-};break;
 case "worker-concurrency-dedup": {
   const sources = makeSources(8);
   const owner = fakeOwner({
@@ -726,7 +652,7 @@ case "worker-concurrency-dedup": {
   assert.equal(present.totalSourceCount, 8);
   assert.equal(present.completedSourceCount, 8);
   assert.equal(present.failedSourceCount, 0, 'a fully healthy sweep reports zero failed sources');
-  assert.equal(present.operation.fact, 'current');
+  assert.equal(present.operation.fact, 'partial', 'legacy page without receipt completes the first round but cannot prove source exhaustion');
   assert.equal(present.operation.value.resultCount, present.results.length);
   assert.ok(present.results.every((r) => r.searchRequestId === present.results[0].searchRequestId),
     'every result of one sweep carries the same searchRequestId');
@@ -789,7 +715,7 @@ case "source-cooldown-retry": {
 };break;
 case "page-retry-admission": {
   const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
-  const Retry=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',['retryOperation']);const retryPage=Retry.prototype.retryOperation;
+  const Retry=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'SearchPage',['retryOperation']);const retryPage=Retry.prototype.retryOperation;
   for (const reason of ['healthFailed', 'cooldown']) {
     const checkedAtMs = Date.now();
     const sources = makeSources(2).map((source) => ({ ...source, sourceVersion: `v-${source.sourceId}`,
@@ -822,7 +748,7 @@ case "page-retry-admission": {
     assert.equal(skipped.operation.fact, 'empty');
     assert.equal(skipped.operation.canRetry, true);
     let invocations = 0;
-    const page = { operation: () => last(presentations).operation,
+    const page = { pageInputCurrent: () => true, operation: () => last(presentations).operation,
       onRetry: () => { invocations += 1; search.retry(); } };
     retryPage.call(page);
     assert.equal(invocations, 1, 'the mounted page must reach explicit retry');
@@ -1035,18 +961,45 @@ case "source-refresh-retained": {
   const owner = fakeOwner({ sources, delayForSource: () => 5, resultsFor: () => [] });
   const { orchestrator, presentations, sourcesSnapshots } = capture();
   const search = orchestrator(owner);
-  search.open();
-  search.search('无结果');
+  const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const intents = [];
+  const LibrarySearchPresentation = bookshelfOperationClass('features/search/presentation/LibrarySearchPresentation.ets',
+    'LibrarySearchPresentation', { Observed: value => value, ReaderLibrarySearchModel: class {
+        suspend() { intents.push('suspend'); }
+      },
+      readerPageInitialHeaderHeight: () => 0, SearchHost: class {
+        viewState = { keywordDraft: '' };
+        open() { intents.push('open'); search.open(); }
+        presentation() { return last(presentations); }
+        search(keyword) { intents.push(keyword); search.search(keyword); }
+        refreshSources() { intents.push('refresh'); search.refreshSources(); }
+        resume() { intents.push('resume'); search.resume(); }
+      } });
+  const library = new LibrarySearchPresentation(() => true, () => true);
+  library.open(() => {});
+  library.host.viewState.keywordDraft = '  离开前的输入  ';
+  const draft = library.sourceManagementKeyword();
+  assert.equal(draft, '离开前的输入');
+  library.search('   ');
+  assert.deepEqual(intents, ['open'], 'blank intent does not suspend the retained input');
+  library.search('无结果');
   await settle(owner.state, 3);
   assert.equal(last(presentations).kind, 'empty');
+  assert.equal(library.sourceManagementKeyword(), '无结果', 'result mode captures the submitted keyword');
 
   sources.push({ sourceId: 'source-3', name: '源3', enabled: true });
-  search.refreshSources();
+  library.returnFromSourceManagement();
   await waitUntil(owner.state, () =>
     sourcesSnapshots.length > 0 && sourcesSnapshots[sourcesSnapshots.length - 1].length === 4);
 
   assert.equal(last(presentations).kind, 'empty', 'refreshSources keeps the current surface');
   assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 4, 'chips projection refreshed');
+  assert.deepEqual(intents, ['open', 'suspend', '无结果', 'refresh', 'resume'], 'ordinary return neither submits nor suspends again');
+  library.returnFromSourceManagement(draft);
+  await waitUntil(owner.state, () => last(presentations).kind === 'empty' && last(presentations).keyword === draft);
+  assert.deepEqual(intents, ['open', 'suspend', '无结果', 'refresh', 'resume', 'suspend', draft],
+    'explicit return suspends before submitting once without reopening the retained entry');
+  assert.equal(library.mode, 'results');
 };break;
 case "source-refresh-resolved": {
   const sources = makeSources(2).map((source) => ({ ...source, enabled: false }));
@@ -1781,14 +1734,14 @@ case "retry-failed-local": {
 case "empty-source-sdk-publication": {
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
   const execute = source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
-  const pageSource = read('entry/src/main/ets/features/search/SearchPage.ets');
+  const pageSource = read('entry/src/main/ets/features/search/ui/SearchPage.ets');
   const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts}=installedEtsCompiler();const tree=ts.createSourceFile('SearchPage.ets',pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
   const classes=tree.statements.filter(n=>ts.isClassDeclaration(n)&&['SearchBookGroup','SearchResultDataSource'].includes(n.name?.text)).map(n=>n.getText(tree).replace('@Observed','')).join('\n');assert.equal(tree.statements.filter(n=>ts.isClassDeclaration(n)&&['SearchBookGroup','SearchResultDataSource'].includes(n.name?.text)).length,2);
-  const {SearchBookGroup,SearchResultDataSource,SearchViewState}=await execute(`const DataOperationType={ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport {SearchBookGroup,SearchResultDataSource};`);
-  const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
+  const {SearchBookGroup,SearchResultDataSource,SearchViewState}=await execute(`const DataOperationType={ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};${authorMetadataModule}\n${read('entry/src/main/ets/features/search/presentation/SearchViewState.ts')}\n${classes}\nexport {SearchBookGroup,SearchResultDataSource};`);
+  const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
   let counting = false;let groupBuilds = 0;let rowUpdates = 0;let notices = 0;let flattenRows = 0;let identityLookups = 0;
   class CountedGroup extends SearchBookGroup { constructor(...args){super(...args);if(counting)groupBuilds++;} }
-  const Page = productionMotionMethods(resolve(repo,'entry/src/main/ets/features/search/SearchPage.ets'),['groupResults'],
+  const Page = productionMotionMethods(resolve(repo,'entry/src/main/ets/features/search/ui/SearchPage.ets'),['groupResults'],
     {SearchBookGroup:CountedGroup,SearchResultProjection});
   const page = Object.assign(new Page(),{shelfBooks:[],selectedGroupName:'全部',viewState:new SearchViewState()});
   const ds = new SearchResultDataSource();ds.registerDataChangeListener({onDatasetChange(){if(counting)notices++;}});

@@ -4,7 +4,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 async function feedbackStats(){
  const {rssRecoverySurfaceSdk}=await import('./lib/rss-recovery-surface-sdk-probe.mjs');
  const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
- const source=readFileSync(new URL('../entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets',import.meta.url),'utf8');
 const names = ['operationFeedback', 'feedbackMessage', 'hasOperationFeedback', 'canRetryFeedback', 'retryFeedback', 'stats', 'enabledCount', 'disabledCount', 'sourceDocumentAction'];
 const shared=rssRecoverySurfaceSdk();
 const owner=shared.consumer(source,names);

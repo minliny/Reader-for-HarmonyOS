@@ -4,7 +4,7 @@ import type { MangaOfflineProbeScope, MangaProbeSelectionMode } from './MangaOff
  * Production EntryAbility has one default cold-start page. Diagnostic pages
  * are admitted only for an exact debug cold start used by the local VM probe.
  */
-export type ReaderColdStartPage = 'pages/Index' | 'pages/ReaderControlMotionVerification' | 'pages/ReaderRendererPilot' | 'pages/ReaderPageStructureVerification' | 'pages/__ReaderStartupMainLoadFailure';
+export type ReaderColdStartPage = 'pages/Index' | 'pages/__ReaderStartupMainLoadFailure';
 
 /**
  * Cold-start-only allowlist. Only primitive boolean true is accepted, and
@@ -14,25 +14,17 @@ export type ReaderColdStartPage = 'pages/Index' | 'pages/ReaderControlMotionVeri
 export function readerControlVerificationColdStartPage(debug: boolean,
   buildModeName: string, parameterValue: Object | undefined,
   rendererParameterValue: Object | undefined = undefined,
-  mainLoadFailureParameterValue: Object | undefined = undefined,
-  verifySceneParameterValue: Object | undefined = undefined): ReaderColdStartPage {
+  mainLoadFailureParameterValue: Object | undefined = undefined): ReaderColdStartPage {
   if (debug !== true || buildModeName !== 'debug') return 'pages/Index';
   const motion = parameterValue === true;
   const renderer = rendererParameterValue === true;
   const mainLoadFailure = mainLoadFailureParameterValue === true;
-  if (verifySceneParameterValue !== undefined &&
-    (typeof verifySceneParameterValue !== 'string' || !/^[a-z][a-z0-9-]{0,31}$/.test(verifySceneParameterValue))) {
-    return 'pages/Index';
-  }
-  const verify = typeof verifySceneParameterValue === 'string';
-  if ((motion && renderer) || (mainLoadFailure && (motion || renderer)) ||
-    (verify && (motion || renderer || mainLoadFailure))) return 'pages/Index';
+  if ((motion && renderer) || (mainLoadFailure && (motion || renderer))) return 'pages/Index';
   // Deliberately not registered as a page. Failure comes from the actual
   // platform dispatch/callback; EntryAbility consumes this destination once.
   if (mainLoadFailure) return 'pages/__ReaderStartupMainLoadFailure';
-  if (verify) return 'pages/ReaderPageStructureVerification';
-  if (renderer) return 'pages/ReaderRendererPilot';
-  if (motion) return 'pages/ReaderControlMotionVerification';
+  // Old renderer and motion Wants still participate in conflict detection.
+  // Both return to the normal application and cannot mount an isolated host.
   return 'pages/Index';
 }
 

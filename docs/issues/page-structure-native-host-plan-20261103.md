@@ -1,5 +1,7 @@
 # E2/E3 原生宿主取证计划
 
+> 2026-11-12整合候选采用PR #22新职责结构及配套Core/UI。旧HAP与旧Native回执保持原绑定。本轮原生计划见[合流实施记录](../architecture/framework-confluence-20261112.md)，现场目标、ABI、系统字号及保数据准入重新核对。原同实例截图、触摸、返回、焦点及字号恢复授权继续按用户限定范围执行。
+
 状态：`HAP6_INSTALL_START_AND_DIAGNOSTIC_ROUTE_PASS / SOURCE_SCALE1_GLYPH_LOCAL_PASS / HAP7_SIGNED_READY_INSTALLING / E2_E3_OPEN`。HAP6已进入诊断菜单与Source；局部中文/英文生产字形正确，实测Area365.714×809.143、scale1。夹具Root漏top safe使页头被状态栏遮挡，已由SourceOwner做Root-only代码修复并通过30个safe-area SDK上下文；含该修复的HAP7已完整编译/签名PASS，canonical安装进行中，修后baseline待复核。不把这段局部证据扩写为全页字形、目标命中、四档字号或全层通过。
 
 当前可审阅候选：HAP7 run `20261103T120548Z-fce869a1-5f3233de`；不可变[manifest](../../.reader-artifacts/page-structure-final-20261103/hap/20261103T120548Z-fce869a1-5f3233de/manifest.json)。signed HAP SHA-256 `0a1ced9d7a44ada8dff7b50512d2877224dede490604e67a7a90731404123457`，214689523 bytes；完整ArkTS/非增量编译与指定签名PASS，证书仍为`minliny_HarmonyOS`，包名`io.reader.minliny`。本计划更新时安装仍进行中；没有该新run部署回执便不称已装。HAP5/HAP6原manifest与失败/成功记录保留，HAP6安装启动及诊断路由通过见下节。只消费当前manifest绑定产物，不从entry/build选包；因Root safe-area生产输入变化重建是新候选，不是同字节重复构建。

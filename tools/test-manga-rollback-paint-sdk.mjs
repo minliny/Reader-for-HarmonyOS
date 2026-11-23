@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -6,17 +7,17 @@ import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mj
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
-import { MangaStripProjection } from '../entry/src/main/ets/features/manga/MangaStripProjection.ts';
-import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { mangaUserError } from '../entry/src/main/ets/features/manga/MangaUserError.ts';
-import { findReaderTheme } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { MangaStripProjection } from '../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts';
+import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { mangaUserError } from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
+import { findReaderTheme } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 // SDK-emitted Surface/Image/PullToRefresh closures and the installed SDK's
 // unmodified @State property runtime execute here. Native frames, geometry,
 // image decoding, imported child mounting and subscriber delivery are ports.
 // This proves retained property updates, not native rendering or VM gestures.
 const root = new URL('../entry/src/main/ets/', import.meta.url);
-const source = readFileSync(new URL('features/manga/MangaReadingSurface.ets', root), 'utf8');
+const source = readFileSync(new URL('features/manga/ui/MangaReadingSurface.ets', root), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -27,7 +28,7 @@ const component = tree.statements.find(node => node.name?.getText(tree) === 'Man
 const names = component.members.map(node => node.name?.getText(tree)).filter(Boolean);
 const classText = name => tree.statements.find(node => node.name?.getText(tree) === name).getText(tree);
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(classText('MangaStripDataSource'))};return MangaStripDataSource`)(MangaStripProjection);
-const MangaLayoutFrame = new Function('FrameCallback', `${stripTypeScriptTypes(classText('MangaLayoutFrame'))};return MangaLayoutFrame`)(class {});
+const MangaLayoutFrame = new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(classText('MangaLayoutFrame'))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const windowSource = readFileSync(new URL('app/ReaderWindowCoordinator.ts', root), 'utf8');
 const windowTree = ts.createSourceFile(virtualFilePath('MangaRollbackWindowValues.ts'), windowSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const windowValue = name => new Function('findReaderTheme', `${stripTypeScriptTypes(windowTree.statements.find(node => node.name?.getText(windowTree) === name).getText(windowTree).replace(/^export /, ''))};return ${name}`)(findReaderTheme);
@@ -125,10 +126,10 @@ async function completeRollback(f) {
   assert.equal(frames.length, 1);
   const frame = frames.shift(); frame.onFrame(0); properties.flush();
   assert.equal(owner.rollbackPainting, true, 'pre-render callback cannot retire the snapshot');
-  frame.onIdle(0); properties.flush();
+  frame.onIdle(0); drainReaderPostLayoutFallbacks(frames); properties.flush();
   assert.equal(owner.rollbackChapterController, undefined); assert.equal(owner.rollbackPainting, false); assert.equal(owner.previousChapterPixels.length, 0);
   assert.equal(owner.controller, controller, 'the actual Controller remains a plain stable owner');
-  const updates = f.built.owner.attributeCalls.length; frame.onIdle(0); properties.flush();
+  const updates = f.built.owner.attributeCalls.length; frame.onIdle(0); drainReaderPostLayoutFallbacks(frames); properties.flush();
   assert.equal(f.built.owner.attributeCalls.length, updates, 'a posted after-render receipt executes once');
 }
 

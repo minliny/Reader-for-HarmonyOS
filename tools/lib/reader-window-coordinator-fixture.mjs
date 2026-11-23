@@ -2,32 +2,45 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {registerHooks} from 'node:module';
 import {ReaderBrightnessWriter} from '../../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
-import * as metrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {findReaderTheme} from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import {installedEtsCompiler,emitSdkProbe} from './ets-compiler-runtime.mjs';
+import * as metrics from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import {findReaderTheme} from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import {installedEtsCompiler} from './ets-compiler-runtime.mjs';
+import {readerWindowEnvironmentForProbe} from './reader-window-environment-probe.mjs';
 const base=new URL('../../entry/src/main/ets/',import.meta.url);
 export async function createWindowCoordinatorFixture(){
- const statusBarUrl=new URL('app/ReaderStatusBarMeasurement.ts',base).href;
- const extensionHook=registerHooks({resolve(s,c,next){
-  if(c.parentURL===statusBarUrl&&s==='../features/common/ReaderWindowMetrics')return next(s+'.ts',c);
-  return next(s,c);
- }});
+ const statusBarUrl = new URL('app/ReaderStatusBarMeasurement.ts', base).href;
+ const extensionHook = registerHooks({ resolve(specifier, context, next) {
+   if (context.parentURL === statusBarUrl && specifier === '../ui/foundation/ReaderWindowMetrics') {
+     return next(`${specifier}.ts`, context);
+   }
+   return next(specifier, context);
+ } });
  let ReaderStatusBarMeasurement;
- try{({ReaderStatusBarMeasurement}=await import(statusBarUrl));}
- finally{extensionHook.deregister();}
+ try { ({ ReaderStatusBarMeasurement } = await import(statusBarUrl)); }
+ finally { extensionHook.deregister(); }
  const {ts}=installedEtsCompiler();
- const app=new Map(),appWrites=[],storagePort={setOrCreate:(k,v)=>{app.set(k,v);appWrites.push([k,v]);}};
+ const app = new Map(), appWrites = [];
+ const storagePort = {
+   get: key => app.get(key),
+   setOrCreate(key, value) {
+     app.set(key, value);
+     appWrites.push([key, value]);
+   },
+ };
  const warnings=[];
  const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
  const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
    AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
    display:{getDefaultDisplaySync:()=>displayInfo,on(){},off(){}}};
- const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
-   '../features/common/ReaderThemeRegistry':{findReaderTheme},
+ const deps={'@kit.ArkUI':kit,'@kit.BasicServicesKit':{deviceInfo:{deviceType:'phone'}},
+   '../ui/platform/ReaderNativeAlertWindow':{ReaderNativeAlertWindow:{bind(){},destroy(){}}},
+   '../platform/ReaderDocumentPickerActivity':{ReaderDocumentPickerActivity:{bind(){},destroy(){},setForeground(){}}},'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
+   '../ui/foundation/ReaderThemeRegistry':{findReaderTheme},
    './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
-   '../features/common/ReaderWindowMetrics':metrics};
+   '../ui/foundation/ReaderWindowMetrics':metrics,
+   '../ui/foundation/ReaderWindowEnvironment':readerWindowEnvironmentForProbe()};
  const source=readFileSync(new URL('app/ReaderWindowCoordinator.ts',base),'utf8');
- const out=emitSdkProbe(source,{fileName:'ReaderWindowCoordinator.ts',compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}});
+ const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
  const module={exports:{}};new Function('require','module','exports','AppStorage',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports,storagePort);
  const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
  function windowPort(options={}){
@@ -50,5 +63,5 @@ export async function createWindowCoordinatorFixture(){
  }
 
  const colors=w=>w.calls.filter(x=>x[0]==='color');
- return{C,S,P,windowPort,colors,displayInfo,app,appWrites,appStorage:storagePort,warnings,cleanup(){C.detach();}};
+ return{C,S,P,windowPort,colors,displayInfo,app,appWrites,warnings,cleanup(){C.detach();}};
 }

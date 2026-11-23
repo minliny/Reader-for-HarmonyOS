@@ -5,6 +5,169 @@
   "scope": "All numeric .height() occurrences in the TTS, reading control, search, RSS, manga, full-directory and directory-navigation feature panels. Text-chain heights are classified separately; other heights are classified as design-token/icon/touch/feature-panel. Content-text lines must use constraintSize or a dynamic resolver.",
   "files": [
     {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
+      "otherHeights": [
+        {
+          "value": 1,
+          "count": 1,
+          "category": "design-token",
+          "reason": "Divider, dot, or compact glyph height."
+        },
+        {
+          "value": 4,
+          "count": 1,
+          "category": "design-token",
+          "reason": "Divider, dot, or compact glyph height."
+        },
+        {
+          "value": 8,
+          "count": 1,
+          "category": "design-token",
+          "reason": "Divider, dot, or compact glyph height."
+        },
+        {
+          "value": 12,
+          "count": 1,
+          "category": "design-token",
+          "reason": "Divider, dot, or compact glyph height."
+        },
+        {
+          "value": 16,
+          "count": 2,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 18,
+          "count": 4,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 20,
+          "count": 3,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 24,
+          "count": 1,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 25,
+          "count": 1,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 28,
+          "count": 2,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 32,
+          "count": 1,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 34,
+          "count": 1,
+          "category": "touch",
+          "reason": "Touch target or control row."
+        },
+        {
+          "value": 36,
+          "count": 1,
+          "category": "touch",
+          "reason": "Touch target or control row."
+        },
+        {
+          "value": 44,
+          "count": 2,
+          "category": "touch",
+          "reason": "Touch target or control row."
+        },
+        {
+          "value": 45,
+          "count": 3,
+          "category": "touch",
+          "reason": "Touch target or control row."
+        },
+        {
+          "value": 52,
+          "count": 1,
+          "category": "touch",
+          "reason": "Touch target or control row."
+        },
+        {
+          "value": 54,
+          "count": 1,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        },
+        {
+          "value": 62,
+          "count": 1,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        },
+        {
+          "value": 108,
+          "count": 1,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        },
+        {
+          "value": 116,
+          "count": 1,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        },
+        {
+          "value": 158,
+          "count": 2,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        },
+        {
+          "value": 182,
+          "count": 1,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        },
+        {
+          "value": 194,
+          "count": 1,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        },
+        {
+          "value": 252,
+          "count": 1,
+          "category": "feature-panel",
+          "reason": "Feature panel internal geometry; owned by this feature."
+        }
+      ],
+      "textHeights": [
+        {
+          "value": 26,
+          "count": 1,
+          "category": "touch",
+          "reason": "收起 button target"
+        },
+        {
+          "value": 43,
+          "count": 3,
+          "category": "feature-panel",
+          "reason": "Timer wheel value rows owned by the TTS panel."
+        }
+      ]
+    },
+    {
       "path": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
       "otherHeights": [
         {
@@ -62,6 +225,18 @@
           "reason": "Icon or compact decorative container."
         },
         {
+          "value": 30,
+          "count": 2,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
+          "value": 32,
+          "count": 1,
+          "category": "icon",
+          "reason": "Icon or compact decorative container."
+        },
+        {
           "value": 42,
           "count": 1,
           "category": "touch",
@@ -69,21 +244,15 @@
         },
         {
           "value": 44,
-          "count": 4,
+          "count": 1,
           "category": "touch",
           "reason": "Touch target or control row."
         },
         {
           "value": 48,
-          "count": 2,
+          "count": 3,
           "category": "touch",
           "reason": "Touch target or control row."
-        },
-        {
-          "value": 64,
-          "count": 1,
-          "category": "feature-panel",
-          "reason": "TTS timer presets rail including its button row and surrounding space."
         },
         {
           "value": 87,
@@ -106,16 +275,22 @@
           "reason": "停止 micro-label inside the transport control."
         },
         {
+          "value": 36,
+          "count": 1,
+          "category": "touch",
+          "reason": "Timer preset button target."
+        },
+        {
           "value": 24,
           "count": 2,
           "category": "feature-panel",
           "reason": "Timer stepper/select value cells."
         },
         {
-          "value": 44,
-          "count": 2,
+          "value": 32,
+          "count": 1,
           "category": "touch",
-          "reason": "Timer and rate preset labels own the complete touch targets."
+          "reason": "Rate preset button target."
         }
       ]
     },
@@ -684,6 +859,9 @@
     }
   ],
   "dynamicTextReplacements": [
+    "ReaderTtsFullPanel.ets: online/system tab label uses constraintSize(minHeight: 16)",
+    "ReaderTtsFullPanel.ets: service description uses constraintSize(minHeight: 13)",
+    "ReaderTtsFullPanel.ets: tab column uses constraintSize(minHeight: 31)",
     "ReaderControlTtsContent.ets: service tab title uses constraintSize(minHeight: 17)",
     "ReaderControlTtsContent.ets: service tab description uses constraintSize(minHeight: 14)",
     "ReaderControlTtsContent.ets: service tab card uses constraintSize(minHeight: 87)"

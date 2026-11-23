@@ -7,21 +7,25 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { sharedProducerShape, producerConsumerEdges } from './lib/architecture-shared-producer-contract.mjs';
+import { currentSharedUiFile } from './lib/shared-ui-source-paths.mjs';
+import { mangaSourcePath, mangaSourceUrl } from './lib/manga-source-paths.mjs';
 import { auditTypographyConsumers } from './lib/reader-typography-consumer-audit.mjs';
 import { countPrivateTypographyCalls } from './lib/architecture-private-typography-count.mjs';
 import { typographyCarrierShape, approvedNativeCarrierFacts } from './lib/approved-manga-typography-carriers.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import * as fontFamilies from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 
 const write = process.argv.length === 3 && process.argv[2] === '--write';
 assert.ok(write || process.argv.length === 2, 'Usage: node tools/capture-manga-directory-registries.mjs [--write]');
 const prefix = 'entry/src/main/ets/';
 const paths = [
-  'features/bookshelf/BookDirectoryPage.ets', 'features/bookshelf/LocalBookDetail.ets',
-  'features/manga/MangaReadingDirectoryFallback.ets', 'features/manga/MangaReadingSurface.ets',
-  'features/reading/ReaderDirectoryNavigationList.ets', 'features/reading/ReaderDirectoryNavigationSurface.ets',
+  'features/reading/ui/BookDirectoryPage.ets', 'features/reading/ui/LocalBookDetail.ets',
+  'features/manga/ui/MangaReadingDirectoryFallback.ets', 'features/manga/ui/MangaReadingSurface.ets',
+  'features/reading/ui/ReaderDirectoryNavigationList.ets', 'features/reading/ui/ReaderDirectoryNavigationSurface.ets',
   'features/common/PageBackBar.ets',
 ].map(path => prefix + path);
+assert.ok(!write || paths.every(file => currentSharedUiFile(file) === file),
+  'The dated registry capture cannot replace reviewed evidence for relocated UI owners');
 const producerComponents = ['MangaDirectoryEntryRow', 'MangaDirectoryCurrentFooter'];
 const producerFiles = producerComponents.map(component => prefix + 'features/manga/' + component + '.ets');
 const docs = 'docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md';
@@ -50,7 +54,7 @@ const counts = source => {
 };
 const summary = [];
 for (const file of paths) {
-  const source = readFileSync(file, 'utf8');
+  const source = readFileSync(currentSharedUiFile(file), 'utf8');
   const entry = typography.files.find(entry => entry.path === file);
   const policy = baseline.uiPolicies.find(entry => entry.file === file);
   assert.ok(entry && policy, 'Only an existing concrete manga successor entry may be captured: ' + file);
@@ -88,7 +92,7 @@ for (const file of paths) {
 const shared = [];
 for (const component of producerComponents) {
 const producerFile = prefix + 'features/manga/' + component + '.ets';
-const source = readFileSync(producerFile, 'utf8');
+const source = readFileSync(mangaSourceUrl(component + '.ets'), 'utf8');
 const shape = sharedProducerShape(source, producerFile);
 const producer = {
   id: 'shared-' + component, file: producerFile, component,
@@ -97,19 +101,22 @@ const producer = {
     'Finite generated current-position footer shared by full and quick manga directories. Only canonical title, page position, theme scheme, actual measured available width and height observation are inputs. The generated visual contract owns typography, minimum height and narrow or large-font stacked presentation; callers cannot override its paint or spacing.',
   successorFacts: facts, shape,
   specSources: (component === 'MangaDirectoryEntryRow' ?
-    ['MangaDirectoryLayout.ts', 'MangaDirectoryPresentation.ts', 'MangaDirectoryVisual.ts', 'MangaDirectoryPressFeedback.ets'] : ['MangaDirectoryVisual.ts']).map(name => {
-    const file = prefix + 'features/manga/' + name;
-    return { file, shape: sharedProducerShape(readFileSync(file, 'utf8'), file) };
+    ['manga/MangaDirectoryLayout.ts', 'manga/MangaDirectoryPresentation.ts', 'manga/MangaDirectoryVisual.ts',
+      'common/MangaDirectoryPressFeedback.ets'] : ['manga/MangaDirectoryVisual.ts']).map(name => {
+    const file = prefix + 'features/' + name;
+    const current = name.startsWith('manga/') ?
+      prefix + mangaSourcePath(name.slice('manga/'.length)) : currentSharedUiFile(file);
+    return { file, shape: sharedProducerShape(readFileSync(current, 'utf8'), current) };
   }),
   consumers: producerConsumerEdges(inventory, component),
-  removalProofs: [docs, prefix + 'features/bookshelf/BookDirectoryPage.ets', prefix + 'features/manga/MangaReadingDirectoryFallback.ets'],
+  removalProofs: [docs, prefix + 'features/reading/ui/BookDirectoryPage.ets', prefix + 'features/manga/ui/MangaReadingDirectoryFallback.ets'],
   sdkProofs: component === 'MangaDirectoryEntryRow' ?
     ['tools/test-manga-directory-entry-row.mjs', 'tools/test-manga-reading-directory-fallback.mjs', 'tools/test-manga-book-directory-chrome.mjs', 'tools/test-manga-directory-press-feedback.mjs'] :
     ['tools/test-manga-directory-quick-panel-sdk.mjs', 'tools/test-manga-book-directory-chrome.mjs'],
 };
 assert.deepEqual(producer.consumers.map(edge => edge.file).sort(), (component === 'MangaDirectoryEntryRow' ? [
-  'features/bookshelf/BookDirectoryPage.ets', 'features/bookshelf/LocalBookDetail.ets', 'features/manga/MangaReadingDirectoryFallback.ets',
-] : ['features/bookshelf/BookDirectoryPage.ets', 'features/manga/MangaReadingSurface.ets']).sort(),
+  'features/reading/ui/BookDirectoryPage.ets', 'features/reading/ui/LocalBookDetail.ets', 'features/manga/ui/MangaReadingDirectoryFallback.ets',
+] : ['features/reading/ui/BookDirectoryPage.ets', 'features/manga/ui/MangaReadingSurface.ets']).sort(),
   'the finite producer is consumed by exactly its implemented manga directory owners');
 const oldProducer = contract.producers.findIndex(entry => entry.file === producerFile);
 if (oldProducer < 0) contract.producers.push(producer); else contract.producers[oldProducer] = producer;

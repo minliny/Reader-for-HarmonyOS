@@ -8,7 +8,7 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 const seed = bookId => ({ sourceId: 'local', bookId });
 const ready = params => ({ data: { ...params, kind: 'ready', reason: 'prepared', chapterIndex: 3 + params.neighborOffset } });

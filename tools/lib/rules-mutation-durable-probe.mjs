@@ -1,4 +1,4 @@
-import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { coreCliPath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
@@ -22,8 +22,9 @@ export const binary=coreCliPath(process.env.READER_RULES_RECEIPT_CORE_ROOT??reso
 export function compile(p,name,deps,official=false,source=read(p)) {
  const body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');
  if(!official)return new Function(...Object.keys(deps),stripTypeScriptTypes(body).replace(/^export /gm,'')+`;return ${name==='*'?'({'+[...source.matchAll(/^export (?:async )?(?:class|const|function) ([A-Za-z0-9_]+)/gm)].map(m=>m[1]).join(',')+'})':name};`)(...Object.values(deps));
- const output=emitSdkProbe(body,{parseSource:source,fileName:p,compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS,strict:true}});
- const exports={};new Function('exports',...Object.keys(deps),output)(exports,...Object.values(deps));return name==='*'?exports:exports[name];
+ const tree=ts.createSourceFile(p,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);assert.deepEqual(tree.parseDiagnostics,[],p+' installed SDK syntax');
+ const emitted=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS,strict:true},reportDiagnostics:true,fileName:p});assert.deepEqual(emitted.diagnostics,[]);
+ const exports={};new Function('exports',...Object.keys(deps),emitted.outputText)(exports,...Object.values(deps));return name==='*'?exports:exports[name];
 }
 export const deferred=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 export const until=async check=>{for(let i=0;i<200;i++){if(check())return;await new Promise(r=>setTimeout(r,5));}throw Error('bounded wait failed');};
@@ -61,11 +62,11 @@ export async function fixture(official=false,existing,mutantSource) {
   AtomicFile:class{constructor(path){this.path=path;this.tmp=path+'.tmp';}startWrite(){if(options.beforeLocal){options.beforeLocal=false;throw Error('startWrite rejected before local side effect');}return{on(){},end:(raw,_encoding,done)=>{fs.writeFileSync(this.tmp,raw);queueMicrotask(done);}};}
    finishWrite(){fs.renameSync(this.tmp,this.path);io.finishes++;if(options.loseFinishAt===io.finishes)throw Error('rename accepted; ACK lost');}failWrite(){io.failWrites++;try{fs.unlinkSync(this.tmp);}catch{}}}};
  const atomic=compile('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo},official);
- const methods=compile('features/settings/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},official);
+ const methods=compile('features/settings/application/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},official);
  const sha256Hex=compile('app/BundledBookSourceSupply.ts','sha256Hex',{cryptoFramework:{createMd:()=>{const hash=createHash('sha256');return{update:async({data})=>{hash.update(data);},digest:async()=>({data:new Uint8Array(hash.digest())})};}},util:{TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}}}},true);
- const Store=compile('features/settings/RulesMutationIntentStore.ts','RulesMutationIntentStore',{ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot:atomic,RULES_MUTATION_METHODS:methods,sha256Hex},official);
+ const Store=compile('features/settings/application/RulesMutationIntentStore.ts','RulesMutationIntentStore',{ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot:atomic,RULES_MUTATION_METHODS:methods,sha256Hex},official);
  const ownerDeps={...scheduler,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,RULES_MUTATION_METHODS:methods,RulesMutationIntentStore:Store};
- const ownerTypes=compile('features/settings/RulesMutationOwner.ts','*',ownerDeps,official,mutantSource??read('features/settings/RulesMutationOwner.ts')),Owner=ownerTypes.RulesMutationOwner;
+ const ownerTypes=compile('features/settings/application/RulesMutationOwner.ts','*',ownerDeps,official,mutantSource??read('features/settings/application/RulesMutationOwner.ts')),Owner=ownerTypes.RulesMutationOwner;
  async function command(method,params={}) { const result=await run(binary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:32*1024*1024});const event=result.stdout.trim().split('\n').map(l=>JSON.parse(l)).findLast(e=>e.requestId===1);if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event; }
  const runtime={closed:false,getUIAbilityContext:()=>({filesDir:files}),supportsCoreCapability:()=>options.capability!==false,
   async request(method,params={},requestOptions={}) {calls.push({method,params:structuredClone(params),options:requestOptions});
@@ -79,10 +80,10 @@ export async function fixture(official=false,existing,mutantSource) {
    if(options.afterMethod===method){options.afterMethod=undefined;throw Error('lost ACK after actual cold SQLite commit');}
    return options.transformMethod===method?{...event,data:options.transform(event.data)}:event;}};
  installed=runtime;
- const Gateway=compile('features/settings/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner:Runtime,RulesMutationOwner:Owner},official);
- const commonReplace={RulesMutationOwner:Owner,RulesMutationError:ownerTypes.RulesMutationError,...(await import('../../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts')),...(await import('../../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts')),...(await import('../../entry/src/main/ets/app/ErrorMessage.ts'))};
- const quickTypes=compile('features/reading/ReaderReplaceQuickGateway.ts','*',commonReplace,official),Quick=quickTypes.ReaderReplaceQuickGateway;
- const fullTypes=compile('features/reading/ReaderControlReplaceGateway.ts','*',{...commonReplace,...quickTypes,RulesManagementGateway:Gateway},official),Full=fullTypes.ReaderControlReplaceGateway;
+ const Gateway=compile('features/settings/application/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner:Runtime,RulesMutationOwner:Owner},official);
+ const commonReplace={RulesMutationOwner:Owner,RulesMutationError:ownerTypes.RulesMutationError,...(await import('../../entry/src/main/ets/features/reading/application/ReaderReplaceQuickState.ts')),...(await import('../../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts')),...(await import('../../entry/src/main/ets/app/ErrorMessage.ts'))};
+ const quickTypes=compile('features/reading/application/ReaderReplaceQuickGateway.ts','*',commonReplace,official),Quick=quickTypes.ReaderReplaceQuickGateway;
+ const fullTypes=compile('features/reading/application/ReaderControlReplaceGateway.ts','*',{...commonReplace,...quickTypes,RulesManagementGateway:Gateway},official),Full=fullTypes.ReaderControlReplaceGateway;
  const gateway=new Gateway(runtime),owner=Owner.forRuntime(runtime),store=new Store(runtime);
  return{toolEvidence: durableFixtureToolEvidence, readCoreIdentity: () => command('core.info'), root,core,files,options,calls,io,runtime,Runtime,Owner,Store,Gateway,Full,Quick,FullError:fullTypes.ReaderControlReplaceGatewayError,gateway,owner,store,command,sha256Hex,
   plan:()=>{try{return fs.readFileSync(resolve(files,'reader-rule-subscription-plan-v1.json'),'utf8');}catch(e){if(e.code==='ENOENT')return'';throw e;}},
@@ -90,7 +91,7 @@ export async function fixture(official=false,existing,mutantSource) {
   writes:()=>calls.filter(c=>c.method==='rules.mutation.apply'),retire:()=>{runtime.closed=true;installed=undefined;},install:o=>{installed=o;},
   recover:retry=>gateway.recoverMutation(()=>Runtime.isCurrent(runtime),retry),
   save:()=>gateway.saveDictRule({name:'dict',urlRule:'https://dict.invalid/{{key}}',showRule:'$.definition',enabled:true,sortNumber:0}),
-  actualSource:()=>read('features/settings/RulesMutationOwner.ts')};
+  actualSource:()=>read('features/settings/application/RulesMutationOwner.ts')};
 }
 export {ReaderWriteEvidence};
 
@@ -101,7 +102,7 @@ export function actualRuntimeDirect() {
  assert.deepEqual(tree.parseDiagnostics,[]);
  const klass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name.text==='ReaderRuntimeOwner');
  const method=klass.members.find(n=>ts.isMethodDeclaration(n)&&n.name.getText(tree)==='requestDirect');assert.ok(method);
- const methods=compile('features/settings/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},true);
+ const methods=compile('features/settings/application/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},true);
  const effects=compile('app/ReaderRuleMutationEffects.ts','readerRuleMutationEffects',{RULES_MUTATION_METHODS:methods},true);
  return compile(path,'ActualRuntimeDirect',{...scheduler,readerRuleMutationEffects:effects,ReaderCoreNotDispatchedError:scheduler.BookRequestNotDispatchedError,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,LOG_DOMAIN:0,hilog:{warn(){}}},true,
   'export class ActualRuntimeDirect {\n'+method.getText(tree)+'\n}');

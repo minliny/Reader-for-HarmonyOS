@@ -1,0 +1,254 @@
+[
+  {
+    "bookSourceName": "Phase1Return Source 01",
+    "bookSourceUrl": "https://s8-source-01.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 02",
+    "bookSourceUrl": "https://s8-source-02.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 03",
+    "bookSourceUrl": "https://s8-source-03.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 04",
+    "bookSourceUrl": "https://s8-source-04.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 05",
+    "bookSourceUrl": "https://s8-source-05.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 06",
+    "bookSourceUrl": "https://s8-source-06.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 07",
+    "bookSourceUrl": "https://s8-source-07.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 08",
+    "bookSourceUrl": "https://s8-source-08.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 09",
+    "bookSourceUrl": "https://s8-source-09.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 10",
+    "bookSourceUrl": "https://s8-source-10.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 11",
+    "bookSourceUrl": "https://s8-source-11.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 12",
+    "bookSourceUrl": "https://s8-source-12.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 13",
+    "bookSourceUrl": "https://s8-source-13.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 14",
+    "bookSourceUrl": "https://s8-source-14.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 15",
+    "bookSourceUrl": "https://s8-source-15.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 16",
+    "bookSourceUrl": "https://s8-source-16.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 2,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Phase1Return Source 17",
+    "bookSourceUrl": "https://s8-source-17.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group B",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  },
+  {
+    "bookSourceName": "Control source 18",
+    "bookSourceUrl": "https://s8-source-18.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Return Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  }
+]

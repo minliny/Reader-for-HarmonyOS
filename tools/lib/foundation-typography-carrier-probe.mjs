@@ -12,25 +12,30 @@ import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { typographyProperties, typographyRoleImports } from './reader-typography-consumer-audit.mjs';
 import {DirectoryRuleDraft,readerControlReplaceEndpoint}from'./reader-reading-field-probe.mjs';
 import {readerRecoveryView}from'../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import {readerSourceCategoryLabel}from'../../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
+import {readerSourceCategoryLabel}from'../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
 import {boundedMembers}from'./bounded-surface-sdk-probe.mjs';
 const cache=new Map();
 const tuple=node=>Object.fromEntries(typographyProperties.filter(p=>Object.hasOwn(node,p)).map(p=>[p,node[p]]));
 /** Original actual owner -> real retained SDK component -> real production
  * AttributeModifier -> native tuple. No stand-in component or tuple whitelist. */
 export function foundationTypographyCarrier(entry,file,expected,pageSource,targetSource){
- const target=targetSource??readFileSync(new URL('../../'+entry.target.path,import.meta.url),'utf8');
+ const producerPath=entry.target.path.replace(
+  /^entry\/src\/main\/ets\/features\/common\/(ReaderButton|ReaderFormField|ReaderLabeledIconAction)\.ets$/,
+  'entry/src/main/ets/ui/controls/$1.ets');
+ const target=targetSource??readFileSync(new URL('../../'+producerPath,import.meta.url),'utf8');
  const key=JSON.stringify([entry,expected,pageSource,target]);if(cache.has(key))return cache.get(key);
- const rolePath=entry.component==='ReaderLabeledIconAction'?'ReaderLabeledIconActionSpecs.ets':'ReaderControlSpecs.ets';
- const specSource=readFileSync(new URL('../../entry/src/main/ets/features/common/'+rolePath,import.meta.url),'utf8');
- const roles=typographyRoleImports(specSource,'ReaderControlSpecs.ets');
+ const producerRolePath=entry.component==='ReaderLabeledIconAction'
+  ? 'entry/src/main/ets/ui/controls/ReaderLabeledIconActionSpecs.ets'
+  : 'entry/src/main/ets/ui/controls/ReaderControlSpecs.ets';
+ const specSource=readFileSync(new URL('../../'+producerRolePath,import.meta.url),'utf8');
+ const roles=typographyRoleImports(specSource,producerRolePath);
  const native=(branch,override={})=>{
   const foundation=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...override}),...(entry.component==='ReaderLabeledIconAction'?{}:{[entry.component==='ReaderButton'?'buttonSource':'fieldSource']:target})});
   const shared=entry.tailFamily?tailControls({foundation,roles:override}):labeledIconControls({foundation,specs:labeledIconSpecs({...readerTypographyRoles,...override}),...(entry.component==='ReaderLabeledIconAction'?{source:target}:{})});
   // SDK field/button source overrides are used by their transform, never just
   // read for a hash. The normal modifier loader also receives actual source.
   const binding=entry.bindingMethod??entry.origin.method;
-  const directory=file==='entry/src/main/ets/features/reading/ReaderDirectoryRules.ets';
+  const directory=file==='entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets';
   // Its complete production Builder now owns captured actor/recovery identities.
   // Load the real methods and initialized fields; a typography-only fixture does
   // not mount its business lifecycle or manufacture a live Runtime/gateway.
@@ -38,7 +43,7 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   const dependencies={...shared.dependencies,DirectoryRuleDraft,readerControlReplaceEndpoint,readerRecoveryView,readerSourceCategoryLabel,ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'}};
   let hooks=shared.hooks;
   if(directory){
-   const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice'].map(name=>[name,readFileSync(new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url),'utf8')]));
+   const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice'].map(name=>[name,readFileSync(new URL('../../entry/src/main/ets/ui/feedback/'+name+'.ets',import.meta.url),'utf8')]));
    hooks={...hooks,childSources:{...hooks.childSources,...childSources}};
    for(const[name,source]of Object.entries(childSources))dependencies[name]=createReaderBuilderProbe(source,boundedMembers(source),dependencies,hooks).Component;
   }
@@ -79,5 +84,5 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   const changed=native(branch,{[role]:{...readerTypographyRoles[role],fontSizeFp:readerTypographyRoles[role].fontSizeFp+2}});
   assert.deepEqual(changed,{...actual,fontSize:actual.fontSize+2},entry.id+': real role propagation through spec/owner/native');
  }
- const result={kind:expected.kind,method:entry.target.method,text:entry.target.text,producerPath:entry.target.path,producerRolePath:'entry/src/main/ets/features/common/'+rolePath,producerProof:'actual owner -> real SDK common control -> production modifier -> native tuple/role propagation',modifiers:Object.fromEntries(Object.entries(expected.changes).map(([p,expression])=>[p,{expression,extra:expected.extra[p]}]))};cache.set(key,result);return result;
+ const result={kind:expected.kind,method:entry.target.method,text:entry.target.text,producerPath,producerRolePath,producerProof:'actual owner -> real SDK common control -> production modifier -> native tuple/role propagation',modifiers:Object.fromEntries(Object.entries(expected.changes).map(([p,expression])=>[p,{expression,extra:expected.extra[p]}]))};cache.set(key,result);return result;
 }

@@ -11,7 +11,7 @@ class Response {
  setResponseCode(v){this.code=v;} setReasonMessage(){} setResponseMimeType(){} setResponseData(v){this.data=v;}
  setResponseIsReady(v){this.ready=v;if(v)this.onReady?.();}
 }
-const util={TextEncoder,Base64Helper:class {encodeToStringSync(bytes){return Buffer.from(bytes).toString('base64');}}};
+const util={TextEncoder:class {encodeInto(value){return new TextEncoder().encode(value);}},Base64Helper:class {encodeToStringSync(bytes){return Buffer.from(bytes).toString('base64');}}};
 function percentBase64(body){const value=Buffer.from(body).toString('base64');return '%'+value.charCodeAt(0).toString(16)+encodeURIComponent(value.slice(1));}
 function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='complete',earlyMode='normal'}={}){
  let now=1000,next=1,observer,diagnostic;const timers=new Map(),jobs=new Map(),logs=[],documents=[];
@@ -93,7 +93,7 @@ function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='
   return pending;
  }};
  const Diagnostic=new Function('hilog','ArkWebExecutor','WebResourceResponse','setTimeout','clearTimeout','Date','util',source+'; return ArkWebResourceDiagnostic;')({info:(_d,_t,_f,message)=>logs.push(JSON.parse(message))},{instance:executor},Response,set,clear,{now:()=>now},util);
- diagnostic=new Diagnostic();
+ diagnostic=new Diagnostic(()=>new Response());
  return {diagnostic,timers,jobs,logs,documents,observer:()=>observer,emit,async advance(ms){const end=now+ms;while(true){const entry=[...timers].filter(([,v])=>v.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!entry)break;now=entry[1].at;timers.delete(entry[0]);entry[1].fn();await ticks();}now=end;await ticks();}};
 }
 {
@@ -176,7 +176,7 @@ for(const lateOld of [false,true]){
 {
  const h=harness();const pending=h.diagnostic.run('cancel');await ticks();
  let providerCalls=0;
- const {owner}=createReaderBuilderProbe(read('ArkWebExecutionHost.ets'),['build','surfacesForRender'],{
+ const {owner}=createReaderBuilderProbe(read('../ui/platform/ArkWebExecutionHost.ets'),['build','surfacesForRender'],{
   ArkWebExecutor:{instance:{blockNetworkUrl:url=>url==='https://denied.example/private-token'}},
   WebResourceResponse:Response,
  });
@@ -211,7 +211,7 @@ for(const lateOld of [false,true]){
  assert.notEqual(h.documents[0].baseUrl,h.documents[1].baseUrl);
  console.log('PASS new run rejects previous run main URL and data document');
 }
-const host=read('ArkWebExecutionHost.ets');const policyPosition=host.indexOf('if (!ArkWebExecutor.instance.blockNetworkUrl(');
+const host=read('../ui/platform/ArkWebExecutionHost.ets');const policyPosition=host.indexOf('if (!ArkWebExecutor.instance.blockNetworkUrl(');
 assert.ok(policyPosition>=0&&host.indexOf('return this.diagnosticResourceProvider(',policyPosition)>policyPosition);
 assert.match(host,/diagnosticResourceProvider:[^\n]+undefined = undefined/);
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('onResourceLoad('),'runner never fabricates native callbacks');

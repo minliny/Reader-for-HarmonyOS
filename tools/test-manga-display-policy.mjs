@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {normalizeReaderSettingsSnapshot,createDefaultReaderSettingsSnapshot} from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),
+import {normalizeReaderSettingsSnapshot,createDefaultReaderSettingsSnapshot} from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
+const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),
  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','resizeViewport','loginRequired','loginAndRetry','imageError','refreshImages']);
 const row={ordinal:8,tileIndex:1,known:true,width:1000,height:1000,sourceHeight:4000,sourceY:1000};
 const restored=[],settings=[],retries=[];let fail='READING_IMAGE_AUTH_REQUIRED';

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 2,
+  "revision": 3,
   "contracts": [
     {
       "contractId": "product",
@@ -28,13 +28,13 @@
     {
       "contractId": "route",
       "plane": "P1",
-      "owner": "Index",
+      "owner": "ReaderNavigation + journey presentation owners",
       "sources": [
         {
-          "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md"
+          "path": "entry/src/main/ets/app/navigation/ReaderNavigation.ts"
         },
         {
-          "path": "entry/src/main/ets/pages/Index.ets"
+          "path": "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets"
         }
       ],
       "machineSource": "tools/contracts/navigation-registry.json",
@@ -57,7 +57,7 @@
           "path": "entry/src/main/ets/pages/ReaderStartupRecovery.ets"
         },
         {
-          "path": "entry/src/main/ets/app/ReaderSystemFileOpenHost.ts"
+          "path": "entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenHost.ts"
         }
       ],
       "machineSource": null,
@@ -80,10 +80,10 @@
           "path": "docs/architecture/ui-page-framework-20261014.md"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderPageScaffold.ets"
+          "path": "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderPageShell.ts"
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts"
         }
       ],
       "machineSource": null,
@@ -106,10 +106,10 @@
           "path": "docs/architecture/ui-parameter-contract-20261025.md"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderPageGeometry.ts"
+          "path": "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderPageScaffold.ets"
+          "path": "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets"
         }
       ],
       "machineSource": null,
@@ -132,7 +132,7 @@
           "path": "docs/architecture/ui-surface-role-contract-20261028.md"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets"
+          "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets"
         }
       ],
       "machineSource": null,
@@ -152,13 +152,13 @@
       "owner": "ReaderTypography",
       "sources": [
         {
-          "path": "entry/src/main/ets/features/common/ReaderTypography.ets"
+          "path": "entry/src/main/ets/ui/foundation/ReaderTypography.ets"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderThemeRegistry.ts"
+          "path": "entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts"
         },
         {
-          "path": "entry/src/main/ets/features/common/MotionSpec.ets"
+          "path": "entry/src/main/ets/ui/foundation/MotionSpec.ets"
         }
       ],
       "machineSource": null,
@@ -178,13 +178,13 @@
       "owner": "ReaderControlSpecs",
       "sources": [
         {
-          "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets"
+          "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderButton.ets"
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderSwitchSpecs.ets"
+          "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets"
         }
       ],
       "machineSource": "tools/contracts/control-registry.json",
@@ -230,10 +230,10 @@
           "path": "entry/src/main/ets/app/ReaderOperationFacts.ts"
         },
         {
-          "path": "entry/src/main/ets/features/source/SourceOrchestrator.ets"
+          "path": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets"
         },
         {
-          "path": "entry/src/main/ets/features/settings/RulesMutationOwner.ts"
+          "path": "entry/src/main/ets/features/settings/application/RulesMutationOwner.ts"
         }
       ],
       "machineSource": null,
@@ -253,7 +253,7 @@
       "owner": "ReaderRuntimeOwner",
       "sources": [
         {
-          "path": "docs/architecture/storage-strong-compatibility-plan-20261030.md"
+          "path": "docs/architecture/reader-residual-repair-implementation-20261111.md"
         },
         {
           "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts"
@@ -276,7 +276,7 @@
       "owner": "ArkWebExecutor",
       "sources": [
         {
-          "path": "entry/src/main/ets/app/ArkWebExecutor.ts"
+          "path": "entry/src/main/ets/platform/network/ArkWebExecutor.ts"
         },
         {
           "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts"
@@ -299,13 +299,13 @@
       "owner": "ReaderPageGeometry",
       "sources": [
         {
-          "path": "entry/src/main/ets/features/common/ReaderPageGeometry.ts"
+          "path": "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderLayoutCapability.ts"
+          "path": "entry/src/main/ets/ui/layout/ReaderLayoutCapability.ts"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts"
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts"
         }
       ],
       "machineSource": null,
@@ -328,10 +328,10 @@
           "path": "docs/architecture/PAGE_STRUCTURE_CONTRACT.md"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderButton.ets"
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets"
         },
         {
-          "path": "entry/src/main/ets/features/common/ReaderToggle.ets"
+          "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets"
         }
       ],
       "machineSource": null,
@@ -351,10 +351,13 @@
       "owner": "workspace-governance",
       "sources": [
         {
-          "path": "../VERSION_POLICY.md"
+          "path": "../AGENTS.md"
         },
         {
-          "path": "AGENTS.md"
+          "path": "config/app-release-ledger.json"
+        },
+        {
+          "path": "AppScope/app.json5"
         }
       ],
       "machineSource": null,

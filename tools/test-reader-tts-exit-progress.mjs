@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const readingFile = fileURLToPath(new URL(
-  '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url));
+  '../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url));
 const Reader = withReaderProgressProducerFixture(productionMotionMethods(readingFile, ['commitTtsProgress', 'finishExit'], {
   CoreReadingAnchor: class {
     constructor(chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion) {

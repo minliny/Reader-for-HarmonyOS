@@ -12,14 +12,8 @@ function isBuildResourceTask(name) {
   return isPackageTask(name) || /(?:^|[:@])(?:compileArkTS|compileTS|compileJS|compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|ProcessLibs|DoNativeStrip|CacheNativeLibs|cleanNative|clean)$/i.test(name);
 }
 
-// Only the explicitly selected single ArkTS task may omit the unrelated
-// Native refresh. Mixed commands retain the complete existing admission path.
 function isSingleArkTsCompile(tasks) {
   return tasks.length === 1 && /^(?::?entry:)?default@CompileArkTS$/i.test(tasks[0]);
-}
-
-function needsIdeNativePreflight(tasks) {
-  return !isSingleArkTsCompile(tasks) && tasks.some(isBuildResourceTask);
 }
 
 function assertArkTsOnlyTaskAllowed(entryTasks, task) {
@@ -44,6 +38,8 @@ function assertCanonicalHapInvocation(tasks, cwd = process.cwd(), env = process.
     const marker = JSON.parse(readFileSync(markerPath, 'utf8'));
     const digest = createHash('sha256').update(readFileSync(resolve(cwd, 'build-profile.json5'))).digest('hex');
     if (!marker.token || marker.token !== env.READER_HAP_PIPELINE_TOKEN || marker.profileSha256 !== digest) stop();
+    const identityDigest = createHash('sha256').update(readFileSync(resolve(cwd, '.reader-app-build.json'))).digest('hex');
+    if (marker.appIdentitySha256 !== identityDigest) stop();
   } catch (_) { stop(); }
 }
 
@@ -53,7 +49,6 @@ async function configureIdeSigning(context, cwd = process.cwd(), env = process.e
     return undefined;
   }
   const pipeline = await import(pathToFileURL(resolve(cwd, 'scripts/hap-pipeline.mjs')).href);
-  pipeline.assertIdeSdkEnvironment(env);
   const session = pipeline.prepareIdeSigningProfile(context.getBuildProfileOpt());
   context.setBuildProfileOpt(session.profile);
   return { pipeline, session };
@@ -75,7 +70,7 @@ function verifyIdeOutput(ide, cwd = process.cwd()) {
 }
 
 module.exports = { assertCanonicalHapInvocation, isPackageTask, isBuildResourceTask, configureIdeSigning,
-  assertReaderHapInvocation, verifyIdeOutput, isSingleArkTsCompile, needsIdeNativePreflight, assertArkTsOnlyTaskAllowed };
+  assertReaderHapInvocation, verifyIdeOutput, isSingleArkTsCompile, assertArkTsOnlyTaskAllowed };
 
 let buildLease, buildLeaseReady, buildEnvironmentBefore, buildGeneration = 0;
 async function beginIdeBuild(ide) {
@@ -114,3 +109,33 @@ function finishIdeBuild() {
 }
 module.exports.beginIdeBuild = beginIdeBuild;
 module.exports.finishIdeBuild = finishIdeBuild;
+
+// Both entries inject through public Hvigor APIs; no source/resource file is generated.
+async function configureAppBuildIdentity(appContext, moduleContexts, ide, cwd = process.cwd(), env = process.env) {
+  const identity = await import(pathToFileURL(resolve(cwd, 'scripts/lib/app-build-identity.mjs')).href);
+  let expected;
+  if (env.READER_HAP_PIPELINE_ROOT || env.READER_HAP_PIPELINE_TOKEN) {
+    assertCanonicalHapInvocation(['assembleHap'], cwd, env);
+    expected = identity.validateAppBuildIdentity(JSON.parse(readFileSync(resolve(cwd, '.reader-app-build.json'), 'utf8')));
+  } else {
+    if (!ide) throw new Error('Reader IDE signing session is not configured');
+    ide.session.appIdentity = ide.pipeline.prepareIdeAppBuildIdentity({
+      buildMode: appContext.getBuildMode(), product: appContext.getCurrentProduct().getProductName(),
+    }, env);
+    expected = ide.session.appIdentity.expectedVersion;
+  }
+  const entries = moduleContexts.filter(context => context.getModuleName() === 'entry');
+  if (entries.length !== 1) throw new Error('Reader app identity requires exactly one entry module');
+  const injected = identity.injectAppIdentity(appContext.getAppJsonOpt(), entries[0].getModuleJsonOpt(), expected);
+  const profile = structuredClone(appContext.getBuildProfileOpt());
+  const products = profile.app?.products?.filter(product => product.name === 'default');
+  if (products?.length !== 1) throw new Error('Reader version assignment requires one default product');
+  products[0].versionName = expected.versionName;
+  products[0].versionCode = expected.versionCode;
+  appContext.setBuildProfileOpt(profile);
+  appContext.setAppJsonOpt(injected.app);
+  entries[0].setModuleJsonOpt(injected.module);
+  console.log(`Reader app identity: ${expected.appBuildId} / code ${expected.versionCode}`);
+  return expected;
+}
+module.exports.configureAppBuildIdentity = configureAppBuildIdentity;

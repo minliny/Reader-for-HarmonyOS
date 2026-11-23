@@ -1,35 +1,26 @@
-import { readerMainViewport } from './MainNavigationSpec';
-import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { ReaderRaisedSurface } from '../common/ReaderRaisedSurface';
-import { readerPageAreaLength } from '../common/ReaderPageShell';
-import { registerReaderShelfFonts } from '../common/ReaderFonts';
+import { ReaderBottomNavigation } from '../../app/navigation/ReaderBottomNavigation';
+import { readerMainTabIconResource } from '../../app/navigation/ReaderMainTabs';
+import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
+import { ReaderRaisedSurface } from '../../ui/surfaces/ReaderRaisedSurface';
+import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
+import { registerReaderShelfFonts } from '../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import {
-  readerInteractiveSafeLeft,
-  readerInteractiveSafeRight,
-} from '../common/ReaderWindowMetrics';
-import { readerFloatingTabBarHeight, readerMainTabItemHeight, readerFloatingTabBottomInset } from '../common/ReaderFloatingBarMetrics';
-import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
+import { readerMainTabItemHeight } from '../../ui/layout/ReaderFloatingBarMetrics';
+import { resolveReaderRaisedShape } from '../../ui/layout/ReaderRaisedShape';
 import {
   TOK_BORDER_W,
   TOK_MUTED,
   TOK_ON_PRIMARY,
   TOK_PRIMARY_DARK,
   TOK_RADIUS_PILL,
-  TOK_SPACE_XS,
-} from '../common/ReaderTokens';
-import { TYPE_MAIN_TAB_LABEL } from '../common/ReaderTypography';
+} from '../../ui/foundation/ReaderTokens';
+import { TYPE_MAIN_TAB_LABEL } from '../../ui/foundation/ReaderTypography';
 import {
   MAIN_TABS,
   MainTabDef,
   MAIN_TAB_RAIL_ITEM_GAP,
   MAIN_TAB_RAIL_PADDING,
   MAIN_TAB_RAIL_WIDTH,
-  mainTabBottomWidth,
   mainTabRailHeight,
 } from './MainNavigationSpec';
 
@@ -40,12 +31,9 @@ import {
 export struct MainTabBar {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop current: string = 'bookshelf';
   @Prop vertical: boolean = false;
-  @State private bottomSurfaceWidth: number = 0;
-  @State private bottomSurfaceHeight: number = 0;
   @State private railSurfaceWidth: number = 0;
   @State private railSurfaceHeight: number = 0;
   onSelect: (key: string) => void = (_key: string): void => {};
@@ -59,33 +47,11 @@ export struct MainTabBar {
     if (this.vertical) {
       this.verticalRail();
     } else {
-      this.bottomBar();
+      ReaderBottomNavigation({ current: this.current,
+        onSelect: (key: string): void => this.onSelect(key),
+        onCurrentTap: (key: string): void => this.onCurrentTap(key),
+      });
     }
-  }
-
-  @Builder
-  private bottomBar() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      ReaderRaisedSurface({ surfaceWidth: this.bottomSurfaceWidth, surfaceHeight: this.bottomSurfaceHeight,
-        cornerRadius: TOK_RADIUS_PILL, scheme: this.appThemeScheme });
-    Row({ space: TOK_SPACE_XS }) {
-      ForEach(MAIN_TABS, (tab: MainTabDef): void => {
-        this.tabItem(tab, this.current === tab.key, false);
-      }, (tab: MainTabDef): string => `main-tab-${tab.key}`);
-    }
-    .width(this.bottomBarFrame().width)
-    .constraintSize({ minHeight: readerFloatingTabBarHeight(this.navigationFontScale()) })
-    .padding(TOK_SPACE_XS)
-    .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
-    .borderRadius(TOK_RADIUS_PILL)
-    .clip(false)
-    .hitTestBehavior(HitTestMode.Transparent)
-    .onAreaChange((_old: Area, area: Area): void => this.recordRaisedSurface(false, area));
-    }.width(this.bottomBarFrame().width).clip(false)
-    .hitTestBehavior(HitTestMode.Transparent)
-    .margin({ bottom: this.bottomInset() })
-    .translate({ x: this.bottomBarTranslateX() });
   }
 
   @Builder
@@ -95,7 +61,7 @@ export struct MainTabBar {
         cornerRadius: TOK_RADIUS_PILL, scheme: this.appThemeScheme });
     Column({ space: MAIN_TAB_RAIL_ITEM_GAP }) {
       ForEach(MAIN_TABS, (tab: MainTabDef): void => {
-        this.tabItem(tab, this.current === tab.key, true);
+        this.tabItem(tab, true);
       }, (tab: MainTabDef): string => `main-rail-tab-${tab.key}`);
     }
     .width(MAIN_TAB_RAIL_WIDTH)
@@ -105,7 +71,7 @@ export struct MainTabBar {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
-    .borderRadius(TOK_RADIUS_PILL)
+    .borderRadius(this.railRadius())
     .clip(false)
     .onAreaChange((_old: Area, area: Area): void => this.recordRaisedSurface(true, area))
     .hitTestBehavior(HitTestMode.Transparent);
@@ -120,17 +86,14 @@ export struct MainTabBar {
     if (vertical) {
       if (Math.abs(width - this.railSurfaceWidth) > 0.1) this.railSurfaceWidth = width;
       if (Math.abs(height - this.railSurfaceHeight) > 0.1) this.railSurfaceHeight = height;
-    } else {
-      if (Math.abs(width - this.bottomSurfaceWidth) > 0.1) this.bottomSurfaceWidth = width;
-      if (Math.abs(height - this.bottomSurfaceHeight) > 0.1) this.bottomSurfaceHeight = height;
     }
   }
 
   @Builder
-  private tabItem(tab: MainTabDef, active: boolean, vertical: boolean) {
+  private tabItem(tab: MainTabDef, vertical: boolean) {
     Column({ space: 2 }) {
       Stack({ alignContent: Alignment.Center }) {
-        this.tabIcon(tab.key, active);
+        this.tabIcon(tab.key);
       }
       .width(30)
       .height(30);
@@ -144,21 +107,22 @@ export struct MainTabBar {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center)
-        .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .fontColor(this.current === tab.key ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width(vertical ? 66 : undefined)
     .layoutWeight(vertical ? 0 : 1)
     .constraintSize({ minHeight: readerMainTabItemHeight(this.navigationFontScale(), vertical) })
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
-    .borderRadius(active ? TOK_RADIUS_PILL : 0)
-    .accessibilityText(`${tab.label}${active ? '，已选中' : ''}`)
+    .backgroundColor(this.current === tab.key ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
+    .borderRadius(this.current === tab.key ? Math.min(66,
+      readerMainTabItemHeight(this.navigationFontScale(), vertical)) / 2 : 0)
+    .accessibilityText(`${tab.label}${this.current === tab.key ? '，已选中' : ''}`)
     .accessibilityRole(AccessibilityRoleType.BUTTON)
-    .accessibilitySelected(active)
+    .accessibilitySelected(this.current === tab.key)
     .focusable(true)
     .onClick((): void => {
-      if (!active) {
+      if (this.current !== tab.key) {
         this.onSelect(tab.key);
       } else {
         this.onCurrentTap(tab.key);
@@ -170,55 +134,13 @@ export struct MainTabBar {
     return this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
   }
 
-  private tabIconResource(key: string, active: boolean): string {
-    const night = this.appThemeScheme === 'night';
-    if (key === 'bookshelf') {
-      return active ? 'bookshelf_library_active' :
-        (night ? 'bookshelf_library_outline_theme_night' : 'bookshelf_library_outline');
-    }
-    if (key === 'discover') {
-      return active ? 'bookshelf_compass_active' :
-        (night ? 'bookshelf_compass_outline_theme_night' : 'bookshelf_compass_outline');
-    }
-    if (key === 'rss') {
-      return active ? 'bookshelf_rss_active' :
-        (night ? 'bookshelf_rss_outline_theme_night' : 'bookshelf_rss_outline');
-    }
-    return active ? 'bookshelf_settings_active' :
-      (night ? 'bookshelf_settings_outline_theme_night' : 'bookshelf_settings_outline');
+  private railRadius(): number {
+    return resolveReaderRaisedShape('main-tab-rail', this.railSurfaceWidth || MAIN_TAB_RAIL_WIDTH,
+      this.railSurfaceHeight || mainTabRailHeight(MAIN_TABS.length, this.navigationFontScale()), TOK_RADIUS_PILL)?.radius ?? 0;
   }
 
   @Builder
-  private tabIcon(key: string, active: boolean) {
-    Image($r(`app.media.${this.tabIconResource(key, active)}`)).width(24).height(24);
-  }
-
-  private bottomBarFrame(): SurfaceHorizontalFrame {
-    const metrics = ReaderWindowCoordinator.metrics();
-    const width = this.liveWindowWidth();
-    return resolveHorizontalFrame(
-      width,
-      readerInteractiveSafeLeft(metrics),
-      readerInteractiveSafeRight(metrics),
-      new SurfaceWidthSpec(mainTabBottomWidth(MAIN_TABS.length), 32, 32, 'center'),
-    );
-  }
-
-  private bottomBarTranslateX(): number {
-    const frame = this.bottomBarFrame();
-    return (frame.left - frame.right) / 2;
-  }
-
-  private bottomInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return 15;
-    return readerFloatingTabBottomInset(ReaderWindowCoordinator.metrics());
-  }
-
-  private liveWindowWidth(): number {
-    if (this.readerWindowMetricsRevision < 0) {
-      return 0;
-    }
-    const width = readerMainViewport(this.mainViewportRevision).width;
-    return Number.isFinite(width) && width > 0 ? width : 0;
+  private tabIcon(key: string) {
+    Image($r(`app.media.${readerMainTabIconResource(key, this.current === key, this.appThemeScheme)}`)).width(24).height(24);
   }
 }

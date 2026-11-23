@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "scope": "Required production fonts, redistribution notices and generated Native storage identity; explicit review when assets change.",
+  "scope": "Required production fonts and redistribution notices; explicit review when assets change.",
   "paths": [
     "reader-core-storage-identity.v1.json",
     "FONT-SOURCES.txt",

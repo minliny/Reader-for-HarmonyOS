@@ -1,0 +1,175 @@
+{
+  "schema": "reader.framework-closure.p0-responsibilities.v1",
+  "status": "COMPLETE_READ_ONLY_SOURCE_INVENTORY",
+  "date": "2026-11-11",
+  "repository": "/home/administrator/Reader/Reader-for-HarmonyOS",
+  "head": "14444eac0feb182d38f16ef8ffb40c43cb749434",
+  "hostWorktreeAtInitialRead": "CLEAN",
+  "evidenceBoundary": "只读当前源码与既有架构说明。没有修改生产、运行测试/构建/门禁、连接设备、读取用户数据库或UNKNOWN。行号及事实绑定本次HEAD/源码指纹；并不证明设备像素、性能或迁移等价。仅写本文件。",
+  "executedChecks": [],
+  "checksStatus": "NOT_RUN_BY_P0_SCOPE",
+  "readOnlyActions": ["git rev-parse HEAD", "git status --short", "bounded rg/source reads", "source SHA256 inventory", "JSON syntax readback of this brief only; no production check"],
+  "mainConclusion": [
+    "ReadingExperience是LocalReadingExperience.ets:896导出的struct，二者是同一生产组件，不存在独立ReadingExperience.ets。",
+    "生产文字链为ReaderShell→ReadingExperience→ReaderControlPanel。ReaderControlMotionStage仅由显式DEBUG冷启动验证页装配，不能把实验文件存在写成生产已迁移，也不能据此认定当前生产存在两个竞争控制时钟。",
+    "生产Panel已复用ReaderControlRuntime；Stage则直接持有另一套手势/帧适配。二者共享会话/手势/几何基础能力，但生产装配和生命周期合同尚未等价。",
+    "采用B先抽seam：先明确纯测量事实与SDK转换、控制语义交接和测量回执接口，再拆UI装配；保留原阅读会话、分页、进度、资源和领域List。Stage接生产是后续有条件决定，不是为完成统计强接。"
+  ],
+  "productionAssembly": [
+    {"file": "entry/src/main/ets/features/reading/ui/ReaderShell.ets", "line": 19, "symbol": "import ReadingExperience, ReaderRetainedPresentation", "fact": "从LocalReadingExperience导入，名称不是另一个组件文件。"},
+    {"file": "entry/src/main/ets/features/reading/ui/ReaderShell.ets", "line": 207, "symbol": "build contentKind branch", "fact": "manga进入mangaSurface；文字分支在211装配ReadingExperience。漫画不在本次文字控制Stage迁移范围。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 896, "symbol": "export struct ReadingExperience", "fact": "持有文字阅读会话与视图协调。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 2233, "symbol": "ReaderControlPanel builder", "fact": "生产唯一控制面板装配：传入$controlSession、布局/measurement identity、minimum/playback回执、临时层、窗口与业务回调；Panel持续挂载，TOC首次打开后保留数组身份。"},
+    {"file": "entry/src/main/ets/pages/ReaderControlMotionVerification.ets", "line": 231, "symbol": "ReaderControlMotionStage builder", "fact": "唯一实际Stage调用点；验证页用合成目录及真实目录/外观子组件，未装配整套阅读业务。"},
+    {"file": "entry/src/main/ets/app/ReaderControlVerificationLaunch.ts", "line": 14, "symbol": "readerControlVerificationColdStartPage", "fact": "只有debug=true、buildModeName=debug、精确布尔参数且无冲突才返回验证页，默认仍pages/Index。"}
+  ],
+  "responsibilityMap": [
+    {
+      "owner": "ReadingExperience / LocalReadingExperience.ets",
+      "owns": ["文字阅读mounted/lifecycle/selection身份", "原ReadingSessionFlowGateway与可见章节/页发布", "语义controlSession及Back/IME/业务交接", "正文measurement准入与相邻页准备协调", "进度提交/未决交接/卸载", "原TTS/自动翻页/资源与窗口owner的接线"],
+      "anchors": [
+        {"line": 1570, "symbol": "aboutToAppear", "fact": "启动同一阅读宿主；1719创建ReadingSessionFlowGateway。"},
+        {"line": 1988, "symbol": "aboutToDisappear", "fact": "撤销minimum代次、翻页/纹理回调、资源/系统/窗口lease与临时读入；正常退出不由此另起第二笔fire-and-forget进度写。"},
+        {"line": 1288, "symbol": "paragraphLayout / physicalPagination", "fact": "已持有ReaderParagraphLayoutOwner与ReaderPhysicalPaginationOwner，不应另造一套分页/段落算法。"},
+        {"line": 5337, "symbol": "beginMeasurement", "fact": "以lifecycle/selection/viewport准入，管理native measurement、正反向测量、章节驻留窗口与可见锚。"},
+        {"line": 5503, "symbol": "consumeMeasuredBatch", "fact": "消费真实Native测量回执与图片几何，决定物理页容量，进入首屏提交；不是通用文本排版引擎。"},
+        {"line": 6958, "symbol": "requestExit", "fact": "顺序为真实IME→临时控制层→以最新visual快照回退控制语义→beginExit。"},
+        {"line": 6980, "symbol": "beginExit", "fact": "与页手势/settlement/进度未决协调后才退出；不能替换为单纯页面导航。"},
+        {"line": 11184, "symbol": "onControlSessionChanged", "fact": "语义边界驱动窗口策略、相邻测量暂停、模块visit与closeRevision清理；关闭控制UI不重置阅读/TTS/自动翻页业务。"}
+      ],
+      "mustRemainSingle": ["原gateway与progress producers", "可见章节/页publication", "lifecycle/selection/pageTurn generation", "controlSession语义authority", "窗口coordinator与revision来源"],
+      "mustNotMoveWholesale": "不得将整个组件搬成ViewModel，也不得把有TextController/Native节点的测量对象直接搬到application。"
+    },
+    {
+      "owner": "ReaderControlPanel.ets",
+      "owns": ["控制Actor装配及稳定子树", "ReaderControlRuntime的平台输入/帧适配", "局部可视标量/运动采样", "真实模块minimum及字体回执", "当前临时层/更多菜单/亮度拖动输入协调", "TTS/自动翻页source-launch显示回执"],
+      "anchors": [
+        {"line": 266, "symbol": "$controlSession + visualSession/visual scalars", "fact": "语义通过@Link接原Host；VSync主要更新Panel局部标量。"},
+        {"line": 589, "symbol": "aboutToAppear", "fact": "创建并start ReaderControlRuntime；字体异步ready以runtimeLifecycle防过期。"},
+        {"line": 613, "symbol": "aboutToDisappear", "fact": "撤销minimum provider、清理profiles/亮度/临时层，stop当前runtime并撤销backdrop区域。"},
+        {"line": 631, "symbol": "runtimeConfig", "fact": "从当前布局/quick/full预算生成轴，应用ProductMotionTiming与reduceMotion。"},
+        {"line": 640, "symbol": "acceptRuntime", "fact": "投影局部pose、保留actors、交付稀疏visual快照/endpoint、报告backdrop及launch source ready。"},
+        {"line": 675, "symbol": "scheduleRuntimeFrame", "fact": "postFrameCallback受runtime ticket与runtimeLifecycle双重失效控制。"},
+        {"line": 733, "symbol": "bindModuleMinimum", "fact": "模块minimum provider与本次identity绑定，不是固定330高度可等价替代。"},
+        {"line": 805, "symbol": "measureControlMinimum", "fact": "实际字体测量加模块delegate生成候选minimum及quick/full内容预算。"},
+        {"line": 942, "symbol": "onControlSessionChanged", "fact": "Host语义命令进入同一个runtime.command。"},
+        {"line": 950, "symbol": "handleControlTouch", "fact": "inputEnabled/obscured/minimum/temporary及原pointer所有权控制输入。"},
+        {"line": 1149, "symbol": "commitVisualSession", "fact": "仅不同endpoint复制回@Link语义state。"},
+        {"line": 1252, "symbol": "build", "fact": "首次开启动画后保留Actor树，topbar、shell、内容surface不应重复包框。"},
+        {"line": 1698, "symbol": "ReaderControlDirectoryContent", "fact": "目录保持原领域内容；其他模块分别在1756/1802/1826/1853/1919/1952装配。"}
+      ],
+      "businessBoundary": "只转发原业务事实/命令，不获得新的书签、规则、TTS配置、进度或下载写入authority。"
+    },
+    {
+      "owner": "ReaderControlRuntime.ts",
+      "owns": ["生产控制session/gesture/layout compensation的运行时采样", "命令重投去重、frame ticket、continuation timing与enable/stop失效"],
+      "anchors": [
+        {"line": 30, "symbol": "ReaderControlRuntime", "fact": "现有纯TS生产时钟：无UI builders、业务数据、平台timer或ArkUI状态。"},
+        {"line": 75, "symbol": "command", "fact": "相同语义命令重投不倒退局部进度。"},
+        {"line": 87, "symbol": "configure", "fact": "复用layout rebase并处理reduce-motion零时长。"},
+        {"line": 119, "symbol": "frame", "fact": "拒绝旧ticket并消费当前时钟；这部分不能在迁移时与Stage直接driver同时活跃。"}
+      ]
+    },
+    {
+      "owner": "ReaderControlMotionStage.ets",
+      "owns": ["实验Stage局部visualSession与手势state", "直接reducer VSync推进", "轴重基及局部layout compensation", "slots几何/点击屏蔽与endpoint发布"],
+      "anchors": [
+        {"line": 51, "symbol": "ReaderControlMotionStage", "fact": "声明用途为代表模块集成/验证，不宣称生产接入。"},
+        {"line": 57, "symbol": "semanticSession prop", "fact": "稀疏语义输入，本地visualSession及onSessionCommit输出；不是生产Panel当前的@Link/runtime组合。"},
+        {"line": 166, "symbol": "setVisualSession", "fact": "隐藏endpoint延后一帧、endpoint去重、视觉快照回调。"},
+        {"line": 238, "symbol": "onSemanticSessionChanged", "fact": "实验语义重投与视觉state适配。"},
+        {"line": 261, "symbol": "aboutToDisappear", "fact": "撤销本Stage lifecycle/指针/帧；不拥有阅读业务卸载。"},
+        {"line": 455, "symbol": "admitLayout", "fact": "使用现有rebaseReaderControlLayout，过滤旧/无效布局回调。"},
+        {"line": 513, "symbol": "scheduleFrame", "fact": "直接advanceReaderControlSession/advanceReaderControlLayoutCompensation，独立于生产ReaderControlRuntime。"}
+      ],
+      "notOwned": ["正文/相邻页measurement", "Core读写与进度receipt", "实际模块minimum/provider生命周期", "真实IME/系统Back/外层遮挡策略", "TTS/autoPage原业务与source launch profile"],
+      "productionStatus": "NOT_CONNECTED_VERIFICATION_ONLY"
+    }
+  ],
+  "measurementAndPreparationSeams": [
+    {"file": "entry/src/main/ets/features/reading/ui/ReadingMeasurementModels.ets", "line": 34, "symbol": "MeasurementParagraph", "fact": "虽然文件自述DTO，实际含TextController与layoutMap；不是可整体下移application的纯DTO。ParagraphRange/MeasuredReadingLine中的纯标量事实可以单独定义。"},
+    {"file": "entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets", "line": 38, "symbol": "ReaderNativeTextMeasurement", "fact": "ArkUI typeNode/UIContext/TextController测量适配边界；take:72转移已测Native节点，clear:79只dispose未转移节点。原shaping/字体/Unicode/bidi行为由框架负责。"},
+    {"file": "entry/src/main/ets/features/reading/ui/ReaderParagraphLayoutOwner.ts", "line": 17, "symbol": "prepareBatch", "fact": "已有有界段落batch规划，巨段保持原整体shaping上下文；可复用，不新造切段/排版器。"},
+    {"file": "entry/src/main/ets/features/reading/ui/ReaderPhysicalPaginationOwner.ts", "line": 30, "symbol": "ReaderPhysicalPaginationOwner", "fact": "已有物理页packing与ReadingPaginationIndex/Prefix准入，不从历史页或未测章节头猜边界。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 8057, "symbol": "controlMinimumIdentity", "fact": "identity包含source/book/lifecycle/open/module visit/目录tab/viewport/metrics revision及前后台/遮挡；不同测量不能互借。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 8094, "symbol": "bindControlMinimum", "fact": "新provider先minimumReady=false并撤销旧代次；保留旧shell不等于允许输入。scheduleControlMinimum:8110再帧后按相同identity/generation读取候选。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 12380, "symbol": "adjacentMeasurementContext", "fact": "相邻章节测量有独立materialized context，不能交换尚未显示的章节为当前正文owner。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 12615, "symbol": "schedulePageTurnPreparation", "fact": "单一pageTurnGeneration撤销准备结果，按前后方向排队；drainPageTurnPreparationQueue:12695受会话launch、手势、settlement与canTurnPage条件限制。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 12863, "symbol": "beginPageTurnPreparation", "fact": "capture原materialized context，构造目标context并测量；准入失败返回retry并恢复上下文。isPreparedPageTurnFresh:12918核origin page、source/book、content/layout与generation。"},
+    {"file": "entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets", "line": 41, "symbol": "ReaderPageTurnRenderPage", "fact": "已有渲染seam，只接已测物理页；不拥有分页或持久进度。文字continuous与flat stage分别由LRE:2145/2188装配。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 13917, "symbol": "persistPresentedPageTurn", "fact": "复用progressProducers.persistPresented，ACK不能倒退/提升页面或改变纹理代次。"},
+    {"file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets", "line": 14008, "symbol": "persistPreparedPageTurn", "fact": "原精确版本锚提交、generation fence及reconcile结果，未决交gateway.handoffPendingProgress；抽seam不得把false/undefined都归为成功。"}
+  ],
+  "stageEquivalenceGaps": [
+    {"id": "E1-clock", "gap": "Stage直接driver与Panel的ReaderControlRuntime不是同一运行适配；生产Runtime还拥有ticket/command continuation策略。", "precondition": "优先让实验Stage复用现有Runtime或先证明同输入trace的稀疏命令/endpoint/旧ticket行为等价；生产任一时刻只允许一个时钟。"},
+    {"id": "E2-measurement", "gap": "Stage接quickHeight/fullHeight等标量；生产动态minimum含字体、模块provider、候选width、identity/key/metrics与playback profile。", "precondition": "先明确measurement receipt端口及失效，不能以Stage默认330/736或验证页尺寸代替真实minimum准入。"},
+    {"id": "E3-input-back", "gap": "Stage只有inputEnabled/temporaryLayerActive等通用输入；生产还含controlObscured、minimum fence、IME、临时层revision、backdrop和最新visual快照的系统Back仲裁。", "precondition": "复用LRE requestExit/ReaderControlHostSession；验证Back先IME/临时层再控制层，外部遮挡、前后台和旧touch不越权。"},
+    {"id": "E4-retained-actors", "gap": "生产Panel保留整套目录/搜索/替换/外观/设置/TTS/autoPage actor与draft/List身份，Stage目前只是builder slots。", "precondition": "使用原领域组件与同一actor身份，验证quick/full/模块切换/hidden terminal frame不重建List或丢输入；不得为统一统计替换领域List。"},
+    {"id": "E5-session-launch", "gap": "Panel.onLaunchSampleChanged:226捕获自然playback profile、source kind、generation与布局回执，Stage当前接口没有等价source-launch合同。", "precondition": "TTS/autoPage source-ready、handoffPending、中断/恢复、自然最小布局回执继续由原owner管理，不能仅用topBar/module slot宣称覆盖。"},
+    {"id": "E6-lifecycle", "gap": "Stage验证局部tear-down并不等于阅读会话retained/exit/Native纹理/资源释放/未决进度交接。", "precondition": "卸载、旋转、重挂载、快速重入及旧回调隔离须绑定原source/book/lifecycle/metrics；reduceMotion须沿现有策略立即settle且仅一次语义endpoint。"},
+    {"id": "E7-evidence", "gap": "验证页content:131仅合成home、FullDirectoryPanel与ReaderControlAppearanceContent；其motion duration也由验证页显式给定。", "precondition": "不得把此验证页当生产全模块、真实会话、性能或像素验收；替换前另列当前候选的局部检查及必要平台证据。"}
+  ],
+  "B_batches": [
+    {
+      "id": "B1-measurement-facts",
+      "dependsOn": ["P0"],
+      "change": "抽出可复用的纯measurement事实/身份与准入DTO；SDK LineMetrics/TextController→纯标量转换留ui/platform适配。",
+      "scope": ["LocalReadingExperience measuredLines/consumeMeasuredBatch等交界", "ReadingMeasurementModels.ets按纯数据与SDK容器分开", "ReaderNativeTextMeasurement保留Native测量/节点转移"],
+      "reuse": ["ReaderParagraphLayoutOwner", "ReaderPhysicalPaginationOwner", "ReadingPaginationIndex/Prefix", "ArkUI native Text shaping"],
+      "doNotChange": ["分页/断行算法", "文字处理/Unicode位置语义", "首次进度提交", "设备参数"],
+      "exitCriteria": ["application纯DTO无ArkUI全局类型、SDK import或ui反向依赖", "原TextController/Native节点仍由单一适配owner测量/take/dispose", "相同chapter/body/processing/layout身份产生同一首尾scalar、片段及Native资源归属", "过期measurement与图片迟到回调不能交付给新chapter/selection"],
+      "futureVerification": "实施前按实际差异重审现有测量/位置/Native ownership准确case；本P0不选择或运行检查。"
+    },
+    {
+      "id": "B2-control-host-port",
+      "dependsOn": ["P0"],
+      "change": "在现有ReaderControlSessionState/ReaderControlHostSession上抽稀疏Host命令、endpoint与只读visual decision端口，先保持生产Panel装配。",
+      "scope": ["LocalReadingExperience controlSession/latestControlVisualSession及2233处接线", "requestExit/onControlSessionChanged/input boundary", "ReaderControlPanel @Link与commitVisualSession边界"],
+      "reuse": ["ReaderControlSessionState", "ReaderControlHostSession", "ReaderControlRuntime"],
+      "exitCriteria": ["LRE仍仅一个语义controlSession，Panel仍仅一个运行时钟", "每帧数据不变为LRE @State，不新增全局panel store", "Back/IME/临时层顺序及closeRevision清理不变", "模块访问revision、TOC数组、draft与原业务写入authority不因壳拆分丢失", "同命令重投、重复UP/endpoint与卸载后回调不重复提交语义"],
+      "futureVerification": "只验证被改端口的实际生产方法/装配与上述负例；不附带Core、全门禁或设备。"
+    },
+    {
+      "id": "B3-minimum-receipt-and-panel-adapter",
+      "dependsOn": ["B1-measurement-facts", "B2-control-host-port"],
+      "change": "先把minimum/provider注册、候选测量回执与shell渲染适配分开；随后按稳定actor边界拆Panel builder，保留原Runtime与模块组件。",
+      "scope": ["LRE controlMinimumIdentity/bind/schedule/admit", "Panel publishMinimumMeasurer/measureControlMinimum/profiles", "Panel acceptRuntime/scheduleRuntimeFrame/build"],
+      "exitCriteria": ["身份仍含source/book/lifecycle/open/module visit/viewport/metrics", "新字体/metrics/provider未准入时保留旧壳但禁新手势，不把fallback当实测成功", "provider撤销/错误回执不解锁新实例，playback receipt不回灌provider形成循环", "topbar/shell/content/backdrop各自单一绘制owner，动作actor不被通用shell窃取hit testing", "领域List与TextInput同一实例跨quick/full/closing保留"],
+      "futureVerification": "针对真实minimum/临时层/保留builder的必要准确case；像素和性能仍独立记账，不因代码拆分自动获得PASS。"
+    },
+    {
+      "id": "B4-page-preparation-port",
+      "dependsOn": ["B1-measurement-facts"],
+      "independentOf": ["Stage production migration"],
+      "change": "为相邻页准备定义精确request/result与context lease端口，分离队列/重试协调，保留原测量lane和可见页/持久提交owner。不得复制整套page-turn state。",
+      "scope": ["LRE schedule/drain/beginPageTurnPreparation", "adjacentMeasurementContext/freshness", "现有ReaderPageTurnStage输入"],
+      "exitCriteria": ["prepared结果完整绑定origin page、target chapter、source/book/content/layout与generation", "取消、字体/viewport变化、跨章准备失败恢复原可见context", "不改变手势、rapid turn、自动翻页与准备队列当前准入/重试语义", "准备不能预写阅读进度或替代visible page发布", "persistPresented/persistPrepared/reconcile/UNKNOWN handoff仍由原gateway/progress owner执行，ACK不反向重放视觉提交"],
+      "futureVerification": "按本批实际改动选择前后相邻/过期准备/commit未决case；不重跑全部阅读/资源套件。"
+    },
+    {
+      "id": "B5-stage-convergence-decision",
+      "dependsOn": ["B2-control-host-port", "B3-minimum-receipt-and-panel-adapter"],
+      "change": "先在验证适配中复用生产Runtime与已抽seam，逐项关闭E1-E7；仅有确证后决定是否让Stage承载生产壳。",
+      "scope": ["ReaderControlMotionStage及显式验证页", "必要时对照Panel适配trace；不先改生产挂载"],
+      "exitCriteria": ["同命令/gesture/layout/reduceMotion/lifecycle trace的endpoint与所有权等价", "真实所有模块和source-launch/IME/临时层/Back/卸载先决已有当前证据", "选择切换时同一生产实例只有一个clock/gesture owner，原重复播放适配随切换退役", "若证据不足，Stage继续明确VERIFICATION_ONLY；B1-B4成果仍可独立交付，不能假装已迁移"],
+      "futureVerification": "先准确本地生产方法/装配；仅源码无法回答且具必要依据的剩余像素/平台问题再另列有界设备计划，不沿用旧截图宣称当前等价。"
+    }
+  ],
+  "ordering": "B1与B2可按文件所有权并行；B3等待二者。B4等待B1但不阻塞Stage与控制壳独立收敛，也不是强制扩展本轮UI范围。B5先保持验证用途，完成先决才评估生产切换。每批都先记录刚需检查入口/嵌套/范围/风险/必要性。",
+  "findingsAndLimits": [
+    "LRE:1123注释称latestControlVisualSession来自Stage，但当前实际生产回调来自Panel:2233。属于命名/注释滞后，不能据此推断Stage已接入；P0只记录不改。",
+    "Stage与Panel共享多个纯模型并不自动证明时序、hidden terminal frame、pointer velocity continuation或真实模块生命周期等价。",
+    "本职责盘点不把行数作为质量标准；已有纯owner与领域组件优先复用，不为迁移统计重写List或阅读算法。",
+    "TTS平台入口不在本P0新增guard任务范围；既有canIUse必须复用，后续只按实际未保护回调/清理缺口审计，不能笼统宣称需新增全部guard。",
+    "没有读取Core/Host用户库、未决journal或设备；本文件不改变既有UNKNOWN/数据保留或设备授权。"
+  ],
+  "sourceFingerprints": {
+    "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets": "b36ec9247f694e279b348757a4b58057a452fb9b4be59589c525ca85141d11d5",
+    "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets": "36f254d5d715937bcf8d9c4c94a772ea0adb986574f37cf9bf10da14b8cc2bf1",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionStage.ets": "956b2f5c23b39eb3c68086d1093ef9c8c5a3c0e65d5ee309f48984d7c52c03b7",
+    "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts": "2d9d1d89117f81845f49412b90a69d8b770a1d8a77dd2379af84d3a80541fcf3",
+    "entry/src/main/ets/features/reading/ui/ReadingMeasurementModels.ets": "0be9053ec707e9f90ff623ebd639360972dce60cfbd062e562715cd361c28365",
+    "entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets": "5120a211c12d7c775d926947602878d9200509421dd16100f3a9ae30af2fee6d",
+    "entry/src/main/ets/features/reading/ui/ReaderShell.ets": "3f928027c20af8491a6df4796c889822b0db7e43bf2fd0ee4276dd6b0856aa84"
+  }
+}

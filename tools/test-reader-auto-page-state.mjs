@@ -14,7 +14,7 @@ import {
   startReaderAutoPage,
   stopReaderAutoPage,
   tickReaderAutoPage,
-} from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderAutoPageState.ts';
 
 
 async function runCase() {

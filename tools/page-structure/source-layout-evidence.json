@@ -2,79 +2,567 @@
   "schemaVersion": "1.0",
   "pageId": "source-management",
   "command": {
-    "entry": "tools/test-source-management-layout.mjs",
+    "entry": "tools/page-structure/source-e2-evidence.mjs",
     "cases": [
-      "matrix"
+      "complete-targets"
     ]
   },
   "inputs": [
     {
-      "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
-      "sha256": "fe71764c14beb4be24232560903b5be5d8292d78ef3bc186b6713224ad08aead"
+      "path": "entry/src/main/ets/app/BookRequestScheduler.ts",
+      "sha256": "38bb6beea0409ccc72b2c6e58a64bda67137219471b1146851557ff64614e3e7"
     },
     {
-      "path": "entry/src/main/ets/features/source/SourceManagementLayout.ts",
-      "sha256": "d4431e6856fbfe216e2b2b4a7937eec35d148da229f8e463f7ee7e84da8cf3bb"
+      "path": "entry/src/main/ets/app/ErrorMessage.ts",
+      "sha256": "5364978b4273f3d855bbe7c39ccc2d621e94ad34a66c565837edc4b0047351b9"
     },
     {
-      "path": "entry/src/main/ets/features/common/ReaderButton.ets",
-      "sha256": "744d2e1da3a46536df60e7a68cf027c644e91726ec69339d81b8f1ce9ea0f350"
+      "path": "entry/src/main/ets/app/LogPrivacy.ts",
+      "sha256": "bd1c21a2d9d9e0e3e71ab2b5e1102d4871c929731fd918e3bc0e2962cb1c1d72"
     },
     {
-      "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
-      "sha256": "002e49d8b438a45a760b32894c0b3425a90a6004945cba0cef85c20c3d35dcfd"
+      "path": "entry/src/main/ets/app/ReaderOperationFacts.ts",
+      "sha256": "3b0c79ab3806abc2c8ee9a79388415f2be9472aee8dc1b1d65ba1a477abb01a9"
     },
     {
-      "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
-      "sha256": "4a2975a5ad3b54aaeeccb4b04a3956373535587102bffd9fc256719e24cc38ad"
+      "path": "entry/src/main/ets/app/ReaderRecoveryProjection.ts",
+      "sha256": "a3084596070fe96b1ad611a9c5a5916cad21fd4d36786b74cff92248f888bd1e"
     },
     {
-      "path": "entry/src/main/ets/features/common/ReaderLabeledIconActionSpecs.ets",
-      "sha256": "c5c599186e6b2414cdd4a7db8d282137b2ec71f19a1254f2f432bbe1eda112f7"
+      "path": "entry/src/main/ets/app/ReaderStartupTrace.ts",
+      "sha256": "ea7d364b29d7c4d252fe86fb09705c799b20a5a877526a864dc9183d7c0bf629"
     },
     {
-      "path": "entry/src/main/ets/features/common/ReaderTypography.ets",
-      "sha256": "d86fb545ba8ed9549f1000eb998f5ff74e61c67f7e5a23d0cfbfb2d1d077e14d"
+      "path": "entry/src/main/ets/app/ReaderWriteEvidence.ts",
+      "sha256": "0d1c451301e0e133f4c7ec2ef61e79ce69bd95c7f38f69dbad83c83163d49c81"
     },
     {
-      "path": "entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts",
-      "sha256": "36bc4ef83f97caa91ed316bc095e7581a804610abdca2750a656c3fd95153fd4"
+      "path": "entry/src/main/ets/app/composition/JsonImportPresentation.ets",
+      "sha256": "dce37bd090b0c4be2875047456beab4ad466cafe32dd9ced9d1befa7f4926db2"
     },
     {
-      "path": "tools/test-source-management-layout.mjs",
-      "sha256": "ad17f05111d5904f15ec8ec738ac8d3a144fbbf7280172fae95a160a597f1048"
+      "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchActions.ets",
+      "sha256": "778fee6b61c62cc07c22e7fe2b70ebb431f03607be61f852435d33953eb977b9"
     },
     {
-      "path": "tools/lib/source-layout-control-probe.mjs",
-      "sha256": "1645eae4c9eda583632931f68f58ce496e4a645f770376ea8e017b1da93d9e1a"
+      "path": "entry/src/main/ets/app/library/BookAcquisitionPresentation.ts",
+      "sha256": "b698ae1620fca293095cc8dc4db21b05883e38220d908b0f511b9b39eac7dd69"
     },
     {
-      "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-      "sha256": "458fccd255ab1e731dccb2a3925891e95183d31dd41a733af7c6e431fe9c1500"
+      "path": "entry/src/main/ets/app/library/BookAuthorMetadata.ts",
+      "sha256": "e88c640df41c291016699a52070fc28f898806e81ddc801215e3e9ff38fa2c25"
     },
     {
-      "path": "tools/lib/reader-foundation-control-probe.mjs",
-      "sha256": "3adf13a825d2897e2dac0399c93cfe303f9302deaf2ba3e088901162520dc0fe"
+      "path": "entry/src/main/ets/app/library/BookSearchTiming.ts",
+      "sha256": "d06d2cd178006f0af40d9586c019c31ea3aa19941dc177ca40b8472f5da55e66"
     },
     {
-      "path": "tools/lib/reader-control-builder-probe.mjs",
-      "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+      "path": "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+      "sha256": "f5ff33ee3b6d1497c3897fc5443003ef7d8373ee94801fe88fb9a78fb0cdc830"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/application/BookshelfReadOwner.ts",
+      "sha256": "c03df97e9f20e5ef0b3d9450c6aa288d9d74a77e93e6b4b1a4027184736c5797"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/application/BookshelfReadableAdmissionOwner.ts",
+      "sha256": "bd3332f81db0fcb2f07e7b62c963e8c2ea2e31689ed46dc75e432101c99d70b0"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts",
+      "sha256": "7185fde0c6b2e5a333f5b22d7e14ce526ccbcd1a758f2be8c88e1e6da7a8ddff"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts",
+      "sha256": "6e4831b7a0fea8c42f8f49268afc0ce97ae916392e1c00e3425a59e7cb7c233a"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/ui/DownloadTypography.ets",
+      "sha256": "b1f4bc9b15d99225d450111b4dd0196ee241e9edeb243f4817f52f02c53e9bac"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts",
+      "sha256": "5ed77f9e353ff088c1fb86f565b541d91b2f5808599b850a8995a0bc391e3e1b"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts",
+      "sha256": "cdb0ed3b64b353b410eb4cd082d0fdd571ccc5f233d4959920455caf394dbb30"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts",
+      "sha256": "9a53ce6265ac20b28b51660ac6e5a9d5316e6558f90a483e8b06097066b21348"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts",
+      "sha256": "b0bbe201ccd9b700ef71f455c5212b9c8a17d1e811aa3f76415a2a8f543d29fd"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/ui/MangaDirectoryEntryRow.ets",
+      "sha256": "f271b0846f3e2f8882e610adebccc543534c5506fcb5133cd685e055686e2711"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts",
+      "sha256": "5ff584a39c6c524d1e18740394c1cfd24988a114d2242d528e0bd265e4331a11"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts",
+      "sha256": "ec9923c9e3112a6ff4ccc6839afc06a038e1ad5209413a89334f34b9b26cd07e"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts",
+      "sha256": "15c282daca016aeb0b04026518e6471c7076a24c19a00e3e7b27b322586ad19d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/application/ReaderDirectoryBackfill.ts",
+      "sha256": "95ff763ba02b058348e5c7e48baddc460ed107fda806ee6885b9c5dd203e0b7b"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/application/ReaderDirectoryDisplayMetadata.ts",
+      "sha256": "b921526a2c55f76645ae1ab0032fedd97d28216a13f7ef70634dbfdd256ef32d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts",
+      "sha256": "a669b95f8a01536c6d7ae66fac97fd7db1ccaf1294b4aaec6f6f54c912537b11"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/application/ReadingOfflineContract.ts",
+      "sha256": "7212a62663dbd962ccce915939bac126da9ffec7da0d55de99819d8c84b76f84"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReaderBookmarkAnchorRequest.ts",
+      "sha256": "b061f8ae5fd464791c4f79449fec4cb4dcc2aae142610b2a2b010e3220fffef4"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
+      "sha256": "ab5ae7f60150b34101cfb38fb98522f2897da8d1c2066021b09cfe7ff841b880"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts",
+      "sha256": "f89da654cba4395bae64c1feaa530db04a0b8c84b76e81f7a058a328ee4fcc87"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts",
+      "sha256": "6661d8376262853c74fedd9891f5d943463ba01c038b653e23a22ede65764f4b"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+      "sha256": "6e0fb9a0588fc0a4e5b3ba67226378b293276683819337dc86a8f593b5b66e1c"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
+      "sha256": "39ae95241e9cdf395308cbe5cfeabfb643abebde06a67f157dddb6777fd070b8"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
+      "sha256": "20af9df8ff0e5d5aa26d54c4c932f60b416ac206db970df9aff38eb1e4d2f782"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/presentation/ReadingOfflineFailurePresentation.ts",
+      "sha256": "52778792d1d0f8c50ac569a08a02bd0a28d8ca6be3784f6b48f6b7ece2257cba"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ui/ReaderControlSwitchTrack.ets",
+      "sha256": "bb9faa11cf79637b8e33d855ee9ed3a9dd892729bde3a317c8c962a23b8573d6"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/application/ReaderSourceCategory.ts",
+      "sha256": "561f6d43b2124f49b3c4edd0946fabe4166c7f52ce8a4bfacaa0c3b5dc0174d1"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/application/SourceSwitchGateway.ts",
+      "sha256": "56e637897049a1a41380e5f515d0bc787fe29a9b982e1c8925f9d2e6468c7d1b"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
+      "sha256": "b8742d06995d2cd6e72accd9623451a7e11d0f0c6bc4e4cc590cde719a582061"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/presentation/SourceSwitchPresentation.ets",
+      "sha256": "3682a16820314c0c8a34f8e2d5c05311feb484964a115c833abc605a4b58dc6e"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts",
+      "sha256": "73083afbaa62f007c5237803f1835749272621c444028bc9e7fb2c2cc21f853b"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+      "sha256": "f101ab9d9fb310fdee4a4bf7adafe5a005d5bd6daeccc615b8fa5298982bd99b"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+      "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+      "sha256": "09d02d639268a0677e4d458ec42ff2efb9047bf1994f07485f23b68f5cc64374"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
+      "sha256": "32a8ab44d37c8c340b98607347d38f4af0f2c77dd4d0cecb659ca3ee0a2c1d13"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderFormField.ets",
+      "sha256": "e2fab3495b1747962948c0ee127f8c8bde924b7f945f0a197ad03b6972dd5409"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderFormRow.ets",
+      "sha256": "c738e28ad52b8a6ef594ca24701287c4f90c770131084f0e7a507fdba23ae095"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
+      "sha256": "d59d7dfeb166f73ef782586ba36b216593ebdbb3c7c9975c83b1c119972facf1"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
+      "sha256": "566c8adc083f9b375ae9617e8dc1fc2973724837d1cea35f7b138f6cf0502ae8"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconActionSpecs.ets",
+      "sha256": "d1b625f51cc9fcd8f0c199cc83a5dab7da65765e289be245af208939bd296245"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderSectionHeading.ets",
+      "sha256": "a09182169e75bd2533c34e8fa62ae2e788a93a51db52b7182b024c7101280c7b"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderSegmentedControl.ets",
+      "sha256": "befa7cfc445316c7ff8b0ef9be4e21faf93fad82fe88b71decbe6085cf904ad8"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
+      "sha256": "907e114c5dfcd10a4279af85938cdf4a8731d7d637f6e820c5cf6daf8e05a6cc"
+    },
+    {
+      "path": "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+      "sha256": "e5a3f07564fb98ed571e9a71b4146709a3735f3085ba8f90bbfebda11f7a810a"
+    },
+    {
+      "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+      "sha256": "2ef578dc200a223f762be78c19241782b5e58fd7596b5ca2014d872bdf54dbc6"
+    },
+    {
+      "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
+      "sha256": "70efeefb7a5bca3d5a11aa39071246ead11b7b58d397da6a3f522aafb356686e"
+    },
+    {
+      "path": "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
+      "sha256": "ed2600df476922ac32269a60cdb4b134440d79279039a83d6b064dd01d508f3f"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/MangaDirectoryPressFeedback.ets",
+      "sha256": "985c289800bad895c586a902221c7b9e346c0a88ae179e61ef0ae555c1394a0f"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts",
+      "sha256": "f4ca9f6fac483baf8ced6cb6689548541b7e84be2d1b4a2082a9ffb908b26571"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts",
+      "sha256": "da256271159a8bb1a1688c52fe70bb1f053eb48c287f610706dd2b74883160b1"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts",
+      "sha256": "f9ccf722c9d14c0994fca2a840aff637626979959e712313ea2accd034ff9f88"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderLayoutTokens.ts",
+      "sha256": "898dabc1297baeb54663aca565c16febe4147845a1ee4e44665006ad1c04ebbf"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderMessageStyle.ets",
+      "sha256": "e89cfc032a76a62ebd5593362187b5c2c6d6941a52b885cc7e70c1cf80b0a001"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderPressFeedback.ets",
+      "sha256": "de661500ec97b4f1b6688a0d6d89fa59439757a2a7aaee4f9ce1bd72d528480e"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts",
+      "sha256": "3f9d52eab3b0e21a9b3b059e5340270295f54c26beea56677bec0dd283b0da0c"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts",
+      "sha256": "56c77f0e2b6e212cc586ccdeff4c00a896862d8a565d42e4f4e5d242b1b2eff7"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+      "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts",
+      "sha256": "b2ca9b1a89d6b9627f2b9cf5fa24a3579ce0bfb944639e1b52950cc6f69e626e"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderTokens.ets",
+      "sha256": "f1619cc9ed350cb06c76f665859e373d45dc25ea9337b147acbe251d9d0ba779"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderTypography.ets",
+      "sha256": "760c4285cae3a2444afec22a6590bca07becaafafa0c32565d4f1aa3a22bef00"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderWidthClass.ts",
+      "sha256": "475234d3f3240b2013b2663afb2288e7fc143a729beadc69f4b9f7aabb18049e"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderWindowEnvironment.ts",
+      "sha256": "801e6f1fe0948522cd4e93a4c3a439aa8416c2749e94e83799feec997a30645c"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts",
+      "sha256": "96ccccd1f68d36a5b50236cf82d7b03912bcea7e9c0da7da40f971a16fdc1cf0"
+    },
+    {
+      "path": "entry/src/main/ets/ui/layout/ReaderFloatingBarMetrics.ts",
+      "sha256": "6ed65cde1889dd9fa3b880bc0881a7a5c9f1d661395b81eaf0c30f0c0c91d99e"
+    },
+    {
+      "path": "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
+      "sha256": "5c7de53b01b820ebd2420361eb6e61430595e7ed5f21a34ff9cc5f8059457016"
+    },
+    {
+      "path": "entry/src/main/ets/ui/layout/ReaderPageNativeAttributes.ets",
+      "sha256": "99e18d64330b49cabf7b4025be902ebf64937e056d6a1587a01a335e0b1bfe53"
+    },
+    {
+      "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+      "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
+    },
+    {
+      "path": "entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts",
+      "sha256": "a1abae74b2d9064354f77a10c054e2fa192555d2946bb05ae76d54b4609ddeab"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets",
+      "sha256": "0bcb00c949b920ada081c26deccf8cc1356ca3099d32fe8f8950dd47e7979292"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets",
+      "sha256": "c387ac966075c550afbea10ead1f14752b74091e271bd2a0887bdfbcbb24c17c"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceActions.ets",
+      "sha256": "7eae9d52d5549fb671df084cb6ada5ef77184f9de0e37877bfc9542f35280d8e"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets",
+      "sha256": "9435b931bcc3f2c4ad47ea096aae77fe4ed3ccc4e5ddf1ba31705ef0c4548a74"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderCard.ets",
+      "sha256": "dcefad7148bdefe05c39ae7fd64ddd8d6f247a0f03d860fbe2def23eb5a7e69f"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderCardSpecs.ets",
+      "sha256": "9043b10111f837cb50f81095977365a1ac217f917853c35e43a1e385967d1ae0"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderPanelFrame.ets",
+      "sha256": "8bb783e92c64f0eddf8c00bf36471be06cfd4ebf79ca44a33daaf6ecfea89955"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
+      "sha256": "85c008cf7490d2dca778a88c31a4f53a04239718fe9b5e70f69b287f88844ab2"
+    },
+    {
+      "path": "entry/vendor/core-harmony/sdk/reader_core.ts",
+      "sha256": "b4a4b2ba37005c16ecc88bd7fc50d72f16b3ef7b114afcfeffa6c4755af633e7"
+    },
+    {
+      "path": "scripts/lib/development-environment.mjs",
+      "sha256": "34c4eb7537bb8f833e642be3073ecc42858d7addfd46047c6de746faa23ba407"
+    },
+    {
+      "path": "scripts/lib/harmony-toolchain.mjs",
+      "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+    },
+    {
+      "path": "tools/lib/arkui-property-runtime-probe.mjs",
+      "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+    },
+    {
+      "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+      "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
     },
     {
       "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-      "sha256": "afcf9dbd70d464eeaeb73da0f81aee74e98b475d33fd6a75ef55affb22633ab8"
+      "sha256": "ecd00af53dd689562c45ce9603080b5b956890f2baaa02e1a11e0af024b9c4b6"
     },
     {
-      "path": "tools/lib/selected-production-methods.mjs",
-      "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a"
+      "path": "tools/lib/contract-case-selection.mjs",
+      "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
     },
     {
-      "path": "tools/lib/reader-typography-probe.mjs",
-      "sha256": "7cc31d0b2cae42d0d749ba3dc2cb884e677e946d678cee8eeba24b47c270c194"
+      "path": "tools/lib/ets-compiler-runtime.mjs",
+      "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
     },
     {
       "path": "tools/lib/ets-pure-module-probe.mjs",
       "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+    },
+    {
+      "path": "tools/lib/execution-input-trace.mjs",
+      "sha256": "c0044add075575105723fe10b42bf2346fed7dea465c8c38fceb05854e4386c9"
+    },
+    {
+      "path": "tools/lib/json-import-presentation-probe.mjs",
+      "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+    },
+    {
+      "path": "tools/lib/manga-directory-entry-row-probe.mjs",
+      "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
+    },
+    {
+      "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
+      "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
+    },
+    {
+      "path": "tools/lib/reader-control-builder-probe.mjs",
+      "sha256": "c93ab55aefd40dd752b4beb9a75b2b6a5cec9180149fac41504e27713928ff83"
+    },
+    {
+      "path": "tools/lib/reader-directory-operations-probe.mjs",
+      "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+    },
+    {
+      "path": "tools/lib/reader-foundation-control-probe.mjs",
+      "sha256": "f8122805933cdf9a8fbda0c56e65c7d0252e155f4dfa4e348700bb2f098e2895"
+    },
+    {
+      "path": "tools/lib/reader-icon-button-probe.mjs",
+      "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
+    },
+    {
+      "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
+      "sha256": "e1f11bdb5430bd0a20fd61cf6e5638e474d92714f51f13976b4967b2717351fb"
+    },
+    {
+      "path": "tools/lib/reader-page-builder-slots.mjs",
+      "sha256": "2251794243816f47db01a06f8ff4d86ffc98566bd72e8b08952b03f00aa54454"
+    },
+    {
+      "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
+      "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+    },
+    {
+      "path": "tools/lib/reader-press-feedback-probe.mjs",
+      "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
+    },
+    {
+      "path": "tools/lib/reader-switch-control-probe.mjs",
+      "sha256": "ceff22891d23daab0e0e9924712325c04762328c9ed0d8e32e099fa388fbb72b"
+    },
+    {
+      "path": "tools/lib/reader-tokens-probe.mjs",
+      "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
+    },
+    {
+      "path": "tools/lib/reader-typography-probe.mjs",
+      "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+    },
+    {
+      "path": "tools/lib/reader-window-environment-probe.mjs",
+      "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+    },
+    {
+      "path": "tools/lib/reading-entry-presentation-probe.mjs",
+      "sha256": "2ab61ffd56f993012ac3c190c487de9e3b4ad4268b0cb5676ba9b89ae6751798"
+    },
+    {
+      "path": "tools/lib/selected-production-methods.mjs",
+      "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+    },
+    {
+      "path": "tools/lib/source-layout-control-probe.mjs",
+      "sha256": "e02d6badf6fcda0d1079289ade38a6a069a8a386f8d1b694b7e492bad5ad43b7"
+    },
+    {
+      "path": "tools/lib/source-switch-presentation-probe.mjs",
+      "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
+    },
+    {
+      "path": "tools/lib/tool-environment.mjs",
+      "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+    },
+    {
+      "path": "tools/test-source-management-layout.mjs",
+      "sha256": "8435534006dc8b418694eaecd2aa1ce1f780beabadecf5cf830a72bdec7a2503"
+    },
+    {
+      "path": "tools/page-structure/source-interaction-inventory.json",
+      "sha256": "c3342292d97d9cd19af100894d66a83e904e24b1a53ca377faac8a1324910f4a"
+    },
+    {
+      "path": "entry/src/main/ets/ui/chrome/PageBackBar.ets",
+      "sha256": "b372efcb6fe83bf596625c359d444c551c2bd2f5ae9fa5ba06abf5dc7809f1bd"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+      "sha256": "4c96ce96ed0d89070fe3e9bdce70b1204901ba171a5450efedb83b532d145e64"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+      "sha256": "58fc099604dbf77aab51d85dd77060cb7ac7af0b14f6e3139d933dc4bd037c49"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+      "sha256": "420f137bcca524ea7e0a4821dccf28408f1fab0a09a6faed9ab0161d63db7855"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+      "sha256": "c5f51f7849d19655f14a93772735548d7d2293b509321ce93a94729e51c36860"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts",
+      "sha256": "904e39296967a2aacca18bd819b5df61bac20cb53fa1f10a4e065ce5ed8f8b38"
+    },
+    {
+      "path": "entry/src/main/ets/ui/layout/ReaderRaisedShape.ts",
+      "sha256": "50c4b16e7098468692e3e9424c13b8f1bdd9277322888c786d9f185e68f7fbb4"
+    },
+    {
+      "path": "tools/fixtures/reader-control-native-tree.mjs",
+      "sha256": "1766255bb85ef75bfdf2afe0d55322a8a970beed4800ae20dafa8ef6ca3d09f6"
+    },
+    {
+      "path": "tools/lib/reader-choice-row-probe.mjs",
+      "sha256": "f1ac7159a2a5409f3909e92783c2b72c3c0baf7fc7e0575794a2c03528e7798a"
+    },
+    {
+      "path": "tools/page-structure/lib.mjs",
+      "sha256": "dbc2740d24d30ae817526e6c7b55ff200e69546b22790f14c5c531062247e0ce"
+    },
+    {
+      "path": "tools/page-structure/test-source-interaction-inventory.mjs",
+      "sha256": "f1620611abda3882c658dbdf085d2bec99cdd1d7b2cdd8a895f2f85bb11a6b59"
+    },
+    {
+      "path": "tools/page-structure/evidence/source-layout-matrix.json",
+      "sha256": "67f180a1bc1efc933df15fde34c3f8772c685da2f6d9e3198408a35fedc617e7"
+    },
+    {
+      "path": "tools/page-structure/evidence/source-interaction.json",
+      "sha256": "38518a3df070b373b4ecfc52819439560cbce91a485f1ee19e9c0ddf9253c1ad"
+    },
+    {
+      "path": "tools/page-structure/source-e2-evidence.mjs",
+      "sha256": "ce68941c3e573dce0fb66a607104fcbd3e0f647b910668b0abe58157c6bfa6c6"
+    },
+    {
+      "path": "tools/page-structure/layout-evidence.mjs",
+      "sha256": "c70f2d3b3cdd392b36674d197c218c3d866b6bf131a76dcb105386018143560d"
+    },
+    {
+      "path": "tools/page-structure/schema/layout-evidence.schema.json",
+      "sha256": "02a33e992c92db6ce27b9fb9984ab863bd5afd9962c11d34a570dc4aeb32e3e1"
+    },
+    {
+      "path": "tools/test-source-group-border-budget.mjs",
+      "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
+    },
+    {
+      "path": "tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets",
+      "sha256": "5babe7c38231be23bb950ba93329436bd1069b4ad145fe53d2bc10c338bbf3c8"
     }
   ],
   "widths": [
@@ -93,14 +581,820 @@
   },
   "targets": [
     {
-      "controlRef": "source-detect",
+      "controlRef": "page-back",
       "width": 320,
       "fontScale": 1,
       "visual": {
         "width": 44,
         "height": 44
       },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        19
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "page-back",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        44
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "page-back",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        69
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "page-back",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        94
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "page-back",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        119
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "page-back",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        144
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "page-back",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        169
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "page-back",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        194
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        16
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        41
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        66
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        91
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        116
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        141
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        166
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-tools",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        191
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        20
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        45
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        70
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        95
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        120
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        145
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        170
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-add-inline",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 40,
+        "height": 40
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        195
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 183,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        18
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 183,
+        "height": 48
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        43
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 183,
+        "height": 53
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        68
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 183,
+        "height": 60
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        93
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 229,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        118
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 229,
+        "height": 48
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        143
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 229,
+        "height": 53
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        168
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-search",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 229,
+        "height": 60
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        193
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 58,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 75.4,
+        "height": 49
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 92.80000000000001,
+        "height": 54
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        50,
+        51,
+        52,
+        53,
+        54
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 116,
+        "height": 61
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        75,
+        76,
+        77,
+        78,
+        79
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 58,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        100,
+        101,
+        102,
+        103,
+        104
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 75.4,
+        "height": 49
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        125,
+        126,
+        127,
+        128,
+        129
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 92.80000000000001,
+        "height": 54
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        150,
+        151,
+        152,
+        153,
+        154
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 116,
+        "height": 61
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        175,
+        176,
+        177,
+        178,
+        179
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 207,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        23
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 199,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        48
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 191,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        73
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 181,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        98
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 253,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        123
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 245,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        148
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 237,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        173
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-select",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 227,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        198
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
     },
     {
       "controlRef": "source-login",
@@ -110,37 +1404,132 @@
         "width": 44,
         "height": 44
       },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        12
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
     },
     {
-      "controlRef": "source-filter-chip",
+      "controlRef": "source-login",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 57.2,
+        "height": 49
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        37
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-login",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 70.4,
+        "height": 54
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        62
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-login",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 88,
+        "height": 61
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        87
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        112
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 57.2,
+        "height": 49
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        137
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 70.4,
+        "height": 54
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        162
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 88,
+        "height": 61
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        187
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-detect",
       "width": 320,
       "fontScale": 1,
       "visual": {
-        "width": 72,
+        "width": 44,
         "height": 44
       },
-      "response": null
-    },
-    {
-      "controlRef": "footer-batch",
-      "width": 320,
-      "fontScale": 1,
-      "visual": {
-        "width": 136,
-        "height": 44
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-add",
-      "width": 320,
-      "fontScale": 1,
-      "visual": {
-        "width": 136,
-        "height": 44
-      },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        13
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
     },
     {
       "controlRef": "source-detect",
@@ -150,47 +1539,12 @@
         "width": 57.2,
         "height": 49
       },
-      "response": null
-    },
-    {
-      "controlRef": "source-login",
-      "width": 320,
-      "fontScale": 1.3,
-      "visual": {
-        "width": 57.2,
-        "height": 49
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-filter-chip",
-      "width": 320,
-      "fontScale": 1.3,
-      "visual": {
-        "width": 93.60000000000001,
-        "height": 49
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-batch",
-      "width": 320,
-      "fontScale": 1.3,
-      "visual": {
-        "width": 136,
-        "height": 50
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-add",
-      "width": 320,
-      "fontScale": 1.3,
-      "visual": {
-        "width": 136,
-        "height": 50
-      },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        38
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
     },
     {
       "controlRef": "source-detect",
@@ -200,47 +1554,12 @@
         "width": 70.4,
         "height": 54
       },
-      "response": null
-    },
-    {
-      "controlRef": "source-login",
-      "width": 320,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 70.4,
-        "height": 54
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-filter-chip",
-      "width": 320,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 115.2,
-        "height": 54
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-batch",
-      "width": 320,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 136,
-        "height": 56
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-add",
-      "width": 320,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 136,
-        "height": 56
-      },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        63
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
     },
     {
       "controlRef": "source-detect",
@@ -250,47 +1569,12 @@
         "width": 88,
         "height": 61
       },
-      "response": null
-    },
-    {
-      "controlRef": "source-login",
-      "width": 320,
-      "fontScale": 2,
-      "visual": {
-        "width": 88,
-        "height": 61
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-filter-chip",
-      "width": 320,
-      "fontScale": 2,
-      "visual": {
-        "width": 144,
-        "height": 61
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-batch",
-      "width": 320,
-      "fontScale": 2,
-      "visual": {
-        "width": 136,
-        "height": 64
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-add",
-      "width": 320,
-      "fontScale": 2,
-      "visual": {
-        "width": 136,
-        "height": 64
-      },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        88
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
     },
     {
       "controlRef": "source-detect",
@@ -300,27 +1584,249 @@
         "width": 44,
         "height": 44
       },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        113
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
     },
     {
-      "controlRef": "source-login",
+      "controlRef": "source-detect",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 57.2,
+        "height": 49
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        138
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 70.4,
+        "height": 54
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        163
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 88,
+        "height": 61
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        188
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-toggle",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        17
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-toggle",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        42
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-toggle",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        67
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-toggle",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        92
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-toggle",
       "width": 366,
       "fontScale": 1,
       "visual": {
         "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
         "height": 44
       },
-      "response": null
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        117
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
     },
     {
-      "controlRef": "source-filter-chip",
+      "controlRef": "source-toggle",
       "width": 366,
-      "fontScale": 1,
+      "fontScale": 1.3,
       "visual": {
-        "width": 72,
+        "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
         "height": 44
       },
-      "response": null
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        142
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-toggle",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        167
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "source-toggle",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 44,
+        "height": 24
+      },
+      "response": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "exact-sdk-size",
+      "sourceRecords": [
+        192
+      ],
+      "boundary": "SDK native carrier/response attributes; no pixel or pointer inference"
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 136,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 136,
+        "height": 50
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 136,
+        "height": 56
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 136,
+        "height": 64
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
     },
     {
       "controlRef": "footer-batch",
@@ -330,47 +1836,9 @@
         "width": 159,
         "height": 44
       },
-      "response": null
-    },
-    {
-      "controlRef": "footer-add",
-      "width": 366,
-      "fontScale": 1,
-      "visual": {
-        "width": 159,
-        "height": 44
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-detect",
-      "width": 366,
-      "fontScale": 1.3,
-      "visual": {
-        "width": 57.2,
-        "height": 49
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-login",
-      "width": 366,
-      "fontScale": 1.3,
-      "visual": {
-        "width": 57.2,
-        "height": 49
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-filter-chip",
-      "width": 366,
-      "fontScale": 1.3,
-      "visual": {
-        "width": 93.60000000000001,
-        "height": 49
-      },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
     },
     {
       "controlRef": "footer-batch",
@@ -380,7 +1848,93 @@
         "width": 159,
         "height": 50
       },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 159,
+        "height": 56
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 159,
+        "height": 64
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 136,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 136,
+        "height": 50
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 136,
+        "height": 56
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 136,
+        "height": 64
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 159,
+        "height": 44
+      },
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
     },
     {
       "controlRef": "footer-add",
@@ -390,47 +1944,9 @@
         "width": 159,
         "height": 50
       },
-      "response": null
-    },
-    {
-      "controlRef": "source-detect",
-      "width": 366,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 70.4,
-        "height": 54
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-login",
-      "width": 366,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 70.4,
-        "height": 54
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-filter-chip",
-      "width": 366,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 115.2,
-        "height": 54
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-batch",
-      "width": 366,
-      "fontScale": 1.6,
-      "visual": {
-        "width": 159,
-        "height": 56
-      },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
     },
     {
       "controlRef": "footer-add",
@@ -440,47 +1956,9 @@
         "width": 159,
         "height": 56
       },
-      "response": null
-    },
-    {
-      "controlRef": "source-detect",
-      "width": 366,
-      "fontScale": 2,
-      "visual": {
-        "width": 88,
-        "height": 61
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-login",
-      "width": 366,
-      "fontScale": 2,
-      "visual": {
-        "width": 88,
-        "height": 61
-      },
-      "response": null
-    },
-    {
-      "controlRef": "source-filter-chip",
-      "width": 366,
-      "fontScale": 2,
-      "visual": {
-        "width": 144,
-        "height": 61
-      },
-      "response": null
-    },
-    {
-      "controlRef": "footer-batch",
-      "width": 366,
-      "fontScale": 2,
-      "visual": {
-        "width": 159,
-        "height": 64
-      },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
     },
     {
       "controlRef": "footer-add",
@@ -490,7 +1968,1473 @@
         "width": 159,
         "height": 64
       },
-      "response": null
+      "response": null,
+      "basis": "exact-sdk-size",
+      "boundary": "actual SDK leaf height and actual equal parent allocation; no native glyph inference"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 49
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 54
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 61
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 49
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 54
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-category-chip",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 61
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        180,
+        181,
+        182,
+        183,
+        184,
+        185,
+        186
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        21,
+        22
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        46,
+        47
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        71,
+        72
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        96,
+        97
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        121,
+        122
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        146,
+        147
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        171,
+        172
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-group-option",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "percentage-parent-minimum",
+      "sourceRecords": [
+        196,
+        197
+      ],
+      "boundary": "Actual 100% leaf response paid by production parent allocation/minimum; intrinsic glyph width/height remain unknown"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        200
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        206
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        212
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        218
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        224
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        230
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        236
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-status-action",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        242
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        203
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        209
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        215
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        221
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        227
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        233
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        239
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-refresh",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        245
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        204
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        210
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        216
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        222
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        228
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        234
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        240
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-read-retry",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        246
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        205
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        211
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        217
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        223
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        229
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        235
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        241
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-filter-clear",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        247
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        200
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        206
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        212
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        218
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        224
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        230
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        236
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-reconcile",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        242
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        201
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        207
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        213
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        219
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        225
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        231
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        237
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-continue",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        243
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        202
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        208
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        214
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        220
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        226
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        232
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        238
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-original-expand",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        244
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        200
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        206
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        212
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        218
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        224
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        230
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        236
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-reconcile",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        242
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 320,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        202
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        208
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        214
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 320,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        220
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 366,
+      "fontScale": 1,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        226
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        232
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        238
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
+    },
+    {
+      "controlRef": "source-unknown-expand",
+      "width": 366,
+      "fontScale": 2,
+      "visual": null,
+      "response": null,
+      "minimum": {
+        "width": 44,
+        "height": 44
+      },
+      "basis": "native-constraint-minimum",
+      "sourceRecords": [
+        244
+      ],
+      "boundary": "Actual native minWidth/minHeight constraints; ambient recovery font contexts are labels, not measured four-font paint"
     }
   ],
   "budgets": [
@@ -544,7 +3488,7 @@
       "fontScale": 1.3,
       "availableWidth": 446,
       "requiredWidth": 445.40000000000003,
-      "availableHeight": 49,
+      "availableHeight": 50,
       "requiredHeight": 49,
       "rowForm": "single-line",
       "measurementKind": "sdk"
@@ -577,7 +3521,7 @@
       "fontScale": 1.6,
       "availableWidth": 541,
       "requiredWidth": 540.8000000000001,
-      "availableHeight": 54,
+      "availableHeight": 55,
       "requiredHeight": 54,
       "rowForm": "single-line",
       "measurementKind": "sdk"
@@ -610,7 +3554,7 @@
       "fontScale": 2,
       "availableWidth": 668,
       "requiredWidth": 668,
-      "availableHeight": 61,
+      "availableHeight": 62,
       "requiredHeight": 61,
       "rowForm": "single-line",
       "measurementKind": "sdk"
@@ -676,7 +3620,7 @@
       "fontScale": 1.3,
       "availableWidth": 446,
       "requiredWidth": 445.40000000000003,
-      "availableHeight": 49,
+      "availableHeight": 50,
       "requiredHeight": 49,
       "rowForm": "single-line",
       "measurementKind": "sdk"
@@ -709,7 +3653,7 @@
       "fontScale": 1.6,
       "availableWidth": 541,
       "requiredWidth": 540.8000000000001,
-      "availableHeight": 54,
+      "availableHeight": 55,
       "requiredHeight": 54,
       "rowForm": "single-line",
       "measurementKind": "sdk"
@@ -742,7 +3686,7 @@
       "fontScale": 2,
       "availableWidth": 668,
       "requiredWidth": 668,
-      "availableHeight": 61,
+      "availableHeight": 62,
       "requiredHeight": 61,
       "rowForm": "single-line",
       "measurementKind": "sdk"

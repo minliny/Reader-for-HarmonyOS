@@ -10,12 +10,12 @@ const resolution=registerHooks({resolve(specifier,context,next){try{return next(
 }}});
 let cleanupDurableFixtures;
 try {
-const { ReadingSessionFlowGateway }=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const { ReadingSessionFlowGateway }=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const { RemoteReadingGatewayError, isRemoteReadingCacheFallbackEligible }=
-  await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
-const { remoteReadingFailureKindOf }=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const replaceState=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
-const replaceQuick=await import('../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts');
+  await import('../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts');
+const { remoteReadingFailureKindOf }=await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const replaceState=await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
+const replaceQuick=await import('../entry/src/main/ets/features/reading/application/ReaderReplaceQuickState.ts');
 let rulesSdkFixture,rulesCompile,until;
 if(selectedCase==='conversion-invalidation'){
  const durable=await import('./lib/rules-mutation-durable-probe.mjs');
@@ -26,7 +26,7 @@ let ReaderControlReplaceGatewayError;
 if(selectedCase==='replacement-invalidation'){
  const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
  const {readFileSync}=await import('node:fs');const {ts,options}=installedEtsCompiler();
- const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderControlReplaceGateway.ts',import.meta.url),'utf8');
  const tree=ts.createSourceFile('ReaderControlReplaceGateway.ts',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
  assert.deepEqual(tree.parseDiagnostics,[]);
  const klass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='ReaderControlReplaceGatewayError');assert.ok(klass);
@@ -84,7 +84,7 @@ for(const local of [false,true])for(const reason of ['PROCESSING_CONTEXT_STALE',
 }
 if(selectedCase!=='error-classification'){
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
   ['runQuickSearch','loadMoreQuickSearch','updateQuickSearchQuery','publishQuickSearchState'],{READER_CONTENT_SEARCH_PAGE_SIZE:50,ReaderRuntimeOwner:readerRuntimeAuthority});
 function reader(f){
   const publications=[];
@@ -137,7 +137,7 @@ if(selectedCase==='conversion-invalidation'||selectedCase==='replacement-invalid
 const processingMethods=['changeChineseConversionMode','reloadCurrentPageAfterReplacePersist',
   'runControlReplaceMutation','beginReplaceMutation','isReplaceMutationCurrent','finishReplaceMutation',
   'readerReplaceRuntimeCurrent','projectReaderReplaceWriteFacts'];
-const Processing=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const Processing=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
   processingMethods,{...replaceState,...replaceQuick,ReaderControlReplaceGatewayError,ReaderRuntimeOwner:readerRuntimeAuthority});
 function processingFixture(settling=false){
   const f=fixture(),r=reader(f),owner=r.owner,reloads=[];
@@ -159,7 +159,7 @@ function processingFixture(settling=false){
 }
 async function actualConversion(f) {
   const rules = await rulesSdkFixture(true);
-  const Gateway = rulesCompile('features/reading/ReaderChineseConversionGateway.ts', 'ReaderChineseConversionGateway',
+  const Gateway = rulesCompile('features/reading/application/ReaderChineseConversionGateway.ts', 'ReaderChineseConversionGateway',
     { RulesMutationOwner: rules.Owner, RulesManagementGateway: rules.Gateway, ReaderRuntimeOwner: rules.Runtime }, true);
   f.owner.chineseConversionGateway = new Gateway(rules.runtime);
   f.owner.chineseConversionOperationId = '';

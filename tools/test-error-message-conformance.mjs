@@ -5,7 +5,7 @@ for (const id of selectContractCases(definitions)) {
   recordContractCasePass(id);
 }
 async function runSelectedCase(selectedCase) {
-const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
+const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync, readdirSync, statSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');

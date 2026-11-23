@@ -6,73 +6,17 @@ files come from `node:os.tmpdir()`. Configure environment variables using your
 shell or CI runner rather than copying a developer's absolute installation path.
 
 ```text
-node tools/gate-index.mjs --need "具体修改涉及的行为"
-node tools/gate-index.mjs --id H-contract-registry#pending-admission
+node tools/test-tool-environment.mjs
+node tools/run-contract-tests.mjs --source
+node tools/run-contract-tests.mjs --full
 node scripts/check-local.mjs
 ```
 
-Queries and no-argument local commands do not run tests. Execute only exact
-reviewed IDs with an item-specific reason; see the workspace `GATE_INDEX.md`.
 The source tier needs Node and the dependencies declared by its selected tests.
-Integration consumers may need the host SDK, paired Native Core checkout and
-native build tools. The legacy full directory is not a release test plan.
-
-`tools/contract-registry.json` is the canonical reviewed metadata input.
-`gate-index.json`, `contract-test-tiers.json` and `contract-case-manifest.json`
-are generated descriptors, read through `lib/contract-registry.mjs`; do not
-hand-maintain their former expanded arrays. `generate-contract-views.mjs --check`
-only checks metadata projections and never imports tests or loads the SDK.
-Reviewed `(path, SHA)` inputs and their ordered definition sets are referenced
-once; storage migration does not refresh expected hashes or approve a case.
-
-The canonical registry schema 2 owns test identity/tier/source review in `tests`,
-published case qualifications/resources in `caseDefinitions`, and immutable
-definition inputs in `inputs`/`inputSets`. `catalogCases` uses those test/case
-references; gate IDs, filenames, case selections, focused lists and summaries
-are projections. `inheritedParentFields` explicitly shares equal family facts.
-Different historical hashes or review claims remain local overrides, including
-unpublished claims, and cannot publish a case. Do not add a second copy of an
-inherited field. `generate-contract-views.mjs --normalize-identities` upgrades
-the prior canonical representation only after comparing all three complete
-views; it does not inspect current test hashes or requalify an entry.
-
-Discovered files awaiting review are explicit `pending` registrations. They are
-omitted from legacy tier dispatch, rejected by exact selection, and cannot be
-added to a scope. `pending` is an unresolved admission state, not a test PASS or
-a claim that the new entry is unnecessary. Missing unknown files, duplicates,
-and retirement conflicts still fail selection. Synthetic schema-1 fixture
-metadata remains supported without a second dispatcher.
+The full tier also needs the host SDK, paired Native Core checkout and native
+build tools. Every discovered test is classified in `contract-test-tiers.json`.
 `READER_CONTRACT_TEST_WORKERS` selects 1–4 isolated workers. Logs and test-specific
 temporary directories are retained under the operating system's temporary root.
-
-Catalog qualification counts and inventory totals are derived from canonical entries.
-Historical baseline counts retain their historical meaning. Optimization proposal
-annotations are read only with `--include-proposals` on a lookup; that option
-cannot participate in `--run`, and ordinary lookup/dispatch does not depend on
-the proposal file.
-
-`lib/ets-builder-probe.mjs` owns SDK lowering and platform recording, without
-Reader business imports. Component families explicitly supply their properties,
-children and Reader globals through `reader-component-probe.mjs`; page-level
-Reader composition remains in `reader-control-builder-probe.mjs`. These probes
-record SDK closures and property behavior, not native scheduling or rendered
-pixels.
-
-`ets-compiler-runtime.mjs` owns installed SDK loading and parse/emit; pure-module
-and ordinary declaration selectors retain their own execution/dependency seams.
-Ordinary method execution, Builder lowering, actual property classes and complete
-App `CompileArkTS` are different evidence layers. Optional product and diagnostic
-fixtures are explicit `reader-extended-product-surface-probe.mjs` and
-`reader-entry-diagnostics-probe.mjs` consumers. Focused test files import them
-only inside selected cases; `--list` must still work without an installed SDK.
-
-Historical duplicates under `docs/history/worktrees` use `CONTENT_INDEX.json`
-and SHA-addressed payloads. Original manifests retain provenance and source
-hashes; `contentObject` identifies exact original bytes behind an inert logical
-path. `node tools/history-artifacts.mjs --verify` checks only those indexed
-objects/references; `--export <new directory>` reconstructs original files and
-refuses to overwrite an existing destination. Neither command executes archived
-code or adds it to ordinary test discovery.
 
 ## Shared environment discovery
 
@@ -100,11 +44,8 @@ SDK probes choose host frontend/runtime variants rather than assuming a macOS
 binary. A missing SDK component remains a missing prerequisite. Tool-path tests
 simulate host layouts; they do not establish native execution on those hosts.
 ZIP and OpenSSL tools must be installed or configured with the production
-resolver's `UNZIP` and `OPENSSL` settings. The retired `migrate-theme-consumers.cjs --environment-check` entry checks
-its SDK dependency without applying a source migration. Other invocations reject
-before SDK loading or writes. Exact mutation source is preserved as inactive
-text under `docs/history/worktrees/theme-consumer-migration/`, with its SHA and
-historical replay boundary. Python generators use UTF-8 explicitly
+resolver's `UNZIP` and `OPENSSL` settings. The historical `migrate-theme-consumers.cjs --environment-check` entry checks
+its SDK dependency without applying a source migration. Python generators use UTF-8 explicitly
 and retain their pinned upstream dependencies.
 
 ## Platform and evidence boundaries

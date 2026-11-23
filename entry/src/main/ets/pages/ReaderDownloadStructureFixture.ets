@@ -1,16 +1,39 @@
 // DEBUG component fixture only: no Runtime/Host, user shelf or file/network port.
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { SharedDownloadPage } from '../features/downloads/SharedDownloadPage';
-import type { SharedDownloadUiIntent, SharedDownloadUiBookTarget, SharedDownloadViewState } from '../features/downloads/SharedDownloadPage';
+import { SharedDownloadPage } from '../features/downloads/ui/SharedDownloadPage';
+import type { SharedDownloadUiIntent, SharedDownloadUiBookTarget, SharedDownloadViewState } from '../features/downloads/presentation/SharedDownloadUiContract';
 import type { DownloadBookView, DownloadChapterView, DownloadContentKind, DownloadReadingTarget,
-  DownloadStorageSummary, DownloadStoragePolicyView } from '../features/downloads/SharedDownloadProjection';
-import { createDownloadBookView, projectDownloadBookAvailability, downloadChapterStateLabel } from '../features/downloads/SharedDownloadProjection';
-import type { LocalReadingDownloadState } from '../features/reading/LocalReadingFlowGateway';
-import { prepareSharedDownloadFonts } from '../features/common/ReaderFonts';
-import { ReaderPageState } from '../features/common/ReaderPageState';
-import { readerPageAreaLength } from '../features/common/ReaderPageShell';
+  DownloadStorageSummary, DownloadStoragePolicyView } from '../features/downloads/presentation/SharedDownloadProjection';
+import { createDownloadBookView, projectDownloadBookAvailability, downloadChapterStateLabel } from '../features/downloads/presentation/SharedDownloadProjection';
+import type { LocalReadingDownloadState } from '../features/reading/application/LocalReadingFlowGateway';
+import { prepareSharedDownloadFonts } from '../ui/foundation/ReaderFonts';
+import { ReaderPageState } from '../ui/feedback/ReaderPageState';
+import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
+import type { ReaderRecoveryView } from '../ui/feedback/ReaderRecoveryView';
+
+export type DownloadFixtureScenario = 'content' | 'loading' | 'empty' | 'read-error' | 'retained-error' |
+  'recovery' | 'pending' | 'filtered-empty' | 'chapter-loading' | 'chapter-error' | 'chapter-empty' | 'chapter-no-catalog';
+
+export interface DownloadFixtureCase {
+  value: DownloadFixtureScenario;
+  title: string;
+}
+
+export const DOWNLOAD_FIXTURE_SCENARIOS: DownloadFixtureCase[] = [
+  { value: 'loading', title: '读取中' },
+  { value: 'empty', title: '空书架' },
+  { value: 'read-error', title: '读取失败' },
+  { value: 'retained-error', title: '保留内容读取失败' },
+  { value: 'recovery', title: '原操作待核对' },
+  { value: 'pending', title: '核对读取中' },
+  { value: 'filtered-empty', title: '筛选为空' },
+  { value: 'chapter-loading', title: '章节投影读取中' },
+  { value: 'chapter-error', title: '章节投影失败' },
+  { value: 'chapter-empty', title: '目录已确认无章节' },
+  { value: 'chapter-no-catalog', title: '暂无目录数据' },
+];
 
 interface DownloadFixtureObservation {
   kind: string;
@@ -19,11 +42,21 @@ interface DownloadFixtureObservation {
   actualHeightVp: number;
   systemFontScale: number;
   intentCount: number;
+  scenario: DownloadFixtureScenario;
+  bookCount: number;
+  loading: boolean;
+  error: string;
+  recoveryVisible: boolean;
+  recoveryGeneration: number;
+  pendingBookReads: number;
+  query: string;
+  detailKey: string;
 }
 
 @Component
 export struct ReaderDownloadStructureFixture {
   @Prop @Watch('onParentFontsChanged') fontsReady: boolean = false;
+  @Prop scenario: DownloadFixtureScenario = 'content';
   onBack: () => void = (): void => {};
   onAction: (kind: string) => void = (_kind: string): void => {};
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
@@ -33,6 +66,9 @@ export struct ReaderDownloadStructureFixture {
   @State private downloadFontsReady: boolean = false;
   @State private fontFailed: boolean = false;
   @State private books: DownloadBookView[] = [];
+  @State private loading: boolean = false;
+  @State private error: string = '';
+  @State private recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @State private storagePolicy: DownloadStoragePolicyView = { capacityBytes: 2147483648, expiryDays: 7 };
   private storageSummary: DownloadStorageSummary = { totalBytes: 251658240, retainedBytes: 167772160,
     automaticBytes: 83886080, cleanableBytes: 41943040, availableBytes: 2147483648 };
@@ -45,11 +81,21 @@ export struct ReaderDownloadStructureFixture {
   private childBackIdentity: string = '';
   private publishedBackIdentity: string = '';
   private lastViewState: SharedDownloadViewState | undefined;
+  private readonly pendingBookReads: Set<string> = new Set<string>();
 
   aboutToAppear(): void {
     this.mounted = true;
     this.fixtureGeneration += 1;
     this.books = this.createBooks();
+    this.loading = this.scenario === 'loading' || this.scenario === 'pending';
+    this.error = this.scenario === 'read-error' || this.scenario === 'retained-error' ?
+      '内存夹具：书架下载信息暂时无法读取，请重试' : '';
+    const recoveryVisible = this.scenario === 'recovery' || this.scenario === 'pending';
+    this.recovery = { visible: recoveryVisible,
+      message: recoveryVisible ? '内存夹具：有一批下载操作结果未确认。刷新仅查看当前列表，原操作结果仍未确认。' : '',
+      canRetry: recoveryVisible, generation: recoveryVisible ? this.fixtureGeneration : 0 };
+    this.pendingBookReads.clear();
+    this.lastViewState = undefined;
     this.storagePolicy = { capacityBytes: 2147483648, expiryDays: 7 };
     void this.prepareFonts();
   }
@@ -97,6 +143,7 @@ export struct ReaderDownloadStructureFixture {
 
   private createBooks(): DownloadBookView[] {
     const result: DownloadBookView[] = [];
+    if (this.scenario === 'loading' || this.scenario === 'empty' || this.scenario === 'read-error') return result;
     const queueStates: LocalReadingDownloadState[] = ['completed', 'missing', 'queued', 'paused',
       'inProgress', 'cached', 'failed', 'cancelled', 'unknown'];
     for (let bookIndex = 0; bookIndex < 12; bookIndex += 1) {
@@ -108,6 +155,18 @@ export struct ReaderDownloadStructureFixture {
         title, author: 'Fixture · 测试作者', contentKind: kind === 'manga' ? 'manga' : 'text',
         addedAt: bookIndex + 1, lastReadAt: bookIndex + 2,
         readingPosition: { chapterIndex: 2, chapterOffset: 0, updatedAt: 1 } });
+      if (bookIndex === 0 && (this.scenario === 'chapter-loading' || this.scenario === 'chapter-error')) {
+        if (this.scenario === 'chapter-error') {
+          view.projectionStatus = 'unavailable';
+          view.projectionError = '内存夹具：下载信息暂时无法读取，请重试';
+        }
+        result.push(view);
+        continue;
+      }
+      if (bookIndex === 0 && (this.scenario === 'chapter-empty' || this.scenario === 'chapter-no-catalog')) {
+        result.push(projectDownloadBookAvailability(view, [], this.scenario === 'chapter-empty' ? 0 : undefined));
+        continue;
+      }
       const chapters: DownloadChapterView[] = [];
       for (let index = 0; index < 18; index += 1) {
         const state: LocalReadingDownloadState = bookIndex === 0 ? 'completed' :
@@ -129,9 +188,13 @@ export struct ReaderDownloadStructureFixture {
   }
 
   private record(kind: string): void {
+    const view = this.lastViewState ?? this.initialView();
     const observation: DownloadFixtureObservation = { kind, generation: this.fixtureGeneration,
       actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
-      systemFontScale: ReaderWindowCoordinator.metrics().systemFontScale, intentCount: this.intentCount };
+      systemFontScale: ReaderWindowCoordinator.metrics().systemFontScale, intentCount: this.intentCount,
+      scenario: this.scenario, bookCount: this.books.length, loading: this.loading, error: this.error,
+      recoveryVisible: this.recovery.visible, recoveryGeneration: this.recovery.generation,
+      pendingBookReads: this.pendingBookReads.size, query: view.query, detailKey: view.detailKey ?? '' };
     hilog.info(0x5244, 'ReaderPageStructure', 'READER_DOWNLOAD_FIXTURE %{public}s', JSON.stringify(observation));
   }
 
@@ -147,18 +210,44 @@ export struct ReaderDownloadStructureFixture {
     if (intent.books.some((target: SharedDownloadUiBookTarget): boolean => !this.books.some((book: DownloadBookView): boolean =>
       book.sourceId === target.sourceId && book.bookId === target.bookId && (target.chapterIndices === undefined ||
         target.chapterIndices.every((index: number): boolean => book.chapters.some((chapter: DownloadChapterView): boolean => chapter.index === index)))))) return;
-    if (intent.action === 'configureStorage' && intent.cacheLimitMb !== undefined && intent.cleanupAfterDays !== undefined &&
-      Number.isFinite(intent.cacheLimitMb) && intent.cacheLimitMb >= 0 && Number.isSafeInteger(intent.cleanupAfterDays) && intent.cleanupAfterDays > 0) {
-      this.storagePolicy = { capacityBytes: Math.round(intent.cacheLimitMb * 1024 * 1024), expiryDays: intent.cleanupAfterDays };
+    if (intent.action === 'configureStorage') {
+      const capacityBytes = intent.cacheLimitMb === undefined ? this.storagePolicy.capacityBytes :
+        Math.round(intent.cacheLimitMb * 1024 * 1024);
+      const expiryDays = intent.cleanupAfterDays ?? this.storagePolicy.expiryDays;
+      if (!Number.isSafeInteger(capacityBytes) || capacityBytes < 0 ||
+        !Number.isSafeInteger(expiryDays) || expiryDays < 1) return;
+      this.storagePolicy = { capacityBytes, expiryDays };
     }
     // No queue/file/retention owner is called, even for destructive captions.
     this.recordAction(generation, `intent-${intent.action}-${intent.scope}`);
   }
 
   private openBook(generation: number, book: DownloadBookView): void {
+    if (!this.current(generation) || this.loading || this.pendingBookReads.has(book.key)) return;
     if (!this.books.some((candidate: DownloadBookView): boolean => candidate.key === book.key &&
       candidate.sourceId === book.sourceId && candidate.bookId === book.bookId)) return;
+    // The normal Host coalesces this book's in-flight refresh. Keep the
+    // supplied projection until a real read result exists.
+    this.pendingBookReads.add(book.key);
     this.recordAction(generation, 'open-book');
+  }
+
+  private initialView(): SharedDownloadViewState {
+    return { query: this.scenario === 'filtered-empty' ? 'fixture-no-matching-book' : '',
+      type: 'all', state: 'all', sourceId: 'all', sort: 'recent', direction: 'desc',
+      detailKey: this.scenario.startsWith('chapter-') ? this.books[0]?.key ?? '' : '' };
+  }
+
+  private refresh(generation: number, kind: string = 'refresh'): void {
+    if (!this.current(generation) || this.loading) return;
+    this.loading = true;
+    this.error = '';
+    this.recordAction(generation, kind);
+  }
+
+  private refreshRecovery(generation: number, recoveryGeneration: number): void {
+    if (!this.recovery.visible || this.recovery.generation !== recoveryGeneration) return;
+    this.refresh(generation, 'recovery-refresh');
   }
 
   private readTarget(generation: number, target: DownloadReadingTarget): void {
@@ -228,10 +317,14 @@ export struct ReaderDownloadStructureFixture {
     if (this.current(this.fixtureGeneration)) {
       ForEach([this.fixtureGeneration], (generation: number): void => {
         SharedDownloadPage({ books: this.books, storageSummary: this.storageSummary,
-          storagePolicy: this.storagePolicy, loading: false, error: '', pendingMessage: '',
+          storagePolicy: this.storagePolicy, loading: this.loading, error: this.error,
+          batchRecovery: this.recovery, initialViewState: this.initialView(),
+          isOpeningCurrent: (): boolean => this.current(generation),
           presentationIdentity: `download-fixture-${generation}`,
           onBack: (): void => this.back(generation),
-          onRefresh: (): void => this.recordAction(generation, 'refresh'),
+          onRefresh: (): void => this.refresh(generation),
+          onRefreshBatchRecovery: (revision: number): void => this.refreshRecovery(generation, revision),
+          onRefreshStorage: (): void => this.recordAction(generation, 'storage-refresh'),
           onOpenBook: (book: DownloadBookView): void => this.openBook(generation, book),
           onIntent: (intent: SharedDownloadUiIntent): void => this.intent(generation, intent),
           onReadTarget: (target: DownloadReadingTarget): void => this.readTarget(generation, target),

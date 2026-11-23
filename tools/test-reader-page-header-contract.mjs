@@ -38,16 +38,25 @@ export const CONTRACT_CASES = {
 async function case_sdk_public_slots() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
 const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 for (const [name, file, slots] of [
-  ['ReaderPageScaffold', 'common/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
-  ['ReaderStandardPage', 'common/ReaderStandardPage.ets', ['content', 'header', 'footer', 'overlayContent']],
-  ['MainTabShell', 'shell/MainTabShell.ets', ['content', 'header', 'overlayContent']],
+  ['ReaderPageScaffold', 'ui/layout/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['ReaderStandardPage', 'ui/layout/ReaderStandardPage.ets', ['content', 'nativeListItems', 'header', 'footer', 'overlayContent', 'boundedOverlayContent']],
+  ['MainTabShell', 'features/shell/MainTabShell.ets', ['content', 'header', 'overlayContent', 'boundedOverlayContent', 'scrollOverlayContent']],
 ]) {
-  const source = readFileSync(`entry/src/main/ets/features/${file}`, 'utf8');
-  const actualSlots = [...readerPageBuilderSlots(source, name)];
-  assert.equal(new Set(actualSlots).size, actualSlots.length, `${name}: public slots remain unique`);
-  for (const slot of slots) assert.ok(actualSlots.includes(slot), `${name}: original public slot ${slot} remains; valid additive slots are allowed`);
+  const source = readFileSync(`entry/src/main/ets/${file}`, 'utf8');
+  assert.deepEqual([...readerPageBuilderSlots(source, name)], slots, `${name}: all original public slots retain their actual declarations`);
   const collision = source.replaceAll('overlayContent', 'overlay');
   assert.notEqual(collision, source);
   assert.throws(() => readerPageBuilderSlots(collision, name), /collides.*native CustomComponent/,
@@ -57,366 +66,473 @@ for (const [name, file, slots] of [
 }
 
 async function case_header_paint_owner() {
-
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { pageFrameSdkFixture, mutatePageFrameCall } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
-const policy = actualReaderPageShell();
-const style = options => policy.readerFrameStyle({backgroundColor:'#FF102030',headerBackground:'#FF405060',footerBackground:'#FF708090',...options});
-const geometry = options => { const input = new policy.ReaderPageGeometryInput(); Object.assign(input, options); return policy.resolveReaderPageGeometry(input); };
-
-function proof(policyOverrides={}) {
- const fixture=pageFrameSdkFixture({dependencies:policyOverrides}),owner=fixture.create('ReaderFixedHeaderHost');
- const receipts=[];let mounts=0;
- Object.assign(owner,{style:style().header,measurementKey:7,content:()=>mounts++,onHeightChange:(height,key)=>receipts.push([height,key])});owner.initialRender();
- const header=fixture.nodes(owner).find(node=>node.type==='Column');
- assert.equal(mounts,1);assert.equal(header.width,'100%');assert.equal(header.zIndex,10);
- assert.equal(header.clip,true,'opaque header clips its own paint');assert.equal(header.backgroundColor,'#FF405060','opaque header paints the supplied original surface');
- const oldMeasurement=header.onAreaChange;
- for(const height of [88,'95vp',-1,'invalid'])oldMeasurement({}, {height});
- assert.deepEqual(receipts,[[88,7],[95,7]],'numeric/vp receipts preserve their captured measurement key');
- owner.style=style({headerTransparent:true}).header;owner.measurementKey=8;fixture.properties.flush();
- assert.equal(header.backgroundColor,'#00000000');assert.equal(header.clip,false,'floating reuse clears its old mask');
- oldMeasurement({}, {height:999});assert.deepEqual(receipts,[[88,7],[95,7]],'old native measurement cannot acquire the new generation');
- header.onAreaChange({}, {height:96});assert.deepEqual(receipts.at(-1),[96,8]);assert.equal(mounts,1);
- owner.style=style({headerBackground:'#FF778899'}).header;fixture.properties.flush();assert.equal(header.backgroundColor,'#FF778899');assert.equal(header.clip,true);
- return fixture;
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
 }
-proof();
-const original=readFileSync(readerPageShellSourceUrl,'utf8');
-// Mutate only this real modifier; the visual header must detect missing paint
-// independently of the supplied style object and compiler lowering.
-const noPaint=mutatePageFrameCall(original,'ReaderHeaderFrameModifier','backgroundColor',(node,tree)=>node.expression.expression.getText(tree));
-assert.notEqual(noPaint,original);assert.throws(()=>proof(actualReaderPageShell(noPaint)),/opaque header paints/);
-const noClip=mutatePageFrameCall(original,'ReaderHeaderFrameModifier','clip',(node,tree)=>node.expression.getText(tree)+'(false)');
-assert.notEqual(noClip,original);assert.throws(()=>proof(actualReaderPageShell(noClip)),/opaque header clips/);
+
+const painted = new Map([
+  ['standard', 'TOK_SURFACE_SOLID'], ['directoryTools', 'TOK_SURFACE_SOLID'],
+  ['home', 'TOK_PAPER'], ['selection', 'TOK_PAPER'], ['search', 'TOK_PAPER'], ['rss', 'TOK_PAPER'],
+  ['download', 'TOK_DOWNLOAD_PAPER'],
+]);
+function headerProof(kind, scheme, dependencies = {}) {
+  const probe = actual('ReaderFixedHeaderHost', dependencies);
+  let mounted = 0; const measured = [];
+  Object.assign(probe.owner, { kind, appThemeScheme: scheme, content: () => mounted++, onHeightChange: height => measured.push(height) });
+  probe.owner.initialRender();
+  const header = [...probe.owner.nodes.values()].find(node => node.type === 'Column');
+  assert.equal(mounted, 1, 'the real header slot mounts once');
+  assert.equal(header.width, '100%'); assert.ok(header.zIndex>0,'fixed header is above the body');
+  if (painted.has(kind)) {
+    assert.equal(header.backgroundColor, readerAppColor(painted.get(kind), scheme), `${kind}/${scheme}: actual opaque mask`);
+    assert.equal(header.clip, true);
+    assert.match(header.backgroundColor, /^#FF[0-9a-f]{6}$/i, 'declared solid header really paints an opaque color');
+  } else {
+    assert.equal(header.backgroundColor, 'Color.Transparent', 'bounded floating/manga/reader actors retain their own surface');
+    assert.equal(header.clip, false, 'bounded card shadows remain outside the host');
+  }
+  for (const height of [88, '95vp', -1, 'invalid']) header.onAreaChange({}, { height });
+  assert.deepEqual(measured, [88, 95], 'real native measurement callbacks reject malformed/negative sizes');
+  return probe;
+}
+for (const scheme of ['day', 'night']) for (const kind of [...painted.keys(), 'floating', 'mangaDirectory', 'reader']) headerProof(kind, scheme);
+
+// Actual shared-policy changes must reach every affected actual SDK consumer.
+// Reusing the same native node must clear previously solid paint and clip.
+{
+  const probe = headerProof('standard', 'day');
+  const node = [...probe.owner.nodes.values()][0];
+  probe.owner.surface = 'transparent'; probe.properties.flush();
+  assert.equal(node.backgroundColor, 'Color.Transparent'); assert.equal(node.clip, true);
+  probe.owner.surface = 'solid'; probe.properties.flush();
+  assert.equal(node.backgroundColor, readerAppColor('TOK_SURFACE_SOLID', 'day'));
+  probe.owner.kind = 'floating'; probe.properties.flush();
+  assert.equal(node.backgroundColor, 'Color.Transparent'); assert.equal(node.clip, false,
+    'standard-to-floating reuse cannot retain a clipping mask around card shadows');
+}
+const changedPolicy = policySource.replace("? 'TOK_SURFACE_SOLID'", "? 'TOK_PRIMARY_DARK'");
+assert.notEqual(changedPolicy, policySource, 'mutation targets the real solid-surface policy');
+for (const kind of ['standard', 'directoryTools']) {
+  const probe = actual('ReaderFixedHeaderHost', actualReaderPageShell(changedPolicy));
+  probe.owner.kind = kind; probe.owner.initialRender();
+  assert.equal([...probe.owner.nodes.values()][0].backgroundColor, readerAppColor('TOK_PRIMARY_DARK', 'day'));
+}
+const omittedPaint = policySource.replace('if (this.surface === \'solid\') instance.backgroundColor', 'if (false) instance.backgroundColor');
+assert.notEqual(omittedPaint, policySource);
+assert.throws(() => headerProof('rss', 'day', actualReaderPageShell(omittedPaint)), /actual opaque mask/,
+  'the historical solid-declaration/no-paint defect cannot pass runtime evidence');
 
 }
 
 async function case_scaffold_slots() {
-
 const { default: assert } = await import('node:assert/strict');
-const { pageFrameSdkFixture } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
-const { actualReaderPageShell } = await import('./lib/reader-page-shell-runtime-probe.mjs');
-const policy = actualReaderPageShell();
-const style = options => policy.readerFrameStyle({backgroundColor:'#FF102030',headerBackground:'#FF405060',footerBackground:'#FF708090',...options});
-const geometry = options => { const input = new policy.ReaderPageGeometryInput(); Object.assign(input, options); return policy.resolveReaderPageGeometry(input); };
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
 
-const fixture=pageFrameSdkFixture(),owner=fixture.create('ReaderPageScaffold');const slots=[],headerReceipts=[],footerReceipts=[];
-Object.assign(owner,{frameStyle:style(),geometry:geometry({frameInsetLeft:13,frameInsetRight:17,headerTop:6,footerBottom:28}),
- headerMeasurementKey:7,footerMeasurementKey:9,content:()=>slots.push('body'),header:()=>slots.push('header'),footer:()=>slots.push('footer'),overlayContent:()=>slots.push('overlay'),
- onHeaderHeightChange:(height,key)=>headerReceipts.push([height,key]),onFooterHeightChange:height=>footerReceipts.push(height)});owner.initialRender();
-assert.deepEqual(slots,['body','header','footer','overlay'],'actual hosts delegate each original slot once');
-const root=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.padding);
-assert.deepEqual(root.padding,{left:13,right:17});assert.equal(root.clip,true);
-const layers=[...owner.nodes.values()].filter(node=>[10,20,30].includes(node.zIndex));assert.deepEqual(layers.map(node=>node.zIndex),[10,20,30]);
-assert.ok(layers.every(node=>node.hitTestBehavior==='HitTestMode.Transparent'));
-const header=fixture.walk(owner).find(actor=>actor!==owner&&actor.measurementKey===7),headerNode=[...header.nodes.values()].find(node=>node.onAreaChange);
-const footer=[...owner.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
-const oldHeader=headerNode.onAreaChange,oldFooter=footer.onAreaChange;
-oldHeader({}, {height:'97vp'});oldFooter({}, {height:'54vp'});assert.deepEqual(headerReceipts,[[97,7]]);assert.deepEqual(footerReceipts,[54]);
-owner.headerMeasurementKey=8;owner.footerMeasurementKey=10;fixture.properties.flush();
-oldHeader({}, {height:999});oldFooter({}, {height:999});assert.deepEqual(headerReceipts,[[97,7]]);assert.deepEqual(footerReceipts,[54],'old footer measurement cannot publish into the new layout');
-headerNode.onAreaChange({}, {height:-1});footer.onAreaChange({}, {height:'invalid'});assert.deepEqual(footerReceipts,[54]);
-headerNode.onAreaChange({}, {height:98});footer.onAreaChange({}, {height:55});assert.deepEqual(headerReceipts.at(-1),[98,8]);assert.deepEqual(footerReceipts,[54,55]);
-owner.frameStyle=style({clip:false});fixture.properties.flush();assert.equal(root.clip,false);assert.deepEqual(slots,['body','header','footer','overlay'],'style and receipt updates retain each business actor');
+const { readerFrameStyle } = await import('../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts');
+for (const clip of [false, true]) {
+  const probe = actual('ReaderPageScaffold');
+  const slots = [], headerHeights = [], footerHeights = [];
+  const background = readerAppColor('app.window.background', 'day');
+  const frameStyle = readerFrameStyle({ backgroundColor: background, clip,
+    headerBackground: background, footerBackground: background });
+  const geometry = { frameInsetLeft: 13, frameInsetRight: 17,
+    header: { insetLeft: 0, insetRight: 0, top: 6 },
+    footer: { insetLeft: 0, insetRight: 0, bottom: 28, surface: 'transparent' },
+    content: { nativeEndInset: 0 } };
+  Object.assign(probe.owner, { frameStyle, geometry,
+    content: () => slots.push('body'), header: () => slots.push('header'), footer: () => slots.push('footer'), overlayContent: () => slots.push('overlay'),
+    onHeaderHeightChange: height => headerHeights.push(height), onFooterHeightChange: height => footerHeights.push(height) });
+  probe.owner.initialRender();
+  assert.deepEqual(slots, ['body', 'header', 'footer', 'overlay'], 'actual finite host delegates every slot exactly once');
+  const root = [...probe.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding?.left === 13 && node.padding?.right === 17);
+  assert.deepEqual(root.padding, { left: 13, right: 17 }, 'measured safe/rail offsets go through the common frame');
+  assert.equal(root.clip, clip);
+  const layers = [...probe.owner.nodes.values()].filter(node => [10, 20, 30].includes(node.zIndex));
+  assert.deepEqual(layers.map(node => node.zIndex), [10, 20, 30], 'header, footer and overlay have one shared ordering');
+  assert.ok(layers.every(node => node.hitTestBehavior === 'HitTestMode.Transparent'), 'empty hosts preserve body hit testing');
+  const header = flatten(probe.owner).find(node => node.type === 'Column' && node.onAreaChange && node.zIndex === 10);
+  header.onAreaChange({}, { height: 97 });
+  const footer = [...probe.owner.nodes.values()].find(node => node.type === 'Column' && node.onAreaChange);
+  footer.onAreaChange({}, { height: 54 });
+  assert.deepEqual(headerHeights, [97]); assert.deepEqual(footerHeights, [54]);
+}
 
 }
 
 async function case_footer_safe_lane() {
-
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { pageFrameSdkFixture, pageFrameSource, mutatePageFrameCall } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
-const policy = actualReaderPageShell();
-const style = options => policy.readerFrameStyle({backgroundColor:'#FF102030',headerBackground:'#FF405060',footerBackground:'#FF708090',...options});
-const geometry = options => { const input = new policy.ReaderPageGeometryInput(); Object.assign(input, options); return policy.resolveReaderPageGeometry(input); };
-
-function proof(sources={},dependencies={}) {
- const fixture=pageFrameSdkFixture({sources,dependencies}),owner=fixture.create('ReaderPageScaffold');let mounts=0;const heights=[];
- Object.assign(owner,{frameStyle:style({footerSolid:true}),geometry:geometry({footerHeight:54,footerBottom:42,footerInsetLeft:20,footerInsetRight:20,footerSurface:'solid'}),
- content:()=>mounts++,footer:()=>{},onFooterHeightChange:height=>heights.push(height)});owner.initialRender();
- const nodes=[...owner.nodes.values()],viewport=nodes.find(node=>node.type==='Stack'&&node.height==='calc(100% - 96vp)');
- assert.ok(viewport,'resolved footer and safe area bound the real content viewport');assert.equal(viewport.clip,true,'rows cannot paint or receive input in the fixed footer lane');
- const backing=nodes.find(node=>node.type==='Column'&&node.padding?.bottom===42);
- assert.ok(backing,'paper covers the complete bottom safe area');assert.equal(backing.width,'100%');assert.equal(backing.clip,true);assert.equal(backing.backgroundColor,'#FF708090','footer lane paints the feature-owned surface');
- const measurement=nodes.find(node=>node.type==='Column'&&node.onAreaChange);measurement.onAreaChange({}, {height:'54vp'});assert.deepEqual(heights,[54]);
- owner.frameStyle=style();owner.geometry=geometry({footerBottom:42,footerSurface:'transparent'});fixture.properties.flush();
- assert.equal(backing.backgroundColor,'#00000000');assert.equal(backing.clip,false);assert.deepEqual(backing.padding,{bottom:0});assert.deepEqual(backing.margin,{bottom:42});
- assert.equal(viewport.height,'100%');assert.equal(viewport.clip,false);assert.equal(mounts,1);
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
 }
-proof();
-const source=pageFrameSource('ReaderPageScaffold');
-const noClip=mutatePageFrameCall(source,'ReaderPageScaffold','clip',(node,tree)=>node.expression.getText(tree)+'(false)');assert.notEqual(noClip,source);assert.throws(()=>proof({ReaderPageScaffold:noClip}),/rows cannot paint/);
-const noLane=mutatePageFrameCall(source,'ReaderPageScaffold','padding',(node,tree)=>node.expression.getText(tree)+'({bottom:0})',(node,tree)=>node.arguments[0]?.getText(tree).includes('bottom:'));assert.notEqual(noLane,source);assert.throws(()=>proof({ReaderPageScaffold:noLane}),/complete bottom safe area/);
-const original=readFileSync(readerPageShellSourceUrl,'utf8');
-const noPaint=mutatePageFrameCall(original,'ReaderFooterFrameModifier','backgroundColor',(node,tree)=>node.expression.expression.getText(tree));assert.notEqual(noPaint,original);assert.throws(()=>proof({},actualReaderPageShell(noPaint)),/footer lane paints/);
+
+function footerProof(scaffoldSource = read('ReaderPageScaffold'), dependencies = {}, scheme = 'day') {
+  const probe = actual('ReaderPageScaffold', dependencies, {}, scaffoldSource);
+  const heights = []; let mounts = 0;
+  Object.assign(probe.owner, { variant: 'mangaDirectory', footerSurface: 'solid', appThemeScheme: scheme,
+    contentEndInset: 98, footerBottom: 42, footerInsetLeft: 20, footerInsetRight: 20,
+    content: () => mounts++, footer: () => {}, onFooterHeightChange: height => heights.push(height) });
+  probe.owner.initialRender();
+  const nodes = [...probe.owner.nodes.values()];
+  const viewport = nodes.find(node => node.type === 'Stack' && node.height === 'calc(100% - 98vp)');
+  assert.ok(viewport, 'the public frame owns a bounded native content viewport above the fixed dock');
+  assert.equal(viewport.clip, true, 'rows cannot paint or receive input below that viewport');
+  const backing = nodes.find(node => node.type === 'Column' && node.padding?.bottom === 42);
+  assert.ok(backing, 'the paper lane includes the complete bottom safe area rather than a transparent margin');
+  assert.equal(backing.width, '100%', 'paper covers both card gutters'); assert.equal(backing.clip, true);
+  assert.equal(backing.backgroundColor, mangaDirectoryColor('paper', scheme));
+  const measurement = nodes.find(node => node.type === 'Column' && node.onAreaChange);
+  measurement.onAreaChange({}, { height: '54vp' }); assert.deepEqual(heights, [54], 'dock measurement excludes the already reserved bottom safe lane');
+  probe.owner.footerSurface = 'transparent'; probe.owner.contentEndInset = 0; probe.properties.flush();
+  assert.equal(backing.backgroundColor, 'Color.Transparent'); assert.equal(backing.clip, false);
+  assert.deepEqual(backing.padding, { bottom: 0 }); assert.deepEqual(backing.margin, { bottom: 42 });
+  assert.equal(viewport.height, '100%'); assert.equal(viewport.clip, false); assert.equal(mounts, 1, 'footer style/inset updates retain the body actor');
+}
+footerProof();
+footerProof(undefined, {}, 'night');
+const scaffoldSource = read('ReaderPageScaffold');
+const noViewportClip = scaffoldSource.replace('.clip(this.contentEndInset > 0)', '.clip(false)');
+assert.notEqual(noViewportClip, scaffoldSource); assert.throws(() => footerProof(noViewportClip), assert.AssertionError);
+const noSafeLane = scaffoldSource.replace("bottom: this.footerSurface === 'solid' ? this.footerBottom : 0", 'bottom: 0');
+assert.notEqual(noSafeLane, scaffoldSource); assert.throws(() => footerProof(noSafeLane), assert.AssertionError);
+const noFooterPaint = policySource.replace('new ReaderPageFrameModifier(this.scheme, this.kind, this.readingUnderlayColor).applyNormalAttribute(instance);', 'instance.backgroundColor(Color.Transparent);');
+assert.notEqual(noFooterPaint, policySource); assert.throws(() => footerProof(scaffoldSource, actualReaderPageShell(noFooterPaint)), assert.AssertionError);
+
 {
- const fixture=pageFrameSdkFixture(),owner=fixture.create('ReaderPageScaffold');let mounts=0;
- Object.assign(owner,{frameStyle:style(),geometry:geometry({}),content:()=>mounts++});owner.initialRender();const root=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.padding);
- owner.frameStyle=style({backgroundColor:'#FF314159'});fixture.properties.flush();assert.equal(root.backgroundColor,'#FF314159');
- owner.pageVisible=false;fixture.properties.flush();assert.equal(root.opacity,0);assert.equal(root.hitTestBehavior,'HitTestMode.Transparent');
- owner.pageVisible=true;fixture.properties.flush();assert.equal(root.opacity,1);assert.equal(root.hitTestBehavior,'HitTestMode.Default');assert.equal(mounts,1,'hidden retained reader preserves its business actor');
+  const policy = actualReaderPageShell();
+  assert.throws(() => policy.readerStandardPageSpec('private99'), /Unknown|unknown/);
+  assert.throws(() => policy.readerPageInitialHeaderHeight('private99'), /Unknown|unknown/);
+}
+
+{
+  const probe = actual('ReaderPageScaffold');
+  probe.owner.variant = 'reader'; probe.owner.headerKind = 'reader';
+  let mounts = 0; probe.owner.content = () => mounts++;
+  probe.owner.initialRender();
+  const root = [...probe.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding);
+  assert.equal(root.backgroundColor, readerAppColor('app.window.background', 'day'), 'reader first frame consumes the real window paper fact');
+  probe.owner.readingUnderlayColor = '#FF314159'; probe.properties.flush();
+  assert.equal(root.backgroundColor, '#FF314159', 'updated window paper reaches the retained common reading frame');
+  assert.equal(mounts, 1, 'window paper updates do not remount reading content');
+  probe.owner.pageVisible = false; probe.properties.flush();
+  assert.equal(root.opacity, 0); assert.equal(root.hitTestBehavior, 'HitTestMode.Transparent');
+  probe.owner.pageVisible = true; probe.properties.flush();
+  assert.equal(root.opacity, 1); assert.equal(root.hitTestBehavior, 'HitTestMode.Default');
+  assert.equal(mounts, 1, 'page visibility toggles preserve the persistent reader actor');
+
 }
 
 }
 
 async function case_standard_page_layout() {
-
 const { default: assert } = await import('node:assert/strict');
-const { pageFrameSdkFixture } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
-const { actualReaderPageShell } = await import('./lib/reader-page-shell-runtime-probe.mjs');
-const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const policy = actualReaderPageShell();
-const style = options => policy.readerFrameStyle({backgroundColor:'#FF102030',headerBackground:'#FF405060',footerBackground:'#FF708090',...options});
-const geometry = options => { const input = new policy.ReaderPageGeometryInput(); Object.assign(input, options); return policy.resolveReaderPageGeometry(input); };
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
 
+const variants = ['management', 'settings', 'rssManagement', 'rssEditor', 'rssFeed', 'rssDetail', 'tools', 'sync', 'sourceManagement', 'settingsHome', 'settingsGeneral'];
+// Native reading geometry belongs to the same actual frame as the body.
+// These finite runtime facts are not a caller-owned style/attribute bag.
 {
- const fixture=pageFrameSdkFixture(),owner=fixture.create('ReaderPageScaffold');let mounts=0;Object.assign(owner,{frameStyle:style({safeArea:'systemVertical'}),geometry:geometry({}),content:()=>mounts++});owner.initialRender();
- const root=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.padding);
- assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM']]);assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);
- owner.frameStyle=style({safeArea:'systemCutoutAll'});fixture.properties.flush();
- assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM','SafeAreaType.CUTOUT'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM','SafeAreaEdge.START','SafeAreaEdge.END']]);assert.deepEqual(root.ignoreLayoutSafeArea,[['LayoutSafeAreaType.SYSTEM'],['LayoutSafeAreaEdge.ALL']]);
- owner.frameStyle=style();fixture.properties.flush();assert.deepEqual(root.expandSafeArea,[[],[]]);assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);assert.equal(mounts,1);
+ const probe=actual('ReaderPageScaffold');let mounts=0;
+ Object.assign(probe.owner,{variant:'reader',readingContentKind:'text',content:()=>mounts++});probe.owner.initialRender();
+ const root=[...probe.owner.nodes.values()].find(node=>node.type==='Stack'&&node.padding);
+ assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM']]);
+ assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);
+ probe.owner.readingContentKind='manga';probe.properties.flush();
+ assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM','SafeAreaType.CUTOUT'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM','SafeAreaEdge.START','SafeAreaEdge.END']]);
+ assert.deepEqual(root.ignoreLayoutSafeArea,[['LayoutSafeAreaType.SYSTEM'],['LayoutSafeAreaEdge.ALL']]);
+ probe.owner.variant='standard';probe.properties.flush();
+ assert.deepEqual(root.expandSafeArea,[[],[]],'reader-to-ordinary reuse clears native expansion');
+ assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]],'reader-to-ordinary reuse clears native ignore policy');
+ assert.equal(mounts,1,'native geometry fact changes retain the same body actor');
 }
-for(const variant of ['management','settings','rssManagement','rssEditor','rssFeed','rssDetail','tools','sync','sourceManagement','settingsHome','settingsGeneral']) {
- const metrics=createDefaultReaderWindowMetrics();Object.assign(metrics.windowRect,{width:393,height:852});metrics.systemInsets.top=32;metrics.cutoutInsets.top=40;metrics.systemInsets.left=24;metrics.cutoutInsets.right=30;
- const fixture=pageFrameSdkFixture({dependencies:{ReaderWindowCoordinator:{metrics:()=>metrics}}}),owner=fixture.create('ReaderStandardPage');let mounts=0;
- Object.assign(owner,{variant,content:()=>mounts++});owner.initialRender();
- const body=()=>fixture.nodes(owner).find(node=>node.type==='Column'&&node.padding?.left!==undefined),scroll=()=>fixture.nodes(owner).find(node=>node.type==='Column'&&node.padding?.top!==undefined);
- assert.deepEqual([body().padding.left,body().padding.right],[24,30],'actual standard page uses the maximum of visual-safe sides and shared horizontal gap once');
- assert.equal(scroll().padding.top,66,'system top is already consumed by the route parent');assert.equal(mounts,1);
- const measured=fixture.nodes(owner).find(node=>node.type==='Column'&&node.zIndex===10&&node.onAreaChange);assert.ok(measured,'actual StandardPage -> Scaffold -> HeaderHost delegation');
- measured.onAreaChange({}, {height:'93vp'});fixture.properties.flush();assert.equal(scroll().padding.top,101);assert.equal(mounts,1,'measured chrome does not remount the business body');
- const outer=[...owner.nodes.values()].find(node=>node.type==='__Common__'&&node.onAreaChange);assert.ok(outer);
- outer.onAreaChange({}, {width:'365vp',height:852});fixture.properties.flush();assert.equal(owner.viewportWidth,365);
- assert.equal(365-body().padding.left-body().padding.right,311,'measured host width flows through the actual horizontal geometry');assert.equal(mounts,1);
- measured.onAreaChange({}, {height:-1});fixture.properties.flush();assert.equal(scroll().padding.top,101);
+for (const variant of variants) {
+  const metrics = createDefaultReaderWindowMetrics();
+  metrics.windowRect.width = 393; metrics.windowRect.height = 852;
+  metrics.systemInsets.top = 32; metrics.cutoutInsets.top = 40;
+  metrics.systemInsets.left = 24; metrics.cutoutInsets.right = 30;
+  const probe = actual('ReaderStandardPage', { ReaderWindowCoordinator: { metrics: () => metrics } });
+  let bodyMounted = 0;
+  Object.assign(probe.owner, { variant, content: () => bodyMounted++ });
+  probe.owner.initialRender();
+  const body = [...probe.owner.nodes.values()].find(node => node.type === 'Column' && node.padding);
+  assert.deepEqual([body.padding.left, body.padding.right, body.padding.top], [24, 30, 66],
+    'conventional content obeys visual safe sides without charging the system top twice');
+  assert.equal(bodyMounted, 1);
+  const header = findChild(probe.owner, child => child.kind !== undefined && child.surface !== undefined);
+  assert.ok(header, 'actual StandardPage → Scaffold → HeaderHost child delegation');
+  const measured = [...header.nodes.values()].find(node => node.onAreaChange);
+  measured.onAreaChange({}, { height: '93vp' }); probe.properties.flush();
+  assert.equal(body.padding.top, 101, 'measured expanded header updates the actual Scroll content clearance');
+  assert.equal(bodyMounted, 1, 'a measured chrome update does not remount business content');
+  const outer = [...probe.owner.nodes.values()].find(node => node.type === '__Common__' && node.onAreaChange);
+  assert.ok(outer, 'the real component instance retains its measured viewport callback');
+  outer.onAreaChange({}, { width: '365vp' }); probe.properties.flush();
+  assert.equal(probe.owner.viewportWidth, 365, 'native vp area strings preserve narrow-host measurement');
+  assert.equal(probe.owner.contentFrame().width, 311, 'layout uses the measured host instead of window width');
+  assert.equal(bodyMounted, 1, 'resizing measured chrome keeps the retained content slot');
+
+  measured.onAreaChange({}, { height: -1 }); probe.properties.flush();
+  assert.equal(body.padding.top, 101);
 }
-assert.throws(()=>policy.readerStandardPageSpec('private99'),/Unknown|unknown/);
 
 }
 
 async function case_framework_route_coverage() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
-const { createReaderComponentProbe } = await import('./lib/reader-component-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
 const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
-const { ts, options } = installedEtsCompiler();
-const contract=JSON.parse(readFileSync('tools/fixtures/reader-page-framework-coverage.json','utf8'));
-const source=file=>readFileSync(`entry/src/main/ets/${file}`,'utf8'),indexSource=source('pages/Index.ets');
-const parse=(text,file='pages/Index.ets')=>{const tree=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[],'mutation/equivalent source is valid SDK syntax');return tree;};
-const all=(tree,predicate)=>{const found=[];const visit=node=>{if(predicate(node))found.push(node);ts.forEachChild(node,visit);};visit(tree);return found;};
-const call=(tree,name,predicate=()=>true)=>{const found=all(tree,node=>(ts.isCallExpression(node)||ts.isEtsComponentExpression(node))&&ts.isIdentifier(node.expression)&&node.expression.text===name&&predicate(node));assert.equal(found.length,1,'one actual mutation target '+name);return found[0];};
-const statement=node=>{while(node&&!ts.isExpressionStatement(node))node=node.parent;assert.ok(node);return node;};
-const member=node=>{while(node&&!ts.isMethodDeclaration(node))node=node.parent;assert.ok(node);return node;};
-const rootNotice=(node,ast)=>node.arguments[0]?.properties.some(prop=>prop.name?.getText(ast)==='view'&&prop.initializer?.getText(ast)==='this.indexRecoveryNotice');
-const edit=(text,node,replacement,tree)=>text.slice(0,node.getStart(tree))+replacement+text.slice(node.end);
-const insert=(text,node,value,tree)=>text.slice(0,node.getStart(tree))+value+text.slice(node.getStart(tree));
-const verify=(changed=indexSource,file='pages/Index.ets')=>{parse(changed,file);return verifyReaderPageFrameworkCoverage(process.cwd(),contract,path=>path===file?changed:source(path));};
-const coverage=verify();assert.equal(coverage.routes,contract.routes.length);
-// Private Builder delegation/names, condition ordering and parenthesization
-// have no role in the page registration. The real original owner edges remain.
-const renamed=indexSource.replaceAll('indexContent','equivalentPageCanvas').replaceAll('syncPreparingContent','equivalentColdContent')
- .replace("this.route === 'bookshelf' || this.route === 'search' || this.retainsShelfOpeningBackground()", "this.retainsShelfOpeningBackground() || ('search' === this.route) || ('bookshelf' === this.route)")
- .replace('this.readingSessionActive && this.detailBook !== undefined','this.detailBook !== undefined && (this.readingSessionActive)');
-assert.notEqual(renamed,indexSource);verify(renamed);
-const delegated=indexSource.replace('contentKind: this.readingContentKind,','contentKind: this.equivalentReadingKind(this.readingContentKind),')
- .replace('  private syncPreparingFrameStyle()', '  private equivalentReadingKind(value: \'text\' | \'manga\'): \'text\' | \'manga\' { return value; }\n\n  private syncPreparingFrameStyle()');
-assert.notEqual(delegated,indexSource);verify(delegated);
-const tree=parse(indexSource),full=call(tree,'ReaderFullDirectory'),reader=call(tree,'ReaderShell'),cold=call(tree,'ReaderPageScaffold');
-const preview=call(tree,'BookDirectoryPage',node=>node.arguments[0].properties.some(prop=>prop.name?.getText(tree)==='currentChapterIndex'&&prop.initializer?.getText(tree)==='-1'));
-let retainedIf=reader;while(retainedIf&&!ts.isIfStatement(retainedIf))retainedIf=retainedIf.parent;assert.ok(retainedIf);
-const coldSlot=cold.arguments[0].properties.find(prop=>prop.name?.getText(tree)==='content').initializer.body;
-const negatives=[
- ['bare catalog sibling',insert(indexSource,statement(full),"Column() { Text('unregistered catalog'); }\n",tree)],
- ['unknown catalog actor',insert(indexSource,statement(full),'UnregisteredCatalogPage({});\n',tree)],
- ['retained reader sibling',insert(indexSource,statement(reader),"Text('unregistered retained reader');\n",tree)],
- ['unregistered side page',insert(indexSource,retainedIf,"if (this.privateCatalogVisible) { Text('unregistered side page'); }\n",tree)],
- ['manga preview sibling',insert(indexSource,statement(preview),"Text('unregistered manga preview');\n",tree)],
- ['cold sync missing frame',edit(indexSource,cold,coldSlot.statements[0].expression.getText(tree),tree)],
- ['modal cannot hide bare page',insert(indexSource,statement(full),"ReaderDialogSurface({}); Text('unregistered modal sibling');\n",tree)],
-];
-for(const [name,changed]of negatives)assert.throws(()=>verify(changed),/category\/common-host|actual page route|registered page/,name);
-const kind=reader.arguments[0].properties.find(prop=>prop.name?.getText(tree)==='contentKind').initializer;
-assert.throws(()=>verify(edit(indexSource,kind,"'text'",tree)),/page\/runtime input/,'manga/text owner fact cannot be replaced with a constant');
-const file='features/bookshelf/BookshelfManagementPage.ets',original=source(file),pageTree=parse(original,file),host=call(pageTree,'ReaderStandardPage');
-assert.throws(()=>verify(edit(original,host.expression,'PrivatePageHost',pageTree),file),/category\/common-host/,'local page cannot revert to a private frame');
-const header=host.arguments[0].properties.find(prop=>prop.name?.getText(pageTree)==='header').initializer.body;
-assert.throws(()=>verify(edit(original,header,"{ PageBackBar({ title: '管理' }); }",pageTree),file),/bare UI component inside shared BuilderParam/);
-const type=tree.statements.find(node=>ts.isTypeAliasDeclaration(node)&&node.name.text==='ReaderRoute');
-assert.throws(()=>verify(edit(indexSource,type.type,"'privateUnregisteredPage' | "+type.type.getText(tree),tree)),/every actual route requires exactly one/);
-
-// Actual SDK execution owns visibility/captured-generation evidence. It does
-// not freeze a condition's spelling or treat static graph reachability as UI.
-function quietProof(text=indexSource){
- const ast=parse(text),notice=call(ast,'ReaderRecoveryNotice',node=>rootNotice(node,ast)),builder=member(notice).name.getText(ast);
- class Notice{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
- for(const visible of[false,true])for(const current of[false,true])for(const pending of[false,true]){
-  const {owner}=createReaderComponentProbe(text,[builder],{ReaderRecoveryNotice:Notice},
-    {childSources:{ReaderRecoveryNotice:source('features/common/ReaderRecoveryNotice.ets')}});
-  const tickets=[];let detailDelegations=0;Object.assign(owner,{indexRecoveryNotice:{message:'original fact',visible,generation:7},
-   indexRecoveryActionLabel:'继续',indexRecoveryCurrent:()=>current,detailPendingNoticeVisible:()=>pending,
-   indexRecoveryRevision:19,messageSafeTop:()=>0,detailOperationNoticeContent:()=>detailDelegations++,runIndexRecoveryAction:ticket=>tickets.push(ticket)});
-  owner[builder]();const children=[...owner.children.values()].filter(child=>child instanceof Notice);
-  assert.equal(children.length,visible&&current?1:0,'quiet feedback actual visibility/owner admission');
-  assert.equal(detailDelegations,pending?1:0,'separate pending shelf facts keep their original delegated Builder');
-  const column=[...owner.nodes.values()].find(node=>node.type==='Column');
-  assert.equal(Boolean(column),Boolean(visible&&current||pending),'quiet feedback actual root visibility/owner admission');
-  if(column){
-   assert.equal(column.height,undefined,'quiet feedback intrinsic height');assert.equal(column.hitTestBehavior,'HitTestMode.Transparent','quiet feedback preserves page input');
-  }
-  if(children.length){
-   children[0].params.onReconcile(999);assert.deepEqual(tickets,[7],'quiet feedback closure captures its original generation, not current ticket or child input');
-  }
- }
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const coverageContract = JSON.parse(readFileSync('tools/fixtures/reader-page-framework-coverage.json', 'utf8'));
+const coverage = verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract);
+assert.ok(coverage.routes>0);
+const source = file => readFileSync(`entry/src/main/ets/${file}`, 'utf8');
+const indexSource = source('pages/Index.ets');
+for (const [name, before, after] of [
+  ['extra naked text catalog sibling', 'ReaderFullDirectory({', "Column() { Text('unregistered text catalog'); }\n        ReaderFullDirectory({"],
+  ['extra unknown text catalog actor', 'ReaderFullDirectory({', 'UnregisteredCatalogPage({});\n        ReaderFullDirectory({'],
+  ['retained reading naked sibling', 'if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {', "if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {\n        Text('unregistered retained reader');"],
+  ['new side page outside primary chain', 'if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {', "if (this.privateCatalogVisible) { Text('unregistered side page'); }\n      if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {"],
+  ['manga preview naked sibling', 'if (this.mangaSourceSwitchSelection !== undefined) {\n      BookDirectoryPage({', "if (this.mangaSourceSwitchSelection !== undefined) {\n      Text('unregistered manga preview');\n      BookDirectoryPage({"],
+  ['cold sync returns to private body', "ReaderPageScaffold({ variant: 'standard', content: (): void => { this.syncPreparingContent(); } });", 'this.syncPreparingContent();'],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource, name + ': actual mutation target');
+  assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract, file => file === 'pages/Index.ets' ? changed : source(file)),
+    /category\/common-host|actual registration|registered page\/window actor/, name + ': retaining a sibling common frame cannot hide this bare branch');
 }
-quietProof();quietProof(indexSource.replace('(this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true)', '(this.indexRecoveryCurrent?.() === true && this.indexRecoveryNotice.visible)'));
-const notice=call(tree,'ReaderRecoveryNotice',node=>rootNotice(node,tree));
-const quietIf=member(notice).body.statements.find(ts.isIfStatement);assert.ok(quietIf);
-const quietStatement=quietIf.thenStatement.statements[0];
-const height=indexSource.slice(0,quietStatement.expression.end)+".height('100%')"+indexSource.slice(quietStatement.expression.end);
-assert.throws(()=>verify(height),/quiet feedback/);assert.throws(()=>quietProof(height),/intrinsic height/);
-const hit=all(quietStatement,node=>ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.name.text==='hitTestBehavior');assert.equal(hit.length,1);
-const mask=edit(indexSource,hit[0].arguments[0],'HitTestMode.Block',tree);assert.throws(()=>verify(mask),/quiet feedback/);assert.throws(()=>quietProof(mask),/preserves page input/);
-const missingAdmission=edit(indexSource,quietIf.expression,quietIf.expression.getText(tree).replace('this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true','this.indexRecoveryNotice.visible'),tree);assert.notEqual(missingAdmission,indexSource);assert.throws(()=>quietProof(missingAdmission),/visibility\/owner admission/);
-const borrowed=indexSource.replace('this.runIndexRecoveryAction(generation)','this.runIndexRecoveryAction(this.indexRecoveryRevision)');assert.notEqual(borrowed,indexSource);assert.throws(()=>quietProof(borrowed),/original generation/);
+for (const [name, before, after] of [
+  ['quiet feedback cannot claim full screen', ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)", ".height('100%').align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)"],
+  ['quiet feedback cannot mask page input', ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)", ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Block)"],
+  ['quiet feedback cannot drop route admission', 'this.readingEntry.recoveryNoticeVisible()', 'this.readingEntry.recoveryNotice.visible'],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource, name);
+  assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+    file => file === 'pages/Index.ets' ? changed : source(file)), /quiet feedback/, name);
+}
+const readerSource=source('features/reading/ui/ReaderShell.ets');
+const detachedKind=readerSource.replace('readingContentKind: this.contentKind',"readingContentKind: 'text'");assert.notEqual(detachedKind,readerSource);
+assert.throws(()=>verifyReaderPageFrameworkCoverage(process.cwd(),coverageContract,file=>file==='features/reading/ui/ReaderShell.ets'?detachedKind:source(file)),/exact page\/runtime fact/);
+const missingHostFile = 'features/bookshelf/ui/BookshelfManagementPage.ets';
+const original = source(missingHostFile);
+const missingHost = original.replace('ReaderStandardPage({', 'PrivatePageHost({');
+assert.notEqual(missingHost, original);
+assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+  file => file === missingHostFile ? missingHost : source(file)), /category\/common-host binding removed/,
+  'a local page reverting to a private host fails reverse coverage');
+const bareUiSlot = original.replace('this.pageHeader();', "PageBackBar({ title: '管理' });");
+assert.notEqual(bareUiSlot, original);
+assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+  file => file === missingHostFile ? bareUiSlot : source(file)), /bare UI component inside shared BuilderParam/,
+  'component calls inside ordinary lambdas cannot pretend to be SDK-emitted native Builder slots');
+const extraRoute = source('pages/Index.ets').replace("type ReaderRoute = 'bookshelf'", "type ReaderRoute = 'privateUnregisteredPage' | 'bookshelf'");
+assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+  file => file === 'pages/Index.ets' ? extraRoute : source(file)), /every actual route requires exactly one/,
+  'new routes cannot bypass category registration');
+
 }
 
 async function case_directory_layout_succession() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
-const { fullDirectorySdkFixture } = await import('./lib/reader-full-directory-sdk-fixture.mjs');
-const { ts, options }=installedEtsCompiler();
-const read=file=>readFileSync(file,'utf8'),baseline=JSON.parse(read('tools/architecture-consumer-baseline.json'));
-const file='entry/src/main/ets/features/reading/ReaderFullDirectory.ets',original=read(file);
-const verify=(source=original,fullMatrix=false)=>verifyFullDirectoryLayoutSuccession(baseline,path=>path===file?source:read(path),undefined,undefined,{executeConsumer:true,fullMatrix,fixtureFactory:fullDirectorySdkFixture});
-const parse=text=>{const tree=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);return tree;};
-const all=(node,predicate)=>{const rows=[];const walk=n=>{if(predicate(n))rows.push(n);ts.forEachChild(n,walk);};walk(node);return rows;};
-const one=(node,predicate,label)=>{const rows=all(node,predicate);assert.equal(rows.length,1,'one actual mutation target '+label);return rows[0];};
-const componentCall=(node,name)=>(ts.isCallExpression(node)||ts.isEtsComponentExpression(node))&&ts.isIdentifier(node.expression)&&node.expression.text===name;
-const edit=(text,node,value,tree)=>text.slice(0,node.getStart(tree))+value+text.slice(node.end);
-const statement=node=>{while(node&&!ts.isExpressionStatement(node))node=node.parent;assert.ok(node);return node;};
-const member=node=>{while(node&&!ts.isMethodDeclaration(node))node=node.parent;assert.ok(node);return node;};
-verify(original,true);
-// Current behavior does not depend on the old private Builder names, order of
-// the two recovery conditions, literal-vs-role font spelling, or callback names.
-let equivalent=original;
-for(const [from,to]of [['topBar','equivalentHeader'],['directoryContent','equivalentBody'],['directoryOverlay','equivalentOverlay'],['recoveryContent','equivalentRecovery'],['topBarTop','equivalentHeaderTop']])equivalent=equivalent.replace(new RegExp('\\b'+from+'\\b','g'),to);
-equivalent=equivalent.replace('this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible','this.directoryRecovery.offline.visible || (this.directoryRecovery.bookmarks.visible)')
- .replace('TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp','16');
-const equivalentTree=parse(equivalent),equivalentHost=one(equivalentTree,node=>componentCall(node,'ReaderPageScaffold'),'equivalent frame');
-const equivalentReceipt=equivalentHost.arguments[0].properties.find(prop=>prop.name.getText(equivalentTree)==='onHeaderHeightChange').initializer;
-let equivalentReceiptText=equivalentReceipt.getText(equivalentTree);
-for(const [index,name]of ['measuredHeight','layoutTicket'].entries())equivalentReceiptText=equivalentReceiptText.replace(new RegExp('\\b'+equivalentReceipt.parameters[index].name.getText(equivalentTree)+'\\b','g'),name);
-equivalent=edit(equivalent,equivalentReceipt,equivalentReceiptText,equivalentTree);
-assert.notEqual(equivalent,original);verify(equivalent,true);
-const tree=parse(original),host=one(tree,n=>componentCall(n,'ReaderPageScaffold'),'public frame'),props=new Map(host.arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer]));
-const panel=one(tree,n=>componentCall(n,'FullDirectoryPanel'),'directory panel'),panelProps=new Map(panel.arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer]));
-const recovery=one(tree,n=>componentCall(n,'ReaderDirectoryRecoverySurface'),'recovery leaf'),recoveryProps=new Map(recovery.arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer]));
-const recoveryMethod=member(recovery),headerTopIf=one(tree,n=>ts.isIfStatement(n)&&ts.isBinaryExpression(n.expression)&&n.expression.left.getText(tree)==='this.catalogContext','context-specific top'),headerTop=member(headerTopIf);
-const pendingCall=one(tree,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.name.text==='hitTestBehavior','pending native input port');
-const pendingStatement=statement(pendingCall),pendingHeight=original.slice(0,pendingStatement.expression.end)+'.height(999)'+original.slice(pendingStatement.expression.end);
-const clip=one(tree,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.name.text==='clip','bounded viewport clip');
-const viewport=all(tree,n=>ts.isEtsComponentExpression(n)&&n.expression.getText(tree)==='Stack'&&all(n,m=>componentCall(m,'FullDirectoryPanel')).length).sort((a,b)=>(a.end-a.pos)-(b.end-b.pos))[0];assert.ok(viewport);
-const viewportStatement=statement(viewport),viewportHeight=one(viewportStatement,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.name.text==='height','viewport height');
-const opacity=one(viewportStatement,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.name.text==='opacity','native panel opacity');
-const headerCallback=props.get('onHeaderHeightChange'),heightName=headerCallback.parameters[0].name.getText(tree),guard=headerCallback.body.statements.find(ts.isIfStatement);assert.ok(guard);
-const generationRead=one(tree,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.name.text==='readForGeneration','native measurement store');
-const fontStatement=statement(one(tree,n=>componentCall(n,'Text')&&n.arguments[0]?.getText(tree)==='this.bookTitle','approved title'));
-const font=one(fontStatement,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.name.text==='fontSize','approved title size');
-const unbound=one(headerTop,n=>ts.isIfStatement(n)&&n.expression.getText(tree).includes('readerWindowMetricsRevision'),'unbound metric fallback');
-const lastReturn=headerTop.body.statements.at(-1);assert.ok(ts.isReturnStatement(lastReturn));
-const negatives=[
- ['missing header',edit(original,props.get('header'),'(): void => {}',tree)],
- ['missing body',edit(original,props.get('content'),'(): void => {}',tree)],
- ['missing recovery overlay',edit(original,props.get('overlayContent'),'(): void => {}',tree)],
- ['extra pending text',original.slice(0,recoveryMethod.body.end-1)+"Text('unregistered pending actor');"+original.slice(recoveryMethod.body.end-1)],
- ['recovery callback alias',edit(original,recoveryProps.get('onReconcileBookmarks'),'this.onContinueBookmarks',tree)],
- ['full height pending mask',pendingHeight],
- ['pending input blocker',edit(original,pendingCall.arguments[0],'HitTestMode.Block',tree)],
- ['unclipped native rows',edit(original,clip.arguments[0],'false',tree)],
- ['truncated native viewport',edit(original,viewportHeight.arguments[0],viewportHeight.arguments[0].getText(tree)+' - 100',tree)],
- ['lost animation pose',edit(original,opacity.arguments[0],'1',tree)],
- ['lost detail unknown-anchor admission',edit(original,panelProps.get('allowUnanchoredBrowse'),'false',tree)],
- ['detail double-charged safe top',edit(original,headerTopIf.expression,'false',tree)],
- ['reader omitted safe top',edit(original,lastReturn.expression,'18',tree)],
- ['missing unbound minimum',edit(original,unbound.expression,'false',tree)],
- ['missing parent generation fence',edit(original,guard.expression,'!this.mounted || '+heightName+' <= 0',tree)],
- ['missing measured-generation lookup',edit(original,generationRead.expression.name,'read',tree)],
- ['constant native generation',edit(original,props.get('headerMeasurementKey'),'0',tree)],
- ['changed approved title size',edit(original,font.arguments[0],'99',tree)],
-];
-for(const [name,changed]of negatives){assert.notEqual(changed,original,name);assert.throws(()=>verify(changed),undefined,name);}
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const readWorkspace=file=>readFileSync(file,'utf8');const architectureBaseline=JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
+const fullFile = 'entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets', fullSource = readWorkspace(fullFile);
+verifyFullDirectoryLayoutSuccession(architectureBaseline, readWorkspace, sharedProducerShape);
+for (const [before, after] of [
+  ['header: (): void => { this.topBar(); }', 'header: (): void => {}'],
+  ['content: (): void => { this.directoryContent(); }', 'content: (): void => {}'],
+  ['overlayContent: (): void => { this.directoryOverlay(); }', 'overlayContent: (): void => { this.offlineBookMenu(); }'],
+  ['Column() { this.recoveryContent(); }', 'Column() {}'],
+  ['Column() { this.recoveryContent(); }', 'Column() { this.recoveryContent(); this.unregisteredPendingMessage(); }'],
+  ['onReconcileBookmarks: this.onReconcileBookmarks', 'onReconcileBookmarks: this.onContinueBookmarks'],
+  ['.zIndex(8).hitTestBehavior(HitTestMode.Transparent)', '.height(999).zIndex(8).hitTestBehavior(HitTestMode.Block)'],
+  ['.height(this.panelViewportHeight())', '.height(Math.max(0, this.panelViewportHeight() - 100))'],
+  ["allowUnanchoredBrowse: this.catalogContext === 'detail'", 'allowUnanchoredBrowse: false'],
+  ['.opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)\n      .clip(true)', '.opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)\n      .clip(false)'],
+  ['.fontSize(TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp)', '.fontSize(99)'],
+  ["if (this.catalogContext === 'detail') return 18;", "if (this.catalogContext === 'detail') return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));"],
+  ['return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));', 'return 18;'],
+  ['if (this.readerWindowMetricsRevision < 0) return 18;', 'if (false) return 18;'],
+]) {
+  const changed = fullSource.replace(before, after); assert.notEqual(changed, fullSource);
+  assert.throws(() => verifyFullDirectoryLayoutSuccession(architectureBaseline, file => file === fullFile ? changed : readWorkspace(file), sharedProducerShape));
+}
+
 }
 
 async function case_sync_cold_layout() {
-const { createIndexProductBuilderProbe } = await import('./lib/reader-extended-product-surface-probe.mjs');
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { pageFrameSdkFixture } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
 
 const source=file=>readFileSync(`entry/src/main/ets/${file}`,'utf8');const indexSource=source('pages/Index.ets');const readWorkspace=file=>readFileSync(file,'utf8');const architectureBaseline=JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
-const succession=verifyIndexSyncColdLayoutSuccession(architectureBaseline, readWorkspace);
-const verifyChanged=changed=>verifyIndexSyncColdLayoutSuccession(architectureBaseline,
-  file=>file==='entry/src/main/ets/pages/Index.ets'?changed:readWorkspace(file));
-const renamed=indexSource.replaceAll(succession.coldContentMethod,'equivalentColdActor')
-  .replace('if (this.syncUi().syncSnapshotReady)', 'if (this.syncUi().syncSnapshotReady === true)');
-assert.notEqual(renamed,indexSource);verifyChanged(renamed);
+verifyIndexSyncColdLayoutSuccession(architectureBaseline, readWorkspace);
 for (const [before, after] of [
   ['content: (): void => { this.syncPreparingContent(); }', 'content: (): void => {}'],
   ["Text('正在读取安全配置…');", "Text('正在读取安全配置…').fontSize(99);"],
   ["}.width('100%').height('100%').justifyContent(FlexAlign.Center);", "}.width('100%').height('100%').justifyContent(FlexAlign.Center).backgroundColor('#FF010203');"],
 ]) {
   const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource);
-  assert.throws(() => verifyChanged(changed));
+  assert.throws(() => verifyIndexSyncColdLayoutSuccession(architectureBaseline, file => file === 'entry/src/main/ets/pages/Index.ets' ? changed : readWorkspace(file)));
 }
-// The actual route owner supplies the visual facts. Keep other branches finite
-// and inert, while the shipping Scaffold and cold slot run through the SDK.
-for (const [testedSource,proof] of [[indexSource,succession],[renamed,verifyChanged(renamed)]]) for (const ready of [false, true]) {
-  const frameFixture = pageFrameSdkFixture();
+for (const ready of [false, true]) {
+  const properties = createArkUIPropertyRuntimeProbe();
   class OtherActor { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); this.nodes = new Map(); this.children = new Map(); } }
-  const components = { BookshelfMultiSelectPage: 'features/bookshelf/BookshelfMultiSelectPage.ets', ReaderShell: 'features/shell/ReaderShell.ets',
-    SyncPage: 'features/sync/SyncPage.ets', ReaderLayoutDebugOverlay: 'features/common/ReaderLayoutDebugOverlay.ets',
-    ReaderTransientToast: 'features/common/ReaderTransientToast.ets', ArkWebExecutionHost: 'app/ArkWebExecutionHost.ets' };
+  const components = { BookshelfMultiSelectPage: 'features/bookshelf/ui/BookshelfMultiSelectPage.ets', ReaderShell: 'features/reading/ui/ReaderShell.ets',
+    SyncPage: 'features/sync/ui/SyncPage.ets', ReaderJourneyRecoveryNotices: 'app/composition/ReaderJourneyRecoveryNotices.ets', ReaderLayoutDebugOverlay: 'app/composition/ReaderLayoutDebugOverlay.ets', ArkWebExecutionHost: 'ui/platform/ArkWebExecutionHost.ets' };
   const metrics = createDefaultReaderWindowMetrics();
-  const { owner } = createIndexProductBuilderProbe(testedSource,
-    ['syncUi','syncProduct','appThemeScheme','expandedLayout',proof.routeMethod,'syncContent','syncSurface',proof.coldContentMethod,
-     'syncPreparingFrameStyle','readerOwnsWindowEdges','mangaOwnsWindowEdges','appContentTopInset'],
-    { ...frameFixture.deps, ...Object.fromEntries(Object.keys(components).map(name => [name, OtherActor])),
-      ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop, isReaderProductSurfaceEnabled: () => true },
-    { ...frameFixture.hooks, childSources: { ...frameFixture.hooks.childSources,
-      ...Object.fromEntries(Object.entries(components).map(([name, file]) => [name, source(file)])) } });
-  Object.assign(owner, {route: 'sync',navigationGeneration: 7,detailShelfAdmissionMount: 3,syncPresentationIdentity: 'sync-window',
-    getSyncOrchestrator: () => ({}),readingSessionActive: false,jsonImportVisible: false,appThemeScheme: 'day',readerWindowMetricsRevision: -1,
-    syncProduct:{syncSnapshotReady: ready,syncSnapshot: {}},retainsShelfOpeningBackground:()=>false,indexRecoveryNoticeContent:()=>{}});
-  owner[proof.routeMethod]();
-  const actors = frameFixture.walk(owner);
-  const frames = actors.filter(actor => actor instanceof frameFixture.deps.ReaderPageScaffold);
+  const { owner } = createReaderBuilderProbe(indexSource, ['build', 'syncContent', 'syncSurface', 'syncPreparingContent', 'readerOwnsWindowEdges', 'mangaOwnsWindowEdges', 'appContentTopInset'],
+    { ...properties.sdk, ...Object.fromEntries(Object.keys(components).map(name => [name, OtherActor])),
+      ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop, isReaderProductSurfaceEnabled: () => true, deviceInfo: { deviceType: 'phone' } },
+    { ...properties.hooks, mountChildren: true, childSources: Object.fromEntries(Object.entries(components).map(([name, file]) => [name, source(file)])) });
+  Object.assign(owner, { route: 'sync', syncSnapshotReady: ready, syncSnapshot: {}, navigationGeneration: 7,
+    detailShelfAdmissionMount: 3, syncPresentationIdentity: 'sync-window', getSyncOrchestrator: () => ({}),
+    readingSessionActive: false, jsonImportVisible: false, appThemeScheme: 'day', readerWindowMetricsRevision: 0 });
+  owner.initialRender();
+  const descendants = actor => [actor, ...[...(actor.children?.values() ?? [])].flatMap(descendants)];
+  const actors = descendants(owner);
   if (ready) {
-    const sync = actors.find(actor => actor.params && Object.hasOwn(actor.params,'snapshot'));
-    if(sync)assert.deepEqual(sync.params.snapshot,owner.syncProduct.syncSnapshot,'real Prop keeps presentation values across the composition copy');
+    const sync = actors.find(actor => actor.params?.snapshot === owner.syncSnapshot);
     assert.ok(sync, 'actual ready branch still mounts the original SyncPage with its current snapshot');
-    assert.equal(frames.length, 0, 'cold frame cannot cover the ready branch');
+    assert.equal(actors.filter(actor => actor.variant === 'standard').length, 0, 'cold frame cannot cover the ready branch');
   } else {
-    assert.equal(frames.length,1,'actual cold branch owns one common frame');const frame=frames[0];
-    const label = frameFixture.nodes(owner).find(node => node.type === 'Text' && node.create === '正在读取安全配置…'); assert.ok(label);
+    const frame = actors.find(actor => actor.variant === 'standard'); assert.ok(frame, 'actual cold branch owns its own common frame');
+    const label = flatten(owner).find(node => node.type === 'Text' && node.create === '正在读取安全配置…'); assert.ok(label);
     const column = [...owner.nodes.values()].find(node => node.type === 'Column' && node.justifyContent === 'FlexAlign.Center');
     assert.deepEqual([column.width, column.height], ['100%', '100%']);
     assert.equal(column.backgroundColor, undefined); assert.equal(label.fontSize, undefined, 'original native AUTO survives the real cold slot');
     const root = [...frame.nodes.values()].find(node => node.type === 'Stack' && node.padding);
-    for (const scheme of ['day', 'night']) {
-      owner.appThemeScheme = scheme; frameFixture.properties.flush();
-      assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme),'parent-owned style updates the same real scaffold');
-    }
+    for (const scheme of ['day', 'night']) { frame.appThemeScheme = scheme; properties.flush(); assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme)); }
   }
 }
 

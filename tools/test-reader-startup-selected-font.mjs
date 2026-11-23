@@ -1,13 +1,12 @@
-import { productionEntryDiagnostics, entryStartupPublicationInputs } from './lib/reader-entry-diagnostics-probe.mjs';
 import assert from 'node:assert/strict';
 import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
 import { createDefaultReaderAppearanceSnapshot, setReaderAppearanceFont, setReaderAppearanceCustomFont,
-  ReaderCustomFontDescriptor } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import { readerAppearanceSnapshotFontFamily } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+  ReaderCustomFontDescriptor } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import { readerAppearanceSnapshotFontFamily } from '../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
 
 const path = new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url);
 const installMangaAtomicPayloadReader = createMangaAtomicPayloadInstallerFixture({});
@@ -131,9 +130,7 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
   let registrations = 0, settingsReads = 0, ability;
   const changed = new ReaderCustomFontDescriptor('New', 'ReaderCustom_bbbbbbbbbbbbbbbb',
     '/files/reader-fonts/' + 'b'.repeat(64) + '.ttf', 'b'.repeat(64));
-  const Ability = productionMotionMethods(path, ['onCreate', 'publishConfirmedBookshelfMode', 'prepareSelectedReadingFont', 'sameSelectedReadingFont'], {
-    ...entryStartupPublicationInputs(), ReaderEntryDiagnostics: productionEntryDiagnostics({hilog:{info(){},error(){}}}),
-    ReaderCrashEvidence:{install:()=>undefined},
+  const Ability = productionMotionMethods(path, ['onCreate', 'prepareSelectedReadingFont', 'sameSelectedReadingFont'], {
     DEBUG: false, BUILD_MODE_NAME: 'release', DOMAIN: 0,
     errorMessageOf, localReadFailureSummary,
     installMangaAtomicPayloadReader,
@@ -142,7 +139,7 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
     readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: {install: () => owner},
     ReaderSystemFileOpenHost: {install() {}, receive() {}}, AppStorage: {setOrCreate() {}},
-    WebDavCredentialStore: {instance: {attachContext() {}, currentBookshelfViewMode:()=>undefined,loadBookshelfViewMode: async () => 'cover'}},
+    WebDavCredentialStore: {instance: {attachContext() {}, loadBookshelfViewMode: async () => 'cover'}},
     prepareReaderShelfFonts: async () => {}, prepareReaderFontFamily: async () => {},
     ReaderThemeHost: {install: async () => {}, setRecoveryBarrier() {}},
     ConfigurationConstant: {ColorMode: {COLOR_MODE_DARK: 1}},

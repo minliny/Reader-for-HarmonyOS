@@ -1,0 +1,15 @@
+[
+  {
+    "bookSourceName": "Reader Phase 1 Search Return",
+    "bookSourceUrl": "https://status-research.reader-phase1.invalid/",
+    "bookSourceType": 0,
+    "enabled": false,
+    "enabledExplore": false,
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    }
+  }
+]

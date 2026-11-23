@@ -1,17 +1,18 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
+import { reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
 
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw e;
 } } });
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const source = readFileSync(file, 'utf8');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
+const source = readReaderExperienceFixture(file, 'utf8');
 const start = source.indexOf('class CoreReadingAnchor implements');
 const end = source.indexOf('\nclass ', start + 1);
 const CoreReadingAnchor = new Function(stripTypeScriptTypes(source.slice(start, end)) + ';return CoreReadingAnchor;')();

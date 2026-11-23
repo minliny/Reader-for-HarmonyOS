@@ -95,22 +95,22 @@ const { projectCommitReadback } = factsModule;
 // the write.
 const errorMessageSource = read('entry/src/main/ets/app/ErrorMessage.ts')
   .replace(/^export /gm, '');
-const transportPolicySource = read('entry/src/main/ets/app/HttpTransportPolicy.ts')
+const transportPolicySource = read('entry/src/main/ets/platform/network/HttpTransportPolicy.ts')
   .replace(/^export /gm, '');
-const sourceCategorySource = read('entry/src/main/ets/features/source/ReaderSourceCategory.ts')
+const sourceCategorySource = read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts')
   .replace(/^export /gm, '');
 const operationFactsSource = read('entry/src/main/ets/app/ReaderOperationFacts.ts')
   .replace(/^export /gm, '');
 const persistedReceiptProjectionSource = read('entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/ReaderOperationFacts['"];\n/m, '')
   .replace(/^export /gm, '');
-const gatewaySource = read('entry/src/main/ets/features/source/SourceGateway.ts')
+const gatewaySource = read('entry/src/main/ets/features/source/application/SourceGateway.ts')
   .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];\n/m, '')
   .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage['"];\n/m, '')
   .replace(/^import \{ httpUrlHostname, isPrivateNetworkTarget \} from ['"][^'"]*HttpTransportPolicy['"];\n/m, '')
   .replace(/^import \{ classifyReaderSource, type ReaderSourceCategory \} from ['"]\.\/ReaderSourceCategory['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
-const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsOrchestrator.ets')
+const orchestratorSource = read('entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ projectCommitReadback \} from ['"][^'"]*ReaderOperationFacts['"];\n/m, '')
@@ -294,7 +294,7 @@ async function openEditorFor(orchestrator, snapshots) {
 // BookshelfFlowGateway is loaded with its Core/import collaborators injected,
 // so the real commit/read-back split is exercised without dragging the whole
 // ReaderCoreGateway into Node.
-const flowSource = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts')
+const flowSource = read('entry/src/main/ets/features/bookshelf/application/BookshelfFlowGateway.ts')
   .replace(/^import \{[\s\S]*?\} from ['"][^'"]*ReaderCoreGateway['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"][^'"]*ReaderOperationFacts['"];\n/m, '')

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 
 import { ReaderHttpTtsGateway } from
-  '../entry/src/main/ets/features/reading/ReaderHttpTtsGateway.ts';
+  '../entry/src/main/ets/features/reading/application/ReaderHttpTtsGateway.ts';
 import {
   isReaderTtsCredentialAliasForConfig,
   readerOnlineTtsEditedProfile,
   readerOnlineTtsProfile,
-} from '../entry/src/main/ets/features/reading/ReaderOnlineTtsProfile.ts';
+} from '../entry/src/main/ets/features/reading/application/ReaderOnlineTtsProfile.ts';
 
 const config = {
   id: 42,

@@ -13,6 +13,10 @@ const {readerTypographyRoles} = await import('./lib/reader-typography-probe.mjs'
 const {default: assert} = await import('node:assert/strict');
 const baseline=JSON.parse(readFileSync(new URL('./fixtures/design/foundation-pill-baseline.json',import.meta.url),'utf8'));
 assert.equal(baseline.schemaVersion,1);
+const liveSourcePaths = new Map([
+ ['entry/src/main/ets/features/search/SearchPage.ets', 'entry/src/main/ets/features/search/ui/SearchPage.ets'],
+]);
+const readLiveSource = file => readFileSync(new URL('../'+(liveSourcePaths.get(file)??file),import.meta.url),'utf8');
 const style=['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','textAlign','maxLines','width','height','layoutWeight','padding','border','borderRadius','opacity','responseRegion'];
 const tuple=node=>Object.fromEntries(style.filter(k=>Object.hasOwn(node,k)).map(k=>[k,node[k]]));
 const cases=[['search/SearchPage.ets','primaryPill',['操作','@callback']],['search/SearchPage.ets','secondaryPill',['操作','@callback']],
@@ -20,7 +24,7 @@ const cases=[['search/SearchPage.ets','primaryPill',['操作','@callback']],['se
  ['rss/RssPage.ets','stateButtons',['重试','@callback']],['rss/RssEntryDetailPage.ets','sourceCard',[]]];
 let groups=0;
 for(const [tail,method,args]of cases)for(const scheme of ['day','night'])for(const enabled of [false,true])for(const busy of [false,true]){
- const f=baseline.files.find(f=>f.path.endsWith(tail)),beforeSource='@Component struct OldActualPill {\n'+f.methods.join('\n')+'\nbuild(){Column(){}}\n}',afterSource=readFileSync(new URL('../'+f.path,import.meta.url),'utf8');
+ const f=baseline.files.find(f=>f.path.endsWith(tail)),beforeSource='@Component struct OldActualPill {\n'+f.methods.join('\n')+'\nbuild(){Column(){}}\n}',afterSource=readLiveSource(f.path);
  const shared=foundationControls(),before=createReaderBuilderProbe(beforeSource,f.names,readerFoundationTokens).owner,after=createReaderBuilderProbe(afterSource,f.names,shared.dependencies,shared.hooks).owner;
  const states={appThemeScheme:scheme,presentation:{loading:busy},activeMode:enabled?'all':'sources',subscription:{title:'订阅'},item:{author:'作者',pubDate:'日期'}};
  Object.assign(before,structuredClone(states));Object.assign(after,structuredClone(states));let oldCalls=0,newCalls=0;
@@ -40,7 +44,7 @@ for(const [tail,method,args]of cases)for(const scheme of ['day','night'])for(con
 }
 // Same family has one real producer; changing a bounded spec modifies only it.
 {
- const a=baseline.files.find(f=>f.path.endsWith('SearchPage.ets')),source=readFileSync(new URL('../'+a.path,import.meta.url),'utf8');
+ const a=baseline.files.find(f=>f.path.endsWith('SearchPage.ets')),source=readLiveSource(a.path);
  for(const role of ['TYPE_APP_PRIMARY_ACTION','TYPE_APP_SECONDARY_ACTION'])assert.ok(readerTypographyRoles[role]);
  const controls=foundationControls(),parent=createReaderBuilderProbe(source,a.names,controls.dependencies,controls.hooks).owner;
  Object.assign(parent,{appThemeScheme:'day'});parent.primaryPill('主',()=>{});parent.secondaryPill('次',()=>{});assert.equal([...parent.children.values()].every(c=>c instanceof controls.button.Component),true);

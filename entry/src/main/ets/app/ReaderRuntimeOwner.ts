@@ -1,24 +1,20 @@
-import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';
-import { ReaderLibraryRestoreJournal, type ReaderLibraryRestoreIdentity, type ReaderLibraryRestoreCoreFact } from './ReaderLibraryRestoreJournal';
-import { ReaderThemeHost } from './ReaderThemeHost';
-import { ReaderSettingsGateway } from '../features/reading/ReaderSettingsGateway';
-import { ReaderTtsPreferencesGateway } from '../features/reading/ReaderTtsPreferencesGateway';
-import { SettingsGateway } from '../features/settings/SettingsGateway';
 import { supplyBundledSources } from './IncrementalBundledSourceSupply';
-import { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
+import { BookAcquisitionCoordinator } from '../features/reading/application/BookAcquisitionCoordinator';
 import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
+import { buildReaderPublicFixtureDirectory, readerHostCacheDirectory, readerHostFilesDirectory,
+  type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
+import { readerPublicSearchHttpFixtureMode } from './diagnostics/ReaderPublicSearchHttpFixture';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from './BookRequestScheduler';
 export { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from './BookRequestScheduler';
 import common from '@ohos.app.ability.common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   createReaderCoreRuntimeAsync,
-  ReaderCoreRequestError,
   probeReaderCoreStorageAsync,
-  type ReaderCoreStorageProbe,
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
+  type ReaderCoreStorageProbe,
   type RequestOptions,
 } from '@reader/core-harmony';
 import {
@@ -29,25 +25,25 @@ import {
   type PendingLocalImportFinalize,
   ReaderHostRegistry,
 } from './ReaderHostRegistry';
-import { errorMessageOf, httpResponseFailureSummary, coreAdmissionFailureSummary, localReadFailureSummary } from './ErrorMessage';
-import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
-import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
-import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
-import { HarmonyTtsMediaSession } from './HarmonyTtsMediaSession';
-import { HarmonyTtsBackgroundSession } from './HarmonyTtsBackgroundSession';
-import { LocalEpubResourceHost } from './LocalEpubResourceHost';
-import { ReadingBodyImageHost, type ReadingBodyImagePayload, type MangaImageMetadataProof } from './ReadingBodyImageHost';
-import { MangaImageDecodeHost } from './MangaImageDecodeHost';
-import { MangaImageMetadataHost } from './MangaImageMetadataHost';
+import { errorMessageOf, httpResponseFailureSummary, coreAdmissionFailureSummary } from './ErrorMessage';
+import { HarmonySystemTtsHost } from '../platform/tts/HarmonySystemTtsHost';
+import { HarmonyHttpTtsHost } from '../platform/tts/HarmonyHttpTtsHost';
+import { HarmonyTtsHostRouter } from '../platform/tts/HarmonyTtsHostRouter';
+import { HarmonyTtsMediaSession } from '../platform/tts/HarmonyTtsMediaSession';
+import { HarmonyTtsBackgroundSession } from '../platform/tts/HarmonyTtsBackgroundSession';
+import { LocalEpubResourceHost } from '../platform/reading-resources/LocalEpubResourceHost';
+import { ReadingBodyImageHost, type ReadingBodyImagePayload, type MangaImageMetadataProof } from '../platform/reading-resources/ReadingBodyImageHost';
+import { MangaImageDecodeHost } from '../platform/reading-resources/MangaImageDecodeHost';
+import { MangaImageMetadataHost } from '../platform/reading-resources/MangaImageMetadataHost';
 import {
   ReadingImageDiskCache,
   type ReadingImageCacheIdentity,
   type ReadingImageChapterIdentity,
-} from './ReadingImageDiskCache';
+} from '../platform/reading-resources/ReadingImageDiskCache';
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
-import { ArkWebExecutor } from './ArkWebExecutor';
+import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
 import { sourceLoginPageUrl } from './SourceLoginPageProjection';
-import type { SourceHttpDiagnosticRecord } from './HttpExecuteHost';
+import type { SourceHttpDiagnosticRecord } from '../platform/network/HttpExecuteHost';
 import {
   BundledSourceLedger,
   canonicalRulePayloadJson,
@@ -58,25 +54,26 @@ import {
   sha256Hex,
 } from './BundledBookSourceSupply';
 import { image } from '@kit.ImageKit';
-import { ReaderAppearanceStore } from '../features/reading/ReaderAppearanceStore';
+import { ReaderAppearanceStore } from '../features/reading/application/ReaderAppearanceStore';
 import { ReaderAppearancePreferences } from './ReaderAppearancePreferences';
-import { ReadingEntryPreparation } from '../features/reading/ReadingEntryPreparation';
-import { releaseReadingEntryMemory } from '../features/reading/ReadingEntryHandoff';
+import { ReadingEntryPreparation } from '../features/reading/application/ReadingEntryPreparation';
+import { releaseReadingEntryMemory } from '../features/reading/application/ReadingEntryHandoff';
 import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
 import { ReaderStartupTrace } from './ReaderStartupTrace';
 import { MangaOfflineNetworkProbe, type MangaOfflineProbeScope, type MangaProbeSelectionMode } from './MangaOfflineNetworkProbe';
-import { MangaChapterPreparationCoordinator } from '../features/manga/MangaChapterPreparationCoordinator';
-import type { MangaStorageChapter, MangaStorageGrant } from './ReadingImageDiskCache';
-import type { MangaDisplaySessionScope } from '../features/reading/ReadingGatewayRuntime';
-import { SharedDownloadCoordinator } from '../features/downloads/SharedDownloadCoordinator';
+import { MangaChapterPreparationCoordinator } from '../features/manga/application/MangaChapterPreparationCoordinator';
+import type { MangaStorageChapter, MangaStorageGrant } from '../platform/reading-resources/ReadingImageDiskCache';
+import type { MangaDisplaySessionScope } from '../features/reading/application/ReadingGatewayRuntime';
+import { SharedDownloadCoordinator } from '../features/downloads/application/SharedDownloadCoordinator';
 import type { ReaderWriteEvidence } from './ReaderWriteEvidence';
-import { SharedDownloadStorageGateway, type SettingsTextCleanupJournal, type SharedDownloadCleanupResult } from '../features/downloads/SharedDownloadStorageGateway';
-import type { ReadingTextStorageChapter } from './ReadingImageDiskCache';
-import type { DownloadStorageSummary } from '../features/downloads/SharedDownloadProjection';
-import { ReadingRecordGateway } from '../features/reading/ReadingRecordGateway';
-import { ReadingProgressJournal } from '../features/reading/ReadingProgressJournal';
-import { ReadingProgressIntentFile } from '../features/reading/ReadingProgressIntentFile';
-import { recoverReadingProgress } from '../features/reading/ReadingSessionFlowGateway';
+import { SharedDownloadStorageGateway, type SettingsTextCleanupJournal, type SharedDownloadCleanupResult,
+  type SharedDownloadStoragePolicyResult } from '../features/downloads/application/SharedDownloadStorageGateway';
+import type { ReadingTextStorageChapter } from '../platform/reading-resources/ReadingImageDiskCache';
+import type { DownloadStorageSummary } from '../features/downloads/presentation/SharedDownloadProjection';
+import { ReadingRecordGateway } from '../features/reading/application/ReadingRecordGateway';
+import { ReadingProgressJournal } from '../features/reading/application/ReadingProgressJournal';
+import { ReadingProgressIntentFile } from '../features/reading/application/ReadingProgressIntentFile';
+import { recoverReadingProgress } from '../features/reading/application/ReadingSessionFlowGateway';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -99,7 +96,7 @@ const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
 const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
-const BUNDLED_RAW_FILE_SHA256 = '72bbd10c370041f467579e6baa08635c2a86f7fa0b819536104bd07d7ad6c459';
+const BUNDLED_RAW_FILE_SHA256 = '405661f1a7308c95e922eddea876ec10888563fde36d7e814064f585bb2142b9';
 // END bundled-source-integrity
 
 type CoreBuildIdentity = {
@@ -110,7 +107,36 @@ type CoreBuildIdentity = {
   cargoLockSha256: string;
   protocolSha256: string;
   rustProfile: string;
+  storageCompatibility?: CoreStorageCompatibility;
+  sqliteUserVersion?: number;
 };
+
+type CoreStorageCompatibility = {
+  sqliteMaxUserVersion: number;
+  sqliteStorageSourceSha256: string;
+};
+
+/** Legacy recovery facts that older Core builds could return in core.info. */
+type LegacyCoreStorageCapabilities = {
+  logicalExport: boolean;
+  logicalRestore: boolean;
+  legacyHostImport: boolean;
+  physicalBackup: boolean;
+  physicalRestore: boolean;
+  webdavConfigRestore: boolean;
+  activeLibrarySync: false;
+  logicalExportRequiresDataPreflight: true;
+  logicalRestoreRequiresCompleteCoverage: boolean;
+  resourceEvidenceOnly: true;
+  externalFilesIncluded: false;
+};
+
+type LegacyCoreStorageFormat = {
+  format: 'legacy' | 'library47';
+  portableSnapshotSupported: boolean;
+  capabilities?: LegacyCoreStorageCapabilities;
+};
+export type ReaderLegacySnapshotRecovery = 'none' | 'unsupportedStorageFormat' | 'storageCapabilityUnavailable' | 'automaticImportDeferred';
 
 type BundledSourceInstallSummary = {
   collectionRecords: number;
@@ -120,24 +146,6 @@ type BundledSourceInstallSummary = {
   failed: number;
   interrupted: boolean;
 };
-
-export type ReaderSourceSwitchRecoveryState = 'idle' | 'recovering' | 'resolved' | 'pending';
-
-/** Observable convergence of interrupted source switches. `pending` means the
- * blanket rollback did not finish; the durable shelf still opens and every
- * original book/progress row remains untouched. */
-export interface ReaderSourceSwitchRecoveryStatus {
-  state: ReaderSourceSwitchRecoveryState;
-  busy: boolean;
-  canRetry: boolean;
-  generation: number;
-  recovered: number;
-  message: string;
-}
-
-const SOURCE_SWITCH_RECOVERY_GRACE_MS = 5000;
-const SOURCE_SWITCH_RECOVERY_PENDING_MESSAGE =
-  '上次换源尚未完成恢复，书架、书籍信息和阅读进度均已保留。可重试恢复，或打开相关书籍核对换源结果。';
 
 /**
  * Owns the one and only native Core runtime for the full application process.
@@ -156,6 +164,8 @@ export class ReaderRuntimeOwner {
   private mangaReadingProbeImageScope: MangaOfflineProbeScope | undefined;
   private mangaReadingProbeForeignImages: number = 0;
   private runtime: ReaderCoreRuntime | undefined = undefined;
+  private searchPageEvidenceCount: number = 0;
+  private switchPageEvidenceCount: number = 0;
   private appearanceStore: ReaderAppearanceStore | undefined = undefined;
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
@@ -179,36 +189,13 @@ export class ReaderRuntimeOwner {
   private state: RuntimeState = 'new';
   private reservationQuarantineDiagnosticLogged: boolean = false;
   private coreCapabilities: Set<string> = new Set<string>();
+  private legacySnapshotRecovery: ReaderLegacySnapshotRecovery = 'none';
   private downloadCoordinator: SharedDownloadCoordinator | undefined;
   private downloadStorageGateway: SharedDownloadStorageGateway | undefined;
   private downloadReadingProtection: { sourceId: string; bookId: string; chapterIndex?: number; } | undefined;
   private downloadProtectionRevision: number = 0;
   private readingRecordGateway: ReadingRecordGateway | undefined;
   private readingProgressJournal: ReadingProgressJournal | undefined;
-  /** Startup rollback of interrupted source switches is convergence, never a
-   * prerequisite for publishing the durable shelf. */
-  private sourceSwitchRecoveryStatus: ReaderSourceSwitchRecoveryStatus = {
-    state: 'idle', busy: false, canRetry: false, generation: 0, recovered: 0, message: '' };
-  private sourceSwitchRecoveryTask: Promise<void> | undefined = undefined;
-  private readonly sourceSwitchRecoveryListeners: Set<(status: ReaderSourceSwitchRecoveryStatus) => void> =
-    new Set<(status: ReaderSourceSwitchRecoveryStatus) => void>();
-
-  sourceSwitchRecovery(): ReaderSourceSwitchRecoveryStatus { return this.sourceSwitchRecoveryStatus; }
-
-  subscribeSourceSwitchRecovery(listener: (status: ReaderSourceSwitchRecoveryStatus) => void): () => void {
-    this.sourceSwitchRecoveryListeners.add(listener);
-    return (): void => { this.sourceSwitchRecoveryListeners.delete(listener); };
-  }
-
-  /** Explicit user retry only: an automatic loop would repeatedly roll back a
-   * switch the reader may be resuming and cannot prove why it failed. */
-  async retrySourceSwitchRecovery(): Promise<void> {
-    const runtime = this.runtime;
-    if (runtime === undefined || this.state !== 'ready' || this.sourceSwitchRecoveryTask !== undefined ||
-      this.sourceSwitchRecoveryStatus.state !== 'pending') return;
-    this.publishSourceSwitchRecovery('recovering', true, false, this.sourceSwitchRecoveryStatus.recovered, '');
-    await this.trackSourceSwitchRecovery(runtime);
-  }
 
   /** One application-owned duration outbox, independent of reading routes. */
   getReadingRecordGateway(): ReadingRecordGateway {
@@ -218,7 +205,8 @@ export class ReaderRuntimeOwner {
 
   getReadingProgressJournal(): ReadingProgressJournal {
     if (this.readingProgressJournal === undefined) this.readingProgressJournal = new ReadingProgressJournal(
-      new ReadingProgressIntentFile(this.getUIAbilityContext().filesDir, (): boolean => ReaderRuntimeOwner.isCurrent(this)));
+      new ReadingProgressIntentFile(readerHostFilesDirectory(this.getUIAbilityContext().filesDir),
+        (): boolean => ReaderRuntimeOwner.isCurrent(this)));
     return this.readingProgressJournal;
   }
 
@@ -234,18 +222,9 @@ export class ReaderRuntimeOwner {
   }
 
   supportsCoreCapability(capability: string): boolean { return this.coreCapabilities.has(capability); }
-  private libraryRestoreHandoff: (() => Promise<void>) | undefined;
-  private libraryRestoreCapturedHandoff: (() => Promise<void>) | undefined;
-  private libraryRestoreHandoffInFlight: boolean = false;
-  private libraryRestoreTask: Promise<JsonObject> | undefined;
-  private libraryRestoreSettled: boolean = false;
-  private libraryRestoreCloseSucceeded: boolean = false;
-  private libraryRestoreApplyDispatched: boolean = false;
-  private libraryRestoreStartupFact: ReaderLibraryRestoreCoreFact | undefined;
-  private libraryRestoreSealed: boolean = false;
-  private hostIoQuiescence: Promise<void> | undefined;
-  private downloadCloseTask: Promise<void> | undefined;
-  private platformStorageInitialized: boolean = false;
+
+  /** Deferred migration is not a failed current SQLite store or a completed import. */
+  legacySnapshotMigrationRecovery(): ReaderLegacySnapshotRecovery { return this.legacySnapshotRecovery; }
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
   private entryPreparations: ReadingEntryPreparation | undefined = undefined;
   private preparationNetwork: ReaderPreparationNetworkHost | undefined;
@@ -259,12 +238,16 @@ export class ReaderRuntimeOwner {
   private readonly predecessorClose: Promise<void>;
   /** Fixed at process-owner construction; never a persisted user setting. */
   private readonly optionalEntryMemoryEnabled: boolean;
+  private readonly publicFixture: ReaderPublicFixtureScope | undefined;
+  private publicSearchHttpReady: boolean = false;
 
   private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve(),
     disableOptionalEntryMemory: boolean = false, mangaOfflineScope?: MangaOfflineProbeScope,
-    mangaReadingScope?: MangaOfflineProbeScope, mangaSelectionMode?: MangaProbeSelectionMode) {
+    mangaReadingScope?: MangaOfflineProbeScope, mangaSelectionMode?: MangaProbeSelectionMode,
+    publicFixture?: ReaderPublicFixtureScope) {
     this.predecessorClose = predecessorClose;
     this.optionalEntryMemoryEnabled = !disableOptionalEntryMemory;
+    this.publicFixture = publicFixture;
     let probe: MangaOfflineNetworkProbe | undefined = undefined;
     const conflictingScope = mangaOfflineScope !== undefined && mangaReadingScope !== undefined;
     const conflictingSelection = mangaSelectionMode !== undefined && (mangaOfflineScope !== undefined || mangaReadingScope !== undefined);
@@ -282,7 +265,8 @@ export class ReaderRuntimeOwner {
       }
     }
     this.mangaOfflineProbe = probe;
-    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe);
+    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe, publicFixture,
+      (): boolean => publicFixture !== undefined && this.publicSearchHttpReady && this.isCurrentPublicFixture(publicFixture));
     this.ttsHost = new HarmonyTtsHostRouter(
       new HarmonySystemTtsHost(),
       new HarmonyHttpTtsHost(this),
@@ -292,310 +276,9 @@ export class ReaderRuntimeOwner {
     );
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
-
-  }
-
-  registerLibraryRestoreHandoff(handler: () => Promise<void>): () => void {
-    if (!ReaderRuntimeOwner.isCurrent(this) || this.state !== 'ready' || this.closeTask !== undefined)
-      throw new Error('LIBRARY_RESTORE_HANDOFF_RETIRED');
-    this.libraryRestoreHandoff = handler;
-    return (): void => { if (this.libraryRestoreHandoff === handler) this.libraryRestoreHandoff = undefined; };
-  }
-
-  private canCommitOriginalLibrarySync(immutableLog: boolean = true): boolean {
-    return this.canConfigureBackupStorage() && this.abilityLeases === 1 && this.libraryRestoreHandoff !== undefined &&
-      this.supportsCoreCapability('library.metadataRestore.status.v1') &&
-      this.supportsCoreCapability(immutableLog ? 'library.sync.log.v2' : 'library.sync.v1');
-  }
-
-  canRecoverLibraryRestoreFailure(): boolean {
-    return this.libraryRestoreSettled && this.libraryRestoreCloseSucceeded && this.state === 'closed' &&
-      ReaderRuntimeOwner.instance === undefined && !this.libraryRestoreHandoffInFlight &&
-      this.libraryRestoreCapturedHandoff !== undefined && this.libraryRestoreHandoff === this.libraryRestoreCapturedHandoff;
-  }
-
-  async recoverAfterLibraryRestoreFailure(): Promise<void> {
-    const handoff = this.libraryRestoreCapturedHandoff;
-    if (!this.canRecoverLibraryRestoreFailure() || handoff === undefined) throw new Error('LIBRARY_RESTORE_HANDOFF_UNAVAILABLE');
-    await this.performLibraryRestoreHandoff(handoff);
-  }
-
-  private async performLibraryRestoreHandoff(handoff: () => Promise<void>): Promise<void> {
-    if (this.libraryRestoreHandoffInFlight || this.libraryRestoreHandoff !== handoff)
-      throw new Error('LIBRARY_RESTORE_HANDOFF_RETIRED');
-    this.libraryRestoreHandoffInFlight = true;
-    try {
-      await handoff();
-      if (this.libraryRestoreHandoff === handoff) this.libraryRestoreHandoff = undefined;
-    } finally { this.libraryRestoreHandoffInFlight = false; }
-  }
-
-  pendingLibraryRestoreStartupFact(): ReaderLibraryRestoreCoreFact | undefined {
-    if (!ReaderRuntimeOwner.isCurrent(this) || this.state !== 'ready') return undefined;
-    return this.libraryRestoreStartupFact;
-  }
-
-  acknowledgeLibraryRestoreStartupFact(identity: ReaderLibraryRestoreIdentity): void {
-    const fact = this.pendingLibraryRestoreStartupFact();
-    if (fact?.operationId === identity.operationId && fact.packageSha256 === identity.packageSha256)
-      this.libraryRestoreStartupFact = undefined;
-  }
-
-  applyLibrarySyncCommit(operationId: string, planToken: string, remoteRevision: string, publishSha256: string): Promise<JsonObject> {
-    if (this.libraryRestoreTask !== undefined) return Promise.reject(new Error('LIBRARY_RESTORE_BUSY'));
-    const operation = this.applyLibrarySyncCommitOwned(operationId, planToken, remoteRevision, publishSha256);
-    this.libraryRestoreTask = operation;
-    void operation.finally((): void => {
-      this.libraryRestoreSettled = true;
-      if (this.libraryRestoreTask === operation && this.state === 'ready' && this.closeTask === undefined)
-        this.libraryRestoreTask = undefined;
-    }).catch((): void => {});
-    return operation;
-  }
-
-  /** The immutable log owner supplies a typed complete-readback proof. It
-   * shares the exact same Runtime/restore retirement transaction as CAS. */
-  applyLibraryLogSyncCommit(operationId: string, planToken: string, readbackProof: JsonObject, publishSha256: string): Promise<JsonObject> {
-    if (this.libraryRestoreTask !== undefined) return Promise.reject(new Error('LIBRARY_RESTORE_BUSY'));
-    const operation = this.applyLibrarySyncCommitOwned(operationId, planToken, '', publishSha256, readbackProof);
-    this.libraryRestoreTask = operation;
-    void operation.finally((): void => {
-      this.libraryRestoreSettled = true;
-      if (this.libraryRestoreTask === operation && this.state === 'ready' && this.closeTask === undefined)
-        this.libraryRestoreTask = undefined;
-    }).catch((): void => {});
-    return operation;
-  }
-
-  private async applyLibrarySyncCommitOwned(operationId: string, planToken: string,
-    remoteRevision: string, publishSha256: string, readbackProof?: JsonObject): Promise<JsonObject> {
-    const protocolVersion = readbackProof === undefined ? 1 : 2;
-    const runtime = this.runtime;
-    const admitted = (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state === 'ready' && this.closeTask === undefined;
-    if (runtime === undefined || !admitted() || !this.canCommitOriginalLibrarySync(readbackProof !== undefined) ||
-      !this.supportsCoreCapability(readbackProof === undefined ? 'library.sync.v1' : 'library.sync.log.v2')) throw new Error('LIBRARY_SYNC_HANDOFF_UNAVAILABLE');
-    if (!/^library-sync-[0-9a-f]{32}$/.test(operationId) || typeof planToken !== 'string' || planToken.length < 1 || planToken.length > 256 ||
-      !/^[0-9a-f]{64}$/.test(publishSha256)) throw new Error('LIBRARY_SYNC_COMMIT_IDENTITY_INVALID');
-    if (readbackProof === undefined) {
-      if (typeof remoteRevision !== 'string' || remoteRevision.length > 1024 || !/^"[\x21\x23-\x7e\x80-\xff]*"$/.test(remoteRevision))
-        throw new Error('LIBRARY_SYNC_COMMIT_IDENTITY_INVALID');
-    } else {
-      const objectId = readbackProof['objectId'], bytes = readbackProof['bytes'];
-      const match = typeof objectId === 'string' ? /^reader-sync-log-v2-[0-9a-f]{64}-([0-9a-f]{32})-([0-9a-f]{64})\.reader$/.exec(objectId) : null;
-      if (readbackProof['kind'] !== 'immutableReadbackV2' || readbackProof['sha256'] !== publishSha256 || match === null ||
-        `library-sync-${match[1]}` !== operationId || match[2] !== publishSha256 || typeof bytes !== 'number' ||
-        !Number.isSafeInteger(bytes) || bytes < 1 || bytes > 24 * 1024 * 1024)
-        throw new Error('LIBRARY_LOG_COMMIT_IDENTITY_INVALID');
-    }
-    const identity: ReaderLibraryRestoreIdentity = { operationId, packageSha256: publishSha256 };
-    await ReaderThemeHost.prepareUserChange();
-    // The receipt is queried before any second commit can be dispatched. A
-    // matching current library is not used as this original operation's ACK.
-    const observed = this.decodeLibraryRestoreCoreFact((await runtime.request('library.package.restore.status', {
-      operationId: identity.operationId, packageSha256: identity.packageSha256 },
-      { timeoutMs: 5000 })).data, identity);
-    if (!admitted() || !this.canCommitOriginalLibrarySync(readbackProof !== undefined)) throw new Error('LIBRARY_SYNC_HANDOFF_UNAVAILABLE');
-    const handoff = this.libraryRestoreHandoff;
-    this.libraryRestoreCapturedHandoff = handoff;
-    const owns = (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state !== 'closed';
-    const journal = new ReaderLibraryRestoreJournal(this.host.getContext().filesDir, owns);
-    let resolveClosed: (() => void) | undefined, rejectClosed: ((error: Error) => void) | undefined;
-    this.closeTask = new Promise<void>((resolve, reject): void => { resolveClosed = resolve; rejectClosed = reject; });
-    void this.closeTask.catch((): void => {});
-    let result: JsonObject | undefined, operationFailure: Error | undefined;
-    try {
-      await journal.prepare(identity);
-      await this.retireRuntimeDomains(true);
-      await ReaderThemeHost.sealForLibraryRestore(this);
-      await this.requireLibraryRestoreHostSettings();
-      const drains = await Promise.allSettled([this.sourceSupplyTask, this.importFinalizeTask, this.mangaImageTail,
-        MangaChapterPreparationCoordinator.forRuntime(this).close(), this.downloadCloseTask,
-        this.downloadStorageGateway?.waitForActiveMutation(), this.flushTail, this.ttsHost.close()]);
-      for (const drain of drains) if (drain.status === 'rejected') throw drain.reason;
-      this.readingImageDiskCache.close();
-      await this.quiesceHostFilesForLibraryRestore();
-      if (!owns() || this.runtime !== runtime) throw new Error('LIBRARY_SYNC_RUNTIME_RETIRED');
-      await journal.markMayApply(identity);
-      this.libraryRestoreApplyDispatched = true;
-      if (observed.status === 'missing') {
-        try {
-          const response = await runtime.request(readbackProof === undefined ? 'library.sync.commit' : 'library.sync.log.commit',
-            readbackProof === undefined ? { operationId, planToken, remoteRevision, publishSha256 } :
-              { operationId, planToken, publishSha256, readbackProof }, { timeoutMs: 60000 });
-          const data = response.data;
-          if (data['protocolVersion'] !== protocolVersion || data['operationId'] !== operationId ||
-            !['committed', 'needsRebase'].includes(data['status'] as string)) throw new Error('LIBRARY_SYNC_COMMIT_REPLY_INVALID');
-          result = data;
-        } catch (_) { /* Exact durable receipt lookup below; never repeat commit. */ }
-      }
-      const fact = this.decodeLibraryRestoreCoreFact((await runtime.request('library.package.restore.status', {
-        operationId: identity.operationId, packageSha256: identity.packageSha256 },
-        { timeoutMs: 5000 })).data, identity);
-      if (fact.status !== 'missing') {
-        await journal.markCoreCommitted(fact);
-        result = { ...(result ?? {}), protocolVersion, operationId, status: 'committed' };
-      } else if (result?.['status'] === 'needsRebase') {
-        const cleared = await journal.reconcile(async (original): Promise<ReaderLibraryRestoreCoreFact> =>
-          this.decodeLibraryRestoreCoreFact((await runtime.request('library.package.restore.status', {
-            operationId: original.operationId, packageSha256: original.packageSha256 },
-            { timeoutMs: 5000 })).data, original));
-        if (cleared?.status !== 'missing') throw new Error('LIBRARY_SYNC_COMMIT_FACT_CHANGED');
-      } else {
-        result = { protocolVersion, operationId, status: 'pending', commitUnconfirmed: true };
-      }
-    } catch (error) { operationFailure = error as Error; }
-    finally {
-      try {
-        if (this.state !== 'closing' && this.state !== 'closed') await this.retireRuntimeDomains();
-        await this.closeRuntime(); this.libraryRestoreCloseSucceeded = true; resolveClosed?.();
-      } catch (error) { rejectClosed?.(error as Error); operationFailure = operationFailure ?? error as Error; }
-    }
-    // Success, deterministic rebase and unknown ACK all retire the old writer.
-    // The successor resolves the shared restore journal before enabling IO.
-    let restartRequired = true;
-    if (this.libraryRestoreCloseSucceeded && handoff !== undefined && this.libraryRestoreHandoff === handoff) {
-      try { await this.performLibraryRestoreHandoff(handoff); restartRequired = false; }
-      catch (_) { /* Same-handler recovery remains available on this closed owner. */ }
-    }
-    if (operationFailure !== undefined)
-      return { protocolVersion, operationId, status: 'pending', commitUnconfirmed: true, restartRequired };
-    return { ...(result ?? { protocolVersion, operationId, status: 'pending', commitUnconfirmed: true }), restartRequired };
-  }
-
-  private decodeLibraryRestoreCoreFact(data: JsonObject, identity: ReaderLibraryRestoreIdentity): ReaderLibraryRestoreCoreFact {
-    const operationId = data['operationId'], packageSha256 = data['packageSha256'], status = data['status'];
-    if (Object.keys(data).length !== 3 || operationId !== identity.operationId || packageSha256 !== identity.packageSha256 ||
-      (status !== 'missing' && status !== 'committedCurrent' && status !== 'committedHistorical'))
-      throw new Error('LIBRARY_RESTORE_CORE_FACT_INVALID');
-    return { operationId: identity.operationId, packageSha256: identity.packageSha256, status };
-  }
-
-  canConfigureBackupStorage(): boolean {
-    return ReaderRuntimeOwner.isCurrent(this) && this.state === 'ready' && this.closeTask === undefined && !this.libraryRestoreSealed;
-  }
-
-  private async requireLibraryRestoreHostSettings(): Promise<void> {
-    const appearance = this.getAppearanceStore();
-    await appearance.load();
-    await Promise.all([appearance.flush(), WebDavCredentialStore.instance.awaitDurableBookshelfWrites((): boolean => ReaderRuntimeOwner.isCurrent(this)),
-      new ReaderSettingsGateway(this).awaitDurableWrites(),
-      new ReaderTtsPreferencesGateway(this).awaitDurableWrites(),
-      new SettingsGateway(this.getUIAbilityContext()).awaitDurableWrites((): boolean => ReaderRuntimeOwner.isCurrent(this))]);
-  }
-
-  private initializePlatformStorage(): void {
-    if (this.platformStorageInitialized) return;
-    ReadingBodyImageHost.setDisplayCacheDir(this.host.getContext().cacheDir);
+    ReadingBodyImageHost.setDisplayCacheDir(readerHostCacheDirectory(context.cacheDir));
     this.bindMangaStorage();
     if (this.mangaOfflineProbe?.mode === 'reading') this.bindMangaReadingProbe();
-    this.platformStorageInitialized = true;
-  }
-
-  private async negotiateCoreCapabilities(runtime: ReaderCoreRuntime, coreInfo: JsonObject): Promise<void> {
-    this.coreCapabilities.clear();
-    const advertised = coreInfo['capabilities'];
-    if (Array.isArray(advertised)) for (const capability of advertised) {
-      if (typeof capability === 'string' && capability !== 'library.sync.v1' && capability !== 'library.sync.log.v2') this.coreCapabilities.add(capability);
-    }
-    const current = (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state === 'starting';
-    if (!current()) throw new Error('Reader Core runtime was closed during capability negotiation');
-    let result: ReaderCoreResultEvent;
-    try {
-      result = await runtime.request('library.sync.capabilities', {}, { timeoutMs: 5000, shouldCancel: (): boolean => !current() });
-    } catch (error) {
-      // Only the SDK's correlated protocol rejection proves absence. A
-      // timeout, malformed reply or initialization error must stay visible.
-      if (current() && error instanceof ReaderCoreRequestError && error.event.protocolVersion === 1 &&
-        error.event.type === 'error' && error.event.error.code === 'UNKNOWN_METHOD') return;
-      throw error;
-    }
-    if (!current()) throw new Error('Reader Core runtime was closed during capability negotiation');
-    const value = result.data;
-    if (value['protocolVersion'] !== 1 || typeof value['metadata'] !== 'boolean' || typeof value['durable'] !== 'boolean')
-      throw new Error('LIBRARY_SYNC_CAPABILITIES_INVALID');
-    if (value['metadata'] === true && value['durable'] === true) this.coreCapabilities.add('library.sync.v1');
-    let logResult: ReaderCoreResultEvent;
-    try {
-      logResult = await runtime.request('library.sync.log.capabilities', {}, { timeoutMs: 5000, shouldCancel: (): boolean => !current() });
-    } catch (error) {
-      if (current() && error instanceof ReaderCoreRequestError && error.event.protocolVersion === 1 &&
-        error.event.type === 'error' && error.event.error.code === 'UNKNOWN_METHOD') return;
-      throw error;
-    }
-    if (!current()) throw new Error('Reader Core runtime was closed during capability negotiation');
-    const log = logResult.data;
-    if (log['protocolVersion'] !== 2 || typeof log['metadata'] !== 'boolean' || typeof log['durable'] !== 'boolean' ||
-      typeof log['immutableLog'] !== 'boolean') throw new Error('LIBRARY_LOG_CAPABILITIES_INVALID');
-    if (log['metadata'] === true && log['durable'] === true && log['immutableLog'] === true) this.coreCapabilities.add('library.sync.log.v2');
-  }
-  private async reconcileLibraryRestoreBeforeReady(runtime: ReaderCoreRuntime): Promise<boolean> {
-    const current = (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state === 'starting';
-    const journal = new ReaderLibraryRestoreJournal(this.host.getContext().filesDir, current);
-    const fact = await journal.reconcile(async (identity: ReaderLibraryRestoreIdentity): Promise<ReaderLibraryRestoreCoreFact> => {
-      if (!this.supportsCoreCapability('library.metadataRestore.status.v1'))
-        throw new Error('LIBRARY_RESTORE_CORE_QUERY_UNAVAILABLE');
-      const response = await runtime.request('library.package.restore.status', {
-        operationId: identity.operationId, packageSha256: identity.packageSha256,
-      }, { timeoutMs: 5000, shouldCancel: (): boolean => !current() });
-      if (!current()) throw new Error('LIBRARY_RESTORE_RUNTIME_RETIRED');
-      const data = response.data;
-      const fact = this.decodeLibraryRestoreCoreFact(data, identity);
-      // A pending intent also keeps the original local settings' actual flush
-      // facts ahead of replacement writer/file-output activation.
-      await this.requireLibraryRestoreHostSettings();
-      // A selected SQL commit supersedes the legacy Host snapshot. Establish
-      // that marker before clearing the journal, including lost-clear-ACK retry.
-      if (fact.status !== 'missing') await this.host.markLegacySnapshotMigrated();
-      if (!current()) throw new Error('LIBRARY_RESTORE_RUNTIME_RETIRED');
-      return fact;
-    });
-    if (fact !== undefined) this.libraryRestoreStartupFact = { ...fact };
-    return fact !== undefined && fact.status !== 'missing';
-  }
-
-  private quiesceHostFilesForLibraryRestore(): Promise<void> {
-    if (this.hostIoQuiescence !== undefined) return this.hostIoQuiescence;
-    const starts: Array<() => Promise<void>> = [
-      (): Promise<void> => this.host.quiesceForLibraryRestore(),
-      (): Promise<void> => this.readingImageDiskCache.quiesceForLibraryRestore(),
-    ];
-    let releaseFailure: unknown;
-    if (this.platformStorageInitialized) {
-      // Release display consumers before sealing the shared display owner;
-      // their actual removal promises remain part of that owner's drain.
-      try {
-        for (const sessionId of this.mangaDisplaySessions.keys()) this.endMangaDisplaySession(sessionId);
-        ReadingBodyImageHost.instance.releaseAllDisplayFiles();
-      } catch (error) { releaseFailure = error; }
-      starts.push((): Promise<void> => ReadingBodyImageHost.instance.quiesceForLibraryRestore());
-    }
-    // Close every admission in this turn before waiting on any one owner.
-    // A synchronous failure must not leave the remaining owners open.
-    const pending = starts.map((start: () => Promise<void>): Promise<void> => {
-      try { return start(); } catch (error) { return Promise.reject(error); }
-    });
-    this.hostIoQuiescence = Promise.allSettled(pending).then((results): void => {
-      if (releaseFailure !== undefined) throw releaseFailure;
-      for (const result of results) if (result.status === 'rejected') throw result.reason;
-    });
-    return this.hostIoQuiescence;
-  }
-
-  private retireRuntimeDomains(strict: boolean = false): Promise<void> {
-    if (strict) this.libraryRestoreSealed = true;
-    if (this.downloadCloseTask === undefined) this.downloadCloseTask = this.downloadCoordinator?.close();
-    void this.downloadCloseTask?.catch((): void => {});
-    this.readingRecordGateway?.stopBackground();
-    this.mangaOfflineProbe?.release('runtime-close');
-    this.preparationForeground = false;
-    this.preparationNetwork?.close();
-    if (this.preparationWakeTimer >= 0) clearTimeout(this.preparationWakeTimer);
-    this.preparationWakeTimer = -1;
-    this.entryPreparations?.close();
-    this.bookCoordinator?.close();
-    this.state = 'closing';
-    ReadingBodyImageHost.instance.setMangaMetadataInspector(undefined);
-    return Promise.resolve();
   }
 
   private bindMangaStorage(): void {
@@ -639,9 +322,10 @@ export class ReaderRuntimeOwner {
             inUse: data['inUse'] as boolean, lastReadAt: lastReadAt as number | null };
         });
       },
-      candidates: async (reason, scope) => {
-        const data = (await this.request('manga.cache.evict', { nowSeconds: Math.floor(Date.now() / 1000),
-          ttlSeconds: reason === 'expiry' ? 7 * 24 * 60 * 60 : 0 })).data;
+      candidates: async (reason, scope, expiry) => {
+        if (reason === 'expiry' && expiry === undefined) throw new Error('MANGA_CACHE_EXPIRY_POLICY_REQUIRED');
+        const data = (await this.request('manga.cache.evict', { nowSeconds: expiry?.nowSeconds ?? Math.floor(Date.now() / 1000),
+          ttlSeconds: reason === 'expiry' ? expiry!.ttlSeconds : 0 })).data;
         return (data['candidates'] as JsonObject[]).map(value => {
           const chapter = value['chapter'] as JsonObject;
           return { sourceId: chapter['sourceId'] as string, bookId: chapter['bookId'] as string,
@@ -656,7 +340,7 @@ export class ReaderRuntimeOwner {
       pending: async () => ((await this.request('manga.cache.eviction.pending')).data['grants'] as JsonObject[]).map(projectGrant),
     });
     const body = ReadingBodyImageHost.instance;
-    body.configureMangaDisplayCache(this.host.getContext().filesDir);
+    body.configureMangaDisplayCache(readerHostFilesDirectory(this.host.getContext().filesDir));
     this.readingImageDiskCache.setMangaExternalStorage({
       inventory: () => body.mangaDisplayInventory(),
       remove: (grant, files) => body.removeMangaDisplay(grant, files),
@@ -668,11 +352,12 @@ export class ReaderRuntimeOwner {
 
   static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false,
     mangaOfflineScope?: MangaOfflineProbeScope, mangaReadingScope?: MangaOfflineProbeScope,
-    mangaSelectionMode?: MangaProbeSelectionMode): ReaderRuntimeOwner {
+    mangaSelectionMode?: MangaProbeSelectionMode, publicFixture?: ReaderPublicFixtureScope): ReaderRuntimeOwner {
     const current = ReaderRuntimeOwner.instance;
     if (current === undefined || current.state === 'closing' || current.state === 'closed') {
       const predecessorClose = current?.closeTask ?? Promise.resolve();
-      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory, mangaOfflineScope, mangaReadingScope, mangaSelectionMode);
+      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory,
+        mangaOfflineScope, mangaReadingScope, mangaSelectionMode, publicFixture);
       if (disableOptionalEntryMemory) ReaderRuntimeOwner.instance.releaseOptionalReadingEntryMemory();
     } else current.mangaOfflineProbe?.release('ability-reinstalled');
     ReaderRuntimeOwner.instance.abilityLeases += 1;
@@ -683,6 +368,18 @@ export class ReaderRuntimeOwner {
    * that require an installed owner still use the throwing current() getter. */
   static isCurrent(owner: ReaderRuntimeOwner): boolean {
     return ReaderRuntimeOwner.instance === owner;
+  }
+
+  isCurrentPublicFixture(fixture: ReaderPublicFixtureScope): boolean {
+    return this.state === 'ready' && ReaderRuntimeOwner.isCurrent(this) && this.publicFixture === fixture;
+  }
+
+  /** Admission follows successful verification of both packaged fixture inputs. */
+  confirmPublicSearchHttpFixture(fixture: ReaderPublicFixtureScope): void {
+    if (!this.isCurrentPublicFixture(fixture) || readerPublicSearchHttpFixtureMode(fixture.id) === undefined) {
+      throw new Error('PUBLIC_SEARCH_HTTP_FIXTURE_NOT_CURRENT');
+    }
+    this.publicSearchHttpReady = true;
   }
 
   selectMangaOfflineProbe(sourceId: string, bookId: string, manga: boolean): void {
@@ -885,6 +582,28 @@ export class ReaderRuntimeOwner {
     return { retainedChapters, protectedChapters };
   }
 
+  /** Bounded operational facts only. Never accepts source/query/body values
+   * or owns pagination; consumers publish after their normal receipt checks. */
+  observeSourceSearchPage(route: 'search' | 'switch', requestedPage: number,
+    decodedCount: number, matchedCount: number): void {
+    if (this.state !== 'ready' || (route !== 'search' && route !== 'switch') ||
+      !Number.isSafeInteger(requestedPage) || requestedPage < 2 || requestedPage > 0xffffffff ||
+      !Number.isSafeInteger(decodedCount) || decodedCount < 1 || decodedCount > 65536 ||
+      !Number.isSafeInteger(matchedCount) || matchedCount < 1 || matchedCount > decodedCount) return;
+    if (route === 'search') {
+      if (this.searchPageEvidenceCount >= 8) return;
+      this.searchPageEvidenceCount += 1;
+    } else {
+      if (this.switchPageEvidenceCount >= 8) return;
+      this.switchPageEvidenceCount += 1;
+    }
+    try {
+      hilog.info(LOG_DOMAIN, 'ReaderSourcePageEvidence',
+        'route=%{public}s requestedPage=%{public}d decoded=%{public}d matched=%{public}d',
+        route, requestedPage, decodedCount, matchedCount);
+    } catch (_) { /* A diagnostic failure cannot change a business receipt. */ }
+  }
+
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
     if (this.state === 'closing' && this.runtime !== undefined &&
       (method === 'manga.cache.materialization.abort' || method === 'manga.session.release')) return this.runtime.request(method, params, options);
@@ -974,7 +693,7 @@ export class ReaderRuntimeOwner {
     return this.getDownloadStorageGateway().readSettingsTextCleanup();
   }
 
-  async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<{ maintenanceMessage?: string; }> {
+  async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<SharedDownloadStoragePolicyResult> {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
     return this.getDownloadStorageGateway().configurePolicy({ capacityBytes: limitMb * 1024 * 1024, expiryDays: cleanupAfterDays });
   }
@@ -1226,11 +945,12 @@ export class ReaderRuntimeOwner {
   }
 
   /** Open a user-operated source login/challenge page on the shared Host jar. */
-  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string): Promise<void> {
+  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string, isCurrent?: () => boolean): Promise<void> {
     await ArkWebExecutor.instance.openInteractive(
       sourceLoginPageUrl(sourceId, loginUrl),
       sourceId,
       `${sourceName} · 登录 / 验证`,
+      isCurrent,
     );
   }
 
@@ -1780,11 +1500,11 @@ export class ReaderRuntimeOwner {
     return this.ttsHost;
   }
 
-  async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
+  async selectLocalBookInputs(canOpenPicker: () => boolean): Promise<LocalBookPreparation[]> {
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Host is no longer available after teardown');
     }
-    return this.host.selectLocalBookInputs();
+    return this.host.selectLocalBookInputs(canOpenPicker);
   }
 
   async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
@@ -1934,7 +1654,6 @@ export class ReaderRuntimeOwner {
   }
 
   private async closeRuntime(): Promise<void> {
-    let ttsCloseTask: Promise<void> | undefined = undefined;
     try {
       // An owner can retire before start() is called. Preserve the whole
       // predecessor chain so a third Ability cannot overtake the first one.
@@ -1965,19 +1684,13 @@ export class ReaderRuntimeOwner {
       // Host callbacks must be invalidated before Core is released, otherwise
       // a late platform completion could attempt to advance a closed queue.
       try {
-        ttsCloseTask = this.ttsHost.close();
-        await ttsCloseTask;
+        await this.ttsHost.close();
       } finally {
-        await this.quiesceHostFilesForLibraryRestore();
         const runtime = this.runtime;
         this.runtime = undefined;
         if (runtime !== undefined) {
           try {
-            // The selected apply may have committed while its ACK was lost.
-            // Retire that captured Core directly; no late old-owner flush may
-            // borrow the replacement metadata writer's authority.
-            if (!this.libraryRestoreApplyDispatched)
-              await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
+            await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
           } finally {
             this.host?.setResponseAssetBridge(undefined);
             runtime.close();
@@ -1985,21 +1698,13 @@ export class ReaderRuntimeOwner {
         }
       }
     } finally {
-      try {
-        // Earlier domain/flush failure must still stop audio and physical IO.
-        if (ttsCloseTask === undefined) ttsCloseTask = this.ttsHost.close();
-        await ttsCloseTask;
-      } finally {
-        try {
-          await this.quiesceHostFilesForLibraryRestore();
-        } finally {
-          const runtime = this.runtime;
-          this.runtime = undefined;
-          this.host.setResponseAssetBridge(undefined);
-          runtime?.close();
-          this.state = 'closed';
-          if (ReaderRuntimeOwner.instance === this) ReaderRuntimeOwner.instance = undefined;
-        }
+      for (const sessionId of this.mangaDisplaySessions?.keys() ?? []) this.endMangaDisplaySession(sessionId);
+      ReadingBodyImageHost.instance.releaseAllDisplayFiles();
+      // Runs even when flush throws, so a rebuilt UIAbility in the same
+      // process gets a fresh runtime rather than a half-closed one.
+      this.state = 'closed';
+      if (ReaderRuntimeOwner.instance === this) {
+        ReaderRuntimeOwner.instance = undefined;
       }
     }
   }
@@ -2018,15 +1723,20 @@ export class ReaderRuntimeOwner {
   private async requireStorageProbeIdentity(probe: ReaderCoreStorageProbe, current: () => boolean): Promise<void> {
     const raw = await this.host.readBundledRawFileText('reader-core-storage-identity.v1.json');
     if (!current() || raw.length > 4096) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
-    const expected = JSON.parse(raw) as JsonObject;
-    const hashes = ['buildId', 'contractSha256', 'coreInputFingerprint'];
-    if (Object.keys(expected).length !== 5 || expected['format'] !== 'reader.storage-bootstrap-identity' || expected['version'] !== 1 ||
-      !hashes.every((key: string): boolean => typeof expected[key] === 'string' && /^[0-9a-f]{64}$/.test(expected[key] as string)) ||
+    const value: unknown = JSON.parse(raw);
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
+    }
+    const expected = value as JsonObject;
+    if (Object.keys(expected).length !== 5 || expected['format'] !== 'reader.storage-bootstrap-identity' ||
+      expected['version'] !== 1 || !this.isLowerHex(expected['buildId'], 64, 64) ||
+      !this.isLowerHex(expected['contractSha256'], 64, 64) ||
+      !this.isLowerHex(expected['coreInputFingerprint'], 64, 64) ||
       expected['buildId'] !== probe.buildIdentity['buildId'] || expected['contractSha256'] !== probe.contractSha256 ||
-      expected['coreInputFingerprint'] !== probe.coreInputFingerprint) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
+      expected['coreInputFingerprint'] !== probe.coreInputFingerprint) {
+      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
+    }
     if (!current()) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
-    // Only compiled identity and admission classification are diagnostic data.
-    // This does not claim that Host has hashed the loaded Native library.
     const receipt = JSON.stringify({ schemaVersion: 1, buildId: expected['buildId'], contractSha256: expected['contractSha256'],
       coreInputFingerprint: expected['coreInputFingerprint'], matched: true });
     hilog.info(LOG_DOMAIN, 'Reader', 'Storage bootstrap identity: %{public}s', receipt);
@@ -2043,22 +1753,25 @@ export class ReaderRuntimeOwner {
     // retaining its original rejection for the admission barrier below.
     void legacyMigration.catch((): void => {});
     let runtime: ReaderCoreRuntime;
-    let storageProbe: ReaderCoreStorageProbe;
+    let admittedBuild: CoreBuildIdentity;
     const isCurrent = (): boolean => this.state === 'starting' && ReaderRuntimeOwner.isCurrent(this);
     try {
-      storageProbe = await ReaderStartupTrace.measure('startup.storage-admission',
-        (): Promise<ReaderCoreStorageProbe> => probeReaderCoreStorageAsync(
-          `${this.host.getContext().filesDir}/reader-core`, isCurrent));
+      const filesDir = this.host.getContext().filesDir;
+      const dataDirectory = this.publicFixture === undefined ? `${filesDir}/reader-core` :
+        buildReaderPublicFixtureDirectory(filesDir, this.publicFixture.id);
+      if (dataDirectory === undefined) throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
+      const storageProbe = await ReaderStartupTrace.measure('startup.storage-admission',
+        (): Promise<ReaderCoreStorageProbe> => probeReaderCoreStorageAsync(dataDirectory, isCurrent));
       if (!isCurrent()) throw new Error('Reader Core startup cancelled after storage admission');
-      this.requireCoreBuildIdentity(storageProbe.buildIdentity);
+      admittedBuild = this.requireCoreBuildIdentity(storageProbe.buildIdentity);
       await this.requireStorageProbeIdentity(storageProbe, isCurrent);
-      const startupConfig: JsonObject = { dataDirectory: `${this.host.getContext().filesDir}/reader-core` };
-      // Core owns the maintenance plan and revalidates it before migration.
-      // Forward its exact observation only after the existing identity gates.
+      const startupConfig: JsonObject = { dataDirectory: dataDirectory };
+      // Core owns the explicit migration plan and revalidates it on open.
       if (storageProbe.observation.requiresMigration && storageProbe.observation.explicitMigration !== null) {
         startupConfig['storageMigration'] = storageProbe.observation.explicitMigration;
       }
-      runtime = await ReaderStartupTrace.measure('startup.native-open', (): Promise<ReaderCoreRuntime> => createReaderCoreRuntimeAsync(startupConfig, isCurrent));
+      runtime = await ReaderStartupTrace.measure('startup.native-open',
+        (): Promise<ReaderCoreRuntime> => createReaderCoreRuntimeAsync(startupConfig, isCurrent));
     } catch (error) {
       if (this.state === 'starting') this.state = 'new';
       throw error;
@@ -2094,36 +1807,56 @@ export class ReaderRuntimeOwner {
         legacyMigration,
       ]);
       const coreInfo = startupReads[0];
-      await this.negotiateCoreCapabilities(runtime, coreInfo.data);
+      const capabilities = coreInfo.data['capabilities'];
+      this.coreCapabilities.clear();
+      if (Array.isArray(capabilities)) {
+        for (const capability of capabilities) {
+          if (typeof capability === 'string') this.coreCapabilities.add(capability);
+        }
+      }
       const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
-      if (buildIdentity.buildId !== storageProbe.buildIdentity['buildId']) {
+      if (buildIdentity.buildId !== admittedBuild.buildId) {
         throw new Error('Reader Core build changed after storage admission');
+      }
+      const storageFormat = this.requireCoreStorageFormat(coreInfo.data['storageFormat']);
+      const sqliteUserVersion = coreInfo.data['sqliteUserVersion'];
+      if (typeof sqliteUserVersion === 'number' && Number.isSafeInteger(sqliteUserVersion) &&
+        sqliteUserVersion > 0 && sqliteUserVersion <= 0x7fffffff) {
+        buildIdentity.sqliteUserVersion = sqliteUserVersion;
       }
       if (this.supportsCoreCapability('host.http.timeout.v1')) {
         hostCapabilities['extensions'] = ['http.execute.timeoutMs.v1'];
         await runtime.request('runtime.setHostCapabilities', hostCapabilities, { timeoutMs: 5000 });
       }
       hilog.info(LOG_DOMAIN, 'Reader', 'Core build identity: %{public}s', JSON.stringify(buildIdentity));
-      const restoredMetadata = await ReaderStartupTrace.measure('startup.library-restore-reconciliation',
-        (): Promise<boolean> => this.reconcileLibraryRestoreBeforeReady(runtime));
-      if (!isCurrent()) throw new Error('Reader Core startup cancelled after restore reconciliation');
-      this.initializePlatformStorage();
-      await this.host.beginLocalBookStageRecovery();
-      if (startupReads[1] && !restoredMetadata) {
-        await ReaderStartupTrace.measure('startup.legacy-restore', (): Promise<ReaderCoreResultEvent> =>
-          runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 }));
-        await ReaderStartupTrace.measure('startup.legacy-marker-write', (): Promise<void> =>
-          this.host.markLegacySnapshotMigrated());
+      this.legacySnapshotRecovery = 'none';
+      if (startupReads[1]) {
+        // Portable export/restore support is not permission to replay this old
+        // Host file into a current Library47 store. Keep its original data and
+        // migration marker intact; any explicit import remains Core-owned.
+        const operation = storageFormat?.capabilities;
+        if (operation === undefined || storageFormat?.format !== 'legacy' || !operation.legacyHostImport) {
+          this.legacySnapshotRecovery = operation === undefined ? 'storageCapabilityUnavailable' :
+            storageFormat?.format === 'library47' ? 'automaticImportDeferred' : 'unsupportedStorageFormat';
+          hilog.warn(LOG_DOMAIN, 'Reader', 'Legacy snapshot migration deferred: %{public}s', this.legacySnapshotRecovery);
+        } else {
+          await ReaderStartupTrace.measure('startup.legacy-restore', (): Promise<ReaderCoreResultEvent> =>
+            runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 }));
+          await ReaderStartupTrace.measure('startup.legacy-marker-write', (): Promise<void> =>
+            this.host.markLegacySnapshotMigrated());
+        }
       }
-      // Recovery remains convergence, not readiness: a stale, conflicting or
-      // slow journal must never deny the durable shelf. Wait only a bounded
-      // grace, then publish while the attempt stays observable for an explicit
-      // retry and a later shelf refresh.
-      await ReaderStartupTrace.measure('startup.source-switch-grace',
-        (): Promise<void> => this.recoverSourceSwitchAtStartup(runtime));
+      // A source switch is not admitted to the restored route until its first
+      // canonical target progress atomically finalizes the Core transaction.
+      // Recover before publishing this runtime so a cold-start page can never
+      // observe the tentative shelf identity or retain a UI-owned journal.
+      const recovery = await ReaderStartupTrace.measure('startup.source-switch-recovery', (): Promise<ReaderCoreResultEvent> =>
+        runtime.request('source.switch.recover', {}, { timeoutMs: 30000 }));
+      const recoveredCount = this.requireSourceSwitchRecoveryCount(recovery.data['recovered']);
+      hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
-      if (this.state !== 'starting') {
+      if (!isCurrent()) {
         throw new Error('Reader Core runtime was closed during startup');
       }
       this.runtime = runtime;
@@ -2142,6 +1875,7 @@ export class ReaderRuntimeOwner {
       this.scheduleImportFinalizeCleanup(runtime);
       // A 1,951-record collection must not hold the first frame or turn a
       // single malformed/dead source into an application startup failure.
+      if (this.publicFixture !== undefined && this.publicFixture.id !== 'empty-shelf') return;
       this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)
         .then((summary: BundledSourceInstallSummary): void => {
           hilog.info(LOG_DOMAIN, 'Reader',
@@ -2564,7 +2298,7 @@ export class ReaderRuntimeOwner {
       typeof identity['rustProfile'] !== 'string' || identity['rustProfile'].trim().length === 0) {
       throw new Error('core.info returned an invalid buildIdentity');
     }
-    return {
+    const result: CoreBuildIdentity = {
       schemaVersion: 1,
       buildId: identity['buildId'],
       gitCommit: gitCommit,
@@ -2573,59 +2307,65 @@ export class ReaderRuntimeOwner {
       protocolSha256: identity['protocolSha256'],
       rustProfile: identity['rustProfile'],
     };
-  }
-
-  private async recoverSourceSwitchAtStartup(runtime: ReaderCoreRuntime): Promise<void> {
-    this.publishSourceSwitchRecovery('recovering', true, false, 0, '');
-    await this.waitForSourceSwitchRecoveryGrace(this.trackSourceSwitchRecovery(runtime));
-  }
-
-  private trackSourceSwitchRecovery(runtime: ReaderCoreRuntime): Promise<void> {
-    const task = this.dispatchSourceSwitchRecovery(runtime);
-    this.sourceSwitchRecoveryTask = task;
-    void task.then((): void => {
-      if (this.sourceSwitchRecoveryTask === task) this.sourceSwitchRecoveryTask = undefined;
-    });
-    return task;
-  }
-
-  private async dispatchSourceSwitchRecovery(runtime: ReaderCoreRuntime): Promise<void> {
-    try {
-      const recovery = await ReaderStartupTrace.measure('startup.source-switch-recovery',
-        (): Promise<ReaderCoreResultEvent> => runtime.request('source.switch.recover', {}, { timeoutMs: 30000 }));
-      const recoveredCount = this.requireSourceSwitchRecoveryCount(recovery.data['recovered']);
-      hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
-      if (this.state !== 'ready' && this.state !== 'starting') return;
-      this.publishSourceSwitchRecovery('resolved', false, false, recoveredCount, '');
-    } catch (error) {
-      if (this.state !== 'ready' && this.state !== 'starting') return;
-      hilog.warn(LOG_DOMAIN, 'Reader',
-        'Source-switch startup recovery remains pending summary=%{public}s detail=%{private}s',
-        localReadFailureSummary(error), errorMessageOf(error));
-      this.publishSourceSwitchRecovery('pending', false, true, 0, SOURCE_SWITCH_RECOVERY_PENDING_MESSAGE);
+    const storage = identity['storageCompatibility'];
+    if (storage !== undefined) {
+      if (typeof storage !== 'object' || storage === null) {
+        throw new Error('core.info returned invalid storage compatibility');
+      }
+      const fields = storage as Record<string, unknown>;
+      const version = fields['sqliteMaxUserVersion'];
+      const source = fields['sqliteStorageSourceSha256'];
+      if (typeof version !== 'number' || !Number.isSafeInteger(version) || version <= 0 || version > 0x7fffffff ||
+        !this.isLowerHex(source, 64, 64)) {
+        throw new Error('core.info returned invalid storage compatibility');
+      }
+      result.storageCompatibility = { sqliteMaxUserVersion: version, sqliteStorageSourceSha256: source };
     }
+    return result;
   }
 
-  private async waitForSourceSwitchRecoveryGrace(task: Promise<void>): Promise<void> {
-    let timer: number = -1;
-    const grace = new Promise<void>((resolve): void => {
-      timer = setTimeout(resolve, SOURCE_SWITCH_RECOVERY_GRACE_MS);
-    });
-    try {
-      await Promise.race([task, grace]);
-    } finally {
-      if (timer >= 0) clearTimeout(timer);
+  private requireCoreStorageFormat(value: unknown): LegacyCoreStorageFormat | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('core.info returned invalid storage format capability');
     }
+    const fields = value as Record<string, unknown>;
+    const format = fields['format'];
+    const portable = fields['portableSnapshotSupported'];
+    if ((format !== 'legacy' && format !== 'library47') || typeof portable !== 'boolean' ||
+      Object.keys(fields).some((key: string): boolean => !['format', 'portableSnapshotSupported', 'capabilities'].includes(key))) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    if (fields['capabilities'] === undefined) return { format, portableSnapshotSupported: portable };
+    const capabilities = this.requireCoreStorageCapabilities(fields['capabilities']);
+    if (portable !== (capabilities.logicalExport && capabilities.logicalRestore && capabilities.legacyHostImport) ||
+      (format === 'library47' && !capabilities.logicalRestoreRequiresCompleteCoverage) ||
+      (format !== 'library47' && (capabilities.physicalBackup || capabilities.physicalRestore))) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    return { format, portableSnapshotSupported: portable, capabilities };
   }
 
-  private publishSourceSwitchRecovery(state: ReaderSourceSwitchRecoveryState, busy: boolean,
-    canRetry: boolean, recovered: number, message: string): void {
-    this.sourceSwitchRecoveryStatus = { state, busy, canRetry, recovered, message,
-      generation: this.sourceSwitchRecoveryStatus.generation + 1 };
-    const snapshot = this.sourceSwitchRecoveryStatus;
-    for (const listener of this.sourceSwitchRecoveryListeners) {
-      try { listener(snapshot); } catch (_) {}
+  private requireCoreStorageCapabilities(value: unknown): LegacyCoreStorageCapabilities {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('core.info returned invalid storage format capability');
     }
+    const fields = value as Record<string, unknown>;
+    const keys: string[] = ['logicalExport', 'logicalRestore', 'legacyHostImport', 'physicalBackup', 'physicalRestore',
+      'webdavConfigRestore', 'activeLibrarySync', 'logicalExportRequiresDataPreflight',
+      'logicalRestoreRequiresCompleteCoverage', 'resourceEvidenceOnly', 'externalFilesIncluded'];
+    if (Object.keys(fields).length !== keys.length || keys.some((key: string): boolean => typeof fields[key] !== 'boolean') ||
+      fields['activeLibrarySync'] !== false || fields['logicalExportRequiresDataPreflight'] !== true ||
+      fields['resourceEvidenceOnly'] !== true ||
+      fields['externalFilesIncluded'] !== false) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    return { logicalExport: fields['logicalExport'] as boolean, logicalRestore: fields['logicalRestore'] as boolean,
+      legacyHostImport: fields['legacyHostImport'] as boolean, physicalBackup: fields['physicalBackup'] as boolean,
+      physicalRestore: fields['physicalRestore'] as boolean, webdavConfigRestore: fields['webdavConfigRestore'] as boolean,
+      activeLibrarySync: false, logicalExportRequiresDataPreflight: true,
+      logicalRestoreRequiresCompleteCoverage: fields['logicalRestoreRequiresCompleteCoverage'] as boolean,
+      resourceEvidenceOnly: true, externalFilesIncluded: false };
   }
 
   private requireSourceSwitchRecoveryCount(value: unknown): number {

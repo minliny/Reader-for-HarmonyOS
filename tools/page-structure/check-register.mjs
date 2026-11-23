@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { deriveStructure, prototypeForBrief } from './derive-structure.mjs';
 import { loadInputs, safePath, digest, diagnostic, printReport, isMain, registrations, isEmbeddedContent } from './lib.mjs';
+import { checkDesignAuthority } from './design-authority.mjs';
 import { checkLayoutEvidence } from './layout-evidence.mjs';
+import { checkNormalPageEvidence } from './normal-page-evidence.mjs';
 
 // These rules consume typed declarations. Source bindings below independently
 // detect selected stale declarations. They do not claim native layout behavior.
@@ -21,7 +23,13 @@ export function evaluatePage(page, model) {
     else if (group.length > 1 && (new Set(group.map(a => a.owner)).size > 1 || group.filter(a => a.priority === 'primary').length > 1)) add('G-02', 'footer', 'actions', `${id}: duplicate action without shared owner/context hierarchy`);
   }
   if (f.scroll.underlap || f.header.presentation === 'Floating') {
-    if (f.scroll.obscurationCompensation === null) diagnostics.push(diagnostic('G-03', page.pageId, 'scroll', 'obscurationCompensation', 'Dynamic compensation requires measured geometry; null does not establish absence or PASS', 'NOT_RUN'));
+    const compensation = f.scroll.obscurationCompensationSource;
+    if (compensation !== undefined) {
+      const pinned = [page.source, ...(page.sourceInputs ?? [])].some(input => input.path === compensation.path);
+      if (f.scroll.obscurationCompensation !== null || !pinned || !compensation.symbol) {
+        add('G-03', 'scroll', 'obscurationCompensationSource', 'Dynamic compensation requires a fingerprinted declaration and a null constant');
+      }
+    } else if (f.scroll.obscurationCompensation === null) diagnostics.push(diagnostic('G-03', page.pageId, 'scroll', 'obscurationCompensation', 'Compensation is unknown without a constant or a bound geometry declaration', 'NOT_RUN'));
     else if (!(f.scroll.obscurationCompensation > 0)) add('G-03', 'scroll', 'obscurationCompensation', 'Underlap/floating header has no compensation');
   }
   if (fixedFooter && (f.scroll.footerInset === 'none' || f.footer.contentEndInset === 'none')) add('G-04', 'scroll', 'footerInset', 'Fixed footer has no end inset');
@@ -47,12 +55,18 @@ export function evaluatePage(page, model) {
   return diagnostics;
 }
 
-export function checkRegister(inputs = loadInputs(), { bindSource = true } = {}) {
+function checkRegistrations(inputs, all, {bindSource = true, selection} = {}) {
   const diagnostics = [];
-  const all = registrations(inputs.register);
+  const designDigests = new Map();
   for (const { page, host } of all) {
     diagnostics.push(...evaluatePage(page, inputs.model));
-    diagnostics.push(...checkLayoutEvidence(page, { bindSource }).diagnostics);
+    const layout = checkLayoutEvidence(page, { bindSource });
+    diagnostics.push(...checkNormalPageEvidence(page, inputs.model, selection, layout.report?.sourceE2ReceiptGroup));
+    if (page.layers.visual.facts.designContractRef || page.layers.visual.result === 'PASS') {
+      diagnostics.push(...checkDesignAuthority(page, inputs.designAuthority, designDigests).map(item =>
+        diagnostic(item.rule, page.pageId, 'visual', 'designContractRef', item.message)));
+    }
+    diagnostics.push(...layout.diagnostics);
     for (const [id, record] of Object.entries(page.invariants)) {
       if (record.result === 'FAIL' && !diagnostics.some(d=>d.pageId===page.pageId && d.ruleId===id && d.result==='FAIL')) diagnostics.push(diagnostic(id, page.pageId, inputs.model.invariants.find(r=>r.id===id)?.layer, `invariants.${id}`, record.reason));
     }
@@ -65,6 +79,19 @@ export function checkRegister(inputs = loadInputs(), { bindSource = true } = {})
         const query = deriveStructure(page.brief, inputs.model).query;
         if (page.layers.query.facts.placement !== query) diagnostics.push(diagnostic('QUERY_VIEWPORT', page.pageId, 'query', 'brief.queryViewport', `Measured viewport requires ${query}, registered ${page.layers.query.facts.placement}`));
       } catch (error) { diagnostics.push(diagnostic('QUERY_VIEWPORT', page.pageId, 'query', 'brief.queryViewport', error.message)); }
+    }
+    if (page.layers.query.facts.inlineComposition === 'boundedEditor') {
+      const { placement, entryPlacements } = page.layers.query.facts;
+      const { viewportHeight, filterStackHeight } = page.layers.informationArchitecture.facts.firstScreenBudget ?? {};
+      if (!embedded || !page.brief.queryViewport || placement !== 'Inline' ||
+        entryPlacements?.length !== 1 || entryPlacements[0] !== 'inline') {
+        diagnostics.push(diagnostic('QUERY_COMPOSITION', page.pageId, 'query', 'inlineComposition', 'Bounded editor requires an embedded, measured Inline query with one entry'));
+      }
+      if (!Number.isFinite(viewportHeight) || !Number.isFinite(filterStackHeight) ||
+        filterStackHeight <= 0 || filterStackHeight >= viewportHeight ||
+        page.layers.scroll.facts.primaryCount !== 1 || page.layers.scroll.facts.underlap) {
+        diagnostics.push(diagnostic('QUERY_COMPOSITION', page.pageId, 'query', 'inlineComposition', 'Bounded editor requires a positive measured share and one unobscured primary results list'));
+      }
     }
     try { if (!embedded) derived = deriveStructure(page.brief, inputs.model); }
     catch (error) { diagnostics.push(diagnostic('DERIVE', page.pageId, 'scaffold', 'brief', error.message)); }
@@ -96,6 +123,47 @@ export function checkRegister(inputs = loadInputs(), { bindSource = true } = {})
   ];
   return { diagnostics, manual };
 }
+
+export function checkRegister(inputs = loadInputs(), {bindSource = true} = {}) {
+  return checkRegistrations(inputs, registrations(inputs.register), {bindSource});
+}
+
+/** 只对所选的独立回放及其登记证据组合页面结论；不影响默认登记检查。 */
+export function checkPageComposition(selection, inputs = loadInputs()) {
+  const {receipt} = selection;
+  const result = (verdict, diagnostics = []) => ({verdict, diagnostics});
+  if (receipt?.page?.registration !== 'REGISTERED_PAGE') return result('NOT_RUN');
+  const matched = registrations(inputs.register).filter(({page}) => page.pageId === receipt.page.id);
+  if (matched.length !== 1 || matched[0].host) return result('INCOMPLETE');
+  const [{page}] = matched;
+  const layers = Object.values(page.layers);
+  const invariants = Object.values(page.invariants);
+  const states = receipt.structure?.states ?? [];
+  if ([...layers, ...invariants].some(record => record.result === 'FAIL') || receipt.structure?.behavior === 'FAIL' ||
+      states.some(state => state.verdict === 'FAIL' || state.checks.some(check => check.verdict === 'FAIL'))) {
+    return result('FAIL');
+  }
+  if (receipt.execution !== 'PASS' || receipt.behavior !== 'PASS' || receipt.observations !== 'COMPLETE' ||
+      receipt.structure?.behavior !== 'PASS' || receipt.structure.observations !== 'COMPLETE' || !states.length ||
+      states.some(state => state.verdict !== 'PASS' || state.observationsComplete !== true || !state.checks.length ||
+        state.checks.some(check => check.verdict !== 'PASS' || check.observationsComplete !== true)) ||
+      inputs.model.layers.length !== layers.length || inputs.model.invariants.length !== invariants.length ||
+      !layers.some(record => record.applicability === 'applicable') ||
+      inputs.model.layers.some(({id}) => {
+        const record = page.layers[id];
+        return !record || !(record.applicability === 'applicable' && record.result === 'PASS' ||
+          record.applicability === 'not_applicable' && record.result === 'NOT_RUN');
+      }) || inputs.model.invariants.some(({id}) => page.invariants[id]?.result !== 'PASS')) {
+    return result('INCOMPLETE');
+  }
+  try {
+    const {diagnostics} = checkRegistrations(inputs, matched, {selection});
+    return result(diagnostics.some(item => item.result === 'FAIL') ? 'FAIL' : diagnostics.length ? 'INCOMPLETE' : 'PASS', diagnostics);
+  } catch (error) {
+    return result('INCOMPLETE', [diagnostic('PAGE_COMPOSITION_INPUT', page.pageId, null, '', error.message, 'NOT_RUN')]);
+  }
+}
+
 if (isMain(import.meta.url)) {
   try { const { diagnostics, manual } = checkRegister(); printReport('check-register', diagnostics, { manual, boundary: 'Registration/source checks; page failures are preserved. Native geometry/accessibility remains NOT_RUN.' }); }
   catch (error) { printReport('check-register', [diagnostic('INPUT', 'framework', null, '', error.message)]); }

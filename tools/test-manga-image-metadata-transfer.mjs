@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { MangaImageMetadataHost } from '../entry/src/main/ets/app/MangaImageMetadataHost.ts';
+import { MangaImageMetadataHost } from '../entry/src/main/ets/platform/reading-resources/MangaImageMetadataHost.ts';
 const bytes=new Uint8Array([1,2,3]),sha256=createHash('sha256').update(bytes).digest('hex');
 for(const invalid of [false,true]){
  const host=new MangaImageMetadataHost();let live=true;const released=[];

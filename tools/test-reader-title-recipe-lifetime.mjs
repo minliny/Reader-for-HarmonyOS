@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
+import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts';
 
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
 const wholeSurface = read('ReadingSurface');
@@ -67,7 +67,7 @@ function instrument(source, mode) {
   const params = mode === 'paged' ? { contentRevision: 1, pageFragments: [], showChapterTitle: true,
     chapterTitle: 'chapter A', fragmentsProvider: () => current } : { appearance: { activeTheme: 'paper', paragraphSpacing: 16 } };
   const names = mode === 'paged' ? ['chapterTitle', 'showChapterTitle', 'pageFragments', 'contentRevision', 'fragmentsProvider', 'build',
-    'renderFragments', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'] : ['appearance', 'build'];
+    'renderFragments', 'currentFragment', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'] : ['appearance', 'build'];
   const { owner, output } = createReaderBuilderProbe(source, names, dependencies,
     { ...runtime.hooks, initialParams: params, allowEmptyBranchAdmission: true });
   Object.assign(owner, { pageParagraphs: [], snapshotSynchronousImages: false, bottomJustifyGap: 0, staticSnapshotId: '',

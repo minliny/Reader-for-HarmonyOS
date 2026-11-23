@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import {
   splitReaderSearchSnippet,
-} from '../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts';
+} from '../entry/src/main/ets/features/reading/presentation/ReaderSearchHighlight.ts';
 
 assert.deepEqual(splitReaderSearchSnippet('雨夜终于抵达', 20, 22, 2), {
   prefix: '雨夜',

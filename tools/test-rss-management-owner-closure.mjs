@@ -1,12 +1,8 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
-const {registerReaderTypeScriptImports}=await import('./lib/reader-typescript-imports.mjs');
-const readerTypeScriptImports=registerReaderTypeScriptImports();
-try {
-const { createIndexProductBuilderProbe, productSurfaceDescendants }=await import('./lib/reader-extended-product-surface-probe.mjs');
 const { resolveEtsLoaderRoot }=await import("./lib/tool-environment.mjs");
-const { RssPresentationProjection }=await import("../entry/src/main/ets/features/rss/RssPresentationProjection.ts");
+const { RssPresentationProjection }=await import("../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts");
 const {runtimeOwnerIdentityProbe}=await import("./lib/reader-runtime-admission-probe.mjs");
 const { readFileSync }=await import("node:fs");
 const { createRequire, stripTypeScriptTypes }=await import("node:module");
@@ -21,16 +17,16 @@ const facts = new Function(ordinary(source('app/ReaderOperationFacts.ts')) + ';r
 const projectPersistedReceipt = new Function(...Object.keys(facts), ordinary(source('app/ReaderPersistedReceiptProjection.ts')) + ';return projectPersistedReceipt;')(...Object.values(facts));
 let currentOwner;
 const ReaderRuntimeOwner = runtimeOwnerIdentityProbe(()=>currentOwner);
-const RssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(source('features/rss/RssGateway.ts')) + ';return RssGateway;')(ReaderRuntimeOwner,isReaderCoreTransactionPendingError);
+const RssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(source('features/rss/application/RssGateway.ts')) + ';return RssGateway;')(ReaderRuntimeOwner,isReaderCoreTransactionPendingError);
 const RssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
-  ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,{warn(){},error(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
+  ordinary(source('features/rss/application/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,{warn(){},error(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const pageSource = source('features/rss/RssSubscriptionManagementPage.ets');
+const pageSource = source('features/rss/ui/RssSubscriptionManagementPage.ets');
 syntax.componentCollection.customComponents.add('RssSubscriptionManagementPage');
 syntax.propCollection.set('RssSubscriptionManagementPage', new Set([...pageSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
-const recoverySource = source('features/common/ReaderRecoveryAction.ets');
+const recoverySource = source('ui/feedback/ReaderRecoveryAction.ets');
 syntax.componentCollection.customComponents.add('ReaderRecoveryAction');
 syntax.propCollection.set('ReaderRecoveryAction', new Set([...recoverySource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 class ManagementChild {
@@ -73,12 +69,12 @@ function rpc(){return {
 let physicalIndexIdentity=0;
 function fixture(runtime=rpc()){
   currentOwner=runtime;
-  const {owner:index}=createIndexProductBuilderProbe(source('pages/Index.ets'),["rssProduct","rssUi","expandedLayout",'rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','retireRssPresentation','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems'],
+  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','retireRssPresentation','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems'],
     {RssPresentationProjection,RssSubscriptionManagementPage:ManagementChild,ReaderRuntimeOwner,RssOrchestrator,projectOperationFacts:facts.projectOperationFacts,isReaderProductSurfaceEnabled:()=>true,deviceInfo:{deviceType:'phone'}});
-  Object.assign(index,{readerWindowMetricsRevision:-1,mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssProduct:{rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''}});
-  const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=productSurfaceDescendants(index).filter(child=>child instanceof ManagementChild).at(-1);
+  Object.assign(index,{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''});
+  const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=[...index.children.values()][0];
   const refresh=()=>{index.replay();return child.params;};
-  const surfaceSdk=boundedSurfaceSdk();const originalSurfaceSource=source('features/rss/RssOriginalRecoverySurface.ets');surfaceSdk.childSources.RssOriginalRecoverySurface=originalSurfaceSource;
+  const surfaceSdk=boundedSurfaceSdk();const originalSurfaceSource=source('features/rss/ui/RssOriginalRecoverySurface.ets');surfaceSdk.childSources.RssOriginalRecoverySurface=originalSurfaceSource;
   const OriginalSurface=createReaderBuilderProbe(originalSurfaceSource,boundedMembers(originalSurfaceSource),surfaceSdk.deps,surfaceSdk.hooks).Component;
   const page=()=>{
     const {owner}=createReaderBuilderProbe(pageSource,['operationFeedback','hasOperationFeedback','feedbackMessage','canRetryFeedback','retryFeedback'],{ReaderRecoveryAction:ManagementChild,RssOriginalRecoverySurface:OriginalSurface},{...surfaceSdk.hooks,mountChildren:true});
@@ -110,39 +106,39 @@ for(const [action,command] of [['toggle','rss.subscription.persist'],['refresh',
   if(action==='refresh')f.refresh().onRefresh('a');
   if(action==='remove')f.orchestrator.removeSubscription('a');
   await settle(f.orchestrator);
-  assert.equal(f.index.rssProduct.rssManagementOperation.action,action);assert.equal(f.index.rssProduct.rssManagementOperation.projection.receipt.fact,'confirmedRefreshFailed');
+  assert.equal(f.index.rssManagementOperation.action,action);assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedRefreshFailed');
   assert.equal(f.refresh().items.length,2,'read failure retains prior rows');
   const page=f.page();assert.match(textNode(page).create,/已确认，刷新失败：list unavailable/);assert.ok([...page.nodes.values()].some(n=>n.type==='Text'&&n.create==='刷新列表'));assert.ok(retryNode(page));
   retryNode(page).onClick();retryNode(page).onClick();await settle(f.orchestrator);
   assert.equal(f.runtime.count(command),1,'double retry never replays write');assert.equal(f.runtime.count('rss-source.list'),3,'double retry admits one read');
-  assert.equal(f.index.rssProduct.rssManagementOperation.projection.receipt.fact,'confirmedCurrent');
+  assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedCurrent');
   if(action==='toggle')assert.equal(f.refresh().items[0].enabled,false);
   if(action==='remove')assert.equal(f.refresh().items.length,1);
   f.runtime.readFailures.push(new Error('different failure'));f.orchestrator.refreshSubscription('b');await settle(f.orchestrator);
   Object.assign(page,{operation:clone(f.refresh().operation),readFacts:clone(f.refresh().readFacts)});page.replay();
   assert.match(textNode(page).create,/different failure/,'mounted SDK text reads live Props');retryNode(f.page()).onClick();await settle(f.orchestrator);
-  assert.equal(f.index.rssProduct.rssManagementOperation.projection.receipt.fact,'confirmedCurrent');
+  assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedCurrent');
 }
 }
 if(key==='first-read'){
 {
   const f=fixture();f.runtime.readFailures.push(new Error('first read failed'));f.orchestrator.open();await settle(f.orchestrator);
-  assert.equal(f.index.rssProduct.rssManagementRead.fact,'failed');const p=f.page();assert.match(textNode(p).create,/订阅源加载失败/);
+  assert.equal(f.index.rssManagementRead.fact,'failed');const p=f.page();assert.match(textNode(p).create,/订阅源加载失败/);
   retryNode(p).onClick();retryNode(p).onClick();await settle(f.orchestrator);
-  assert.equal(f.runtime.count('rss-source.list'),2);assert.equal(f.index.rssProduct.rssManagementOperation,undefined,'read must not fabricate write');
+  assert.equal(f.runtime.count('rss-source.list'),2);assert.equal(f.index.rssManagementOperation,undefined,'read must not fabricate write');
   f.runtime.readFailures.push(new Error('later read failed'));f.orchestrator.open();await settle(f.orchestrator);
-  assert.equal(f.index.rssProduct.rssManagementRead.fact,'refreshFailed');assert.equal(f.refresh().items.length,2);assert.match(textNode(f.page()).create,/保留上次读取结果/);
+  assert.equal(f.index.rssManagementRead.fact,'refreshFailed');assert.equal(f.refresh().items.length,2);assert.match(textNode(f.page()).create,/保留上次读取结果/);
 }
 }
 if(key==='import'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);f.runtime.readFailures.push(new Error('import read failed'));
   const completed=[],failed=[];f.orchestrator.importSources(false,v=>completed.push(v),e=>failed.push(e));await settle(f.orchestrator);
-  assert.deepEqual(completed,[{imported:1,replaceExisting:false}]);assert.equal(failed.length,0);assert.equal(f.index.rssProduct.rssManagementOperation.projection.receipt.fact,'confirmedRefreshFailed');
+  assert.deepEqual(completed,[{imported:1,replaceExisting:false}]);assert.equal(failed.length,0);assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedRefreshFailed');
   retryNode(f.page()).onClick();await settle(f.orchestrator);assert.equal(f.runtime.count('rss-source.import'),1);assert.equal(f.refresh().items.length,3);
-  f.runtime.selection=undefined;const prior=f.index.rssProduct.rssManagementOperation;
+  f.runtime.selection=undefined;const prior=f.index.rssManagementOperation;
   f.orchestrator.importSources(false,v=>completed.push(v),e=>failed.push(e));await settle(f.orchestrator);
-  assert.equal(completed.at(-1),undefined);assert.equal(f.index.rssProduct.rssManagementOperation,prior,'picker cancellation dispatches no write');
+  assert.equal(completed.at(-1),undefined);assert.equal(f.index.rssManagementOperation,prior,'picker cancellation dispatches no write');
 }
 }
 if(key==='unknown'){
@@ -150,13 +146,13 @@ for(const action of ['toggle','import']){
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);f.runtime.writeFailure=new Error('ack lost');
   if(action==='toggle')f.orchestrator.toggleSubscription('a',false);
   else f.orchestrator.importSources(false,()=>assert.fail('lost ack cannot report success'),()=>assert.fail('lost ack cannot report failure'));
-  await settle(f.orchestrator);assert.equal(f.index.rssProduct.rssManagementOperation.projection.receipt.confirmation,'unknown');
+  await settle(f.orchestrator);assert.equal(f.index.rssManagementOperation.projection.receipt.confirmation,'unknown');
   retryNode(f.page()).onClick();await settle(f.orchestrator);
-  assert.equal(f.index.rssProduct.rssManagementOperation.projection.receipt.fact,'pendingReconciliation','matching state is not a lost ACK');
+  assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'pendingReconciliation','matching state is not a lost ACK');
   assert.equal(f.runtime.count(action==='toggle'?'rss.subscription.persist':'rss-source.import'),1);
   f.orchestrator.toggleSubscription('b',false);f.orchestrator.importSources(true,()=>assert.fail('unknown cannot be replaced'),()=>assert.fail());await settle(f.orchestrator);
   assert.equal(f.runtime.count('rss.subscription.persist'),action==='toggle'?1:0);assert.equal(f.runtime.count('rss-source.import'),action==='import'?1:0);
-  assert.equal(f.index.rssProduct.rssManagementOperation.projection.receipt.confirmation,'unknown','subsequent intent cannot overwrite unresolved receipt');
+  assert.equal(f.index.rssManagementOperation.projection.receipt.confirmation,'unknown','subsequent intent cannot overwrite unresolved receipt');
 }
 }
 if(key==='picker-failure'){
@@ -164,14 +160,14 @@ if(key==='picker-failure'){
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
   f.runtime.selectRssSourceJson=async()=>{throw new Error('picker denied');};
   const failures=[];f.orchestrator.importSources(false,()=>assert.fail('picker failure cannot import'),e=>failures.push(e.message));await settle(f.orchestrator);
-  assert.deepEqual(failures,['picker denied']);assert.equal(f.index.rssProduct.rssManagementOperation,undefined);assert.equal(f.runtime.count('rss-source.import'),0);
+  assert.deepEqual(failures,['picker denied']);assert.equal(f.index.rssManagementOperation,undefined);assert.equal(f.runtime.count('rss-source.import'),0);
 }
 }
 if(key==='typed-read'){
 {
   const f=fixture();f.runtime.readFailures.push(pendingRssError());
   f.orchestrator.open();await settle(f.orchestrator);
-  assert.equal(f.index.rssProduct.rssManagementRead.fact,'current');assert.equal(f.runtime.count('runtime.status'),1);assert.equal(f.runtime.count('rss-source.list'),2,'typed read gate waits and retries a read only');
+  assert.equal(f.index.rssManagementRead.fact,'current');assert.equal(f.runtime.count('runtime.status'),1);assert.equal(f.runtime.count('rss-source.list'),2,'typed read gate waits and retries a read only');
 }
 }
 if(key==='picker-retirement'){
@@ -191,16 +187,16 @@ if(key==='runtime-replacement'){
   const pause=deferred();let waiting=false;
   f.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
   f.orchestrator.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));
-  const next=fixture(rpc()),newer=next.orchestrator;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);newer.open();await settle(newer);const current=clone(next.index.rssProduct.rssPresentation);
-  pause.resolve();await settle(f.orchestrator);assert.deepEqual(next.index.rssProduct.rssPresentation,current,'old owner late ACK cannot publish into new owner');
+  const next=fixture(rpc()),newer=next.orchestrator;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);newer.open();await settle(newer);const current=clone(next.index.rssPresentation);
+  pause.resolve();await settle(f.orchestrator);assert.deepEqual(next.index.rssPresentation,current,'old owner late ACK cannot publish into new owner');
 }
 }
 if(key==='route-close'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);const pause=deferred();let waiting=false;
   f.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
-  f.orchestrator.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));const before=clone(f.index.rssProduct.rssPresentation);
-  f.index.route='rss';pause.resolve();await settle(f.orchestrator);assert.deepEqual(f.index.rssProduct.rssPresentation,before,'close rejects late ACK publication');
+  f.orchestrator.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));const before=clone(f.index.rssPresentation);
+  f.index.route='rss';pause.resolve();await settle(f.orchestrator);assert.deepEqual(f.index.rssPresentation,before,'close rejects late ACK publication');
   const reads=f.runtime.count('rss-source.list');f.orchestrator.reconcileManagementOperation(clone(f.orchestrator.latestOperationProjection()));await settle(f.orchestrator);
   assert.equal(f.runtime.count('rss-source.list'),reads,'closed recovery ignored');
   f.orchestrator.toggleSubscription('b',false);f.orchestrator.importSources(false,()=>assert.fail(),()=>assert.fail());await settle(f.orchestrator);
@@ -211,7 +207,7 @@ if(key==='route-close'){
 if(key==='stale-generation'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);f.runtime.readFailures.push(new Error('failed'));f.orchestrator.toggleSubscription('a',false);await settle(f.orchestrator);
-  const stale=clone(f.index.rssProduct.rssManagementOperation);f.orchestrator.open();await settle(f.orchestrator);const reads=f.runtime.count('rss-source.list');
+  const stale=clone(f.index.rssManagementOperation);f.orchestrator.open();await settle(f.orchestrator);const reads=f.runtime.count('rss-source.list');
   f.orchestrator.reconcileManagementOperation(stale);await settle(f.orchestrator);assert.equal(f.runtime.count('rss-source.list'),reads,'re-entry invalidates recovery');
   const replacement=rpc(),next=fixture(replacement),newer=next.orchestrator;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);assert.notEqual(newer,f.orchestrator);newer.open();await settle(newer);
   f.orchestrator.toggleSubscription('b',false);await settle(f.orchestrator);assert.equal(f.runtime.count('rss.subscription.persist'),1,'retired owner cannot dispatch');
@@ -225,7 +221,7 @@ if(key==='queued-reentry'){
   f.orchestrator.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));
   f.orchestrator.refreshSubscription('b');f.orchestrator.open();pause.resolve();await settle(f.orchestrator);
   assert.deepEqual(f.runtime.calls.map(c=>c[0]),['rss-source.list','rss.subscription.persist','rss-source.list','rss-source.list'],'unsent retired-session intent is dropped; accepted write and re-entry share one chain');
-  assert.equal(f.index.rssProduct.rssManagementOperation.subscriptionId,'a');assert.equal(f.refresh().items[0].enabled,false);
+  assert.equal(f.index.rssManagementOperation.subscriptionId,'a');assert.equal(f.refresh().items[0].enabled,false);
 }
 }
 if(key==='index-transfer'){
@@ -235,7 +231,7 @@ if(key==='index-transfer'){
   const pause=deferred();let accepted=false;
   first.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){accepted=true;await pause.promise;}};
   oldToggle('a',false);while(!accepted)await new Promise(r=>setImmediate(r));
-  const oldValue=clone(first.index.rssProduct.rssPresentation);
+  const oldValue=clone(first.index.rssPresentation);
   first.index.shelfReceiptRetired=true;
   const next=fixture(first.runtime);assert.equal(next.orchestrator,first.orchestrator,'actual new Index reuses one original mutation lane');
   const liveIdentity=next.index.rssPresentationIdentity;
@@ -244,7 +240,7 @@ if(key==='index-transfer'){
   oldToggle('b',false);oldRetry({generation:5});
   pause.resolve();await settle(next.orchestrator);
   assert.equal(first.runtime.count('rss.subscription.persist'),1);
-  assert.deepEqual(first.index.rssProduct.rssPresentation,oldValue,'accepted ACK cannot deliver to retired Index');
+  assert.deepEqual(first.index.rssPresentation,oldValue,'accepted ACK cannot deliver to retired Index');
   assert.equal(next.refresh().items[0].enabled,false,'actual SDK successor receives readback');
   assert.equal(next.refresh().operation.projection.receipt.fact,'confirmedCurrent');
 }
@@ -264,11 +260,11 @@ if(key==='index-unknown'){
 if(key==='route-publication'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
-  const oldRead=clone(f.index.rssProduct.rssManagementRead),oldOperation=clone(f.index.rssProduct.rssManagementOperation);
+  const oldRead=clone(f.index.rssManagementRead),oldOperation=clone(f.index.rssManagementOperation);
   f.index.navigationGeneration+=1;f.index.route='rss';
   f.index.getRssOrchestrator();
   assert.equal(f.orchestrator.presentationIdentity,f.index.rssPresentationIdentity,'nonmanagement admitted factory binds current nav');
-  assert.deepEqual(f.index.rssProduct.rssManagementRead,oldRead);assert.deepEqual(f.index.rssProduct.rssManagementOperation,oldOperation,'management-only publication cannot leak into another route');
+  assert.deepEqual(f.index.rssManagementRead,oldRead);assert.deepEqual(f.index.rssManagementOperation,oldOperation,'management-only publication cannot leak into another route');
   currentOwner=undefined;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);
 }
 }
@@ -352,7 +348,7 @@ if(key==='throwing-admission'){
 if(key==='throwing-diagnostics'){
 {
   const ThrowingDiagnosticOwner = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
-    ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,
+    ordinary(source('features/rss/application/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,
       {warn(){throw Error('logger unavailable');},error(){throw Error('logger unavailable');}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
   const runtime=rpc();currentOwner=runtime;
   const owner=new ThrowingDiagnosticOwner(()=>{throw Error('native delivery retired');},()=>true,runtime,
@@ -364,8 +360,6 @@ if(key==='throwing-diagnostics'){
   let ran=false;await owner.runSerialized(async()=>{ran=true;});assert.equal(ran,true,'logger cannot poison the serial tail');
 }
 }
-
-} finally { readerTypeScriptImports.deregister(); }
 }
 const definitions={"readback": {"description": "readback actual production owner/SDK scope", "resources": []}, "first-read": {"description": "first-read actual production owner/SDK scope", "resources": []}, "import": {"description": "import actual production owner/SDK scope", "resources": []}, "unknown": {"description": "unknown actual production owner/SDK scope", "resources": []}, "picker-failure": {"description": "picker-failure actual production owner/SDK scope", "resources": []}, "typed-read": {"description": "typed-read actual production owner/SDK scope", "resources": []}, "picker-retirement": {"description": "picker-retirement actual production owner/SDK scope", "resources": []}, "runtime-replacement": {"description": "runtime-replacement actual production owner/SDK scope", "resources": []}, "route-close": {"description": "route-close actual production owner/SDK scope", "resources": []}, "stale-generation": {"description": "stale-generation actual production owner/SDK scope", "resources": []}, "queued-reentry": {"description": "queued-reentry actual production owner/SDK scope", "resources": []}, "index-transfer": {"description": "index-transfer actual production owner/SDK scope", "resources": []}, "index-unknown": {"description": "index-unknown actual production owner/SDK scope", "resources": []}, "route-publication": {"description": "route-publication actual production owner/SDK scope", "resources": []}, "accepted-transfer": {"description": "accepted-transfer actual production owner/SDK scope", "resources": []}, "queued-transfer": {"description": "queued-transfer actual production owner/SDK scope", "resources": []}, "unknown-transfer": {"description": "unknown-transfer actual production owner/SDK scope", "resources": []}, "runtime-cache": {"description": "runtime-cache actual production owner/SDK scope", "resources": []}, "throwing-admission": {"description": "throwing-admission actual production owner/SDK scope", "resources": []}, "throwing-diagnostics": {"description": "throwing-diagnostics actual production owner/SDK scope", "resources": []}};
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

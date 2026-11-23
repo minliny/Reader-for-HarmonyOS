@@ -6,10 +6,10 @@ import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
-import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
-import { MangaImageGraphicsHost } from './MangaImageGraphicsHost';
+import { ReadingBodyImageHost, type ReadingBodyImagePayload } from '../platform/reading-resources/ReadingBodyImageHost';
+import { MangaImageGraphicsHost } from '../platform/reading-resources/MangaImageGraphicsHost';
 import { MANGA_PLATFORM_FIXTURES, MANGA_PLATFORM_GRAPHICS, type MangaPlatformFixture } from './MangaPlatformFixtures';
-import type { MangaPlatformObservation, MangaBodyDiagnosticState } from './MangaPlatformObservation';
+import type { MangaPlatformObservation, MangaBodyDiagnosticState } from '../platform/reading-resources/MangaPlatformObservation';
 import { MANGA_PLATFORM_LARGE_FIXTURE, MANGA_PLATFORM_LARGE_CONTROL } from './MangaPlatformLargeFixture';
 
 export interface MangaProbeFrame { id: string; fileUri: string; width: number; height: number; }
@@ -244,7 +244,7 @@ export class MangaPlatformProbeRunner {
     const expected = await this.bytes(f.expectedFile, f.expectedSha256);
     const expectedBgra = await this.bytes(f.preEncodedFile, f.preEncodedSha256);
     const planBytes = await this.bytes(f.planFile, f.planSha256);
-    const plan = JSON.parse(new util.TextDecoder().decodeWithStream(planBytes)) as JsonObject;
+    const plan = JSON.parse(new util.TextDecoder().decodeToString(planBytes)) as JsonObject;
     await this.body.validateBytes(encoded, this.current, 0);
     this.assertProfile('png', 8, 103);
     this.preEncoded = undefined;
@@ -277,7 +277,7 @@ export class MangaPlatformProbeRunner {
       if (graphics) {
         const g = MANGA_PLATFORM_GRAPHICS;
         const encoded = await this.bytes(g.file, g.sha256);
-        const plan = JSON.parse(new util.TextDecoder().decodeWithStream(await this.bytes(g.planFile, g.planSha256))) as JsonObject;
+        const plan = JSON.parse(new util.TextDecoder().decodeToString(await this.bytes(g.planFile, g.planSha256))) as JsonObject;
         await this.graphics.transform(encoded, plan, this.current);
       } else {
         const bytes = await this.bytes(f.file, f.sha256);

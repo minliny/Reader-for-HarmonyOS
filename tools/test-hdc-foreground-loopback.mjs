@@ -1,17 +1,10 @@
-import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"owned-loopback":{"description":"Owned temporary loopback listeners, real macOS lsof/ps and bounded startup; no HDC service","resources":["network-fixture"]}};
-for(const id of selectContractCases(definitions)){await run();recordContractCasePass(id);}
-async function run(){
-const {default:assert}=await import("node:assert/strict");
-const {spawn}=await import("node:child_process");
-const {once}=await import("node:events");
-const {inspectListeners,matchesOwnedListener,ownedProcessNameMatches,connectLocal,parseLsofListeners,validateLsofWarning}=await import("./reader-hdc-foreground.mjs");
 // Exact offline regression for the production foreground listener checks.
 // Only temporary loopback sockets and owned Node child processes are used.
-
-
-
-
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { inspectListeners, matchesOwnedListener, ownedProcessNameMatches,
+  connectLocal, parseLsofListeners, validateLsofWarning } from './reader-hdc-foreground.mjs';
 
 const children = [];
 async function listen(host, port = 0) {
@@ -20,13 +13,14 @@ async function listen(host, port = 0) {
   children.push(child);
   let stderr = '';
   child.stderr.on('data', chunk => { stderr += chunk; });
-  let timeout;
-  const failed = new Promise((_resolve,reject) => {
-    timeout=setTimeout(()=>{child.kill('SIGKILL');reject(Error('owned listener did not publish a port within 5s'));},5000);
-  });
+  const timeout = setTimeout(() => child.kill('SIGKILL'), 5000);
   try {
-    const [data] = await Promise.race([once(child.stdout,'data'),
-      once(child,'exit').then(([code,signal])=>{throw Error('owned listener exited before port: '+code+'/'+signal+' '+stderr);}),failed]);
+    const [data] = await Promise.race([
+      once(child.stdout, 'data'),
+      once(child, 'close').then(([code, signal]) => {
+        throw new Error(`owned listener exited before readiness (${code}/${signal}): ${stderr}`);
+      }),
+    ]);
     const bound = Number(String(data).trim());
     assert.ok(Number.isInteger(bound) && bound > 0, stderr);
     return { child, port: bound };
@@ -57,10 +51,8 @@ try {
   console.log('PASS foreground listener: real IPv4-mapped loopback, owner, TCP, competing IPv6 and fail-closed parsing');
 } finally {
   await Promise.all(children.map(async child => {
-    if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
+    if (child.exitCode !== null || child.signalCode !== null) return;
     child.kill('SIGTERM');
     await once(child, 'close');
   }));
-}
-
 }

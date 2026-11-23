@@ -12,7 +12,7 @@ const settle = async () => { for (let index = 0; index < 20; index += 1) await P
 const book = (id, chapter) => ({ sourceId: 's', bookId: String(id), title: String(id), author: '', currentChapterIndex: chapter,
   readingPosition: chapter === undefined ? undefined : { chapterIndex: chapter, chapterOffset: 0, updatedAt: 1 } });
 const page = (books, total = books.length) => ({ books, total, unfilteredTotal: total, projectionRevision: 'same-read', changed: false });
-const Flow = productionMotionMethods(file('features/bookshelf/BookshelfFlowGateway.ts'), ['load', 'loadPage', 'classify'], { BOOKSHELF_PAGE_SIZE: 48 });
+const Flow = productionMotionMethods(file('features/bookshelf/application/BookshelfFlowGateway.ts'), ['load', 'loadPage', 'classify'], { BOOKSHELF_PAGE_SIZE: 48 });
 function flow(filter = { readingState: 'all', sourceKind: 'all' }, supportsPages = true) {
   const first = deferred(), continued = deferred(), requests = [];
   let continueCalls = 0;
@@ -124,7 +124,7 @@ for (const filter of [{ readingState: 'unread', sourceKind: 'all' }, { readingSt
   assert.equal(f.continueCalls(), 0); assert.equal(f.requests[0].pageProjection, undefined, 'legacy Core contract stays unchanged');
 }
 
-const Store = productionMotionMethods(file('features/sync/WebDavCredentialStore.ts'), [
+const Store = productionMotionMethods(file('features/sync/application/WebDavCredentialStore.ts'), [
   'attachContext', 'currentBookshelfViewMode', 'loadBookshelfViewMode', 'saveBookshelfViewMode',
   'readOrMigrateViewMode', 'writeLocalViewMode', 'validateRestoreJournal',
 ], { LOCAL_VIEW_MODE_KEY: 'mode', LOCAL_MIGRATION_KEY: 'version', LOCAL_CONFIG_VERSION: 1, LOCAL_RESTORE_JOURNAL_KEY: 'journal' });
@@ -175,7 +175,7 @@ function storeFixture() {
   assert.equal(f.store.currentBookshelfViewMode(), 'list', 'serialized writes publish the last acknowledgement');
 }
 
-const Page = productionMotionMethods(file('features/bookshelf/BookshelfPage.ets'), ['aboutToAppear', 'loadViewMode', 'retryViewMode', 'viewModeRecovery', 'viewModePending', 'modeFeedback', 'applyViewModeSnapshot'], { readerRecoveryView, registerReaderShelfFonts() {} });
+const Page = productionMotionMethods(file('features/bookshelf/ui/BookshelfPage.ets'), ['aboutToAppear', 'takeDetailReturnFocus', 'loadViewMode', 'retryViewMode', 'viewModeRecovery', 'viewModePending', 'modeFeedback', 'applyViewModeSnapshot'], { readerRecoveryView, registerReaderShelfFonts() {} });
 function pageFixture(confirmed, pending) {
   let reads = 0, builds = 0;
   const owner = Object.assign(new Page(), { mounted: false, viewModeRevision: 0, storedViewMode: 'cover', viewSwitchRunning: false,

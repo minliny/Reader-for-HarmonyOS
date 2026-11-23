@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ReaderControlRuntime.ts';
-import * as session from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts';
+import * as session from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { readerControlHeaderFrame } from '../entry/src/main/ets/features/reading/ReaderControlHeaderGeometry.ts';
+import { readerControlHeaderFrame } from '../entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts';
 import { readerControlMotionBounds, sampleReaderControlMotionComposition }
-  from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';
+  from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
@@ -15,9 +15,9 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
-const { sampleReaderControlReplaceHeader } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
+const { sampleReaderControlReplaceHeader } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), 'utf8');
 const shell = source.slice(source.indexOf(".id('reader-control-motion-shell')"),
   source.indexOf(".id('reader-control-full-content-surface')"));
 assert.match(shell, /\.hitTestBehavior\(HitTestMode\.None\)/,
@@ -30,7 +30,7 @@ assert.match(source,
   'collapse action has an explicit blocking target and production callback');
 
 const Panel = productionMotionMethods(
-  new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url),
+  new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url),
   ['collapseControl', 'applySemanticSession'], {
     collapseReaderControlSession: session.collapseReaderControlSession,
     READER_CONTROL_EXPAND_MS: 320,
@@ -77,7 +77,8 @@ const probeSource = source.slice(0, source.lastIndexOf('}')) +
   '\n @Builder private probeHeaderActor() {\n' + headerActor + '\n }\n}';
 const probeMembers = ['probeHeaderActor', 'controlHeader', 'replaceHeader', 'headerFrame', 'replaceHeaderFrame',
   'headerIcon', 'headerInter', 'contentTitle', 'contentLocation', 'collapseControl', 'applySemanticSession',
-  'acceptRuntime', 'rememberVisibleContentLocation', 'commitVisualSession', 'onControlSessionChanged'];
+  'acceptRuntime', 'rememberVisibleContentLocation', 'commitVisualSession', 'onControlSessionChanged', 'contentInputEnabled',
+  'syncProgressInput', 'invalidateProgressInput', 'progressInputEnabled', 'progressChangeHandler', 'clampPercent'];
 for (const module of ['autoPage', 'tts', 'directory', 'appearance', 'settings', 'search', 'replace']) {
   for (const reduced of [false, true]) {
     const { owner } = createReaderBuilderProbe(probeSource, probeMembers, {
@@ -89,6 +90,8 @@ for (const module of ['autoPage', 'tts', 'directory', 'appearance', 'settings', 
     let semantic = settledFull, activities = 0, writes = 0;
     Object.assign(owner, {
       runtime: controlRuntime, runtimeMounted: true, reduceMotion: reduced, inputEnabled: true,
+      runtimeLifecycle: 1, controlOpenRevision: 1, progressInputRevision: 0, progressInputScope: '', progressPreviewPercent: -1,
+      controlObscured: false, temporaryLayerActive: false, moreMenuVisible: false,
       visualSession: settledFull, visualHeldPointerId: -1, lastVisibleContentLocation: settledFull.location,
       appScheme: 'day', rootScreenX: 0, rootScreenY: 0, dockRect: {},
       onInputActivity: () => activities++, onVisualSessionChange() {}, setAppearanceFontReorderActivity() {},

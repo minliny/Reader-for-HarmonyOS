@@ -1,10 +1,12 @@
-import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
 import {auditNativeTextElements} from './reader-typography-consumer-audit.mjs';
 
 export const indexSyncColdLayoutSuccessorPath='tools/fixtures/index-sync-cold-page-layout-successor-20261014.json';
-const {ts,options}=installedEtsCompiler();
+const sdk=resolveEtsLoaderRoot();
+const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 /** One original AUTO text state moves to a named Builder and a real shared
@@ -26,26 +28,19 @@ export function verifyIndexSyncColdLayoutSuccession(baseline,readSource,parseCur
  assert.equal(tree.fileName,w.page,'shared cold Index AST path matches current source');
  assert.equal(tree.text,source,'shared cold Index AST bytes match current source');
  const owner=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text==='Index');assert.ok(owner);
- const member=name=>owner.members.find(m=>m.name?.getText(tree)===name);
+ const member=name=>owner.members.find(m=>m.name?.getText(tree)===name),build=member('build'),body=member(w.currentMethod);assert.ok(build&&body);
  const collect=(node,predicate)=>{const found=[];const walk=n=>{if(predicate(n))found.push(n);ts.forEachChild(n,walk);};walk(node);return found;};
  const calls=(node,name)=>collect(node,n=>(ts.isCallExpression(n)||ts.isEtsComponentExpression(n))&&n.expression.getText(tree)===name);
+ const snapshots=collect(build,n=>ts.isIfStatement(n)&&n.expression.getText(tree)==='this.syncSnapshotReady');assert.equal(snapshots.length,1);
+ const hosts=calls(snapshots[0].elseStatement,w.host);assert.equal(hosts.length,1,'actual unready-sync branch delegates the one shared frame');
+ const props=new Map(hosts[0].arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer]));
+ assert.equal(props.get('variant')?.getText(tree),"'standard'");assert.equal(calls(props.get('content'),'this.'+w.currentMethod).length,1,'actual cold content slot invokes the original AUTO actor successor');
+ assert.equal(calls(snapshots[0].elseStatement,'Column').length,0,'the cold route has no parallel private frame');
  const native=auditNativeTextElements(source,w.page,tree).filter(n=>n.kind==='Text'&&n.text===w.previousNative.text);assert.equal(native.length,1,'one retained cold-state native text');
- const coldMethod=native[0].method,body=member(coldMethod);assert.ok(body,'cold native actor has one actual owner');
- assert.deepEqual({kind:native[0].kind,text:native[0].text,modifiers:native[0].modifiers,attributes:native[0].attributes},w.previousNative,'all original native typography/AUTO effects remain');
- // Discover the actual delegated content. Private Builder names, containing
- // route method and equivalent readiness expressions are not the contract.
- const frames=collect(owner,n=>(ts.isCallExpression(n)||ts.isEtsComponentExpression(n))&&n.expression.getText(tree)===w.host)
-  .filter(n=>n.arguments[0]&&calls(n.arguments[0],'this.'+coldMethod).length===1);
- assert.equal(frames.length,1,'the one cold actor has one shared frame owner');
- const frame=frames[0],props=new Map(frame.arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer]));
- assert.ok(props.has('frameStyle')&&props.has('geometry'),'shared frame receives explicit feature visual and geometry facts');
- const branches=collect(owner,n=>ts.isIfStatement(n)&&n.elseStatement&&collect(n.elseStatement,c=>c===frame).length===1);
- const branch=branches.at(-1);assert.ok(branch,'cold content is the unready alternative; SDK execution checks the actual readiness facts');
- assert.equal(calls(branch.elseStatement,'Column').length,0,'the cold route has no parallel private frame');
+ assert.equal(native[0].method,w.currentMethod);assert.deepEqual({kind:native[0].kind,text:native[0].text,modifiers:native[0].modifiers,attributes:native[0].attributes},w.previousNative,'all original native typography/AUTO effects remain');
  assert.equal(calls(body,'Column').length,1);
  const attributes=Object.fromEntries(collect(body,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&['width','height','justifyContent','backgroundColor'].includes(n.expression.name.text)).map(n=>[n.expression.name.text,n.arguments[0].getText(tree)]));
  assert.deepEqual(attributes,w.previousColumnAttributes,'cold state retains centered native geometry and relinquishes private paper paint');
  assert.equal(w.currentBackgroundOwner,'ReaderPageFrameModifier');assert.equal(w.sdkProof,'tools/test-reader-page-header-contract.mjs');assert.ok(readSource(w.sdkProof).length>0);
- let route=branch.parent;while(route&&!ts.isMethodDeclaration(route))route=route.parent;assert.ok(route);
- return{nativeActors:1,privateBackgroundRemoved:1,coldContentMethod:coldMethod,routeMethod:route.name.getText(tree)};
+ return{nativeActors:1,privateBackgroundRemoved:1};
 }

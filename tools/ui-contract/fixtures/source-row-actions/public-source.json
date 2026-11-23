@@ -1,0 +1,18 @@
+[
+  {
+    "bookSourceName": "Reader Phase 1 Row Actions",
+    "bookSourceUrl": "https://row-actions.reader-phase1.invalid/",
+    "bookSourceGroup": "Phase1 Group A",
+    "bookSourceType": 0,
+    "enabled": false,
+    "bookSourceComment": "Public Phase 1 native row geometry fixture. Reserved origin and no real provider.",
+    "searchUrl": "/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result",
+      "name": "class.title@text",
+      "bookUrl": "tag.a@href"
+    },
+    "enabledExplore": false,
+    "loginUrl": "https://row-actions.reader-phase1.invalid/login"
+  }
+]

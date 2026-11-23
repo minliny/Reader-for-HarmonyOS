@@ -19,17 +19,17 @@ const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 // app.
 const errorMessageSource = read('entry/src/main/ets/app/ErrorMessage.ts')
   .replace(/^export /gm, '');
-const transportPolicySource = read('entry/src/main/ets/app/HttpTransportPolicy.ts')
+const transportPolicySource = read('entry/src/main/ets/platform/network/HttpTransportPolicy.ts')
   .replace(/^export /gm, '');
-const sourceCategorySource = read('entry/src/main/ets/features/source/ReaderSourceCategory.ts')
+const sourceCategorySource = read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts')
   .replace(/^export /gm, '');
-const gatewaySource = read('entry/src/main/ets/features/source/SourceGateway.ts')
+const gatewaySource = read('entry/src/main/ets/features/source/application/SourceGateway.ts')
   .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];\n/m, '')
   .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage['"];\n/m, '')
   .replace(/^import \{ httpUrlHostname, isPrivateNetworkTarget \} from ['"][^'"]*HttpTransportPolicy['"];\n/m, '')
   .replace(/^import \{ classifyReaderSource, type ReaderSourceCategory \} from ['"]\.\/ReaderSourceCategory['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
-const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsOrchestrator.ets')
+const orchestratorSource = read('entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
@@ -42,7 +42,10 @@ const executable = stripTypeScriptTypes(
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
 let currentOwner;const owned=[];const {isReaderCoreTransactionPendingError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
-const {SourceGateway,SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}=new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError','hilog',executable.replace(/^export /gm,'')+';return{SourceGateway,SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT};')(runtimeOwnerIdentityProbe(()=>currentOwner),isReaderCoreTransactionPendingError,{warn(){},error(){},info(){},debug(){},fatal(){}});
+const mutationOwners = new WeakMap();
+const RulesMutationOwner = { forRuntime: owner => mutationOwners.get(owner) };
+const AppStorage = { get: key => key === 'readerAppForeground' ? true : undefined };
+const {SourceGateway,SourceToolsOrchestrator}=new Function('ReaderRuntimeOwner','RulesMutationOwner','isReaderCoreTransactionPendingError','hilog','AppStorage',executable.replace(/^export /gm,'')+';return{SourceGateway,SourceToolsOrchestrator};')(runtimeOwnerIdentityProbe(()=>currentOwner),RulesMutationOwner,isReaderCoreTransactionPendingError,{warn(){},error(){},info(){},debug(){},fatal(){}},AppStorage);
 const tick = () => new Promise((resolveTick) => setImmediate(resolveTick));
 
 async function waitUntil(predicate, label) {
@@ -57,7 +60,7 @@ function source(sourceId, name) {
   return {
     sourceId,
     name,
-    baseUrl: `https://${sourceId}.example`,
+    baseUrl: sourceId.includes('://') ? sourceId : `https://${sourceId}.example`,
     enabled: true,
     enabledExplore: true,
   };
@@ -70,8 +73,8 @@ function rawSource(item) {
     baseUrl: item.baseUrl,
     enabled: item.enabled,
     enabledExplore: item.enabledExplore,
-    sourceVersion: item.sourceVersion ?? 'v1',
-    bookSource: { bookSourceUrl: item.sourceId, bookSourceName: item.name },
+    sourceVersion: item.sourceVersion ?? 'a'.repeat(64),
+    bookSource: { bookSourceUrl: item.baseUrl, bookSourceName: item.name },
   };
 }
 
@@ -212,14 +215,37 @@ const currentHistory = { checkedAtMs: 20, stale: false, report: reportEnvelope('
 try{
 if(id==='followup-feedback'){
 const SourceToolsFeedback = productionMotionMethods(new URL(
-  '../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), ['feedbackIdentity', 'showTransientFeedback']);
+  '../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), ['feedbackIdentity', 'showTransientFeedback']);
 
 // Retained batch results do not own feedback from later operations. Exercise
-// real check progress, editor/export Gateway calls, receipt facts and the
-// production Page feedback method together for both terminal batch states.
+// real check progress, editor/export Gateway calls, receipt projection and
+// production Page feedback. Core and durable mutation execution are finite ports.
 for (const phase of ['completed', 'stopped']) for (const action of ['saved', 'readbackFailed', 'exported']) {
   const sources = [source('https://after-a.example', '甲源'), source('https://after-b.example', '乙源')];
   const owner = controlledOwner(sources), originalRequest = owner.request.bind(owner);
+  owner.supportsCoreCapability = capability => [
+    'source.check.mode.v1', 'rules.mutation.exact.v1', 'source.import.conditional.v1',
+  ].includes(capability);
+  const noPendingMutation = { blocked: false, confirmation: 'undispatched' };
+  mutationOwners.set(owner, {
+    snapshot: () => noPendingMutation,
+    recoverOriginal: async () => noPendingMutation,
+    async runSubscription(kind, steps, failures, current, qualify, evidence, _onFailure, identify) {
+      assert.equal(kind, 3, 'the conditional editor uses the source mutation family');
+      assert.deepEqual(failures, []);
+      assert.equal(steps.length, 1);
+      assert.equal(current(), true);
+      const [{ method, params }] = steps;
+      assert.equal(method, 'source.import');
+      assert.equal(params.sourceId, sources[0].sourceId);
+      assert.equal(params.expectedVersion, 'a'.repeat(64));
+      identify('fixture-source-editor-operation');
+      const { data } = await owner.request(method, params, { onDispatch: () => evidence.dispatched() });
+      qualify(method, params, data);
+      evidence.confirmed();
+      return { subscription: { confirmedParts: 1, failedParts: 0 } };
+    },
+  });
   let failReadback = false, imports = 0, exports = 0;
   owner.request = async (method, params, options) => {
     if (method === 'source.list' && failReadback && imports > 0) { failReadback = false; throw new Error('readback unavailable'); }
@@ -231,9 +257,16 @@ for (const phase of ['completed', 'stopped']) for (const action of ['saved', 're
     return originalRequest(method, params, options);
   };
   owner.saveBookSourceJson = async () => { exports++; return 'saved-sources.json'; };
-  const notices = [],page = Object.assign(new SourceToolsFeedback(), { mounted: true, lastFeedbackIdentity: '',
-    transientFeedback: { show(_context, options) { notices.push(options); return true; }, reset() {} },
-    getUIContext: () => ({ getFont: () => ({}) }) });
+  const notices = [], page = Object.assign(new SourceToolsFeedback(), {
+    mounted: true,
+    lastFeedbackIdentity: '',
+    transientFeedback: { show(_context, options, isCurrent) {
+      if (!isCurrent()) return false;
+      notices.push(options);
+      return true;
+    } },
+    getUIContext: () => ({}),
+  });
   const { orchestrator, snapshots } = capture(owner, snapshot => { page.snapshot = snapshot; page.showTransientFeedback(); });
   await openReady(orchestrator, snapshots, sources);
   const initialFeedback = notices.length;
@@ -247,7 +280,7 @@ for (const phase of ['completed', 'stopped']) for (const action of ['saved', 're
   await orchestrator.operationTail;
   const retained = structuredClone(latest(snapshots).batchCheck);
   assert.equal(retained.phase, phase);assert.ok(retained.results.length > 0);
-  assert.equal(notices.length, initialFeedback, 'selection and the retained batch emit no new short feedback');
+  assert.equal(notices.length, initialFeedback, 'selection and the retained batch emit no new transient feedback');
   assert.equal(latest(snapshots).statusEvent, 'batch');
   if (action === 'exported') orchestrator.exportSelected(['https://after-a.example']);
   else {
@@ -257,16 +290,16 @@ for (const phase of ['completed', 'stopped']) for (const action of ['saved', 're
   }
   await orchestrator.operationTail;
   assert.deepEqual(latest(snapshots).batchCheck, retained, 'later operations preserve original progress, counts and item results');
-  assert.equal(latest(snapshots).statusEvent, 'feedback');
+  assert.equal(latest(snapshots).statusEvent, 'feedback', `${phase}/${action}: ${latest(snapshots).statusMessage}`);
   assert.equal(notices.length, initialFeedback + 1, `${phase}/${action}: later operation emits one own result`);
-  const ownNotice = notices.at(-1);
+  const notice = notices.at(-1);
   page.showTransientFeedback();assert.equal(notices.length, initialFeedback + 1, 'repainting a terminal operation cannot replay feedback');
-  if (action === 'exported') { assert.equal(exports, 1);assert.match(ownNotice.message, /已导出 1 个书源/); }
+  if (action === 'exported') { assert.equal(exports, 1);assert.match(notice.message, /已导出 1 个书源/); }
   else {
     assert.equal(imports, 1, 'follow-up read failure never repeats source.import');
-    assert.equal(latest(snapshots).receipt.receipt.confirmation, 'confirmed');
-    if (action === 'readbackFailed') { assert.equal(latest(snapshots).receipt.receipt.fact, 'confirmedRefreshFailed');assert.match(ownNotice.message, /已确认.*刷新失败/);assert.ok(latest(snapshots).editorText.length > 0, 'failed readback retains the original draft'); }
-    else { assert.equal(latest(snapshots).editorSourceId, '');assert.match(ownNotice.message, /校验并保存/); }
+    assert.equal(latest(snapshots).editorReadback.confirmation, 'confirmed');
+    if (action === 'readbackFailed') { assert.equal(latest(snapshots).editorReadback.fact, 'confirmedRefreshFailed');assert.match(notice.message, /已确认.*刷新失败/);assert.ok(latest(snapshots).editorText.length > 0, 'failed readback retains the original draft'); }
+    else { assert.equal(latest(snapshots).editorSourceId, '');assert.match(notice.message, /校验并保存/); }
   }
 }
 }
@@ -380,7 +413,7 @@ if(id==='stop'){
 }
 if(id==='index-selection'){
 const sources=[source('selected-a','甲'),source('selected-b','乙')],owner=controlledOwner(sources);const {orchestrator,snapshots}=capture(owner);await openReady(orchestrator,snapshots,sources);orchestrator.setSelection(sources.map(s=>s.sourceId));
-const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('entry/src/main/ets/features/source/SourceToolsPage.ets');sdk.hooks.childSources.SourceToolsPage=pageSource;
+const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('entry/src/main/ets/features/source/ui/SourceToolsPage.ets');sdk.hooks.childSources.SourceToolsPage=pageSource;
 const leaf=sdk.consumer(pageSource,['snapshot','onCheckSelected'],{EMPTY_SOURCE_TOOLS_SNAPSHOT:latest(snapshots)}).constructor;
 const index=sdk.consumer(read('entry/src/main/ets/pages/Index.ets'),['sourceToolsContent','sourceToolsSurface','isCurrentSourceToolsPresentation','isCurrentRuntime'],{SourceToolsPage:leaf,ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>currentOwner)});
 Object.assign(index,{navigationGeneration:1,mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,sourceToolsOrchestrator:orchestrator,sourceToolsPresentationIdentity:'source-tools:1',sourceToolsSnapshot:latest(snapshots),shelfReceiptRetired:false,route:'sourceTools'});orchestrator.attachPresentation('source-tools:1',snapshot=>{snapshots.push(snapshot);index.sourceToolsSnapshot=snapshot;},()=>true);
@@ -441,10 +474,10 @@ if(id==='scale-selection'){
 }
 }
 if(id==='list-notifications'){
-const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts,options}=installedEtsCompiler();const sourceText=read('entry/src/main/ets/features/source/SourceToolsPage.ets');const tree=ts.createSourceFile('SourceToolsData.ets',sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
+const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts,options}=installedEtsCompiler();const sourceText=read('entry/src/main/ets/features/source/ui/SourceToolsPage.ets');const tree=ts.createSourceFile('SourceToolsData.ets',sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
 const names=['SourceToolListRow','SourceToolListDataSource','SourceCheckResultDataSource','SourceDebugLogDataSource'];const declarations=tree.statements.filter(n=>n.name&&names.includes(n.name.getText(tree)));assert.equal(declarations.length,names.length);
 const code=ts.transpileModule(declarations.map(n=>n.getText(tree)).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;const types=new Function(code+';return{'+names.join(',')+'};')();
-const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const snapshot={...EMPTY_SOURCE_TOOLS_SNAPSHOT,sources:Array.from({length:1777},(_,i)=>source('row-'+i,'源'+i)),selectedSourceIds:[],sourceListRevision:1,selectionRevision:1,busy:false};
+const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const snapshot={sources:Array.from({length:1777},(_,i)=>source('row-'+i,'源'+i)),selectedSourceIds:[],sourceListRevision:1,selectionRevision:1,busy:false,batchCheck:{results:[]},debugLogs:[],debugSourceId:''};
 const page=sdk.consumer(sourceText,['snapshot','sourceDataSource','batchResultDataSource','debugLogDataSource','projectedSourceListRevision','projectedSelectionRevision','projectedBusy','projectedCanWrite','projectedBatchResultsIdentity','projectedDebugLogsIdentity','mounted','lastFeedbackIdentity','feedbackIdentity','showTransientFeedback','syncListDataSources','canWriteSources','batchResultsIdentity','debugLogsIdentity'],{...types,EMPTY_SOURCE_TOOLS_SNAPSHOT:snapshot},{snapshot});
 let reloads=0,resultReloads=0;const listener={onDataReloaded(){reloads++;}};page.sourceDataSource.registerDataChangeListener(listener);page.sourceDataSource.registerDataChangeListener(listener);page.batchResultDataSource.registerDataChangeListener({onDataReloaded(){resultReloads++;}});
 page.syncListDataSources();assert.equal(reloads,1);assert.equal(page.sourceDataSource.totalCount(),1777);assert.deepEqual(page.sourceDataSource.getData(1776).source,snapshot.sources[1776]);
@@ -502,6 +535,7 @@ if(id==='report-history'){
   await assert.rejects(new SourceGateway(reportOwner(1, undefined, [currentHistory])).loadSources(undefined, true),
     /unrequested report version/);
   const ordinaryOwner = reportOwner(2, undefined, [null]);
+  delete ordinaryOwner.supportsCoreCapability;
   const ignored = await new SourceGateway(ordinaryOwner).loadSources();
   assert.equal(ignored[0].checkReports, undefined, 'history remains opt-in');
   assert.deepEqual(ordinaryOwner.calls[0].params, {}, 'ordinary listing never requires diagnostic capability negotiation');

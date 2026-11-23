@@ -1,25 +1,29 @@
 #!/usr/bin/env node
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const selected=selectContractCases({'probe-idle':{description:'Actual probe exits on idle deadline and releases shared lease',resources:[]},'capture-stop':{description:'Actual capture stops after a zero-exit transport failure, without retry',resources:[]},'command-policy':{description:'Bind service maintenance and reconnect to the matching server and target',resources:[]},'foreground-policy':{description:'Offline owned foreground startup, competing listener, failure and unreconciled spawn checks',resources:[]},timeout:{description:'Hung client ignoring TERM is killed before lock release; successor can run',resources:[]},'orphan-child':{description:'Dead wrapper with a live client cannot be reclaimed',resources:[]},serialization:{description:'Offline actual CLI shared-server lock across two targets and exact event order',resources:[]},'wait-barrier':{description:'Actual acquire promise reaches contention before releasing first owner',resources:[]},'stale-token':{description:'Actual stale reclaim and token-safe release without devices',resources:[]},signal:{description:'Offline CLI SIGTERM forwards to owned Node child then releases lease',resources:[]}});
+const selected = selectContractCases({
+  'command-policy': { description: 'Bind command/server/target and preserve current HAP install argv without a device.', resources: [] },
+  'foreground-policy': { description: 'Owned foreground startup, competing listener, failure and unreconciled process paths with finite ports.', resources: [] },
+  timeout: { description: 'Kill a hung owned Node client before releasing the shared lease.', resources: [] },
+  'orphan-child': { description: 'Keep a dead wrapper lease while its actual child is still alive.', resources: [] },
+  serialization: { description: 'Actual CLI server lease serializes two exact targets.', resources: [] },
+  'wait-barrier': { description: 'Actual acquire promise reaches contention before the first owner releases.', resources: [] },
+  'stale-token': { description: 'Actual stale reclaim and token-safe release.', resources: [] },
+  signal: { description: 'Actual CLI signal forwards to the owned Node client and releases after exit.', resources: [] },
+  'direct-environment': { description: 'Actual client and default foreground Node spawn remove proxy variables and preserve other input.', resources: [] },
+});
 async function run(id){
  const {default:assert}=await import('node:assert/strict');
  const {spawn}=await import('node:child_process');
  const {mkdtempSync,readFileSync,writeFileSync,existsSync,rmSync,chmodSync}=await import('node:fs');
- const {tmpdir}=await import('node:os');const {resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');
- const {admitCommand,canonicalServerKey,acquireLease,releaseLease,targetRef,hdcDirectEnvironment}=await import('./reader-hdc-lease.mjs');
+ const {tmpdir}=await import('node:os');const {basename,resolve}=await import('node:path');const {fileURLToPath}=await import('node:url');
+ const {admitCommand,canonicalServerKey,hdcDirectEnvironment,acquireLease,releaseLease,targetRef}=await import('./reader-hdc-lease.mjs');
  const root=mkdtempSync(resolve(tmpdir(),'reader-hdc-lease-test-'));
- const children=new Set();
- const ownedSpawn=(command,args,options={})=>{
-  const child=spawn(command,args,{...options,detached:true,
-   env:hdcDirectEnvironment({...process.env,...options.env,READER_HDC_LEASE_ROOT:root,READER_HDC_SERVER_KEY:'127.0.0.1:8710'})});
-  children.add(child);child.once('close',()=>children.delete(child));return child;
- };
  const fake=resolve(root,'hdc');
  writeFileSync(fake,`#!${process.execPath}\nconst args=process.argv.slice(2);eval(args.at(-1));\n`);chmodSync(fake,0o700);
  const events=()=>existsSync(resolve(root,'events.jsonl'))?readFileSync(resolve(root,'events.jsonl'),'utf8').trim().split('\n').filter(Boolean).map(JSON.parse):[];
  const wait=async predicate=>{const deadline=Date.now()+5000;while(!predicate()){assert.ok(Date.now()<deadline,'owned worker handshake timeout');await new Promise(r=>setTimeout(r,5));}};
- const cli=(agent,target,code,waitMs='2000',timeoutMs='30000')=>{
-  const child=ownedSpawn(process.execPath,[fileURLToPath(new URL('./reader-hdc-lease.mjs',import.meta.url)),'--target',target,'--hdc',fake,'--server-key','127.0.0.1:8710','--lock-root',root,'--agent-id',agent,'--wait-ms',waitMs,'--timeout-ms',timeoutMs,'--','shell',code],{stdio:['ignore','pipe','pipe']});
+ const cli=(agent,target,code,waitMs='2000',timeoutMs='30000',environment=process.env)=>{
+  const child=spawn(process.execPath,[fileURLToPath(new URL('./reader-hdc-lease.mjs',import.meta.url)),'--target',target,'--hdc',fake,'--lock-root',root,'--agent-id',agent,'--wait-ms',waitMs,'--timeout-ms',timeoutMs,'--','shell',code],{env:environment,stdio:['ignore','pipe','pipe']});
   let stdout='',stderr='';child.stdout.on('data',v=>stdout+=v);child.stderr.on('data',v=>stderr+=v);
   return{child,done:new Promise((yes,no)=>{child.on('error',no);child.on('close',exit=>yes({exit,stdout,stderr}));})};
  };
@@ -27,17 +31,7 @@ async function run(id){
  const options=(agent,target='device-a')=>({root,target,targetRefValue:targetRef(target),lockRefValue:targetRef('127.0.0.1:8710'),waitMs:2000,owner:{pid:process.pid,token:agent,agentId:agent,target}});
  try{
   assert.equal(canonicalServerKey('::ffff:127.0.0.1:8710'),'127.0.0.1:8710');
-  if(id==='probe-idle'){
-   const child=ownedSpawn(process.execPath,[fileURLToPath(new URL('./reader-control-device-probe.mjs',import.meta.url)),'--target','fixture','--hdc',fake,'--server','127.0.0.1:8710','--output-dir',resolve(root,'output')],{env:{READER_HDC_PROBE_IDLE_MS:'100'},stdio:['pipe','pipe','pipe']});
-   let output='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>output+=x);
-   const exit=await new Promise((r,j)=>{const timer=setTimeout(()=>{child.kill('SIGKILL');j(new Error('idle probe did not exit'));},5000);child.on('close',x=>{clearTimeout(timer);r(x);});});
-   assert.equal(exit,1,output);assert.match(output,/idle-timeout/);assert.equal(events().at(-1).type,'release');
-  }else if(id==='capture-stop'){
-   writeFileSync(fake,`#!${process.execPath}\nconsole.log('Connect server failed');\n`);
-   const child=ownedSpawn(process.execPath,[fileURLToPath(new URL('./reader-control-fast-capture.mjs',import.meta.url)),'--target','fixture','--hdc',fake,'--output-dir',resolve(root,'output'),'--action','custom','--x','1','--y','1','--count','8','--interval-ms','0'],{stdio:'ignore'});
-   assert.equal(await new Promise(r=>child.on('close',r)),1);
-   assert.equal(events().filter(x=>x.type==='acquire').length,1,'failed first snapshot must stop remaining seven and file recv');
-  }else if(id==='command-policy'){
+  if(id==='command-policy'){
    for(const args of [['start'],['start','-r'],['kill'],['-s','127.0.0.1:9999','list','targets'],['-t','other','shell','echo'],['tconn','other'],['reconnect','other'],['reconnect'],['-m']]) {
     assert.throws(()=>admitCommand(args,'127.0.0.1:8710','device-a'));
    }
@@ -57,8 +51,60 @@ async function run(id){
    assert.throws(()=>admitCommand(['-t','device-a','reconnect','device-a'],'127.0.0.1:8710','device-a'));
    assert.deepEqual(admitCommand(['-s','::ffff:127.0.0.1:8710','-t','device-a','shell','echo'],'127.0.0.1:8710','device-a').command,['-p','-s','127.0.0.1:8710','-t','device-a','shell','echo']);
    assert.equal(canonicalServerKey('[::ffff:127.0.0.1]:8710'),'127.0.0.1:8710');
-   const bad=ownedSpawn(process.execPath,[fileURLToPath(new URL('./reader-hdc-lease.mjs',import.meta.url)),'--target','device-a','--hdc',fake,'--lock-root',root,'--','start','-r'],{stdio:'ignore'});
+   const hap = '/private/fixture candidate/reader.hap';
+   assert.deepEqual(admitCommand(['-s', '::ffff:127.0.0.1:8710', '-t', 'device-a', 'install', '-r', hap], '127.0.0.1:8710', 'device-a'), {
+     command: ['-p', '-s', '127.0.0.1:8710', '-t', 'device-a', 'install', '-r', hap], timeoutMs: 180000,
+   });
+   assert.equal(admitCommand(['file', 'recv', '/device/file', '/host/file'], '127.0.0.1:8710', 'device-a').timeoutMs, 120000);
+   assert.equal(admitCommand(['shell', 'bm dump -n io.reader.minliny'], '127.0.0.1:8710', 'device-a').timeoutMs, 30000);
+
+   const bad=spawn(process.execPath,[fileURLToPath(new URL('./reader-hdc-lease.mjs',import.meta.url)),'--target','device-a','--hdc',fake,'--lock-root',root,'--','start','-r'],{stdio:'ignore'});
    assert.equal(await new Promise(r=>bad.on('close',r)),2);assert.equal(events().length,0);
+  }else if(id==='direct-environment'){
+   const { startForegroundServer } = await import('./reader-hdc-foreground.mjs');
+   const proxyNames = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'SOCKS_PROXY'].flatMap(name => [name, name.toLowerCase()]);
+   const keys = [...proxyNames, 'NO_PROXY', 'no_proxy', 'READER_HDC_TEST_SENTINEL'];
+   const environment = { ...process.env, NO_PROXY: 'old', no_proxy: 'old', READER_HDC_TEST_SENTINEL: 'retained' };
+   for (const name of proxyNames) environment[name] = 'http://fixture.invalid:1';
+   const expected = Object.fromEntries(keys.map(name => [name, name === 'NO_PROXY' || name === 'no_proxy' ? '*' : name === 'READER_HDC_TEST_SENTINEL' ? 'retained' : null]));
+   const observationCode = `Object.fromEntries(${JSON.stringify(keys)}.map(name => [name, process.env[name] ?? null]))`;
+   const direct = hdcDirectEnvironment(environment);
+   assert.deepEqual(Object.fromEntries(keys.map(name => [name, direct[name] ?? null])), expected);
+   assert.equal(environment.HTTP_PROXY, 'http://fixture.invalid:1', 'input environment is copied');
+   const result = await cli('direct', 'device-a', `console.log(JSON.stringify(${observationCode}))`, '2000', '30000', environment).done;
+   assert.equal(result.exit, 0, result.stderr);
+   assert.deepEqual(JSON.parse(result.stdout), expected, 'actual CLI child receives the direct environment');
+
+   const script = resolve(root, 'foreground-environment.cjs');
+   const receipt = resolve(root, 'foreground-environment.json');
+   writeFileSync(script, `require('node:fs').writeFileSync(process.argv[2], JSON.stringify(${observationCode}));setInterval(()=>{},100);`);
+   const saved = Object.fromEntries(keys.map(name => [name, process.env[name]]));
+   let childPid;
+   try {
+    for (const name of keys) process.env[name] = environment[name];
+    // Listener/TCP observations are explicitly finite here. The default production
+    // spawn and actual process-name check execute against an owned Node child.
+    const started = await startForegroundServer({
+     hdc: process.execPath, command: [script, receipt], root, serverRef: 'offline-environment', timeoutMs: 1500,
+     owner: { serverKey: '127.0.0.1:8710', agentId: 'test' }, onSpawn: pid => { childPid = pid; },
+     deps: {
+      observe: () => ({ listeners: childPid === undefined ? [] : [{ pid: childPid, command: basename(process.execPath), address: '127.0.0.1:8710' }] }),
+      connect: async () => childPid !== undefined,
+     },
+    });
+    assert.deepEqual(started, { exitCode: 0, safeToRelease: true });
+    await wait(() => existsSync(receipt));
+    assert.deepEqual(JSON.parse(readFileSync(receipt, 'utf8')), expected, 'default foreground spawn receives the direct environment');
+   } finally {
+    for (const name of keys) {
+     if (saved[name] === undefined) delete process.env[name];
+     else process.env[name] = saved[name];
+    }
+    if (childPid !== undefined) {
+     try { process.kill(childPid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+     await wait(() => { try { process.kill(childPid, 0); return false; } catch (error) { return error.code === 'ESRCH'; } });
+    }
+   }
   }else if(id==='foreground-policy'){
    const {EventEmitter}=await import('node:events');
    const {startForegroundServer}=await import('./reader-hdc-foreground.mjs');
@@ -80,7 +126,11 @@ async function run(id){
    writeFileSync(ownerPath,JSON.stringify(a.owner));releaseLease(root,held.lockDir,a.owner);
   }else if(id==='timeout'){
    const a=cli('timeout','device-a',`process.on('SIGTERM',()=>{});${heldCode()}`,'2000','1500');
-   await wait(()=>existsSync(resolve(root,'ready')));const result=await a.done;
+   await Promise.race([
+    wait(() => existsSync(resolve(root, 'ready'))),
+    a.done.then(result => { throw new Error(`owned worker ended before readiness: ${JSON.stringify(result)}`); }),
+   ]);
+   const result=await a.done;
    assert.equal(result.exit,124);const e=events();
    assert.equal(e.find(x=>x.type==='command-exit').signal,'SIGKILL');
    assert.deepEqual(e.map(x=>x.type),['acquire','command-timeout','command-exit','release']);
@@ -88,6 +138,8 @@ async function run(id){
   }else if(id==='orphan-child'){
    const a=options('a'),lease=await acquireLease(a);
    writeFileSync(resolve(lease.lockDir,'owner.json'),JSON.stringify({...a.owner,pid:2147483647,childPid:process.pid}));
+   await assert.rejects(acquireLease({...options('b'),waitMs:0}),/wait timed out/);
+   writeFileSync(resolve(lease.lockDir,'owner.json'),JSON.stringify({...a.owner,pid:2147483647,commandStartPending:true}));
    await assert.rejects(acquireLease({...options('b'),waitMs:0}),/wait timed out/);
    releaseLease(root,lease.lockDir,a.owner);
   }else if(id==='serialization'){
@@ -120,22 +172,6 @@ async function run(id){
    a.child.kill('SIGTERM');const result=await a.done;assert.equal(result.exit,1,'forwarded signal yields unsuccessful child, never a PASS child exit');
    assert.deepEqual(events().filter(e=>['acquire','release'].includes(e.type)).map(e=>[e.type,e.agentId]),[['acquire','signal'],['release','signal']]);
   }
- }finally{
-  // Each real child owns a new process group. On assertion failure, let the
-  // actual wrapper forward TERM and reap its fake client before escalating
-  // only that still-live owned group. Never signal an HDC service or peer.
-  for(const child of [...children]){
-   if(!child.pid||child.exitCode!==null||child.signalCode!==null)continue;
-   const closed=new Promise(done=>child.once('close',done));
-   child.kill('SIGTERM');
-   await Promise.race([closed,new Promise(done=>setTimeout(done,3000))]);
-   if(child.exitCode===null&&child.signalCode===null){
-    try{process.kill(-child.pid,'SIGKILL');}catch(error){if(error.code!=='ESRCH')throw error;}
-    await Promise.race([closed,new Promise(done=>setTimeout(done,1000))]);
-   }
-   assert.ok(child.exitCode!==null||child.signalCode!==null,'owned fixture child must settle before root removal');
-  }
-  rmSync(root,{recursive:true,force:true});
- }
+ }finally{rmSync(root,{recursive:true,force:true});}
 }
 for(const id of selected){await run(id);recordContractCasePass(id);}

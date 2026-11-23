@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"tap-constructor": {"description": "实际Tap构造配置/API字段与toggle/panel/end fences", "resources": []}, "safe-area": {"description": "实际全窗image与overlay单safe owner/retained revision", "resources": []}, "save-and-frame": {"description": "实际save等待CAS与受控retirement下postFrame拒绝", "resources": []}, "persistent-directory": {"description": "实际persistent目录当前Props/无popup query与独立stage", "resources": []}, "viewport-overlays": {"description": "实际noninteractive badge/current progress range与偏好保留", "resources": []}, "sheet-frame": {"description": "实际各panel bounded frame/current width/quick目录footer回执", "resources": []}, "action-safe-frame": {"description": "实际More/download shared safe-area单owner", "resources": []}, "stage-width": {"description": "实际stage与split canvas独立参数/跨三宽度反例", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
@@ -9,22 +10,22 @@ const {readFileSync} = await import('node:fs');
 const {createRequire,stripTypeScriptTypes} = await import('node:module');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
-const {createDefaultReaderWindowMetrics, ReaderInsetsVp, readerInteractiveSafeInsets} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {createDefaultReaderWindowMetrics, ReaderInsetsVp, readerInteractiveSafeInsets} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
-const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),'utf8');
 const tree=ts.createSourceFile(virtualFilePath('MangaReadingSurface.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const component=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
 const names=component.members.map(node=>node.name?.getText(tree)).filter(Boolean);
-const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const MangaStripProjection=new Function(`${stripTypeScriptTypes(projectionSource)};return MangaStripProjection`)();
 const dataSource=tree.statements.find(node=>node.name?.getText(tree)==='MangaStripDataSource').getText(tree);
 const MangaStripDataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataSource)};return MangaStripDataSource`)(MangaStripProjection);
 const frame=tree.statements.find(node=>node.name?.getText(tree)==='MangaLayoutFrame');
 assert.ok(frame,'restore uses the actual post-render callback class');
-const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
+const MangaLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const runtime=createArkUIPropertyRuntimeProbe();
 const scrolls=[],frames=[];
 class ListScroller {getItemRect(){return {x:0,y:-100,width:500,height:500};}scrollToIndex(...args){scrolls.push(args);}scrollBy(...args){scrolls.push(args);}}
@@ -130,7 +131,7 @@ await new Promise(r=>setImmediate(r));assert.equal(completed,false);assert.deepE
 resolve();await saving;assert.equal(completed,true);
 owner.restore(0,0.75);owner.aboutToDisappear=()=>{owner.mounted=false;owner.layoutGeneration++;};owner.aboutToDisappear();
 assert.equal(frames.length,1,'restore queued a real rendered-frame callback');
-const disposedFrame=frames.shift();disposedFrame.onFrame(0);runtime.flush();disposedFrame.onIdle(2_000_000);
+const disposedFrame=frames.shift();disposedFrame.onFrame(0);runtime.flush();disposedFrame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames);
 await new Promise(r=>setImmediate(r));assert.equal(scrolls.length,0);
 
 }

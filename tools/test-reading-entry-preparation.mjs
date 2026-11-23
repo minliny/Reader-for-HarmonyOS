@@ -12,8 +12,8 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
-const { ReadingEntryPreparation:ProductionPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const { ReadingEntryPreparation:ProductionPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const ownedPreparations=[];const createPreparation=(...args)=>{const v=new ProductionPreparation(...args);ownedPreparations.push(v);return v;};
 const tick = () => new Promise(setImmediate);
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };

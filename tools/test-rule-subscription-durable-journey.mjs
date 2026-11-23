@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
 const {fixture,compile,until,deferred}=await import("./lib/rules-mutation-durable-probe.mjs");
-const policy=await import('../entry/src/main/ets/app/HttpTransportPolicy.ts');
-const category=await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
+const policy=await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
+const category=await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 const errors=await import('../entry/src/main/ets/app/ErrorMessage.ts');
 const facts=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const projection=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const {ReaderWriteEvidence}=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
 const sub={id:33,name:'subscription',url:'https://example.test/rules',type:0,autoUpdate:false,customOrder:0,update:0};
 const sourceDoc=JSON.stringify([{bookSourceName:'one',bookSourceUrl:'https://one.example.test'},null,{bookSourceName:'two',bookSourceUrl:'https://two.example.test'}]);
-function source(f,official){return new (compile('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:f.Runtime,...policy,...category,...errors},official))(f.runtime);}
+function source(f,official){return new (compile('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:f.Runtime,...policy,...category,...errors},official))(f.runtime);}
 async function refresh(f,official,doc=sourceDoc,subscription=sub){const plan=subscription.type===0?source(f,official).prepareSubscriptionDocument(doc):undefined;return f.gateway.refreshSubscription(subscription,doc,plan,()=>f.Runtime.isCurrent(f.runtime));}
 
 const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
@@ -49,7 +49,7 @@ if(key==='runtime-retirement'){
 }
 if(key==='orchestrator-reopen'){
 {const f=await fixture(official),emitted=[];f.runtime.loadOnlineJsonDocument=async()=>({text:sourceDoc});const Source=source(f,official).constructor;
- const Orchestrator=compile('features/settings/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',{ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence,RulesManagementGateway:f.Gateway,SourceGateway:Source,RssGateway:class{observeWrites(){}},...facts,...projection,hilog:{error(){}}},official);let live=true;const original=new Orchestrator(s=>emitted.push(s),()=>live,f.runtime);f.options.afterMethod='rules.mutation.apply';original.refreshRuleSubscription(sub);await original.operationTail;assert.equal(emitted.at(-1).ruleMutation.confirmation,'unknown');const fixed=JSON.parse(f.disk());live=false;const reopened=new Orchestrator(s=>emitted.push(s),()=>true,f.runtime);reopened.open();await reopened.operationTail;assert.equal(f.writes().length,1,'reopen does not redownload/replay');const current=emitted.at(-1);reopened.reconcile(current.receipt.facts.generation);await reopened.operationTail;assert.equal(f.writes().at(-1).params.mutation.params.update,JSON.parse(f.plan()).steps.at(-1).params.update);assert.equal(emitted.at(-1).ruleMutation.subscription.metadataConfirmed,true);}
+ const Orchestrator=compile('features/settings/application/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',{ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence,RulesManagementGateway:f.Gateway,SourceGateway:Source,RssGateway:class{observeWrites(){}},...facts,...projection,hilog:{error(){}}},official);let live=true;const original=new Orchestrator(s=>emitted.push(s),()=>live,f.runtime);f.options.afterMethod='rules.mutation.apply';original.refreshRuleSubscription(sub);await original.operationTail;assert.equal(emitted.at(-1).ruleMutation.confirmation,'unknown');const fixed=JSON.parse(f.disk());live=false;const reopened=new Orchestrator(s=>emitted.push(s),()=>true,f.runtime);reopened.open();await reopened.operationTail;assert.equal(f.writes().length,1,'reopen does not redownload/replay');const current=emitted.at(-1);reopened.reconcile(current.receipt.facts.generation);await reopened.operationTail;assert.equal(f.writes().at(-1).params.mutation.params.update,JSON.parse(f.plan()).steps.at(-1).params.update);assert.equal(emitted.at(-1).ruleMutation.subscription.metadataConfirmed,true);}
 }
 passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
 }

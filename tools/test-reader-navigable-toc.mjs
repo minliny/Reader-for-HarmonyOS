@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingChapterWindow } from '../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
-const Host = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+import { ReadingChapterWindow } from '../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts';
+const Host = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['readingTocEntries', 'requireKnownChapter', 'adjacentChapterIndex', 'isKnownControlChapter', 'selectControlChapter', 'stepControlChapter']);
 const entries = [{ index: 0, title: 'volume one', navigable: false }, { index: 1, title: 'one' },
   { index: 2, title: 'volume two', navigable: false }, { index: 3, title: 'volume three', navigable: false },

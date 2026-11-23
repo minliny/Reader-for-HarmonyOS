@@ -24,7 +24,7 @@ export function nativeDefaultRecoveryBranchContract(previous) {
   const { count: _observedActorCount, ...historical } = previous;
   assert.equal(digest(JSON.stringify(historical)), recoverySuccessor.previousRowSha256, 'exact original native retry row');
   assert.deepEqual([recoverySuccessor.id, recoverySuccessor.file, recoverySuccessor.method, recoverySuccessor.sdkProof],
-    ['NATIVE-DEFAULT-05', 'features/reading/LocalReadingExperience.ets', 'readingFailureContent', 'tools/test-native-default-control-contracts.mjs']);
+    ['NATIVE-DEFAULT-05', 'features/reading/ui/LocalReadingExperience.ets', 'readingFailureContent', 'tools/test-native-default-control-contracts.mjs']);
   assert.equal(recoverySuccessor.exclusiveGuard, previous.branchInstances[0].guard);
   assert.equal(recoverySuccessor.branchInstances.length, previous.branchInstances.length, 'no added native actor');
   const inlineGuard = 'this.readerRecoveryView.visible && this.readerRecoveryView.canRetry';
@@ -45,20 +45,17 @@ export function nativeDefaultRecoveryBranchContract(previous) {
 /** A named native-default family may have explicit mutually exclusive actors.
  * This is not a larger omission budget: every actual branch, callback and
  * keyed capture must match, and a copied actor is rejected by cardinality. */
-export function verifyNativeDefaultBranches(source, file, contract, messageReplacement = false) {
+export function verifyNativeDefaultBranches(source, file, contract) {
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${contract.id}: actual native default AST`);
   const sites = [];
   const visit = node => {
-    const componentCall=ts.isEtsComponentExpression(node)||messageReplacement&&ts.isCallExpression(node);
-    const props = messageReplacement && componentCall && node.arguments[0] && ts.isObjectLiteralExpression(node.arguments[0])
-      ? new Map(node.arguments[0].properties.map(property => [property.name?.getText(tree), property.initializer?.getText(tree)])) : undefined;
-    if (componentCall && node.expression.getText(tree) === (messageReplacement ? 'ReaderRecoveryAction' : contract.kind) &&
-        normalise(messageReplacement ? props?.get('label') : node.arguments[0]?.getText(tree)) === normalise(contract.argument)) {
+    if (ts.isEtsComponentExpression(node) && node.expression.getText(tree) === contract.kind &&
+        normalise(node.arguments[0]?.getText(tree)) === normalise(contract.argument)) {
       let member = node;
       while (member && !ts.isMethodDeclaration(member)) member = member.parent;
       if (member?.name?.getText(tree) === contract.method) {
-        let branch, loop, callback = messageReplacement ? props?.get('onReconcile') : undefined;
+        let branch, loop, callback;
         const branches = [];
         for (let parent = node.parent; parent && parent !== member; parent = parent.parent) {
           if (ts.isCallExpression(parent) && parent.expression.name?.text === 'onClick') callback = parent.arguments[0]?.getText(tree);

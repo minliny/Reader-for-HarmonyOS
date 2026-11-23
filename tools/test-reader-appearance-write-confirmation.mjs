@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
-import * as state from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
+import * as state from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/app/ReaderAppearancePreferences.ts', import.meta.url), 'utf8');
 const initial = state.createDefaultReaderAppearanceSnapshot();

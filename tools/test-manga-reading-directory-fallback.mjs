@@ -1,25 +1,26 @@
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+import * as directoryState from '../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
 import assert from 'node:assert/strict';
-import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
-import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
-import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { ReaderDirectoryNavigationGateway, openReaderDirectoryNavigation } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
-import { mangaDirectoryEntryRows, mangaDirectoryLabel, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
+import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
+import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { ReaderDirectoryNavigationGateway } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import { openReaderDirectoryNavigation } from './lib/reader-directory-navigation-session-probe.mjs';
+import { mangaDirectoryEntryRows, mangaDirectoryLabel, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
 import { mangaDirectoryEntryRowSdk, mangaDirectoryEntryRowSource } from './lib/manga-directory-entry-row-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 
-const path = fileURLToPath(new URL('../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets', import.meta.url));
+const path = fileURLToPath(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets', import.meta.url));
 const source = readFileSync(path, 'utf8');
 const timers = [];
 const deps = { ...directoryState, mangaDirectoryDisplay, visual, mangaDirectoryScale, mangaDirectoryColor, ReaderWindowCoordinator: {metrics: () => ({systemFontScale: 1})}, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600, projectReaderDirectoryEntries, sameReaderDirectoryData, snapshotReaderDirectoryData,
@@ -29,7 +30,7 @@ const deps = { ...directoryState, mangaDirectoryDisplay, visual, mangaDirectoryS
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'admitEntries', 'publishProjection',
   'preparePresentation', 'rowPresentation', 'prepareLayout', 'fontScale', 'onViewportChanged', 'layoutEntryRows', 'layoutRow', 'showContext',
   'onLayoutInputsChanged', 'onCurrentChapterChanged', 'expandCurrentAncestors', 'onIdentityChanged', 'onEntriesChanged', 'onViewInputsChanged', 'onLocateCurrent', 'requestScroll', 'activeScroller',
-  'onFirstLayout', 'onListFirstLayout', 'onListUserScroll', 'onUserScrollIntent', 'selectEntry', 'toggleBranch', 'downloadEntry'];
+  'onFirstLayout', 'onListFirstLayout', 'onListUserScroll', 'onUserScrollIntent', 'currentInputEnabled', 'selectEntry', 'toggleBranch', 'downloadEntry'];
 const Directory = productionMotionMethods(path, methods, deps);
 const entries = Object.freeze(Array.from({ length: 681 }, (_, ordinal) => Object.freeze({
   index: ordinal * 2 + 1, title: `第${ordinal + 1}话`, navigable: ordinal !== 10, downloadState: 'unknown',
@@ -198,7 +199,7 @@ assert.equal(requests[0].method, 'reading.directory.view.open.v2');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const listSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryList.ets', import.meta.url), 'utf8');
+const listSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderDirectoryList');
 syntax.propCollection.set('ReaderDirectoryList', new Set([...listSource.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(match => match[1])));
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
@@ -206,10 +207,7 @@ const builderNames = ['build', 'row', 'mangaColor', 'emptyState', 'emptyActionLa
 const stateNames = ['presentation', 'collapsedGroups', 'projectedEntries', 'layoutRows', 'viewportWidth',
   'rowHeight', 'mangaCatalogDisplay', 'mangaCatalogNarrow', 'currentChapterIndex', 'query'];
 function parentProbe(candidate = source, childCandidate = mangaDirectoryEntryRowSource) {
-  const shared = mangaDirectoryEntryRowSdk({ source: childCandidate, dependencies: { ...deps, ReaderDirectoryList: Child,
-    ReaderActionAccessibility: class { constructor() {} applyNormalAttribute() {} },
-    readerActionTouchRegion: (width, height) => ({ x: 0, y: 0, width, height }),
-    registerReaderFonts: () => undefined } });
+  const shared = mangaDirectoryEntryRowSdk({ source: childCandidate, dependencies: { ...deps, ReaderDirectoryList: Child } });
   const built = createReaderBuilderProbe(candidate, [...new Set([...methods, ...builderNames, ...stateNames])], shared.deps, shared.hooks);
   return { ...built, shared };
 }
@@ -257,7 +255,7 @@ for (const current of [false, true]) {
   assert.equal(title.fontColor, active ? (scheme === 'night' ? '#B9CEB1' : '#425D45') :
     (scheme === 'night' ? '#EAE7DE' : '#1F1B17'));
   assert.equal(row.opacity, navigable === false ? .36 : 1);
-  assert.equal(row.backgroundColor, active ? mangaDirectoryColor('active', scheme) : 'Color.Transparent');
+  assert.equal(row.backgroundColor, active ? (scheme === 'night' ? '#303C2D' : '#E8EDE2') : 'Color.Transparent');
   assert.equal(nodes.some(node => node.type === 'Image'), navigable === true && !current);
   if (navigable === undefined) assert.ok(nodes.some(node => node.type === 'Text' && node.create === '状态待确认'));
 }
@@ -334,15 +332,10 @@ function checkEmpty(candidate = source, listCandidate = listSource, exhaustive =
     const item = [...list.nodes.values()].find(node => node.type === 'ListItem');
     assert.ok(item, 'empty fallback has the actual shared deferred ListItem');
     assert.equal(typeof item.create[0], 'function'); item.create[0](item.id, true);
-    const collect = actor => [actor, ...[...(actor.children?.values() ?? [])].flatMap(child => child.nodes ? collect(child) : [])];
-    const nodes = collect(owner).flatMap(actor => [...actor.nodes.values()]), empty = nodes.find(node => node.type === 'Column');
+    const nodes = [...owner.nodes.values()], empty = nodes.find(node => node.type === 'Column');
     const message = nodes.find(node => node.type === 'Text' && node.create === '没有匹配的章节');
-    assert.ok(message, 'the empty slot mounts the shared ReaderPageState message');
-    assert.deepEqual([message.fontFamily, message.fontWeight, message.fontSize, message.lineHeight, message.halfLeading],
-      [READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 13, 21, undefined],
-      'empty copy uses the shared message-body role rather than the retired bespoke quiet-empty text');
-    assert.equal(message.maxFontScale, undefined, 'ReaderPageState leaves native font scaling unclamped');
-    assert.equal(message.textAlign, 'TextAlign.Center');
+    assert.ok(message); assert.deepEqual([message.fontSize, message.lineHeight, message.halfLeading], [12, 18, true]);
+    assert.equal(message.maxFontScale, scale); assert.equal(message.textAlign, 'TextAlign.Center');
     assert.equal(message.fontColor, mangaDirectoryColor('muted', scheme));
     assert.deepEqual(empty.create, { space: 8 }); assert.deepEqual(empty.constraintSize, { minHeight: 164 });
     assert.deepEqual(empty.padding, { left: 12, right: 12, top: 36, bottom: 36 });
@@ -364,7 +357,7 @@ function checkEmpty(candidate = source, listCandidate = listSource, exhaustive =
 checkEmpty();
 for (const [label, candidate, listCandidate, failure] of [
   ['lost shared slot', source, listSource.replace('this.naturalRowHeight && this.entries.length === 0', 'false'), /actual shared deferred ListItem/],
-  ['lost clear port', source.replace('this.onClearSearch();', 'void 0;'), listSource, /strictly equal/],
+  ['lost clear port', source.replace('.onClick((): void => this.onClearSearch())', '.onClick((): void => {})'), listSource, /strictly equal/],
   ['fixed clear height', source.replace('.constraintSize({ minHeight: visual.quietEmptyClearHeight })', '.height(visual.quietEmptyClearHeight)'), listSource, /natural line box/],
   ['missing clear feedback', source.replaceAll('.attributeModifier(new MangaDirectoryPressFeedback(true, true, this.mangaScheme))', ''), listSource, /strictly equal/],
 ]) {
@@ -425,12 +418,11 @@ function checkRetainedGroupFold(candidate = source, childCandidate = mangaDirect
   const arrow = nodes.find(node => node.type === 'Image'), disclosure = nodes.find(node => node.type === 'Stack' && node.onClick);
   const count = nodes.find(node => node.type === 'Text' && node.create === '3 个可读条目');
   assert.equal(action.enabled, true, 'a proved canonical group admits its fold action');
-  assert.equal(group.constraintSize.minHeight, 48);
-  assert.equal(group.backgroundColor, mangaDirectoryColor('soft', scheme));
+  assert.equal(group.constraintSize.minHeight, 48); assert.equal(group.backgroundColor, scheme === 'night' ? '#30342D' : '#F0ECE3');
   assert.ok(count, 'expanded count comes from the full admitted catalog');
   assert.equal(arrow.create, scheme === 'night' ? 'app.media.manga_sheet_chevron_down_theme_night' : 'app.media.manga_sheet_chevron_down');
   assert.equal(arrow.width, 16); assert.equal(arrow.height, 16);
-  assert.deepEqual(arrow.rotate, { angle: 0 }); assert.deepEqual(arrow.animation, { duration: 180, curve: 'Ease' });
+  assert.deepEqual(arrow.rotate, { angle: 0 }); assert.deepEqual(arrow.animation, { duration: 180, curve: 'ease' });
   const actorCount = child.observers.length;
   action.onClick(); shared.properties.flush();
   assert.equal(nativeList(owner), list); assert.equal(sharedRow(owner), child, 'fold retains the SDK shared row child');
@@ -491,7 +483,7 @@ const propertyEvidence = checkRetainedGroupFold(); checkRetainedGroupFold(source
 const plainCollapsed = mangaDirectoryEntryRowSource.replace('@Prop collapsedBranches:', 'collapsedBranches:');
 assert.notEqual(plainCollapsed, mangaDirectoryEntryRowSource);
 assert.throws(() => checkRetainedGroupFold(source, plainCollapsed), /observed collapse updates/, 'negative control detects lost fold Prop delivery to the retained shared child');
-const noRotationAnimation = mangaDirectoryEntryRowSource.replace(".animation(motionAnimateParam('manga.directory.fold'))", '');
+const noRotationAnimation = mangaDirectoryEntryRowSource.replace(".animation({ duration: MANGA_DIRECTORY_VISUAL.foldDuration, curve: 'ease' })", '');
 assert.notEqual(noRotationAnimation, mangaDirectoryEntryRowSource);
 assert.throws(() => checkRetainedGroupFold(source, noRotationAnimation), /deep-equal/, 'negative control detects omitted native arrow animation');
 const disabledGroup = mangaDirectoryEntryRowSource.replace('.enabled(this.interactionEnabled && (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false))', '.enabled(this.interactionEnabled && entry.navigable !== false)');

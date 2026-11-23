@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
-const source = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
+const source = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url);
 const Panel = productionMotionMethods(source, ['reportBackdropRegions'], {});
 const calls = [];
 const dock = { x: 0, y: 0, width: 100, height: 200, borderRadius: 24 };
@@ -40,7 +40,7 @@ const drawing = {
   },
 };
 const Host = productionMotionMethods(new URL(
-  '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  '../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['controlBackdropContainsRoundedRect'], { drawing });
 const host = new Host();
 let rect = { x: 13, y: 19, width: 364, height: 54, borderRadius: 24 };

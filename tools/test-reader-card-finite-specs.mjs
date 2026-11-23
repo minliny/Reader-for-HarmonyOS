@@ -67,15 +67,16 @@ async function cardCase(selectedCase) {
   const { cardSdk } = await import('./lib/reader-card-probe.mjs');
   const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { syncIndexFixture } = await import('./lib/sync-index-real-fixture.mjs');
-  const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+  const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
   const { readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
   const { createReaderBuilderProbe, readerBuilderChildPropertyCacheStats } = await import('./lib/reader-control-builder-probe.mjs');
-  const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-  const fontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+  const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+  const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
   const read = file => readFileSync(file, 'utf8');
-  const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/CategorySection.ets',sync='entry/src/main/ets/features/sync/SyncPage.ets';
+  const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/ui/CategorySection.ets',sync='entry/src/main/ets/features/sync/ui/SyncPage.ets';
+  const surfaces='entry/src/main/ets/ui/surfaces/';
   const historical = selectedCase === 'historical-migration';
-  let golden, before, physicalSuccessor;
+  let golden, before;
   if (historical) {
     golden = JSON.parse(read('tools/fixtures/reader-card-ui-baseline.json'));
     for (const entry of Object.values(golden.sources)) assert.equal(createHash('sha256').update(entry.source).digest('hex'), entry.sha256, 'historical source identity');
@@ -87,19 +88,6 @@ assert.equal(layout.schema,1);assert.equal(layout.page,sync);
 assert.equal(layout.previousFixture,'tools/fixtures/reader-card-ui-baseline.json');
 assert.equal(digest(read(layout.previousFixture)),layout.previousFixtureSha256,'layout successor cannot rewrite the frozen Card/body witness');
 assert.equal(golden.sources[sync].sha256,layout.previousPageSha256);
-const bodySuccessor=JSON.parse(read('tools/fixtures/reader-card-sync-body-successor-20261120.json'));
-assert.equal(bodySuccessor.schema,1);assert.equal(bodySuccessor.page,sync);
-assert.equal(bodySuccessor.previousFixture,'tools/fixtures/reader-card-page-layout-successor-20261014.json');
-assert.equal(bodySuccessor.previousPageSha256,layout.previousPageSha256);
-assert.deepEqual(bodySuccessor.successorCommits,['fce869a1','1dea9328']);
-assert.deepEqual(bodySuccessor.removedMethods,['expandRow']);
-physicalSuccessor=JSON.parse(read('tools/fixtures/reader-card-physical-successor-20261120.json'));
-assert.equal(physicalSuccessor.schema,1);assert.equal(physicalSuccessor.component,common+'ReaderCard.ets');
-assert.equal(physicalSuccessor.previousFixture,'tools/fixtures/reader-card-ui-baseline.json');
-assert.equal(digest(read(physicalSuccessor.previousFixture)),physicalSuccessor.previousFixtureSha256,'physical successor cannot rewrite the frozen Card witness');
-assert.equal(digest(read(common+'ReaderCardSpecs.ets')),physicalSuccessor.currentSpecSourceSha256,'physical successor binds the exact current finite Card specs');
-assert.deepEqual(physicalSuccessor.successorCommits,['fce869a1']);
-assert.deepEqual(Object.keys(physicalSuccessor.methodSpecs).sort(),['autoBackupSection','build','emptyState','historyRow','manualActionsSection','webdavSection']);
 assert.deepEqual(layout.previousLayoutMethods,['build','contentFrame','bottomContentInset']);
 assert.deepEqual(Object.keys(layout.currentLayoutMethods),['build','pageContent','contentFrame']);
 assert.deepEqual([layout.host,layout.variant,layout.slots],['ReaderStandardPage','sync',{header:'backBar',content:'pageContent'}]);
@@ -138,21 +126,9 @@ function bodiesWithoutCardInputs(source){
  const normalized=parse(source),owner=normalized.statements.find(ts.isStructDeclaration),printer=ts.createPrinter({removeComments:true});
  return Object.fromEntries(owner.members.filter(ts.isMethodDeclaration).map(member=>[member.name.getText(normalized),printer.printNode(ts.EmitHint.Unspecified,member,normalized)]));
 }
-function verifyBodySuccessor(source){
- const {tree,owner}=sdkOwner(source),printer=ts.createPrinter({removeComments:true});
- const method=name=>{const node=owner.members.find(member=>ts.isMethodDeclaration(member)&&member.name.getText(tree)===name);assert.ok(node,'successor method present: '+name);return node;};
- for(const[name,sha]of Object.entries(bodySuccessor.successorMethods))assert.equal(digest(printer.printNode(ts.EmitHint.Unspecified,method(name),tree)),sha,'exact registered body successor: '+name);
- for(const name of bodySuccessor.removedMethods)assert.equal(owner.members.some(member=>ts.isMethodDeclaration(member)&&member.name.getText(tree)===name),false,'successor method remains removed: '+name);
-}
 function compareBodies(file,source=read(file)){
  const actual=bodiesWithoutCardInputs(source),expected=bodiesWithoutCardInputs(golden.sources[file].source);
- if(file===sync){
-  proveSyncLayout(source);verifyBodySuccessor(source);
-  for(const name of Object.keys(layout.currentLayoutMethods))delete actual[name];
-  for(const name of layout.previousLayoutMethods)delete expected[name];
-  for(const name of Object.keys(bodySuccessor.successorMethods)){delete actual[name];delete expected[name];}
-  for(const name of bodySuccessor.removedMethods)delete expected[name];
- }
+ if(file===sync){proveSyncLayout(source);for(const name of Object.keys(layout.currentLayoutMethods))delete actual[name];for(const name of layout.previousLayoutMethods)delete expected[name];}
  assert.deepEqual(actual,expected,'all actual body/state/callback methods unchanged except finite Card inputs and one proved layout successor: '+file);
 }
 for(const file of[category,sync])compareBodies(file);
@@ -161,21 +137,20 @@ for(const file of[category,sync])compareBodies(file);
 for(const[from,to]of[["variant: 'sync'","variant: 'settings'"],['this.pageContent();','this.webdavSection();'],['this.autoBackupSection();','']]){
  const changed=read(sync).replace(from,to);assert.notEqual(changed,read(sync));assert.throws(()=>compareBodies(sync,changed));
 }
-assert.throws(()=>compareBodies(sync,read(sync).replace("titleColor: readerAppColor('app.text.syncHeading', this.appThemeScheme)","titleColor: readerAppColor('TOK_INK', this.appThemeScheme)")),/exact registered body successor/);
 assert.throws(()=>compareBodies(sync,read(sync).replace("return this.snapshot.facts?.canMutate ?? true;","return true;")),'unchanged body and callback contract is still strict');
 
 
   }
-const originalSpec=read(common+'ReaderCardSpecs.ets');
+const originalSpec=read(surfaces+'ReaderCardSpecs.ets');
 const methods=['webdavSection','manualActionsSection','autoBackupSection','emptyState','historyRow'];
 const entry={destination:'WebDAV',timestamp:'2026-10-04 08:00',summary:'原始备份结果',status:'success',detail:'保持原始信息',bookCount:2,sourceCount:3};
-const geometry=syncIndexFixture.execute('features/common/SurfaceHorizontalGeometry.ts','({SurfaceWidthSpec,SurfaceHorizontalFrame,resolveHorizontalFrame})');
+const geometry=syncIndexFixture.execute('ui/layout/SurfaceHorizontalGeometry.ts','({SurfaceWidthSpec,SurfaceHorizontalFrame,resolveHorizontalFrame})');
 // Compile equal production inputs once inside this test. Every comparison still
 // constructs fresh owners, native actors, observed properties and callbacks;
 // neither a rendered fixture nor an assertion result is cached.
 const parentKernels=new Map(),consumerMembers=new Map();let parentInstances=0;
 function parent({legacy=false,method='build',scheme='day',width=352,specSource=originalSpec}={}){
- const cardSource=legacy?before:read(common+'ReaderCard.ets');
+ const cardSource=legacy?before:read(surfaces+'ReaderCard.ets');
  const kernelKey=JSON.stringify([cardSource,specSource,scheme]);
  let kernel=parentKernels.get(kernelKey);
  if(!kernel){kernel={shared:cardSdk({source:cardSource,specSource,scheme}),consumers:new Map()};parentKernels.set(kernelKey,kernel);}
@@ -205,71 +180,23 @@ function parent({legacy=false,method='build',scheme='day',width=352,specSource=o
  return {shared,owner,card,outer:()=>shared.outer(card),contentCalls:()=>contentCalls,backupCalls:()=>backupCalls};
 }
 const physical=node=>Object.fromEntries(['width','constraintSize','backgroundColor','border','borderRadius'].map(key=>[key,node[key]]));
-const successorSentinel='<declared-physical-successor>';
-function normalizeSuccessorPhysical(tuple,changedFields){
- const normalized=structuredClone(tuple);
- if(changedFields.includes('backgroundColor'))normalized.backgroundColor=successorSentinel;
- if(changedFields.includes('border.color'))normalized.border.color=successorSentinel;
- if(changedFields.includes('borderRadius'))normalized.borderRadius=successorSentinel;
- return normalized;
-}
-function nativeCardCalls(probe){
- const id=probe.outer().id;
- return structuredClone(probe.card.attributeCalls.filter(call=>call.id===id).map(({property,args})=>({property,args})));
-}
-function normalizeSuccessorCalls(calls,changedFields){
- for(const call of calls){
-  if(call.property==='backgroundColor'&&changedFields.includes('backgroundColor'))call.args=[successorSentinel];
-  if(call.property==='border'&&changedFields.includes('border.color'))
-   call.args=call.args.map(value=>value&&typeof value==='object'?{...value,color:successorSentinel}:value);
-  if(call.property==='borderRadius'&&changedFields.includes('borderRadius'))call.args=[successorSentinel];
- }
- return calls;
-}
 
 if (historical) {
 let comparisons=0;
 const metadataBeforeComparisons=readerBuilderChildPropertyCacheStats();
 for(const method of ['build',...methods])for(const scheme of ['day','night'])for(const width of [0,152,352,800]){
  const old=parent({legacy:true,method,scheme,width}),current=parent({method,scheme,width});
- const specId=physicalSuccessor.methodSpecs[method],successor=physicalSuccessor.specs[specId];
- assert.ok(successor,'finite Card successor registered: '+specId);
- assert.equal(current.card.specId,specId,'consumer resolves its finite Card spec');
- const spec=current.shared.resolveReaderCardSpec(specId);
- assert.deepEqual({backgroundRole:spec.backgroundRole,borderRole:spec.borderRole,radius:spec.radius},
-  {backgroundRole:successor.current.backgroundRole,borderRole:successor.current.borderRole,radius:successor.current.radius},
-  'current spec matches the committed finite successor');
- const currentPhysical=physical(current.outer()),oldPhysical=physical(old.outer());
- assert.deepEqual(currentPhysical,{
-  width:width>0?width:'100%',
-  constraintSize:{maxWidth:readerFoundationTokens.TOK_CONTENT_MAX_W_TABLET},
-  backgroundColor:readerAppColor(successor.current.backgroundRole,scheme),
-  border:{width:readerFoundationTokens.TOK_BORDER_W,color:readerAppColor(successor.current.borderRole,scheme)},
-  borderRadius:successor.current.radius,
- },`${method}/${scheme}/${width} current Card has the complete finite native tuple`);
- assert.deepEqual(normalizeSuccessorPhysical(currentPhysical,successor.changedPhysicalFields),
-  normalizeSuccessorPhysical(oldPhysical,successor.changedPhysicalFields),
-  `${method}/${scheme}/${width} physical differences stay within the declared successor`);
- const currentCalls=nativeCardCalls(current),oldCalls=nativeCardCalls(old);
- assert.deepEqual(normalizeSuccessorCalls(currentCalls,successor.changedPhysicalFields),
-  normalizeSuccessorCalls(oldCalls,successor.changedPhysicalFields),
-  `${method}/${scheme}/${width} complete native attribute sequence differs only at declared successor fields`);
- for(const field of successor.changedPhysicalFields){
-  if(field==='backgroundColor')assert.notEqual(currentPhysical.backgroundColor,oldPhysical.backgroundColor,`${method}/${scheme}/${width} declared background successor is observable`);
-  if(field==='border.color')assert.notEqual(currentPhysical.border.color,oldPhysical.border.color,`${method}/${scheme}/${width} declared border successor is observable`);
-  if(field==='borderRadius')assert.notEqual(currentPhysical.borderRadius,oldPhysical.borderRadius,`${method}/${scheme}/${width} declared radius successor is observable`);
- }
+ assert.deepEqual(physical(current.outer()),physical(old.outer()),`${method}/${scheme}/${width} exact original native Card tuple`);
+ assert.deepEqual(current.card.attributeCalls.filter(call=>call.id===current.outer().id).map(({property,args})=>({property,args})),old.card.attributeCalls.filter(call=>call.id===old.outer().id).map(({property,args})=>({property,args})),`${method}/${scheme}/${width} exact native attribute calls, including omission presence`);
  assert.equal(current.outer().width,width>0?width:'100%');
  assert.equal(current.outer().constraintSize.maxWidth,readerFoundationTokens.TOK_CONTENT_MAX_W_TABLET);
  assert.equal(current.outer().border.width,readerFoundationTokens.TOK_BORDER_W);
- assert.equal(current.contentCalls(),old.contentCalls(),'Builder slot execution count is unchanged');
  if(method==='build'){
-  assert.equal(current.contentCalls(),1,'actual original Builder slot');
+  assert.equal(current.contentCalls(),1);assert.equal(old.contentCalls(),1,'actual original Builder slot');
   const label=current.shared.nodes(current.owner).find(n=>n.type==='Text'&&n.create==='真实分类标题');assert.ok(label,'real section heading remains mounted');
  }
  comparisons++;
 }
-assert.equal(comparisons,48,'six real consumer sites by two schemes and four width inputs');
 assert.ok(readerBuilderChildPropertyCacheStats().hits>metadataBeforeComparisons.hits,'real Card comparisons reuse identical child metadata');
 assert.ok(readerBuilderChildPropertyCacheStats().entries<=256,'child metadata storage stays bounded');
 
@@ -296,9 +223,9 @@ assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four
  const base=cardSdk();assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-config'));
  const changed=originalSpec.replace('radius: TOK_RADIUS_MD','radius: TOK_RADIUS_MD + 2');assert.notEqual(changed,originalSpec);
  const category=parent({specSource:changed}),configuration=parent({method:'webdavSection',specSource:changed}),status=parent({method:'manualActionsSection',specSource:changed});
- assert.equal(category.outer().borderRadius,10);assert.equal(configuration.outer().borderRadius,10);assert.equal(status.outer().borderRadius,readerFoundationTokens.TOK_RADIUS_LG,'status uses the shared large radius and stays isolated from the standard variant');
- const other=originalSpec.replace('radius: TOK_RADIUS_LG','radius: TOK_RADIUS_LG + 2');assert.notEqual(other,originalSpec);
- for(const method of methods.slice(1))assert.equal(parent({method,specSource:other}).outer().borderRadius,readerFoundationTokens.TOK_RADIUS_LG + 2,'all four real status consumers share changed spec');
+ assert.equal(category.outer().borderRadius,10);assert.equal(configuration.outer().borderRadius,10);assert.equal(status.outer().borderRadius,13,'status variant isolated');
+ const other=originalSpec.replace('radius: 13','radius: 15');assert.notEqual(other,originalSpec);
+ for(const method of methods.slice(1))assert.equal(parent({method,specSource:other}).outer().borderRadius,15,'all four real status consumers share changed spec');
  assert.equal(parent({specSource:other}).outer().borderRadius,8);assert.equal(parent({method:'webdavSection',specSource:other}).outer().borderRadius,8);
 }
 // Retained V1 Props update the actual native Card without remounting its body;
@@ -306,11 +233,11 @@ assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four
 {
  const p=parent(),body=p.contentCalls(),count=p.card.observers.length;
  p.card.updateStateVars({specId:'sync-status',cardWidth:280});p.shared.properties.flush();
- assert.equal(p.outer().borderRadius,readerFoundationTokens.TOK_RADIUS_LG);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
+ assert.equal(p.outer().borderRadius,13);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
  p.card.updateStateVars({specId:'settings-category',cardWidth:0});p.shared.properties.flush();assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().width,'100%');
  p.card.radius=99;p.card.bg='private';p.card.cardBorder='private';p.card.replay();
  assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','day'));
- p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('app.border.contentCard','night'),'actual retained StorageLink follows the embedded-card border in the current theme');
+ p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('TOK_BORDER','night'),'actual retained StorageLink follows current theme');
  p.owner.cardWidth=318;p.shared.flush(p.owner);assert.equal(p.outer().width,318,'parent measurement reaches real child Prop');
  assert.equal(p.card.observers.length,count,'parent update retains one Card');
 }
@@ -334,10 +261,6 @@ assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four
 
 }
 if (selectedCase === 'page-measurement') {
-const { pageFrameSdkFixture } = await import('./lib/reader-page-frame-sdk-fixture.mjs');
-const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-const headerMetrics = await import('../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts');
-const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
 // The new owner is a real SDK page composition, not a normalization of the
 // old Stack into another local layout. Current page slots mount the original
 // four Card sections inside one shared Scroll. Native height/host-width
@@ -348,33 +271,14 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  const shared=cardSdk({scheme}),metrics=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,windowWidth,900),
   undefined,new metricsApi.ReaderInsetsVp(left,47,right,bottom));
  const frameDeps={...metricsApi,...fontFamilies,ReaderWindowCoordinator:{metrics:()=>metrics}};
- const frameFixture=pageFrameSdkFixture({properties:shared.properties,dependencies:{...shared.deps,...frameDeps}});
- Object.assign(shared.deps,frameFixture.deps);
- Object.assign(shared.hooks.childSources,frameFixture.hooks.childSources);
- const backSource=read(common+'PageBackBar.ets');shared.hooks.childSources.PageBackBar=backSource;
- shared.hooks.childSources.ReaderRaisedSurface=read(common+'ReaderRaisedSurface.ets');
- const scale= pureModuleProbe(read(common+'ReaderSurfaceResolvers.ts'),'ReaderSurfaceResolvers.ts',metricsApi,
-  ['readerScaledBarHeight']);
- const elevation=pureModuleProbe(read(common+'ReaderSurfaceSpecs.ets'),'ReaderSurfaceSpecs.ets',
-  {readerAppColor,SOURCE_SWITCH_VISUAL,TextAlign:{Start:'TextAlign.Start'},
-   ReaderWindowCoordinator:frameDeps.ReaderWindowCoordinator},
-  ['readerSurfaceElevation','readerHeaderVeilMaterial','readerHeaderVeilBorder']);
- class InactiveRaisedBar { constructor() { assert.fail('the fixed Sync header must not mount a raised surface'); } }
- shared.deps.PageBackBar=createReaderBuilderProbe(backSource,boundedMembers(backSource),
-  {...shared.deps,...frameDeps,...headerMetrics,...scale,...elevation,ReaderRaisedSurface:InactiveRaisedBar},shared.hooks).Component;
+ const backSource=read('entry/src/main/ets/ui/chrome/PageBackBar.ets');shared.hooks.childSources.PageBackBar=backSource;
+ shared.deps.PageBackBar=createReaderBuilderProbe(backSource,boundedMembers(backSource),{...shared.deps,...frameDeps},shared.hooks).Component;
  const owner=shared.consumer(read(sync),boundedMembers(read(sync)),{...frameDeps,DEFAULT_SYNC_SNAPSHOT:syncIndexFixture.DEFAULT_SYNC_SNAPSHOT,
   readerRecoveryView:syncIndexFixture.readerRecoveryView,registerReaderFonts(){}});
  Object.assign(owner,{appThemeScheme:scheme});owner.initialRender();
  const standard=shared.walk(owner).find(actor=>actor.variant==='sync');assert.ok(standard,'actual finite standard page actor');
- const scrollHost=shared.walk(standard).find(actor=>actor.layout?.mode==='padding'&&
-  [...actor.nodes.values()].some(node=>node.type==='Scroll'));
- assert.ok(scrollHost,'the shared scroll host mounts once');
- const scroll=[...scrollHost.nodes.values()].find(node=>node.type==='Scroll');
- assert.equal(scroll.height,'100%');assert.equal(scroll.width,'100%');
- const scrollPadding=[...scrollHost.nodes.values()].find(node=>node.type==='Column'&&node.padding);
- assert.ok(scrollPadding);assert.equal(scrollPadding.padding.top,66,'shared header fallback plus gap; system top is already consumed by Index');
- const body=[...standard.nodes.values()].find(node=>node.type==='Column'&&node.padding&&Object.hasOwn(node.padding,'left'));
- assert.ok(body,'standard page owns the horizontal frame around the retained Sync content');
+ const scroll=[...standard.nodes.values()].find(node=>node.type==='Scroll');assert.ok(scroll);assert.equal(scroll.height,'100%');assert.equal(scroll.width,'100%');
+ const body=[...standard.nodes.values()].find(node=>node.type==='Column'&&node.padding);assert.ok(body);assert.equal(body.padding.top,66,'shared header fallback plus gap; system top is already consumed by Index');
  const sectionCards=shared.cards(owner);assert.equal(sectionCards.length,4,'all four original sections mount once via the public body slot');
  const nativeCounts=sectionCards.map(card=>card.observers.length);
  const pageArea=[...owner.nodes.values()].find(node=>node.type==='__Common__'&&node.onAreaChange);assert.ok(pageArea);
@@ -383,12 +287,11 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  pageArea.onAreaChange({},area);sharedArea.onAreaChange({},area);shared.properties.flush();
  const frame=owner.contentFrame();assert.equal(frame.width,Math.min(720,hostWidth-Math.max(19,left)-Math.max(19,right)));
  assert.deepEqual([body.padding.left,body.padding.right],[frame.left,frame.right],'actual shared Scroll and Card content use the same measured host geometry');
- assert.equal(scrollPadding.padding.bottom,Math.max(18,bottom),'actual shared trailing clearance preserves the sync minimum and current safe bottom');
+ assert.equal(body.padding.bottom,Math.max(18,bottom),'actual shared trailing clearance preserves the sync minimum and current safe bottom');
  for(const card of sectionCards)assert.equal(shared.outer(card).width,frame.width,'measured parent width reaches the original real Card Prop');
  const header=shared.walk(owner).find(actor=>typeof actor.onHeightChange==='function');assert.ok(header);
  const mask=[...header.nodes.values()].find(node=>node.backgroundColor!==undefined);assert.ok(mask);assert.equal(mask.backgroundColor,readerAppColor('TOK_SURFACE_SOLID',scheme));
- assert.equal(typeof mask.onAreaChange,'function');mask.onAreaChange({},{height:'93vp'});shared.properties.flush();
- assert.equal(scrollPadding.padding.top,101,'actual vp measurement of the shared header clears the unchanged body');
+ assert.equal(typeof mask.onAreaChange,'function');mask.onAreaChange({},{height:'93vp'});shared.properties.flush();assert.equal(body.padding.top,101,'actual vp measurement of the shared header clears the unchanged body');
  assert.deepEqual(shared.cards(owner),sectionCards,'shared measurement retains every original Card actor');
  assert.deepEqual(sectionCards.map(card=>card.observers.length),nativeCounts,'shared measurement retains Card body/native observers');
 }

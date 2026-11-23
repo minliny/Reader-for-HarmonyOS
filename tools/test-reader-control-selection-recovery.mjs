@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import * as selection from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
+import * as selection from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
 const ticket = { sourceId: 'local', bookId: 'book', lifecycleToken: 1, selectionToken: 2,
   controlOpenRevision: 3, targetChapterIndex: 10 };
 const owner = { ...ticket, mounted: true, exitRequested: false, controlVisible: true, controlClosing: false };

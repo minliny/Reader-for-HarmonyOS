@@ -3,6 +3,12 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { isReaderLocalBookFileName } from '../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts';
 import { localImportFailure } from '../entry/src/main/ets/app/LocalImportFailure.ts';
+import { ReaderDocumentPickerActivity } from '../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts';
+
+const pickerAdmission = { current: true, foreground: true };
+const canOpenPicker = () => pickerAdmission.current && pickerAdmission.foreground;
+ReaderDocumentPickerActivity.bind(9202);
+ReaderDocumentPickerActivity.setForeground(pickerAdmission.foreground);
 
 const source = readFileSync(
   'entry/src/main/ets/app/ReaderHostRegistry.ts',
@@ -12,7 +18,7 @@ const source = readFileSync(
 // Keep this executable check on the production method itself.  The picker and
 // filesystem APIs are replaced only at this boundary; no VM/device is needed
 // to prove that malformed provider output cannot reject the whole batch.
-const start = source.indexOf('  async selectLocalBookInputs()');
+const start = source.indexOf('  async selectLocalBookInputs(canOpenPicker: () => boolean)');
 const end = source.indexOf('\n  private async ensureStageRecovery()', start);
 assert.ok(start >= 0 && end > start, 'picker selection method must exist');
 const method = source.slice(start, end);
@@ -31,6 +37,7 @@ const logs = [];
 const Harness = new Function(
   'picker', 'ReaderHostRegistry', 'hilog', 'errorMessageOf', 'localImportFailure',
   'READER_LOCAL_BOOK_PICKER_FILTER', 'isReaderLocalBookFileName', 'LOG_DOMAIN',
+  'ReaderDocumentPickerActivity',
   `${stripTypeScriptTypes(`
     class Harness {
       ${method}
@@ -48,6 +55,7 @@ const Harness = new Function(
   'TXT、EPUB、MOBI、AZW3|.txt,.epub,.mobi,.azw,.azw3,.kf8',
   isReaderLocalBookFileName,
   0x5244,
+  ReaderDocumentPickerActivity,
 );
 
 const harness = new Harness();
@@ -66,7 +74,7 @@ Object.assign(harness, {
 });
 
 Picker.uris = ['good-a', 'bad://provider-result', 'provider-returned.html', 'good-b'];
-const mixed = await harness.selectLocalBookInputs();
+const mixed = await harness.selectLocalBookInputs(canOpenPicker);
 assert.equal(mixed.length, 4);
 assert.deepEqual(mixed.map(item => item.state), ['ready', 'failed', 'failed', 'ready']);
 assert.equal(mixed[1].fileName, '未命名文件');
@@ -77,7 +85,7 @@ assert.deepEqual(stagedUris, ['good-a', 'good-b'],
   'provider-supplied unsupported files must fail without staging or dropping admitted neighbors');
 
 Picker.uris = Array.from({ length: 55 }, (_value, index) => `book-${index}`);
-const oversized = await harness.selectLocalBookInputs();
+const oversized = await harness.selectLocalBookInputs(canOpenPicker);
 assert.equal(oversized.length, 50, 'provider over-return must be bounded before allocation');
 assert.equal(oversized.at(-1).input.fileName, 'book-49.txt');
 assert.ok(logs.some(entry => entry[0] === 'warn'), 'oversized provider result must be observable');

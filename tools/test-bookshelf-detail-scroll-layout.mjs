@@ -7,8 +7,8 @@ for (const id of selectContractCases(definitions)) {
 async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const {localBookDetailSdk, localBookDetailSource} = await import('./lib/local-book-detail-sdk-probe.mjs');
-const {MANGA_DIRECTORY_VISUAL: visual, mangaDirectoryColor, mangaDirectoryContentTop} = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {MANGA_DIRECTORY_VISUAL: visual, mangaDirectoryColor, mangaDirectoryContentTop} = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 let metrics;
 const {Component, Header} = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}});
@@ -222,7 +222,10 @@ function checkMangaGeometry(candidate = localBookDetailSource) {
     assert.equal(content.width, Math.min(540, width - 40)); assert.equal(content.create.space, 0);
     const header = [...owner.children.values()].find(child => child instanceof sdk.Header);
     assert.equal(header.variant, 'mangaDirectory');
-    assert.equal(header.backIcon, `app.media.manga_directory_back${scheme === 'night' ? '_theme_night' : ''}`);
+    header.appThemeScheme = scheme;
+    sdk.properties.flush();
+    const backImage = [...header.nodes.values()].find(node => node.type === 'Image');
+    assert.equal(backImage?.create, `app.media.manga_directory_back${scheme === 'night' ? '_theme_night' : ''}`);
     const heading = nodes.find(node => node.type === 'Text' && node.create === '章节目录');
     assert.deepEqual([heading.fontSize, heading.lineHeight, heading.fontWeight], [17, 25, [650, {enableVariableFontWeight: true}]]);
     assert.ok(nodes.some(node => node.create === '最新：最新事实'), 'business latest facts survive the visual conversion');

@@ -4,8 +4,8 @@ import text from '@ohos.graphics.text';
 import { DrawContext, FrameNode, LengthMetricsUnit, NodeController, RenderNode } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
-import { ReadingSurfaceLayoutMap } from '../features/reading/ReadingSurfaceLayoutMap';
+import { readerMotionNowMs } from '../ui/foundation/ReaderMotionClock';
+import { ReadingSurfaceLayoutMap } from '../features/reading/application/ReadingSurfaceLayoutMap';
 
 const PARAGRAPH_FONT = 'ReaderParagraphDiagnosticNotoSerifSC';
 const PARAGRAPH_FONT_FILE = 'NotoSerifSC-Regular.ttf';
@@ -388,6 +388,6 @@ export struct ReaderParagraphDiagnostic {
         Text('选择、无障碍、图片、长段性能及生产分页均未准入。Emoji 与阿拉伯文回退字体待运行时核对。')
           .fontSize(11).fontColor('#555555');
       }.width('100%').padding(12)
-    }.width('100%').layoutWeight(1)
+    }.width('100%').layoutWeight(1).align(Alignment.Top)
   }
 }

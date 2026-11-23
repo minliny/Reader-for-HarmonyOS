@@ -7,15 +7,15 @@ import {actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mj
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers,boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as metricsApi from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const require=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
 const syntax=require(sdkRoot+'/lib/validate_ui_syntax.js');
 syntax.componentCollection.customComponents.add('BookshelfShell');
-syntax.propCollection.set('BookshelfShell',new Set([...read('features/bookshelf/BookshelfShell.ets').matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));
+syntax.propCollection.set('BookshelfShell',new Set([...read('features/bookshelf/ui/BookshelfShell.ets').matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));
 syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));
 require(sdkRoot+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
-for(const [name,path] of [['MainTabShell','features/shell/MainTabShell.ets'],['AppTopBar','features/common/AppTopBar.ets'],['ReaderIconButton','features/common/ReaderIconButton.ets'],['BookshelfMoreMenu','features/bookshelf/BookshelfMoreMenu.ets']]) {
+for(const [name,path] of [['MainTabShell','features/shell/MainTabShell.ets'],['AppTopBar','ui/chrome/AppTopBar.ets'],['ReaderIconButton','ui/controls/ReaderIconButton.ets'],['BookshelfMoreActionSheet','features/bookshelf/ui/BookshelfMoreActionSheet.ets']]) {
  const text=read(path);syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...text.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));
  syntax.builderParamObjectCollection.set(name,new Set([...text.matchAll(/@BuilderParam\s+(\w+)/g)].map(m=>m[1])));
 }
@@ -42,10 +42,10 @@ function render(f,index) {
  Object.assign(i,index);for(const name of [...methods,'shelfReadRecovery'])i[name]=index[name].bind(index);
  i.bookshelfShellContent();const params=[...i.children.values()].find(c=>c instanceof ShellChild).params;
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- const shell=sdk.consumer(read('features/bookshelf/BookshelfShell.ets'),boundedMembers(read('features/bookshelf/BookshelfShell.ets')),
+ const shell=sdk.consumer(read('features/bookshelf/ui/BookshelfShell.ets'),boundedMembers(read('features/bookshelf/ui/BookshelfShell.ets')),
   {bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{},...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}},params);
  shell.aboutToAppear();shell.recoveryNoticeContent(shell.recovery,false);
- const nodes=()=>sdk.nodes(shell),action=label=>{const actor=sdk.walk(shell).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label);return actor&&sdk.nodes(actor).find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick);};
+ const nodes=()=>sdk.nodes(shell),action=label=>{const actor=sdk.walk(shell).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label);return actor&&sdk.nodes(actor).find(n=>n.type==='Button'&&n.constraintSize?.minHeight===44&&n.onClick);};
  return{parent,params,sdk,shell,nodes,action};
 }
 async function unknown(before=true) {
@@ -60,9 +60,8 @@ async function unknown(before=true) {
  const check=(view,busy)=>{
   assert.equal(view.params.recoveryBusy,busy,'actual Index forwards only reconcileBusy');
   const actor=view.sdk.walk(view.shell).find(c=>c instanceof view.sdk.deps.ReaderRecoveryAction&&c.label==='核对操作结果');assert.ok(actor,'native action remains rendered');
-  const nodes=view.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'&&n.create==='核对操作结果'),hit=nodes.find(n=>n.type==='Stack'&&n.onClick);
+  const nodes=view.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'&&n.create==='核对操作结果'),hit=nodes.find(n=>n.type==='Button'&&n.onClick);
   assert.equal(label.opacity,busy?0:1,'label keeps its geometry while native loader covers it');
-  // Native recovery action now uses the 44vp accessibility target.
   assert.equal(hit.constraintSize.minHeight,44);assert.equal(hit.enabled,!busy);
   const loaders=nodes.filter(n=>n.type==='LoadingProgress');assert.equal(loaders.length,busy?1:0);
   if(busy)assert.deepEqual([loaders[0].width,loaders[0].height],[18,18]);

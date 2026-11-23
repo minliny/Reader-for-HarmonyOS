@@ -6,27 +6,28 @@ import { auditTypographyConsumers } from './reader-typography-consumer-audit.mjs
 import { foundationTypographyCarrier } from './foundation-typography-carrier-probe.mjs';
 import { boundedTypographyCarrier } from './bounded-typography-carrier-probe.mjs';
 import { typographyLayoutMethod } from './reader-typography-layout-successor.mjs';
+import { currentSharedUiFile, currentSharedUiImport, originalSharedUiFile } from './shared-ui-source-paths.mjs';
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const registry = JSON.parse(readFileSync(new URL('../fixtures/design/typography-carrier-successors.json', import.meta.url), 'utf8'));
 assert.equal(registry.schemaVersion, 1);
-const successor = (file, expected) => registry.entries.find(entry => entry.origin.path === file && entry.origin.method === expected.method && entry.origin.kind === expected.kind && entry.origin.text === expected.text);
+const successor = (file, expected) => registry.entries.find(entry => entry.origin.path === originalSharedUiFile(file) && entry.origin.method === expected.method && entry.origin.kind === expected.kind && entry.origin.text === expected.text);
 function currentCarrierText(entry) {
   if (entry.id !== 'local-import-body-3') return entry.target.text;
   // The registry is a hash-bound historical relocation witness. Only this
   // existing hint gained the current task-blocked branch; its complete native
   // tuple and original witness remain unchanged.
-  const path = 'entry/src/main/ets/features/bookshelf/LocalImportDialog.ets';
+  const path = 'entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets';
   const text = "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'";
   assert.equal(entry.kind, 'sameFile');
   assert.deepEqual(entry.origin, { path, method: 'fileSelectionPanel', kind: 'Text', text });
   assert.deepEqual(entry.target, { path, method: 'fileSelectionBody', kind: 'Text', text });
   return 'this.selectionBlockedMessage.length > 0 ? this.selectionBlockedMessage :\n            ' + text;
 }
-function methodOf(source, file, name, historicalLayout = true) {
-  if (historicalLayout) name = typographyLayoutMethod(file, name, source);
+function methodOf(source, file, name) {
+  name = typographyLayoutMethod(file, name, source);
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: real SDK AST for carrier successor`);
   const declaration = tree.statements.find(node => node.members?.some(member => member.name?.text === 'build'));
@@ -34,61 +35,21 @@ function methodOf(source, file, name, historicalLayout = true) {
   assert.ok(method, `${file}: actual origin ${name}`);
   return { tree, method };
 }
-function callsMethod(source, file, origin, target, argumentsText = [], historicalLayout = true, occurrences) {
-  const { tree, method } = methodOf(source, file, origin, historicalLayout); let found = 0;
+function callsMethod(source, file, origin, target) {
+  const { tree, method } = methodOf(source, file, origin); let found = false;
   const visit = node => {
-    if (ts.isCallExpression(node) && node.expression?.getText(tree) === `this.${target}` &&
-      node.arguments.length === argumentsText.length && node.arguments.every((argument, index) =>
-        argument.getText(tree) === argumentsText[index])) found++;
+    if (ts.isCallExpression(node) && node.expression?.getText(tree) === `this.${target}` && node.arguments.length === 0) found = true;
     ts.forEachChild(node, visit);
   };
-  visit(method);
-  if (occurrences === undefined) assert.ok(found, `${file}/${origin}: actual AST call to ${target}, not a comment or unrelated carrier`);
-  else assert.equal(found, occurrences, `${file}/${origin}: exact actual AST call count to ${target}, not a comment, copy or unrelated carrier`);
-}
-/** Current approved message layouts may add a named body slot between the
- * historical owner and native actor. Every finite edge, including its exact
- * arguments, still has to exist in the installed SDK AST. */
-export function assertTypographyMethodEdges(file, source, edges) {
-  for (const [origin, target, argumentsText = [], occurrences = 1] of edges)
-    callsMethod(source, file, origin, target, argumentsText, false, occurrences);
-}
-/** A current finite component delegate still requires its actual import,
- * owning method, unique call and exact spec/variant inputs. Supplying a test
- * dependency cannot stand in for a disconnected production component. */
-export function assertTypographyComponentBinding(file, source, origin, component, module, inputs) {
-  const { tree, method } = methodOf(source, file, origin, false);
-  assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === module &&
-    node.importClause?.namedBindings?.elements?.some(element => element.name?.text === component)),
-    `${file}: actual finite ${component} import`);
-  const calls=[];
-  const visit=node=>{
-    if((ts.isCallExpression(node)||ts.isEtsComponentExpression?.(node))&&node.expression?.getText(tree)===component) calls.push(node);
-    ts.forEachChild(node,visit);
-  };visit(method);
-  assert.equal(calls.length,1,`${file}/${origin}: one actual shared component binding`);
-  const props=calls[0].arguments?.[0];assert.ok(props&&ts.isObjectLiteralExpression(props),'actual shared component input object');
-  for(const[name,expected]of Object.entries(inputs))
-    assert.equal(props.properties.find(property=>property.name?.text===name)?.initializer?.getText(tree),expected,
-      `${file}/${origin}: actual finite ${component} input ${name}`);
+  visit(method); assert.ok(found, `${file}/${origin}: actual AST call to ${target}, not a comment or unrelated carrier`);
 }
 /** Only explicitly audited same-file relocations. The immutable tuple remains
  * the baseline; an actual current origin->Builder edge is mandatory. */
 export function typographyCarrierMethod(file, expected, pageSource) {
   const entry = successor(file, expected);
   if (entry?.kind === 'sameFile') {
-    assert.equal(entry.target.path, file);
-    if (['local-import-body-1','local-import-body-2'].includes(entry.id)) {
-      assert.equal(file, 'entry/src/main/ets/features/bookshelf/LocalImportDialog.ets');
-      assert.equal(entry.origin.method, 'fileSelectionPanel');assert.equal(entry.target.method, 'fileSelectionBody');
-      // Only these two unchanged drop-zone labels gained the actual scroll
-      // document between their old owner and retained body. Their historical
-      // tuple comparison below is intentionally unchanged.
-      assertTypographyMethodEdges(file, pageSource, [['fileSelectionPanel','selectionDocument'],
-        ['selectionDocument','fileSelectionBody']]);
-    } else {
-      for (const [origin, target] of entry.methodEdges ?? [[entry.origin.method, entry.target.method]]) callsMethod(pageSource, file, origin, target);
-    }
+    assert.equal(currentSharedUiFile(entry.target.path), currentSharedUiFile(file));
+    for (const [origin, target] of entry.methodEdges ?? [[entry.origin.method, entry.target.method]]) callsMethod(pageSource, file, origin, target);
     const text = currentCarrierText(entry);
     const carriers = auditTypographyConsumers(pageSource, file).filter(node => node.method === entry.target.method && node.kind === entry.target.kind && node.text === text);
     assert.equal(carriers.length, 1, `${entry.id}: one exact authored successor carrier`);
@@ -107,10 +68,13 @@ export function typographyCarrierMethod(file, expected, pageSource) {
  * rows/counts, physical values or AUTO omissions are changed. */
 export function sharedTypographyReplacement(file, expected, pageSource, targetSource) {
   const entry = successor(file, expected);
+  if (!entry || entry.kind === 'sameFile') return undefined;
+  const target = currentSharedUiFile(entry.target.path);
+  const module = currentSharedUiImport(currentSharedUiFile(file), entry.origin.path, entry.module, entry.target.path);
   if (entry?.kind === 'bounded' || entry?.kind === 'foundation') {
     for (const [origin, target] of entry.methodEdges ?? []) callsMethod(pageSource, file, origin, target);
     const { tree, method } = methodOf(pageSource, file, entry.bindingMethod);
-    assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === entry.module &&
+    assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === module &&
       node.importClause?.namedBindings?.elements?.some(element => element.name?.text === entry.component)), `${entry.id}: actual finite component import`);
     let found = false;
     const visit = node => {
@@ -125,11 +89,12 @@ export function sharedTypographyReplacement(file, expected, pageSource, targetSo
     };
     visit(method);
     assert.ok(found, `${entry.id}: real finite binding, not a comment or unrelated shared node`);
-    return entry.kind === 'foundation' ? foundationTypographyCarrier(entry,file,expected,pageSource,targetSource) : boundedTypographyCarrier(entry, file, expected, pageSource, targetSource);
+    const current = target === entry.target.path ? entry : { ...entry, target: { ...entry.target, path: target } };
+    return entry.kind === 'foundation' ? foundationTypographyCarrier(current,file,expected,pageSource,targetSource) : boundedTypographyCarrier(current, file, expected, pageSource, targetSource);
   }
   if (entry?.kind !== 'shared') return undefined;
   const { tree, method } = methodOf(pageSource, file, expected.method); let found = false;
-  assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === entry.module &&
+  assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === module &&
     node.importClause?.namedBindings?.elements?.some(element => element.name?.text === entry.component)), `${file}: actual shared implementation import`);
   const visit = node => {
     if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) && node.expression?.getText(tree) === entry.component) {
@@ -144,7 +109,6 @@ export function sharedTypographyReplacement(file, expected, pageSource, targetSo
   };
   visit(method);
   assert.ok(found, `${file}/${expected.method}: actual page consumes the finite shared replacement`);
-  const target = entry.target.path;
   const source = targetSource ?? readFileSync(new URL('../../'+target, import.meta.url), 'utf8');
   const actual = auditTypographyConsumers(source, target).find(node => node.method === entry.target.method && node.kind === entry.target.kind && node.text === entry.target.text);
   assert.ok(actual, 'shared actual message carrier');

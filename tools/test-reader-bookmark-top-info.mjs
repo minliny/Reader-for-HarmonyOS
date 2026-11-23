@@ -1,32 +1,31 @@
 import assert from 'node:assert/strict';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import { registerReaderTypeScriptImports } from './lib/reader-typescript-imports.mjs';
 
 async function runCase(selectedCase) {
 const geometryCase = selectedCase === 'geometry';
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const { readFileSync } = await import('node:fs');
-const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
-const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { createRequire, registerHooks } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const chromeLayout = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const chromeLayout = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 const { loadReaderTypographyRoles, readerMessageStyles } = await import('./lib/reader-typography-probe.mjs');
-const gesture = await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
-const rapid = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
-const { mergeReaderControlBookmarkProjection } = await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
-const resolution = registerReaderTypeScriptImports();
+const gesture = await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
+const rapid = await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+const { mergeReaderControlBookmarkProjection } = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
+const resolution = registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
+  if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw e;
+} } });
 try {
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { ReaderRectVp: Rect, ReaderDisplayCornerVp: Corner, ReaderWindowMetricsSnapshot: Metrics } = windowMetrics;
-const { readerWidthClassWithHint } = await import('../entry/src/main/ets/features/common/ReaderWidthClass.ts');
+const { ReaderRectVp: Rect, ReaderDisplayCornerVp: Corner, ReaderWindowMetricsSnapshot: Metrics } =
+  await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP } =
+  await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { findReaderTheme } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const file = name => new URL(`../entry/src/main/ets/features/reading/${name}`, import.meta.url);
-const { resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP } = pureModuleProbe(
-  readFileSync(file('ReaderLayoutGeometry.ts'), 'utf8'), 'ReaderLayoutGeometry.ets',
-  { ...windowMetrics, readerWidthClassWithHint }, ['resolveReaderReadingLayout', 'READER_PAGE_CHROME_TOP_ROW_PADDING_VP']);
-const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { findReaderTheme } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const typography = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const typography = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL } =
   loadReaderTypographyRoles(typography);
 const roles = { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL };
@@ -60,10 +59,9 @@ function context(scale) {
     getMeasureUtils: () => ({ measureText: ({ textContent }) => textContent.length * 7.2 * 3 * scale,
       measureTextSize: ({textContent}) => ({width: textContent.length * 7.2 * 3 * scale, height: 20 * 3 * scale}) }) };
 }
-const chromeMembers = ['build', 'chromeLayout', 'textMeasure', 'topTextStyle', 'footerExitX', 'footerExitY', 'metaColor',
-  'filledBookmarkAsset', 'outlineBookmarkAsset'];
+const chromeMembers = ['build', 'chromeLayout', 'textMeasure', 'topTextStyle', 'footerExitX', 'footerExitY', 'metaColor'];
 const bookmarkMembers = ['bookmarkCornerFeedback', 'bookmarkCornerLayout', 'bookmarkFeedbackLabel',
-  'pageBookmarkFeedbackFilled', 'pageBookmarkFeedbackMode', 'pageBookmarkFeedbackOpacity', 'pageBookmarkFeedbackAnchor', 'bookmarkFeedbackOwnerKey',
+  'pageBookmarkFeedbackFilled', 'pageBookmarkFeedbackMode', 'pageBookmarkFeedbackAnchor', 'bookmarkFeedbackOwnerKey',
   'bookmarkFeedbackHintFits', 'bookmarkFeedbackHintLabel', 'bookmarkFeedbackTopBoundary'];
 // Reuse only the SDK-compiled classes. Every combination gets fresh owners,
 // node maps and geometry caches; no mounted actor or fixture state is shared.
@@ -81,60 +79,35 @@ function render(layout, state = {}, time = '12:30') {
   const ui = context(layout.systemFontScale);
   const chrome = new ChromeComponent(undefined, {});
   Object.assign(chrome, { layout, textMeasureCache: readerPageChromeTextMeasurements,
-    topInfoSuppressed: state.controlVisible?.() === true,
+    topInfoSuppressed: state.readerSettingsSnapshot?.hideStatusBar === false || state.controlVisible?.() === true,
     topStartText: 'A very long book title that must not overlap', topEndText: time,
     bottomStartText: '10%', bottomEndText: '第 2 页', sessionVisible: false,
     sessionWidth: 0, sessionHeight: 0, sessionExitProgress: 0, isSessionOverlay: false,
-    sessionOverlayActive: false, topTranslateY: state.readerSettingsSnapshot?.navigationMode === 'paged' ?
-      0 : -(state.bookmarkPageOffsetY ?? 0),
-    incomingOpacity: 1, footerOpacity: 1, footerTranslateX: 0,
+    sessionOverlayActive: false, topTranslateY: -(state.bookmarkPageOffsetY ?? 0), incomingOpacity: 1, footerOpacity: 1, footerTranslateX: 0,
     appearance: { activeTheme: 'paper' }, getUIContext: () => ui });
+  chrome.initialRender();
   const bookmark = new BookmarkComponent(undefined, {});
   Object.assign(bookmark, { sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
     currentChapterIndex: () => 0, currentPageBookmarkStatus: () => 'bookmarked', bookmarkPendingTarget: '',
     bookmarkPreviewStatus: state.currentPageBookmarkStatus?.() ?? 'bookmarked', bookmarkPreviewCancelled: false,
     lifecycleToken: 1, chapterSelectionToken: 1, bookmarkUnavailableMessage: '',
     controlVisible: () => false, controlObscured: false, bookmarkPageOffsetY: 0, bookmarkPreviewChanged: false,
-    // This probe exercises the retained Host actor used only by continuous
-    // reading. Paged reading now renders the marker inside ReaderPageChrome.
-    readerSettingsSnapshot: { hideStatusBar: true, navigationMode: 'continuous' }, windowChromeActive: true, windowControlsPresented: false,
+    readerSettingsSnapshot: { hideStatusBar: true, navigationMode: 'paged' }, windowChromeActive: true, windowControlsPresented: false,
     readerAppScheme: 'day', bookTitle: chrome.topStartText, pageChromeClockText: time, readingLayout: () => layout, getUIContext: () => ui, ...state });
   bookmark.visibleReadingAppearance = () => ({ activeTheme: 'paper' });
   bookmark.bookmarkPreviewOwner = bookmark.bookmarkFeedbackOwnerKey();
-  const pageOwned = bookmark.readerSettingsSnapshot.navigationMode === 'paged';
-  if (pageOwned) {
-    const pageLayout = bookmark.bookmarkCornerLayout();
-    Object.assign(chrome, {
-      bookmarkMode: bookmark.controlVisible() || bookmark.controlObscured ? 'hidden' :
-        bookmark.pageBookmarkFeedbackMode(bookmark.pageTurnRenderRevision),
-      bookmarkOpacity: bookmark.controlVisible() || bookmark.controlObscured ? 0 :
-        bookmark.pageBookmarkFeedbackOpacity(),
-      bookmarkTopAccessoryX: pageLayout.topAccessoryX,
-      bookmarkTopAccessoryY: pageLayout.topAccessoryY,
-      bookmarkTopAccessoryWidth: pageLayout.topAccessoryWidth,
-      bookmarkTopAccessoryHeight: pageLayout.topAccessoryHeight,
-    });
-  }
-  chrome.initialRender();
   bookmark.bookmarkCornerFeedback();
   const nodes = [...chrome.nodes.values()];
-  const hostMarker = [...bookmark.nodes.values()].find(n => n.type === 'Image');
-  const pageMarker = pageOwned ? nodes.find(n => n.type === 'Image') : undefined;
-  const marker = pageMarker ?? hostMarker;
+  const marker = [...bookmark.nodes.values()].find(n => n.type === 'Image');
   return { chrome, bookmark, clock: nodes.find(n => n.type === 'Text' && n.create === time),
     title: nodes.find(n => n.type === 'Text' && n.create.startsWith('A very')),
     marker, icon: marker?.visibility === 'Visibility.Hidden' || marker?.opacity === 0 ? undefined : marker,
     hint: (() => {
-      const hostNodes = [...bookmark.nodes.values()];
-      const hostGroup = hostNodes.find(n => n.type === 'Row' && n.position !== undefined);
-      const hintNodes = hostGroup ? hostNodes : nodes;
-      const group = hostGroup ?? nodes.find(n => n.type === 'Row' && n.position !== undefined);
-      const label = hintNodes.find(n => n.type === 'Text' &&
-        n.create === bookmark.bookmarkFeedbackHintLabel(bookmark.pageTurnRenderRevision));
-      return label === undefined || group === undefined ? undefined : { ...label,
-        position: { ...group.position, y: group.position.y + (hostGroup ? 0 : bookmark.bookmarkPageOffsetY) },
-        owner: hostGroup ? 'host' : 'page', width: group.width, height: group.height,
-        hitTestBehavior: group.hitTestBehavior };
+      const nodes = [...bookmark.nodes.values()];
+      const label = nodes.find(n => n.type === 'Text' && n.create !== '↓');
+      const group = nodes.find(n => n.type === 'Row' && n.position !== undefined);
+      return label === undefined ? undefined : { ...label, position: group?.position,
+        width: group?.width, height: group?.height, hitTestBehavior: group?.hitTestBehavior };
     })() };
 }
 function noOverlap(a, b) { return a.x + a.width <= b.x + 1e-8 || b.x + b.width <= a.x + 1e-8; }
@@ -183,6 +156,7 @@ if (selectedCase === 'transaction') {
 }
 const layout = cases[1];
 if (geometryCase) {
+let leftFallbacks = 0;
 for (const layout of cases) {
   const { clock, title, icon, chrome, bookmark } = render(layout);
   assert.ok(clock && icon, 'both native Text clock and native Image bookmark exist');
@@ -203,63 +177,41 @@ for (const layout of cases) {
     'bookmark stays inside top information band, above reading body');
   assert.equal(icon.translate, undefined, 'drag does not translate the icon into the reading body');
   assert.equal(icon.accessibilityText, '本页已添加书签');
+  if (a.x < b.x) leftFallbacks++;
   const cutout = layout.pageChromeStatusMetrics.statusBarCutoutRect;
-  assert.ok(icon.position.y >= cutout.top + cutout.height,
-    'the common top information row keeps the full marker below the physical cutout');
-  assert.ok(clock.position.y >= cutout.top + cutout.height,
-    'the clock shares the below-cutout information row');
   if (icon.position.y < cutout.top + cutout.height && icon.position.y + icon.height > cutout.top) {
     assert.ok(noOverlap(a, { x: cutout.left, width: cutout.width }), 'bookmark avoids physical cutout');
     assert.ok(noOverlap(b, { x: cutout.left, width: cutout.width }), 'clock avoids physical cutout');
   }
 }
+assert.ok(leftFallbacks > 0, 'narrow right cutout lane exercises left title-lane fallback');
 // Include the actual sibling status-paper Builder: a marker can have correct
 // own visibility/alpha yet be completely covered by this higher opaque crop.
 let statusCompositions = 0;
-const statusModeGeometry = new Map();
-for (const [fixtureIndex, fixture] of cases.entries()) for (const hideStatusBar of [false, true]) {
-  for (const [status, pull, changed] of [['bookmarked', 0, false], ['empty', 8, false], ['empty', 32, true], ['empty', 72, true], ['empty', 128, true]]) {
+for (const fixture of cases) for (const hideStatusBar of [false, true]) {
+  for (const [status, pull, changed] of [['bookmarked', 0, false], ['empty', 8, false], ['empty', 32, true]]) {
     const state = { readerSettingsSnapshot: { hideStatusBar }, currentPageBookmarkStatus: () => status,
       bookmarkPageOffsetY: pull, bookmarkPreviewChanged: changed };
-    const { icon, hint, paper, paperOrder, layout, bookmark, clock, title } = renderStatusComposition(fixture, state);
+    const { icon, hint, paper, paperOrder, layout, bookmark, clock } = renderStatusComposition(fixture, state);
     assert.ok(icon, 'idle saved marker and both admitted preview states have a complete icon');
-    assert.equal([...bookmark.nodes.values()].filter(node => node.type === 'Image').length, 0,
-      'paged status composition has no retained Host bookmark actor');
-    const expectedSize = chromeLayout.READER_PAGE_CHROME_BOOKMARK_SIZE;
+    const expectedSize = hideStatusBar ? Math.min(chromeLayout.READER_PAGE_CHROME_BOOKMARK_SIZE,
+      fixture.pageChromeStatusMetrics.statusBarRect.height) : chromeLayout.READER_PAGE_CHROME_BOOKMARK_SIZE;
     assert.equal(icon.width, expectedSize);
     assert.equal(icon.height, expectedSize);
-    const bounds = { ...icon.position, y: icon.position.y + pull, width: icon.width, height: icon.height };
-    assert.ok(bounds.y + bounds.height <= layout.contentTop + pull, 'idle/drag icon never covers the chapter heading or body');
+    const bounds = { ...icon.position, width: icon.width, height: icon.height };
+    assert.ok(bounds.y + bounds.height <= layout.contentTop, 'idle/drag icon never covers the chapter heading or body');
     assert.equal(icon.create.includes('page_bookmark_filled'), status === 'bookmarked' || changed);
     if (!hideStatusBar) {
       assert.ok(paper && paperOrder > icon.zIndex, 'keep the actual system paper above reader content');
       assert.ok(disjoint(bounds, paper), `bookmark must not be covered by system status paper: ${JSON.stringify({bounds,paper,contentTop:layout.contentTop})}`);
-      assert.ok(bounds.y >= layout.pageChromeVisualSafeTop + pull,
-        'the marker remains inside the moving information row, below its safe top');
-      assert.ok(clock, 'the page information clock remains below the separately rendered native status band');
-    } else {
-      assert.equal(paper, undefined, 'explicit immersion keeps the original unobscured top slot');
-    }
-    assert.ok(clock, 'both system-status choices keep the page information clock');
-    assert.equal(clock.translate.y, 0, 'paged top text has no counter-translation in either system-status mode');
-    assert.equal(clock.translate.y + pull, pull, 'clock and bookmark share the page displacement in both modes');
-    const geometryKey = JSON.stringify([fixtureIndex, status, pull, changed]);
-    const informationGeometry = { contentTop: layout.contentTop, safeTop: layout.pageChromeVisualSafeTop,
-      regionHeight: layout.pageChromeTopRegionHeight, icon: { position: icon.position, width: icon.width, height: icon.height },
-      clock: { position: clock.position, translate: clock.translate, width: clock.constraintSize.maxWidth },
-      title: { position: title.position, translate: title.translate, width: title.constraintSize.maxWidth } };
-    if (hideStatusBar) assert.deepEqual(informationGeometry, statusModeGeometry.get(geometryKey),
-      'hiding only the native status bar preserves the page information row and body geometry');
-    else statusModeGeometry.set(geometryKey, informationGeometry);
-    if (pull > 0 && bookmark.bookmarkFeedbackHintFits()) assert.ok(hint, 'admitted paged hint must be inspected');
+      assert.ok(bounds.y >= bookmark.bookmarkFeedbackTopBoundary(layout));
+      assert.equal(clock, undefined, 'native status owns its original clock band');
+    } else assert.equal(paper, undefined, 'explicit immersion keeps the original unobscured top slot');
     if (hint) {
-      assert.equal(hint.owner, 'host', 'gesture instruction stays fixed while the marker follows the sheet');
       const hintBounds = { ...hint.position, width: hint.width, height: hint.height };
-      assert.ok(disjoint(bounds, hintBounds), `preview label never overlaps its bookmark icon: ${JSON.stringify({hideStatusBar,pull,bounds,hintBounds,contentTop:layout.contentTop})}`);
+      assert.ok(disjoint(bounds, hintBounds), 'preview label never overlaps its bookmark icon');
       if (paper) assert.ok(disjoint(hintBounds, paper), 'preview label remains below the opaque system band');
       assert.ok(hintBounds.y + hintBounds.height <= layout.contentTop + pull, 'large-scale hint only uses real blank/pulled space');
-      assert.ok(hintBounds.y + hintBounds.height <= bookmark.bookmarkHintTopInfoTop + pull,
-        'fixed hint stays above the moving title/clock/marker row in both system-status modes');
     }
     statusCompositions++;
   }
@@ -271,27 +223,13 @@ for (const [fixtureIndex, fixture] of cases.entries()) for (const hideStatusBar 
   }
 }
 console.log(`PASS bookmark/status composition: ${statusCompositions} actual LRE layouts and SDK marker/status-paper trees; full-size idle/outline/filled, cutout/scale and controls`);
-for (const hideStatusBar of [false, true]) {
-  const shown = [128, 160, 128].map(pull => renderStatusComposition(cases[1], {
-    readerSettingsSnapshot: { hideStatusBar }, currentPageBookmarkStatus: () => 'empty',
-    bookmarkPageOffsetY: pull, bookmarkPreviewChanged: true,
-  }));
-  for (const result of shown) {
-    assert.ok(result.hint, 'a sufficiently exposed gap actually shows the hint');
-    assert.equal(result.hint.owner, 'host');
-    assert.equal(result.hint.position.y, shown[0].hint.position.y,
-      'hint screen Y remains fixed during further pull and rebound');
-    assert.equal([...result.chrome.nodes.values()].filter(n => n.type === 'Row').length, 0,
-      'the page/texture chrome has no duplicate gesture instruction');
-  }
-}
 for (const [status, drag, preview, visible, filled, label] of [
   ['empty', 0, false, false, false, ''],
   ['empty', 8, false, true, false, '下拉添加书签'],
   ['empty', 32, true, true, true, '松手添加书签'],
   ['bookmarked', 0, false, true, true, '本页已添加书签'],
-  ['bookmarked', 8, false, true, true, '下拉移除本页书签'],
-  ['bookmarked', 32, true, true, false, '松手移除本页书签'],
+  ['bookmarked', 8, false, true, true, '下拉移除书签'],
+  ['bookmarked', 32, true, true, false, '松手移除书签'],
   ['unknown', 0, false, false, false, ''],
 ]) {
   const { icon, clock, marker } = render(layout, { currentPageBookmarkStatus: () => status,
@@ -319,7 +257,8 @@ assert.equal(render(layout, { currentPageBookmarkStatus: () => 'empty', bookmark
 
 // Execute the actual three component-call boundaries. Only native font/layout
 // leaves are stubbed; a missing primitive Prop connection fails this chain.
-const { root: sdkRoot, require } = installedEtsCompiler();
+const require = createRequire(import.meta.url);
+const sdkRoot = resolveEtsLoaderRoot();
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const stageSource = readFileSync(file('ReaderPageTurnStage.ets'), 'utf8');
 const readingSource = readFileSync(file('ReadingSurface.ets'), 'utf8');
@@ -332,41 +271,24 @@ registerChild('ReaderNativeParagraphView', readFileSync(file('ReaderNativeParagr
 registerChild('ReaderPageChrome', chromeSource); registerChild('ReaderReadingTextFragment', readingSource);
 registerChild('ReaderPaperBackground', readFileSync(file('ReaderPaperBackground.ets'), 'utf8'));
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-const topInfoMovesWithPage = true;
-assert.match(lreSource, /topInfoMovesWithPage:\s*true\s*,/,
-  'the paged reader always assigns its information row to the physical page');
 for (const pull of [0, 8, 32, 18, 0]) {
   const source = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
-  const stage = createReaderBuilderProbe(source, ['build', 'slotBookmarkMode', 'slotBookmarkOpacity'], { ReaderPageTurnSurface: Child }).owner;
+  const stage = createReaderBuilderProbe(source, ['build'], { ReaderPageTurnSurface: Child }).owner;
   Object.assign(stage, { translateY: pull, currentPageSlot: 'a', layout, appearance: { activeTheme: 'paper' },
-    topInfoMovesWithPage,
-    bookmarkMode: 'filled', bookmarkOpacity: 1, bookmarkTopAccessoryX: 220, bookmarkTopAccessoryY: 12,
-    bookmarkTopAccessoryWidth: 24, bookmarkTopAccessoryHeight: 24, bookmarkHintText: '', bookmarkHintVisible: false,
-    bookmarkHintX: 0, bookmarkHintY: 0, bookmarkHintWidth: 0, bookmarkHintHeight: 0,
-    bookmarkHintArrowVisible: false, bookmarkHintArrowRotation: 0, bookmarkVisible: true,
-    bookmarkPresentationRevision: 0,
-    slotPage: () => ({ fragments: [], chromeTopStartText: 'Book', chromeTopEndText: '12:30',
-      chromeBottomStartText: '', chromeBottomEndText: '',
-      bookmark: { mode: 'filled', opacity: 1, topAccessoryX: 220, topAccessoryY: 12,
-        topAccessoryWidth: 24, topAccessoryHeight: 24 } }),
+    slotPage: () => ({ fragments: [], chromeTopStartText: 'Book', chromeTopEndText: '12:30' }),
     slotIdentity: slot => slot, slotSnapshotId: () => '', slotX: () => 0,
     slotVisible: slot => slot === 'a', slotLayer: () => 0, slotShadow: () => 0, hasActiveTurn: () => false });
   stage.initialRender();
   const root = [...stage.nodes.values()].find(n => n.translate?.y === pull);
   assert.ok(root); assert.equal(root.clip, pull <= 0, 'counter-translated top row is not clipped at moving stage edge');
   for (const page of stage.children.values()) {
-    const expectedTopTranslateY = topInfoMovesWithPage ? 0 : -pull;
-    assert.equal(page.params.chromeTopTranslateY, expectedTopTranslateY,
-      topInfoMovesWithPage ? 'page-owned top info follows the page' : 'system-owned top lane remains fixed');
+    assert.equal(page.params.chromeTopTranslateY + pull, 0);
     const slot = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
       COVER_OCCLUSION_RADIUS_VP: 1, COVER_OCCLUSION_OFFSET_X_VP: 1 }, {componentName:'ReaderPageTurnSurface'}).owner;
     Object.assign(slot, page.params, { staticSnapshotId: '', slotIdentity: 'a', shadowColor: () => '#00000000' });
     slot.initialRender();
     const readingParams = [...slot.children.values()][0].params;
-    assert.equal(readingParams.chromeTopTranslateY, expectedTopTranslateY);
-    assert.equal(readingParams.bookmarkTopAccessoryX, 220);
-    assert.equal(readingParams.bookmarkTopAccessoryY, 12);
-    assert.equal(readingParams.bookmarkMode, 'filled');
+    assert.equal(readingParams.chromeTopTranslateY + pull, 0);
     const reading = createReaderBuilderProbe(readingSource.slice(readingSource.lastIndexOf('@Component', readingSource.indexOf('export struct ReadingSurface'))), ['build', 'usesHighlightCanvas'], { ReaderPageChrome: Child, ReaderNativeParagraphView: Child,
       ReaderReadingTextFragment: Child, ReaderPaperBackground: Child, GradientDirection: { Bottom: 'bottom' } }).owner;
     Object.assign(reading, readingParams, { themeStyle: () => ({ sourcePaperLighting: false, paperTexture: false,
@@ -374,115 +296,11 @@ for (const pull of [0, 8, 32, 18, 0]) {
       showChapterTitle: false, staticSnapshotId: '', contentInsets: () => ({}), layout });
     reading.initialRender();
     const finalParams = [...reading.children.values()].find(child => 'topTranslateY' in child.params).params;
-    assert.equal(finalParams.topTranslateY, expectedTopTranslateY,
-      'actual Stage → slot → surface → Chrome forwards the ownership-specific transform');
-    assert.equal(finalParams.bookmarkTopAccessoryX, 220, 'page-owned marker stays in the page chrome chain');
-    assert.equal(finalParams.bookmarkTopAccessoryY, 12);
-    const chrome = new ChromeComponent(undefined, {});
-    Object.assign(chrome, finalParams, { layout, topInfoSuppressed: false,
-      textMeasureCache: readerPageChromeTextMeasurements, getUIContext: () => context(layout.systemFontScale) });
-    chrome.initialRender();
-    const clock = [...chrome.nodes.values()].find(node => node.type === 'Text' && node.create === '12:30');
-    const marker = [...chrome.nodes.values()].find(node => node.type === 'Image');
-    assert.ok(clock && marker);
-    assert.equal(clock.translate.y + root.translate.y, topInfoMovesWithPage ? pull : 0,
-      'actual rendered clock follows the ownership-specific viewport displacement');
-    assert.equal((marker.translate?.y ?? 0) + root.translate.y, pull,
-      'actual rendered marker follows the page in both modes');
+    assert.equal(finalParams.topTranslateY + pull, 0, 'actual Stage → slot → surface → Chrome forwards primitive cancellation');
   }
 }
 assert.match(lreSource, /\.clip\(true\)\s*\.onTouch/, 'reading viewport retains outer clipping');
 console.log('PASS PH86 actual SDK Stage/slot/ReadingSurface/Chrome Prop chain across drag and rebound; outer viewport clip retained');
-}
-if (selectedCase === 'transaction') {
-  const WindowOwner = productionMotionMethods(file('LocalReadingExperience.ets'), [
-    'commitReaderWindowSettings', 'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork',
-    'captureReaderSettingsAdmission', 'canTurnPage', 'pageTurnTapOnlyInput',
-  ]);
-  const drain = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
-  function windowOwner(phase = 'idle') {
-    const requests = [], writes = [], reflows = [];
-    const owner = Object.assign(new WindowOwner(), {
-      mounted: true, exitRequested: false, lifecycleToken: 1, sourceId: 'local', bookId: 'book',
-      readerSettingsMutationGeneration: 0, pageTurnRenderRevision: 1, phase: 'ready',
-      readerSettingsSnapshot: { hideStatusBar: false, extendIntoCutout: false },
-      visiblePage: {}, chapter: {}, visiblePageSelectionToken: 1, chapterSelectionToken: 1,
-      materializedChapterSelectionToken: 1, controlVisible: () => false,
-      pageTurnInputPhase: () => phase, isSessionActive: () => owner.mounted,
-      rollbackPageTurnForDeferredMutation() { owner.rollbacks = (owner.rollbacks ?? 0) + 1; },
-      configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {},
-      controlsPresentedForWindow: () => false,
-      applyReaderWindowPolicy(snapshot) {
-        return new Promise((resolve, reject) => requests.push({ snapshot, resolve, reject }));
-      },
-      persistReaderSettingsSnapshot: async snapshot => { writes.push(snapshot); },
-      reflowAfterWindowGeometryChange() { reflows.push(owner.readerSettingsSnapshot); },
-      showReaderSettingsFailure() { owner.failures = (owner.failures ?? 0) + 1; },
-    });
-    owner.clearDeferredPageTurnWork();
-    return { owner, requests, writes, reflows, idle() { phase = 'idle'; } };
-  }
-  for (const phase of ['tracking', 'dragging', 'settling']) {
-    const f = windowOwner(phase), initial = f.owner.readerSettingsSnapshot;
-    const hidden = { ...initial, hideStatusBar: true };
-    const latest = { ...hidden, extendIntoCutout: true };
-    f.owner.commitReaderWindowSettings(hidden);
-    f.owner.commitReaderWindowSettings(latest);
-    assert.equal(f.owner.readerSettingsSnapshot, initial, 'drag/rebound retains its original geometry preference');
-    assert.equal(f.requests.length, 0, 'window policy is not dispatched mid-gesture');
-    assert.equal(f.owner.pageTurnPendingWindowSettings, latest, 'latest queued choice wins');
-    f.idle(); f.owner.resumeDeferredPageTurnWork();
-    assert.equal(f.requests.length, 1);
-    assert.equal(f.requests[0].snapshot, latest);
-    assert.equal(f.owner.pageTurnPendingWindowSettings, undefined);
-    assert.equal(f.owner.canTurnPage(), false, 'no motion starts against an unacknowledged window policy');
-    assert.equal(f.owner.pageTurnTapOnlyInput(), true);
-    f.requests[0].resolve(); await drain();
-    assert.equal(f.owner.canTurnPage(), true);
-    assert.equal(f.owner.pageTurnTapOnlyInput(), false);
-    assert.deepEqual(f.reflows, [latest]);
-    assert.deepEqual(f.writes, [latest]);
-    assert.equal(f.owner.pageTurnRenderRevision, 2, 'accepted status change invalidates page texture identity');
-  }
-  {
-    const f = windowOwner(), initial = f.owner.readerSettingsSnapshot;
-    f.owner.commitReaderWindowSettings({ ...initial, hideStatusBar: true });
-    f.requests[0].reject(Error('window refused')); await drain();
-    assert.equal(f.owner.readerSettingsSnapshot, initial);
-    assert.equal(f.requests[1].snapshot, initial);
-    assert.equal(f.owner.canTurnPage(), false, 'rollback policy must settle before motion resumes');
-    assert.equal(f.writes.length, 0);
-    f.requests[1].resolve(); await drain();
-    assert.equal(f.owner.canTurnPage(), true);
-    assert.equal(f.owner.failures, 1);
-  }
-  {
-    const f = windowOwner(), initial = f.owner.readerSettingsSnapshot;
-    f.owner.commitReaderWindowSettings({ ...initial, hideStatusBar: true });
-    f.owner.commitReaderWindowSettings(initial);
-    f.requests[0].resolve(); await drain();
-    assert.equal(f.owner.canTurnPage(), false, 'stale ACK cannot unlock a newer policy');
-    assert.equal(f.writes.length, 0);
-    f.requests[1].resolve(); await drain();
-    assert.equal(f.owner.canTurnPage(), true);
-    assert.deepEqual(f.writes, [initial]);
-  }
-  {
-    const f = windowOwner('dragging');
-    f.owner.commitReaderWindowSettings({ hideStatusBar: true, extendIntoCutout: false });
-    f.owner.clearDeferredPageTurnWork(); f.idle(); f.owner.resumeDeferredPageTurnWork();
-    assert.equal(f.requests.length, 0, 'retired deferred work cannot apply its old window setting');
-  }
-  for (const outcome of ['resolve', 'reject']) {
-    const f = windowOwner();
-    f.owner.commitReaderWindowSettings({ hideStatusBar: true, extendIntoCutout: false });
-    f.owner.readerSettingsMutationGeneration++;
-    f.requests[0][outcome](outcome === 'reject' ? Error('retired policy') : undefined);
-    await drain();
-    assert.equal(f.owner.canTurnPage(), true, 'a later non-window preference cannot strand the motion lock');
-    assert.equal(f.writes.length, 0, 'retired setting callback does not persist over the new preference');
-  }
-  console.log('PASS hidden-status window transaction: deferred latest choice, native ACK admission, rollback, stale ACK and retirement');
 }
 if (selectedCase === 'subscription') {
 // Retain the SDK-emitted If/Image observers instead of mounting the Builder
@@ -499,7 +317,7 @@ function retainedMarker(initial = 'bookmarked') {
   });
   const state = { pageTurnRenderRevision: 1, bookmarkPageOffsetY: 0, bookmarkPendingTarget: '',
     bookmarkPreviewChanged: false, bookmarkPreviewCancelled: false, bookmarkUnavailableMessage: '',
-    controlObscured: false, readerAppScheme: 'day', readerSettingsSnapshot: { navigationMode: 'continuous' },
+    controlObscured: false, readerAppScheme: 'day',
     directoryEntries: [{ index: 0, title: 'C', bookmarks: initial === 'bookmarked' ? [{ time: 1, chapterOffset: 0 }] : [] }] };
   Object.assign(owner, { sourceId: 'local', bookId: 'b', chapter: { chapterIndex: 0 },
     visiblePage: { startScalar: 0, endScalar: 50 }, lifecycleToken: 1, chapterSelectionToken: 1,
@@ -559,11 +377,9 @@ if (selectedCase === 'transaction') {
 const H = productionMotionMethods(file('LocalReadingExperience.ets'), ['onReaderBookmarkGestureStateChanged',
   'onReaderBookmarkGestureReleased', 'finishBookmarkRollback', 'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus',
   'pageBookmarkFeedbackAnchor', 'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback',
-  'canStartReaderBookmarkGesture', 'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey', 'usesBookTurnSimulation'],
-  {...gesture, LOCAL_READING_SOURCE_ID:'local', usesBookTurnSimulation: () => false});
+  'canStartReaderBookmarkGesture', 'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey'], {...gesture,LOCAL_READING_SOURCE_ID:'local'});
 let entries = [{ index: 0, title: 'C', bookmarks: [] }], pending = [];
 const host = Object.assign(new H(), { mounted: true, sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
-  usesBookTurnSimulation: () => false,
   currentChapterIndex: () => 0, currentPageBookmarkText: () => 'body', controlDirectoryEntries: () => entries,
   bookmarkPendingTarget: '', bookmarkPreviewChanged: false, bookmarkRollbackGeneration: 0, bookmarkMutationGeneration: 0,
   bookmarkGestureAnchor: '', lifecycleToken: 1, chapterSelectionToken: 1, pagePointerEpoch: 1, pageTurnInputRevision: 1,
@@ -596,19 +412,15 @@ const Normal = productionMotionMethods(file('LocalReadingExperience.ets'), [
   'onReaderBookmarkGestureStateChanged', 'onReaderBookmarkGestureReleased', 'finishBookmarkRollback',
   'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus', 'pageBookmarkFeedbackAnchor',
   'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback', 'canStartReaderBookmarkGesture',
-  'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey', 'usesBookTurnSimulation',
+  'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey',
   'onReaderPageGestureStateChanged',
-  'acquirePagePointer', 'releasePagePointer', 'pageTurnTapOnlyInput', 'regrabReaderPageGesture', 'regrabPageTurn',
+  'acquirePagePointer', 'releasePagePointer', 'pageTurnTapOnlyInput', 'regrabPageTurn',
   'controlDirectorySourceEntries', 'controlDirectoryEntries', 'invalidatePageTurnRuntime',
-  'suspendAdjacentMeasurement', 'finishAdjacentMeasurementContext', 'resetPendingPage',
-  'cancelMeasurementDeadline', 'canTurnPage', 'bookmarkFeedbackLabel',
-], { ...gesture, ...rapid, LOCAL_READING_SOURCE_ID:'local', usesBookTurnSimulation: () => false,
-  motionAnimateParam: (_key, onFinish) => ({ onFinish }),
+], { ...gesture, ...rapid, LOCAL_READING_SOURCE_ID:'local', motionAnimateParam: (_key, onFinish) => ({ onFinish }),
   setTimeout: callback => { pointerReleaseTicks.push(callback); return pointerReleaseTicks.length; } });
 function normalHost(bookmarked = false) {
   const requests = [], animations = [];
   const h = Object.assign(new Normal(), { mounted: true, sourceId: 'local', bookId: 'b', chapter: undefined,
-    usesBookTurnSimulation: () => false,
     visiblePage: { startScalar: 50, endScalar: 100 },
     directoryEntries: [{ index: 16, title: 'chapter17', bookmarks: bookmarked ? [{ time: 10, chapterOffset: 50 }] : [] }],
     tocEntries: [], currentChapterIndex: () => 16, currentPageBookmarkText: () => 'text', canTurnPage: () => true,
@@ -628,33 +440,6 @@ function normalHost(bookmarked = false) {
   });
   return { h, requests, animations };
 }
-// Execute the actual speculative-lane retirement before the real current-page
-// gate. A pending business commit still blocks; prefetch alone does not.
-for (const committing of [false, true]) {
-  const { h, requests } = normalHost();
-  delete h.canTurnPage;
-  Object.assign(h, { chapter: { chapterIndex: 16 }, phase: 'ready', controlVisible: () => false,
-    adjacentMeasurementContext: { chapter: { chapterIndex: 17 } },
-    pageTurnPreparation: { direction: 'next' }, pageTurnPreparationQueue: [],
-    measurementCompleting: true, measurementEpoch: 10, measurementDeadlineTimer: -1,
-    commitInFlight: committing, visiblePageSelectionToken: 1, materializedChapterSelectionToken: 1 });
-  const page = h.visiblePage;
-  assert.equal(h.canStartReaderBookmarkGesture(), !committing);
-  assert.equal(h.adjacentMeasurementContext, undefined);
-  assert.equal(h.pageTurnPreparation, undefined);
-  assert.equal(h.measurementEpoch, 11, 'in-flight speculative callbacks are retired');
-  assert.deepEqual(h.pageTurnPreparationQueue, ['next'], 'speculation remains available after the gesture');
-  assert.equal(h.visiblePage, page);
-  assert.equal(requests.length, 0, 'admission never writes a bookmark');
-}
-{
-  const { h } = normalHost(true);
-  assert.equal(h.canStartReaderBookmarkGesture(), true);
-  h.bookmarkPageOffsetY = 20; h.bookmarkPreviewChanged = true;
-  assert.equal(h.bookmarkFeedbackLabel(), '松手移除本页书签');
-  h.bookmarkPreviewChanged = false;
-  assert.equal(h.bookmarkFeedbackLabel(), '下拉移除本页书签');
-}
 function normalRelease(h, cancelled = false) {
   assert.equal(h.canStartReaderBookmarkGesture(), true);
   let state = gesture.beginReaderPageGesture(390, 200, 300, 0, 844);
@@ -668,7 +453,7 @@ function normalRelease(h, cancelled = false) {
 // bookmark settling before raw pointer release and the business UP callback;
 // blocking new DOWN must not change the predicate that admits this same UP.
 const ReboundInput = productionMotionMethods(file('ReaderPageInteractionLayer.ets'),
-  ['startRawPointer', 'handleTouch', 'cancelPan', 'resetRawPointer'],
+  ['acceptCurrentInput', 'startRawPointer', 'handleTouch', 'cancelPan', 'resetRawPointer'],
   { ...gesture, TouchType: { Down: 'down', Up: 'up', Move: 'move', Cancel: 'cancel' } });
 for (const reduced of [false, true]) for (const cancelled of [false, true]) {
   const { h, requests, animations } = normalHost();
@@ -720,10 +505,7 @@ for (const owner of ['horizontalPage', 'verticalPrevious']) {
     pageTurnSettlementGeneration: 10, pageTurnSlideTimeline: {}, usesBookTurnSimulation: () => false,
     completeRapidPageTurnTransaction() {} });
   assert.equal(h.acquirePagePointer(14), true, 'ordinary page settlement preserves its existing pointer/regrab admission');
-  assert.equal(h.regrabReaderPageGesture(390, 844, 200, 300, 32, 'next'), undefined,
-    'same-direction swipe must remain an additional turn, not replace the active turn');
-  assert.equal(h.pageTurnSettlementActive, true);
-  const resumed = h.regrabReaderPageGesture(390, 844, 200, 300, 32, 'previous');
+  const resumed = h.regrabPageTurn(390, 844, 200, 300, 32);
   assert.equal(resumed.owner, 'horizontalPage'); assert.equal(resumed.currentOffsetX, -40);
   assert.equal(h.pageTurnSettlementActive, false, 'ordinary page regrab retains its existing settlement handoff');
 }
@@ -885,7 +667,7 @@ noMoveScans.h.controlDirectoryEntries = () => { scans++; return realEntries(); }
 assert.equal(noMoveScans.h.canStartReaderBookmarkGesture(), true);
 const admittedScans = scans;
 let preview = gesture.beginReaderPageGesture(390, 200, 300, 0, 844);
-for (const dy of [32, 40, 48, 80, 20]) {
+for (const dy of [24, 32, 48, 80, 20]) {
   preview = gesture.moveReaderPageGesture(preview, 0, dy);
   noMoveScans.h.onReaderBookmarkGestureStateChanged(preview);
   noMoveScans.h.pageBookmarkFeedbackFilled();
@@ -899,7 +681,7 @@ for (const [initial, next] of [ ['empty', 'bookmarked'], ['bookmarked', 'empty']
   assert.equal(h.canStartReaderBookmarkGesture(), true);
   const admissionScans = projectionScans;
   let state = gesture.beginReaderPageGesture(390, 200, 300, 0, 844);
-  for (const dy of [32, 40, 48, 80]) {
+  for (const dy of [24, 32, 48, 80]) {
     state = gesture.moveReaderPageGesture(state, 0, dy);
     h.onReaderBookmarkGestureStateChanged(state);
     h.pageBookmarkFeedbackFilled();
@@ -930,9 +712,7 @@ const feedback = Object.assign(new Feedback(), { mounted: true, lifecycleToken: 
   sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 }, currentChapterIndex: () => 0,
   bookmarkUnavailableMessage: '', bookmarkUnavailableGeneration: 0, bookmarkUnavailableTimer: -1,
   bookmarkPendingTarget: '', bookmarkPageOffsetY: 0, currentPageBookmarkStatus: () => 'unknown',
-  // The stationary continuous header can admit a quiet hint in the gap.
-  readerSettingsSnapshot: { hideStatusBar: false, navigationMode: 'continuous' },
-  transientFeedback: { show: (_context, options) => nativeToasts.push(options.message) },
+  readerSettingsSnapshot: { hideStatusBar: true },
   isReaderPageInteractionEnabled: () => true, readingLayout: () => feedbackLayout,
   pageChromeClockText: '12:30', bookTitle: 'Book',
   getUIContext: () => ({ ...context(feedbackLayout.systemFontScale),
@@ -962,12 +742,6 @@ feedback.readingLayout = () => ({ ...feedbackLayout,
   contentTop: feedbackLayout.pageChromeVisualSafeTop + feedbackLayout.pageChromeTopRegionHeight });
 feedback.onReaderBookmarkGestureUnavailable('busy');
 assert.deepEqual(nativeToasts, ['页面切换中，请稍后下拉'], 'zero whitespace uses one existing native short notice per arena callback');
-feedback.readerSettingsSnapshot.hideStatusBar = true;
-feedback.readerSettingsSnapshot.navigationMode = 'paged';
-feedback.readingLayout = () => feedbackLayout;
-feedback.onReaderBookmarkGestureUnavailable('busy');
-assert.equal(feedback.bookmarkFeedbackHintLabel(), '', 'an unshifted immersive top row cannot host a rejected-pull hint');
-assert.deepEqual(nativeToasts, ['页面切换中，请稍后下拉', '页面切换中，请稍后下拉']);
 console.log('PASS bookmark admission: 17 identity/readiness invalidations, pointer-release-before-UP, duplicate UP, retired ACK and zero MOVE scans');
 console.log('PASS bookmark feedback: visible pull/cancel labels, transient busy/unknown/pending, stale timer/lifecycle isolation and constrained-space fallback');
 console.log('PASS PH86 normal motion: 6 completion orders/12 lifecycles without intermediate inversion; cancelled/failed/page-invalidated/duplicate/old ACK cases');

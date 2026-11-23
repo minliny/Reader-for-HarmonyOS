@@ -1,15 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { diagnostic, safePath, digest, readJSON, schemaValidator } from './lib.mjs';
+import { sourceE2InventoryPath } from './source-e2-admission.mjs';
 
 // This finite evidence adapter validates SDK property / measurement reports.
 // It never claims pointer dispatch, clipping or rendered pixels from dimensions.
 const widths = [320, 366], fontScales = [1, 1.3, 1.6, 2];
 const sharedInputs = [
-  'entry/src/main/ets/features/common/ReaderButton.ets',
-  'entry/src/main/ets/features/common/ReaderControlSpecs.ets',
-  'entry/src/main/ets/features/common/ReaderTypography.ets',
-  'entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts',
+  'entry/src/main/ets/ui/controls/ReaderButton.ets',
+  'entry/src/main/ets/ui/controls/ReaderControlSpecs.ets',
+  'entry/src/main/ets/ui/foundation/ReaderTypography.ets',
+  'entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',
 ];
 export const sourceInteractiveControls = [
   'page-back', 'source-tools', 'source-add-inline', 'source-search', 'source-filter-chip',
@@ -126,6 +127,24 @@ export function checkLayoutEvidence(page, { bindSource = true, read = path => re
     }
     for (const id of claimedPass) if (report.results[id] !== 'PASS') fail('LAYOUT_EVIDENCE_RESULT', `results.${id}`, 'Page PASS is unsupported by probe result');
     if (claimedPass.includes('E2')) {
+      if (page.pageId === 'source-management') {
+        const composer = 'tools/page-structure/source-e2-evidence.mjs';
+        const requiredInputs = [composer,sourceE2InventoryPath,'tools/page-structure/evidence/source-layout-matrix.json',
+          'tools/page-structure/evidence/source-interaction.json'];
+        if (report.command.entry !== composer || report.command.cases.length !== 1 ||
+            report.command.cases[0] !== 'complete-targets' || requiredInputs.some(path=>!inputs.has(path))) {
+          fail('LAYOUT_EVIDENCE_PROVENANCE', 'layoutEvidence', 'Source E2 requires its current bound SDK matrix and interaction report');
+        }
+        if (report.results.E2 === 'PASS') {
+          const group = report.sourceE2ReceiptGroup;
+          const registered = (page.invariants.E2.evidence ?? []).some(item =>
+            item.kind === 'device' && item.result === 'PASS' && item.symbol === 'ui-contract-receipt-group' &&
+            item.path === group?.path && item.rootSha256 === group?.sha256);
+          if (!registered || fingerprint(group.path) !== group.sha256) {
+            fail('LAYOUT_EVIDENCE_PROVENANCE', 'sourceE2ReceiptGroup', 'Source E2 requires the same pinned native receipt group in its report and registration');
+          }
+        }
+      }
       const required = page.pageId === 'source-management' ? sourceInteractiveControls.filter(id => page.controlRefs.includes(id)) : page.controlRefs;
       for (const id of required) if (!targetIds.includes(id)) fail('LAYOUT_EVIDENCE_COVERAGE', 'targets', `Whole-page E2 PASS lacks ${id}; scoped SDK target PASS is not whole-page PASS`);
       const declaredScope = page.layers.interaction.facts.targets?.controlRefs;

@@ -4,7 +4,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 async function actor(method) {
  const {foundationControls}=await import('./lib/reader-foundation-control-probe.mjs');
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
- const page=readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets',import.meta.url),'utf8');
+ const page=readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets',import.meta.url),'utf8');
  const controls=foundationControls(),owner=createReaderBuilderProbe(page,[method],controls.dependencies,controls.hooks).owner;Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});return{controls,owner};
 }
 async function exportAction(){

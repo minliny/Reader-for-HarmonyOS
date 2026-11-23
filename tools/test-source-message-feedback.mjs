@@ -6,18 +6,14 @@ import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mj
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 
 const file=relative=>new URL('../entry/src/main/ets/'+relative,import.meta.url);
-const JsonForm=productionMotionMethods(file('features/common/JsonImportDialog.ets'),['submitOnlineImport']);
+const JsonForm=productionMotionMethods(file('app/composition/JsonImportDialog.ets'),['submitOnlineImport']);
 const imported=[],form=Object.assign(new JsonForm(),{urlDraft:'  ',validationMessage:'',onImportOnline:value=>imported.push(value)});
 form.submitOnlineImport();assert.deepEqual(imported,[]);assert.equal(form.urlDraft,'  ');assert.match(form.validationMessage,/请输入/);
 form.urlDraft='example.test/rules.json';form.submitOnlineImport();assert.deepEqual(imported,[]);assert.equal(form.urlDraft,'example.test/rules.json');
 form.urlDraft=' https://example.test/rules.json ';form.submitOnlineImport();assert.deepEqual(imported,['https://example.test/rules.json']);assert.equal(form.urlDraft,' https://example.test/rules.json ');
 
-const Feedback=productionMotionMethods(file('features/source/SourceToolsPage.ets'),['feedbackIdentity','showTransientFeedback']);
-// Feedback is delivered through the shared transient host now; record its
-// options directly instead of the retired raw-toast call.
-const notices=[],page=Object.assign(new Feedback(),{mounted:true,lastFeedbackIdentity:'',snapshot:{busy:false,statusMessage:'刷新失败，保留现有列表',sources:[{sourceId:'original'}],readFacts:{fact:'refreshFailed',hasValue:true,generation:8},batchCheck:{phase:'idle'}},
-  transientFeedback:{show(_context,options){notices.push(options);return true;}},
-  getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
+const Feedback=productionMotionMethods(file('features/source/ui/SourceToolsPage.ets'),['feedbackIdentity','showTransientFeedback']);
+const notices=[],page=Object.assign(new Feedback(),{mounted:true,lastFeedbackIdentity:'',snapshot:{busy:false,statusMessage:'刷新失败，保留现有列表',sources:[{sourceId:'original'}],readFacts:{fact:'refreshFailed',hasValue:true,generation:8},batchCheck:{phase:'idle'}},getUIContext:()=>({getPromptAction:()=>({showToast:notice=>notices.push(notice)})})});
 page.showTransientFeedback();page.showTransientFeedback();assert.equal(notices.length,1);assert.equal(notices[0].duration,2200);
 page.snapshot={...page.snapshot,statusMessage:'原操作尚未确认',receipt:{receipt:{confirmation:'unknown'},facts:{generation:9}}};page.showTransientFeedback();assert.equal(notices.length,1,'true pending is retained by its own action surface');
 page.snapshot={...page.snapshot,receipt:undefined,statusMessage:'初次读取失败',sources:[],readFacts:{fact:'failed',hasValue:false,generation:10}};page.showTransientFeedback();assert.equal(notices.length,1,'initial read failure belongs to the page state');
@@ -37,11 +33,11 @@ const ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence
 const readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),
-  ...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),
-  ...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource}')};
-const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{
+  ...load('platform/network/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),
+  ...load('features/source/application/ReaderSourceCategory.ts','{classifyReaderSource}')};
+const SourceGateway=load('features/source/application/SourceGateway.ts','SourceGateway',{
   ReaderRuntimeOwner,isReaderCoreTransactionPendingError:()=>false,...helpers});
-const SourceToolsOrchestrator=load('features/source/SourceToolsOrchestrator.ets','SourceToolsOrchestrator',{
+const SourceToolsOrchestrator=load('features/source/application/SourceToolsOrchestrator.ets','SourceToolsOrchestrator',{
   SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,projectPersistedReceipt,...facts,hilog:{warn(){},error(){},info(){}}});
 for(const populated of [true,false]){
   const seeds=populated?[{sourceId:'https://retained.example',name:'保留的书源',baseUrl:'https://retained.example',
@@ -51,8 +47,7 @@ for(const populated of [true,false]){
   const owner={supportsCoreCapability:()=>false,async request(method){reads.push(method);assert.equal(method,'source.list','retry remains a read, never a source write');throw Error(errors[reads.length-1]);}};
   currentOwner=owner;
   const feedback=Object.assign(new Feedback(),{mounted:true,lastFeedbackIdentity:'',
-    transientFeedback:{show(_context,options){toasts.push(options);return true;}},
-    getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
+    getUIContext:()=>({getPromptAction:()=>({showToast:notice=>toasts.push(notice)})})});
   const tools=new SourceToolsOrchestrator(snapshot=>{snapshots.push(snapshot);feedback.snapshot=snapshot;feedback.showTransientFeedback();},()=>true,owner);
   tools.open(seeds);await tools.operationTail;
   const first=snapshots.at(-1);assert.equal(first.readFacts.message,errors[0]);assert.equal(first.receipt,undefined);
@@ -60,7 +55,7 @@ for(const populated of [true,false]){
   tools.setSelection(populated?[seeds[0].sourceId]:[]);
   const selected=snapshots.at(-1);assert.equal(selected.statusEvent,'state');
   const before=toasts.length,previousSources=structuredClone(selected.sources),previousSelection=selected.selectedSourceIds.slice();
-  const sdk=boundedSurfaceSdk(),surface=sdk.consumer(source('features/source/SourceToolsPage.ets'),['recoveryAction','recovery'],{readerRecoveryView});
+  const sdk=boundedSurfaceSdk(),surface=sdk.consumer(source('features/source/ui/SourceToolsPage.ets'),['recoveryAction','recovery'],{readerRecoveryView});
   Object.assign(surface,{appThemeScheme:'day',snapshot:selected,onReconcile:generation=>tools.reconcile(generation)});
   surface.recoveryAction();
   const retry=sdk.walk(surface).find(child=>child instanceof sdk.deps.ReaderRecoveryAction&&child.label==='刷新列表');
@@ -82,7 +77,7 @@ for(const populated of [true,false]){
 // confirmation: unknown + reading is still pendingReconciliation, so only the
 // explicit status kind supplied by SourceOrchestrator may light the spinner.
 for(const [reading,canRetry]of [[true,false],[false,true],[false,false]]){
-  const sdk=boundedSurfaceSdk(),surface=sdk.consumer(source('features/source/SourceManagementPage.ets'),
+  const sdk=boundedSurfaceSdk(),surface=sdk.consumer(source('features/source/ui/SourceManagementPage.ets'),
     ['pendingOverlay','recovery'],{readerRecoveryView});let reconciles=0;
   Object.assign(surface,{appThemeScheme:'day',operation:{receipt:projectPersistedReceipt({confirmation:'unknown',
     readback:reading?'reading':'failed',canRetry,generation:13})},statusKind:reading?'loading':'warning',

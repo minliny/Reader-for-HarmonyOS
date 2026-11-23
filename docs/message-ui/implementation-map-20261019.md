@@ -2,8 +2,6 @@
 
 批准依据：`approved-scope-20261019.json`。源码起点 `5a01ec1cdbd5ec864046e1b9202963ead23a513a`；实施分支 `codex/message-ui-unification-20261019`。此表区分源码实施与原生验收。
 
-2026-10-23 `main` 执行更新：所有 `shared.transient` 入口继续由 `ReaderTransientFeedback` 接收，呈现已统一为根页面及已登记原生模态层复用的 `ReaderTransientToast` 自绘宿主；系统 `showToast` 已移除。阅读换源完成提示复用该公共短反馈，自动播放/翻页胶囊继续由阅读专用宿主承载。下面的公共组件和业务 owner 接线仍需结合各自的真实可达性、构建、设备视觉和用户验收分层记账。
-
 | 原编号 | 已接入的呈现 | 主要宿主/组件 |
 | --- | --- | --- |
 | A01 | 有旧内容的刷新失败短反馈，保留原刷新入口 | BookshelfShell、DiscoverPage、SourceManagementPage、各设置页 |
@@ -52,8 +50,3 @@
 - 原视觉fixture保留；`message-style-typography-successor-20261019.json`锁定本次精确字体/原生属性，逐个保留普通控件的历史元组和出现次数，不把源码快照当原生视觉通过。
 
 完整703/703、全工程编译、非增量构建、指定证书签名及manifest离线复验均PASS；成功run为 `20261018T182618Z-5a01ec1c-ffaa901e`。本次改动尚未提交，是iteration产物；未进行设备安装/原生交互或用户验收。完整身份与证据边界见 `shared-verification-20261019.md` 最终交付结果。
-
-
-### 2026-10-28 搜索静态页紧凑任务摘要
-
-用户批准的跨页暖白/表面分层demo落实到搜索任务：`SearchPage.searchProgressDetails` 传只读query/operation事实给 `ReaderSearchTaskPanel`，主List仅两行摘要+细轨，完整partial/failed/skipped与一个终态重试进入公共 `search-task-status` native Sheet。分类仍为持续任务，使用MESSAGE_META/ReaderButton，表面/标题/关闭/遮罩由ReaderBoundedSurface/Header和SheetSpec拥有。关闭不停止任务；页面、query、presentation、operation key各保留旧动作拒绝。登记已更新；源码/SDK本地检查、HAP编译和设备视觉结果分别记账，不能由此记录推断设备验收。

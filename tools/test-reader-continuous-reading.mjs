@@ -7,7 +7,7 @@ const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
  const {default:assert}=await import('node:assert/strict');
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const {ReadingSurfaceLayoutMap}=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+ const {ReadingSurfaceLayoutMap}=await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
  const readingDir=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
 if(selectedCase==='semantic-paragraph'){
 {

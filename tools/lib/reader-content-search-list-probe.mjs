@@ -1,34 +1,37 @@
+import {pureModuleProbe} from './ets-pure-module-probe.mjs';
+import { ReaderContentSearchPublication } from './reader-content-search-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './reader-motion-method-probe.mjs';
-import * as geometry from '../../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts';
-import * as scroll from '../../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
-import * as list from '../../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts';
-import * as morph from '../../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import * as motion from '../../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import { splitReaderSearchSnippet } from '../../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts';
+import * as geometry from '../../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts';
+import * as scroll from '../../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts';
+import * as list from '../../entry/src/main/ets/features/reading/ui/ReaderControlSearchListProjection.ts';
+import * as morph from '../../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts';
+import * as motion from '../../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts';
+import { splitReaderSearchSnippet } from '../../entry/src/main/ets/features/reading/presentation/ReaderSearchHighlight.ts';
 // This ordinary ETS class uses ArkUI's IDataSource/DataChangeListener globals.
 // Execute its unchanged methods after erasing types; native range admission is
 // still outside this probe and is not replaced by a local interface or engine.
 const dataSourceText = readFileSync(new URL(
-  '../../entry/src/main/ets/features/reading/ReaderContentSearchDataSource.ets', import.meta.url), 'utf8');
+  '../../entry/src/main/ets/features/reading/ui/ReaderContentSearchDataSource.ets', import.meta.url), 'utf8');
 const data = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(dataSourceText)).toString('base64')}`);
-export const searchListSourceUrl = new URL('../../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url);
+export const searchListSourceUrl = new URL('../../entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets', import.meta.url);
 export const searchListSource = readFileSync(searchListSourceUrl, 'utf8');
 export const searchListSources = { DRAG: 0, FLING: 1, EDGE_EFFECT: 2, OTHER_USER_INPUT: 3,
   SCROLL_BAR: 4, SCROLL_BAR_FLING: 5, SCROLLER: 6, SCROLLER_ANIMATION: 7 };
 export const searchListTouches = { Down: 0, Up: 1, Move: 2, Cancel: 3 };
-export const searchListMethods = ['frame', 'resultLayout', 'resultScrollFrame', 'resultListFrame',
+export const searchListMethods = ['displayState','displayedFacts','displayedResultScope','preparedProfile','presentationPrepared','currentMinimumProfile','naturalSize','minimumProfiles','currentInputEnabled', 'continuationQueued', 'scheduleResultContinuation', 'frame', 'resultLayout', 'resultLayoutAt', 'resultScrollFrame', 'resultListFrame',
   'resultRowTranslation', 'resultNativeRawOffset', 'resultNativeOffset', 'onResultDataChanged',
   'onResultLayoutChanged', 'syncResultNativeOffset', 'onResultScrollAppear', 'onResultScrollDisappear',
   'onResultScrollArea', 'onResultWillScroll', 'onResultDidScroll', 'onResultTouch', 'onResultScrollStop',
-  'tryResultScrollRebase', 'cancelResultNativeFollow', 'scheduleResultNativeFollow'];
+  'rememberResultScroll','tryResultScrollRebase', 'cancelResultNativeFollow', 'scheduleResultNativeFollow'];
 export const searchListRowMembers = ['resultsBody', 'loadMoreAction', 'resultRow', 'resultSnippet',
   'resultTitle', 'currentResult', 'currentResultIndex', 'currentSnippet', 'selectCurrentResult', 'statusText',
-  'presentation', 'resultClip'];
-export const searchListDependencies = { ...geometry, ...scroll, ...list, ...morph, ...motion, ...data,
+  'displayResults','displayedLoadMoreFailure','presentation', 'resultClip'];
+const minimumHelpers=pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets',import.meta.url),'utf8'),'ReaderControlSearchMinimum.ets',{},['readerControlSearchResultTitle','readerControlSearchStatusText']);
+export const searchListDependencies = { ...minimumHelpers, ...geometry, ...scroll, ...list, ...morph, ...motion, ...data,
   splitReaderSearchSnippet, ScrollSource: searchListSources, TouchType: searchListTouches,
   PathShape: class { commands(path) { this.path = path; return this; } } };
 export const searchListRows = (count, bookId = 'b') => Array.from({ length: count }, (_, i) => ({
@@ -69,10 +72,18 @@ export function searchListFixture({ count = 50, p = 0, indices, source = searchL
     fullContentHeight: 666, quickContentHeight: 190, interactionEnabled: true,
     resultScroller: controller, resultDataSource: new data.ReaderContentSearchDataSource(), resultItemSizes: { childDefaultSize: 72 },
     resultNativeFollowTimer: -1, resultNativeFollowLifecycle: 0, resultNativeRawBase: 0,
-    resultScrollMounted: false, resultViewportHeight: 0, resultPointers: [], resultUserScrolling: false,
+    resultScrollVisit: 1, acceptedResultScrollScope: 1, resultScrollMounted: false, resultViewportHeight: 0, resultPointers: [], resultUserScrolling: false,
     resultScrollSource: 'unknown', resultRowIndexes: new Map(), resultScrollPosition: scroll.createReaderControlSearchScroll(),
     state: { kind: 'results', keyword: '他', results: searchListRows(count) },
     getUIContext: () => ({ vp2px: x => x * 3 }), onLoadMore() {}, onSelectResult() {} });
+  const publication=new ReaderContentSearchPublication();
+  publication.publish(owner.state);owner.searchPublication=publication;owner.resultScrollVisit=publication.attachResultScroll();
+  owner.acceptedResultScrollScope=publication.resultScrollScopeFor(owner.state);
+  Object.defineProperty(owner,'state',{configurable:true,get:()=>publication.stateAt(0),set:state=>{publication.publish(state);owner.acceptedResultScrollScope=publication.resultScrollScopeFor(state);}});
+  owner.publishMinimumMeasurer ??= () => {};
+  owner.currentSearchState ??= () => owner.state;
+  owner.resultActionCurrent ??= () => owner.interactionEnabled && (owner.motionProgress === 0 || owner.motionProgress === 1);
+  owner.onNeedMore ??= () => {};
   owner.onResultDataChanged();
   if (indices !== undefined) owner.resultsBody();
   owner.onResultScrollAppear(); owner.onResultScrollArea({ height: owner.resultListFrame().viewportHeightVp });
@@ -107,7 +118,9 @@ export function assertSearchListBuilderGeometry(source = searchListSource) {
       assert.equal(parent.clip, true, 'actual Results parent clips');
       assert.deepEqual(parent.position, { x: frame.results.x, y: frame.results.y });
       near(parent.position.y, frame.queryDivider.y + 1, 'input/result boundary');
-      near(native.width, frame.firstResult.width, 'native row width'); near(native.position.x, frame.firstResult.x, 'native row X');
+      near(native.width, frame.firstResult.width, 'native row width');
+      const lane=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.clip===true&&node.position?.x===frame.firstResult.x&&node.position?.y===0);
+      assert.ok(lane,'actual inner result lane owns the visual row clipping');near(native.position.x+lane.position.x,frame.firstResult.x,'native row X');
       near(native.height, parent.height * ratio, 'viewport canonical conversion');
       near(native.contentEndOffset, (frame.firstResult.y + 5) * ratio, 'native extent preserves origin and py5');
       const scrollFrame = owner.resultScrollFrame(), painted = [];

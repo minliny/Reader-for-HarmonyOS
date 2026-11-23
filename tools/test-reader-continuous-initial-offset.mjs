@@ -7,7 +7,7 @@ const InputClock = productionMotionMethods(new URL('ReaderPageInputClock.ts', re
 class Clock extends InputClock { constructor() { super(); Object.assign(this, { initialized:false,lastNativeMs:-1,lastReceivedMs:0,timeMs:0,nativeOffsetMs:0,rebase:false,resetVelocity:false }); } }
 const TouchType = { Down:0, Move:1, Up:2, Cancel:3 }, ScrollState={Idle:0,Scroll:1,Fling:2};
 const Stage=productionMotionMethods(stageFile,['scheduleInitialScroll','tryApplyInitialScroll','initialListIndex',
- 'acceptParagraphPosition','cancelInitialScrollForInput','handleTouch','resetTouch','reportManualInteraction',
+ 'acceptParagraphPosition','cancelInitialScrollForInput','acceptCurrentInput','onInputRevisionChanged','handleTouch','resetTouch','reportManualInteraction',
  'onContentScrolled','onContentScrollStopped','reportCurrentVisibleRange','reportVisibleRange','fragmentRenderKey',
  'hasTitleItem','onListAttached','confirmInitialScroll','releaseInitialParagraph','beginProgrammaticScroll'],{
  TouchType,ScrollState,ScrollAlign:{START:'start'},LengthMetrics:{vp:value=>({value,unit:'vp'})},

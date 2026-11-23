@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
-import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
+import { MangaImageDecodeHost } from '../entry/src/main/ets/platform/reading-resources/MangaImageDecodeHost.ts';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
  if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;}}});
-const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
 function fixture(options={}) {
  const host=new MangaImageDecodeHost(), assets=new Map(), released=[];let id=0,current=true,validated=false;
  const bridge={begin(_r,_o,n){assets.set(++id,new Uint8Array(n));return id},write(_r,_o,i,b){assets.get(i).set(b);return b.length},commit(_r,_o,i){return assets.get(i).length},async read(_r,_o,i,offset,limit){if(options.cancelRead)current=false;return assets.get(i).slice(offset,offset+limit-(options.short?1:0))},release(_r,_o,i){released.push(i);assets.delete(i)}};
@@ -136,7 +136,7 @@ console.log('PASS Core advertised 8/16MiB binds fetch/input/graphics/output/rece
 // limit; base64 rejects an over-limit string before invoking its native decoder.
 {
  let receivedLimit,decodeCalls=0;let responseBytes=new Uint8Array([1]);
- const Body=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),['fetchRequestBytes','readDataUriBytes','assertCurrent'],{
+ const Body=productionMotionMethods(new URL('../entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts',import.meta.url),['fetchRequestBytes','readDataUriBytes','assertCurrent'],{
   MAX_READING_IMAGE_BYTES:16*1024*1024,MAX_READING_IMAGE_DATA_URI_CHARS:Math.ceil(16*1024*1024/3)*4+4096,
   HttpExecuteHost:{instance:{async executeBytes(_request,limit,_requestId,cancelled){assert.equal(cancelled(),false);receivedLimit=limit;return {status:200,headers:{},bytes:responseBytes};}}},
   readingImageHttpError:()=>Error('http status'),util:{Type:{MIME:1},Base64Helper:class{decodeSync(text){decodeCalls++;return new Uint8Array(Buffer.from(text,'base64'));}}}

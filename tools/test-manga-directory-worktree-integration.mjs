@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import { mangaDirectoryEntryRows, mangaDirectoryNodeRows } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
-import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
-import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import { mangaDirectoryEntryRows, mangaDirectoryNodeRows } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
+import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
+import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
 import { mangaDirectoryEntryRowSdk } from './lib/manga-directory-entry-row-probe.mjs';
 
 // The real row consumes explicit DTO facts while selection still returns the

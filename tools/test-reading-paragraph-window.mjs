@@ -6,10 +6,10 @@ const { registerHooks }=await import('node:module');
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(s + '.ts', c); throw e;
 } } });
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { extendReadingParagraphWindow } = await import('../entry/src/main/ets/features/reading/ReadingDocumentWindow.ts');
-const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { readingSessionDocuments } = await import('../entry/src/main/ets/features/reading/ReadingSessionDocuments.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { extendReadingParagraphWindow } = await import('../entry/src/main/ets/features/reading/application/ReadingDocumentWindow.ts');
+const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { readingSessionDocuments } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionDocuments.ts');
 const scope = { sourceId: 's', bookId: 'b', chapterIndex: 4, bodyVersion: 'body', processingVersion: 'process' };
 const baseUrl = 'https://example.org/chapter';
 function fixture(content, options = {}) {
@@ -152,7 +152,7 @@ if(id==='image-overlap'){
 if(id==='cooperative-body'){
 const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['openChapter', 'prepareChapterMeasurementProjection'], {
     RemoteChapterCacheRefreshError: class extends Error {},
   });
@@ -205,7 +205,7 @@ function reader(load) {
 if(id==='cooperative-successor'){
 const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['openChapter', 'prepareChapterMeasurementProjection'], {
     RemoteChapterCacheRefreshError: class extends Error {},
   });
@@ -253,7 +253,7 @@ function reader(load) {
 if(id==='cancel-scalar-map'){
 const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['openChapter', 'prepareChapterMeasurementProjection'], {
     RemoteChapterCacheRefreshError: class extends Error {},
   });
@@ -296,7 +296,7 @@ function reader(load) {
 if(id==='cancel-paragraph-scan'){
 const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['openChapter', 'prepareChapterMeasurementProjection'], {
     RemoteChapterCacheRefreshError: class extends Error {},
   });
@@ -339,7 +339,7 @@ function reader(load) {
 if(id==='cancel-range-conversion'){
 const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['openChapter', 'prepareChapterMeasurementProjection'], {
     RemoteChapterCacheRefreshError: class extends Error {},
   });

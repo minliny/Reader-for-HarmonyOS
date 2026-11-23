@@ -7,18 +7,17 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { stripTypeScriptTypes } from 'node:module';
-const source = readFileSync(new URL('../entry/src/main/ets/features/settings/SettingsPage.ets', import.meta.url), 'utf8');
-const overlaySource = readFileSync(new URL('../entry/src/main/ets/features/settings/SettingsSelectOverlay.ets', import.meta.url), 'utf8');
-const overlayMembers = ['expandedLayout', 'field', 'selectionId', 'value', 'options', 'anchorRight', 'anchorBottom',
+const source = readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsPage.ets', import.meta.url), 'utf8');
+const overlaySource = readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsSelectOverlay.ets', import.meta.url), 'utf8');
+const overlayMembers = ['isTablet', 'field', 'selectionId', 'value', 'options', 'anchorRight', 'anchorBottom',
   'onSelect', 'onDismiss', 'appThemeScheme', 'mounted', 'closed', 'aboutToAppear', 'aboutToDisappear',
   'onFieldChanged', 'ownsOpening', 'dismiss', 'choose', 'build', 'phoneSheet', 'phoneOption',
   'tabletPanel', 'tabletOption', 'tabletSpec', 'isSelected', 'title'];
 const pageMembers = ['nativeAlertOwner', 'onTemporaryBackBridge', 'temporaryBackIdentity', 'themeOwner',
-  'mounted', 'resetRevision', 'expandedLayout', 'openSelect', 'selectionId', 'selectionField', 'selectAnchors',
+  'mounted', 'resetRevision', 'isTablet', 'openSelect', 'selectionId', 'selectionField', 'selectAnchors',
   'languageValue', 'startupValue', 'animationValue', 'anchorRight', 'anchorBottom', 'originX', 'originY',
   'buildOverlay', 'currentValue', 'selectOptions', 'setSelectValue', 'toggleSelection', 'retireSelection',
-  'ownsSelection', 'commitSelection', 'dismissSelection', 'aboutToDisappear',
-  'developerPageId', 'messagePreviewId', 'messagePreviewBackHandler'];
+  'ownsSelection', 'commitSelection', 'dismissSelection', 'aboutToDisappear'];
 function fixture(tablet, overlay = overlaySource) {
   const choice = choiceRowProbe();
   const platform = { ...choice.properties.sdk, ...choice.dependencies,
@@ -32,8 +31,7 @@ function fixture(tablet, overlay = overlaySource) {
     childSources: { ...choice.hooks.childSources, SettingsSelectOverlay: overlay } };
   const { owner } = createReaderBuilderProbe(source, pageMembers,
     { ...platform, ReaderNativeAlertOwner, SettingsSelectOverlay: actualOverlay.Component, settingsSelectionGeneration: 0 }, hooks);
-  Object.assign(owner, { mounted: true, operation: {}, expandedLayout: tablet, anchorRight: 200, anchorBottom: 180,
-    settingsSelectionGeneration: 0, developerPageId: '', messagePreviewId: '' });
+  Object.assign(owner, { mounted: true, operation: {}, isTablet: tablet, anchorRight: 200, anchorBottom: 180 });
   owner.toggleSelection('language'); owner.buildOverlay(); choice.properties.flush();
   const child = [...owner.children.values()][0];
   assert.equal(child.constructor, actualOverlay.Component, 'actual Page creates the complete SDK overlay');
@@ -97,7 +95,7 @@ assert.notEqual(unguardedChoose, overlaySource);
 
 // Replay the real trigger's native Area wrapper, including unit-bearing vp
 // coordinates, before passing its anchor to the retained actual overlay.
-const selectSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSelect.ets', import.meta.url), 'utf8');
+const selectSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url), 'utf8');
 const actualConstants = text => stripTypeScriptTypes(text.slice(0, text.indexOf('@Component')))
   .replace(/^import[\s\S]*?;\s*/gm, '').replace(/^export /gm, '');
 const selectConstants = new Function('TOK_SPACE_CONTROL_INLINE', actualConstants(selectSource) +
@@ -105,8 +103,7 @@ const selectConstants = new Function('TOK_SPACE_CONTROL_INLINE', actualConstants
 const pageConstants = new Function(actualConstants(source) + ';return {SELECT_ROW_H,SELECT_TRIGGER_H,SELECT_TRIGGER_OFFSET};')();
 function triggerAnchor(pageSource = source) {
   const choice = choiceRowProbe(), uiContext = { getFont: () => ({}), px2vp: value => value,
-    getMeasureUtils: () => ({ measureText: ({ textContent }) => String(textContent).length * 12,
-      measureTextSize: ({ textContent }) => ({ width: String(textContent).length * 12, height: 18 }) }) };
+    getMeasureUtils: () => ({ measureText: ({ textContent }) => String(textContent).length * 12 }) };
   const platform = { ...choice.properties.sdk, ...choice.dependencies, ...readerFoundationTokens,
     ...readerTypographyRoles, ...selectConstants, ...pageConstants, Curve:{Linear:'Curve.Linear'}, registerReaderFonts() {}, uiContext };
   const select = createReaderBuilderProbe(selectSource, boundedMembers(selectSource), platform, choice.properties.hooks);
@@ -114,8 +111,7 @@ function triggerAnchor(pageSource = source) {
     childSources: { ...choice.hooks.childSources, ReaderSelect: selectSource } };
   const page = createReaderBuilderProbe(pageSource, [...pageMembers, 'selectRow', 'labelColumn', 'iconBox'],
     { ...platform, ReaderNativeAlertOwner, ReaderSelect: select.Component, settingsSelectionGeneration: 0 }, hooks).owner;
-  Object.assign(page, { mounted:true, expandedLayout:true, selectAnchors:{}, openSelect:'', languageValue:'简体中文',
-    settingsSelectionGeneration:0, developerPageId:'', messagePreviewId:'',
+  Object.assign(page, { mounted:true, isTablet:true, selectAnchors:{}, openSelect:'', languageValue:'简体中文',
     startupValue:'书架', animationValue:'平移', reduceMotionValue:true, appThemeScheme:'day' });
   page.selectRow('语言', () => 'app.media.settings_gen_language', 'language', ['简体中文','English']);
   const trigger = [...page.children.values()].find(child => child instanceof select.Component);
@@ -146,7 +142,7 @@ function triggerAnchor(pageSource = source) {
     'Number mutation reproduces invalid vp anchor in the actual SDK callback'); cases++;
 }
 {
-  const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/SettingsShell.ets',import.meta.url),'utf8');
+  const shellSource=readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsShell.ets',import.meta.url),'utf8');
   const shell=createReaderBuilderProbe(shellSource,['reportOverlayOrigin']).owner;
   const points=[]; shell.onOverlayOriginChange=(x,y)=>points.push([x,y]);
   shell.reportOverlayOrigin({globalPosition:{x:10,y:39}});

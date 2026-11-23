@@ -5,31 +5,56 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
-  'check-identity': 'Actual Source owners with fake mode-v1 transport: single-flight, definition drift, successor finally/dispatch guards and direct ruleDigest refusal. No report-v2 decode or Core process.',
+  'check-identity': 'Actual SourceHost/Orchestrator/Gateway single-flight, definition read boundaries, removed/replaced rules, successor finally and final dispatch guards. Finite transport, no Core process.',
   'tools-retention': 'Actual retained Tools owner keeps draft/selection/check settings/results across view detach, continues accepted checks, and honors explicit stop/runtime retirement.',
-  'editor-conflict': 'Actual editor observed definition/enable/delete drift guard and confirmed/unknown compatibility source.import facts; SDK parent read-only parameter only. No atomic CAS/modern RulesMutation/native editor evidence.',
+  'editor-conflict': 'Actual editor load/save refuses observed definition/enable/delete drift; confirmed/unknown receipts remain authoritative and real SDK editor parameter becomes read-only.',
 });
 if (selected.length) {
-  const resolution=registerHooks({ resolve(specifier, context, next) {
+  registerHooks({ resolve(specifier, context, next) {
     if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) {
       const url = new URL(specifier + '.ts', context.parentURL);
       if (existsSync(fileURLToPath(url))) return next(url.href, context);
     }
     return next(specifier, context);
   } });
-  try {
   const { actualSourceManagementTypes } = await import('./lib/source-management-owner-probe.mjs');
   const { runtimeOwnerIdentityProbe } = await import('./lib/reader-runtime-admission-probe.mjs');
   const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
   const { projectOperationFacts, projectCommitReadback } = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
   const { ReaderWriteEvidence } = await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
   const { errorMessageOf } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+  const { BookRequestNotDispatchedError } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
+  const { compile } = await import('./lib/rules-mutation-durable-probe.mjs');
   let installed;
   const Runtime = runtimeOwnerIdentityProbe(() => installed);
+  // Finite persistence and Core transport ports. The editor, Gateway, owner,
+  // fixed DTO admission and receipt projection are production methods.
+  class FiniteIntentStore {
+    constructor(runtime) { this.runtime = runtime; }
+    accepted() { return this.runtime.intent; }
+    async load() { return this.runtime.intent; }
+    async accept(label, method, params, queryHead, current, subscription) {
+      assert(current());
+      const sequence = await queryHead() + 1;
+      const intent = { version:1,label,operationId:`finite-editor/${sequence}`,sequence,
+        mutation:{method,params:structuredClone(params)},subscription:structuredClone(subscription) };
+      this.runtime.intent = intent;
+      return intent;
+    }
+    async qualifyTerminal() {}
+    async ensureDurable() {}
+    async retainTerminal(intent, terminal) { this.runtime.intent = {...intent,terminal}; }
+    async clear() { this.runtime.intent = undefined; }
+  }
+  const mutationMethods = compile('features/settings/application/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},true);
+  const RulesMutationOwner = compile('features/settings/application/RulesMutationOwner.ts','RulesMutationOwner',{
+    ReaderRuntimeOwner:Runtime,RulesMutationIntentStore:FiniteIntentStore,ReaderWriteEvidence,
+    BookRequestNotDispatchedError,RULES_MUTATION_METHODS:mutationMethods,
+  },true);
   const hilog = { info() {}, warn() {}, error() {} };
-  const { SourceHost, SourceGateway } = actualSourceManagementTypes({ ReaderRuntimeOwner: Runtime, hilog });
+  const { SourceHost, SourceGateway } = actualSourceManagementTypes({ ReaderRuntimeOwner: Runtime, RulesMutationOwner, hilog });
   const projectPersistedReceipt = bookshelfOperationClass('app/ReaderPersistedReceiptProjection.ts', 'projectPersistedReceipt', { projectOperationFacts, projectCommitReadback });
-  const SourceToolsOrchestrator = bookshelfOperationClass('features/source/SourceToolsOrchestrator.ets', 'SourceToolsOrchestrator', {
+  const SourceToolsOrchestrator = bookshelfOperationClass('features/source/application/SourceToolsOrchestrator.ets', 'SourceToolsOrchestrator', {
     ReaderRuntimeOwner: Runtime, SourceGateway, ReaderWriteEvidence, projectOperationFacts, projectCommitReadback,
     projectPersistedReceipt, errorMessageOf, hilog,
   });
@@ -45,7 +70,10 @@ if (selected.length) {
   function rpc(rows = [row()]) {
     return { rows: clone(rows), calls: [], imports: 0, dispatchPause: undefined, checkPause: undefined,
       lostImport: false, failReadAfterImport: false,
-      supportsCoreCapability: value => value === 'source.check.mode.v1', takeSourceHttpDiagnostics: () => [],
+      editorExact:false, conditionalCapability:true, head:undefined, receipt:undefined, beforeListResponse:undefined,
+      supportsCoreCapability(value) { return value === 'source.check.mode.v1' || this.editorExact &&
+        ['rules.mutation.exact.v1','rules.mutation.source-management.v1','source.import.conditional.v1'].includes(value) &&
+        (value !== 'source.import.conditional.v1' || this.conditionalCapability); }, takeSourceHttpDiagnostics: () => [],
       async clearSourceCookieSession() {}, async openSourceLogin() {},
       async request(method, params, options = {}) {
         if (method === 'source.check.run') await this.dispatchPause?.promise;
@@ -53,7 +81,43 @@ if (selected.length) {
         options.onDispatch?.(); this.calls.push({ method, params: clone(params) });
         if (method === 'source.list') {
           if (this.failReadAfterImport && this.imports > 0) { this.failReadAfterImport = false; throw Error('readback unavailable'); }
-          return { data: { sources: clone(params.sourceId === undefined ? this.rows : this.rows.filter(source => source.sourceId === params.sourceId)) } };
+          const sources = clone(params.sourceId === undefined ? this.rows : this.rows.filter(source => source.sourceId === params.sourceId));
+          const beforeResponse = this.beforeListResponse;
+          this.beforeListResponse = undefined;
+          await beforeResponse?.();
+          return { data: { sources } };
+        }
+        if (method === 'source.export') {
+          const sources = this.rows.filter(source => params.sourceIds === undefined || params.sourceIds.includes(source.sourceId));
+          const data = sources.map(source => source.bookSource ?? {bookSourceName:source.name,bookSourceUrl:source.baseUrl});
+          return {data:{format:'json',count:data.length,data:JSON.stringify(data)}};
+        }
+        if (method === 'rules.mutation.query') return {data:{head:this.head ?? null,
+          receipt:params.operationId !== undefined && params.operationId === this.head?.operationId ? this.receipt : null}};
+        if (method === 'rules.mutation.apply') {
+          const mutation = params.mutation, source = this.rows.find(value => value.sourceId === mutation.params.sourceId);
+          let data, outcome = 'applied';
+          const lost = mutation.method === 'source.import' && this.lostImport;
+          this.lostImport = false;
+          if (mutation.method === 'source.import' && mutation.params.expectedVersion !== undefined &&
+            source?.sourceVersion !== mutation.params.expectedVersion) {
+            outcome = 'rejected'; data = {error:{code:'INVALID_PARAMS',message:'source changed or deleted',retryable:false}};
+          } else if (mutation.method === 'source.import') {
+            data = (await this.request('source.import',mutation.params)).data;
+          } else if (mutation.method === 'source.update') {
+            source.enabled = mutation.params.enabled;
+            source.bookSource.enabled = mutation.params.enabled;
+            source.sourceVersion = version('2');
+            data = {source:{sourceId:source.sourceId,enabled:source.enabled}};
+          } else if (mutation.method === 'source.delete') {
+            const before = this.rows.length;
+            this.rows = this.rows.filter(value => !mutation.params.sourceIds.includes(value.sourceId));
+            data = {deleted:before-this.rows.length};
+          } else assert.fail(`Unexpected original mutation ${mutation.method}`);
+          this.head = {operationId:params.operationId,sequence:params.sequence,payloadFingerprint:version('a')};
+          this.receipt = {binding:this.head,method:mutation.method,outcome,data,ackFingerprint:version('b')};
+          if (lost) throw Error('write ACK lost');
+          return {data:this.receipt};
         }
         if (method === 'source.check.run') {
           await this.checkPause?.promise;
@@ -64,8 +128,10 @@ if (selected.length) {
         if (method === 'source.import') {
           this.imports++;
           const index = this.rows.findIndex(source => source.sourceId === params.sourceId);
-          const value = { ...row(params.sourceId, '8'), name: params.bookSource.bookSourceName,
-            enabled: params.bookSource.enabled !== false, bookSource: clone(params.bookSource) };
+          const rules = params.rules ?? (params.expectedVersion === undefined ? undefined : this.rows[index]?.rules) ??
+            {search:null,explore:null,detail:null,toc:null,chapter:null};
+          const value = { ...row(params.bookSource.bookSourceUrl, '8'), sourceId:params.sourceId, name: params.bookSource.bookSourceName,
+            enabled: params.bookSource.enabled !== false, rules:clone(rules), bookSource: clone(params.bookSource) };
           if (index < 0) this.rows.push(value); else this.rows[index] = value;
           if (this.lostImport) throw Error('write ACK lost');
           return { data: { imported: true, sourceId: params.sourceId, name: value.name } };
@@ -78,11 +144,12 @@ if (selected.length) {
   function presentation(runtime, identity) {
     let active = true;
     const values = [], projections = [];
-    const host = new SourceHost(value => values.push(clone(value)), () => active, () => {}, () => runtime,
+    const host = new SourceHost(value => values.push(clone(value)), () => {},
       value => projections.push(clone(value)));
     assert.equal(host.bindPresentation(runtime, identity, () => active), true);
+    const acceptedOwner = host.orchestrator;
     return { host, identity, values, projections, retire() { active = false; host.detachPresentation(identity); },
-      async settle() { await tick(); await host.orchestrator.operationChain; await tick(); },
+      async settle() { await tick(); await acceptedOwner.operationChain; await tick(); },
       async open() { host.open(identity); await this.settle(); } };
   }
   async function checkIdentity() {
@@ -179,8 +246,87 @@ if (selected.length) {
     assert.equal(newer.owner.current().editorSourceId, ''); assert.equal(newer.owner.current().selectedSourceCount, 0);
   }
   async function editorConflict() {
+    const canonicalRules = {search:[{kind:'jsonPath',path:'$.books[*]'}],explore:null,detail:null,toc:null,chapter:null};
+    for (const rawField of ['null','omitted']) {
+      for (const retainsDraft of [false,true]) {
+        const sourceId = 'canonical-1', rawId = 'https://raw-editor.example';
+        const canonical = {...row('https://canonical.example'),sourceId,rules:clone(canonicalRules),bookSource:null};
+        if (rawField === 'omitted') delete canonical.bookSource;
+        const r = rpc([canonical,row(rawId)]); r.editorExact = true; installed = r;
+        const before = clone(r.rows), p = tools(r, `canonical-${rawField}-${retainsDraft}`); await p.open();
+        if (retainsDraft) {
+          p.owner.openEditor(rawId); await p.settle();
+          p.owner.updateEditorDraft(JSON.stringify({...r.rows[1].bookSource,bookSourceName:'retained raw draft'}));
+        }
+        const previousEditor = p.owner.current();
+        const definition = await new SourceGateway(r).readSourceDefinition(sourceId);
+        assert.equal(definition.sourceId,sourceId); assert.equal(definition.hasRawBookSource,false);
+        assert.equal(JSON.parse(definition.text).bookSourceUrl,canonical.baseUrl,'diagnostics retain the legacy export projection');
+        p.owner.openEditor(sourceId); await p.settle();
+        assert.equal(p.owner.current().editorSourceId,previousEditor.editorSourceId);
+        assert.equal(p.owner.current().editorText,previousEditor.editorText);
+        assert.match(p.owner.current().statusMessage,/完整原始 BookSource JSON/);
+        if (!retainsDraft) { p.owner.saveEditor(); await p.settle(); }
+        assert.equal(r.imports,0); assert.equal(r.count('rules.mutation.apply'),0);
+        assert.deepEqual(r.rows,before,'opening canonical metadata cannot replace its rules or convert its source mode');
+      }
+    }
+    {
+      const mixed = {...row(),rules:clone(canonicalRules)};
+      const r = rpc([mixed]); r.editorExact = true; installed = r;
+      const p = tools(r,'mixed-raw-canonical'); await p.open();
+      p.owner.openEditor(mixed.sourceId); await p.settle();
+      p.owner.updateEditorDraft(JSON.stringify({...mixed.bookSource,bookSourceName:'raw name edited'}));
+      p.owner.saveEditor(); await p.settle();
+      assert.equal(p.owner.current().editorReadback.confirmation,'confirmed');
+      const edit = r.calls.filter(call => call.method === 'rules.mutation.apply').at(-1).params;
+      assert.equal(Object.hasOwn(edit.mutation.params,'rules'),false,'Host never synthesizes hidden canonical rules');
+      assert.deepEqual(r.rows[0].rules,canonicalRules);
+    }
+    for (const change of ['unchanged','url-changed','late-disable','late-delete']) {
+      const sourceId = 'legacy-1', sourceUrl = 'https://example.org';
+      const r = rpc([{...row(sourceUrl),sourceId}]); r.editorExact = true; installed = r;
+      const p = tools(r, `opaque-${change}`); await p.open();
+      p.owner.openEditor(sourceId); await p.settle();
+      assert.equal(p.owner.current().editorSourceId,sourceId);
+      const value = {...r.rows[0].bookSource,bookSourceName:'opaque-edited'};
+      if (change === 'url-changed') value.bookSourceUrl = 'https://changed.example.org';
+      const draft = JSON.stringify(value); p.owner.updateEditorDraft(draft);
+      if (change === 'late-disable' || change === 'late-delete') {
+        const other = new SourceGateway(r);
+        r.beforeListResponse = async () => {
+          if (change === 'late-disable') await other.updateSource(sourceId,{enabled:false});
+          else await other.deleteSources([sourceId]);
+        };
+      }
+      p.owner.saveEditor(); await p.settle();
+      const state = p.owner.current();
+      if (change === 'unchanged') {
+        assert.equal(r.imports,1,'opaque ID with unchanged original URL remains editable');
+        assert.equal(state.editorSourceId,''); assert.equal(state.editorReadback.confirmation,'confirmed');
+        assert.equal(r.rows.length,1); assert.equal(r.rows[0].sourceId,sourceId);
+        assert.equal(r.rows[0].bookSource.bookSourceUrl,sourceUrl); assert.equal(r.rows[0].name,'opaque-edited');
+      } else {
+        assert.equal(r.imports,0); assert.equal(state.editorText,draft);
+        assert.equal(state.editorReadback.confirmation,'undispatched');
+        if (change === 'url-changed') {
+          assert.equal(r.count('rules.mutation.apply'),0);
+          assert.equal(r.rows[0].bookSource.bookSourceUrl,sourceUrl);
+        } else {
+          assert.equal(RulesMutationOwner.forRuntime(r).snapshot().blocked,false);
+          if (change === 'late-disable') assert.equal(r.rows[0].enabled,false);
+          else assert.equal(r.rows.length,0);
+        }
+      }
+      if (change !== 'url-changed') {
+        const edit = r.calls.filter(call => call.method === 'rules.mutation.apply').at(-1).params;
+        assert.equal(edit.mutation.params.sourceId,sourceId);
+        assert.equal(edit.mutation.params.bookSource.bookSourceUrl,sourceUrl);
+        assert.equal(edit.mutation.params.expectedVersion,version('1'));
+      }
+    }
     for (const drift of ['unchanged','raw-rules','disabled','deleted','unknown','confirmed-read-failed']) {
-      const r = rpc(); installed = r; const p = tools(r, `edit-${drift}`); await p.open();
+      const r = rpc(); r.editorExact = true; installed = r; const p = tools(r, `edit-${drift}`); await p.open();
       p.owner.openEditor(r.rows[0].sourceId); await p.settle();
       const draft = JSON.stringify({ ...r.rows[0].bookSource, bookSourceName: 'edited' }); p.owner.updateEditorDraft(draft);
       if (drift === 'raw-rules') r.rows[0].bookSource.ruleSearch.bookList = '.new';
@@ -193,7 +339,7 @@ if (selected.length) {
         assert.equal(r.imports, 0, `${drift} cannot be overwritten by an old editor`);
         assert.equal(state.editorText, draft); assert.equal(state.editorReadback.confirmation, 'undispatched');
       } else if (drift === 'unchanged') {
-        assert.equal(r.imports, 1); assert.equal(state.editorSourceId, ''); assert.equal(state.editorReadback.confirmation, 'confirmed');
+        assert.equal(r.imports, 1,JSON.stringify({message:state.statusMessage,original:state.original,calls:r.calls})); assert.equal(state.editorSourceId, '',JSON.stringify({message:state.statusMessage,original:state.original,readback:state.editorReadback})); assert.equal(state.editorReadback.confirmation, 'confirmed');
       } else {
         const expected = drift === 'unknown' ? 'unknown' : 'confirmed';
         assert.equal(r.imports, 1); assert.equal(state.editorReadback.confirmation, expected);
@@ -203,25 +349,83 @@ if (selected.length) {
         p.detach(); p.attach(); await p.open(); assert.equal(p.owner.current().editorText, draft);
       }
     }
-    const { createReaderComponentProbe:createReaderBuilderProbe } = await import('./lib/reader-component-probe.mjs');
-    const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
-    const {readerReadableFontScale}=await import('../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts');
-    const {readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-    const { readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
-    const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
-    const source = readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), 'utf8');
-    const fieldSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderFormField.ets', import.meta.url), 'utf8');
-    class Field { constructor(owner, params, _storage, id) { this.owner = owner; this.id = id; Object.assign(this,params); } updateStateVars(params) { Object.assign(this,params); } }
+    for (const boundary of ['old-core','missing-condition','invalid-version']) {
+      const r = rpc(); r.editorExact = boundary !== 'old-core';
+      r.conditionalCapability = boundary !== 'missing-condition';
+      if (boundary === 'invalid-version') r.rows[0].sourceVersion = 'legacy';
+      installed = r; const p = tools(r, boundary); await p.open();
+      p.owner.openEditor(r.rows[0].sourceId); await p.settle();
+      const draft = JSON.stringify({...r.rows[0].bookSource,bookSourceName:'retained'});
+      p.owner.updateEditorDraft(draft); p.owner.saveEditor(); await p.settle();
+      assert.equal(r.imports,0); assert.equal(r.count('rules.mutation.apply'),0);
+      assert.equal(p.owner.current().editorText,draft);
+      assert.equal(p.owner.current().editorReadback.confirmation,'undispatched');
+      await new SourceGateway(r).importBookSourceDocument(draft);
+      assert.equal(r.imports,1,'ordinary import retains its compatible upsert');
+    }
+    for (const action of ['disable','delete','replace']) {
+      const r = rpc(); r.editorExact = true; installed = r;
+      const p = tools(r, `late-${action}`); await p.open();
+      const sourceId = r.rows[0].sourceId;
+      p.owner.openEditor(sourceId); await p.settle();
+      const draft = JSON.stringify({...r.rows[0].bookSource,bookSourceName:'retained-late-draft'});
+      p.owner.updateEditorDraft(draft);
+      const other = new SourceGateway(r);
+      r.beforeListResponse = async () => {
+        if (action === 'disable') await other.updateSource(sourceId,{enabled:false});
+        else if (action === 'delete') await other.deleteSources([sourceId]);
+        else await other.importBookSourceDocument(JSON.stringify({...r.rows[0].bookSource,ruleSearch:{bookList:'.replacement'}}));
+      };
+      p.owner.saveEditor(); await p.settle();
+      const state = p.owner.current();
+      assert.equal(state.editorText,draft);
+      assert.equal(state.editorReadback.confirmation,'undispatched','exact Core rejection preserves a writable draft');
+      assert.equal(RulesMutationOwner.forRuntime(r).snapshot().blocked,false);
+      if (action === 'disable') assert.equal(r.rows[0].enabled,false);
+      if (action === 'delete') assert.equal(r.rows.length,0);
+      if (action === 'replace') assert.equal(r.rows[0].bookSource.ruleSearch.bookList,'.replacement');
+      const edit = r.calls.filter(call => call.method === 'rules.mutation.apply').at(-1).params;
+      assert.equal(edit.mutation.params.expectedVersion,version('1'),'late snapshot never replaces the editor-open SHA');
+    }
+    for (const hasReceipt of [true,false]) {
+      const r = rpc(); r.editorExact = true; installed = r;
+      const gateway = new SourceGateway(r);
+      const draft = JSON.parse(await gateway.loadEditableSource(r.rows[0].sourceId));
+      draft.bookSourceName = 'unknown-original'; r.lostImport = true;
+      await assert.rejects(gateway.saveEditableSource(r.rows[0].sourceId,JSON.stringify(draft)));
+      const original = clone(r.intent), writes = r.count('rules.mutation.apply');
+      assert.equal(original.mutation.params.expectedVersion,version('1'));
+      r.conditionalCapability = false;
+      if (!hasReceipt) { r.receipt = undefined; r.head = undefined; }
+      if (hasReceipt) {
+        const recovered = await gateway.recoverOriginalSource(() => true,true,original.operationId);
+        assert.equal(recovered.confirmation,'confirmed'); assert.equal(recovered.blocked,false);
+        assert.equal(r.intent,undefined,'capability loss allows the qualified original ACK cleanup');
+      } else {
+        await assert.rejects(gateway.recoverOriginalSource(() => true,true,original.operationId),/条件编辑/);
+        assert.deepEqual(r.intent,original,'missing capability preserves the fixed condition and original intent');
+        assert.equal(RulesMutationOwner.forRuntime(r).snapshot().confirmation,'unknown');
+      }
+      assert.equal(r.count('rules.mutation.apply'),writes,'capability loss never dispatches another conditional write');
+    }
+    const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+    const { foundationControls, withReaderSectionHeading } = await import('./lib/reader-foundation-control-probe.mjs');
+    const sourceEditorReadbackPending = bookshelfOperationClass('features/source/application/SourceToolsOrchestrator.ets', 'sourceEditorReadbackPending');
+    const source = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), 'utf8');
+    const owners = owner => [owner, ...[...owner.children.values()].filter(child => child.nodes).flatMap(owners)];
     for (const state of [{busy:false}, {busy:true}, {busy:false,editorReadback:{confirmation:'unknown'}}, {busy:false,editorReadback:{confirmation:'confirmed',fact:'confirmedRefreshFailed'}}]) {
-      const properties=createArkUIPropertyRuntimeProbe();
-      const page = createReaderBuilderProbe(source, ['editorCard','canWriteSources','fontScale'], { ...properties.sdk, ...readerFoundationTokens, ...readerTypographyRoles,
-        ReaderFormField:Field,readerAppColor,readerReadableFontScale,ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})} }, { ...properties.hooks, childSources:{ReaderFormField:fieldSource} }).owner;
-      Object.assign(page, { appThemeScheme:'day',readerWindowMetricsRevision:1,snapshot:{editorSourceId:'a',editorText:'{}',...state},heading(){},actionButton(){} });
-      page.editorCard(); const field = [...page.children.values()].find(child=>child instanceof Field); assert.ok(field);
+      const controls = withReaderSectionHeading(foundationControls());
+      const page = createReaderBuilderProbe(source,
+        ['editorCard','canWriteSources','editorDraftIsEditable','editorDraftChange','editorAction','toolsInputIsCurrent','toolsOpeningIsCurrent'],
+        { ...controls.dependencies, sourceEditorReadbackPending, AppStorage: { get: () => true } }, controls.hooks).owner;
+      Object.assign(page, { appThemeScheme:'day', mounted:true, temporaryBackIdentity:'editor-sdk', editorInputRevision:0,
+        snapshot:{editorSourceId:'a',editorRevision:1,editorText:'{}',...state}, actionButton(){} });
+      page.editorCard(1);
+      const field = owners(page).find(child => child instanceof controls.field.Component);
+      assert.ok(field, 'actual ReaderCard mounts its current ReaderFormField');
       assert.equal(field.isEditable,!state.busy && state.editorReadback===undefined,'SDK editor follows actual owner readback admission');
     }
   }
   const cases = { 'check-identity':checkIdentity, 'tools-retention':toolsRetention, 'editor-conflict':editorConflict };
   for (const id of selected) { await cases[id](); recordContractCasePass(id); }
-  }finally{resolution.deregister();}
 }

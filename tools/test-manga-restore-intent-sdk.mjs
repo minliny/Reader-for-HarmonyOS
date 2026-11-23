@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -6,7 +7,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
-import { MangaStripProjection } from '../entry/src/main/ets/features/manga/MangaStripProjection.ts';
+import { MangaStripProjection } from '../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts';
 import { PhotoViewScaleModel } from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
 
 // Model-only sizes reproduce the recorded proportions, not guest intrinsic
@@ -15,7 +16,7 @@ import { PhotoViewScaleModel } from '../entry/src/main/ets/features/manga/vendor
 // receipts are controlled. In particular, header work never invents geometry.
 const MODEL = { width: 1280, height: 2133, tileHeight: 524, viewportHeight: 2832, density: 3.5 };
 const REQUESTED_Y = 0.6721680877983167;
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/manga-restore-e1e7d06c-methods.json', import.meta.url), 'utf8'));
 assert.equal(baseline.referencedVersion, 'e1e7d06c7e02b0439e837985dc878b22bac14d1a');
 assert.equal(createHash('sha256').update(JSON.stringify(baseline.methods)).digest('hex'),
@@ -36,7 +37,7 @@ const members = declaration.members.filter(node => node.name?.getText(tree) !== 
 const dataText = tree.statements.find(node => node.name?.getText(tree) === 'MangaStripDataSource').getText(tree);
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(dataText)}; return MangaStripDataSource;`)(MangaStripProjection);
 const frames = Object.fromEntries(['MangaLayoutFrame', 'MangaSheetFrame'].map(name => [name,
-  new Function('FrameCallback', `${stripTypeScriptTypes(tree.statements.find(node => node.name?.getText(tree) === name).getText(tree))}; return ${name};`)(class {})]));
+  new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(tree.statements.find(node => node.name?.getText(tree) === name).getText(tree))}; return ${name};`)(class {}, actualReaderPostLayoutFrame())]));
 let oldSource = source;
 for (const name of ['restore', 'publish', 'onViewportScroll']) {
   const member = declaration.members.find(node => node.name?.getText(tree) === name);
@@ -133,7 +134,7 @@ function fixture(Component = Current, { tailKnown = false, prefixKnown = true, t
     for (const callback of batch) callback.onFrame(0);
     ports.layoutReady = true;
     if (ports.pendingOffset !== undefined) { ports.offset = ports.pendingOffset; ports.pendingOffset = undefined; }
-    for (const callback of batch) callback.onIdle(2_000_000);
+    for (const callback of batch) { callback.onIdle(2_000_000); drainReaderPostLayoutFallbacks(ports.frames); }
   }
   async function settle() { for (let i = 0; i < 4; i++) { frame(); await tick(); } }
   function receipt(ordinal) {

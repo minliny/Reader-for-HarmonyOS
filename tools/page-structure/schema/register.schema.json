@@ -114,6 +114,46 @@
             "EXCEPTION",
             "NOT_RUN"
           ]
+        },
+        "rootSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "toolSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "toolPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "appBuildId",
+            "hapSha256",
+            "sourceFingerprint",
+            "targetRef"
+          ],
+          "properties": {
+            "appBuildId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "hapSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "sourceFingerprint": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "targetRef": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{12}$"
+            }
+          }
         }
       },
       "required": [
@@ -121,7 +161,46 @@
         "path",
         "result"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "symbol"
+            ],
+            "properties": {
+              "symbol": {
+                "enum": ["ui-contract-receipt", "ui-contract-receipt-group"]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rootSha256",
+              "toolSha256",
+              "toolPath",
+              "candidate"
+            ],
+            "properties": {
+              "kind": {
+                "const": "device"
+              },
+              "rootSha256": {},
+              "toolSha256": {},
+              "toolPath": {},
+              "candidate": {}
+            }
+          },
+          "else": {
+            "properties": {
+              "rootSha256": false,
+              "toolSha256": false,
+              "toolPath": false,
+              "candidate": false
+            }
+          }
+        }
+      ]
     },
     "brief": {
       "type": "object",
@@ -1039,6 +1118,24 @@
           ],
           "minimum": 0
         },
+        "obscurationCompensationSource": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "symbol": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "path",
+            "symbol"
+          ],
+          "additionalProperties": false
+        },
         "restore": {
           "type": "string",
           "minLength": 1
@@ -1356,6 +1453,12 @@
             "HeaderSlot",
             "Overlay",
             "None"
+          ]
+        },
+        "inlineComposition": {
+          "type": "string",
+          "enum": [
+            "boundedEditor"
           ]
         },
         "entryPlacements": {
@@ -2037,6 +2140,10 @@
           "minimum": 0
         },
         "contrastEvidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "designContractRef": {
           "type": "string",
           "minLength": 1
         }

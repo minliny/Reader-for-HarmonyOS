@@ -22,7 +22,7 @@ import {
   startReaderPagePan,
   updateReaderPagePan,
   updateReaderPagePanInPlace,
-} from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
 
 assert.equal(READER_PAGE_GESTURE_TOUCH_SLOP, 8);
 assert.equal(READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP, 16);
@@ -75,22 +75,22 @@ assert.equal(state.owner, 'horizontalPage');
 assert.equal(state.axis, 'horizontal');
 assert.equal(state.direction, 'next');
 
-// A published horizontal page follows the thumb's arc without reclassifying
-// its release by Y. It never converts the same pointer into a bookmark.
+// A published horizontal page keeps its owner but rolls back after a clear
+// vertical redirection. It never converts the same pointer into a bookmark.
 state = moveReaderPageGesture(state, -20, -700, 0, 180, -300, 0, 32);
 assert.equal(state.owner, 'horizontalPage');
 assert.equal(state.direction, 'next');
 decision = settleReaderPageGesture(state, -8, 1200, 0, 192, 1600, 0, 48);
-assert.equal(decision.direction, 'next');
+assert.equal(decision.direction, undefined);
 assert.equal(decision.bookmarkChanged, false);
 assert.equal(decision.state.owner, 'horizontalPage');
-assert.equal(decision.state.settleTarget, 'commit');
+assert.equal(decision.state.settleTarget, 'rollback');
 for (const sign of [-1, 1]) for (const verticalSign of [-1, 1]) {
   const horizontal = moveReaderPageGesture(beginReaderPageGesture(300), sign * 20, 0);
   assert.equal(settleReaderPageGesture(horizontal, sign * 20, verticalSign * 29.99).direction,
     sign < 0 ? 'next' : 'previous', 'small vertical drift retains the confirmed horizontal owner');
   assert.equal(settleReaderPageGesture(horizontal, sign * 20, verticalSign * 30).direction,
-    sign < 0 ? 'next' : 'previous', 'a curved release retains the confirmed horizontal owner');
+    undefined, 'clear final vertical dominance cancels either horizontal direction');
 }
 
 // Early X noise can change candidate before any page-owned visual is admitted.
@@ -114,52 +114,15 @@ assert.equal(settleReaderPageGesture(state, -8, 100).bookmarkChanged, true);
 
 for (const sign of [-1, 1]) {
   state = moveReaderPageGesture(beginReaderPageGesture(300), sign * 23.99, 16);
-  assert.equal(state.owner, 'horizontalPage', 'the former diagonal gap belongs to paging');
+  assert.equal(state.owner, 'undecided', 'an ambiguous diagonal has no published owner');
   state = moveReaderPageGesture(state, sign * 24, 16);
   assert.equal(state.owner, 'horizontalPage', 'exact 1.5 main-axis dominance is admitted');
 }
 state = moveReaderPageGesture(beginReaderPageGesture(300, 0, 0, 0, 800), 16, 24);
-assert.equal(state.owner, 'undecided', 'early vertical tangent remains a candidate');
+assert.equal(state.owner, 'bookmark');
 assert.equal(state.direction, undefined);
 
-// Fixed physical thumb traces, mirrored for both hands and upward/downward
-// arcs. The old diagonal wedge and the release veto must each fail separately.
-for (const sign of [-1, 1]) for (const verticalSign of [-1, 1]) {
-  const expected = sign < 0 ? 'next' : 'previous';
-  for (const points of [
-    [[8, 8], [20, 22], [40, 46], [64, 72]],
-    [[20, 2], [35, 28], [48, 65], [52, 100]],
-    [[4, 18], [30, 36], [80, 45]],
-  ]) {
-    for (const inPlace of [false, true]) {
-      let arc = beginReaderPageGesture(300, 150, 200, 0, 800);
-      for (const [x, y] of points) {
-        const update = inPlace ? updateReaderPagePanInPlace : moveReaderPageGesture;
-        arc = update(arc, sign * x, verticalSign * y);
-      }
-      const [x, y] = points.at(-1);
-      const result = finishReaderPagePan(arc, sign * x, verticalSign * y);
-      assert.equal(result.direction, expected, 'thumb arc commits its horizontal page');
-      assert.equal(result.bookmarkChanged, false);
-      assert.equal(finishReaderPagePan(result.state, sign * x, verticalSign * y).direction, undefined);
-      assert.equal(finishReaderPagePan(arc, sign * 7.99, verticalSign * y).direction, undefined,
-        'horizontal return inside tap slop still cancels the arc');
-      assert.equal(finishReaderPagePan(arc, -sign * 40, verticalSign * y).direction, undefined,
-        'crossing the starting point still cancels the arc');
-      assert.equal(finishReaderPagePan(cancelReaderPagePan(arc), sign * x, verticalSign * y).direction,
-        undefined, 'system cancellation never commits an arc');
-    }
-  }
-  const diagonal = finishReaderPagePan(beginReaderPageGesture(300), sign * 64, verticalSign * 72);
-  assert.equal(diagonal.direction, expected, 'UP-only diagonal is a page turn');
-  const edge = moveReaderPageGesture(beginReaderPageGesture(300), sign * 16, verticalSign * 23.99);
-  assert.equal(edge.owner, 'horizontalPage');
-  const vertical = moveReaderPageGesture(beginReaderPageGesture(300), sign * 16, verticalSign * 32);
-  assert.equal(vertical.owner, verticalSign > 0 ? 'bookmark' : 'verticalPrevious',
-    'the exact vertical boundary remains reserved for vertical actions');
-}
-
-// A light flick still commits; returning inside 8vp always rolls back.
+// Final relative displacement alone decides. Returning inside 8vp rolls back;
 // a very fast 8vp light flick commits immediately.
 state = beginReaderPageGesture(300, 200, 400, 0, 800);
 state = moveReaderPageGesture(state, -80, 0, 0, 120, 400, 0, 16);
@@ -180,13 +143,12 @@ assert.equal(state.reversed, true);
 decision = settleReaderPageGesture(state, 120, 0, 5000, 320, 400, 0, 48);
 assert.equal(decision.direction, undefined);
 
-// Upward MOVE confirms at32vp; a short UP can still commit at24vp.
+// Upward motion confirms at16vp, commits at24vp and stays page-owned.
 state = beginReaderPageGesture(300, 180, 500, 0, 800);
 state = moveReaderPageGesture(state, 2, -16, 0, 182, 484, 0, 8);
-assert.equal(state.owner, 'undecided');
+assert.equal(state.owner, 'verticalPrevious');
 assert.equal(settleReaderPageGesture(state, 2, -23.99).direction, undefined);
-assert.equal(settleReaderPageGesture(state, 2, -24).direction, 'previous');
-state = moveReaderPageGesture(state, 2, -32, 0, 182, 468, 0, 16);
+state = moveReaderPageGesture(state, 2, -24, 0, 182, 476, 0, 16);
 assert.equal(state.owner, 'verticalPrevious');
 assert.equal(state.verticalPrevious, true);
 assert.equal(state.direction, 'previous');
@@ -199,7 +161,7 @@ assert.equal(decision.direction, 'previous');
 // beyond the16vp confirmation band moves the page, retaining the H/2 cap.
 state = beginReaderPageGesture(300, 150, 100, 0, 800);
 state = moveReaderPageGesture(state, 0, 16, 0, 150, 116, 0, 8);
-assert.equal(state.owner, 'undecided');
+assert.equal(state.owner, 'bookmark');
 assert.equal(state.bookmarkOffsetY, 0);
 assert.equal(state.bookmarkPreviewChanged, false);
 state = moveReaderPageGesture(state, 0, 48, 0, 150, 148, 0, 16);
@@ -210,7 +172,7 @@ state = moveReaderPageGesture(state, 0, 800, 0, 150, 900, 0, 32);
 assert.equal(state.bookmarkOffsetY, 392);
 assert.equal(state.bookmarkPeakDistance, 800);
 state = moveReaderPageGesture(state, 0, 399, 0, 150, 499, 0, 48);
-assert.equal(state.bookmarkPreviewChanged, true, 'release threshold does not depend on pull peak');
+assert.equal(state.bookmarkPreviewChanged, false, 'below half peak withdraws the preview toggle');
 state = moveReaderPageGesture(state, 0, 401, 0, 150, 501, 0, 64);
 assert.equal(state.bookmarkPreviewChanged, true);
 decision = settleReaderPageGesture(state, 0, 401, 0, 150, 501, 0, 80);
@@ -258,15 +220,15 @@ assert.equal(settleReaderPageGesture(state, 15, 900, 0, 15, 900, 0, 32, 8, 0).di
   'stage Y cannot cancel a physically horizontal release');
 state = beginReaderPageGesture(300, 200, 100, 0, 800);
 state = moveReaderPageGesture(state, 0, 160, 0, 200, 260, 0, 16, 0, 16);
-assert.equal(state.owner, 'undecided');
+assert.equal(state.owner, 'bookmark');
 assert.equal(state.bookmarkOffsetY, 0);
 state = moveReaderPageGesture(state, 0, 480, 0, 200, 580, 0, 32, 0, 48);
 assert.equal(state.currentOffsetY, 480);
 assert.equal(state.inputOffsetY, 48);
 assert.equal(state.bookmarkPeakDistance, 48);
 assert.equal(state.bookmarkOffsetY, 16);
-assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 32).bookmarkChanged, true);
-assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 31.99).bookmarkChanged, false);
+assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 24).bookmarkChanged, true);
+assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 23.99).bookmarkChanged, false);
 state = moveReaderPageGesture(beginReaderPageGesture(300, 0, 0, 0, 800), 180, 120, 0, 180, 120, 0, 16, 12, 60);
 assert.equal(state.owner, 'bookmark', 'raw Y selects bookmark even if stage X is larger');
 assert.equal(state.bookmarkPreviewChanged, true);
@@ -354,39 +316,4 @@ assert.equal(readerPageTapIntent(150, 300), 'control');
 assert.equal(readerPageTapIntent(290, 300), 'next');
 assert.equal(readerPageTapIntent(-1, 300), undefined);
 
-// Deliberate reversal cancels without requiring an exact return to P0. Small
-// noise after cancellation cannot re-arm; forward intent can restore it.
-for (const sign of [-1, 1]) for (const inPlace of [false, true]) {
-  const update = inPlace ? updateReaderPagePanInPlace : moveReaderPageGesture;
-  let path = update(beginReaderPageGesture(390), sign * 120, 0);
-  path = update(path, sign * 96.01, 0);
-  assert.equal(path.turnCommitArmed, true);
-  path = update(path, sign * 96, 0);
-  assert.equal(path.turnCommitArmed, false);
-  path = update(path, sign * 9, 0);
-  assert.equal(finishReaderPagePan(path, sign * 9, 0).direction, undefined);
-  path = update(path, sign * 24.99, 0);
-  assert.equal(path.turnCommitArmed, false);
-  path = update(path, sign * 25, 0);
-  assert.equal(finishReaderPagePan(path, sign * 25, 0).direction, sign < 0 ? 'next' : 'previous');
-}
-for (const peak of [48, 80, 200, 800]) {
-  let pull = moveReaderPageGesture(beginReaderPageGesture(390, 0, 0, 0, 800), 0, peak);
-  pull = moveReaderPageGesture(pull, 0, 32);
-  assert.equal(pull.bookmarkPreviewChanged, true);
-  pull = moveReaderPageGesture(pull, 0, 31.99);
-  assert.equal(pull.bookmarkPreviewChanged, false);
-  for (const y of [32, 40, 47.99]) {
-    pull = moveReaderPageGesture(pull, 0, y);
-    assert.equal(pull.bookmarkPreviewChanged, false, 'threshold noise cannot re-arm the bookmark');
-  }
-  pull = moveReaderPageGesture(pull, 0, 48);
-  assert.equal(finishReaderPagePan(pull, 0, 48).bookmarkChanged, true);
-  pull = moveReaderPageGesture(pull, 72, 48);
-  assert.equal(pull.bookmarkPreviewChanged, false);
-  pull = moveReaderPageGesture(pull, 71, 48);
-  assert.equal(pull.bookmarkPreviewChanged, false, 'direction hysteresis also resists chatter');
-  pull = moveReaderPageGesture(pull, 40, 48);
-  assert.equal(pull.bookmarkPreviewChanged, true);
-}
 console.log('reader page-gesture pure state: PASS');

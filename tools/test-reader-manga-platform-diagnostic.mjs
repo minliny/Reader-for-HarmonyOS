@@ -1,7 +1,6 @@
 import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
 const selected=selectContractCases({'live-safety':{description:'Diagnostic only: actual watcher ownership, privacy, bounds and teardown',resources:[]},'r31-history':{description:'Diagnostic only: fixed historical file is never a live OS event',resources:[]},'sdk-types':{description:'Diagnostic only: installed SDK type check and frontend parse-only with invalid holder negative',resources:[]}});
 async function run(id){
-const { productionEntryDiagnostics }=await import('./lib/reader-entry-diagnostics-probe.mjs');
 const { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync }=await import('node:fs');
@@ -216,10 +215,8 @@ if(id==="live-safety")
     ReaderThemeHost: { detach() {} }, ReaderWindowCoordinator: { detach() {} }, AppStorage: { setOrCreate() {} },
     ReaderSystemFileOpenHost: { detach() {} }, hilog: { error() {} }, DOMAIN: 0x5244,
   });
-  const Type=productionEntryDiagnostics({ReaderMangaPlatformDiagnostic:{install:()=>({stop(){effects.push('stop');}})},hilog:{info(){},error(){}}});
-  const a = new destroyed(); a.diagnostics=Type.forColdStart(true,'debug',{parameters:{readerMangaReadingProbeSelectManga:true}},()=>0);
-  assert.ok(a.diagnostics);a.onDestroy();
-  assert.deepEqual(effects, ['stop']); assert.equal(a.diagnostics, undefined);
+  const a = new destroyed(); a.mangaPlatformDiagnostic = { stop() { effects.push('stop'); } }; a.onDestroy();
+  assert.deepEqual(effects, ['stop']); assert.equal(a.mangaPlatformDiagnostic, undefined);
 
 }
 if(id==="sdk-types")

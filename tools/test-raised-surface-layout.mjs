@@ -5,19 +5,17 @@ import {fileURLToPath} from 'node:url';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 
 const selected=selectContractCases({
-  'geometry-underlap':{resources:[],description:'Actual page resolver keeps text/notice clearance and footer avoidance while shelf/detail paint enters overlay chrome; invalid or inline inputs retain safe behavior.'},
+  'geometry-underlap':{description:'Actual page resolver keeps text/notice clearance and footer avoidance while shelf/detail paint enters overlay chrome; invalid or inline inputs retain safe behavior.'},
 });
 if(selected.length){
-  const resolution=registerHooks({resolve(specifier,context,next){
+  registerHooks({resolve(specifier,context,next){
     if(specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier)){
       const url=new URL(specifier+'.ts',context.parentURL);
       if(existsSync(fileURLToPath(url)))return next(url.href,context);
     }
     return next(specifier,context);
   }});
-  let ReaderPageGeometryInput,resolveReaderPageGeometry;
-  try { ({ReaderPageGeometryInput,resolveReaderPageGeometry}=await import('../entry/src/main/ets/features/common/ReaderPageGeometry.ts')); }
-  finally { resolution.deregister(); }
+  const {ReaderPageGeometryInput,resolveReaderPageGeometry}=await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
   const input=new ReaderPageGeometryInput();
   input.viewportWidth=366;input.viewportHeight=800;
   input.headerTop=40;input.headerHeight=53;input.contentGap=14;

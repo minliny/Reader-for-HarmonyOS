@@ -1,11 +1,11 @@
-import * as directoryState from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import { mangaDirectoryDisplay } from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import * as visual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-import * as layout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+import * as directoryState from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import * as visual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
+import * as layout from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
 
 /** Named production members needed when the SDK lowers the real Grid build.
  * Empty data is only the IO seam for chrome probes, never a layout substitute. */
-export const mangaGridBuilderMembers = ['chapterByIndex', 'mangaGridSpans', 'mangaDisplayNode', 'mangaTitle', 'mangaContextTitle', 'mangaDownloadable', 'mangaStatusText', 'mangaAccessoryWidth', 'prepareMangaGridProjection', 'mangaLayoutByNode', 'mangaLayoutSignature', 'mangaLayoutPageRefs', 'mangaPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaEmptyState', 'mangaRowBody', 'mangaNumberCell', 'mangaGridLayoutOptions', 'mangaGridNarrow', 'mangaQuickContextRow', 'mangaQuickContextTitle',
+export const mangaGridBuilderMembers = ['chapterByIndex', 'mangaGridSpans', 'mangaDisplayNode', 'mangaTitle', 'mangaContextTitle', 'mangaDownloadable', 'mangaStatusText', 'mangaAccessoryWidth', 'prepareMangaGridProjection', 'mangaLayoutByNode', 'mangaLayoutSignature', 'mangaLayoutPageRefs', 'currentPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaEmptyState', 'mangaRowBody', 'mangaNumberCell', 'mangaGridLayoutOptions', 'mangaGridNarrow', 'mangaQuickContextRow', 'mangaQuickContextTitle',
   'mangaLoadedRuns', 'mangaCellPlacement', 'mangaCellOrdinal', 'mangaCellWidth', 'mangaCellTop', 'mangaCellBottom',
   'mangaFontScale', 'mangaContentWidth', 'mangaContentStartOffset', 'mangaContentEndOffset', 'mangaCellHeight', 'mangaFirstDisplayRow', 'mangaFirstGridRun', 'publishMangaScrollOffset', 'toggleMangaRow', 'canDownloadTarget', 'downloadTarget', 'admitMangaPages', 'settleMangaScroll'];
 /** Shared real row closure for metadata, font and download consumers. */

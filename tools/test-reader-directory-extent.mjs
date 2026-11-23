@@ -7,9 +7,9 @@ const {stripTypeScriptTypes}=await import('node:module');
 const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
 if(id==='lifecycle'){
 const source = readFileSync(new URL(
-  '../entry/src/main/ets/features/reading/ReaderDirectoryList.ets', import.meta.url), 'utf8');
+  '../entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets', import.meta.url), 'utf8');
 const snapshotSource = readFileSync(new URL(
-  '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts', import.meta.url), 'utf8');
+  '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts', import.meta.url), 'utf8');
 const { sameReaderDirectoryData, snapshotReaderDirectoryData } = await import(
   `data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(snapshotSource)).toString('base64')}`);
 
@@ -101,7 +101,7 @@ assert.throws(() => checkLifecycle(loadList(source.replace(
 
 }else{
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
- const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryList.ets',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets',import.meta.url),'utf8');
  for(const natural of [false,true])for(const rowHeight of [32,34.072,40]){
   const entry={index:21,title:'章节'},lazy={create(_id,_owner,data,generate){assert.equal(data.totalCount(),1);generate(data.getData(0),0);},pop(){}};
   const owner=createReaderBuilderProbe(source,['build','rowBuilder','emptyBuilder','emptyContent'],{LazyForEach:lazy,makeBuilderParameterProxy:(_name,values)=>Object.fromEntries(Object.entries(values).map(([key,get])=>[key,get()])),BarState:{Auto:'auto',Off:'off'}}).owner;

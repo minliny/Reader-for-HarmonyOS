@@ -13,26 +13,27 @@ for(const id of selected){
 
 async function runSelectedCase(selectedCase){
 const [
- {createReaderBuilderProbe}, metricsApi,
+ {createReaderBuilderProbe}, {boundedMembers,boundedSurfaceSdk}, metricsApi,
  {readerFloatingTabContentInset}, {productionMotionMethods}, {readerRecoveryView},
  {BookshelfViewState}, headerMetrics, {pureModuleProbe}, {readerFoundationTokens},
 ]=await Promise.all([
  import('./lib/reader-control-builder-probe.mjs'),
- import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts'),
+ import('./lib/bounded-surface-sdk-probe.mjs'),
+ import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts'),
  import('./lib/reader-floating-bar-metrics-probe.mjs'),
  import('./lib/reader-motion-method-probe.mjs'),
  import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts'),
- import('../entry/src/main/ets/features/bookshelf/BookshelfViewState.ts'),
- import('../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts'),
+ import('../entry/src/main/ets/features/bookshelf/presentation/BookshelfViewState.ts'),
+ import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts'),
  import('./lib/ets-pure-module-probe.mjs'),
  import('./lib/reader-foundation-control-probe.mjs'),
 ]);
-const source=new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url);
-const common=name=>readFileSync(new URL(`../entry/src/main/ets/features/common/${name}`,import.meta.url),'utf8');
-const headerSpecs=pureModuleProbe(common('ReaderHeaderSpecs.ets'),'ViewportReturnHeaderSpecs.ets',
+const source=new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url);
+const headerSpecSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets',import.meta.url),'utf8');
+const headerSpecs=pureModuleProbe(headerSpecSource,'ViewportReturnHeaderSpecs.ets',
  {...headerMetrics,TOK_BORDER_W:readerFoundationTokens.TOK_BORDER_W},['bookshelfHeaderSpec']);
 class Frame { constructor(callback){this.callback=callback;} }
-const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear','viewModeRecovery','publishHeaderScrolled','onScrollToTopRequested'],{
+const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear','viewModeRecovery','publishHeaderScrolled','onScrollToTopRequested','takeDetailReturnFocus','cancelBookActionFocus','bookActionFocusRevision','restoreDetailReturnFocus'],{
  ...headerSpecs,readerRecoveryView, BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, Edge:{Top:'top'}, registerReaderShelfFonts(){}
 });
 const state=new BookshelfViewState(); const frames=[]; const calls=[]; const prepared=[];const materials=[];
@@ -113,93 +114,57 @@ for (const saved of [0, -30, -66]) {
 const text=readFileSync(source,'utf8');assert.match(text,/List\(\{ space: TOK_SPACE_CONTROL_INLINE, scroller: this\.shelfScroller \}\)/);
 assert.match(text,/maintainVisibleContentPosition\(true\)/);assert.match(text,/onAppear\(\(\): void => this\.restoreShelfViewport\(\)\)/);
 const index=readFileSync(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
-assert.match(index,/private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState/);
-assert.match(index,/BookshelfPage\(\{[\s\S]*?noticeTopInset: this\.shelfPendingNoticeHeight > 0 \? this\.shelfPendingNoticeHeight \+ 8 : 0,[\s\S]*?headerBottom: this\.shelfHeaderHeight,[\s\S]*?navigationGeneration: this\.navigationGeneration,\s*viewState: this\.bookshelfViewState/);
-assert.match(index,/this\.bookshelfViewState\.anchorKey = ''; this\.bookshelfViewState\.anchorOffset = 0;\s*this\.bookshelfViewState\.anchorCaptured = false/,
+const readPresentation=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfReadPresentation.ets',import.meta.url),'utf8');
+const shelfScene=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfScene.ets',import.meta.url),'utf8');
+assert.match(readPresentation,/readonly viewState: BookshelfViewState = new BookshelfViewState/);
+assert.match(index,/BookshelfScene\(\{\s*read: this\.shelfRead,/);
+assert.match(shelfScene,/BookshelfPage\(\{[\s\S]*?noticeTopInset: this\.read\.noticeTopInset\(\),\s*headerBottom: this\.read\.headerBottom,[\s\S]*?navigationGeneration: this\.navigation,\s*viewState: this\.read\.viewState/);
+assert.match(readPresentation,/this\.viewState\.anchorKey = '';\s*this\.viewState\.anchorOffset = 0;\s*this\.viewState\.anchorCaptured = false/,
  'a changed shelf filter revokes the captured viewport rather than restoring numeric zero as a saved scroll');
-assert.match(index,/private pendingShelfReadbackKey: string = ''/,
+const detail=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfDetailPresentation.ets',import.meta.url),'utf8');
+assert.match(detail,/private pendingReadbackKey: string = ''/,
   'detail shelf admission retains a confirmed identity until the bookshelf route readback');
-assert.match(index,/this\.getUIContext\(\)\.postFrameCallback\(new ReaderNavigationBackfillFrame/,
+assert.match(index,/this\.navigateTo\('bookshelf'\);\s*this\.refreshBookshelf\(\);[\s\S]*?this\.detailShelf\.readbackOnBookshelf\(\);/);
+assert.match(index,/postFrame: \(action: \(\) => void\): void => this\.getUIContext\(\)\.postFrameCallback\(new ReaderNavigationBackfillFrame\(action\)\)/);
+assert.match(detail,/readbackOnBookshelf\(\): void \{[\s\S]*?this\.scope\.postFrame\(\(\): void => \{/,
   'bookshelf return schedules a fresh read after the route binding is mounted');
-assert.match(index,/this\.invalidateBookshelfProjection\(\);\s*this\.refreshBookshelf\(\);\s*this\.pendingShelfReadbackKey = ''/,
+assert.match(detail,/this\.scope\.invalidateProjection\(\);\s*this\.scope\.refreshBookshelf\(\);\s*this\.pendingReadbackKey = ''/,
   'the post-frame shelf readback invalidates the stale detail projection before clearing the pending identity');
 console.log('PASS bookshelf route return: complete native samples, captured zero, new-state top, signed/identity anchors, late callback isolation');
 }
 
-// The actual shelf uses a scaffold with its header disabled. LibrarySearch owns
-// the public fixed header and publishes its measured bottom to the shelf route.
-async function headerScrollerIdentity(){
- const {pageFrameSdkFixture}=await import('./lib/reader-page-frame-sdk-fixture.mjs');
- const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
- const sdk=pageFrameSdkFixture(),text=readFileSync(source,'utf8');
- const section=readFileSync(new URL('./BookshelfSectionHeader.ets',source),'utf8');
- class SectionPort {
-  constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}
-  initialRender(){}
-  updateStateVars(next){Object.assign(this.params,next);}
- }
- const metrics=metricsApi.createDefaultReaderWindowMetrics();
- metrics.windowRect.width=390;
- metrics.windowRect.height=844;
- const headerSpec=headerSpecs.bookshelfHeaderSpec();
- const deps={...sdk.deps,...metricsApi,...headerSpecs,ReaderWindowCoordinator:{metrics:()=>metrics},
-  BookshelfSectionHeader:SectionPort,LazyForEach:{create(){},pop(){}},
-  ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}}
- };
- const {owner:listOwner}=createReaderBuilderProbe(text,['bookshelfList','shelfPageHandler','shelfScrollHandler',
-  'isShelfPresentationCurrent','shelfFirstItemPadding','shelfViewportMotionId','scrollLayout','pageGeometry',
-  'contentGeometry','shelfViewportScrollHandler'],deps,
-  {...sdk.hooks,childSources:{...sdk.hooks.childSources,BookshelfSectionHeader:section}});
- const returned=page(),scroller=returned.shelfScroller;
+// The page owns the same List/Scroller under the real public page frame.
+// Header measurement only changes its scrollable start clearance; no spacer
+// item or alternate List may shift saved identities on route return.
+function headerScrollerIdentity(){
+ const returned=page();const text=readFileSync(source,'utf8');
+ const sdk=boundedSurfaceSdk(),mainText=readFileSync(new URL('../entry/src/main/ets/features/shell/MainTabShell.ets',import.meta.url),'utf8');
+ sdk.childSources.MainTabBar=readFileSync(new URL('../entry/src/main/ets/features/shell/MainTabBar.ets',import.meta.url),'utf8');
+ class Tab {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+ const deps={...sdk.deps,...metricsApi,readerFloatingTabContentInset,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},
+  MainTabBar:Tab,LazyForEach:{create(){},pop(){}},ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}}};
+ const listOwner=createReaderBuilderProbe(text,['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent'],deps,sdk.hooks).owner;
+ const scroller=returned.shelfScroller;
  Object.assign(listOwner,{appThemeScheme:'day',readerWindowMetricsRevision:0,mounted:true,navigationGeneration:1,
-  shelfScroller:scroller,continueReading:undefined,filterRowVisible:false,viewModeError:'',visibleBookCount:1,
-  headerBottom:headerSpec.frameHeight,viewMode:'list',viewSwitchHeaderOpacity:1,hasActiveFilters:()=>false,
-  filterPanel(){},effectiveViewportWidth:()=>390,shelfContentEndValue:()=>0,shelfContentWidth:()=>352,
-  rowDataSource:{totalCount:()=>0},isWideViewport:()=>false,
-  saveShelfViewport:returned.saveShelfViewport.bind(returned),restoreShelfViewport:returned.restoreShelfViewport.bind(returned)});
- const style=sdk.deps.readerFrameStyle({backgroundColor:'#FFFAF8F4',headerBackground:'#FFFAF8F4',footerBackground:'#FFFAF8F4'});
- const frame=sdk.create('ReaderPageScaffold',{frameStyle:style,geometry:listOwner.pageGeometry(),
-  headerVisible:false,content:()=>listOwner.bookshelfList(false)});
+  shelfScroller:scroller,continueReading:undefined,filterRowVisible:false,viewModeError:'',visibleBookCount:1,headerClearance:74,
+  shelfContentWidth:()=>352,rowDataSource:{totalCount:()=>0},isWideViewport:()=>false,sectionAction(){},saveShelfViewport:returned.saveShelfViewport.bind(returned),restoreShelfViewport:returned.restoreShelfViewport.bind(returned)});
+ const frame=createReaderBuilderProbe(mainText,boundedMembers(mainText),deps,sdk.hooks).owner;
+ Object.assign(frame,{showBottomNav:false,showTabletRail:false,headerKind:'floating',headerTop:8,
+  content:()=>listOwner.bookshelfList(false),onHeaderHeightChange:height=>{listOwner.headerClearance=height+14;listOwner.replay();}});
  frame.initialRender();
  const list=sdk.nodes(listOwner).find(node=>node.type==='List'),items=sdk.nodes(listOwner).filter(node=>node.type==='ListItem');
+ assert.equal(list.create.scroller,scroller,'public migration keeps the actual viewport Scroller owner');
+ assert.equal(list.contentStartOffset,74);assert.equal(list.maintainVisibleContentPosition,true);
  assert.equal(items.length,1,'header remains outside the List and does not add an index-shifting item');
- assert.equal(typeof items[0].create?.[0],'function','the SDK gives native List the actual lazy item body');
- items[0].create[0](items[0].id,true);
- const firstContent=sdk.nodes(listOwner).find(node=>node.type==='Column'&&node.padding?.top===headerSpec.contentGap+headerSpec.contentUnderlap);
- assert.ok(firstContent,'the first item compensates for the approved header underlap');
- assert.equal(list.create.scroller,scroller,'actual shelf retains its viewport Scroller');
- assert.equal(list.contentStartOffset,headerSpec.frameHeight-headerSpec.contentUnderlap);
- assert.equal(list.contentStartOffset+firstContent.padding.top,headerSpec.contentClearance);
- assert.equal(list.maintainVisibleContentPosition,true);
- assert.ok(sdk.nodes(frame).some(node=>node.type==='Stack'&&node.backgroundColor),'actual Scaffold paints the page root');
- const surfaceFile=new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets',import.meta.url);
- const SearchHeader=selectedProductionMethods(surfaceFile,'ReaderLibrarySearchSurface',['captureHeader'],{
-  readerPresentedHeaderBottom:sdk.deps.readerPresentedHeaderBottom,bookshelfHeaderSpec:headerSpecs.bookshelfHeaderSpec,
- });
- const accepted=[];
- const search=Object.assign(new SearchHeader(),{mounted:true,measurementKey:7,identity:11,navigationGeneration:1,mounting:3,
-  headerBottom:headerSpec.frameHeight,onHeaderBottom(bottom,...identity){
-   accepted.push([bottom,...identity]);listOwner.headerBottom=bottom;listOwner.replay();
-  }});
- const header=sdk.create('ReaderFixedHeaderHost',{style:new sdk.deps.ReaderHeaderFrameStyle(true,''),measurementKey:7,
-  onHeightChange:(height,key)=>search.captureHeader(height,key)});
- header.initialRender();
- const measured=sdk.nodes(header).find(node=>node.type==='Column'&&node.onAreaChange);
- assert.ok(measured,'the public fixed header publishes a native measurement');
- const oldMeasurement=measured.onAreaChange;
- oldMeasurement({}, {height:'96vp'});
- const bottom=96+headerSpec.topInset;
- assert.deepEqual(accepted,[[bottom,11,7,1,3]],'actual search surface publishes the measured bottom with the shelf identity');
- assert.equal(list.contentStartOffset,bottom-headerSpec.contentUnderlap);
- assert.equal(list.contentStartOffset+firstContent.padding.top,bottom+headerSpec.contentGap,'actual measured header and content gap reach the same List');
+ assert.ok(sdk.nodes(frame).some(node=>node.type==='Stack'&&node.backgroundColor),'actual Scaffold paints the same page root');
+ const headerOwner=sdk.walk(frame).find(owner=>owner.kind==='floating'&&typeof owner.onHeightChange==='function');
+ const measured=[...headerOwner.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
+ assert.ok(measured,'public HeaderHost owns measurement');measured.onAreaChange({}, {height:'96vp'});
+ assert.equal(list.contentStartOffset,118,'public height plus top gap and approved list gap propagate once');
  assert.equal(sdk.nodes(listOwner).find(node=>node.type==='List'),list,'changed header clearance keeps the native List actor');
- assert.equal(list.create.scroller,scroller);assert.deepEqual(sdk.nodes(listOwner).filter(node=>node.type==='ListItem'),items);
- search.measurementKey=8;
- oldMeasurement({}, {height:'300vp'});
- assert.equal(accepted.length,1,'a retired header measurement cannot change the list');
- assert.equal(list.contentStartOffset,bottom-headerSpec.contentUnderlap);
+ assert.equal(list.create.scroller,scroller);assert.deepEqual(sdk.nodes(listOwner).filter(node=>node.type==='ListItem'),items,'measurement preserves item identities');
 }
 
 if(selectedCase==='route-anchor-capture')routeAnchorCapture();
-else await headerScrollerIdentity();
+else headerScrollerIdentity();
 }

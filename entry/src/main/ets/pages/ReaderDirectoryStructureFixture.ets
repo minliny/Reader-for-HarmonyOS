@@ -2,30 +2,37 @@
 // This file owns no Runtime/Core/Host, real navigation, user records or network.
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { ReaderFullDirectory } from '../features/reading/ReaderFullDirectory';
-import { BookDirectoryPage } from '../features/bookshelf/BookDirectoryPage';
-import { ReaderControlDirectoryContent } from '../features/reading/ReaderControlDirectoryContent';
-import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { resolveReaderControlLayout, type ReaderControlLayoutSnapshot } from '../features/reading/ReaderLayoutGeometry';
-import { ReaderControlGeometry } from '../features/reading/ReaderControlGeometry';
+import { ReaderFullDirectory } from '../features/reading/ui/ReaderFullDirectory';
+import { BookDirectoryPage } from '../features/reading/ui/BookDirectoryPage';
+import { ReaderControlDirectoryContent } from '../features/reading/ui/ReaderControlDirectoryContent';
+import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
+import { resolveReaderControlLayout, type ReaderControlLayoutSnapshot, type ReaderControlModuleMeasurer } from '../features/reading/ui/ReaderLayoutGeometry';
+import { ReaderControlGeometry } from '../features/reading/ui/ReaderControlGeometry';
 import { readerControlMotionBounds, sampleReaderControlMotionComposition,
-  type ReaderControlMotionFrame } from '../features/reading/ReaderControlMotionGeometry';
-import { readerControlDirectoryFrame } from '../features/reading/ReaderControlHeaderGeometry';
-import { readerReadableFontScale } from '../features/common/ReaderSurfaceResolvers';
-import { readerPageAreaLength } from '../features/common/ReaderPageShell';
-import type { LocalReadingTocEntry, LocalReadingBookmark } from '../features/reading/LocalReadingFlowGateway';
-import type { ReaderDirectoryChapterStartBookmarkRequest } from '../features/reading/ReaderDirectoryMarkerState';
-import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
-import type { MangaDownloadAction, MangaDownloadActionId } from '../features/manga/MangaDownloadActionsGateway';
-import type { ReaderBookIdentity } from '../features/reading/ReaderBookmarkProjection';
-import type { ReaderDirectoryNavigationPortFactory } from '../features/reading/ReaderDirectoryNavigation';
-import { readerDirectoryFixtureEntries, ReaderDirectoryFixturePort, readerDirectoryFixtureCopyEntry } from './ReaderDirectoryStructureFixtureData';
+  type ReaderControlMotionFrame } from '../features/reading/ui/ReaderControlMotionGeometry';
+import { readerReadableFontScale } from '../ui/foundation/ReaderSurfaceResolvers';
+import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
+import type { LocalReadingTocEntry } from '../features/reading/application/LocalReadingFlowGateway';
+import type { ReaderDirectoryChapterStartBookmarkRequest } from '../features/reading/presentation/ReaderDirectoryMarkerState';
+import type { MangaDownloadAction, MangaDownloadActionId } from '../features/manga/application/MangaDownloadActionsGateway';
+import type { ReaderBookIdentity } from '../features/reading/presentation/ReaderBookmarkProjection';
+import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../features/reading/presentation/ReadingDirectoryRecovery';
+import type { ReaderDirectoryNavigationPortFactory } from '../features/reading/application/ReaderDirectoryNavigation';
+import { readerDirectoryFixtureEntries, ReaderDirectoryFixturePort, readerDirectoryFixtureCopyEntry,
+  nextReaderDirectoryFixtureInstanceId } from './ReaderDirectoryStructureFixtureData';
+import { ReaderOfflineRecoveryFixtureOwner } from './ReaderOfflineRecoveryFixtureOwner';
 
 export type ReaderDirectoryFixtureMode = 'text' | 'manga' | 'control';
 interface ReaderDirectoryFixtureObservation {
   kind: string;
   mode: string;
+  flatCatalog: boolean;
+  sourceSwitchCandidate: boolean;
+  targetSelectionBusy: boolean;
+  fixtureInstanceId: number;
   presentation: number;
+  bookId: string;
+  viewId: string;
   actualWidthVp: number;
   actualHeightVp: number;
   systemFontScale: number;
@@ -42,30 +49,42 @@ export struct ReaderDirectoryStructureFixture {
   @StorageLink('readerWindowMetricsRevision') @Watch('onMetricsChanged') private windowMetricsRevision: number = 0;
   @Prop @Watch('resetFixture') mode: ReaderDirectoryFixtureMode = 'text';
   @Prop @Watch('resetFixture') fontsReady: boolean = false;
+  @Prop @Watch('resetFixture') flatCatalog: boolean = false;
+  @Prop @Watch('resetFixture') sourceSwitchCandidate: boolean = false;
+  @Prop @Watch('resetFixture') emptyRetry: boolean = false;
+  @Prop @Watch('resetFixture') offlineRecovery: boolean = false;
   @Prop catalogContext: 'detail' | 'reader' = 'detail';
   @Prop controlExpanded: boolean = true;
   @Prop controlViewportHeight: number = 0;
-  @Prop @Watch('resetFixture') initialControlTab: string = 'directory';
   onBack: () => void = (): void => {};
   onAction: (kind: string, chapterIndex: number) => void = (_kind: string, _chapterIndex: number): void => {};
-  onSelection: (label: string) => void = (_label: string): void => {};
   @State private entries: LocalReadingTocEntry[] = [];
   @State private currentChapterIndex: number = 21;
+  @State private targetSelectionBusy: boolean = false;
   @State private controlTab: string = 'directory';
-  private bookmarkSelection: string = 'bookmark-selection:none';
   @State private actualWidth: number = 0;
   @State private actualHeight: number = 0;
   @State private localControlViewportHeight: number = 0;
   @State private presentation: number = 0;
+  private readonly fixtureInstanceId: number = nextReaderDirectoryFixtureInstanceId();
   private intentCount: number = 0;
   private mounted: boolean = false;
   private nextBookmarkTime: number = 1793671200000;
+  private fixturePort: ReaderDirectoryFixturePort | undefined = undefined;
   private navigationFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
+  @State private controlMinimumKey: string = '';
+  private controlMinimumRevision: number = 0;
+  private controlMinimumMeasurer: ReaderControlModuleMeasurer | undefined = undefined;
   private actualControlWidth: number = 0;
   private actualControlHeight: number = 0;
+  @State private offlineRecoveryRevision: number = 0;
+  private offlineOwner: ReaderOfflineRecoveryFixtureOwner | undefined;
+  private offlineReceiptTimer: number = -1;
 
   aboutToAppear(): void { this.mounted = true; this.resetFixture(); }
-  aboutToDisappear(): void { this.mounted = false; this.presentation += 1; }
+  aboutToDisappear(): void {
+    this.mounted = false; this.presentation += 1; this.fixturePort?.close(); this.closeOfflineOwner();
+  }
 
   private admitted(): boolean {
     return this.mounted && DEBUG === true && BUILD_MODE_NAME === 'debug' && this.fontsReady;
@@ -73,72 +92,111 @@ export struct ReaderDirectoryStructureFixture {
 
   private resetFixture(): void {
     this.presentation += 1;
+    this.closeOfflineOwner();
+    this.fixturePort?.close(); this.fixturePort = undefined;
     this.actualControlWidth = 0; this.actualControlHeight = 0;
     this.localControlViewportHeight = this.initialRequestedControlHeight();
     this.entries = this.admitted() ? readerDirectoryFixtureEntries(this.mode === 'manga') : [];
-    this.currentChapterIndex = 21;
-    this.controlTab = this.initialControlTab === 'bookmarks' ? 'bookmarks' : 'directory';
-    this.bookmarkSelection = 'bookmark-selection:none';
-    if (this.mode === 'control' && this.controlTab === 'bookmarks') this.entries = this.withControlBookmarkScope(this.entries);
+    if (this.sourceSwitchCandidate) {
+      this.entries = this.entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
+        const candidate = readerDirectoryFixtureCopyEntry(entry);
+        candidate.downloadState = 'unknown';
+        candidate.bookmarks = undefined;
+        return candidate;
+      });
+    }
+    this.currentChapterIndex = this.sourceSwitchCandidate ? -1 : 21;
+    this.targetSelectionBusy = false;
+    this.controlTab = 'directory';
     this.intentCount = 0;
     this.nextBookmarkTime = 1793671200000;
     this.navigationFactory = undefined;
+    this.controlMinimumMeasurer = undefined; this.controlMinimumKey = ''; this.controlMinimumRevision += 1;
     if (this.admitted()) {
       const presentation = this.presentation, identity = this.identity();
       const port = new ReaderDirectoryFixturePort(identity.sourceId, identity.bookId,
-        `directory-fixture:${this.mode}:${presentation}`, (): LocalReadingTocEntry[] => this.entries,
+        `${this.openingIdentity()}:${this.mode}`, (): LocalReadingTocEntry[] => this.entries,
         (): boolean => this.current(presentation),
-        (kind: string, index: number): void => { if (this.current(presentation)) this.record(kind, index); });
+        (kind: string, index: number): void => { if (this.current(presentation)) this.record(kind, index); }, this.flatCatalog, this.emptyRetry);
+      this.fixturePort = port;
       this.navigationFactory = (): ReaderDirectoryFixturePort => {
         if (!this.current(presentation)) throw new Error('directory fixture factory has retired');
         return port;
       };
+      if (this.offlineRecovery && this.mode === 'manga') {
+        const owner = new ReaderOfflineRecoveryFixtureOwner(this.openingIdentity(), {
+          sourceId: identity.sourceId, sourceName: '内存目录样本', bookId: identity.bookId,
+          title: identity.bookName, author: identity.bookAuthor,
+        }, (): LocalReadingTocEntry[] => this.entries, (): boolean => this.current(presentation), (): void => {
+          if (this.current(presentation)) { this.offlineRecoveryRevision += 1; this.recordOffline('owner-change'); }
+        });
+        this.offlineOwner = owner;
+        void owner.load().then((): void => this.recordOffline('loaded')).catch((): void => this.recordOffline('load-failed'));
+      }
     }
     if (this.admitted()) this.record('mount');
   }
 
+  private openingIdentity(): string { return `directory-fixture:${this.fixtureInstanceId}:${this.presentation}`; }
+
   private identity(): ReaderBookIdentity {
-    return { sourceId: 'directory-native-fixture', bookId: `${this.mode}:${this.presentation}`,
-      libraryBookId: `directory-native-fixture:${this.mode}:${this.presentation}`,
+    const bookId = `${this.mode}:${this.fixtureInstanceId}:${this.presentation}`;
+    return { sourceId: 'directory-native-fixture', bookId: bookId,
+      libraryBookId: `directory-native-fixture:${bookId}`,
       bookName: '目录原生夹具 · 山海行记', bookAuthor: '内存样本' };
   }
 
-  private withControlBookmarkScope(entries: LocalReadingTocEntry[]): LocalReadingTocEntry[] {
-    const identity = this.identity();
-    return entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
-      if (entry.index !== 21 || entry.bookmarks === undefined) return entry;
-      const copy = readerDirectoryFixtureCopyEntry(entry);
-      copy.bookmarks = entry.bookmarks.map((bookmark: LocalReadingBookmark): LocalReadingBookmark => ({
-        time: bookmark.time, chapterIndex: bookmark.chapterIndex, chapterOffset: bookmark.chapterOffset,
-        chapterTitle: bookmark.chapterTitle, content: bookmark.content, bookText: bookmark.bookText,
-        positionScope: { sourceId: identity.sourceId, bookId: identity.bookId,
-          chapterIndex: bookmark.chapterIndex, bodyVersion: 'fixture-body', processingVersion: 'fixture-processing' },
-      }));
-      return copy;
-    });
+  private closeOfflineOwner(): void {
+    if (this.offlineReceiptTimer >= 0) clearTimeout(this.offlineReceiptTimer);
+    this.offlineReceiptTimer = -1;
+    this.offlineOwner?.close(); this.offlineOwner = undefined;
   }
 
-  private selectBookmark(presentation: number, id: string, chapterIndex: number, chapterOffset: number,
-    positionScope?: RemoteReadingPositionScope): void {
-    if (!this.current(presentation)) return;
-    const scope = positionScope === undefined ? 'none' :
-      `${positionScope.sourceId}:${positionScope.bookId}:${positionScope.chapterIndex}:${positionScope.bodyVersion}:${positionScope.processingVersion}`;
-    this.bookmarkSelection = `bookmarkId=${id} chapter=${chapterIndex} offset=${chapterOffset} scope=${scope}`;
-    this.onSelection(this.bookmarkSelection);
-    this.intent(presentation, 'select-bookmark', chapterIndex);
+  private recordOffline(kind: string): void {
+    if (!this.admitted() || this.offlineOwner === undefined) return;
+    const operation = this.offlineOwner.host.snapshot();
+    hilog.info(0x5244, 'ReaderOfflineFixture', 'READER_OFFLINE_FIXTURE %{public}s', JSON.stringify({
+      kind, fixtureInstanceId: this.fixtureInstanceId, presentation: this.presentation,
+      bookId: this.identity().bookId, generation: operation?.generation ?? 0,
+      confirmation: operation?.projection.receipt.confirmation ?? 'idle',
+      readback: operation?.projection.receipt.readback ?? 'idle', recoveryAction: operation?.recoveryAction ?? '',
+      queryCount: this.offlineOwner.gateway.queryCount, continueCount: this.offlineOwner.gateway.continueCount,
+      rawOriginal: this.offlineOwner.gateway.rawOriginal(), unexpectedRequests: this.offlineOwner.runtime.unexpectedRequests,
+    }));
+  }
+
+  private recoverOffline(presentation: number, generation: number, identity: string, continuing: boolean): void {
+    const owner = this.offlineOwner;
+    if (!this.current(presentation) || owner === undefined || !owner.reconcile(generation, identity, continuing)) return;
+    this.offlineReceiptTimer = setTimeout((): void => {
+      this.offlineReceiptTimer = -1;
+      if (this.current(presentation) && owner === this.offlineOwner) owner.complete(continuing);
+    }, 6000);
+  }
+
+  private memoryRecovery(_revision: number): ReadingDirectoryRecovery {
+    if (this.offlineOwner !== undefined) return this.offlineOwner.recovery();
+    const identity = this.identity();
+    return readingDirectoryRecovery(this.openingIdentity(), {
+      sourceId: identity.sourceId, sourceName: '内存目录样本', bookId: identity.bookId,
+      title: identity.bookName, author: identity.bookAuthor,
+    }, undefined, undefined, this.admitted());
   }
 
   private current(presentation: number): boolean { return this.admitted() && presentation === this.presentation; }
 
   private record(kind: string, chapterIndex: number = -1): void {
-    const observation: ReaderDirectoryFixtureObservation = { kind: kind, mode: this.mode,
+    const observation: ReaderDirectoryFixtureObservation = { kind: kind, mode: this.mode, flatCatalog: this.flatCatalog,
+      sourceSwitchCandidate: this.sourceSwitchCandidate, targetSelectionBusy: this.targetSelectionBusy,
+      fixtureInstanceId: this.fixtureInstanceId, bookId: this.identity().bookId,
+      viewId: `${this.openingIdentity()}:${this.mode}`,
       presentation: this.presentation, actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
-      systemFontScale: ReaderWindowCoordinator.metrics().systemFontScale,
+      systemFontScale: readerWindowMetrics().systemFontScale,
       chapterIndex: chapterIndex, intentCount: this.intentCount,
       initialRequestedControlHeightVp: this.initialRequestedControlHeight(),
       requestedControlHeightVp: this.requestedControlHeight(),
       actualControlWidthVp: this.actualControlWidth, actualControlHeightVp: this.actualControlHeight };
-    hilog.info(0x5244, 'ReaderDirectoryFixture', '%{public}s', JSON.stringify(observation));
+    hilog.info(0x5244, 'ReaderDirectoryFixture', 'READER_DIRECTORY_FIXTURE %{public}s', JSON.stringify(observation));
   }
 
   private onMetricsChanged(): void { if (this.admitted()) this.record('system-metrics'); }
@@ -173,7 +231,7 @@ export struct ReaderDirectoryStructureFixture {
   private viewportHudFontScale(): number {
     // Bind these diagnostic budgets to the existing published metrics owner.
     const _revision = this.windowMetricsRevision;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
 
   private viewportHudButtonWidth(): number {
@@ -208,6 +266,25 @@ export struct ReaderDirectoryStructureFixture {
       (width === this.actualControlWidth && height === this.actualControlHeight)) return;
     this.actualControlWidth = width; this.actualControlHeight = height;
     this.record('actual-control-area');
+    this.refreshControlMinimum();
+  }
+
+  private admitControlMinimum(presentation: number, identity: string,
+    measurer: ReaderControlModuleMeasurer | undefined): void {
+    if (!this.current(presentation) || identity !== `${this.openingIdentity()}:${this.controlTab}`) return;
+    if (this.controlMinimumMeasurer === measurer) return;
+    this.controlMinimumMeasurer = measurer;
+    this.controlMinimumRevision += 1;
+    this.refreshControlMinimum();
+  }
+
+  private refreshControlMinimum(): void {
+    if (!this.admitted() || this.mode !== 'control' || this.controlMinimumMeasurer === undefined || this.actualControlWidth <= 0) return;
+    const key = `${this.openingIdentity()}:${this.controlTab}:${this.controlMinimumRevision}|${this.actualControlWidth}`;
+    if (key === this.controlMinimumKey) return;
+    const minimum = this.controlMinimumMeasurer({ panelWidthVp: this.actualControlWidth,
+      quickContentWidthVp: this.actualControlWidth, fullContentWidthVp: this.actualControlWidth }, key);
+    if (minimum !== undefined) this.controlMinimumKey = key;
   }
 
   private measure(area: Area): void {
@@ -249,6 +326,16 @@ export struct ReaderDirectoryStructureFixture {
     this.onBack();
   }
 
+  private selectSourceSwitchTarget(presentation: number, chapterIndex: number): void {
+    if (!this.current(presentation) || !this.sourceSwitchCandidate || this.targetSelectionBusy) return;
+    const entry = this.entries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === chapterIndex);
+    if (entry === undefined || entry.navigable === false) return;
+    this.targetSelectionBusy = true;
+    this.intentCount += 1;
+    this.record('select-target-chapter', chapterIndex);
+    this.onAction('select-target-chapter', chapterIndex);
+  }
+
   private deleteBookmarks(presentation: number, times: number[]): void {
     if (!this.current(presentation)) return;
     this.entries = this.entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry =>
@@ -274,7 +361,8 @@ export struct ReaderDirectoryStructureFixture {
   }
 
   private controlLayout(): ReaderControlLayoutSnapshot {
-    const metrics = ReaderWindowCoordinator.metrics();
+    this.windowMetricsRevision;
+    const metrics = readerWindowMetrics();
     return resolveReaderControlLayout(this.actualWidth, this.actualHeight, false, metrics);
   }
 
@@ -282,24 +370,24 @@ export struct ReaderDirectoryStructureFixture {
     const layout = this.controlLayout(), expanded = layout.widthClass === 'expanded';
     const fullHeight = Math.min(Math.max(0, layout.fullPanelHeight), expanded ? 852 : 736);
     const quickHeight = Math.min(fullHeight, new ReaderControlGeometry(expanded).sheetH);
-    return readerControlDirectoryFrame(sampleReaderControlMotionComposition(
+    return sampleReaderControlMotionComposition(
       { visibilityProgress: 1, expansionProgress: this.controlExpanded ? 1 : 0 },
-      readerControlMotionBounds(layout.fullPanelWidth, fullHeight, layout.dockBottomGap, quickHeight)),
-      readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale));
+      readerControlMotionBounds(layout.fullPanelWidth, fullHeight, layout.dockBottomGap, quickHeight, layout.contentBudget));
   }
 
   @Builder
   private textContent(presentation: number) {
     ReaderFullDirectory({ bookTitle: '目录原生夹具 · 山海行记',
       chapterTitle: this.entries[this.currentChapterIndex]?.title ?? '',
-      catalogContext: this.catalogContext, sourceId: this.identity().sourceId,
+      catalogContext: this.catalogContext, sourceId: this.identity().sourceId, bookId: this.identity().bookId,
+      isOpeningCurrent: (): boolean => this.current(presentation),
       bookmarkIdentity: this.identity(), navigationPortFactory: this.navigationFactory,
+      directoryRecovery: this.memoryRecovery(this.offlineRecoveryRevision),
       entries: this.entries, currentChapterIndex: this.currentChapterIndex,
-      animateFromControl: false, chapterStartBookmarkCreationEnabled: true,
+      chapterStartBookmarkCreationEnabled: true,
       onSelectChapter: (index: number): void => this.intent(presentation, 'select-chapter', index),
       onSelectNavigationTarget: (index: number): void => this.intent(presentation, 'select-chapter', index),
-      onSelectBookmark: (id: string, index: number, offset: number, scope?: RemoteReadingPositionScope): void =>
-        this.selectBookmark(presentation, id, index, offset, scope),
+      onSelectBookmark: (_id: string, index: number): void => this.intent(presentation, 'select-bookmark', index),
       onDownloadChapter: (index: number): void => this.intent(presentation, 'download-chapter', index),
       onDownloadBook: (): void => this.intent(presentation, 'download-book'),
       onClearBookOffline: (): void => this.intent(presentation, 'clear-offline'),
@@ -311,12 +399,27 @@ export struct ReaderDirectoryStructureFixture {
   }
 
   @Builder
+  private sourceSwitchContent(presentation: number) {
+    BookDirectoryPage({ sourceId: this.identity().sourceId, bookId: this.identity().bookId,
+      navigationPortFactory: this.navigationFactory, isOpeningCurrent: (): boolean => this.current(presentation),
+      bookTitle: '目录原生夹具 · 山海画卷', entries: this.entries,
+      currentChapterIndex: -1, currentPageOrdinal: -1, currentPageTotal: -1,
+      catalogMessage: '请选择目标章节继续换源', selectionBusy: this.targetSelectionBusy,
+      onSelectChapter: (index: number): void => this.selectSourceSwitchTarget(presentation, index),
+      onSelectNavigationTarget: (index: number): void => this.selectSourceSwitchTarget(presentation, index),
+      onBack: (): void => this.leave(presentation) });
+  }
+
+  @Builder
   private mangaContent(presentation: number) {
     BookDirectoryPage({ sourceId: this.identity().sourceId, bookId: this.identity().bookId,
-      navigationPortFactory: this.navigationFactory, contentKind: 'manga',
+      navigationPortFactory: this.navigationFactory, isOpeningCurrent: (): boolean => this.current(presentation),
       bookTitle: '目录原生夹具 · 山海画卷', entries: this.entries,
       currentChapterIndex: this.currentChapterIndex, currentPageOrdinal: 7, currentPageTotal: 24,
-      mangaDownloadEnabled: true, chapterStartBookmarkCreationEnabled: true,
+      mangaDownloadEnabled: true,
+      directoryRecovery: this.memoryRecovery(this.offlineRecoveryRevision),
+      onReconcileOffline: (generation: number, identity: string): void => this.recoverOffline(presentation, generation, identity, false),
+      onContinueOffline: (generation: number, identity: string): void => this.recoverOffline(presentation, generation, identity, true),
       onLoadDownloadActions: async (index?: number): Promise<MangaDownloadAction[]> => {
         if (!this.current(presentation)) return [];
         this.record('download-menu', index ?? -1);
@@ -328,22 +431,25 @@ export struct ReaderDirectoryStructureFixture {
       },
       onSelectChapter: (index: number): void => this.intent(presentation, 'select-chapter', index),
       onSelectNavigationTarget: (index: number): void => this.intent(presentation, 'select-chapter', index),
-      onDownloadChapter: (index: number): void => this.intent(presentation, 'download-chapter', index),
-      onDeleteBookmarks: (times: number[]): void => this.deleteBookmarks(presentation, times),
-      onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => this.createBookmark(presentation, request),
       onRetryCatalog: (): void => this.intent(presentation, 'retry-catalog'),
       onBack: (): void => this.leave(presentation) });
   }
 
   @Builder
   private controlContent(presentation: number) {
-    ReaderControlDirectoryContent({ entries: this.entries, currentChapterIndex: this.currentChapterIndex,
+    ReaderControlDirectoryContent({
+      minimumIdentity: `${this.openingIdentity()}:${this.controlTab}`,
+      minimumKey: this.controlMinimumKey,
+      onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
+        this.admitControlMinimum(presentation, identity, measurer),
+      entries: this.entries, currentChapterIndex: this.currentChapterIndex,
       bookmarkIdentity: this.identity(), navigationPortFactory: this.navigationFactory,
+      bookmarkRecovery: this.memoryRecovery(this.offlineRecoveryRevision),
       catalogComplete: true, catalogChapterCount: this.entries.length,
       catalogReadableChapterCount: this.entries.length, catalogReadablePosition: this.currentChapterIndex,
       progress: this.controlExpanded ? 1 : 0, interactionEnabled: true,
       availableWidth: this.controlFrame().content.width, availableHeight: this.controlHeight(),
-      tab: this.controlTab, sessionKey: `directory-fixture:${presentation}`,
+      tab: this.controlTab, sessionKey: this.openingIdentity(),
       chapterDownloadEnabled: true, chapterStartBookmarkCreationEnabled: true,
       onTabChange: (tab: string): void => {
         if (!this.current(presentation)) return;
@@ -352,8 +458,7 @@ export struct ReaderDirectoryStructureFixture {
       },
       onSelectChapter: (index: number): void => this.intent(presentation, 'select-chapter', index),
       onSelectNavigationTarget: (index: number): void => this.intent(presentation, 'select-chapter', index),
-      onSelectBookmark: (id: string, index: number, offset: number, scope?: RemoteReadingPositionScope): void =>
-        this.selectBookmark(presentation, id, index, offset, scope),
+      onSelectBookmark: (_id: string, index: number): void => this.intent(presentation, 'select-bookmark', index),
       onDownloadChapter: (index: number): void => this.intent(presentation, 'download-chapter', index),
       onDeleteBookmarks: (times: number[]): void => this.deleteBookmarks(presentation, times),
       onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => this.createBookmark(presentation, request),
@@ -390,7 +495,10 @@ export struct ReaderDirectoryStructureFixture {
             this.controlContent(presentation);
             if (this.viewportHudVisible()) this.viewportHud(presentation);
           }
-          else if (this.mode === 'manga') this.mangaContent(presentation);
+          else if (this.mode === 'manga') {
+            if (this.sourceSwitchCandidate) this.sourceSwitchContent(presentation);
+            else this.mangaContent(presentation);
+          }
         }, (presentation: number): string => presentation.toString());
       }
     }.width('100%').height('100%')

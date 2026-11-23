@@ -20,8 +20,8 @@ const { createBookTurnTextureOwner } = await import('./lib/reader-book-turn-owne
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const file=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
 class ReaderMaterializedChapterContext {
   constructor(chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar){Object.assign(this,{chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar});}
 }
@@ -54,15 +54,15 @@ const { createBookTurnTextureOwner } = await import('./lib/reader-book-turn-owne
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const file=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
 class ReaderMaterializedChapterContext {
   constructor(chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar){Object.assign(this,{chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar});}
 }
 class ReaderPageTurnPreparation {constructor(direction,origin,originChapterIndex,originPageStartScalar,generation){Object.assign(this,{direction,origin,originChapterIndex,originPageStartScalar,generation});}}
 // Reproduce eviction after walking forward across many chapters, then coming
 // back four chapter boundaries: a pagination target is not a materialized body.
-const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
 const Demand = productionMotionMethods(file,
   ['requestPageTurnChapter', 'isStableVisiblePageOwner', 'startPreviousPagePreparationDiscovery', 'beginPageTurnPreparation'],
   { readerRapidPageTurnDirection: state => state.direction });
@@ -162,8 +162,8 @@ const { createBookTurnTextureOwner } = await import('./lib/reader-book-turn-owne
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const file=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
 class PendingSnapshot { constructor(identity,pageGeneration,pixelMap){Object.assign(this,{identity,pageGeneration,pixelMap});} }
 const Capture = productionMotionMethods(file, ['sessionLaunchRenderWorkBlocked', 'captureBookTurnTexture','takeBookTurnPendingSnapshot','releaseBookTurnPendingSnapshot'], {
   ReaderBookTurnSnapshot:PendingSnapshot,

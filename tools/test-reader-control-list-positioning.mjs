@@ -12,7 +12,7 @@ import {
   readerControlNearestBookmarkRow,
   readerControlUniformListViewport,
   retainReaderControlListPositioning,
-} from '../entry/src/main/ets/features/reading/ReaderControlListPositioning.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlListPositioning.ts';
 
 // Expectations come from execution reference D-01/D-03, not a copied sampler.
 const bookmarks = [

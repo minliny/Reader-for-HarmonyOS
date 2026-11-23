@@ -12,6 +12,7 @@ export type ReaderProductSurface =
   'discover' |
   'rss' |
   'sync' |
+  'wideNavigationRail' |
   'unimplementedSettings';
 
 function configuredReaderProductProfile(): ReaderProductProfile {
@@ -25,7 +26,13 @@ export function isReaderProductSurfaceEnabled(surface: ReaderProductSurface): bo
     return false;
   }
   return surface === 'discover' || surface === 'rss' || surface === 'sync' ||
-    surface === 'unimplementedSettings';
+    surface === 'wideNavigationRail' || surface === 'unimplementedSettings';
+}
+
+/** Admission affects the effective navigation only; the persisted preference
+ * remains owned by Settings and is retained for a future qualified profile. */
+export function effectiveReaderWideNavigationRail(preferred: boolean): boolean {
+  return preferred && isReaderProductSurfaceEnabled('wideNavigationRail');
 }
 
 export function isReaderMainTabEnabled(key: string): boolean {

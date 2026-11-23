@@ -1,0 +1,114 @@
+{
+  "id": "bookshelf.search-source-load-error",
+  "version": 3,
+  "phase": 1,
+  "pageId": "bookshelf",
+  "fixture": {
+    "id": "public-search-source-load-error-v3",
+    "description": "Open Search from the isolated public bookshelf. A settled healthy source.list read requires the normal native input over the bookshelf. A real failed read requires the native recovery surface and actual keyboard state.",
+    "bookTitle": "Reader Phase 1 公共长目录",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "before",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-search",
+      "kind": "action",
+      "op": "click",
+      "from": "before",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [
+        {
+          "kind": "search-open-accepted"
+        }
+      ]
+    },
+    {
+      "id": "entry-projection",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-library-search-back",
+        "reader-bookshelf-search-sourceLoadError"
+      ],
+      "afterAction": "open-search",
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "input"
+          },
+          "match": "latest",
+          "channel": "business"
+        },
+        {
+          "kind": "search-page-projection",
+          "fields": {
+            "payload.projection": "sourceLoadError"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ],
+      "quietMs": 125
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+    "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets",
+    "entry/src/main/ets/features/search/ui/SearchPage.ets",
+    "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
+    "entry/src/main/ets/features/search/presentation/SearchPresentation.ts",
+    "entry/src/main/ets/features/search/presentation/SearchPublication.ts",
+    "entry/src/main/ets/features/search/presentation/SearchViewState.ts",
+    "entry/src/main/ets/features/search/application/SearchGateway.ts",
+    "entry/src/main/ets/features/search/application/SearchOrchestrator.ets",
+    "entry/src/main/ets/features/search/application/SearchHost.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchTaskPanel.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets"
+  ],
+  "assertions": [
+    {
+      "id": "search.entry.source-load-error",
+      "evaluator": "search",
+      "kind": "phase-projection",
+      "required": false,
+      "expected": {
+        "mode": "input",
+        "projections": [
+          "sourceLoadError"
+        ],
+        "searchActive": false,
+        "node": "reader-bookshelf-search-sourceLoadError"
+      },
+      "source": "entry/src/main/ets/features/search/ui/SearchPage.ets#observePageProjection",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-search",
+      "sample": "entry-projection",
+      "condition": "The native source repository's real source.list request fails in the controlled public-data session."
+    }
+  ],
+  "structure": {
+    "before": "before",
+    "entry-projection": "entry-projection"
+  }
+}

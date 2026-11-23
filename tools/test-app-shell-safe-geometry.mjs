@@ -9,13 +9,14 @@ async function runSelectedCase() {
 
 const {default: assert} = await import('node:assert/strict');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
-const {resolveHorizontalFrame,SurfaceWidthSpec} = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const {actualReaderPhoneNavigationGeometry} = await import('./lib/reader-phone-navigation-source.mjs');
+const {resolveHorizontalFrame,SurfaceWidthSpec} = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 let metrics={windowRect:{width:410,height:800},left:51,right:7,top:30,bottom:20};
 const dependencies={ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft:m=>m.left,
  readerInteractiveSafeRight:m=>m.right,readerVisualSafeTop:m=>m.top,readerInteractiveSafeBottom:m=>m.bottom,
  TOK_HOME_TOP_BAR_INSET:17,TOK_SPACE_CONTROL_INLINE:20,resolveHorizontalFrame,SurfaceWidthSpec,MAIN_TABS:[{}, {}, {}]};
-for(const [file,name] of [['features/common/AppTopBar.ets','AppTopBar'],['features/common/PageBackBar.ets','PageBackBar']]) {
+for(const [file,name] of [['ui/chrome/AppTopBar.ets','AppTopBar'],['ui/chrome/PageBackBar.ets','PageBackBar']]) {
  const Owner=selectedProductionMethods(new URL(file,base),name,['leftInset','rightInset'],dependencies);
  const owner=Object.assign(new Owner(),{floating:false,readerWindowMetricsRevision:0,variant:'standard'});
  const left=owner.leftInset(),right=owner.rightInset();
@@ -24,8 +25,9 @@ for(const [file,name] of [['features/common/AppTopBar.ets','AppTopBar'],['featur
  assert.equal(owner.leftInset(),right);assert.equal(owner.rightInset(),left,'asymmetric edges mirror independently');
  metrics={...metrics,left:51,right:7};
 }
-const Bar=selectedProductionMethods(new URL('features/shell/MainTabBar.ets',base),'MainTabBar',['bottomBarFrame','liveWindowWidth'],dependencies);
-const bar=Object.assign(new Bar(),{readerWindowMetricsRevision:0});
+const phoneGeometry=actualReaderPhoneNavigationGeometry({...dependencies,AppStorage:{get:()=>undefined}});
+const Bar=selectedProductionMethods(new URL('app/navigation/ReaderBottomNavigation.ets',base),'ReaderBottomNavigation',['bottomBarFrame','liveWindowWidth'],{...dependencies,...phoneGeometry});
+const bar=Object.assign(new Bar(),{readerWindowMetricsRevision:0,mainViewportRevision:0});
 for(const [width,left,right] of [[410,51,7],[250,3,49],[0,10,20],[NaN,10,20],[90,120,6]]) {
  metrics={...metrics,windowRect:{...metrics.windowRect,width},left,right};
  const frame=bar.bottomBarFrame();const w=Number.isFinite(width)?Math.max(0,width):0;

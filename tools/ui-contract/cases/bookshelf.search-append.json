@@ -1,0 +1,286 @@
+{
+  "id": "bookshelf.search-append",
+  "version": 5,
+  "phase": 1,
+  "pageId": "bookshelf",
+  "fixture": {
+    "id": "public-search-append-v3",
+    "description": "Use the preloaded public local book and a public source with a short first page that triggers viewport continuation, a second page with distinct results, and a verified terminating empty page. The retained public local row must stay visible. The candidate needs negotiated book.search.page-receipt.v1 support.",
+    "inputs": {
+      "a": "Reader"
+    },
+    "bookTitle": "Reader Phase 0 公共测试书",
+    "onlineResultTitles": {
+      "cedar": "Reader Phase 1 Online Cedar",
+      "maple": "Reader Phase 1 Online Maple"
+    },
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "before",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "open-search",
+      "kind": "action",
+      "op": "click",
+      "from": "before",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [
+        {
+          "kind": "search-open-accepted"
+        }
+      ]
+    },
+    {
+      "id": "ime-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-field",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "open-search",
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "input"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ],
+      "keyboard": true,
+      "focus": "reader-book-search-input",
+      "quietMs": 125
+    },
+    {
+      "id": "type-a",
+      "kind": "action",
+      "op": "inputText",
+      "from": "ime-ready",
+      "target": "reader-book-search-input",
+      "waitFor": [
+        {
+          "kind": "search-editor-edit",
+          "fields": {
+            "payload.length": 6
+          }
+        },
+        {
+          "kind": "search-editor-selection",
+          "fields": {
+            "payload.start": 6,
+            "payload.end": 6
+          }
+        },
+        {
+          "kind": "search-draft-accepted",
+          "fields": {
+            "payload.length": 6
+          }
+        }
+      ],
+      "inputRole": "a"
+    },
+    {
+      "id": "submit-a-ready",
+      "kind": "locate",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "type-a",
+      "keyboard": true,
+      "focus": "reader-book-search-input"
+    },
+    {
+      "id": "submit-a",
+      "kind": "action",
+      "op": "click",
+      "from": "submit-a-ready",
+      "target": "reader-bookshelf-search-submit",
+      "waitFor": [
+        {
+          "kind": "search-button-intent"
+        },
+        {
+          "kind": "search-submit-accepted"
+        }
+      ]
+    },
+    {
+      "id": "results-a",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-bar",
+        "reader-library-search-back",
+        "reader-bookshelf-search-submit"
+      ],
+      "afterAction": "submit-a",
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "results"
+          },
+          "match": "latest",
+          "channel": "business"
+        },
+        {
+          "kind": "search-page-projection",
+          "fields": {
+            "payload.searchActive": false,
+            "payload.operation": "current",
+            "payload.moreSources": false,
+            "payload.resultCount": 3
+          },
+          "match": "latest",
+          "channel": "business"
+        },
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "need-more"
+          },
+          "channel": "business"
+        },
+        {
+          "kind": "search-continuation-page",
+          "fields": {
+            "payload.stage": "settled",
+            "payload.capability": "book.search.page-receipt.v1",
+            "payload.trigger": "viewport",
+            "payload.requestedPage": 3,
+            "payload.receiptState": "end"
+          },
+          "channel": "business"
+        }
+      ],
+      "keyboard": false,
+      "quietMs": 1500,
+      "stateWaitMs": 60000,
+      "stateWaitSource": "entry/src/main/ets/features/search/application/SearchGateway.ts#SEARCH_SOURCE_REQUEST_TIMEOUT_MS",
+      "anyAnchor": [
+        "reader-bookshelf-search-results",
+        "reader-bookshelf-search-empty",
+        "reader-bookshelf-search-pending"
+      ]
+    },
+    {
+      "id": "back-to-shelf",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "results-a",
+      "waitFor": [
+        {
+          "kind": "search-back-consumed"
+        }
+      ],
+      "key": "Back"
+    },
+    {
+      "id": "bookshelf-again",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "afterAction": "back-to-shelf",
+      "waitFor": [
+        {
+          "kind": "search-route-released",
+          "fields": {
+            "payload.route": "bookshelf"
+          }
+        }
+      ],
+      "keyboard": false,
+      "quietMs": 125,
+      "book": true
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+    "entry/src/main/ets/app/BookRequestScheduler.ts",
+    "entry/src/main/ets/app/library/BookSearchPageProgress.ts",
+    "entry/src/main/ets/features/search/ui/LibrarySearchResults.ets",
+    "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets",
+    "entry/src/main/ets/features/search/ui/SearchPage.ets",
+    "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
+    "entry/src/main/ets/features/search/presentation/SearchPresentation.ts",
+    "entry/src/main/ets/features/search/presentation/SearchViewState.ts",
+    "entry/src/main/ets/features/search/application/SearchOrchestrator.ets",
+    "entry/src/main/ets/features/search/application/SearchGateway.ts",
+    "entry/src/main/ets/features/search/application/SearchHost.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchTaskPanel.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets"
+  ],
+  "assertions": [
+    {
+      "id": "search.append.owns-query",
+      "evaluator": "search",
+      "kind": "phase-operation",
+      "required": false,
+      "expected": {
+        "action": "need-more",
+        "publicResult": "a",
+        "requirePageThreeEnd": true,
+        "requirePageThreeDemand": true,
+        "requireFirstPageReceipt": true
+      },
+      "source": "entry/src/main/ets/features/search/application/SearchOrchestrator.ets#needMoreResults",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner",
+        "app-input"
+      ],
+      "action": "submit-a",
+      "sample": "results-a",
+      "condition": "The controlled single source has an accepted first-page Core next receipt and is ready for page two in the current query."
+    },
+    {
+      "id": "search.back.results",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": false,
+      "expected": {
+        "consumer": "route",
+        "previousMode": "results",
+        "publicBook": true
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets#returnToBookshelf",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "back-to-shelf",
+      "baseline": "results-a",
+      "sample": "bookshelf-again",
+      "condition": "The controlled single source has an accepted first-page Core next receipt and is ready for page two in the current query."
+    }
+  ],
+  "structure": {
+    "before": "before",
+    "ime-ready": "ime-ready",
+    "results-a": "results-a",
+    "bookshelf-again": "bookshelf-again"
+  }
+}

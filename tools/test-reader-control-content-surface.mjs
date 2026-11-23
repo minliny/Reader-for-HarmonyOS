@@ -7,7 +7,7 @@ const definitions={
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
  const {default:assert}=await import('node:assert/strict');
- const motion=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+ const motion=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
  const bounds=motion.readerControlMotionBounds(364,736,19);
  if(selectedCase==='sampler'){
   for(const p of [0,.2,.5,.8,1,.8,.5,.2,0])for(const v of [1,.5,0]){
@@ -20,14 +20,14 @@ async function runCase(selectedCase){
  const {readFileSync}=await import('node:fs');
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
  if(selectedCase==='tts-backdrop'){
-  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTtsContent.ets',import.meta.url),'utf8');
+  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets',import.meta.url),'utf8');
   const {owner}=createReaderBuilderProbe(source,['quickBackdrop']);
   Object.assign(owner,{availableWidth:286,availableHeight:190,appScheme:'day',p:()=>0});owner.quickBackdrop();
   assert.equal(owner.nodes.size,1,'one authored backdrop');const node=[...owner.nodes.values()][0];
   for(const p of [0,.3,1,.7,0]){owner.p=()=>p;owner.replay();assert.equal(node.opacity,1-p);assert.equal(node.hitTestBehavior,'HitTestMode.None');}
   return;
  }
- const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlMotionStage.ets',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlMotionStage.ets',import.meta.url),'utf8');
  const {readerControlNativeTree}=await import('./fixtures/reader-control-native-tree.mjs');
  for(const module of ['directory','tts','appearance','settings','search','autoPage','replace']){
   const tree=readerControlNativeTree();

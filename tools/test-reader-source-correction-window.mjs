@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
-const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['loadSessionChapter']);
 const damaged = { sourceId: 's', bookId: 'b', chapterIndex: 833, content: 'quot;正文',
   bodyVersion: 'old', processingVersion: 'p', sourceCorrectionRequired: true };

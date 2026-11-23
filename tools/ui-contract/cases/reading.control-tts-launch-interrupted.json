@@ -1,0 +1,401 @@
+{
+  "id": "reading.control-tts-launch-interrupted",
+  "version": 1,
+  "phase": 1,
+  "pageId": "reading",
+  "fixture": {
+    "id": "public-local-reading-v1",
+    "bookTitle": "Reader Phase 0 公共测试书",
+    "description": "On the public local book with the built-in system speech engine, open Quick TTS and press its actual play control, then tap the measured reader center within the same launch. Observe the Quick TTS receiver and the same active speech session."
+  },
+  "ownerSources": [
+    "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+    "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+    "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlCapsuleVerification.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchStage.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchTimeline.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchCurves.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts",
+    "entry/src/main/ets/ui/foundation/MotionTimeline.ts",
+    "entry/src/main/ets/ui/foundation/MotionSpec.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderContinuousReadingStage.ets",
+    "entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts",
+    "entry/src/main/ets/features/reading/application/ReaderTtsGateway.ts",
+    "entry/src/main/ets/features/reading/application/ReaderTtsState.ts",
+    "entry/src/main/ets/platform/tts/HarmonyTtsHostRouter.ts",
+    "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts"
+  ],
+  "steps": [
+    {
+      "id": "reading-book-entry",
+      "kind": "locate",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "enter-reading",
+      "kind": "action",
+      "op": "click",
+      "from": "reading-book-entry",
+      "target": {
+        "publicBookTitle": "Reader Phase 0 公共测试书"
+      },
+      "waitFor": [
+        {
+          "kind": "reading.ready",
+          "fields": {
+            "payload.localBook": true,
+            "payload.reduceMotion": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "reading-before",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "enter-reading",
+      "quietMs": 500,
+      "anyAnchor": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ]
+    },
+    {
+      "id": "open",
+      "kind": "action",
+      "op": "click",
+      "from": "reading-before",
+      "target": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ],
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ],
+      "gesture": true
+    },
+    {
+      "id": "open-state",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "open",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "enter-tts",
+      "kind": "action",
+      "op": "click",
+      "from": "open-state",
+      "target": "reader-control-entry-tts",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "enter-tts-state",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "enter-tts",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "interrupt-launch",
+      "kind": "action",
+      "op": "clickThenReaderCenter",
+      "from": "enter-tts-state",
+      "target": "reader-control-tts-transport-toggle",
+      "waitFor": [
+        {
+          "kind": "reading.control-effect",
+          "channel": "business",
+          "fields": {
+            "payload.kind": "capsule-launch",
+            "payload.phase": "retired",
+            "payload.facts.type": "tts"
+          }
+        },
+        {
+          "kind": "reading.control-effect",
+          "channel": "motion",
+          "fields": {
+            "payload.kind": "capsule-launch",
+            "payload.phase": "frame-block",
+            "payload.facts.finalBlock": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "launch-interrupted",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "interrupt-launch",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "reading.control-effect",
+          "channel": "business",
+          "fields": {
+            "payload.kind": "capsule-launch",
+            "payload.phase": "retired",
+            "payload.facts.type": "tts"
+          }
+        },
+        {
+          "kind": "reading.control-effect",
+          "channel": "motion",
+          "fields": {
+            "payload.kind": "capsule-launch",
+            "payload.phase": "frame-block",
+            "payload.facts.finalBlock": true
+          }
+        }
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "id": "reading.control-tts-launch-interrupted.open",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "open",
+      "baseline": "reading-before",
+      "sample": "open-state",
+      "expected": {
+        "op": "click",
+        "direction": "open",
+        "origins": [
+          "continuous-tap",
+          "paged-tap"
+        ],
+        "source": {
+          "level": "hidden",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 220,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ],
+        "trajectory": {
+          "layoutToleranceVp": 1,
+          "opacityTolerance": 0.02,
+          "transformTolerance": 0.001,
+          "cadenceGapFactor": 3,
+          "dockTravelVp": 18,
+          "grabberWidthVp": 72,
+          "grabberHeightVp": 28,
+          "maxContentInsetVp": 13,
+          "quickContentTopVp": 29,
+          "quickContentReserveVp": 52,
+          "quickCornerVp": 8,
+          "cornerDeltaVp": 4,
+          "runtimeDurationMs": 220
+        }
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#openReaderControl",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics",
+        "debug-frame"
+      ]
+    },
+    {
+      "id": "reading.control-tts-launch-interrupted.enter-tts",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "enter-tts",
+      "baseline": "open-state",
+      "sample": "enter-tts-state",
+      "expected": {
+        "op": "click",
+        "direction": "navigate",
+        "origins": [
+          "module-button"
+        ],
+        "source": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "secondary",
+          "module": "tts",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 0,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets"
+        ]
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#requestControlSession",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    },
+    {
+      "id": "reading.control-tts-launch-interrupted.interrupt-launch",
+      "evaluator": "motion",
+      "kind": "control-effect",
+      "required": false,
+      "action": "interrupt-launch",
+      "baseline": "enter-tts-state",
+      "sample": "launch-interrupted",
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#cancelSessionLaunch",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics",
+        "debug-frame"
+      ],
+      "expected": {
+        "effect": "capsule-launch",
+        "op": "clickThenReaderCenter",
+        "type": "tts",
+        "kind": "quickTts",
+        "form": "quick",
+        "opacityTolerance": 0.03,
+        "cadenceGapFactor": 3,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlCapsuleVerification.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchStage.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchTimeline.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchCurves.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts",
+          "entry/src/main/ets/ui/foundation/MotionTimeline.ts",
+          "entry/src/main/ets/ui/foundation/MotionSpec.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderContinuousReadingStage.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
+          "entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts",
+          "entry/src/main/ets/features/reading/application/ReaderTtsGateway.ts",
+          "entry/src/main/ets/features/reading/application/ReaderTtsState.ts",
+          "entry/src/main/ets/platform/tts/HarmonyTtsHostRouter.ts",
+          "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts"
+        ],
+        "requiresSystemSpeech": true
+      },
+      "condition": "The current launch starts confirmed audio through the built-in system speech engine. An explicit system unavailability receipt is handled separately."
+    }
+  ],
+  "structure": {
+    "reading-before": "reading-before",
+    "open-state": "open-state",
+    "enter-tts-state": "enter-tts-state",
+    "launch-interrupted": "launch-interrupted"
+  }
+}

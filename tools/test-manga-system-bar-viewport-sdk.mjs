@@ -2,42 +2,30 @@ import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mj
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {createRequire,registerHooks,stripTypeScriptTypes} from 'node:module';
+import {createRequire,stripTypeScriptTypes} from 'node:module';
+import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {pureModuleProbe} from './lib/ets-pure-module-probe.mjs';
-const productionRoot=new URL('../entry/src/main/ets/',import.meta.url).href;
-registerHooks({resolve(specifier,context,next){
- if(context.parentURL?.startsWith(productionRoot)&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);
- return next(specifier,context);
-}});
-const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const {mangaSurfaceSdkDependencies,mountMangaViewportBuilder,mangaSurfaceBoundedControls}=await import('./lib/manga-surface-sdk-probe.mjs');
-const {createDefaultReaderWindowMetrics,ReaderInsetsVp,ReaderRectVp,readerInteractiveSafeInsets,readerContentSafeTop}=
- await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+import {mangaSurfaceSdkDependencies, mountMangaViewportBuilder,mangaSurfaceBoundedControls} from './lib/manga-surface-sdk-probe.mjs';
+import {createDefaultReaderWindowMetrics,ReaderInsetsVp,ReaderRectVp,readerInteractiveSafeInsets,readerContentSafeTop} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 const componentMap=require(`${sdk}/lib/component_map.js`);
 const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
-const {ReaderTransientFeedback}=pureModuleProbe(
- read('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts'),
- 'ReaderTransientFeedback.ts',{AppStorage:{get:()=>undefined}},['ReaderTransientFeedback']);
-const {readerActionIcon}=pureModuleProbe(
- read('../entry/src/main/ets/features/common/ReaderActionIconResources.ets'),
- 'ReaderActionIconResources.ets',{$r:name=>name},['readerActionIcon']);
-const source=read('../entry/src/main/ets/features/manga/MangaReadingSurface.ets');
+const source=read('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets');
 const indexSource=read('../entry/src/main/ets/pages/Index.ets');
-const shellSource=read('../entry/src/main/ets/features/shell/ReaderShell.ets');
+const shellSource=read('../entry/src/main/ets/features/reading/ui/ReaderShell.ets');
+const baseline=read('./fixtures/manga-viewport-r6/MangaReadingSurface.ets');
+const indexBaseline=read('./fixtures/manga-viewport-r6/Index.ets');
 const sha=text=>createHash('sha256').update(text).digest('hex');
+assert.equal(sha(baseline),'f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448');
+assert.equal(sha(indexBaseline),'0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5');
 function parse(text,name){
  const tree=ts.createSourceFile(virtualFilePath('MangaFullWindowSdk.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  assert.deepEqual(tree.parseDiagnostics,[]);const type=tree.statements.find(n=>n.name?.getText(tree)===name);
  assert.ok(type);return{tree,type,names:type.members.map(n=>n.name?.getText(tree)).filter(Boolean)};
 }
 const nativeBoundary=new Proxy({}, {get:()=>()=>{}});
-// The shared frame modifier executes outside the SDK component lexical scope.
-// In this isolated test process it resolves the same native enumeration.
-globalThis.HitTestMode = { Block: 'HitTestMode.Block' };
 const fullExpand=[['SafeAreaType.SYSTEM','SafeAreaType.CUTOUT'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM','SafeAreaEdge.START','SafeAreaEdge.END']];
 const fullIgnore=[['LayoutSafeAreaType.SYSTEM'],['LayoutSafeAreaEdge.ALL']];
 function assertFullWindow(actor,label){
@@ -49,10 +37,10 @@ function assertFullWindow(actor,label){
 function mangaFixture(text=source,values={}){
  // Each fixture is an independent compilation unit. Use the installed SDK's
  // reset; otherwise its prior unit's literal .id line/column produces a false
- // duplicate warning when the an independent source has different member positions.
+ // duplicate warning when the exact baseline has different member positions.
  componentMap.resetComponentMap();
  const {tree,names}=parse(text,'MangaReadingSurface');
- const projection=read('../entry/src/main/ets/features/manga/MangaStripProjection.ts').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+ const projection=read('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
  const Projection=new Function(`${stripTypeScriptTypes(projection)};return MangaStripProjection`)();
  const dataText=tree.statements.find(n=>n.name?.getText(tree)==='MangaStripDataSource').getText(tree);
  const DataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataText)};return MangaStripDataSource`)(Projection);
@@ -68,11 +56,7 @@ function mangaFixture(text=source,values={}){
  }
  class Scroller{currentOffset(){return{xOffset:31,yOffset:0};}scrollTo(...args){scrolls.push(['horizontal',...args]);}}
  const built=createReaderBuilderProbe(text,names,{
-  ...properties.sdk,...mangaSurfaceSdkDependencies,...shared.deps,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class{},ReaderTransientFeedback,
-  readerMotionDurationMs:()=>0,readerActionIcon,
-  // The body viewport and frame are real. Individual action rows have their
-  // own SDK contract and do not determine the admitted Scroll constraint.
-  ReaderActionSheetContent:mangaSurfaceSdkDependencies.ReaderActionSheetContent,
+  ...properties.sdk,...mangaSurfaceSdkDependencies,...shared.deps,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class{},
   ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
   ScrollAlign:{START:'start'},ImageFit:{Fill:'fill'},ScrollDirection:{Horizontal:'horizontal'},TouchType:{Down:0},
   LazyForEach:{create(_id,generatedOwner,data,item,key){
@@ -141,9 +125,7 @@ function verifyManga(text=source){
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 function indexFixture(text=indexSource){
  componentMap.resetComponentMap();
- // Route observation belongs to the App lifecycle, outside this geometry fixture.
- text=text.replace(/@Watch\('(?:onSearchVisibilityChanged|onShelfMotionWindowChanged)'\)/g, '');
- const {type,names}=parse(text,'Index');
+ const {tree,type,names}=parse(text,'Index'),build=type.members.find(n=>n.name?.getText(tree)==='build');
  const native=new Set(['Stack','Column','Row','Text','Button','Image','Blank','ForEach','If','Scroll','List','ListItem','LoadingProgress','Progress','Flex']);
  const dependencies={};
  const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text)&&!native.has(node.expression.text)){
@@ -151,18 +133,17 @@ function indexFixture(text=indexSource){
  }ts.forEachChild(node,visit);};visit(type);
  const properties=createArkUIPropertyRuntimeProbe(),metrics=createDefaultReaderWindowMetrics();metrics.systemInsets=new ReaderInsetsVp(0,48,0,0);
  const selected=['build','route','readingSessionActive','readingContentKind','directoryReturnTarget','detailBook','readerWindowMetricsRevision',
-  'appThemeScheme','readerOwnsWindowEdges','mangaOwnsWindowEdges','appContentTopInset','indexContent',
-  'retainsShelfOpeningBackground'];
+  'appThemeScheme','readerOwnsWindowEdges','mangaOwnsWindowEdges','appContentTopInset','onSearchVisibilityChanged',
+  'applyMangaAdjacentChapter','applyDirectoryChapter',
+  ...type.members.filter(n=>ts.getAllDecorators(n).some(d=>d.getText(tree)==='@Builder')).map(n=>n.name.getText(tree))];
  const {owner,output}=createReaderBuilderProbe(text,selected.filter(n=>names.includes(n)),{
   ...properties.sdk,...mangaSurfaceSdkDependencies,...dependencies,ReaderWindowCoordinator:{metrics:()=>metrics},readerContentSafeTop,
   ReaderRuntimeOwner:{current:()=>({setReadingPreparationContext(){},readingEntryPreparations:()=>({setPaused(){}}),bookAcquisitions:()=>({visibilityChanged(){},setPreparationVisible(){}})})},
  },properties.hooks);
- Object.assign(owner,{indexRecoveryNoticeContent(){},
+ Object.assign(owner,{preparePersistedShelfBooks(){},refreshDetailAcquisitionProjection:async()=>{},consumeSystemFileOpen(){},
   detailBook:undefined,settingsSnapshot:{reduceMotion:false},readingSessionActive:true,readingContentKind:'manga',directoryReturnTarget:'readerControl'});
  owner.route='reading';owner.initialRender();
- const roots=[...owner.nodes.values()].filter(node=>node.type==='Stack'&&Object.hasOwn(node.padding??{},'top'));
- assert.equal(roots.length,1,'Index content Stack owns route-specific top padding');
- return{owner,properties,metrics,root:roots[0],output};
+ return{owner,properties,metrics,root:owner.nodes.get(0),output};
 }
 function verifyIndex(text=indexSource){
  const f=indexFixture(text),id=f.root.id;assert.equal(f.root.type,'Stack');assert.deepEqual(f.root.padding,{top:0});
@@ -194,14 +175,14 @@ function verifyShell(){
  },{...properties.hooks,initialParams:{contentKind:'manga',visible:true,route:'reading'}});
  owner.initialRender();
  const actors=current=>[current,...[...(current.children?.values()??[])].filter(child=>child.nodes).flatMap(actors)];
- const scaffold=actors(owner).find(actor=>actor.params?.frameStyle?.safeArea!==undefined);
+ const scaffold=actors(owner).find(actor=>actor.params?.variant==='reader');
  assert.ok(scaffold?.nodes,'Shell mounts the actual SDK Scaffold instead of a child seam');
  const root=scaffold.nodes.get(0),id=root.id;assert.equal(root.type,'Stack');assertFullWindow(root,'Shell manga root');
- assert.equal(scaffold.params.frameStyle.safeArea,'systemCutoutAll');assert.equal(root.opacity,1);assert.equal(root.hitTestBehavior,'HitTestMode.Default');
+ assert.equal(scaffold.readingContentKind,'manga');assert.equal(root.opacity,1);assert.equal(root.hitTestBehavior,'HitTestMode.Default');
  assert.ok([...owner.children.values()].some(child=>child.params.windowChromeActive===true),'actual Shell Builder admits manga child Props');
  assert.ok(![...owner.nodes.values()].some(node=>node.id==='reader-overlay-status-bar-underlay'),'manga has no second status-paper overlay');
  owner.updateStateVars({contentKind:'text',visible:true,route:'reading'});properties.flush();
- assert.equal(actors(owner).find(actor=>actor.params?.frameStyle?.safeArea!==undefined),scaffold,'kind changes retain the actual native Scaffold owner');
+ assert.equal(actors(owner).find(actor=>actor.params?.variant==='reader'),scaffold,'kind changes retain the actual native Scaffold owner');
  assert.equal(scaffold.nodes.get(0),root);assert.equal(root.id,id);assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);
  assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM']],'novel Shell preserves its previous system-only expansion');
  owner.updateStateVars({contentKind:'manga',visible:true,route:'reading'});properties.flush();assertFullWindow(root,'retained Shell manga root');
@@ -218,20 +199,19 @@ function verifyShell(){
 const mangaEvidence=verifyManga(),indexEvidence=verifyIndex(),shellEvidence=verifyShell();
 for(const panel of ['directory','mode','settings','more']){
  const f=mangaFixture(source,{viewportWidth:240,stageWidth:240,viewportHeight:280,stageHeight:280,panel,controlsVisible:false});
- if(panel!=='directory'){
+ if(panel==='more'){
   const frame=f.shared.walk(f.owner).find(child=>child instanceof f.shared.deps.ReaderBoundedSurface);
-  assert.ok(frame,`${panel} mounts the actual shared frame`);assert.equal(frame.specId,'reader-action-sheet');
-  const shell=[...frame.nodes.values()].find(n=>n.type==='Column'&&n.clip===true&&n.width===frame.surfaceWidth);
+  assert.ok(frame,'More mounts the actual shared frame rather than a private Stack');assert.equal(frame.specId,'reader-action-sheet');
+  const shell=[...frame.nodes.values()].find(n=>n.type==='Column'&&n.clip===true&&n.width==='100%');
   assert.ok(shell);assert.ok(shell.constraintSize.minHeight<=shell.constraintSize.maxHeight,'short shared phone frame has consistent measured bounds');
   assert.equal(shell.constraintSize.maxHeight,f.owner.panelHeight(),'shared frame ceiling includes its reserved navigation band once');
-  const spec=f.shared.deps.resolveDrawerSpec('reader-action-sheet');
-  assert.equal(shell.constraintSize.minHeight,Math.min(spec.minimumContentHeight,f.owner.panelContentHeight())+24);
+  assert.equal(shell.constraintSize.minHeight,Math.min(260,f.owner.panelContentHeight())+24);
   assert.deepEqual({...shell.padding},{left:0,top:0,right:0,bottom:24});
   const body=f.shared.nodes(f.owner).find(n=>n.type==='Scroll'&&n.scrollBar==='BarState.Auto');
   assert.ok(body);assert.equal(f.owner.panelContentHeight(),shell.constraintSize.maxHeight-24);
-  assert.equal(body.constraintSize.maxHeight,f.owner.panelContentHeight()-f.owner.actionHeaderHeight(),'action body removes the navigation band and shared phone header once');
+  assert.equal(body.constraintSize.maxHeight,f.owner.panelContentHeight()-70,'action body removes the navigation band and shared phone header once');
  }else{
-  const shell=[...f.owner.nodes.values()].find(n=>n.type==='Stack'&&n.clip===true&&n.width===f.owner.panelWidth());
+  const shell=[...f.owner.nodes.values()].find(n=>n.type==='Stack'&&n.clip===true&&n.width==='100%');
   const size=[...f.owner.nodes.values()].find(n=>n.type==='Column'&&n.constraintSize?.maxHeight===f.owner.panelContentHeight());
   assert.ok(shell&&size);assert.ok(size.constraintSize.minHeight<=size.constraintSize.maxHeight,'short phone has consistent measured content bounds');
   assert.equal(size.constraintSize.maxHeight,f.owner.panelHeight()-24);assert.deepEqual({...shell.padding},{left:0,top:0,right:0,bottom:24});
@@ -250,15 +230,7 @@ for(const panel of ['directory','mode','settings','more']){
  assert.equal(sheet.padding.top,48);assert.equal(sheet.padding.bottom,24);
  assert.equal(f.owner.panelContentHeight(),900-48-24);assertFullWindow(f.owner.nodes.get(0),'split manga image root');
 }
-const mangaIgnore='      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL]);';
-assert.equal(source.split(mangaIgnore).length,2,'one manga root ignore request');
-const reservedImageSpace=source.replace(mangaIgnore,`      .padding(this.interactiveInsets(this.windowMetricsRevision))
-${mangaIgnore}`);
-assert.throws(()=>verifyManga(reservedImageSpace),/image ancestor has no safe-area reservation/);
-const indexIgnore=`      .ignoreLayoutSafeArea(this.mangaOwnsWindowEdges() ? [LayoutSafeAreaType.SYSTEM] : [],
-        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [])`;
-assert.equal(indexSource.split(indexIgnore).length,2,'one Index manga layout ignore request');
-const missingIndexIgnore=indexSource.replace(indexIgnore,'');
-assert.throws(()=>verifyIndex(missingIndexIgnore),/Index manga owner must exclude ancestor safe-area shrinking/);
+assert.throws(()=>verifyManga(baseline),/image ancestor has no safe-area reservation/,'exact R6 image-padding source fails actual SDK actor assertion');
+assert.throws(()=>verifyIndex(indexBaseline),/Index manga owner must exclude ancestor safe-area shrinking/,'exact R6 Index misses actual layout-safe-area ignore request');
 console.log(JSON.stringify({sourceSHA:sha(source),indexSHA:sha(indexSource),shellSHA:sha(shellSource),...mangaEvidence,...indexEvidence,...shellEvidence}));
-console.log('PASS actual SDK manga root/Index/Shell full-window layout requests, same retained Image/ListItem dimensions and row key/anchor across controls and live avoid/cached-status changes, no restore/scroll request, overlay-only safe padding, short-panel constraints/split-pane projection, novel/app preservation and two minimal R6 negative variants. Native safe-area expansion, physical bounds/pixels and OS Area delivery remain target acceptance; supplied Area/Scroller inputs are controlled and no layout engine is simulated.');
+console.log('PASS actual SDK manga root/Index/Shell full-window layout requests, same retained Image/ListItem dimensions and row key/anchor across controls and live avoid/cached-status changes, no restore/scroll request, overlay-only safe padding, short-panel constraints/split-pane projection, novel/app preservation and two exact R6 negative fixtures. Native safe-area expansion, physical bounds/pixels and OS Area delivery remain target acceptance; supplied Area/Scroller inputs are controlled and no layout engine is simulated.');

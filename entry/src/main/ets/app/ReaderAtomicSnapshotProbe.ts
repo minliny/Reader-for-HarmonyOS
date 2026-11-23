@@ -2,7 +2,7 @@ import fileIo from '@ohos.file.fs';
 import util from '@ohos.util';
 import type { BusinessError } from '@ohos.base';
 import { replaceReaderAtomicSnapshot } from './ReaderAtomicSnapshotFile';
-import type { SourceSwitchNewTocEntry } from '../features/source/SourceSwitchGateway';
+import type { SourceSwitchNewTocEntry } from '../features/source/application/SourceSwitchGateway';
 
 export interface ReaderAtomicSnapshotSample {
   phase: 'write' | 'read' | 'clear' | 'cleanup';

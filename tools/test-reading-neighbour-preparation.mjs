@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const {ReadingChapterWindow}=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
-const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const Host=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),['prefetchNextChapter']);
+const {ReadingChapterWindow}=await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
+const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const Host=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),['prefetchNextChapter']);
 const body=index=>({sourceId:'local',bookId:'b',chapterIndex:index,chapterTitle:`章${index}`,chapterUrl:undefined,
  content:'正文'.repeat(20),images:[],contentVersion:`v${index}`,extractionVia:'local'});
 const tick=()=>new Promise(r=>setTimeout(r,0));

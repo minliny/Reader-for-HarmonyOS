@@ -8,15 +8,15 @@
     {
       "id": "header-back",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "backBar",
         "component": "PageBackBar"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/PageBackBar.ets",
+        "path": "entry/src/main/ets/ui/chrome/PageBackBar.ets",
         "symbol": "panel"
       },
-      "eventOwner": "Index.onBack",
+      "eventOwner": "SourceJourneySurface.managementPage → ReaderNavigation.closeSourceManagement",
       "condition": "always",
       "admission": "PageBackBar direct onBack; overlay-first is parent temporary-back policy",
       "sdkGroup": "header-back",
@@ -26,15 +26,15 @@
     {
       "id": "header-tools",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "backBar",
         "component": "ReaderIconButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderIconButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
         "symbol": "build"
       },
-      "eventOwner": "Index.onOpenTools",
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.retainManagementViewForTools → ReaderNavigation.openSourceTools",
       "condition": "always",
       "admission": "mounted + actionEnabled + readable label",
       "sdkGroup": "header-tools",
@@ -44,12 +44,12 @@
     {
       "id": "query-input",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "searchField",
         "component": "ReaderSearchField"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
         "symbol": "autoLineHeightField"
       },
       "eventOwner": "SourceManagementPage.searchQuery",
@@ -63,15 +63,15 @@
     {
       "id": "search-import",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
-        "symbol": "searchField",
-        "component": "native:onClick"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "importAction",
+        "component": "ReaderIconButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
-        "symbol": "searchField"
+        "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
+        "symbol": "build"
       },
-      "eventOwner": "Index.onAddSource",
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneySurface.onImport",
       "condition": "always",
       "admission": "page callback; D1 retains duplicate entry",
       "sdkGroup": "search-import",
@@ -81,12 +81,12 @@
     {
       "id": "status-all",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.statusValue",
@@ -100,12 +100,12 @@
     {
       "id": "status-enabled",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.statusValue",
@@ -119,12 +119,12 @@
     {
       "id": "status-error",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.statusValue",
@@ -138,12 +138,12 @@
     {
       "id": "status-unchecked",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.statusValue",
@@ -157,12 +157,12 @@
     {
       "id": "status-custom",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.statusValue",
@@ -176,12 +176,12 @@
     {
       "id": "category-all",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
@@ -196,12 +196,12 @@
     {
       "id": "category-novel",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
@@ -216,12 +216,12 @@
     {
       "id": "category-comic",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
@@ -236,12 +236,12 @@
     {
       "id": "category-music",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
@@ -256,12 +256,12 @@
     {
       "id": "category-download",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
@@ -276,12 +276,12 @@
     {
       "id": "category-external",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
@@ -296,12 +296,12 @@
     {
       "id": "category-other",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
@@ -316,12 +316,12 @@
     {
       "id": "group-trigger",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "groupFilter",
         "component": "ReaderSelect"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderSelect.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
         "symbol": "sourceGroupTrigger"
       },
       "eventOwner": "SourceManagementPage.group selection",
@@ -334,12 +334,12 @@
     {
       "id": "group-selected-option",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "groupOverlay",
         "component": "ReaderSelectPanel"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderChoiceRow.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
         "symbol": "flowRow"
       },
       "eventOwner": "SourceManagementPage.group selection",
@@ -348,7 +348,7 @@
       "sdkGroup": "group-option",
       "nativeEvidence": "OPEN",
       "panelBinding": {
-        "path": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
         "symbol": "selectedRow"
       },
       "cardinality": "dynamic group options; each option uses this template",
@@ -357,12 +357,12 @@
     {
       "id": "group-other-option",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "groupOverlay",
         "component": "ReaderSelectPanel"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderChoiceRow.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
         "symbol": "flowRow"
       },
       "eventOwner": "SourceManagementPage.group selection",
@@ -371,7 +371,7 @@
       "sdkGroup": "group-option",
       "nativeEvidence": "OPEN",
       "panelBinding": {
-        "path": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
         "symbol": "optionRow"
       },
       "cardinality": "dynamic group options; each option uses this template",
@@ -380,12 +380,12 @@
     {
       "id": "group-outside-dismiss",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "groupOverlay",
         "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "groupOverlay"
       },
       "eventOwner": "SourceManagementPage.group selection",
@@ -399,12 +399,12 @@
     {
       "id": "row-login",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "loginButton",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.loginSource",
@@ -417,12 +417,12 @@
     {
       "id": "row-detect",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "detectButton",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.checkSource",
@@ -435,12 +435,12 @@
     {
       "id": "row-toggle",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "sourceSwitch",
         "component": "ReaderToggle"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderToggle.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.toggleSource",
@@ -453,15 +453,15 @@
     {
       "id": "footer-manage",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "bottomActionBar",
         "component": "ReaderButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
-      "eventOwner": "Index.onOpenTools",
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.retainManagementViewForTools → ReaderNavigation.openSourceTools",
       "condition": "always",
       "admission": "ReaderButton mounted + actionEnabled; D1 retains duplicate entry",
       "sdkGroup": "footer-manage",
@@ -471,15 +471,15 @@
     {
       "id": "footer-add",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "bottomActionBar",
         "component": "ReaderLabeledIconAction"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
         "symbol": "build"
       },
-      "eventOwner": "Index.onAddSource",
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneySurface.onImport",
       "condition": "always",
       "admission": "mounted action; D1 retains duplicate entry",
       "sdkGroup": "footer-add",
@@ -489,15 +489,15 @@
     {
       "id": "status-action",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "statusAction",
         "component": "ReaderRecoveryAction"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
-      "eventOwner": "Index.onStatusAction",
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.runSearchAction",
       "condition": "statusActionLabel nonempty and original not blocked",
       "admission": "captured statusActionGeneration",
       "sdkGroup": "recovery-compact",
@@ -507,12 +507,12 @@
     {
       "id": "read-refresh",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "sourceList",
         "component": "ReaderRecoveryAction"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.reconcile",
@@ -525,12 +525,12 @@
     {
       "id": "empty-read-retry",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "sourceList",
         "component": "ReaderPageState"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.reconcile or retryLoad",
@@ -543,12 +543,12 @@
     {
       "id": "filter-empty-clear",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "sourceList",
         "component": "ReaderPageState"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceManagementPage.clearFilters",
@@ -561,12 +561,12 @@
     {
       "id": "original-reconcile",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "originalRecovery",
         "component": "ReaderRecoveryNotice"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.reconcile",
@@ -579,12 +579,12 @@
     {
       "id": "original-continue",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "originalRecovery",
         "component": "ReaderRecoveryNotice"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.continueOriginal",
@@ -597,12 +597,12 @@
     {
       "id": "original-expand-collapse",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "originalRecovery",
         "component": "ReaderRecoveryNotice"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "ReaderRecoveryNotice.expanded",
@@ -615,12 +615,12 @@
     {
       "id": "unknown-reconcile",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
-        "symbol": "pendingOverlay",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "pendingRecovery",
         "component": "ReaderRecoveryNotice"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "SourceHost.reconcile",
@@ -633,12 +633,12 @@
     {
       "id": "unknown-expand-collapse",
       "pageBinding": {
-        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
-        "symbol": "pendingOverlay",
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "pendingRecovery",
         "component": "ReaderRecoveryNotice"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
         "symbol": "build"
       },
       "eventOwner": "ReaderRecoveryNotice.expanded",

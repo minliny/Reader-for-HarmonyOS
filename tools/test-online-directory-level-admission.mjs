@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const seed={sourceId:'https://m.qidian.com#ReaderTestBuiltin',bookId:'1001458054',detailUrl:'https://m.qidian.com/book/1001458054',title:'青春',author:'韩寒'};
 for(const cached of [false,true]) for(const level of (cached ? [undefined] : [0,1,32,undefined,-1,33,0.5])) {
  const toc=[{index:0,title:'正文卷',url:'',level},{index:1,title:'第一章',url:'/chapter/1',...(cached ? {} : {level:2})}];

@@ -1,8 +1,0 @@
-{
-  "command": "node tools/evidence/loading-layout-20261020/search-list-header-probe.mjs",
-  "exitCode": 1,
-  "stdout": "PASS real filter toggle changes natural header/inset identity; stale receipts reject and body facts never enter the fixed panel\n",
-  "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: progress stays in fixed row, not result header\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-list-header-probe.mjs:333:12\n    at scenario (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-list-header-probe.mjs:223:32)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/evidence/loading-layout-20261020/search-list-header-probe.mjs:314:1 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n",
-  "sourceSha256": "101572ad4e7ed32414d8c0566c1a3bab4f54d6bc7d207e93e9e84a1645127e48",
-  "probeSha256": "4d10e2aa3acc58b93b6f63da7c45ce483eb64e03fc63ceb7be1f6cdf7d52059e"
-}

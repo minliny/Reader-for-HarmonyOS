@@ -169,8 +169,8 @@ if(id==='chapter-start-proof'){
 }
 if(id==='position-conflict'){
 {
- const { classifyRemoteReadingCommandFailure, isRemoteReadingCacheFallbackEligible } = await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
- const { remoteReadingFailureKindOf, isRemoteSourceFailureKind } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+ const { classifyRemoteReadingCommandFailure, isRemoteReadingCacheFallbackEligible } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts');
+ const { remoteReadingFailureKindOf, isRemoteSourceFailureKind } = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
  for (const reason of ['PROCESSING_CONTEXT_STALE','POSITION_CONTEXT_STALE','MISSING_OLD_BODY']) {
   const cause={event:{error:{code:'INVALID_PARAMS',details:{reason,requiresPositionMigration:true}}}};
   const failure=classifyRemoteReadingCommandFailure('chapter.content',cause);
@@ -185,12 +185,13 @@ if(id==='position-conflict'){
 }
 if(id==='directory-proof'){
 {
-  const proof={sourceId:'source',bookId:'book',catalogRevision:'c',structureRevision:'s',nodeId:'n',url:'/0'};
+  const proof={sourceId:'source',bookId:'book',catalogRevision:'c',structureRevision:'s',nodeId:'n',chapterIndex:0,url:'/0'};
   const calls=[];const runtime={request:async(method,params)=>{calls.push({method,params});
     return method==='chapter.content'?response(undefined):{data:{stored:true,...progress()}};}};
   const gateway=new ReadingSessionFlowGateway('source','book',{kind:'remote',session},runtime);
   const chapter=await gateway.loadChapter('book',0,()=>true,false,{anchors:[],directoryTargetProof:proof});
   assert.deepEqual(calls[0].params.directoryTargetProof,proof);
+  assert.notEqual(calls[0].params.directoryTargetProof,proof);
   assert.equal(calls[0].params.positionContext,undefined);
   assert.deepEqual(chapter.directoryTargetProof,proof);
   await gateway.resolveAndUpdateProgress('book','第一章',{chapterIndex:0,chapterOffset:15,chapterProgress:0.2,

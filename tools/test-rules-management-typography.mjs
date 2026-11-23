@@ -5,9 +5,9 @@ async function carriers() {
  const {loadReaderTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
  const {foundationControls,foundationSpecs}=await import('./lib/reader-foundation-control-probe.mjs');
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
- const {readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+ const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
  const read=name=>readFileSync(new URL('../entry/src/main/ets/'+name,import.meta.url),'utf8');
- const roles=loadReaderTypographyRoles(read('features/common/ReaderTypography.ets')),page=read('features/settings/RulesManagementPage.ets');
+ const roles=loadReaderTypographyRoles(read('ui/foundation/ReaderTypography.ets')),page=read('features/settings/ui/RulesManagementPage.ets');
  const keys=['TYPE_RULES_MANAGEMENT_HEADING','TYPE_RULES_MANAGEMENT_INPUT','TYPE_RULES_MANAGEMENT_ACTION'];
  for(const scheme of ['day','night'])for(const mutated of [false,true]) {
   const active={...roles};if(mutated)for(const key of keys)active[key]={...roles[key],fontFamily:'ReaderTestRole',fontWeight:500,fontSizeFp:roles[key].fontSizeFp+3};

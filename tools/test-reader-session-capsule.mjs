@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { deriveReaderSessionCapsule, readerTtsSessionBlocksAutoPageStart } from '../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts';
+import { deriveReaderSessionCapsule, readerTtsSessionBlocksAutoPageStart } from '../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts';
 
 const base={mounted:true,exitRequested:false,pageReady:true,controlObscured:false,interactionBlocked:false,
   controlVisible:false,autoPageStatus:'stopped',autoPageRemainingSeconds:8,ttsStatus:'idle'};

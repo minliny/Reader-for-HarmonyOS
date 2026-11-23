@@ -9,9 +9,8 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {productionReaderPressFeedback} from './lib/reader-press-feedback-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
-const indexSource=read('pages/Index.ets'),pageSource=read('features/settings/SettingsPage.ets'),shelfSource=read('features/bookshelf/BookshelfSettingsPage.ets');
+const indexSource=read('pages/Index.ets'),pageSource=read('features/settings/ui/SettingsPage.ets'),shelfSource=read('features/bookshelf/ui/BookshelfSettingsPage.ets');
 const require=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
-require(sdkRoot+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('CategoryRow',new Set(['content']));
 let sequence=0,cases=0;
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 const names=['settingsContent','settingsSurface','bookshelfSettingsContent','bookshelfSettingsSurface','bindSettingsPresentation',
@@ -41,19 +40,19 @@ function index(f,route='settings',text=indexSource){
    return{o,p,params,toggle:()=>params.onAutoCheckUpdate(!params.autoCheckUpdate),native,refresh(){o.updateStateVars(props());p.properties.flush();}};
   }
   const ReaderPressFeedback=productionReaderPressFeedback();p.hooks.lifecycleChildren=true;
-  for(const [n,path]of [['CategoryRow','features/settings/CategoryRow.ets'],['ReaderToggle','features/common/ReaderToggle.ets']]){
+  for(const [n,path]of [['ReaderToggle','ui/controls/ReaderToggle.ets']]){
    p.hooks.childSources[n]=read(path);p.deps[n]=createReaderBuilderProbe(read(path),boundedMembers(read(path)),{...p.deps,ReaderPressFeedback,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},p.hooks).Component;
   }
   const properties=[...pageSource.matchAll(/@Prop\s+(?:@Watch\([^\n]+?\)\s+)?(\w+)\s*:/g)].map(m=>m[1]);
   const callbacks=[...pageSource.matchAll(/^  (on\w+):/gm)].map(m=>m[1]);
   const o=p.consumer(pageSource,[...properties,...callbacks,'appThemeScheme','mounted','themeOwner','temporaryBackIdentity','resetMessage',
-   'autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged','applyCacheCleanup',
+   'autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged',
    'switchRow','toggleSetting','settingValue','settingCanToggle','settingToggleBusy','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind',
    'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction','onOperationChanged','operationFeedbackIdentity',
    'lastOperationFeedback','lastOperationToast','lastCacheFeedback','cacheFeedbackIdentity','showFeedbackToast','hasPendingSettings','hasPendingCleanup','pendingFeedback',
    'capturedPendingAction','recoveryIdentityFor'],{ReaderPressFeedback,ReaderRuntimeOwner:f.Runtime,readerRecoveryView},params);
   Object.assign(o,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'actual-settings:'+sequence,resetMessage:''});o.syncSnapshotValues();
-  const toggle=()=>{o.switchRow('减少动效',()=>({id:1}),'reduceMotion');const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderToggle);assert.ok(actor,'actual shared toggle mounted');return p.nodes(actor).find(n=>n.onClick).onClick;};
+  const toggle=()=>{o.switchRow('减少动效',()=>({id:1}),'reduceMotion');const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderToggle);assert.ok(actor,'actual shared toggle mounted');const node=p.nodes(actor).findLast(n=>n.type==='Toggle'&&n.onChange);const next=!actor.value;return()=>node.onChange(next);};
   const native=label=>{o.operationFeedback();o.pendingFeedback();const actual=label==='重试保存当前设置'?'继续保存':label==='刷新设置'&&o.hasPendingSettings()?'核对':label;const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderRecoveryAction&&c.label===actual);assert.ok(actor,label);return p.nodes(actor).find(n=>n.onClick).onClick;};
   return{o,p,params,toggle,native,refresh(){o.updateStateVars(props());p.properties.flush();}};
  };
@@ -69,7 +68,7 @@ const puts=f=>f.events.filter(e=>e[0]==='put').length;
  old.params.onOpenBookshelfSettings();old.params.onRssRequested();old.params.onDiscoverRequested();old.params.onTemporaryBackBridge(()=>true,'old');
  assert.equal(await old.params.onRestoreDefaults(),false);assert.equal(await old.params.onClearCache(),undefined);await old.params.onReconcileCache(1);await old.params.onContinueCache(1);await settle();
  assert.equal(puts(f),before);assert.deepEqual(a.routes,[]);assert.equal(a.i.settingsSection,'general');
- const live=b.page();live.toggle()();await settle();assert.equal(puts(f),before+6);assert.equal(b.i.settingsSnapshot.reduceMotion,true);
+ const live=b.page();live.toggle()();await settle();assert.equal(puts(f),before+5);assert.equal(b.i.settingsSnapshot.reduceMotion,true);
  assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');live.params.onOpenSourceManagement();assert.deepEqual(b.routes,['openSourceManagement']);cases++;
 }
 for(const failure of ['before','after']){
@@ -79,14 +78,14 @@ for(const failure of ['before','after']){
  const b=index(f);await b.open();const n=puts(f);oldSave();await settle();assert.equal(puts(f),n);
  const page=b.page(),refresh=page.native('刷新设置');refresh();refresh();await settle();assert.equal(puts(f),n,'native reconciliation does not issue put');
  assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'unknown');
- const current=b.page(),save=current.native('重试保存当前设置');save();save();await settle();assert.equal(puts(f),n+6);assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');
+ const current=b.page(),save=current.native('重试保存当前设置');save();save();await settle();assert.equal(puts(f),n+5);assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');
  f.fail('after');b.page().toggle()();await settle();const after=puts(f);old.refresh();oldSave();await settle();assert.equal(puts(f),after,'V1 Props update cannot upgrade the old physical generation');cases++;
 }
 {
  const f=fixture(),a=index(f);await a.open();const gate=deferred();f.hangFlush(gate);a.page().toggle()();await settle();
  const prior={...a.i.settingsSnapshot};const b=index(f);await b.open();assert.equal(a.i.settingsHost.orchestrator,b.i.settingsHost.orchestrator);
  assert.equal(b.i.settingsSnapshot.reduceMotion,true);gate.resolve();await settle();assert.deepEqual(a.i.settingsSnapshot,prior);
- assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');assert.equal(puts(f),6,'one six-field accepted write survives reconstruction in the original chain');cases++;
+ assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');assert.equal(puts(f),5,'one five-field accepted write survives reconstruction in the original chain');cases++;
 }
 for(const retirement of ['nav','mount','unset','closed']){
  const f=fixture(),a=index(f);await a.open();const old=a.page(),tap=old.toggle();if(retirement==='nav')a.i.navigationGeneration++;
@@ -96,7 +95,7 @@ for(const retirement of ['nav','mount','unset','closed']){
 {
  const f=fixture(),a=index(f,'bookshelfSettings');await a.open();const old=a.page();f.fail('after');old.toggle();await settle();assert.equal(a.i.settingsOperation.receipt.receipt.confirmation,'unknown');
  const save=a.page().native('重试保存当前设置'),b=index(f,'bookshelfSettings');await b.open();const n=puts(f);save();old.params.onAutoCheckUpdate(true);await settle();assert.equal(puts(f),n);
- const current=b.page();current.native('重试保存当前设置')();await settle();assert.equal(puts(f),n+6);assert.equal(b.i.settingsSnapshot.autoCheckUpdate,false);cases++;
+ const current=b.page();current.native('重试保存当前设置')();await settle();assert.equal(puts(f),n+5);assert.equal(b.i.settingsSnapshot.autoCheckUpdate,false);cases++;
 }
 {
  const mutant=indexSource.replace("(!attached || (identity.length > 0 && identity === this.settingsPresentationIdentity && host.isPresentationCurrent(owner, identity)))",'true');

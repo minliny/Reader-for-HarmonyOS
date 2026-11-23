@@ -6,8 +6,8 @@ const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { searchListFixture, searchListRows, searchListSources, searchListTouches,
   searchListSource, searchListDependencies, assertSearchListBuilderGeometry }=await import('./lib/reader-content-search-list-probe.mjs');
-const list=await import('../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts');
-const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
+const list=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchListProjection.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts');
 const { readerContentSearchFieldProbe }=await import('./lib/reader-content-search-field-probe.mjs');
 const near = (a, b, why) => assert.ok(Math.abs(a - b) < 1e-6, `${why}: ${a} != ${b}`);
 const { ReaderContentSearchDataSource } = searchListDependencies;
@@ -16,12 +16,34 @@ assertSearchListBuilderGeometry();
 for (const [from, to, expected] of [
   ['.position({ x: this.frame().results.x, y: this.frame().results.y }).clip(true)',
     '.position({ x: this.frame().results.x, y: this.frame().results.y }).clip(false)', /actual Results parent clips/],
-  ['contentOriginVp: this.frame().firstResult.y', 'contentOriginVp: 0', /native extent preserves origin/],
-  ['contentEndPaddingVp: this.frame().resultEndPadding', 'contentEndPaddingVp: 0', /native extent preserves origin/],
+  ['contentOriginVp: frame.firstResult.y', 'contentOriginVp: 0', /native extent preserves origin/],
+  ['contentEndPaddingVp: frame.resultEndPadding', 'contentEndPaddingVp: 0', /native extent preserves origin/],
   ['.translate({ y: this.resultRowTranslation(this.currentResultIndex(result.chapterIndex, result.chapterOffset)) })', '.translate({ y: this.resultRowTranslation(this.currentResultIndex(result.chapterIndex, result.chapterOffset)) + 1 })', /authored child C and B-O paint/],
 ]) {
   assert.ok(searchListSource.includes(from));
   assert.throws(() => assertSearchListBuilderGeometry(searchListSource.replace(from, to)), expected);
+}
+// The larger endpoint clamps a tail offset. Every fully visible native row
+// must retain a complete paint mask, including rows newly exposed above it.
+for (const [from, to] of [[0, 1], [1, 0]]) {
+  const f = searchListFixture({ count: 309, p: from, indices: [] }); f.flush();
+  const { owner } = f;
+  f.native(owner.resultListFrame().maxOffsetVp, searchListSources.DRAG);
+  owner.onResultScrollStop(); f.flush();
+  f.resize(to, true); f.flush(); f.native(owner.resultListFrame().targetOffsetVp); f.flush();
+  const layout = owner.resultLayout(), projection = owner.resultScrollFrame();
+  const origin = layout.contentOriginVp ?? 0;
+  const first = Math.max(0, Math.ceil((projection.offsetVp - origin) / layout.rowHeightVp));
+  const last = Math.min(308, Math.floor((projection.offsetVp + layout.viewportHeightVp - origin) / layout.rowHeightVp) - 1);
+  assert.ok(last >= first, 'the actual endpoint exposes whole result rows');
+  for (let index = first; index <= last; index += 1) {
+    const path = owner.resultClip(index, 2).path;
+    const rectangles = [...path.matchAll(/M([\d.e+-]+) ([\d.e+-]+)h([\d.e+-]+)v([\d.e+-]+)h[\d.e+-]+Z/g)]
+      .map(match => match.slice(1).map(Number));
+    assert.ok(rectangles.some(([x, y, width, height]) => x <= 1e-6 && y <= 1e-6 &&
+      width >= owner.frame().firstResult.width * 3 - 1e-6 && height >= layout.rowHeightVp * 3 - 1e-6),
+    `visible endpoint result ${index} keeps its full native paint mask: ${path}`);
+  }
 }
 }
 const reports = [];
@@ -38,7 +60,7 @@ for (const count of [50, 2000, 10000]) {
     f.resize(p, false);
     const beforeReceipt = controller.offset, commands = controller.commands.length;
     f.flush();
-    near(owner.resultScrollPosition.anchorRows, anchor * p, 'deep Full→Quick path and held reversal');
+    near(owner.resultScrollPosition.anchorRows, anchor, 'Full/Quick and held reversal retain the same semantic result row');
     assert.equal(controller.offset, beforeReceipt, 'sending target never fabricates a native receipt');
     assert.ok(controller.commands.length <= commands + 1, 'one latest target per coalesced turn');
     const target = owner.resultListFrame().targetOffsetVp;
@@ -64,8 +86,9 @@ for (const count of [50, 2000, 10000]) {
       }
     }
   }
-  f.resize(0, true); f.flush(); f.native(0); f.flush();
+  f.resize(0, true); f.flush(); f.native(owner.resultListFrame().targetOffsetVp); f.flush();
   assert.equal(owner.resultMotionPath, undefined, 'untouched endpoint releases the path');
+  near(owner.resultScrollPosition.anchorRows, anchor, 'settled Quick retains the deep Full result anchor');
   for (const source of [searchListSources.DRAG, searchListSources.FLING, searchListSources.OTHER_USER_INPUT,
     searchListSources.SCROLL_BAR, searchListSources.SCROLL_BAR_FLING]) {
     const before = owner.resultScrollPosition.anchorRows;
@@ -74,8 +97,9 @@ for (const count of [50, 2000, 10000]) {
   }
   owner.onResultScrollStop();
   const beforeAppend = owner.resultScrollPosition.anchorRows, rawBeforeAppend = controller.offset;
-  owner.state = { ...owner.state, results: owner.state.results.concat(searchListRows(50).map((r, i) =>
-    ({ ...r, chapterIndex: count + i }))) };
+  const retainedRows = owner.state.results;
+  retainedRows.push(...searchListRows(50).map((r, i) => ({ ...r, chapterIndex: count + i })));
+  owner.state = { ...owner.state, results: retainedRows };
   owner.onResultDataChanged(); f.flush();
   near(owner.resultScrollPosition.anchorRows, beforeAppend, 'stable query append keeps anchor');
   assert.equal(controller.offset, rawBeforeAppend); assert.equal(owner.resultDataSource.totalCount(), count + 50);
@@ -98,6 +122,27 @@ for (const count of [50, 2000, 10000]) {
   assert.equal(controller.commands.length, commandCount, 'detached module cannot issue native commands');
   assert.ok(maxNativeDemand <= 18, 'bound is viewport + two cached items per side, independent of N');
   reports.push({ count, maxNativeDemand, finalDataCount: count + 50 });
+}
+// ArkUI may render only the final result of a fast requery. Equal keyword
+// and canonical row keys cannot turn that new owner scope into an append.
+{
+  const f = searchListFixture({ count: 2000, p: 1 }); f.flush();
+  const { owner } = f;
+  f.native(1980 * 72, searchListSources.DRAG); owner.onResultScrollStop(); f.flush();
+  await Promise.resolve();
+  const oldScope = owner.acceptedResultScrollScope;
+  let prematurePages = 0; owner.onNeedMore = () => { prematurePages += 1; };
+  owner.state = { kind: 'results', keyword: '他', results: searchListRows(50), hasMore: true };
+  assert.notEqual(owner.acceptedResultScrollScope, oldScope, 'new owner result scope');
+  owner.onResultDataChanged(); f.flush();
+  assert.equal(owner.resultScrollPosition.anchorRows, 0, 'coalesced same-keyword requery resets to its first result');
+  await Promise.resolve();
+  assert.equal(prematurePages, 0, 'old deep native offset cannot prefetch pages for a fresh first-result view');
+  f.native(owner.resultListFrame().targetOffsetVp); f.flush();
+  assert.equal(owner.resultNativeRawOffset(), 0, 'reset is confirmed by actual controller readback');
+  f.native(40 * 72, searchListSources.DRAG);
+  await Promise.resolve();
+  assert.equal(prematurePages, 1, 'a real current-query movement near its end still requests the next page');
 }
 // API constraints are handled separately from painted offsets: native List
 // forbids negative start/end padding, while the semantic max still shrinks.
@@ -154,7 +199,7 @@ if(selectedCase==='row-admission'){
 }
 }
 if(selectedCase==='input-variant'){
-const fontSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
+const fontSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
 const fieldProbe=readerContentSearchFieldProbe(fontSource),field=fieldProbe.owner;
 Object.assign(field,{query:'保留全文搜索',motionProgress:1,availableWidth:338,availableHeight:666});
 field.searchField();

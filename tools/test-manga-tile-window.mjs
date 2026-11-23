@@ -1,4 +1,5 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
 
 export const CONTRACT_CASES = {
   "tile-attempt-ownership": {
@@ -17,8 +18,7 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
-function load(name, dependencies = {}, file = new URL(`${name}.ts`, root)) {
+function load(name, dependencies = {}, file = mangaSourceUrl(`${name}.ts`)) {
   const source = readFileSync(file, 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
@@ -42,7 +42,7 @@ function fixture() {
   return { controller: new Controller(runtime), runtime, pending, released, calls };
 }
 const Projection = load('MangaStripProjection');
-const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear','displayChapterTitle']);
+const Surface = productionMotionMethods(mangaSourceUrl('MangaReadingSurface.ets'), ['updateViewport','requestedLast','onRowAppear','displayChapterTitle']);
 // Real Surface generation fence plus real Controller: the latest repeated
 // viewport must wait for the same pending tile, then acknowledge this chapter.
 {
@@ -153,8 +153,7 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
-function load(name, dependencies = {}, file = new URL(`${name}.ts`, root)) {
+function load(name, dependencies = {}, file = mangaSourceUrl(`${name}.ts`)) {
   const source = readFileSync(file, 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
@@ -177,9 +176,9 @@ function fixture() {
   }, releaseReadingImage(uri) { released.push(uri); } };
   return { controller: new Controller(runtime), runtime, pending, released, calls };
 }
-const RULES_MUTATION_METHODS = load('RULES_MUTATION_METHODS', {}, new URL('../settings/RulesMutationContract.ts', root));
-const readerRuleMutationEffects = load('readerRuleMutationEffects', { RULES_MUTATION_METHODS }, new URL('../../app/ReaderRuleMutationEffects.ts', root));
-const ReadingEntryPreparation = load('ReadingEntryPreparation', { readerRuleMutationEffects }, new URL('../reading/ReadingEntryPreparation.ts', root));
+const RULES_MUTATION_METHODS = load('RULES_MUTATION_METHODS', {}, new URL('../entry/src/main/ets/features/settings/application/RulesMutationContract.ts', import.meta.url));
+const readerRuleMutationEffects = load('readerRuleMutationEffects', { RULES_MUTATION_METHODS }, new URL('../entry/src/main/ets/app/ReaderRuleMutationEffects.ts', import.meta.url));
+const ReadingEntryPreparation = load('ReadingEntryPreparation', { readerRuleMutationEffects }, new URL('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts', import.meta.url));
 // Drive the actual content fence rather than toggling a fixture boolean. A
 // settled ordinary position write keeps decoded tiles admitted; a catalog
 // mutation permanently retires this chapter's content snapshot.

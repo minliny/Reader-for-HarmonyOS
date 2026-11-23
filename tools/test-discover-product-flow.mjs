@@ -8,7 +8,7 @@ async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 
-const Gateway=selectedProductionMethods(new URL('../entry/src/main/ets/features/discover/DiscoverGateway.ts',import.meta.url),'DiscoverGateway',['loadExploreKinds','loadExplore','string']);
+const Gateway=selectedProductionMethods(new URL('../entry/src/main/ets/features/discover/application/DiscoverGateway.ts',import.meta.url),'DiscoverGateway',['loadExploreKinds','loadExplore','string']);
 const calls=[];let payload;const gateway=Object.assign(new Gateway(),{runtimeOwner:{async request(...args){calls.push(args);return {data:payload};}}});
 const current=()=>true;
 payload={kinds:[{title:'分组',url:'  '},{title:'分类',url:'/category'},null]};let malformed;

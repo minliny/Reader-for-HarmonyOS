@@ -1,0 +1,260 @@
+{
+  "id": "reading.control-open-motion",
+  "version": 2,
+  "pageId": "reading",
+  "fixture": {
+    "id": "public-local-reading-v1",
+    "bookTitle": "Reader Phase 0 公共测试书",
+    "description": "Unique public local book on the shelf; normal motion, no system overlays."
+  },
+  "steps": [
+    {
+      "id": "reading-book-entry",
+      "kind": "locate",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "enter-reading",
+      "kind": "action",
+      "op": "click",
+      "target": {
+        "publicBookTitle": "Reader Phase 0 公共测试书"
+      },
+      "from": "reading-book-entry",
+      "wait": [
+        "reading.ready"
+      ]
+    },
+    {
+      "id": "reading-before",
+      "kind": "sample",
+      "anchors": [],
+      "keyboard": false,
+      "anyAnchor": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ]
+    },
+    {
+      "id": "open",
+      "kind": "action",
+      "op": "click",
+      "target": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ],
+      "from": "reading-before",
+      "gesture": true,
+      "wait": [
+        "reading.control-requested",
+        "reading.control-committed"
+      ]
+    },
+    {
+      "id": "control-open",
+      "kind": "sample",
+      "anchors": [
+        "reader-control-motion-shell",
+        "reader-control-motion-grabber",
+        "reader-control-motion-dock",
+        "reader-control-content-host"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "dismiss",
+      "kind": "action",
+      "op": "keyEvent",
+      "wait": [
+        "reading.control-requested",
+        "reading.control-committed"
+      ],
+      "from": "control-open"
+    },
+    {
+      "id": "control-closed",
+      "kind": "sample",
+      "anchors": [],
+      "keyboard": false,
+      "anyAnchor": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ]
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+    "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts"
+  ],
+  "assertions": [
+    {
+      "id": "reading.control-open",
+      "evaluator": "motion",
+      "kind": "control-open",
+      "expected": {
+        "open": true
+      },
+      "source": "LocalReadingExperience#openReaderControl",
+      "sources": [
+        "window-metrics",
+        "app-owner",
+        "native-tree",
+        "debug-frame"
+      ]
+    },
+    {
+      "id": "reading.control-dismiss",
+      "evaluator": "motion",
+      "kind": "control-dismiss",
+      "expected": {
+        "hidden": true
+      },
+      "source": "ReaderControlHostSession#backReaderControlHostSession",
+      "sources": [
+        "window-metrics",
+        "app-owner",
+        "native-tree",
+        "debug-frame"
+      ]
+    },
+    {
+      "id": "reading.motion-open",
+      "evaluator": "motion",
+      "kind": "motion-open",
+      "expected": {
+        "durationMs": 220,
+        "dockTravelVp": 18,
+        "layoutToleranceVp": 1,
+        "opacityTolerance": 0.02,
+        "transformTolerance": 0.001,
+        "cadenceGapFactor": 3,
+        "actors": [
+          "reader-control-motion-shell",
+          "reader-control-motion-grabber",
+          "reader-control-motion-dock",
+          "reader-control-content-host"
+        ]
+      },
+      "source": "ReaderControlRuntime#configure; ReaderControlLayoutRebase#rebaseReaderControlLayout; ReaderControlMotionGeometry; ProductMotionTiming",
+      "sources": [
+        "window-metrics",
+        "app-owner",
+        "debug-frame",
+        "native-tree"
+      ]
+    },
+    {
+      "id": "reading.motion-dismiss",
+      "evaluator": "motion",
+      "kind": "motion-dismiss",
+      "expected": {
+        "durationMs": 200,
+        "dockTravelVp": 18,
+        "layoutToleranceVp": 1,
+        "opacityTolerance": 0.02,
+        "transformTolerance": 0.001,
+        "cadenceGapFactor": 3,
+        "actors": [
+          "reader-control-motion-shell",
+          "reader-control-motion-grabber",
+          "reader-control-motion-dock",
+          "reader-control-content-host"
+        ]
+      },
+      "source": "ReaderControlRuntime#configure; ReaderControlLayoutRebase#rebaseReaderControlLayout; ReaderControlMotionGeometry; ProductMotionTiming",
+      "sources": [
+        "window-metrics",
+        "app-owner",
+        "debug-frame",
+        "native-tree"
+      ]
+    },
+    {
+      "id": "reading.layout.content-contained",
+      "evaluator": "layout",
+      "kind": "contain",
+      "expected": {
+        "maxOverflowVp": 0
+      },
+      "source": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets#controlContent",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "control-open",
+      "a": "reader-control-content-host",
+      "b": "reader-control-motion-content-clip",
+      "tolerancePx": 1
+    },
+    {
+      "id": "reading.layout.clip-config",
+      "evaluator": "layout",
+      "kind": "clip",
+      "expected": {
+        "enabled": true,
+        "shape": "roundedRect"
+      },
+      "source": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets#controlContent",
+      "sources": [
+        "native-tree",
+        "debug-frame",
+        "window-metrics"
+      ],
+      "sample": "control-open",
+      "a": "reader-control-content-host",
+      "b": "reader-control-motion-content-clip",
+      "mode": "configuration"
+    },
+    {
+      "id": "reading.layout.clip-effect",
+      "evaluator": "layout",
+      "kind": "clip",
+      "expected": {
+        "minClippedAreaVp2": 0
+      },
+      "source": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets#controlContent",
+      "sources": [
+        "native-tree",
+        "debug-frame",
+        "window-metrics"
+      ],
+      "sample": "control-open",
+      "a": "reader-control-content-host",
+      "b": "reader-control-motion-content-clip",
+      "mode": "effect",
+      "required": false
+    },
+    {
+      "id": "reading.layout.grabber-visible",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1
+      },
+      "source": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets#grabber",
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "control-open",
+      "a": "reader-control-motion-grabber",
+      "basis": "rectangular"
+    }
+  ]
+}

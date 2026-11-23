@@ -7,19 +7,17 @@ const definitions={
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
  const {default:assert}=await import('node:assert/strict');const {readFileSync}=await import('node:fs');
- const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
+ const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
  const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
  const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
- const row=read('entry/src/main/ets/features/reading/ReaderBookmarkRow.ets');
- const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
- const accessibility=pureModuleProbe(read('entry/src/main/ets/features/common/ReaderActionAccessibility.ets'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['readerActionTouchRegion','ReaderActionAccessibility']);
- const constants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkRow.ets',import.meta.url),['BOOKMARK_ROW_HEIGHT','BOOKMARK_PENDING_LABEL']);
+ const row=read('entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets');
+ const constants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets',import.meta.url),['BOOKMARK_ROW_HEIGHT','BOOKMARK_PENDING_LABEL']);
  const near=(a,b,why='')=>assert.ok(Math.abs(a-b)<1e-8,`${why}: ${a} != ${b}`);
  if(selectedCase==='list-extent'){
   const pending=[];
-  const List=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkList.ets',import.meta.url),'ReaderBookmarkList',
-   ['rowHeight','fontScale','stableLayoutEnabled','layoutRowHeightValue','layoutPaddingXValue','onRowGeometryChanged','scheduleRowGeometryFlush','aboutToAppear','aboutToDisappear'],
+  const List=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderBookmarkList.ets',import.meta.url),'ReaderBookmarkList',
+   ['rowHeight','stableLayoutEnabled','layoutRowHeightValue','layoutPaddingXValue','onRowGeometryChanged','scheduleRowGeometryFlush','aboutToAppear','aboutToDisappear'],
    {...constants,sampleReaderControlBookmark,setTimeout:callback=>pending.push(callback)});
   const owner=Object.assign(new List(),{embeddedInControl:false,motionProgress:0,rowWidth:254,layoutRowHeight:0,listPaddingX:10,layoutPaddingX:-1,
    itemSizes:{childDefaultSize:0},mounted:false,rowGeometryGeneration:0,rowGeometryLifecycleGeneration:0,
@@ -58,8 +56,8 @@ for(const p of [0,.25,.5,.75,1,.75,0]){
  const first=99+track('1841:3781','translate',p)[1],second=173+track('1841:3786','translate',p)[1];near(second-first,frame.card.height);
 }
   function mounted(source) {
-    const { owner } = createReaderBuilderProbe(source, ['frame', 'fontScale', 'rowHeight', 'motionBody'], {
-      ...accessibility,sampleReaderControlBookmark, BOOKMARK_ROW_HEIGHT: 74,
+    const { owner } = createReaderBuilderProbe(source, ['frame', 'motionBody'], {
+      sampleReaderControlBookmark, BOOKMARK_ROW_HEIGHT: 74,
       BOOKMARK_EXCERPT_ACCENT: '#8C9B8466', BOOKMARK_PENDING_LABEL: '待确认' });
     Object.assign(owner, { motionProgress: 0, availableWidth: 254,
       row: { bookmarkId: 'a', chapterIndex: 2, chapterOffset: 3, chapterTitle: '旧章节', excerpt: '旧片段',
@@ -77,7 +75,7 @@ for(const p of [0,.25,.5,.75,1,.75,0]){
       near(card.height, f.card.height); near(card.width, f.card.width);
       assert.deepEqual(title.position, { x: f.title.x, y: f.title.y });
       assert.deepEqual(excerpt.position, { x: f.excerpt.x, y: f.excerpt.y });
-      near(excerpt.width, f.excerpt.width); near(excerpt.constraintSize.minHeight, f.excerpt.height);
+      near(excerpt.width, f.excerpt.width); near(excerpt.height, f.excerpt.height);
       assert.equal(excerpt.create, '新片段'); assert.equal(excerpt.fontSize, 9); assert.equal(excerpt.lineHeight, 14);
       const text = [...owner.nodes.values()].find(n => n.create === '新章节');
       assert.ok(text, 'mounted title follows current business payload'); assert.equal(text.fontSize, 11); assert.equal(text.lineHeight, 14);
@@ -97,13 +95,13 @@ return;
 // The production row consumes the independent position label and keeps the
 // saved quote/callback proof through scope-only updates of a retained card.
 {
- const {projectReaderBookmarkRows}=await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+ const {projectReaderBookmarkRows}=await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
  const identity={libraryBookId:'lib',sourceId:'remote',bookId:'b',bookName:'书',bookAuthor:'作者'};
  const mark={time:92,chapterIndex:0,chapterOffset:12,chapterTitle:'章节',content:'备注',bookText:'刷新前保留的原文'};
  const entries=[{index:0,title:'章节',bookmarks:[mark]}];
  const model=projectReaderBookmarkRows(entries,'',identity,new Map([[0,24]]))[0];
  for(const builder of ['motionBody','legacyBody']) {
-  const {owner}=createReaderBuilderProbe(row,['frame','fontScale','rowHeight',builder],{...accessibility,sampleReaderControlBookmark,BOOKMARK_ROW_HEIGHT:74,BOOKMARK_PENDING_LABEL:'待确认'});
+  const {owner}=createReaderBuilderProbe(row,['frame',builder],{sampleReaderControlBookmark,BOOKMARK_ROW_HEIGHT:74,BOOKMARK_PENDING_LABEL:'待确认'});
   const calls=[];Object.assign(owner,{row:model,motionProgress:1,availableWidth:316,onSelectBookmark:(...args)=>calls.push(args)});
   owner[builder]();
   assert.ok([...owner.nodes.values()].some(n=>n.type==='Text'&&n.create==='位置待恢复'));

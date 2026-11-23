@@ -14,7 +14,7 @@ const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {tailControls,compileTailConsumer,seedTailOwner,searchActionMethods} = await import('./lib/foundation-tail-consumer-probe.mjs');
 const {foundationSpecs} = await import('./lib/reader-foundation-control-probe.mjs');
-const {readerAppColor} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const {readerAppColor} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const {createRequire} = await import('node:module');
 
 const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),ts=req(sdk+'/node_modules/typescript'),opts=req(sdk+'/lib/ets_checker.js').compilerOptions;

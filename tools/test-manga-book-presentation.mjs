@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
-import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 const identity = { sourceId: 'source-a', bookId: 'book-a', chapterId: 'chapter-4' };
 const location = { kind: 'manga', chapter: identity, manifestVersion: 'manifest-1', pageId: 'page-8',
   pageOrdinalFallback: 7, x: 0, y: 0, progressRevision: 3 };

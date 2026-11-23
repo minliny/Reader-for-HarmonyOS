@@ -2,15 +2,15 @@ import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selec
 const selected=selectContractCases({'prefix-pending':{description:'Actual prefix early commit, pending suffix/title and packing omission negative',resources:[]},'image-admission':{description:'Unknown image minimum versus known pending/failed geometry admission',resources:[]},'bounds-title':{description:'Actual local/canonical page-end precedence and native title ownership transfer',resources:[]}});
 async function run(id){
 const {default:assert}=await import('node:assert/strict');
-const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const style=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 const { readFileSync }=await import('node:fs');
 const { stripTypeScriptTypes }=await import('node:module');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const { ReadingPaginationIndex, ReadingPaginationPrefix }=await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const { ReadingPaginationIndex, ReadingPaginationPrefix }=await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts');
 
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 class Fragment { constructor(id, text) { Object.assign(this, { id, text }); } }
-const nativeSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextWindow.ets',import.meta.url),'utf8');
+const nativeSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets',import.meta.url),'utf8');
 const nativeHeightSource=nativeSource.slice(nativeSource.indexOf('export function readerNativeParagraphHeight'),nativeSource.indexOf('/** A viewport'));
 const nativeHeight=new Function('graphicsText',stripTypeScriptTypes(nativeHeightSource).replace('export ','')+';return readerNativeParagraphHeight;')({RectWidthStyle:{TIGHT:0},RectHeightStyle:{TIGHT:0}});
 let serial=0;

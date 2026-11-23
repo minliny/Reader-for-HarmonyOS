@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { downloadVisualColor } from '../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts';
-import { mangaDirectoryColor } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { downloadVisualColor } from '../entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts';
+import { mangaDirectoryColor } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 export const SVG_PROVENANCE_SCHEMA_VERSION = 1;
 export const SVG_FIGMA_FILE_KEY = 'klhs2jMM4MncaJFqZMfqEK';
 export const SVG_FIGMA_ICON_PAGE_NODE_ID = '259:4';

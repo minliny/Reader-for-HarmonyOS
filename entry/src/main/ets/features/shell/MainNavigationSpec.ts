@@ -1,12 +1,15 @@
-import { readerMainTabItemHeight } from '../common/ReaderFloatingBarMetrics';
+import { readerMainTabItemHeight } from '../../ui/layout/ReaderFloatingBarMetrics';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import { isReaderMainTabEnabled } from '../../app/ReaderProductScope';
+import { effectiveReaderWideNavigationRail } from '../../app/ReaderProductScope';
+import { MAIN_TABS } from '../../app/navigation/ReaderMainTabs';
+export { MAIN_TABS } from '../../app/navigation/ReaderMainTabs';
+export type { MainTabDef } from '../../app/navigation/ReaderMainTabs';
 import {
   readerInteractiveSafeBottom,
   readerInteractiveSafeLeft,
   readerVisualSafeTop,
-} from '../common/ReaderWindowMetrics';
-import { READER_EXPANDED_MIN_WIDTH } from '../common/ReaderWidthClass';
+} from '../../ui/foundation/ReaderWindowMetrics';
+import { READER_EXPANDED_MIN_WIDTH } from '../../ui/foundation/ReaderWidthClass';
 
 export type MainNavigationMode = 'rail' | 'bottom';
 
@@ -32,22 +35,6 @@ export function readerMainViewport(_revision: number = 0): MainViewport {
     height: Math.max(0, metrics.windowRect.height - readerVisualSafeTop(metrics)) };
 }
 
-
-export interface MainTabDef {
-  key: string;
-  label: string;
-}
-
-const ALL_MAIN_TABS: MainTabDef[] = [
-  { key: 'bookshelf', label: '书架' },
-  { key: 'discover', label: '发现' },
-  { key: 'rss', label: 'RSS' },
-  { key: 'settings', label: '设置' },
-];
-
-export const MAIN_TABS: MainTabDef[] = ALL_MAIN_TABS.filter(
-  (tab: MainTabDef): boolean => isReaderMainTabEnabled(tab.key),
-);
 
 export const WIDE_NAVIGATION_RAIL_STORAGE_KEY = 'readerWideNavigationRail';
 export const MAIN_TAB_RAIL_WIDTH = 82;
@@ -92,7 +79,7 @@ export function mainTabRailTop(windowHeight: number, safeTop: number, safeBottom
 export function readerMainNavigationMode(useRail: boolean, revision: number = 0, _metricsRevision: number = 0): MainNavigationMode {
   const metrics = ReaderWindowCoordinator.metrics();
   const viewport = readerMainViewport(revision);
-  return mainNavigationMode(useRail, viewport.width, viewport.height,
+  return mainNavigationMode(effectiveReaderWideNavigationRail(useRail), viewport.width, viewport.height,
     0, readerInteractiveSafeBottom(metrics), MAIN_TABS.length, metrics.systemFontScale);
 }
 

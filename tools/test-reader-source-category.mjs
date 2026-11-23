@@ -32,7 +32,7 @@ const { fileURLToPath } = await import('node:url');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const categorySource = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+  read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'),
 );
 const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
 const {
@@ -52,6 +52,7 @@ assert.equal(classifyReaderSource({ bookSourceType: 1 }), 'music');
 assert.equal(classifyReaderSource({ bookSourceType: '2' }), 'comic');
 assert.equal(classifyReaderSource({ bookSourceType: 3 }), 'download');
 assert.equal(classifyReaderSource({ bookSourceType: 4 }), 'external');
+assert.equal(classifyReaderSource({ bookSourceType: 0, name: '小说来源', baseUrl: 'https://library.example.test/novodbooks' }), 'novel');
 assert.equal(classifyReaderSource({ bookSourceType: 99, name: '小说' }), 'other');
 assert.equal(classifyReaderSource({ group: '漫画' }), 'comic');
 assert.equal(classifyReaderSource({ name: '有声听书' }), 'music');
@@ -86,7 +87,7 @@ for (const category of ['comic', 'music', 'download', 'external', 'other']) {
   assert.notEqual(readerSourceCategoryLabel(category), '小说');
 }
 
-const searchGateway = read('entry/src/main/ets/features/search/SearchGateway.ts');
+const searchGateway = read('entry/src/main/ets/features/search/application/SearchGateway.ts');
 
 }
 
@@ -99,7 +100,7 @@ const { fileURLToPath } = await import('node:url');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const categorySource = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+  read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'),
 );
 const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
 const {
@@ -109,7 +110,7 @@ const {
   readerSourceCategoryLabel,
 } = await import(categoryUrl);
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const Gateway=productionMotionMethods(new URL('../entry/src/main/ets/features/search/SearchGateway.ts',import.meta.url),['searchBySource'],{readerSourceCategoryIsReadable,SEARCH_SOURCE_REQUEST_TIMEOUT_MS:1000,httpTransportFailureSummary:error=>{throw error;},errorMessageOf:error=>error.message});
+const Gateway=productionMotionMethods(new URL('../entry/src/main/ets/features/search/application/SearchGateway.ts',import.meta.url),['searchBySource'],{readerSourceCategoryIsReadable,SEARCH_SOURCE_REQUEST_TIMEOUT_MS:1000,httpTransportFailureSummary:error=>{throw error;},errorMessageOf:error=>error.message});
 for(const category of ['novel','comic','music','download','external','other']){
  let active=true,calls=0;
  const owner=Object.assign(new Gateway(),{generateSearchRequestId:()=> 'case',sourceBookUrl:s=>s.sourceId,requestOptions:()=>({}),runtimeOwner:{async request(method,params){assert.equal(method,'book.search');assert.equal(params.sourceId,'s');calls++;active=false;return {data:{}};}}});
@@ -129,7 +130,7 @@ const { fileURLToPath } = await import('node:url');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const categorySource = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+  read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'),
 );
 const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
 const {
@@ -139,7 +140,7 @@ const {
   readerSourceCategoryLabel,
 } = await import(categoryUrl);
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const Discover=productionMotionMethods(new URL('../entry/src/main/ets/features/discover/DiscoverOrchestrator.ets',import.meta.url),['loadSources'],{readerSourceCategoryIsText});
+const Discover=productionMotionMethods(new URL('../entry/src/main/ets/features/discover/application/DiscoverOrchestrator.ets',import.meta.url),['loadSources'],{readerSourceCategoryIsText});
 const categories=['novel','comic','music','download','external','other'];const sources=categories.map(category=>({sourceId:category,name:category,category,enabled:true,enabledExplore:true}));
 sources.push({sourceId:'disabled',category:'novel',enabled:false,enabledExplore:true},{sourceId:'no-explore',category:'novel',enabled:true,enabledExplore:false});
 const received=[];const owner=Object.assign(new Discover(),{isCurrentSession:()=>true,isCurrentRead:()=>true,beginRead:()=>1,sourceGateway:{loadSources:async()=>sources},currentSource:()=>undefined,loadSource:async(_session,index,rows)=>received.push({index,rows}),fail:(_session,_generation,_message,error)=>{throw error;}});
@@ -156,7 +157,7 @@ const { fileURLToPath } = await import('node:url');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const categorySource = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+  read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'),
 );
 const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
 const {
@@ -166,7 +167,7 @@ const {
   readerSourceCategoryLabel,
 } = await import(categoryUrl);
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const Page=productionMotionMethods(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets',import.meta.url),['filteredSources']);
+const Page=productionMotionMethods(new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets',import.meta.url),['filteredSources']);
 const rows=[{name:'Alpha',baseUrl:'https://one',group:'g1',category:'novel',enabled:true},{name:'Beta',baseUrl:'https://two',group:'g1',category:'comic',enabled:true},{name:'Gamma',baseUrl:'https://three',group:'g2',category:'comic',enabled:false}];
 const owner=Object.assign(new Page(),{sources:rows,searchQuery:'',groupValue:'全部分组',categoryValue:'all',matchesStatus:s=>s.enabled});
 assert.deepEqual(owner.filteredSources(),rows.slice(0,2));owner.categoryValue='comic';assert.deepEqual(owner.filteredSources(),[rows[1]]);owner.searchQuery='alpha';assert.deepEqual(owner.filteredSources(),[]);owner.searchQuery='two';owner.groupValue='g1';assert.deepEqual(owner.filteredSources(),[rows[1]]);owner.groupValue='g2';assert.deepEqual(owner.filteredSources(),[]);
@@ -182,7 +183,7 @@ const { fileURLToPath } = await import('node:url');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const categorySource = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+  read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'),
 );
 const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
 const {

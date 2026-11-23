@@ -3,9 +3,9 @@ import { stripTypeScriptTypes } from 'node:module';
 
 const root = new URL('../../entry/src/main/ets/', import.meta.url);
 const read = name => readFileSync(new URL(name, root), 'utf8');
-export const configurationSource = read('features/reading/ReaderTtsConfigurationHost.ts');
+export const configurationSource = read('features/reading/application/ReaderTtsConfigurationHost.ts');
 const dependencies = [read('app/ReaderOperationFacts.ts'), read('app/ReaderPersistedReceiptProjection.ts'),
-  read('features/reading/ReaderOnlineTtsProfile.ts')];
+  read('features/reading/application/ReaderOnlineTtsProfile.ts')];
 
 /** Execute the production Host and pure contract leaves with erased imports;
  * no algorithm is recreated and no Harmony platform secret API is loaded. */

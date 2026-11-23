@@ -5,7 +5,7 @@ import {
   bookTurnInput,
   stopBookTurnMotion,
   updateBookTurnMotionInPlace,
-} from '../entry/src/main/ets/features/reading/BookTurnMotionState.ts';
+} from '../entry/src/main/ets/features/reading/ui/BookTurnMotionState.ts';
 
 // Contract V2 §5.3: ArkTS keeps only the newest raw gesture sample. Edge
 // chasing, velocity, and frame advance all live in native state, so the

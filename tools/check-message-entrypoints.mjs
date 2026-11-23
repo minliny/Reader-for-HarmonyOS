@@ -18,7 +18,7 @@ const scopeBoundary = [
   'A registered source entry is not a complete business-scene inventory, lifecycle behavior proof, visual acceptance, or whole-app notification coverage claim.',
 ];
 const components = new Map([
-  ['ReaderTransientToast', 'shared.transient-host'],
+  ['ReaderTransientToast', 'shared.transient-presentation'],
   ['ReaderRecoveryNotice', 'shared.recovery-notice'],
   ['ReaderRecoveryAction', 'shared.recovery-action'],
   ['ReaderPageState', 'shared.page-state'],
@@ -154,7 +154,7 @@ export function inventoryMessageEntrypoints({ files } = {}) {
     collect(tree);
     const union = lists => new Set(lists.flatMap(value => [...value]));
     function propertyValue(receiver, property, node, seen) {
-      if (property === 'showToast') return new Set(['api:native.toast']);
+      if (property === 'showToast' || property === 'openToast' || property === 'closeToast') return new Set(['api:native.toast']);
       if (property === 'showAlertDialog') return new Set(['api:native.alert']);
       if (components.has(property)) return new Set([`api:${components.get(property)}`]);
       if (owners.has(property) || property === 'CustomDialogController') return new Set([`constructor:${property}`]);

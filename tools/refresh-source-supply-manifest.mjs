@@ -19,6 +19,7 @@ import {
   collectInsecureUrlFindings,
   collectPaywallFindings,
   collectSecretFindings,
+  isExternalBundledSource,
   ruleFingerprint,
   sha256Hex,
 } from './source-supply-lib.mjs';
@@ -34,7 +35,6 @@ const admittedEvidenceFile = resolve(privateEvidence, 'Reader-for-HarmonyOS', ad
 const legacyBundledRelative = 'entry/src/main/resources/rawfile/reader-test-book-sources.json';
 const rawFile = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
-const ownerFile = resolve(repo, 'entry/src/main/ets/app/ReaderRuntimeOwner.ts');
 
 const EXPECTED_EVIDENCE_SHA256 = '3041b3833629a2510f75cd563a9ee4e70dafbcf80a5d979a131ec593e172585b';
 // The six-source handoff was later consolidated into a 1,951-row admission
@@ -280,7 +280,8 @@ assert.equal(new Set(secureRecords.map(record => record.sourceId)).size, EXPECTE
 // strongest tested variant last so a normal sequential app import leaves the
 // best recorded variant installed for each duplicated identity.
 const bestBySourceId = new Map();
-for (const record of secureRecords) {
+const distributable = secureRecords.filter(record => !isExternalBundledSource(record.source));
+for (const record of distributable) {
   const current = bestBySourceId.get(record.sourceId);
   if (current === undefined || record.preferAsCurrent === true ||
     (current.preferAsCurrent !== true && (record.passDepth > current.passDepth ||
@@ -290,8 +291,8 @@ for (const record of secureRecords) {
 }
 const bestRecords = new Set(bestBySourceId.values());
 const ordered = [
-  ...secureRecords.filter(record => !bestRecords.has(record)),
-  ...secureRecords.filter(record => bestRecords.has(record)),
+  ...distributable.filter(record => !bestRecords.has(record)),
+  ...distributable.filter(record => bestRecords.has(record)),
 ];
 const sources = ordered.map(record => record.source);
 applyReadingAssistantMetadataCorrection(sources);
@@ -308,17 +309,11 @@ const updated = `${JSON.stringify(sources)}\n`;
 writeFileSync(rawFile, updated, 'utf8');
 const fileSha256 = sha256Hex(updated);
 
-const owner = readFileSync(ownerFile, 'utf8');
-const marker = /const BUNDLED_RAW_FILE_SHA256 = '[0-9a-f]{64}';/;
-assert.ok(marker.test(owner), 'pinned bundled-source digest constant missing from ReaderRuntimeOwner.ts');
-writeFileSync(ownerFile, owner.replace(marker,
-  `const BUNDLED_RAW_FILE_SHA256 = '${fileSha256}';`), 'utf8');
-
 const sourceBytes = createHash('sha256').update(updated).digest('hex');
 assert.equal(sourceBytes, fileSha256);
 console.log(`refreshed ${sources.length} historically tested records ` +
-  `(${bestBySourceId.size} secure unique source identities; ` +
-  `${records.length - secureRecords.length} unsafe records excluded); ` +
+  `(${bestBySourceId.size} distributed source identities; ` +
+  `${records.length - secureRecords.length} unsafe and ${secureRecords.length - distributable.length} external-media records excluded); ` +
   `file sha256 ${fileSha256}`);
 
 await import('./generate-bundled-source-index.mjs');

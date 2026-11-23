@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { installedEtsCompiler, emitSdkProbe } from './ets-compiler-runtime.mjs';
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { virtualFilePath } from './tool-environment.mjs';
 
 const { root, ts, options } = installedEtsCompiler();
@@ -23,9 +23,11 @@ export function pureModuleProbe(source, fileName, dependencies, exports,
     let text = source;
     for (const declaration of tree.statements.filter(ts.isImportDeclaration).reverse())
       text = text.slice(0, declaration.getStart(tree)) + text.slice(declaration.end);
-    const output = emitSdkProbe(text.replace(/^export /gm, ''), { fileName: file, parseSource: source,
-      scriptKind: 'ETS', compilerOptions });
-    factory = new Function(...parameters, output + ';return {' + exports.join(',') + '};');
+    const emitted = ts.transpileModule(text.replace(/^export /gm, ''), {
+      fileName: file, reportDiagnostics: true, compilerOptions,
+    });
+    assert.deepEqual(emitted.diagnostics, [], 'actual pure module SDK emit: ' + fileName);
+    factory = new Function(...parameters, emitted.outputText + ';return {' + exports.join(',') + '};');
     if (factories.size >= 128) factories.delete(factories.keys().next().value);
     factories.set(key, factory);
     compiles++;

@@ -30,8 +30,21 @@ export interface ReaderStartupSample {
   capacity?: ReaderCapacityObservation;
 }
 
-/** Small process-local log adapter; uses the existing platform uptime clock.
- * No timers, disk reads, retained samples, book titles or source URLs. */
+interface ReaderTtsCapsuleTimingMark {
+  stage: string;
+  uptimeMs: number;
+}
+
+export interface ReaderTtsCapsuleTiming {
+  operationId?: number;
+  closed: boolean;
+  marks: ReaderTtsCapsuleTimingMark[];
+}
+
+const TTS_CAPSULE_MARK_LIMIT: number = 24;
+
+/** Process-local log adapter using the existing platform uptime clock.
+ * Only an explicitly observed TTS flight retains bounded timing marks. */
 export class ReaderStartupTrace {
   private static instance: ReaderStartupTrace | undefined = undefined;
   private readonly now: () => number;
@@ -43,6 +56,7 @@ export class ReaderStartupTrace {
   private entrySequence: number = 0;
   private operationSequence: number = 0;
   private readonly ttsEnabled: boolean;
+  private ttsCapsuleTiming: ReaderTtsCapsuleTiming | undefined = undefined;
 
   private constructor(now: () => number, record: (sample: ReaderStartupSample) => void, enabled: boolean,
     ttsEnabled: boolean) {
@@ -71,16 +85,46 @@ export class ReaderStartupTrace {
     return trace?.ttsEnabled === true ? trace : undefined;
   }
 
-  beginTtsOperation(): number {
+  beginTtsOperation(timing?: ReaderTtsCapsuleTiming): number {
     if (!this.ttsEnabled) return 0;
     this.operationSequence += 1;
+    if (timing !== undefined && !timing.closed && timing.operationId === undefined) {
+      timing.operationId = this.operationSequence;
+      this.ttsCapsuleTiming = timing;
+    }
     this.markTts('tts.intent', this.operationSequence);
     return this.operationSequence;
   }
 
   markTts(stage: string, operationId: number, status: string = 'event'): void {
     if (!this.ttsEnabled || !Number.isSafeInteger(operationId) || operationId <= 0) return;
+    if (this.observingTtsCapsule(operationId)) {
+      this.markTtsCapsule(stage, operationId);
+      return;
+    }
     this.emit(stage, status, this.currentEntryId(), undefined, this.sampleTime(), operationId);
+  }
+
+  createTtsCapsuleTiming(): ReaderTtsCapsuleTiming {
+    return { closed: false, marks: [] };
+  }
+
+  closeTtsCapsuleTiming(timing: ReaderTtsCapsuleTiming): void {
+    timing.closed = true;
+    if (this.ttsCapsuleTiming === timing) this.ttsCapsuleTiming = undefined;
+  }
+
+  observingTtsCapsule(operationId?: number): boolean {
+    return operationId !== undefined && this.ttsCapsuleTiming?.operationId === operationId;
+  }
+
+  markTtsCapsule(stage: string, operationId?: number): void {
+    if (!this.observingTtsCapsule(operationId)) return;
+    const timing = this.ttsCapsuleTiming;
+    if (timing === undefined || timing.marks.length >= TTS_CAPSULE_MARK_LIMIT ||
+      timing.marks.some((mark: ReaderTtsCapsuleTimingMark): boolean => mark.stage === stage)) return;
+    const uptimeMs = this.sampleTime();
+    if (uptimeMs >= 0) timing.marks.push({ stage, uptimeMs });
   }
 
   static measure<T>(stage: string, task: () => Promise<T>): Promise<T> {
@@ -159,5 +203,52 @@ export class ReaderStartupTrace {
     if (capacity !== undefined) sample.capacity = capacity;
     // Diagnostic delivery must never alter startup or entry admission.
     try { this.record(sample); } catch (_) {}
+  }
+}
+
+export type ReaderShelfEntryPhase = 'tap' | 'reader-mount-request' | 'present';
+type ReaderShelfEntryLog = (phase: ReaderShelfEntryPhase, attempt: number, navigation: number, elapsedMs: number) => void;
+
+/** Correlates entry milestones within one mounted application root. */
+export class ReaderEntryStartupTrace {
+  private entryId: number = 0;
+  private shelfAttempt: number = 0;
+  private shelfStartedAt: number = -1;
+  private readonly logShelfPhase: ReaderShelfEntryLog;
+
+  constructor(logShelfPhase: ReaderShelfEntryLog) {
+    this.logShelfPhase = logShelfPhase;
+  }
+
+  begin(): void {
+    this.shelfStartedAt = -1;
+    this.entryId = ReaderStartupTrace.current()?.beginEntry() ?? 0;
+  }
+
+  beginShelf(navigation: number): void {
+    this.begin();
+    this.shelfAttempt += 1;
+    this.shelfStartedAt = Date.now();
+    this.shelfPhase('tap', navigation);
+  }
+
+  shelfPhase(phase: ReaderShelfEntryPhase, navigation: number): void {
+    if (this.shelfStartedAt < 0) return;
+    try {
+      ReaderStartupTrace.current()?.mark(`shelf-entry.${phase}`, 'event', this.entryId);
+      this.logShelfPhase(phase, this.shelfAttempt, navigation, Math.max(0, Date.now() - this.shelfStartedAt));
+    } catch (_) { /* Diagnostic delivery cannot interrupt reader admission. */ }
+  }
+
+  ready(shelfNavigation?: number): void {
+    if (shelfNavigation !== undefined) this.shelfPhase('present', shelfNavigation);
+    const entryId = this.entryId;
+    this.retire();
+    if (entryId > 0) ReaderStartupTrace.current()?.mark('reader.model-ready', 'ready', entryId);
+  }
+
+  retire(): void {
+    this.entryId = 0;
+    this.shelfStartedAt = -1;
   }
 }
