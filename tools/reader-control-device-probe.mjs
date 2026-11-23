@@ -684,6 +684,7 @@ async function probe(options) {
             if (cleanup) evidence.cleanup = commandOK(cleanup.result) ? 'PASS' : 'FAIL';
           }
         }
+        if (evidence.cleanup !== 'PASS') evidence.guestTracePathIfRetained = remote;
         writeFileSync(receiptPath, JSON.stringify(evidence, null, 2) + '\n', {flag:'wx',mode:0o600});
       };
       const arming = await collector.armed;
