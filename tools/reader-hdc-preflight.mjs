@@ -30,10 +30,12 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectListeners } from './reader-hdc-foreground.mjs';
+import { parseTargetState } from './reader-hdc-lease.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LEASE = resolve(HERE, 'reader-hdc-lease.mjs');
 const DEFAULT_SERVER_KEY = '127.0.0.1:8710';
+const REMOTE_VM_SERVER_KEY = '192.168.1.10:8710';
 const TARGET_RE = /^[A-Za-z0-9._:\[\]-]{1,256}$/;
 const SERVER_RE = /^[A-Za-z0-9._:\[\]-]{1,256}$/;
 const PROXY_VARS = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'SOCKS_PROXY',
@@ -50,17 +52,6 @@ function parseEndpoint(serverKey) {
   if (!raw || !Number.isInteger(raw.port) || raw.port <= 0 || raw.port > 65535) return null;
   const host = raw.host === '0.0.0.0' || raw.host === '::' ? '127.0.0.1' : raw.host;
   return { host, port: raw.port };
-}
-
-function parseTargetState(listing, target) {
-  const rows = listing.split(/\r?\n/).map(line => line.trim().split(/\s+/))
-    .filter(columns => columns[0] === target);
-  if (rows.length === 0) return 'absent';
-  if (rows.length !== 1) return 'ambiguous';
-  const columns = rows[0];
-  // Verbose HDC listings can include a transport column before the state.
-  const state = /^(TCP|USB|UART|SERIAL)$/i.test(columns[1]) ? columns[2] : columns[1];
-  return /^(Connected|Disconnected|Connecting|Offline|Unknown)$/i.test(state) ? state.toLowerCase() : 'unknown';
 }
 
 function probeTcp(host, port, timeoutMs = 1500) {
@@ -190,8 +181,10 @@ async function inspect(option) {
     } else {
       targetState = parseTargetState(text, target);
       if (targetState === 'absent') {
-        note('targets', 'warn', `target ${target} not listed`,
-          `tconn to attach it: node tools/reader-hdc-lease.mjs --hdc <hdc> --target ${target} -- tconn ${target}`);
+        note('targets', 'warn', `target ${target} not listed on server ${serverKey}`,
+          serverKey === REMOTE_VM_SERVER_KEY
+            ? 'Verify the requested remote VM is running and registered with its remote HDC server. Refresh the exact target on that server through the lease.'
+            : 'Refresh the exact target on the selected server through the lease. For the remote VM, select its remote server explicitly. For a local physical device, verify its USB or direct debugging connection.');
       } else if (targetState === 'ambiguous') {
         note('targets', 'block', `multiple rows report the exact target ${target}`);
       } else {
@@ -266,7 +259,10 @@ function render(report) {
 async function main(argv) {
   const option = parseArgs(argv);
   if (option.help) {
-    console.log('Usage: node tools/reader-hdc-preflight.mjs --hdc <abs hdc> --target <exact target> [--server-key 127.0.0.1:8710] [--json]');
+    console.log(`Usage: node tools/reader-hdc-preflight.mjs --hdc <abs hdc> --target <exact target> [--server-key <server>] [--json]
+  Remote VM:    --server-key ${REMOTE_VM_SERVER_KEY}
+  Local VM or physical device: --server-key ${DEFAULT_SERVER_KEY} (default)
+  Select the exact target from the chosen server through reader-hdc-lease.mjs. A remote VM target can be a loopback address on its remote server.`);
     return 0;
   }
   const report = await inspect(option);

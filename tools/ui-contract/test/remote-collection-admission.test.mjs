@@ -32,13 +32,20 @@ test('Remote VM admission requires one of the five cases and the exact guest-onl
     'reading.control-tts-capsule-handoff', 'reading.control-tts-capsule-handoff-full', 'reading.control-more-popup']) {
     assert.doesNotThrow(() => assertLiveCollectionTarget({...options, contract:loadCase(id)}));
   }
-  for (const changed of [
-    {server:'192.168.1.11:8710'}, {target:'127.0.0.1:45679'}, {target:'192.168.1.10:45678'},
-    {contract:loadCase('reading.control-tts-launch-interrupted')}, {manifest:{abi:'arm64-v8a'}},
-    {vmLog:'/test/Emulator.log'}, {deployment:{...deployment, targetKind:'physical'}},
-    {deployment:{...deployment, readiness:{...deployment.readiness, evidenceScope:'guest-and-emulator-log'}}},
+  for (const [changed, diagnostic] of [
+    [{server:'192.168.1.11:8710'}, /HDC server differs from the verified deployment/u],
+    [{target:'127.0.0.1:45679'}, /target differs from the verified deployment/u],
+    [{target:'192.168.1.10:45678'}, /exact loopback target discovered on that server/u],
+    [{contract:loadCase('reading.control-tts-launch-interrupted')}, /no remote VM admission for this case/u],
+    [{manifest:{abi:'arm64-v8a'}}, /requires an x86_64 preserve-data deployment receipt/u],
+    [{deployment:{...deployment, targetKind:'physical'}}, /--target-kind vm --vm-location remote/u],
+    [{vmLog:'/test/Emulator.log'}, /Omit --vm-log for the remote install and collection/u],
+    [
+      {deployment:{...deployment, readiness:{...deployment.readiness, evidenceScope:'guest-and-emulator-log'}}},
+      /requires guest-only readiness/u,
+    ],
   ]) {
-    assert.throws(() => assertLiveCollectionTarget({...options, ...changed}), /verified deployment|remote VM collection is not permitted/u);
+    assert.throws(() => assertLiveCollectionTarget({...options, ...changed}), diagnostic);
   }
 });
 

@@ -6,7 +6,7 @@ import { EvidenceError, requireEvidence } from './lib/evidence.mjs';
 
 async function main() {
   const options = {
-    case: {type:'string'}, 'dry-run': {type:'boolean'}, platform: {type:'string'},
+    help: {type:'boolean'}, case: {type:'string'}, 'dry-run': {type:'boolean'}, platform: {type:'string'},
     replay: {type:'string'}, 'expected-root': {type:'string'}, manifest: {type:'string'},
     deployment: {type:'string'}, hdc: {type:'string'}, server: {type:'string'}, target: {type:'string'},
     'output-dir': {type:'string'}, fixture: {type:'string'}, 'vm-log': {type:'string'},
@@ -18,6 +18,26 @@ async function main() {
   requireEvidence(tokens.length === new Set(tokens.map(token => token.name)).size &&
     !tokens.some(token => token.kind !== 'option' || token.value?.startsWith('--')),
   'Repeated or invalid CLI option');
+  if (values.help) {
+    requireEvidence(tokens.length === 1, 'Run --help by itself');
+    const { remoteUiCaseIds } = await import('./collectors/harmonyos/records.mjs');
+    return {
+      usage: [
+        'node tools/ui-contract/cli.mjs --case <id> --dry-run [--platform <name>]',
+        'node tools/ui-contract/cli.mjs --case <id> --manifest <path> --deployment <path> --hdc <path> --server <endpoint> --target <exact-target> --fixture <path> --output-dir <path> [--vm-log <path>]',
+        'node tools/ui-contract/cli.mjs --case <id> --replay <receipt> --expected-root <sha256>',
+      ],
+      remoteVm: {
+        server: '192.168.1.10:8710',
+        target: 'Use the exact loopback target discovered on the remote HDC server.',
+        cases: remoteUiCaseIds,
+        deployment: 'Use the verified x86_64 preserve-data deployment receipt with guest-only readiness from hap-pipeline.mjs install --target-kind vm --vm-location remote.',
+        fixture: 'Use a current isolated public fixture for the same target. The empty-shelf scope keeps test data separate from the ordinary Reader instance.',
+        scope: 'Case admission applies to formal UI receipts. HAP deployment uses hap-pipeline.mjs.',
+      },
+      vmLog: 'Supply --vm-log for current local VM readiness. Remote guest-only collection and physical device collection omit it. Frame timing comes from native samples.',
+    };
+  }
   const contract = loadCase(values.case);
   if (values['dry-run']) {
     requireEvidence(Object.keys(values).every(key => ['case','dry-run','platform'].includes(key)), 'Invalid dry-run arguments');

@@ -43,7 +43,9 @@ const IDLE_MS = 60000;
 const SESSION_MS = 600000;
 const hdcEnvironment = hdcDirectEnvironment();
 const MAX_OUTPUT = 4 * 1024 * 1024;
-const POPUP_RENDER_OUTPUT_BYTES = 16 * 1024 * 1024;
+// One More action streams 36 complete RenderService trees before the host
+// filters the Reader nodes. A remote capture crossed 16 MiB on its last tree.
+const POPUP_RENDER_OUTPUT_BYTES = 32 * 1024 * 1024;
 const RUNNER_OUTPUT_BYTES = 64 * 1024;
 const RUNNER_CLOCK_ARGS = ['shell','date','+%s'];
 const UI_CONTRACT_LOG_ARGS = ['shell','hilog','-x','-T','ReaderUIContract'];

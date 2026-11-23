@@ -11,7 +11,7 @@ const definitions = {
   routing: 'Original routing assertions bind explicit location, lease server, target and timeout metadata with an injected runner.',
   'lease-session': 'Original exact storage lease-session leaf uses private fake Node transport to retain one token and clear proxies.',
   'deployment-session': 'Actual canonical deployment session passes its owner to the callback and spans preflight, recheck, install and launch fixture commands.',
-  'guarded-exports': 'Current PR storage/ABI/UID/post-install guard bodies remain equal after only the reviewed transport normalization.',
+  'guarded-exports': 'Unchanged ABI, UID and lock guards retain their original bodies. The current deployment uses candidate-bound live storage admission before replacement.',
 };
 const selected = selectContractCases(definitions);
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -19,6 +19,15 @@ const pipeline = () => import('../scripts/hap-pipeline.mjs');
 
 async function routingCase() {
   const { hdcRouteEvidence, resolveHdcServer, runTargetHdc } = await pipeline();
+  const { parseTargetState } = await import('./reader-hdc-lease.mjs');
+  const { parseTargetState: preflightTargetState } = await import('./reader-hdc-preflight.mjs');
+  assert.equal(preflightTargetState, parseTargetState);
+  const fixtureTarget = '127.0.0.1:5555';
+  assert.equal(parseTargetState('  127.0.0.1:5555\tTCP\tConnected  \r\n', fixtureTarget), 'connected');
+  assert.equal(parseTargetState('127.0.0.1:5555 Disconnected', fixtureTarget), 'disconnected');
+  assert.equal(parseTargetState('127.0.0.1:5555 TCP Offline MetaConnected', fixtureTarget), 'offline');
+  assert.equal(parseTargetState('127.0.0.1:55550 TCP Connected', fixtureTarget), 'absent');
+  assert.equal(parseTargetState('127.0.0.1:5555 TCP Connected\n127.0.0.1:5555 TCP Offline', fixtureTarget), 'ambiguous');
 const local = { serverKey: '127.0.0.1:8710', vmLocation: 'local' };
 const remote = { serverKey: '192.168.1.10:8710', vmLocation: 'remote' };
 assert.deepEqual(resolveHdcServer({ targetKind: 'physical' }), { serverKey: local.serverKey });
@@ -58,15 +67,25 @@ assert.deepEqual(hdcRouteEvidence({ serverKey: local.serverKey }), { hdcServer: 
     writeFileSync(manifest, '{}');
     writeFileSync(hdc, '#!/bin/sh\nprintf "Unexpected HDC invocation\\n" >&2\nexit 99\n', { mode: 0o700 });
     const script = fileURLToPath(new URL('../scripts/hap-pipeline.mjs', import.meta.url));
+    const preflight = fileURLToPath(new URL('./reader-hdc-preflight.mjs', import.meta.url));
+    for (const [entry, support] of [
+      [script, /Remote VM\s+--target-kind vm --vm-location remote[\s\S]+guest-only readiness[\s\S]+Physical\s+--target-kind physical/],
+      [preflight, /Remote VM:\s+--server-key 192\.168\.1\.10:8710[\s\S]+Local VM or physical device: --server-key 127\.0\.0\.1:8710/],
+    ]) {
+      const result = spawnSync(process.execPath, [entry, '--help'], { encoding: 'utf8', timeout: 5000 });
+      assert.ifError(result.error);
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout + result.stderr, support);
+    }
     const logs = ['--vm-log', join(directory, 'operator-selected-emulator.log')];
     for (const [args, server, status, message] of [
-      [[], undefined, 2, /current instance emulator log/],
+      [[], undefined, 2, /current instance emulator log[\s\S]+--target-kind vm --vm-location remote/],
       [logs, local.serverKey, 1, /invalid HAP run manifest/],
       [['--vm-location', 'remote'], undefined, 1, /invalid HAP run manifest/],
       [[], remote.serverKey, 1, /invalid HAP run manifest/],
       [[...logs, '--vm-location', 'remote'], remote.serverKey, 1, /invalid HAP run manifest/],
       [['--vm-log', ''], remote.serverKey, 2, /missing --vm-log/],
-      [['--vm-location', 'remote'], local.serverKey, 1, /conflicts/],
+      [['--vm-location', 'remote'], local.serverKey, 1, /conflicts with --target-kind vm --vm-location remote \(192\.168\.1\.10:8710\)/],
     ]) {
       const env = { ...process.env, HDC: hdc, READER_HDC_LEASE_ROOT: join(directory, 'locks') };
       if (server === undefined) delete env.READER_HDC_SERVER_KEY;
@@ -199,36 +218,75 @@ async function guardedExportsCase() {
   const tree = parse(source);
   assert.deepEqual(tree.parseDiagnostics, []);
   const declaration = name => tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === name);
-  const normalizedBody = (name, text) => {
-    let body = text;
-    if (name === 'resolveDeployment') {
-      body = body.replace(fixture.routeDeclaration, '').replace(fixture.currentDeviceQuery, fixture.prDeviceQuery)
-        .replaceAll('assertTargetConnected(hdc, target, hdcRoute.serverKey)', 'assertTargetConnected(hdc, target)')
-        .replaceAll('installedMetadata(hdc, target, hdcRoute.serverKey)', 'installedMetadata(hdc, target)')
-        .replace('    hdcRoute,\n', '');
-    }
-    if (name === 'installDeployment') {
-      body = body.replaceAll('runTargetHdc(resolved.hdc, resolved.target, resolved.hdcRoute.serverKey, [', 'runTargetHdc(resolved.hdc, resolved.target, [')
-        .replaceAll('installedMetadata(resolved.hdc, resolved.target, resolved.hdcRoute.serverKey)', 'installedMetadata(resolved.hdc, resolved.target)');
-    }
-    body = body.replaceAll('...hdcRouteEvidence(resolved.hdcRoute),', '');
-    const parsed = parse(`function guard() ${body}`);
+  const printBody = text => {
+    const parsed = parse(`function guard() ${text}`);
     assert.deepEqual(parsed.parseDiagnostics, []);
     return printer.printNode(ts.EmitHint.Unspecified, parsed.statements[0].body, parsed);
   };
+  // The live Inspector path replaced serialized transition evidence in 2f9eb4be.
+  // Keep the original evidence for the guards whose implementation was retained.
+  const liveAdmissionWiring = {
+    verifyManifest: [
+      "if (loaded.manifest.storageEvidenceVersion === 1 && !artifact.storageContract)",
+      'current.storageCapability = verifyStorageDeliveryContract(loaded.directory, current, loaded.manifest.source.vendoredCoreNapi)',
+    ],
+    resolveDeployment: [
+      "if (options.has('--storage-transition'))",
+      "if (artifactKind !== 'signed')",
+      'if (!artifact?.storageCapability)',
+      'storageAdmission = collectStorageAdmission({',
+      'candidate: artifact.storageCapability',
+      "if (mode === 'install' && !storageAdmissionAllowed(storageAdmission, { targetKind, installed, artifact }))",
+      "reason: 'live-storage-admission-does-not-match-the-candidate'",
+    ],
+    inspectDeployment: [
+      "const observed = resolved.storageAdmission?.status === 'OBSERVED'",
+      "status: observed ? 'OBSERVED' : 'STOP'",
+      'releaseStorageAdmission(resolved.storageAdmission)',
+    ],
+    installDeployment: [
+      "const resolved = resolveDeployment(options, 'install')",
+      'if (!resolved.route.allowed)',
+      'if (currentArtifact.sha256 !== resolved.artifact.sha256 || currentArtifact.bytes !== resolved.artifact.bytes)',
+      'revalidateStorageAdmission(storageAdmission)',
+      "'install', '-r', resolved.artifactPath",
+      'assertInstalledDeploymentIdentity({',
+      'recordInstalledStorageCandidate(storageAdmission, postInstall)',
+      'aa start -a EntryAbility',
+      'releaseStorageAdmission(storageAdmission)',
+    ],
+  };
+  assert.equal(declaration('archiveStorageTransition'), undefined, 'the retired transition must stay disconnected');
   for (const [name, expected] of Object.entries(fixture.functions)) {
+    if (name === 'archiveStorageTransition' || Object.hasOwn(liveAdmissionWiring, name)) continue;
     const node = declaration(name);
     assert.ok(node?.body, `actual current guard ${name}`);
-    assert.equal(hash(normalizedBody(name, node.body.getText(tree))), expected, `PR guard body preserved for ${name}`);
+    assert.equal(hash(printBody(node.body.getText(tree))), expected, `original guard body preserved for ${name}`);
   }
-  for (const [name, from, to] of [
-    ['assertInstalledDeploymentIdentity', 'after.uid !== before.uid', 'false'],
-    ['installDeployment', 'if (!resolved.route.allowed)', 'if (false)'],
-    ['resolveDeployment', "policy: 'formal-stopped-transition-required'", "policy: 'retained-logs-admitted'"],
+  function assertWiring(name, text) {
+    const body = printBody(text);
+    let previous = 0;
+    for (const fragment of liveAdmissionWiring[name]) {
+      const position = body.indexOf(fragment, previous);
+      assert.notEqual(position, -1, `${name} lost or reordered ${fragment}`);
+      previous = position + fragment.length;
+    }
+  }
+  for (const name of Object.keys(liveAdmissionWiring)) {
+    assertWiring(name, declaration(name).body.getText(tree));
+  }
+  const identityGuard = declaration('assertInstalledDeploymentIdentity').body.getText(tree);
+  assert.match(identityGuard, /after\.uid !== before\.uid/u);
+  assert.notEqual(hash(printBody(identityGuard.replace('after.uid !== before.uid', 'false'))),
+    fixture.functions.assertInstalledDeploymentIdentity);
+  for (const [name, guard] of [
+    ['resolveDeployment', '!artifact?.storageCapability'],
+    ['installDeployment', '!resolved.route.allowed'],
+    ['installDeployment', 'revalidateStorageAdmission(storageAdmission)'],
   ]) {
     const body = declaration(name).body.getText(tree);
-    assert.ok(body.includes(from));
-    assert.notEqual(hash(normalizedBody(name, body.replace(from, to))), fixture.functions[name], `removed ${name} guard is rejected`);
+    assert.ok(body.includes(guard));
+    assert.throws(() => assertWiring(name, body.replace(guard, 'false')), /lost or reordered/u);
   }
   for (const command of ['inspect', 'install']) {
     const matches = [];

@@ -32,7 +32,9 @@ node tools/ui-contract/cli.mjs --case reading.control-search-interrupted-back --
 | captureAfterOnlineSweep | 可选搜索采集设置。仅在在线源持续更改结果导致取样失败时使用，待当前首轮停止更新再取样，最多等待 300 秒。 |
 | directRoute.clientToServer、directRoute.serverToTarget | 两段各记录 direct: true、socketObservation、routeObservation。记录实际现场依据。 |
 
-操作前，VM 的 emulator 日志必须来自已确认的当前实例。真机使用本机 HDC server，并单独核验授权、官方保数据准入和隔离测试环境。工具在已取得的租约里确认准确目标、boot、SceneBoard、已安装候选和正常启动，依次执行所选 case。每次提供新的输出目录。留存原始图、树和日志的目录权限默认为 0700。
+本机 VM 使用当前实例的 `--vm-log` 核对就绪。远程 x86_64 VM 使用 `192.168.1.10:8710` 和该 server 现场发现的准确 loopback target，提供同一目标的 guest-only 保数据部署回执和当前隔离公开 fixture，省略 `--vm-log`。使用 `publicFixtureScope: empty-shelf` 可将测试书架与普通 Reader 隔离。用 `node tools/ui-contract/cli.mjs --help` 查看工具准入的五个远程用例。帧间隔来自设备原生采样。真机使用本机 HDC server，并单独核验授权、官方保数据准入和隔离测试环境。
+
+工具在已取得的租约里确认准确目标、boot、SceneBoard、已安装候选和正常启动，依次执行所选 case。每次提供新的输出目录。留存原始图、树和日志的目录权限默认为 0700。
 
 搜索用例允许公开本地书成为命中结果。已有在线书源按正常应用语义参与；结果页实际可见数据同样须在公开范围内。
 

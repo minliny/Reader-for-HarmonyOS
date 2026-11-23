@@ -42,7 +42,7 @@ import { APP_IDENTITY_SCHEMA, APP_RELEASE_LEDGER, createAppBuildIdentity, packag
 import { prepareAppIdentity, assertAppIdentityUnchanged, verifyAppContentEvidence } from './lib/app-build-context.mjs';
 import { selectBundledSources } from '../tools/verify-bundled-test-book-sources-live.mjs';
 import { contractTests, contractSelection, explicitContractTests, contractCaseSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
-import { canonicalServerKey, withHdcCommandSession, hdcDirectEnvironment } from '../tools/reader-hdc-lease.mjs';
+import { canonicalServerKey, withHdcCommandSession, hdcDirectEnvironment, parseTargetState } from '../tools/reader-hdc-lease.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
@@ -203,7 +203,7 @@ export async function withDeploymentHdcSession(options, action, { preflight = fa
 export function resolveHdcServer({ targetKind, vmLocation, configuredServer }) {
   if (!['vm', 'physical'].includes(targetKind)) throw new Error('invalid target kind for HDC routing');
   if (vmLocation !== undefined && (targetKind !== 'vm' || !['local', 'remote'].includes(vmLocation))) {
-    throw new Error('--vm-location must be local or remote and applies only to a VM');
+    throw new Error('--vm-location must be local or remote and applies only to a VM. Choose --target-kind vm --vm-location remote for remote VM deployment.');
   }
   let configured;
   if (configuredServer !== undefined) {
@@ -216,7 +216,9 @@ export function resolveHdcServer({ targetKind, vmLocation, configuredServer }) {
     (vmLocation ?? (configured === REMOTE_VM_HDC_SERVER ? 'remote' : 'local'));
   const serverKey = location === 'remote' ? REMOTE_VM_HDC_SERVER : LOCAL_HDC_SERVER;
   if (configured !== undefined && configured !== serverKey) {
-    throw new Error('configured HDC server conflicts with the selected device location');
+    const selection = targetKind === 'physical' ? '--target-kind physical' : `--target-kind vm --vm-location ${location}`;
+    throw new Error(`READER_HDC_SERVER_KEY=${configured} conflicts with ${selection} (${serverKey}). ` +
+      'Use the flags for the authorized target and unset or correct READER_HDC_SERVER_KEY.');
   }
   return { serverKey, ...(location === undefined ? {} : { vmLocation: location }) };
 }
@@ -2034,9 +2036,11 @@ function targetReference(target) {
 }
 
 function assertTargetConnected(hdc, target, serverKey) {
-  const output = runTargetHdc(hdc, target, serverKey, ['list', 'targets', '-v']).stdout?.trim() ?? '';
-  const match = output.split('\n').find((line) => line.split(/\s+/)[0] === target);
-  if (match === undefined || !/Connected/i.test(match)) fail('the exact HDC target is not connected');
+  const output = runTargetHdc(hdc, target, serverKey, ['list', 'targets', '-v']).stdout ?? '';
+  const state = parseTargetState(output, target);
+  if (state !== 'connected') {
+    fail(`The exact HDC target is not connected on server ${serverKey} (state: ${state}). Refresh the target on that server with reader-hdc-lease.mjs list targets -v.`);
+  }
 }
 
 // Read-only readiness gate before a real install. It reports and stops only:
@@ -2115,7 +2119,10 @@ function resolveDeployment(options, mode = 'inspect') {
   const hdcRoute = resolveHdcServer({ targetKind, vmLocation: option(options, '--vm-location'),
     configuredServer: process.env.READER_HDC_SERVER_KEY });
   const vmLog = options.has('--vm-log') ? requiredOption(options, '--vm-log') : undefined;
-  if (hdcRoute.vmLocation === 'local' && !vmLog) fail('Local VM deployment requires the current instance emulator log', 2);
+  if (hdcRoute.vmLocation === 'local' && !vmLog) {
+    fail('Local VM deployment requires the current instance emulator log (--vm-log). ' +
+      'For a remote VM, select --target-kind vm --vm-location remote to use guest-only readiness when host logs are unavailable.', 2);
+  }
   const verified = verifyManifest(requiredOption(options, '--manifest'));
   const candidateAbi = verified.manifest.abi ?? 'arm64-v8a';
   const artifact = verified.artifacts.find(candidate => candidate.kind === artifactKind);
@@ -2307,8 +2314,21 @@ function usage() {
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [--abi arm64-v8a|x86_64] [sync-core alias]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
-  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>]
-  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>] [--no-launch]`);
+  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed --target <exact> <route flags>
+  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed --target <exact> <route flags> [--no-launch]
+
+Deployment routes:
+  Remote VM   --target-kind vm --vm-location remote
+              Server ${REMOTE_VM_HDC_SERVER}. Use a matching signed HAP (x86_64 for this remote VM) and live guest readiness.
+              Omit --vm-log for guest-only readiness. A supplied current log is also validated.
+  Local VM    --target-kind vm --vm-location local --vm-log <current-emulator.log>
+              Server ${LOCAL_HDC_SERVER}. Use the confirmed current local instance log.
+  Physical    --target-kind physical
+              Server ${LOCAL_HDC_SERVER}. Requires a separately connected physical target.
+
+Discover the exact target on the selected server with reader-hdc-lease.mjs list targets -v.
+The server endpoint and target ID are distinct, even when the remote server lists its target as a loopback address.
+Emulator.log and a snapshot companion qemu.log are startup/readiness evidence. Frame timing comes from the UI collector.`);
 }
 
 async function main() {

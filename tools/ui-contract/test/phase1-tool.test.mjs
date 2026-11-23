@@ -278,13 +278,13 @@ test('Phase 1 second original recovery scope authorizes only the exact Continue 
   assert.equal(fixtureAdmission(original, center, candidate), Date.parse(original.checkedAt));
 });
 
-test('Phase 1 live UI collection rejects remote VM servers', () => {
+test('Phase 1 live UI collection reports the exact route mismatch', () => {
   const local = {hdcServer:'127.0.0.1:8710',targetKind:'vm'};
   assert.doesNotThrow(() => assertLiveCollectionTarget({server:local.hdcServer,deployment:local}));
   assert.throws(() => assertLiveCollectionTarget({server:'192.168.1.10:8710',
-    deployment:{...local,hdcServer:'192.168.1.10:8710'}}), /remote VM collection is not permitted/);
+    deployment:{...local,hdcServer:'192.168.1.10:8710'}}), /exact loopback target discovered on that server/u);
   assert.throws(() => assertLiveCollectionTarget({server:'127.0.0.1:8710',
-    deployment:{...local,hdcServer:'192.168.1.10:8710'}}), /remote VM collection is not permitted/);
+    deployment:{...local,hdcServer:'192.168.1.10:8710'}}), /HDC server differs from the verified deployment/u);
 });
 
 test('Phase 1 native PNG validates complete chunk structure rather than trusting the header', () => {

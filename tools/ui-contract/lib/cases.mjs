@@ -1042,6 +1042,8 @@ export function replayToolFiles(root = toolRoot) {
         path.startsWith('collectors/'))) {
         walk(`${name}/`, dependency);
       } else if (item.isFile() && (dependency || /\.(mjs|json)$/.test(item.name))) {
+        // Finder's numbered source copies are local workspace artifacts.
+        if (!dependency && / \d+\.mjs$/u.test(item.name)) continue;
         tracked.push(name);
       } else if (dependency && !item.isDirectory()) {
         throw new Error(`Unsupported installed dependency file type: ${name}`);

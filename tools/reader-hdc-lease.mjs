@@ -40,6 +40,17 @@ const canonicalServerKey = value => String(value).trim()
   .replace(/^\[::ffff:([^\]]+)\]:/, '$1:').replace(/^::ffff:/, '')
   .replace(/^localhost:/, '127.0.0.1:').replace(/^\[::1\]:/, '127.0.0.1:');
 
+export function parseTargetState(listing, target) {
+  const rows = listing.split(/\r?\n/u).map(line => line.trim().split(/\s+/u))
+    .filter(columns => columns[0] === target);
+  if (rows.length === 0) return 'absent';
+  if (rows.length !== 1) return 'ambiguous';
+  const columns = rows[0];
+  // Verbose HDC listings can include a transport column before the state.
+  const state = /^(TCP|USB|UART|SERIAL)$/iu.test(columns[1]) ? columns[2] : columns[1];
+  return /^(Connected|Disconnected|Connecting|Offline|Unknown)$/iu.test(state) ? state.toLowerCase() : 'unknown';
+}
+
 // Bind service operations to their server-wide lease and device operations to
 // their exact target. Callers decide whether maintenance is appropriate and
 // coordinate users of that server before disrupting their sessions.

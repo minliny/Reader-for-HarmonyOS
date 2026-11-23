@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { popupRenderAcknowledged, popupRenderArgs, popupRenderBaselineAcknowledged, popupRenderBaselineArgs,
   popupRenderJournal, preparePopupRender, readPopupRender } from '../lib/popup-render.mjs';
@@ -92,5 +93,49 @@ test('Popup render capture refuses an empty, alien or wrong-state baseline befor
     assert.match(result.reason,/RenderService baseline/u);
     assert.match(result.baselineOutput,/RS_SAMPLE 0 BEGIN/u);
     assert.doesNotMatch(result.baselineOutput,/RS_ACTION BEGIN/u);
+  }
+});
+
+test('Popup probe retains the complete action when RenderService output exceeds 16 MiB', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'reader-popup-large-output.'));
+  try {
+    const baseline = `RS_POPUP_PID ${pid}\nRS_SAMPLE 0 BEGIN\n${tree(false)}RS_SAMPLE 0 END\nRS_POPUP_END ${pid}\n`;
+    const {operation, sample} = preparePopupRender(baseline, open);
+    const unrelatedNode = `  | CANVAS_NODE[${(BigInt(pid + 1) << 32n) + 1n}] ${'x'.repeat(480 * 1024)}\n`;
+    const slots = Array.from({length:36}, (_, index) =>
+      `RS_SAMPLE ${index + 1} BEGIN\n${unrelatedNode}${tree(true)}RS_SAMPLE ${index + 1} END\n`).join('');
+    const output = `RS_POPUP_PID ${pid}\nRS_POPUP_SURFACE ${operation.renderSurface} ${operation.renderDepth}\n` +
+      `RS_ACTION BEGIN 1795279192769240556\n${slots}No Error\nRS_ACTION END 1795279192936492514\nRS_POPUP_END ${pid}\n`;
+    assert(Buffer.byteLength(output) > 16 * 1024 * 1024);
+    const fixture = join(directory, 'render-stream');
+    const hdc = join(directory, 'fixture-hdc');
+    writeFileSync(fixture, output);
+    writeFileSync(hdc, `#!/bin/sh
+case "$*" in
+  *"RS_ACTION BEGIN"*) exec /bin/cat "$fixture_output" ;;
+  *) exit 99 ;;
+esac
+`, {mode:0o700});
+
+    const probe = fileURLToPath(new URL('../../reader-control-device-probe.mjs', import.meta.url));
+    const result = spawnSync(process.execPath, [probe, '--target', 'fixture-more', '--server', '127.0.0.1:8710',
+      '--hdc', hdc, '--output-dir', join(directory, 'evidence')], {
+      input: `${JSON.stringify({...operation, preflightConfirmed:true})}\n{"op":"quit"}\n`,
+      encoding:'utf8', timeout:5000, env:{...process.env, fixture_output:fixture,
+        READER_HDC_LEASE_ROOT:join(directory, 'lease')},
+    });
+    assert.ifError(result.error);
+    const rows = result.stdout.trim().split('\n').map(line => JSON.parse(line));
+    const commands = rows.filter(row => row.event === 'command');
+    assert.equal(commands.length, 1);
+    assert.equal(commands[0].error, null, commands[0].error);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(commands[0].ok, true);
+    assert.doesNotMatch(commands[0].stdout, /x{10}/u);
+    const capture = readPopupRender(commands[0].stdout, operation, sample);
+    assert.equal(capture?.samples.length, 37);
+    assert.equal(capture.samples.at(-1)?.menu, rsId(6));
+  } finally {
+    rmSync(directory, {recursive:true, force:true});
   }
 });

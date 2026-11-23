@@ -257,7 +257,7 @@ export function assertInstalled(identityRecord, candidate) {
   }
 }
 
-const remoteUiCases = new Set([
+export const remoteUiCaseIds = Object.freeze([
   'reading.control-tts-launch-quick',
   'reading.control-tts-launch-full',
   'reading.control-tts-capsule-handoff',
@@ -266,7 +266,7 @@ const remoteUiCases = new Set([
 ]);
 
 export function remoteUiCollectionCase(contract) {
-  return contract?.phase === 1 && remoteUiCases.has(contract.id);
+  return contract?.phase === 1 && remoteUiCaseIds.includes(contract.id);
 }
 
 export function remoteEmptyShelfFixture(candidate, contract, scope) {

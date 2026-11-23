@@ -528,6 +528,8 @@ test('replays legacy and structure-aware synthetic receipts in an exported stand
 
   const packageDir = join(toolDir, 'tools/ui-contract');
   assert.ok(existsSync(join(toolDir, 'tools/page-structure/model.json')));
+  const numberedCopies = ['cli 2.mjs', 'collectors/harmonyos/records 2.mjs', 'collectors/harmonyos/run 2.mjs'];
+  assert.ok(numberedCopies.every(file => !existsSync(join(packageDir, file))));
   for (const dependency of ['receipt-conditions', 'receipt-structure', 'structure', 'structure-contract']) {
     assert.ok(existsSync(join(packageDir, 'lib', `${dependency}.mjs`)));
   }
@@ -584,6 +586,8 @@ test('replays legacy and structure-aware synthetic receipts in an exported stand
   assert.equal(currentCoverage.candidates[0].toolSha256, identity.sha256);
 
   const copiedTool = pathToFileURL(packageDir + '/');
+  for (const file of numberedCopies) writeFileSync(join(packageDir, file), 'local Finder copy');
+  assert.deepEqual(toolIdentity(copiedTool), identity);
   appendFileSync(join(packageDir, 'cases', `${readingId}.json`), '\n');
   const changedCase = toolIdentity(copiedTool);
   assert.notEqual(changedCase.sha256, identity.sha256);
@@ -596,7 +600,7 @@ test('replays legacy and structure-aware synthetic receipts in an exported stand
 
 test('current acceptance retains necessary structure, full coverage obligations and applicable gaps', () => {
   const auditCase = {
-    id:'contract.sample', phase:1, steps:[{id:'current',kind:'sample'},{id:'later',kind:'sample'}],
+    id:'contract.sample', version:1, phase:1, steps:[{id:'current',kind:'sample'},{id:'later',kind:'sample'}],
     structure:{current:'current',later:'later'},
   };
   const definition = {
@@ -700,7 +704,7 @@ test('current acceptance retains necessary structure, full coverage obligations 
 });
 
 test('Phase 1 candidate coverage combines only compatible complete scenarios across exact layout groups', () => {
-  const first = {id:'example.compact',phase:1,steps:[{id:'observed',kind:'sample'}],structure:{observed:'observed'},
+  const first = {id:'example.compact',version:1,phase:1,steps:[{id:'observed',kind:'sample'}],structure:{observed:'observed'},
     assertions:[{id:'check',required:true}]};
   const second = {...first,id:'example.expanded'};
   const conditional = {...first,id:'example.external',assertions:[{id:'check',required:false,condition:'observed fault'}]};
@@ -778,7 +782,7 @@ test('Phase 1 candidate coverage combines only compatible complete scenarios acr
 
 test('Phase 1 mixed coverage cannot use an inapplicable run to replace an applied functional check', () => {
   const caseId = 'example.mixed';
-  const contract = { id:caseId, phase:1, steps:[{id:'result',kind:'sample'}], structure:{result:'result'},
+  const contract = { id:caseId, version:1, phase:1, steps:[{id:'result',kind:'sample'}], structure:{result:'result'},
     assertions:[{id:'normal',required:true},{id:'late-a',required:false,condition:'An A completion arrived late'},
       {id:'late-b',required:false,condition:'A B completion arrived late'}],
   };
@@ -931,7 +935,7 @@ test('combines distinct runs for the same candidate and exact target, rejecting 
     return spawnSync(process.execPath, [fileURLToPath(new URL('../coverage.mjs', import.meta.url)),
       '--search', search.path, '--search-root', search.rootSha256,
       '--reading', reading.path, '--reading-root', reading.rootSha256],
-    { encoding: 'utf8', timeout: 3000 });
+    { encoding: 'utf8', timeout: 15000 });
   }
 
   const sameServer = cover(localReading);

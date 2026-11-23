@@ -195,13 +195,19 @@ export function fixtureAdmission(fixture, contract, candidate) {
 }
 
 export function assertLiveCollectionTarget({ server, target, deployment, manifest, contract, vmLog }) {
-  const local = server === '127.0.0.1:8710';
-  const remote = guestSchedulingRemoteTarget(server, target) && remoteUiCollectionCase(contract) &&
-    deployment.targetKind === 'vm' && deployment.vmLocation === 'remote' && !vmLog &&
-    manifest?.abi === 'x86_64' && deployment.postInstall?.cpuAbi === 'x86_64' &&
-    deployment.dataPolicy === 'preserve' && remoteGuestReady(deployment.readiness);
-  requireEvidence(deployment.hdcServer === server && (local || remote),
-    'Live UI collection requires the exact deployment server; remote VM collection is not permitted without an admitted case and guest-only x86_64 preserve deployment');
+  requireEvidence(deployment.hdcServer === server,
+    'Selected HDC server differs from the verified deployment. Use the server recorded in the deployment receipt.');
+  if (server !== '127.0.0.1:8710') {
+    requireEvidence(guestSchedulingRemoteTarget(server, target),
+      'Remote VM UI collection uses HDC server 192.168.1.10:8710 and the exact loopback target discovered on that server.');
+    requireEvidence(remoteUiCollectionCase(contract),
+      'The formal UI collector has no remote VM admission for this case. Run --help to list the admitted cases.');
+    requireEvidence(deployment.targetKind === 'vm' && deployment.vmLocation === 'remote' &&
+      manifest?.abi === 'x86_64' && deployment.postInstall?.cpuAbi === 'x86_64' && deployment.dataPolicy === 'preserve',
+    'Remote VM UI collection requires an x86_64 preserve-data deployment receipt from hap-pipeline.mjs install --target-kind vm --vm-location remote.');
+    requireEvidence(!vmLog && remoteGuestReady(deployment.readiness),
+      'Remote VM UI collection requires guest-only readiness in the deployment receipt. Omit --vm-log for the remote install and collection.');
+  }
   requireEvidence(target === undefined || deployment.targetRef === sha256(target).slice(0, 12),
     'Selected target differs from the verified deployment');
 }
