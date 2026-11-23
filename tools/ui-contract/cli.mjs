@@ -10,6 +10,7 @@ async function main() {
     replay: {type:'string'}, 'expected-root': {type:'string'}, manifest: {type:'string'},
     deployment: {type:'string'}, hdc: {type:'string'}, server: {type:'string'}, target: {type:'string'},
     'output-dir': {type:'string'}, fixture: {type:'string'}, 'vm-log': {type:'string'},
+    'guest-scheduling-trace': {type:'boolean'},
     'runner-mode': {type:'string'}, 'runner-manifest': {type:'string'}, 'runner-install-evidence': {type:'string'},
     'runner-deployment-sha256': {type:'string'}, 'runner-qualification': {type:'string'}, 'runner-qualification-sha256': {type:'string'},
   };
@@ -29,7 +30,8 @@ async function main() {
     return replayReceipt({receiptPath:values.replay, expectedRoot:values['expected-root'], contract});
   }
   const required = ['case','manifest','deployment','hdc','server','target','output-dir','fixture'];
-  requireEvidence(Object.keys(values).every(key => required.includes(key) || key === 'vm-log' || key.startsWith('runner-')) &&
+  requireEvidence(Object.keys(values).every(key => required.includes(key) || key === 'vm-log' ||
+    key === 'guest-scheduling-trace' || key.startsWith('runner-')) &&
     required.every(key => values[key]) &&
     values.server === '127.0.0.1:8710' &&
     /^[A-Za-z0-9._:\[\]-]{1,256}$/.test(values.target) && !values.target.startsWith('-'),
@@ -39,6 +41,7 @@ async function main() {
   const collectOptions = {
     manifest:resolve(values.manifest), deployment:resolve(values.deployment), hdc:resolve(values.hdc), server:values.server,
     target:values.target, outputDir:resolve(values['output-dir']), fixture:resolve(values.fixture), vmLog:optionalPath('vm-log'),
+    guestSchedulingTrace:values['guest-scheduling-trace'],
     runnerMode:values['runner-mode'],runnerManifest:optionalPath('runner-manifest'),runnerInstallEvidence:optionalPath('runner-install-evidence'),
     runnerDeploymentSha:values['runner-deployment-sha256'],runnerQualification:optionalPath('runner-qualification'),
     runnerQualificationSha:values['runner-qualification-sha256'],
@@ -49,13 +52,16 @@ async function main() {
     const qualification = sealRunnerQualification(outcome,contract);
     if (qualification) return qualification;
   }
-  return sealReceipt(outcome, contract);
+  const result = sealReceipt(outcome, contract);
+  return outcome.guestSchedulingTrace ? {...result, guestSchedulingTrace:outcome.guestSchedulingTrace} : result;
 }
 
 try {
   const result = await main();
   console.log(JSON.stringify(result, null, 2));
-  if (result.receipt && result.receipt.execution !== 'PASS') process.exitCode = 1;
+  if ((result.receipt && result.receipt.execution !== 'PASS') ||
+    (result.guestSchedulingTrace && (result.guestSchedulingTrace.status !== 'COVERED' ||
+      result.guestSchedulingTrace.cleanup !== 'PASS'))) process.exitCode = 1;
 } catch (error) {
   const incomplete = error instanceof EvidenceError;
   console.error(JSON.stringify({execution:incomplete ? 'INCOMPLETE' : 'ERROR', reason:error.message}));

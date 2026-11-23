@@ -5,11 +5,12 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EvidenceError } from '../../../lib/native-ui-evidence.mjs';
 import { requireEvidence } from '../../lib/evidence.mjs';
+import { guestSchedulingClientTimeoutMs, guestSchedulingCloseTimeoutMs } from './guest-scheduling.mjs';
 
 const probe = fileURLToPath(new URL('../../../reader-control-device-probe.mjs', import.meta.url));
 
 /** One owned probe and exactly one in-flight, bounded request. */
-export function openProbe({hdc, server, target, outputDir, runnerMode}) {
+export function openProbe({hdc, server, target, outputDir, runnerMode, guestSchedulingTrace}) {
   requireEvidence(runnerMode === undefined || runnerMode === 'dry' || runnerMode === 'dispatch',
     'The probe Runner mode must be dry or dispatch');
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
@@ -17,12 +18,14 @@ export function openProbe({hdc, server, target, outputDir, runnerMode}) {
   Object.assign(env, {NO_PROXY: '*', no_proxy: '*'});
   const args = [probe,'--hdc',hdc,'--server',server,'--target',target,'--output-dir',outputDir];
   if (runnerMode !== undefined) args.push('--runner-mode',runnerMode);
+  if (guestSchedulingTrace) args.push('--guest-scheduling','full-handoff');
   const child = spawn(process.execPath,args,{stdio:['pipe','pipe','pipe'],env});
   const records = [];
   const reader = createInterface({ input: child.stdout, crlfDelay: Infinity });
   let exited = null;
   let aborted = null;
   let pending;
+  let observedGuestSchedule = false;
   const ended = new Promise(resolve => {
     child.on('close', (code, signal) => {
       exited = {code, signal};
@@ -65,13 +68,16 @@ export function openProbe({hdc, server, target, outputDir, runnerMode}) {
     ready: () => next('ready', null, 34000),
     command: op => {
       const capture = op.op === 'recv' || op.op === 'uiContractReadiness';
+      if (op.observeGuestSchedule === true) observedGuestSchedule = true;
       const event = { uiContractReadiness: 'readiness', recv: 'capture-integrity', clickThenBack: 'click-then-back',
         clickThenReaderCenter: 'click-then-reader-center' }[op.op] ?? 'command';
-      return next(event, op, capture ? 122000 : 32000);
+      const timeout = capture ? 122000 : 32000;
+      return next(event, op, timeout + (op.observeGuestSchedule === true ? guestSchedulingClientTimeoutMs : 0));
     },
     async close() {
       if (!exited) child.stdin.end();
-      const outcome = await Promise.race([ended, delay(2000, null, {ref: false})]);
+      const closeTimeout = observedGuestSchedule ? guestSchedulingCloseTimeoutMs : 2000;
+      const outcome = await Promise.race([ended, delay(closeTimeout, null, {ref: false})]);
       if (!outcome) {
         child.kill('SIGTERM');
         // Do not start another target operation or free resources while the

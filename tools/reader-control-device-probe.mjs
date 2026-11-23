@@ -17,8 +17,8 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  accessSync, appendFileSync, constants, lstatSync, mkdirSync,
-  readFileSync, realpathSync, statSync, writeFileSync,
+  accessSync, appendFileSync, chmodSync, constants, lstatSync, mkdirSync,
+  readFileSync, realpathSync, renameSync, statSync, writeFileSync,
 } from 'node:fs';
 import { isIP } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -32,6 +32,9 @@ import { capsuleCenterDispatch, clickThenBackArgs, clickThenReaderCenterArgs, cr
   searchMorphDispatchWindowMs, uiInputKeyArgument } from './ui-contract/lib/control-input.mjs';
 import { popupRenderAcknowledged, popupRenderArgs, popupRenderBaselineAcknowledged, popupRenderBaselineArgs,
   popupRenderJournal } from './ui-contract/lib/popup-render.mjs';
+import { guestSchedulingClientTimeoutMs, guestSchedulingCommands, guestSchedulingLocalTarget,
+  guestSchedulingReceipt, guestSchedulingTraceFile, guestSchedulingVmLog,
+  observeGuestSchedulingChild } from './ui-contract/collectors/harmonyos/guest-scheduling.mjs';
 
 const BUNDLE = 'io.reader.minliny';
 const TIMEOUT_MS = 30000;
@@ -157,7 +160,8 @@ function optionsFrom(argv) {
   const keys = ['--target', '--hdc', '--server', '--output-dir'];
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index];
-    if ((!keys.includes(key) && key !== '--runner-mode') || options[key] !== undefined || argv[index + 1] === undefined) {
+    if ((!keys.includes(key) && key !== '--runner-mode' && key !== '--guest-scheduling') ||
+      options[key] !== undefined || argv[index + 1] === undefined) {
       fail('invalid/duplicate startup option');
     }
     options[key] = argv[index + 1];
@@ -169,6 +173,11 @@ function optionsFrom(argv) {
   }
   if (!/^[A-Za-z0-9._:\[\]-]{1,256}$/.test(options['--target']) || options['--target'].startsWith('-')) fail('invalid exact target');
   const server = options['--server'];
+  const guestScheduling = options['--guest-scheduling'];
+  if (guestScheduling !== undefined &&
+    (guestScheduling !== 'full-handoff' || !guestSchedulingLocalTarget(server, options['--target']))) {
+    fail('Guest scheduling requires a local Full handoff probe session');
+  }
   const colon = server.lastIndexOf(':');
   const host = server.slice(0, colon).replace(/^\[|\]$/g, '');
   const port = server.slice(colon + 1);
@@ -179,7 +188,7 @@ function optionsFrom(argv) {
   const outputDir = resolve(options['--output-dir']);
   if (outputDir === parse(outputDir).root) fail('output directory cannot be filesystem root');
   return { target: options['--target'], hdc: options['--hdc'], server, outputDir,
-    ...(runnerMode === undefined ? {} : {runnerMode}) };
+    ...(runnerMode === undefined ? {} : {runnerMode}), guestScheduling:guestScheduling === 'full-handoff' };
 }
 
 function exactFields(operation, names) {
@@ -239,7 +248,7 @@ function touchPlanText(events, width, height) {
 function operationPlan(operation, outputDir) {
   exactFields(operation, ['x', 'y', 'fromX', 'fromY', 'toX', 'toY', 'velocity', 'key', 'path', 'text', 'explicitPermit', 'sampleDelaysMs',
     'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs', 'targetKind', 'vmLog',
-    'centerX', 'centerY', 'bundleName', 'argument', 'renderPid', 'renderSurface', 'renderDepth']);
+    'centerX', 'centerY', 'bundleName', 'argument', 'renderPid', 'renderSurface', 'renderDepth', 'observeGuestSchedule']);
   if (operation.op === 'quit') {
     exactFields(operation, []);
     return { kind: 'quit' };
@@ -283,8 +292,11 @@ function operationPlan(operation, outputDir) {
       ...(execute ? { sampleDelaysMs: sampleDelays(operation.sampleDelaysMs) } : {}) };
   }
   if (operation.op === 'click' || operation.op === 'longClick') {
-    exactFields(operation, ['x', 'y']);
-    return shell('uitest', 'uiInput', operation.op, integer(operation.x, 0, 16384, 'x'), integer(operation.y, 0, 16384, 'y'));
+    exactFields(operation, ['x', 'y', ...(operation.op === 'click' ? ['observeGuestSchedule'] : [])]);
+    const click = shell('uitest', 'uiInput', operation.op, integer(operation.x, 0, 16384, 'x'), integer(operation.y, 0, 16384, 'y'));
+    if (!Object.hasOwn(operation, 'observeGuestSchedule')) return click;
+    if (operation.observeGuestSchedule !== true) fail('guest scheduler observation requires an explicit true flag');
+    return { ...click, kind:'guestSchedulingClick' };
   }
   if (operation.op === 'clickThenBack') {
     exactFields(operation, ['x', 'y']);
@@ -479,8 +491,17 @@ async function acquireTargetLock(target, hdc, configuredServer) {
   const configuredWait = Number(process.env.READER_HDC_LEASE_WAIT_MS || '30000');
   const waitMs = Number.isInteger(configuredWait) && configuredWait >= 0 && configuredWait <= 3600000 ? configuredWait : 30000;
   const lease = await acquireLease({ root, target, targetRefValue: targetRef, lockRefValue: serverRef, waitMs, owner });
+  const ownerFile = resolve(lease.lockDir, 'owner.json');
+  function recordClient(startPending, childPid = owner.childPid) {
+    owner.commandStartPending = startPending;
+    owner.childPid = childPid;
+    const pendingFile = resolve(lease.lockDir, 'owner.pending.json');
+    writeFileSync(pendingFile, JSON.stringify(owner), {mode:0o600});
+    renameSync(pendingFile, ownerFile);
+  }
   return {
     targetRef,
+    recordClient,
     release() { releaseLease(root, lease.lockDir, owner); },
   };
 }
@@ -491,6 +512,12 @@ async function probe(options) {
   const lock = await acquireTargetLock(options.target, options.hdc, options.server);
   let input;
   let activeChild;
+  let finishGuestScheduling;
+  const closeGuestScheduling = async transfer => {
+    const finish = finishGuestScheduling;
+    finishGuestScheduling = undefined;
+    await finish?.(transfer);
+  };
   let stopping = false;
   let frameIndex = 0;
   let idleTimer;
@@ -520,6 +547,7 @@ async function probe(options) {
       process.stdout.write(line);
     };
     const prefix = ['-p', '-s', options.server, '-t', options.target];
+    let localVmReady = false;
     let parseBundleMetadata;
     const assess = (args, result, startedAt, elapsedMs, {privateBundleOutput = false,runnerBundle,runnerClock,popupRender} = {}) => {
       let installed;
@@ -541,15 +569,19 @@ async function probe(options) {
         ...(installed ? { installed } : {}) });
       if (!ok) fail('device command failed or stop-condition output observed; no automatic retry');
     };
-    const invoke = (args, latestStart = deadline, maxBuffer = MAX_OUTPUT) => {
+    const invoke = (args, latestStart = deadline, maxBuffer = MAX_OUTPUT, client) => {
       const start = performance.now();
       if (stopping || deadline <= start || latestStart <= start) return null;
       const startedAt = new Date().toISOString();
       const transfer = args[0] === 'file';
-      const timeout = Math.min(transfer ? TRANSFER_TIMEOUT_MS : TIMEOUT_MS, Math.max(1, Math.floor(deadline - start)));
+      const timeout = Math.min(client?.timeout ?? (transfer ? TRANSFER_TIMEOUT_MS : TIMEOUT_MS),
+        Math.max(1, Math.floor(deadline - start)));
+      if (client) lock.recordClient(true);
       const result = spawnSync(options.hdc, [...prefix, ...args], {
         shell: false, encoding: 'utf8', timeout, env: hdcEnvironment, maxBuffer, stdio: ['ignore', 'pipe', 'pipe'],
+        ...(client ? {killSignal:'SIGKILL'} : {}),
       });
+      if (client) lock.recordClient(false);
       return { result, startedAt, start, elapsedMs: performance.now() - start };
     };
     const publicDispatch = (args, dispatch) => dispatch && ({
@@ -590,7 +622,8 @@ async function probe(options) {
     const run = plan => {
       if (plan.localPath && evidenceEntryExists(plan.localPath)) fail('refusing to overwrite existing local evidence or symlink');
       const dispatched = invoke(plan.args,deadline,plan.runnerOutput ? RUNNER_OUTPUT_BYTES :
-        plan.popupRender ? POPUP_RENDER_OUTPUT_BYTES : MAX_OUTPUT);
+        plan.popupRender ? POPUP_RENDER_OUTPUT_BYTES : MAX_OUTPUT,
+      plan.kind === 'guestSchedulingClick' ? {timeout:4000} : undefined);
       if (!dispatched) fail('probe is stopping');
       const { result, startedAt, elapsedMs } = dispatched;
       assess(plan.args,plan.runnerOutput ? boundedRunnerOutput(result) :
@@ -611,6 +644,57 @@ async function probe(options) {
       }
       return result;
     };
+    const guestSchedulingClick = async plan => {
+      if (!localVmReady || finishGuestScheduling || stopping) fail('guest scheduler observation requires one ready local VM click');
+      const receiptPath = resolve(options.outputDir, guestSchedulingReceipt);
+      const tracePath = resolve(options.outputDir, guestSchedulingTraceFile);
+      if (evidenceEntryExists(receiptPath) || evidenceEntryExists(tracePath)) fail('guest scheduler evidence already exists');
+      const {armArgs, remote, cleanupArgs} = guestSchedulingCommands(frameRunNonce, BUNDLE);
+      const traceStarted = performance.now();
+      if (deadline - traceStarted < guestSchedulingClientTimeoutMs) fail('not enough probe time remains to start the guest trace');
+      lock.recordClient(true);
+      const child = spawn(options.hdc, [...prefix, ...armArgs], {
+        timeout:guestSchedulingClientTimeoutMs, killSignal:'SIGKILL', env:hdcEnvironment, stdio:['ignore','pipe','pipe'],
+      });
+      child.once('spawn', () => lock.recordClient(false, child.pid));
+      const collector = observeGuestSchedulingChild(child);
+      let dispatch;
+      finishGuestScheduling = async transfer => {
+        const {arming, savedFile, captured, finishedAt} = await collector.completed;
+        lock.recordClient(false, null);
+        const evidence = { targetRef:lock.targetRef, traceClock:'mono', traceDurationSeconds:5,
+          status:arming ? 'TRACE_INCOMPLETE' : 'NOT_ARMED', finishedAt,
+          readerPid:arming?.readerPid, armedAt:arming?.armedAt, dispatch, cleanup:'NOT_RUN' };
+        if (savedFile && !stopping) {
+          try {
+            if (transfer && captured && dispatch?.completedAt && !evidenceEntryExists(tracePath)) {
+              const received = invoke(['file','recv',remote,tracePath], deadline, MAX_OUTPUT, {timeout:8000});
+              const file = lstatSync(tracePath, {throwIfNoEntry:false});
+              if (file?.isFile()) chmodSync(tracePath, 0o600);
+              if (received && commandOK(received.result) && file?.isFile() &&
+                file.size === savedFile.bytes && sha256(readFileSync(tracePath)) === savedFile.sha256) {
+                evidence.status = 'TRACE_BYTES_SAVED';
+                evidence.trace = { path:guestSchedulingTraceFile, bytes:savedFile.bytes, sha256:savedFile.sha256 };
+              }
+            }
+          } finally {
+            // Let any signal received during synchronous file recv reach stop().
+            await new Promise(resolveImmediate => setImmediate(resolveImmediate));
+            const cleanup = invoke(cleanupArgs, deadline, MAX_OUTPUT, {timeout:5000});
+            if (cleanup) evidence.cleanup = commandOK(cleanup.result) ? 'PASS' : 'FAIL';
+          }
+        }
+        writeFileSync(receiptPath, JSON.stringify(evidence, null, 2) + '\n', {flag:'wx',mode:0o600});
+      };
+      const arming = await collector.armed;
+      if (!arming || stopping || child.exitCode !== null || child.signalCode !== null ||
+        performance.now() - arming.hostArmedMs > 1000 || performance.now() - traceStarted > 4000) {
+        fail('guest scheduler trace did not arm for the current playback action');
+      }
+      dispatch = { commandSeq:seq + 1, beganAt:new Date().toISOString() };
+      run(plan);
+      dispatch.completedAt = new Date().toISOString();
+    };
     const readiness = async plan => {
       const { readinessQueryOutput, targetReadiness } = await import('../scripts/lib/hap-delivery-evidence.mjs');
       const query = command => {
@@ -626,6 +710,11 @@ async function probe(options) {
       const exact = (listing.stdout ?? '').split(/\r?\n/u).filter(line => line.split(/\s+/u)[0] === options.target);
       if (!commandOK(listing) || exact.length !== 1 || !/\bConnected\b/u.test(exact[0])) fail('Exact target is not independently confirmed Connected');
       const checked = targetReadiness({ targetKind: plan.targetKind, vmLog: plan.vmLog, targetEndpoint: options.target, query });
+      localVmReady = options.guestScheduling && checked.status === 'PASS' &&
+        checked.bootCompleted === true && checked.sceneBoardStable === true &&
+        plan.targetKind === 'vm' && options.server === '127.0.0.1:8710' &&
+        guestSchedulingVmLog(plan.vmLog) && checked.emulatorLog?.bootMarker === true &&
+        checked.emulatorLog.instabilityAfterMarker === false;
       record({ event: 'readiness', ...checked, hdcServer: options.server, targetKind: plan.targetKind, exactConnected: true });
     };
     const touchTickets = new Map();
@@ -847,6 +936,7 @@ async function probe(options) {
       else if (plan.kind === 'dryRunTouchSequence') dryRunTouchSequence(plan);
       else if (plan.kind === 'sampledTouchSequence') await sampledTouchSequence(plan);
       else if (plan.kind === 'uiContractReadiness') await readiness(plan);
+      else if (plan.kind === 'guestSchedulingClick') await guestSchedulingClick(plan);
       else if (plan.kind === 'uiContractRunnerInvoke') run(await runnerInvocation(plan,runnerState,lock.targetRef,options.runnerMode));
       else {
         if (plan.privateBundleOutput && !plan.runnerBundle) {
@@ -856,15 +946,19 @@ async function probe(options) {
       }
       waitForInput();
     }
+    await closeGuestScheduling(!stopping);
     record({ event: 'closed', reason: stopping ? 'signal' : 'quit-or-eof' });
   } finally {
     clearTimeout(idleTimer);
     clearTimeout(sessionTimer);
     input?.close();
-    process.off('SIGINT', stop);
-    process.off('SIGTERM', stop);
-    process.off('SIGHUP', stop);
-    lock.release();
+    try { await closeGuestScheduling(false); }
+    finally {
+      process.off('SIGINT', stop);
+      process.off('SIGTERM', stop);
+      process.off('SIGHUP', stop);
+      lock.release();
+    }
   }
 }
 
@@ -877,10 +971,19 @@ function selfTest() {
   const plan = value => operationPlan({ preflightConfirmed: true, ...value }, directory);
   const validArgs = ['--target', 'test-serial', '--hdc', resolve(tmpdir(), 'fixture-hdc'), '--server', '::ffff:127.0.0.1:8710', '--output-dir', directory];
   assert.equal(optionsFrom(validArgs).server, '::ffff:127.0.0.1:8710');
+  assert.equal(optionsFrom(validArgs).guestScheduling, false);
+  assert.throws(() => optionsFrom([...validArgs,'--guest-scheduling','full-handoff']));
+  const tracedArgs = validArgs.map(value => value === 'test-serial' ? '127.0.0.1:5561' :
+    value === '::ffff:127.0.0.1:8710' ? '127.0.0.1:8710' : value);
+  assert.equal(optionsFrom([...tracedArgs,'--guest-scheduling','full-handoff']).guestScheduling, true);
   assert.throws(() => optionsFrom([...validArgs, '--target', 'other']));
   assert.throws(() => optionsFrom(validArgs.map(value => value === 'test-serial' ? 'x; reboot' : value)));
   assert.throws(() => operationPlan({ op: 'click', x: 1, y: 2 }, directory));
   assert.deepEqual(plan({ op: 'click', x: 1, y: 2 }).args, ['shell', 'uitest', 'uiInput', 'click', '1', '2']);
+  const observedClick = plan({op:'click',x:1,y:2,observeGuestSchedule:true});
+  assert.deepEqual(observedClick, {kind:'guestSchedulingClick',args:plan({op:'click',x:1,y:2}).args});
+  assert.throws(() => plan({op:'click',x:1,y:2,observeGuestSchedule:false}));
+  assert.throws(() => plan({op:'longClick',x:1,y:2,observeGuestSchedule:true}));
   assert.deepEqual(plan({ op: 'inputDirectoryFixtureUrl', x: 1, y: 2 }).args,
     ['shell', 'uitest', 'uiInput', 'inputText', '1', '2', 'http://127.0.0.1:18084/reading-directory-sources.json']);
   assert.throws(() => plan({ op: 'inputDirectoryFixtureUrl', x: 1, y: 2, text: 'other' }));

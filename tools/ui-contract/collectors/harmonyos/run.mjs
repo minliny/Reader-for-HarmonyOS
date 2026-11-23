@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { dirname, join, basename } from 'node:path';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { isDeepStrictEqual } from 'node:util';
@@ -22,6 +22,8 @@ import { sourceStatusActionEdgePostToastSample, sourceStatusActionEdgeToastRetir
 import { prepareReversalDispatch, reversalReadbackTiming, reversalReplayTiming } from './reversal-dispatch.mjs';
 import { popupRenderOperation } from '../../lib/popup-render.mjs';
 import { openProbe } from './transport.mjs';
+import { guestSchedulingActionWindow, guestSchedulingCase, guestSchedulingClick, guestSchedulingCoverage, guestSchedulingReceipt,
+  guestSchedulingLocalTarget, guestSchedulingTraceFile, guestSchedulingVmLog } from './guest-scheduling.mjs';
 import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from './focus-window.mjs';
 
 export { classifyFocusWindow } from './focus-window.mjs';
@@ -463,6 +465,9 @@ export async function prepareUnlockedFocus(probe, {targetKind, server, target}, 
 }
 
 export async function collectHarmony(options, contract) {
+  requireEvidence(!options.guestSchedulingTrace || contract.id === guestSchedulingCase &&
+    guestSchedulingVmLog(options.vmLog) && guestSchedulingLocalTarget(options.server, options.target),
+  'Guest scheduling trace requires the Full capsule handoff on the original local VM');
   const {runnerCollectionMode,authorizeRunnerCollection} = await import('./runner-collection-admission.mjs');
   const collectionMode = runnerCollectionMode(options,contract);
   const reversal = contract.steps.find(step => step.op === 'grabberReversal');
@@ -470,6 +475,10 @@ export async function collectHarmony(options, contract) {
   const { verifyManifest } = await import('../../../../scripts/hap-pipeline.mjs');
   verifyManifest(options.manifest);
   const inputs = candidateInputs(options, contract);
+  if (options.guestSchedulingTrace) {
+    requireEvidence(guestSchedulingVmLog(options.vmLog, JSON.parse(inputs.fixtureBytes).vmName),
+      'Guest scheduling trace fixture does not identify the original VM');
+  }
   const runId = randomUUID();
   mkdirSync(options.outputDir, { mode: 0o700 });
   const store = evidenceStore(options.outputDir);
@@ -570,7 +579,8 @@ export async function collectHarmony(options, contract) {
           entry.popupRenderBaselineLog = baseline.seq;
         }
         if (op.op === 'inputText') inputLength = op.text.length;
-        const command = await probe.command(op);
+        const observeGuestSchedule = options.guestSchedulingTrace && guestSchedulingClick(contract, step, op);
+        const command = await probe.command(observeGuestSchedule ? { ...op, observeGuestSchedule:true } : op);
         entry.command = command.seq;
         requireActionDispatch(probe.records, command.seq, op);
       } else if (sourceTransientStatusStep(contract.fixture,step)) {
@@ -677,6 +687,45 @@ export async function collectHarmony(options, contract) {
   const session = validate('session', {runId, platform:'harmonyos', instanceId, result, reason,
     commands:observed, fixture, chain:sealChain(entries),...(runnerEvidence ? {runner:runnerEvidence} : {})});
   const sessionRef = store.writeJson('session/session.json', session);
+  let guestSchedulingTrace;
+  if (options.guestSchedulingTrace) {
+    const path = 'raw/' + guestSchedulingReceipt;
+    const action = entries.find(entry => entry.kind === 'action' && entry.id === 'playback-launch');
+    let status = 'NOT_RUN';
+    let observation;
+    let trace;
+    let coverage;
+    let cleanup = 'NOT_RUN';
+    if (existsSync(join(store.root, path))) {
+      try {
+        observation = store.reference(path);
+        const data = store.json(observation);
+        status = data.status;
+        cleanup = data.cleanup;
+        if (status === 'TRACE_BYTES_SAVED') {
+          const artifact = store.reference('raw/' + guestSchedulingTraceFile);
+          if (data.targetRef === candidate.targetRef && action &&
+            data.dispatch?.commandSeq === action.command && artifact.bytes === data.trace?.bytes &&
+            artifact.sha256 === data.trace?.sha256) {
+            trace = artifact;
+            const events = probeEventsInRange(probe.records.slice(action.floorLog - 1, action.afterLog),
+              instanceId, action.beforeSeq, action.afterSeq);
+            const {startTimeMs, frames} = guestSchedulingActionWindow(events);
+            coverage = guestSchedulingCoverage(store.bytes(trace).toString('utf8'), data.readerPid, startTimeMs, frames);
+            status = coverage.status === 'COVERED' ? 'COVERED' : 'TRACE_BYTES_ONLY';
+          } else status = 'UNBOUND';
+        }
+      } catch (_) {
+        status = 'UNBOUND';
+      }
+    }
+    const evidence = store.writeJson('session/guest-scheduling.json', {
+      status, observation, trace, coverage, cleanup, session:sessionRef, runId, instanceId, caseId:contract.id,
+      appBuildId:candidate.appBuildId, buildRunId:candidate.buildRunId, targetRef:candidate.targetRef,
+      playbackCommandSeq:action?.command, dispatchLogFloorSeq:action?.floorLog,
+    });
+    guestSchedulingTrace = { status, cleanup, evidence };
+  }
   if (toolError) throw toolError;
-  return {store, refs, candidate, session, sessionRef};
+  return {store, refs, candidate, session, sessionRef, guestSchedulingTrace};
 }
