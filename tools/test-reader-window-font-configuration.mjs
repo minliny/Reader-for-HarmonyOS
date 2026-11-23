@@ -5,7 +5,7 @@ import {createWindowCoordinatorFixture} from './lib/reader-window-coordinator-fi
 import {selectedProductionMethods} from './lib/selected-production-methods.mjs';
 const defaultSourceManagementFilters = () => ({searchQuery:'',statusValue:'全部',categoryValue:'all',groupValue:'全部分组'});
 
-const selected=selectContractCases({configuration:'Actual Coordinator owns valid Configuration.fontSizeScale independently from Display density; lifecycle, dedup and late-window guards.', 'entry-consumer':'Actual Entry window install/configuration update forwarding and retired-stage/theme behavior.', 'native-context':'Actual loaded fixture record observes native following/max/fp-vp conversion with strict unavailable validity; public followSystem config has no max override.'});
+const selected=selectContractCases({configuration:'Actual Coordinator owns valid Configuration.fontSizeScale independently from Display density; lifecycle, dedup and late-window guards.', 'entry-consumer':'Actual Entry window install/configuration update forwarding and retired-stage/theme behavior.', 'native-context':'Actual loaded fixture record observes native following/max/fp-vp conversion with strict unavailable validity; public followSystem config has no max override.', 'fixture-isolation':'Two live Coordinator fixtures retain their own window and storage ports without replacing process AppStorage.'});
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
 async function configuration(){
@@ -40,9 +40,43 @@ async function entryConsumer(){
  owner.onWindowStageDestroy();const count=calls.length;owner.onConfigurationUpdate({fontSizeScale:2,colorMode:0});await flush();assert.equal(calls.length,count,'retired stage publishes no font update');assert.deepEqual(themes,['night','day'],'existing system-theme handling remains active');assert.equal(closed,1);
  owner.activeWindowStage={getMainWindowSync(){throw Error('retired native window');}};owner.onConfigurationUpdate({fontSizeScale:2,colorMode:1});await flush();assert.equal(calls.length,count);assert.deepEqual(themes,['night','day','night']);
 }
+async function fixtureIsolation() {
+  const originalStorage = globalThis.AppStorage;
+  const first = await createWindowCoordinatorFixture();
+  let second;
+  try {
+    second = await createWindowCoordinatorFixture();
+    const firstWindow = first.windowPort();
+    const secondWindow = second.windowPort();
+    assert.equal(await first.C.install(firstWindow, { fontSizeScale: 1.3 }), true);
+    await flush();
+    assert.ok(first.appWrites.length > 0, 'first window publishes to its own storage');
+    assert.equal(second.appWrites.length, 0, 'first window cannot write the successor fixture storage');
+
+    const firstWrites = first.appWrites.length;
+    assert.equal(await second.C.install(secondWindow, { fontSizeScale: 1.6 }), true);
+    await flush();
+    assert.ok(second.appWrites.length > 0, 'second window publishes to its own storage');
+    assert.equal(first.appWrites.length, firstWrites);
+
+    const secondWrites = second.appWrites.length;
+    first.C.refreshConfiguration({ fontSizeScale: 2 }, firstWindow);
+    await flush();
+    assert.equal(first.C.metrics().systemFontScale, 2);
+    assert.equal(second.C.metrics().systemFontScale, 1.6);
+    assert.ok(first.appWrites.length > firstWrites);
+    assert.equal(second.appWrites.length, secondWrites);
+    assert.equal(globalThis.AppStorage, originalStorage, 'fixtures leave the process storage port intact');
+  } finally {
+    second?.cleanup();
+    first.cleanup();
+  }
+  assert.equal(globalThis.AppStorage, originalStorage, 'fixture cleanup leaves the process storage port intact');
+}
+
 function nativeContext(){
  const logs=[],snapshot={systemFontScale:1.45};const Fixture=selectedProductionMethods(new URL('pages/ReaderPageStructureVerification.ets',base),'ReaderPageStructureVerification',['record'],{readerWindowMetrics:()=>snapshot,hilog:{info:(...args)=>logs.push(JSON.parse(args.at(-1)))}});
- function observe(overrides={},throws=false){const owner=Object.assign(new Fixture(),{scene:'default',filters:defaultSourceManagementFilters(),presentation:1,requestedWidth:366,actualWidth:365.714,actualHeight:809.143,intentCount:0,appContentTopInset:()=>39,getUIContext:()=>{if(throws)throw Error('unavailable native context');return {isFollowingSystemFontScale:()=>true,getMaxFontScale:()=>3.2,vp2px:()=>3.5,fp2px:()=>5.075,...overrides};}});owner.record('test-observation');return logs.at(-1);}
+ function observe(overrides={},throws=false){const owner=Object.assign(new Fixture(),{scene:'default',sources:[],filters:defaultSourceManagementFilters(),presentation:1,requestedWidth:366,actualWidth:365.714,actualHeight:809.143,intentCount:0,appFontPreviewScale:0,appContentTopInset:()=>39,getUIContext:()=>{if(throws)throw Error('unavailable native context');return {isFollowingSystemFontScale:()=>true,getMaxFontScale:()=>3.2,vp2px:()=>3.5,fp2px:()=>5.075,...overrides};}});owner.record('test-observation');return logs.at(-1);}
  let row=observe();assert.equal(row.nativeFontObservationStatus,'ready');assert.equal(row.nativeFontFollowing,true);assert.equal(row.nativeFontMaxScale,3.2);assert.equal(row.nativeFontScaleVp,1.45);assert.equal(snapshot.systemFontScale,1.45);
  row=observe({isFollowingSystemFontScale:()=>false,fp2px:()=>3.5});assert.equal(row.nativeFontObservationStatus,'ready');assert.equal(row.nativeFontFollowing,false,'observe false truthfully; do not manufacture followSystem');assert.equal(row.nativeFontScaleVp,1);
  const invalid=[{isFollowingSystemFontScale:()=>undefined},{getMaxFontScale:()=>0},{getMaxFontScale:()=>Infinity},{vp2px:()=>0},{vp2px:()=>NaN},{fp2px:()=>-1},{fp2px:()=>Infinity},{vp2px:()=>1e-300,fp2px:()=>1e300},{vp2px:()=>1e300,fp2px:()=>1e-300}];
@@ -51,4 +85,4 @@ function nativeContext(){
  const app=JSON.parse(readFileSync(new URL('../AppScope/app.json5',import.meta.url),'utf8')),profile=JSON.parse(readFileSync(new URL('../AppScope/resources/base/profile/configuration.json',import.meta.url),'utf8'));
  assert.equal(app.app.configuration,'$profile:configuration');assert.deepEqual(profile,{configuration:{fontSizeScale:'followSystem'}},'declare followSystem only; no fabricated max scale override');
 }
-for(const id of selected){await({configuration,'entry-consumer':entryConsumer,'native-context':nativeContext}[id]());recordContractCasePass(id);}
+for(const id of selected){await({configuration,'entry-consumer':entryConsumer,'native-context':nativeContext,'fixture-isolation':fixtureIsolation}[id]());recordContractCasePass(id);}

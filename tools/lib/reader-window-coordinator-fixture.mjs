@@ -8,10 +8,25 @@ import {installedEtsCompiler} from './ets-compiler-runtime.mjs';
 import {readerWindowEnvironmentForProbe} from './reader-window-environment-probe.mjs';
 const base=new URL('../../entry/src/main/ets/',import.meta.url);
 export async function createWindowCoordinatorFixture(){
- const extensionHook=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
- const {ReaderStatusBarMeasurement}=await import('../../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
+ const statusBarUrl = new URL('app/ReaderStatusBarMeasurement.ts', base).href;
+ const extensionHook = registerHooks({ resolve(specifier, context, next) {
+   if (context.parentURL === statusBarUrl && specifier === '../ui/foundation/ReaderWindowMetrics') {
+     return next(`${specifier}.ts`, context);
+   }
+   return next(specifier, context);
+ } });
+ let ReaderStatusBarMeasurement;
+ try { ({ ReaderStatusBarMeasurement } = await import(statusBarUrl)); }
+ finally { extensionHook.deregister(); }
  const {ts}=installedEtsCompiler();
- const app=new Map(),appWrites=[],priorStorage=globalThis.AppStorage;globalThis.AppStorage={get:key=>app.get(key),setOrCreate:(k,v)=>{app.set(k,v);appWrites.push([k,v]);}};
+ const app = new Map(), appWrites = [];
+ const storagePort = {
+   get: key => app.get(key),
+   setOrCreate(key, value) {
+     app.set(key, value);
+     appWrites.push([key, value]);
+   },
+ };
  const warnings=[];
  const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
  const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
@@ -26,7 +41,7 @@ export async function createWindowCoordinatorFixture(){
    '../ui/foundation/ReaderWindowEnvironment':readerWindowEnvironmentForProbe()};
  const source=readFileSync(new URL('app/ReaderWindowCoordinator.ts',base),'utf8');
  const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
- const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);
+ const module={exports:{}};new Function('require','module','exports','AppStorage',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports,storagePort);
  const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
  function windowPort(options={}){
    const zero={left:0,top:0,width:0,height:0};
@@ -48,5 +63,5 @@ export async function createWindowCoordinatorFixture(){
  }
 
  const colors=w=>w.calls.filter(x=>x[0]==='color');
- return{C,S,P,windowPort,colors,displayInfo,app,appWrites,warnings,cleanup(){C.detach();extensionHook.deregister();if(priorStorage===undefined)delete globalThis.AppStorage;else globalThis.AppStorage=priorStorage;}};
+ return{C,S,P,windowPort,colors,displayInfo,app,appWrites,warnings,cleanup(){C.detach();}};
 }
