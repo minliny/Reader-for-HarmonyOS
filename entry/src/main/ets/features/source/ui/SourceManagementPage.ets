@@ -2,7 +2,7 @@ import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeome
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { readerInteractiveSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderRectVp, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, readerTransientTextObserver,
@@ -267,6 +267,8 @@ export struct SourceManagementPage {
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
   @State private groupX: number = 0;
   @State private groupY: number = 0;
+  @State private groupTriggerWidth: number = 0;
+  @State private groupClosingAnchor: ReaderRectVp | undefined = undefined;
   @State private originX: number = 0;
   @State private originY: number = 0;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
@@ -275,8 +277,8 @@ export struct SourceManagementPage {
   private headerInputs: string = '';
   private headerTopAlignmentScheduled: boolean = false;
   private footerInputs: string = '';
-  private viewportWidth: number = 0;
-  private viewportHeight: number = 0;
+  @State private viewportWidth: number = 0;
+  @State private viewportHeight: number = 0;
   private measurementRevision: number = 0;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   private verificationReadLoadingGeneration: number = 0;
@@ -399,6 +401,7 @@ export struct SourceManagementPage {
     this.verificationGroupTextMetrics = undefined;
     this.groupOpen = false;
     this.groupClosing = false;
+    this.groupClosingAnchor = undefined;
     this.groupSelectionId = '';
   }
 
@@ -412,7 +415,9 @@ export struct SourceManagementPage {
 
   private toggleGroupSelection(): void {
     if (!this.managementInputIsCurrent()) return;
-    if (this.requestGroupClose(this.groupSelectionId) || this.groupOptions().length <= 1) return;
+    if (this.requestGroupClose(this.groupSelectionId) || this.groupOptions().length <= 1 || this.groupTriggerWidth <= 0) return;
+    if (this.overlayBottom() - this.groupOverlayTop() < 44 + 2 * TOK_BORDER_W ||
+      this.groupX - this.originX >= this.overlayRight()) return;
     this.cancelGroupFocus();
     this.cancelToolsReturnFocus('group');
     this.groupSelectionId = `source-group:${++sourceTemporaryGeneration}`;
@@ -439,6 +444,8 @@ export struct SourceManagementPage {
   private commitGroupSelection(option: string, identity: string): void {
     if (!this.managementInputIsCurrent() || !this.ownsGroupSelection(identity) || this.groupClosing || this.groupOptions().indexOf(option) < 0) return;
     this.cancelGroupFocus();
+    // Applying a group can scroll the list to its top before the panel finishes closing.
+    this.groupClosingAnchor = new ReaderRectVp(this.groupX, this.groupY, this.groupTriggerWidth, 0);
     this.groupValue = option;
     this.rebuildSourceProjection('group');
   }
@@ -636,14 +643,14 @@ export struct SourceManagementPage {
         value: this.groupValue,
         options: this.groupOptions(),
         variant: 'sourceGroup',
-        controlWidth: this.groupSelectWidth(),
+        controlWidth: this.groupClosingAnchor?.width ?? this.groupTriggerWidth,
         reduceMotion: this.reduceMotion,
         closing: this.groupClosing,
         selectionId: this.groupSelectionId,
         focusIdPrefix: this.groupPanelFocusPrefix(this.groupSelectionId),
-        x: this.groupX - this.originX,
-        y: this.groupY - this.originY,
-        hostTopVp: this.overlayTop(), hostBottomVp: this.overlayBottom(),
+        x: (this.groupClosingAnchor?.left ?? this.groupX) - this.originX,
+        y: (this.groupClosingAnchor?.top ?? this.groupY) - this.originY,
+        hostTopVp: this.groupOverlayTop(), hostBottomVp: this.overlayBottom(),
         hostLeftVp: this.overlayLeft(), hostRightVp: this.overlayRight(),
         optionTextLayoutOptions: this.verificationGroupTextMetrics === undefined ? undefined :
           (opt: string, identity: string): TextOptions | undefined => this.verificationGroupTextOptions(opt, identity),
@@ -1462,11 +1469,7 @@ export struct SourceManagementPage {
       })
       .id('reader-source-group-trigger')
       .margin({ left: GROUP_TRIGGER_GAP })
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
-        this.groupX = Number(newValue.globalPosition.x);
-        this.groupY = Number(newValue.globalPosition.y);
-      });
+      .onAreaChange((_oldValue: Area, newValue: Area): void => this.recordGroupTrigger(newValue));
     }
     .id('reader-source-group-filter')
     .width(this.filterControlWidth())
@@ -2434,6 +2437,15 @@ export struct SourceManagementPage {
     }
   }
 
+  private recordGroupTrigger(area: Area): void {
+    const width = this.numericAreaLength(area.width);
+    if (!this.mounted || width <= 0) return;
+    // Area already reports vp. Use the actual trigger box in the overlay's coordinates.
+    this.groupX = this.numericAreaLength(area.globalPosition.x);
+    this.groupY = this.numericAreaLength(area.globalPosition.y);
+    this.groupTriggerWidth = width;
+  }
+
   private onGeometryInputsChanged(): void {
     if (!this.mounted) return;
     const metrics = ReaderWindowCoordinator.metrics();
@@ -2564,6 +2576,7 @@ export struct SourceManagementPage {
   }
 
   private overlayLeft(): number {
+    this.readerWindowMetricsRevision;
     return Math.min(Math.max(0, this.viewportWidth),
       Math.max(0, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()) - this.originX));
   }
@@ -2575,7 +2588,14 @@ export struct SourceManagementPage {
   }
 
   private overlayTop(): number {
+    // The keyboard can change while the trigger and root keep the same area.
+    this.readerWindowMetricsRevision;
     return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics(), true) - this.originY);
+  }
+
+  private groupOverlayTop(): number {
+    const anchor = this.groupClosingAnchor?.top ?? this.groupY;
+    return Math.max(this.overlayTop(), Math.min(anchor - this.originY, this.overlayBottom()));
   }
 
   private overlayBottom(): number {

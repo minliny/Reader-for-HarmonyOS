@@ -146,7 +146,9 @@ export struct ReaderSelect {
     } else if (this.variant === 'settingsTablet') {
       this.settingsTrigger();
     } else if (this.variant === 'sourceGroup') {
-      this.sourceGroupTrigger();
+      this.sourceGroupTrigger(this.measuredValueHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp,
+        TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily, TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight,
+        TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp));
     } else {
       this.defaultTrigger();
     }
@@ -221,13 +223,11 @@ export struct ReaderSelect {
   }
 
   @Builder
-  private sourceGroupTrigger() {
+  private sourceGroupTrigger(valueHeight: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.value)
         .width(Math.max(0, this.resolvedWidth() - 42))
-        .height(this.measuredValueHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp,
-          TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily, TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight,
-          TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp))
+        .height(valueHeight)
         .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
         .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
@@ -235,7 +235,7 @@ export struct ReaderSelect {
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 14, y: 10 });
+        .position({ x: 14, y: (this.triggerHeight() - valueHeight) / 2 });
       Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron')))
         .width(12)
         .height(12)

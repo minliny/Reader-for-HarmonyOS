@@ -122,15 +122,19 @@ function selectHost() {
     if (height === 0) assert.equal(frame.height, 0, 'zero host never restores the330vp default');
     results.push({ case: 'select-host', height, y: frame.position.y, panelHeight: frame.height });
   }
-  const parent = createReaderBuilderProbe(read('features/source/ui/SourceManagementPage.ets'), ['groupOverlay', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
+  const parent = createReaderBuilderProbe(read('features/source/ui/SourceManagementPage.ets'), ['groupOverlay', 'groupOverlayTop', 'recordGroupTrigger', 'numericAreaLength', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
     { ...inline.dependencies, ...safe, ReaderWindowCoordinator: { metrics: () => value } }, inline.hooks).owner;
-  Object.assign(parent, { groupOpen: true, groupValue: '全部分组', groupSelectionId: 'source:1', groupX: 180, groupY: 250,
+  Object.assign(parent, { mounted: true, groupOpen: true, groupValue: '全部分组', groupSelectionId: 'source:1',
     originX: 0, originY: 0, viewportWidth: 320, viewportHeight: 180, reduceMotion: true, groupClosing: false,
-    groupOptions: () => Array.from({ length: 8 }, (_, index) => `组${index}`), groupSelectWidth: () => 100,
+    groupOptions: () => Array.from({ length: 8 }, (_, index) => `组${index}`),
     groupCloseAction: () => () => {}, groupPanelFocusPrefix: () => '', groupPanelLayoutAction: () => () => {} });
+  parent.recordGroupTrigger({ width: 100, globalPosition: { x: 180, y: 90 } });
   parent.groupOverlay();
   const mounted = inline.walk(parent).find(actor => actor instanceof Panel);
-  assert.ok(mounted); assert.equal(mounted.hostBottomVp, 180); assert.equal(mounted.hostTopVp, 24);
+  assert.ok(mounted);
+  assert.equal(mounted.hostBottomVp, 180);
+  assert.equal(mounted.hostTopVp, 90, 'Source caller reserves only the space below the measured anchor');
+  assert.equal(mounted.controlWidth, 100);
   function heightReceipts(Component) {
     value.systemFontScale = 1; value.windowRect.width = 320;
     const panel = new Component(undefined, { variant: 'sourceGroup', value: '全部分组', options: ['全部分组', '甲组', '乙组'],
@@ -630,12 +634,13 @@ function supplementalSelectTargets() {
   const inline = inlineSelectSdk({ uiContext: selectTextContext(value), dependencies: { readerWindowMetrics: () => value } });
   const rel = 'features/source/ui/SourceManagementPage.ets', source = read(rel);
   function sourcePanel(width, definition = source) {
-    const parent = createReaderBuilderProbe(definition, ['groupOverlay', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
+    const parent = createReaderBuilderProbe(definition, ['groupOverlay', 'groupOverlayTop', 'recordGroupTrigger', 'numericAreaLength', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
       { ...inline.dependencies, ...safe, ReaderWindowCoordinator: { metrics: () => value } }, inline.hooks).owner;
-    Object.assign(parent, { groupOpen: true, groupValue: '全部分组', groupSelectionId: `embedded:${width}`,
-      groupX: 123, groupY: 200, originX: 23, originY: 24, viewportWidth: width, viewportHeight: 360,
+    Object.assign(parent, { mounted: true, groupOpen: true, groupValue: '全部分组', groupSelectionId: `embedded:${width}`,
+      originX: 23, originY: 24, viewportWidth: width, viewportHeight: 360,
       reduceMotion: true, groupClosing: false, groupOptions: () => ['全部分组', '甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未'],
-      groupSelectWidth: () => 160, groupCloseAction: () => () => {}, groupPanelFocusPrefix: () => '', groupPanelLayoutAction: () => () => {} });
+      groupCloseAction: () => () => {}, groupPanelFocusPrefix: () => '', groupPanelLayoutAction: () => () => {} });
+    parent.recordGroupTrigger({ width: 160, globalPosition: { x: 123, y: 200 } });
     parent.groupOverlay();
     const panel = inline.walk(parent).find(actor => actor instanceof inline.dependencies.ReaderSelectPanel);
     const frame = inline.nodes(panel).find(node => node.type === 'Column' && node.position !== undefined);
@@ -656,7 +661,8 @@ function supplementalSelectTargets() {
       assert.deepEqual([...panel.optionHeights.values()], [88], 'old host receipt cannot replace a current row height');
     }
   }
-  const oldCaller = source.replace('hostLeftVp: this.overlayLeft(), hostRightVp: this.overlayRight(),', '');
+  const oldCaller = source.replace('hostLeftVp: this.overlayLeft(), hostRightVp: this.overlayRight(),', '')
+    .replace('controlWidth: this.groupClosingAnchor?.width ?? this.groupTriggerWidth,', 'controlWidth: 0,');
   assert.notEqual(oldCaller, source);
   const old = sourcePanel(320, oldCaller).frame;
   assert.throws(() => assert.ok(old.position.x + old.width <= 320), /AssertionError/, 'actual prior Source caller reproduces the30vp overflow');

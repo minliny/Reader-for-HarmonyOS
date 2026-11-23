@@ -34,7 +34,7 @@ import {
 // 下层选项不可点; 拆到全高容器即解决)。
 // 面板 = 已选行置顶 (panel-soft 高亮 + Bold + chevron 上旋) + 其余选项 (透明 +
 // Regular #41484C), 选项左对齐 px10, 对齐 motion 1506:8807。
-// 默认菜单独立测量选项；长名称受安全宽度/紧凑书源上限约束并原生折行。
+// 默认菜单独立测量选项；书源分组在触发条宽度内折行。
 const OPTION_H = 36;
 const SELECT_PAD = TOK_SPACE_CONTROL_INLINE; // 10
 const CHEVRON_GAP = 8;
@@ -56,13 +56,13 @@ export struct ReaderSelectPanel {
   @Prop @Watch('onGeometryChanged') value: string = '';
   @Prop @Watch('onGeometryChanged') options: string[] = [];
   @Prop hosting: 'overlay' | 'popup' = 'overlay';
-  @Prop x: number = 0;
+  @Prop @Watch('onGeometryChanged') x: number = 0;
   @Prop y: number = 0;
   @Prop @Watch('onGeometryChanged') variant: ReaderSelectVariant = 'default';
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @Prop @Watch('onClosingChanged') closing: boolean = false;
   @Prop @Watch('onIdentityChanged') selectionId: string = '';
-  // 仅 appearance 等既有定宽模板保留固定菜单宽；default/sourceGroup独立测量。
+  // 书源分组使用实测触发条宽。default 菜单独立测量选项。
   @Prop @Watch('onGeometryChanged') controlWidth: number = 0;
   /** Optional current appearance host budget. Zero keeps the original menu contract. */
   @Prop @Watch('onGeometryChanged') maxPanelHeight: number = 0;
@@ -185,7 +185,8 @@ export struct ReaderSelectPanel {
     const metrics = readerWindowMetrics();
     const inputs = JSON.stringify([this.selectionId, this.variant, this.controlWidth, this.menuKind,
       this.renderedValue(), this.renderedOptions(), this.hostLeftVp, this.hostRightVp, metrics.windowRect.width,
-      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics), metrics.systemFontScale, metrics.densityPixels]);
+      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics), metrics.systemFontScale, metrics.densityPixels,
+      this.variant === 'sourceGroup' && this.controlWidth > 0 ? this.x : 0]);
     if (inputs !== this.optionLayoutInputs) {
       this.optionLayoutInputs = inputs;
       this.optionLayoutIdentity = JSON.stringify([inputs, this.resolvedWidth()]);
@@ -305,9 +306,11 @@ export struct ReaderSelectPanel {
     };
   }
 
-  // 最长文本(值 ∪ 选项)实测宽 + chrome, px→vp。
   private resolvedWidth(): number {
-    if (this.controlWidth > 0 && this.variant !== 'default' && this.variant !== 'sourceGroup') {
+    if (this.variant === 'sourceGroup' && this.controlWidth > 0) {
+      return this.hostRightVp >= 0 ? Math.min(this.controlWidth, this.hostRightVp - this.panelX()) : this.controlWidth;
+    }
+    if (this.controlWidth > 0 && this.variant !== 'default') {
       return this.hostRightVp >= 0 ? Math.min(this.controlWidth, readerSelectAvailableWidth(this.hostRightVp - this.hostLeftVp, 0, 0)) : this.controlWidth;
     }
     const ctx = this.getUIContext();
@@ -340,6 +343,9 @@ export struct ReaderSelectPanel {
   }
 
   private panelX(): number {
+    if (this.variant === 'sourceGroup' && this.controlWidth > 0) {
+      return this.hostRightVp >= 0 ? Math.max(this.hostLeftVp, Math.min(this.x, this.hostRightVp)) : this.x;
+    }
     const requested = this.alignRight ? this.x - this.resolvedWidth() : this.x;
     if (this.hostRightVp >= 0) {
       const left = Math.min(this.hostRightVp, this.hostLeftVp + 16);
