@@ -67,11 +67,14 @@ async function sdkTypeResolution() {
 async function fixtureTypes(withStartup = false) {
   const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
   const methods = ['requireCoreStorageFormat', 'requireCoreStorageCapabilities'];
-  if (withStartup) methods.push('startRuntime', 'supportsCoreCapability', 'legacySnapshotMigrationRecovery', 'requireSourceSwitchRecoveryCount');
+  if (withStartup) methods.push('startRuntime', 'supportsCoreCapability', 'legacySnapshotMigrationRecovery',
+    'requireSourceSwitchRecoveryCount', 'requireStorageProbeIdentity', 'isLowerHex', 'isCurrent');
   let active;
+  let probeStorage;
   const Type = selectedProductionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
     'ReaderRuntimeOwner', methods, {
       ReaderStartupTrace: { measure: (_name, run) => run(), current: () => undefined },
+      probeReaderCoreStorageAsync: (directory, current) => probeStorage(directory, current),
       createReaderCoreRuntimeAsync: async (_config, current) => {
         if (!current()) throw new Error('retired startup');
         return active;
@@ -80,7 +83,7 @@ async function fixtureTypes(withStartup = false) {
       MangaImageMetadataHost: { instance: {} },
       hilog: { info() {}, warn() {}, error() {} }, LOG_DOMAIN: 0x5244,
     });
-  return { Type, setRuntime: value => { active = value; } };
+  return { Type, setRuntime: value => { active = value; }, setStorageProbe: probe => { probeStorage = probe; } };
 }
 
 // A finite fixture reads the current Rust producer's declared bool constants
@@ -142,21 +145,28 @@ async function legacySnapshotBarrier() {
   const { default: assert } = await import('node:assert/strict');
   const { readFileSync } = await import('node:fs');
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
-  const { Type, setRuntime } = await fixtureTypes(true);
-  async function startup(storageFormat, pending = true, failRestore = false, retireOnRecovery = false) {
+  const { Type, setRuntime, setStorageProbe } = await fixtureTypes(true);
+  const identity = { format: 'reader.storage-bootstrap-identity', version: 1,
+    buildId: 'a'.repeat(64), contractSha256: 'b'.repeat(64), coreInputFingerprint: 'c'.repeat(64) };
+  async function startup(storageFormat, { pending = true, failRestore = false, retireOnRecovery = false, mismatch = false } = {}) {
     const events = [];
     let owner;
     const runtime = { assetBridge: () => ({}), setCapabilityRouter() {}, close() { events.push('runtime.close'); },
       async request(method) {
         events.push(method);
         assert.equal(owner.runtime, undefined, 'startup never exposes a tentative runtime');
-        if (method === 'core.info') return { data: { buildIdentity: {}, capabilities: [], storageFormat } };
+        if (method === 'core.info') return { data: { buildIdentity: { buildId: identity.buildId }, capabilities: [], storageFormat } };
         if (method === 'runtime.storage.restore' && failRestore) throw new Error('original restore failed');
         if (method === 'source.switch.recover' && retireOnRecovery) owner.state = 'closing';
         return { data: { recovered: [] } };
       } };
     owner = Object.assign(new Type(), { state: 'starting', coreCapabilities: new Set(), legacySnapshotRecovery: 'none',
       host: { getContext: () => ({ filesDir: '/fixture/app' }), setResponseAssetBridge() {}, createCapabilityRouter: () => ({}),
+        async readBundledRawFileText(file) {
+          assert.equal(file, 'reader-core-storage-identity.v1.json');
+          events.push('storage.identity');
+          return JSON.stringify(identity);
+        },
         async needsLegacySnapshotMigration() { events.push('marker.read'); return pending; },
         async markLegacySnapshotMigrated() { events.push('marker.write'); } },
       requireCoreBuildIdentity: value => value,
@@ -165,10 +175,19 @@ async function legacySnapshotBarrier() {
       getDownloadCoordinator: () => ({ restore: async () => {} }), scheduleImportFinalizeCleanup() {},
       installBundledBookSourceCollection: async () => ({ collectionRecords: 0, uniqueSourceIds: 0, processed: 0, installedOrUpgraded: 0, failed: 0, interrupted: false }),
     });
+    Type.instance = owner;
+    setStorageProbe(async (directory, current) => {
+      assert.equal(directory, '/fixture/app/reader-core');
+      assert.ok(current());
+      events.push('storage.probe');
+      return { buildIdentity: { buildId: identity.buildId }, contractSha256: identity.contractSha256,
+        coreInputFingerprint: mismatch ? 'd'.repeat(64) : identity.coreInputFingerprint,
+        observation: { requiresMigration: false, explicitMigration: null } };
+    });
     setRuntime(runtime);
     let error;
     try { await owner.startRuntime(); await owner.sourceSupplyTask; } catch (failure) { error = failure; }
-    assert.ok(events.every(method => ['marker.read', 'runtime.setHostCapabilities', 'core.info', 'runtime.storage.restore',
+    assert.ok(events.every(method => ['marker.read', 'storage.probe', 'storage.identity', 'runtime.setHostCapabilities', 'core.info', 'runtime.storage.restore',
       'marker.write', 'source.switch.recover', 'runtime.close'].includes(method)), 'no original intent/snapshot payload I/O enters this Host composition');
     return { owner, runtime, events, error };
   }
@@ -179,7 +198,13 @@ async function legacySnapshotBarrier() {
   assert.equal(result.owner.legacySnapshotMigrationRecovery(), 'automaticImportDeferred');
   assert.ok(!result.events.includes('runtime.storage.restore') && !result.events.includes('marker.write'),
     'Library47 logical/legacy import support does not authorize automatic replay of an old Host snapshot');
+  assert.ok(result.events.indexOf('storage.probe') < result.events.indexOf('storage.identity'));
+  assert.ok(result.events.indexOf('storage.identity') < result.events.indexOf('runtime.setHostCapabilities'));
   assert.ok(result.events.includes('source.switch.recover'), 'ordinary startup recovery still precedes publication');
+  result = await startup(library, { mismatch: true });
+  assert.match(result.error?.message ?? '', /STORAGE_BOOTSTRAP_IDENTITY_MISMATCH/);
+  assert.equal(result.owner.runtime, undefined);
+  assert.deepEqual(result.events, ['marker.read', 'storage.probe', 'storage.identity']);
   for (const fact of [undefined, { format: 'legacy', portableSnapshotSupported: true }, { format: 'library47', portableSnapshotSupported: true }]) {
     result = await startup(fact);
     assert.equal(result.error, undefined); assert.equal(result.owner.state, 'ready');
@@ -199,15 +224,15 @@ async function legacySnapshotBarrier() {
   const importOnly = structuredClone(legacy); importOnly.capabilities.logicalExport = false; importOnly.portableSnapshotSupported = false;
   result = await startup(importOnly);
   assert.equal(result.error, undefined); assert.ok(result.events.includes('runtime.storage.restore'), 'legacy migration uses its exact operation fact rather than an unrelated export summary');
-  result = await startup(legacy, true, true);
+  result = await startup(legacy, { failRestore: true });
   assert.match(result.error?.message ?? '', /original restore failed/); assert.equal(result.owner.runtime, undefined);
   assert.ok(!result.events.includes('marker.write')); assert.ok(result.events.includes('runtime.close'));
-  result = await startup(library, false);
+  result = await startup(library, { pending: false });
   assert.equal(result.error, undefined); assert.equal(result.owner.legacySnapshotMigrationRecovery(), 'none');
   result = await startup({ ...library, portableSnapshotSupported: false });
   assert.match(result.error?.message ?? '', /invalid storage format capability/); assert.equal(result.owner.runtime, undefined);
   assert.ok(!result.events.includes('source.switch.recover') && !result.events.includes('marker.write')); assert.ok(result.events.includes('runtime.close'));
-  result = await startup(library, true, false, true);
+  result = await startup(library, { retireOnRecovery: true });
   assert.match(result.error?.message ?? '', /closed during startup/); assert.equal(result.owner.runtime, undefined);
   assert.ok(!result.events.includes('runtime.storage.restore') && !result.events.includes('marker.write')); assert.ok(result.events.includes('runtime.close'));
 
