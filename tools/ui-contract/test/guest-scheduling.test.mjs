@@ -45,6 +45,12 @@ test('Guest scheduling is scoped to the Full handoff launch and a finite private
   assert.equal(command.cleanupArgs[1], 'rm -f ' + command.remote + ' && rmdir ' + command.remote.split('/').slice(0,-1).join('/'));
   const syntax = spawnSync('/bin/sh', ['-n'], { input:script, encoding:'utf8' });
   assert.equal(syntax.status, 0, syntax.stderr);
+  const remoteScript = guestSchedulingCommands(nonce, bundle, 'remote').armArgs[1];
+  assert.match(remoteScript, /pidof hitrace .*"\$collector"/);
+  assert.doesNotMatch(remoteScript, /wchan/);
+  assert.match(remoteScript, /grep -qm 1 "sched_switch:".+armed\.ftrace/);
+  const remoteSyntax = spawnSync('/bin/sh', ['-n'], {input:remoteScript,encoding:'utf8'});
+  assert.equal(remoteSyntax.status, 0, remoteSyntax.stderr);
 });
 
 test('Guest scheduling readiness arrives before completion and finish must match the same Reader PID', async () => {

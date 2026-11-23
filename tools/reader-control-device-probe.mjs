@@ -659,7 +659,7 @@ async function probe(options) {
       const receiptPath = resolve(options.outputDir, guestSchedulingReceipt);
       const tracePath = resolve(options.outputDir, guestSchedulingTraceFile);
       if (evidenceEntryExists(receiptPath) || evidenceEntryExists(tracePath)) fail('guest scheduler evidence already exists');
-      const {armArgs, remote, cleanupArgs} = guestSchedulingCommands(frameRunNonce, BUNDLE);
+      const {armArgs, remote, cleanupArgs} = guestSchedulingCommands(frameRunNonce, BUNDLE, remoteVmReady ? 'remote' : 'local');
       const traceStarted = performance.now();
       if (deadline - traceStarted < guestSchedulingClientTimeoutMs) fail('not enough probe time remains to start the guest trace');
       lock.recordClient(true);

@@ -43,8 +43,8 @@ export function guestSchedulingActionWindow(events) {
   return {startTimeMs:admission.startTimeMs, frames:blocks.flatMap(block => block.frames)};
 }
 
-export function guestSchedulingCommands(nonce, bundle) {
-  if (!/^[a-f0-9-]{36}$/u.test(nonce) || bundle !== 'io.reader.minliny') {
+export function guestSchedulingCommands(nonce, bundle, vmLocation = 'local') {
+  if (!/^[a-f0-9-]{36}$/u.test(nonce) || bundle !== 'io.reader.minliny' || !['local','remote'].includes(vmLocation)) {
     throw new Error('Guest scheduler capture needs a private nonce and the Reader bundle');
   }
   const directory = '/data/local/tmp/reader-control-schedule-' + nonce;
@@ -70,13 +70,17 @@ export function guestSchedulingCommands(nonce, bundle) {
     'test ! -e armed.ftrace',
     '/bin/hitrace --trace_clock mono -b 18432 -t 5 -o ' + remote + ' sched ace graphic >trace.log 2>&1 &',
     'collector=$!',
-    'trace_waiting() {',
-    '  [ "$(cat /proc/$collector/comm 2>/dev/null)" = hitrace ] || return 1',
-    '  case "$(cat /proc/$collector/wchan 2>/dev/null)" in',
-    '    *nanosleep|poll_schedule_timeout) return 0 ;;',
-    '    *) return 1 ;;',
-    '  esac',
-    '}',
+    ...vmLocation === 'remote'
+      // The x86 guest does not report the historical wait channel. Require
+      // the exact owned tracer PID; the kernel dump below proves readiness.
+      ? ['trace_waiting() { [ "$(pidof hitrace 2>/dev/null)" = "$collector" ]; }']
+      : ['trace_waiting() {',
+        '  [ "$(cat /proc/$collector/comm 2>/dev/null)" = hitrace ] || return 1',
+        '  case "$(cat /proc/$collector/wchan 2>/dev/null)" in',
+        '    *nanosleep|poll_schedule_timeout) return 0 ;;',
+        '    *) return 1 ;;',
+        '  esac',
+        '}'],
     'ready=0; i=0',
     'while [ "$i" -lt 20 ] && [ -d "/proc/$collector" ]; do',
     '  if trace_waiting; then sleep 0.05; if trace_waiting; then ready=1; break; fi; fi',
