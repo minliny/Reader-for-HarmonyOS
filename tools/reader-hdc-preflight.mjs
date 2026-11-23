@@ -165,8 +165,7 @@ async function inspect(option) {
       note('consistency', 'warn', `local server ${serverKey} with LAN-looking target ${target}`,
         'Confirm the device actually attaches to this server; a LAN target is not a local-server device by default.');
     } else if (!localServer && /^127\./.test(target)) {
-      note('consistency', 'warn', `remote server ${serverKey} with loopback target ${target}`,
-        'A loopback target identifies a device on the remote host, not a local device.');
+      note('consistency', 'note', `loopback target ${target} is scoped to remote server ${serverKey}`);
     }
   }
 

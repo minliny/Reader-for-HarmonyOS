@@ -53,7 +53,7 @@ SDK priority is `READER_HARMONY_SDK_HOME` → `HARMONY_SDK_HOME` → `DEVECO_SDK
 
 Core gate receipts are validated and their stage logs copied only when `--core-gate-receipt <receipt.json>` is explicitly supplied. An absent receipt remains `NOT_RUN`; missing complete Host/Core evidence keeps `acceptanceEligible: false`, including when the requested class is `acceptance`. The build does not generate missing full-suite evidence automatically. HAP resources include an explicit font/license list whose bytes are checked inside each package. Failed build attempts retain redacted stage logs under `.reader-artifacts/hap-attempts/`.
 
-For VM inspect/install, supply `--vm-log <current-emulator.log>` from the operator-confirmed current instance. Before any Bundle Manager operation the pipeline requires completed boot, a current Guest OS boot marker and stable SceneBoard across observations. Physical targets use the boot/SceneBoard checks without an emulator log. These checks do not imply interaction acceptance.
+For local VM inspect/install, supply `--vm-log <current-emulator.log>` from the operator-confirmed current instance. The remote VM route may omit this log and records `guest-only` evidence. A supplied VM log is checked for the current Guest OS boot marker and subsequent signs of instability. All targets require completed boot, stable boot identity and stable SceneBoard across observations before any Bundle Manager operation. Interaction acceptance is verified separately.
 
 For physical user-build phones that explicitly deny the kernel boot-ID read,
 the controller checks Toybox's UTC boot time and all six init boot milestones

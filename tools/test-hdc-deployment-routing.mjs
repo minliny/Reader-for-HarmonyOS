@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const definitions = {
@@ -47,7 +49,38 @@ for (const route of [local, remote]) {
 }
 assert.deepEqual(hdcRouteEvidence({ serverKey: local.serverKey }), { hdcServer: local.serverKey });
 
-
+  // The real inspect entry must reach manifest validation only for the routes
+  // eligible to proceed. No candidate or real HDC commands are needed here.
+  const directory = mkdtempSync(join(tmpdir(), 'reader-deployment-log-routing-'));
+  try {
+    const manifest = join(directory, 'invalid-manifest.json');
+    const hdc = join(directory, 'fixture-hdc');
+    writeFileSync(manifest, '{}');
+    writeFileSync(hdc, '#!/bin/sh\nprintf "Unexpected HDC invocation\\n" >&2\nexit 99\n', { mode: 0o700 });
+    const script = fileURLToPath(new URL('../scripts/hap-pipeline.mjs', import.meta.url));
+    const logs = ['--vm-log', join(directory, 'operator-selected-emulator.log')];
+    for (const [args, server, status, message] of [
+      [[], undefined, 2, /current instance emulator log/],
+      [logs, local.serverKey, 1, /invalid HAP run manifest/],
+      [['--vm-location', 'remote'], undefined, 1, /invalid HAP run manifest/],
+      [[], remote.serverKey, 1, /invalid HAP run manifest/],
+      [[...logs, '--vm-location', 'remote'], remote.serverKey, 1, /invalid HAP run manifest/],
+      [['--vm-log', ''], remote.serverKey, 2, /missing --vm-log/],
+      [['--vm-location', 'remote'], local.serverKey, 1, /conflicts/],
+    ]) {
+      const env = { ...process.env, HDC: hdc, READER_HDC_LEASE_ROOT: join(directory, 'locks') };
+      if (server === undefined) delete env.READER_HDC_SERVER_KEY;
+      else env.READER_HDC_SERVER_KEY = server;
+      const result = spawnSync(process.execPath, [script, 'inspect', '--manifest', manifest, '--artifact', 'signed',
+        '--target', 'fixture-device', '--target-kind', 'vm', ...args], { env, encoding: 'utf8', timeout: 5000 });
+      assert.ifError(result.error);
+      assert.equal(result.status, status, result.stderr);
+      assert.match(result.stderr, message);
+      assert.doesNotMatch(result.stderr, /Unexpected HDC invocation/);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 }
 
 async function leaseSessionCase() {

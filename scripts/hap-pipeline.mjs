@@ -30,7 +30,8 @@ import { assertBuildTools } from '../tools/reader-build-tools.mjs';
 import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
 import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development-environment.mjs';
-import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
+import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate,
+  readinessQueryOutput, targetReadiness } from './lib/hap-delivery-evidence.mjs';
 import { embeddedStorageCompatibility, storageUpdateRoute } from './lib/hap-storage-admission.mjs';
 import { publishStorageDeliveryContract, verifyStorageDeliveryContract, storageBootstrapIdentityBytes, STORAGE_BOOTSTRAP_RESOURCE } from './lib/storage-delivery-contract.mjs';
 import { collectStorageAdmission, installedStorageIdentity, storageAdmissionAllowed, revalidateStorageAdmission,
@@ -2111,10 +2112,10 @@ function resolveDeployment(options, mode = 'inspect') {
   const artifactKind = requiredOption(options, '--artifact');
   if (!['vm', 'physical'].includes(targetKind)) fail('--target-kind must be vm or physical', 2);
   if (artifactKind !== 'signed') fail('Preserve-data deployment requires a signed artifact', 2);
-  const vmLog = option(options, '--vm-log');
-  if (targetKind === 'vm' && !vmLog) fail('VM deployment requires the current instance emulator log', 2);
   const hdcRoute = resolveHdcServer({ targetKind, vmLocation: option(options, '--vm-location'),
     configuredServer: process.env.READER_HDC_SERVER_KEY });
+  const vmLog = options.has('--vm-log') ? requiredOption(options, '--vm-log') : undefined;
+  if (hdcRoute.vmLocation === 'local' && !vmLog) fail('Local VM deployment requires the current instance emulator log', 2);
   const verified = verifyManifest(requiredOption(options, '--manifest'));
   const candidateAbi = verified.manifest.abi ?? 'arm64-v8a';
   const artifact = verified.artifacts.find(candidate => candidate.kind === artifactKind);
@@ -2125,10 +2126,8 @@ function resolveDeployment(options, mode = 'inspect') {
   const runHdc = (args, settings = {}) => runTargetHdc(hdc, target, hdcRoute.serverKey, args, settings);
   const query = (command, settings = {}) => runHdc(['-t', target, 'shell', command], settings);
   const observeReadiness = () => targetReadiness({ targetKind, targetEndpoint: target, vmLog,
-    query: command => {
-      const result = query(command, { timeoutMs: 10000, maxBuffer: 1024 * 1024, allowFailure: true });
-      return `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
-    } });
+    query: command => readinessQueryOutput(command,
+      query(command, { timeoutMs: 10000, maxBuffer: 1024 * 1024, allowFailure: true })) });
   const observeInstalled = () => installedMetadata(hdc, target, hdcRoute.serverKey);
   const readiness = observeReadiness();
   const installed = observeInstalled();
