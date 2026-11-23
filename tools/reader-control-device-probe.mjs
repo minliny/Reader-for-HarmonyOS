@@ -32,7 +32,7 @@ import { capsuleCenterDispatch, clickThenBackArgs, clickThenReaderCenterArgs, cr
   searchMorphDispatchWindowMs, uiInputKeyArgument } from './ui-contract/lib/control-input.mjs';
 import { popupRenderAcknowledged, popupRenderArgs, popupRenderBaselineAcknowledged, popupRenderBaselineArgs,
   popupRenderJournal } from './ui-contract/lib/popup-render.mjs';
-import { guestSchedulingClientTimeoutMs, guestSchedulingCommands, guestSchedulingLocalTarget,
+import { guestSchedulingClientTimeoutMs, guestSchedulingCommands, guestSchedulingLocalTarget, guestSchedulingRemoteTarget,
   guestSchedulingReceipt, guestSchedulingTraceFile, guestSchedulingVmLog,
   observeGuestSchedulingChild } from './ui-contract/collectors/harmonyos/guest-scheduling.mjs';
 
@@ -175,8 +175,9 @@ function optionsFrom(argv) {
   const server = options['--server'];
   const guestScheduling = options['--guest-scheduling'];
   if (guestScheduling !== undefined &&
-    (guestScheduling !== 'full-handoff' || !guestSchedulingLocalTarget(server, options['--target']))) {
-    fail('Guest scheduling requires a local Full handoff probe session');
+    (guestScheduling !== 'full-handoff' || !(guestSchedulingLocalTarget(server, options['--target']) ||
+      guestSchedulingRemoteTarget(server, options['--target'])))) {
+    fail('Guest scheduling requires a Full handoff VM probe session');
   }
   const colon = server.lastIndexOf(':');
   const host = server.slice(0, colon).replace(/^\[|\]$/g, '');
@@ -247,18 +248,21 @@ function touchPlanText(events, width, height) {
 }
 function operationPlan(operation, outputDir) {
   exactFields(operation, ['x', 'y', 'fromX', 'fromY', 'toX', 'toY', 'velocity', 'key', 'path', 'text', 'explicitPermit', 'sampleDelaysMs',
-    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs', 'targetKind', 'vmLog',
+    'elfPath', 'elfSha256', 'width', 'height', 'display', 'plan', 'ticket', 'requestAuth', 'durationMs', 'targetKind', 'vmLog', 'vmLocation',
     'centerX', 'centerY', 'bundleName', 'argument', 'renderPid', 'renderSurface', 'renderDepth', 'observeGuestSchedule']);
   if (operation.op === 'quit') {
     exactFields(operation, []);
     return { kind: 'quit' };
   }
   if (operation.op === 'uiContractReadiness') {
-    exactFields(operation, ['targetKind', 'vmLog']);
-    const vm = operation.targetKind === 'vm' && typeof operation.vmLog === 'string' && isAbsolute(operation.vmLog);
-    const physical = operation.targetKind === 'physical' && operation.vmLog === undefined;
-    if (!vm && !physical) fail('Readiness requires an exact target kind and the current emulator log for a VM');
-    return { kind: 'uiContractReadiness', vmLog: operation.vmLog, targetKind: operation.targetKind };
+    exactFields(operation, ['targetKind', 'vmLog', 'vmLocation']);
+    const remote = operation.targetKind === 'vm' && operation.vmLocation === 'remote' && operation.vmLog === undefined;
+    const local = operation.targetKind === 'vm' && operation.vmLocation === undefined &&
+      typeof operation.vmLog === 'string' && isAbsolute(operation.vmLog);
+    const physical = operation.targetKind === 'physical' && operation.vmLog === undefined && operation.vmLocation === undefined;
+    if (!remote && !local && !physical) fail('Readiness requires an exact target kind and VM location or current emulator log');
+    return { kind:'uiContractReadiness', vmLog:operation.vmLog, targetKind:operation.targetKind,
+      ...(remote ? {vmLocation:'remote'} : {}) };
   }
   if (operation.preflightConfirmed !== true) fail('fresh external boot/SceneBoard/exact-target preflight confirmation is required');
   const shell = (...args) => ({ kind: 'command', args: ['shell', ...args] });
@@ -397,6 +401,11 @@ function operationPlan(operation, outputDir) {
   if (operation.op === 'startNormal') {
     exactFields(operation, []);
     return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry');
+  }
+  if (operation.op === 'startRemoteEmptyShelf') {
+    exactFields(operation, []);
+    return { ...shell('aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
+      '--ps','readerPublicFixture','empty-shelf'), kind:'startRemoteEmptyShelf' };
   }
   if (operation.op === 'clearRebuildableCache') {
     exactFields(operation, []);
@@ -547,7 +556,8 @@ async function probe(options) {
       process.stdout.write(line);
     };
     const prefix = ['-p', '-s', options.server, '-t', options.target];
-    let localVmReady = false;
+    let traceVmReady = false;
+    let remoteVmReady = false;
     let parseBundleMetadata;
     const assess = (args, result, startedAt, elapsedMs, {privateBundleOutput = false,runnerBundle,runnerClock,popupRender} = {}) => {
       let installed;
@@ -645,7 +655,7 @@ async function probe(options) {
       return result;
     };
     const guestSchedulingClick = async plan => {
-      if (!localVmReady || finishGuestScheduling || stopping) fail('guest scheduler observation requires one ready local VM click');
+      if (!traceVmReady || finishGuestScheduling || stopping) fail('guest scheduler observation requires one ready VM click');
       const receiptPath = resolve(options.outputDir, guestSchedulingReceipt);
       const tracePath = resolve(options.outputDir, guestSchedulingTraceFile);
       if (evidenceEntryExists(receiptPath) || evidenceEntryExists(tracePath)) fail('guest scheduler evidence already exists');
@@ -697,6 +707,10 @@ async function probe(options) {
       dispatch.completedAt = new Date().toISOString();
     };
     const readiness = async plan => {
+      const remote = plan.vmLocation === 'remote';
+      if (remote && !guestSchedulingRemoteTarget(options.server, options.target)) {
+        fail('Remote VM readiness requires the configured LAN server and its loopback target');
+      }
       const { readinessQueryOutput, targetReadiness } = await import('../scripts/lib/hap-delivery-evidence.mjs');
       const query = command => {
         if (stopping || deadline <= performance.now()) fail('probe is stopping');
@@ -711,12 +725,18 @@ async function probe(options) {
       const exact = (listing.stdout ?? '').split(/\r?\n/u).filter(line => line.split(/\s+/u)[0] === options.target);
       if (!commandOK(listing) || exact.length !== 1 || !/\bConnected\b/u.test(exact[0])) fail('Exact target is not independently confirmed Connected');
       const checked = targetReadiness({ targetKind: plan.targetKind, vmLog: plan.vmLog, targetEndpoint: options.target, query });
-      localVmReady = options.guestScheduling && checked.status === 'PASS' &&
-        checked.bootCompleted === true && checked.sceneBoardStable === true &&
-        plan.targetKind === 'vm' && options.server === '127.0.0.1:8710' &&
-        guestSchedulingVmLog(plan.vmLog) && checked.emulatorLog?.bootMarker === true &&
-        checked.emulatorLog.instabilityAfterMarker === false;
-      record({ event: 'readiness', ...checked, hdcServer: options.server, targetKind: plan.targetKind, exactConnected: true });
+      remoteVmReady = remote && checked.status === 'PASS' && checked.bootCompleted === true &&
+        checked.sceneBoardStable === true && checked.evidenceScope === 'guest-only' &&
+        checked.emulatorLog?.status === 'NOT_PROVIDED' &&
+        ['kernel-boot-id','vm-guest-boot-milestones-v1'].includes(checked.bootIdentitySource);
+      const instanceReady = remote
+        ? remoteVmReady
+        : guestSchedulingLocalTarget(options.server, options.target) && guestSchedulingVmLog(plan.vmLog) &&
+          checked.emulatorLog?.bootMarker === true && checked.emulatorLog.instabilityAfterMarker === false;
+      traceVmReady = options.guestScheduling && checked.status === 'PASS' && checked.bootCompleted === true &&
+        checked.sceneBoardStable === true && plan.targetKind === 'vm' && instanceReady;
+      record({ event:'readiness', ...checked, hdcServer:options.server, targetKind:plan.targetKind, exactConnected:true,
+        ...(remote ? {vmLocation:'remote'} : {}) });
     };
     const touchTickets = new Map();
     const verifyTouchArtifacts = ticket => {
@@ -938,6 +958,10 @@ async function probe(options) {
       else if (plan.kind === 'sampledTouchSequence') await sampledTouchSequence(plan);
       else if (plan.kind === 'uiContractReadiness') await readiness(plan);
       else if (plan.kind === 'guestSchedulingClick') await guestSchedulingClick(plan);
+      else if (plan.kind === 'startRemoteEmptyShelf') {
+        if (!remoteVmReady) fail('Remote public storage launch requires this probe’s verified remote VM');
+        run(plan);
+      }
       else if (plan.kind === 'uiContractRunnerInvoke') run(await runnerInvocation(plan,runnerState,lock.targetRef,options.runnerMode));
       else {
         if (plan.privateBundleOutput && !plan.runnerBundle) {
@@ -1044,6 +1068,8 @@ function selfTest() {
   assert.deepEqual(plan({ op: 'startNormal' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry']);
   assert.throws(() => plan({ op: 'startNormal', bundle: 'other' }));
+  assert.deepEqual(plan({op:'startRemoteEmptyShelf'}).args, ['shell','aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
+    '--ps','readerPublicFixture','empty-shelf']);
   assert.deepEqual(plan({ op: 'startColdEntryMemoryMiss' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
       '--pb', 'readerDisableOptionalEntryMemory', 'true']);

@@ -15,7 +15,7 @@ import { assertSearchSourceRetryOpening, canOmitSearchSourceRetry, searchEntrySo
   usesSearchEntrySourceRead } from '../../lib/search-entry-source-read.mjs';
 import { sourceUnknownExpandScope, sourceUnknownExpandTrigger,
   usesSourceUnknownExpand } from '../../lib/source-unknown-expand.mjs';
-import { assertCurrentActionState, assertInstalled, assertOwnerActionState, checkpoint, latestProbeEvent, matchesPredicates, normalizeSample, probeEventsInRange, sampleReadiness, requestedOperation, requireActionDispatch, requireCommand, requirePopupRenderPreflight, requirePublicFixtureCheckpoint, validateInstalledMetadata, windowStable } from './records.mjs';
+import { assertCurrentActionState, assertInstalled, assertOwnerActionState, assertRemoteCollectionReadiness, checkpoint, latestProbeEvent, matchesPredicates, normalizeSample, probeEventsInRange, remoteEmptyShelfFixture, remoteGuestReady, remoteUiCollectionCase, sampleReadiness, requestedOperation, requireActionDispatch, requireCommand, requirePopupRenderPreflight, requirePublicFixtureCheckpoint, validateInstalledMetadata, windowStable } from './records.mjs';
 import { matchingSourceTransientRetirement, sameSourceTransientStatus, sourceTransientStatusEvent,
   sourceTransientStatusLayout, sourceTransientStatusLifecycle, sourceTransientStatusStep } from '../../lib/source-transient-status-text.mjs';
 import { sourceStatusActionEdgePostToastSample, sourceStatusActionEdgeToastRetired } from '../../lib/source-status-action.mjs';
@@ -23,7 +23,7 @@ import { prepareReversalDispatch, reversalReadbackTiming, reversalReplayTiming }
 import { popupRenderOperation } from '../../lib/popup-render.mjs';
 import { openProbe } from './transport.mjs';
 import { guestSchedulingActionWindow, guestSchedulingCase, guestSchedulingClick, guestSchedulingCoverage, guestSchedulingReceipt,
-  guestSchedulingLocalTarget, guestSchedulingTraceFile, guestSchedulingVmLog } from './guest-scheduling.mjs';
+  guestSchedulingLocalTarget, guestSchedulingRemoteTarget, guestSchedulingTraceFile, guestSchedulingVmLog } from './guest-scheduling.mjs';
 import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from './focus-window.mjs';
 
 export { classifyFocusWindow } from './focus-window.mjs';
@@ -139,7 +139,9 @@ export function loadCandidate(store, refs, contract) {
     ownerSources[path] = ref;
   }
   return { ...identity, ownerSources, expectedVersion: manifest.expectedVersion, postInstall: deployment.postInstall,
-    completedAt: deployment.completedAt, hdcServer: deployment.hdcServer, targetKind:deployment.targetKind };
+    completedAt: deployment.completedAt, hdcServer: deployment.hdcServer, targetKind:deployment.targetKind,
+    ...(deployment.vmLocation === 'remote' && deployment.readiness?.evidenceScope === 'guest-only' ?
+      {vmLocation:'remote', remoteGuestReadiness:deployment.readiness} : {}) };
 }
 
 export function fixtureAdmission(fixture, contract, candidate) {
@@ -163,7 +165,8 @@ export function fixtureAdmission(fixture, contract, candidate) {
     'The public platform Cancel fixture cannot service another case version');
   if (Object.hasOwn(fixture, 'publicFixtureScope')) {
     requireEvidence(contract.phase === 1 && candidate.targetKind === 'vm' &&
-      publicFixtureScopes.get(fixture.publicFixtureScope)?.has(contract.id),
+      (publicFixtureScopes.get(fixture.publicFixtureScope)?.has(contract.id) ||
+        remoteEmptyShelfFixture(candidate, contract, fixture.publicFixtureScope)),
     'The public fixture scope is unavailable for the selected case or target');
   }
   if (contract.phase !== undefined) {
@@ -191,23 +194,30 @@ export function fixtureAdmission(fixture, contract, candidate) {
   return checkedAt;
 }
 
-export function assertLiveCollectionTarget({ server, deployment }) {
-  requireEvidence(server === '127.0.0.1:8710' && deployment.hdcServer === server,
-    'Live UI collection is restricted to the local HDC server 127.0.0.1:8710; remote VM collection is not permitted');
+export function assertLiveCollectionTarget({ server, target, deployment, manifest, contract, vmLog }) {
+  const local = server === '127.0.0.1:8710';
+  const remote = guestSchedulingRemoteTarget(server, target) && remoteUiCollectionCase(contract) &&
+    deployment.targetKind === 'vm' && deployment.vmLocation === 'remote' && !vmLog &&
+    manifest?.abi === 'x86_64' && deployment.postInstall?.cpuAbi === 'x86_64' &&
+    deployment.dataPolicy === 'preserve' && remoteGuestReady(deployment.readiness);
+  requireEvidence(deployment.hdcServer === server && (local || remote),
+    'Live UI collection requires the exact deployment server; remote VM collection is not permitted without an admitted case and guest-only x86_64 preserve deployment');
+  requireEvidence(target === undefined || deployment.targetRef === sha256(target).slice(0, 12),
+    'Selected target differs from the verified deployment');
 }
 
 function candidateInputs(options, contract) {
   const files = [options.manifest, options.deployment, join(dirname(options.manifest), 'source-snapshot.json')];
   const input = files.map(path => readFileSync(path));
   const [manifest, deployment, snapshot] = input.map(value => JSON.parse(value));
-  assertLiveCollectionTarget({ server: options.server, deployment });
+  const {server, target, vmLog} = options;
+  assertLiveCollectionTarget({server, target, vmLog, deployment, manifest, contract});
+  const localVm = deployment.targetKind === 'vm' && server === '127.0.0.1:8710';
   const identity = candidateIdentity(manifest, deployment, snapshot);
-  requireEvidence(identity.targetRef === sha256(options.target).slice(0, 12) && deployment.hdcServer === options.server &&
-    (deployment.targetKind === 'vm') === Boolean(options.vmLog),
-    'Selected target or server differs from the verified deployment');
+  requireEvidence(localVm === Boolean(vmLog), 'The current emulator log is required for local VM collection only');
   const fixtureBytes = readFileSync(options.fixture);
   const checkedAt = fixtureAdmission(JSON.parse(fixtureBytes), contract,
-    {...identity, hdcServer: options.server, targetKind:deployment.targetKind});
+    {...identity, hdcServer:options.server, targetKind:deployment.targetKind, vmLocation:deployment.vmLocation});
   requireEvidence(Date.now() >= checkedAt && Date.now() - checkedAt <= 10 * 60 * 1000,
     'Isolated public fixture and route observation must be current');
   const owners = contract.ownerSources.map(path => {
@@ -465,9 +475,10 @@ export async function prepareUnlockedFocus(probe, {targetKind, server, target}, 
 }
 
 export async function collectHarmony(options, contract) {
+  const remote = guestSchedulingRemoteTarget(options.server, options.target);
   requireEvidence(!options.guestSchedulingTrace || contract.id === guestSchedulingCase &&
-    guestSchedulingVmLog(options.vmLog) && guestSchedulingLocalTarget(options.server, options.target),
-  'Guest scheduling trace requires the Full capsule handoff on the original local VM');
+    (remote || guestSchedulingVmLog(options.vmLog) && guestSchedulingLocalTarget(options.server, options.target)),
+  'Guest scheduling trace requires the Full capsule handoff on an admitted VM');
   const {runnerCollectionMode,authorizeRunnerCollection} = await import('./runner-collection-admission.mjs');
   const collectionMode = runnerCollectionMode(options,contract);
   const reversal = contract.steps.find(step => step.op === 'grabberReversal');
@@ -475,7 +486,7 @@ export async function collectHarmony(options, contract) {
   const { verifyManifest } = await import('../../../../scripts/hap-pipeline.mjs');
   verifyManifest(options.manifest);
   const inputs = candidateInputs(options, contract);
-  if (options.guestSchedulingTrace) {
+  if (options.guestSchedulingTrace && !remote) {
     requireEvidence(guestSchedulingVmLog(options.vmLog, JSON.parse(inputs.fixtureBytes).vmName),
       'Guest scheduling trace fixture does not identify the original VM');
   }
@@ -509,13 +520,16 @@ export async function collectHarmony(options, contract) {
   try {
     const ready = await probe.ready();
     requireEvidence(ready.targetRef === candidate.targetRef, 'Probe holds a different target lease');
-    const readiness = await probe.command({op:'uiContractReadiness', vmLog:options.vmLog, targetKind:candidate.targetKind});
+    const readiness = await probe.command({op:'uiContractReadiness', targetKind:candidate.targetKind,
+      ...(remote ? {vmLocation:'remote'} : {vmLog:options.vmLog})});
+    if (remote) assertRemoteCollectionReadiness(readiness, candidate, contract);
     const installed = await probe.command({op:'uiContractInstalledIdentity'});
     assertInstalled(installed, candidate);
     await prepareUnlockedFocus(probe, {...options, targetKind:candidate.targetKind});
     const baselineLog = await logRead(probe);
     const baseline = checkpoint(baselineLog);
-    const start = await probe.command({op:'startNormal'});
+    const start = await probe.command({op:remoteEmptyShelfFixture(candidate, contract, probe.publicFixtureScope) ?
+      'startRemoteEmptyShelf' : 'startNormal'});
     await requireUnlockedFocus(probe, 'after-launch');
     const startFloor = await logRead(probe);
     const floorEvent = latestProbeEvent(startFloor);

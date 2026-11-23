@@ -57,6 +57,7 @@ import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, focusW
 export const logCommand = ['shell', 'hilog', '-x', '-T', 'ReaderUIContract'];
 export const installedCommand = ['shell', 'bm', 'dump', '-n', 'io.reader.minliny'];
 export const startCommand = ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', 'io.reader.minliny', '-m', 'entry'];
+const remoteEmptyShelfStartCommand = [...startCommand, '--ps', 'readerPublicFixture', 'empty-shelf'];
 const fragmentLine = /\/ReaderUIContract:\s+RUI1 ([0-9a-f-]{36})\/(\d+)\/(\d+)\/(\d+) (.*)$/u;
 const submitId = 'reader-bookshelf-search-submit';
 const searchBarId = 'reader-bookshelf-search-bar';
@@ -254,6 +255,67 @@ export function assertInstalled(identityRecord, candidate) {
   for (const field of ['appIdSha256','appIdentifierSha256','updateTime','cpuAbi','appProvisionType']) {
     requireEvidence(installed[field] === candidate.postInstall[field], `Installed candidate ${field} changed after deployment`);
   }
+}
+
+const remoteUiCases = new Set([
+  'reading.control-tts-launch-quick',
+  'reading.control-tts-launch-full',
+  'reading.control-tts-capsule-handoff',
+  'reading.control-tts-capsule-handoff-full',
+  'reading.control-more-popup',
+]);
+
+export function remoteUiCollectionCase(contract) {
+  return contract?.phase === 1 && remoteUiCases.has(contract.id);
+}
+
+export function remoteEmptyShelfFixture(candidate, contract, scope) {
+  return scope === 'empty-shelf' && candidate.targetKind === 'vm' && candidate.vmLocation === 'remote' &&
+    candidate.hdcServer === '192.168.1.10:8710' && remoteUiCollectionCase(contract);
+}
+
+function digestPresent(value) {
+  return typeof value === 'string' && /^[0-9a-f]{64}$/u.test(value);
+}
+
+// The delivery and probe gates validate each observation's time series.
+// Compare their boot witnesses without assuming a shared host clock origin.
+function guestBootStart(readiness) {
+  const witness = readiness.vmGuestBootWitness;
+  const first = witness?.samples?.[0];
+  if (witness?.version !== 1 || !Array.isArray(witness.samples) || witness.samples.length !== 2 ||
+    !Number.isSafeInteger(first?.bootStart) || first.bootStart <= 0 || !digestPresent(witness.milestonesSha256) ||
+    !witness.samples.every(sample => Number.isSafeInteger(sample?.bootStart) &&
+      Math.abs(sample.bootStart - first.bootStart) <= 1000 && Array.isArray(sample.milestones) &&
+      sample.milestones.length > 0 && sha256(JSON.stringify(sample.milestones)) === witness.milestonesSha256) ||
+    sha256(JSON.stringify([first.bootStart, first.milestones])) !== readiness.bootIdSha256) return undefined;
+  return first.bootStart;
+}
+
+export function remoteGuestReady(readiness) {
+  return readiness?.status === 'PASS' && readiness.bootCompleted === true && readiness.sceneBoardStable === true &&
+    readiness.evidenceScope === 'guest-only' && readiness.emulatorLog?.status === 'NOT_PROVIDED' &&
+    digestPresent(readiness.bootIdSha256) && digestPresent(readiness.sceneBoardPidSha256) &&
+    Number.isFinite(readiness.observationMs) && readiness.observationMs >= 2000 && readiness.observationMs <= 10_000 &&
+    (readiness.bootIdentitySource === 'kernel-boot-id' && readiness.uptimeSource === 'procfs' ||
+      readiness.bootIdentitySource === 'vm-guest-boot-milestones-v1' && readiness.uptimeSource === 'toybox-sysinfo' &&
+      guestBootStart(readiness) !== undefined);
+}
+
+export function assertRemoteCollectionReadiness(readiness, candidate, contract) {
+  const deployed = candidate.remoteGuestReadiness;
+  requireEvidence(remoteUiCollectionCase(contract) && candidate.targetKind === 'vm' &&
+    candidate.hdcServer === '192.168.1.10:8710' && candidate.postInstall?.cpuAbi === 'x86_64' &&
+    readiness?.event === 'readiness' && readiness.vmLocation === 'remote' && readiness.exactConnected === true &&
+    readiness.targetRef === candidate.targetRef && readiness.hdcServer === candidate.hdcServer && readiness.targetKind === 'vm' &&
+    remoteGuestReady(deployed) && remoteGuestReady(readiness), 'Unverified exact remote VM or guest-only readiness');
+  const sameBoot = readiness.bootIdentitySource === 'kernel-boot-id' ?
+    readiness.bootIdSha256 === deployed.bootIdSha256 :
+    readiness.vmGuestBootWitness.milestonesSha256 === deployed.vmGuestBootWitness?.milestonesSha256 &&
+      Math.abs(guestBootStart(readiness) - guestBootStart(deployed)) <= 1000;
+  requireEvidence(sameBoot && readiness.bootIdentitySource === deployed.bootIdentitySource &&
+    readiness.sceneBoardPidSha256 === deployed.sceneBoardPidSha256,
+  'Remote VM boot or SceneBoard changed since the preserve-data deployment');
 }
 
 function onlyLogPolls(records, start, end) {
@@ -1079,14 +1141,21 @@ export function sessionContext({store, session, sessionRef, candidate, contract,
     if (index === 0) {
       guardedFocus = verifyStartupFocus(records, entry, candidate);
       const readiness = records[entry.readiness - 1];
-      requireEvidence(readiness?.event === 'readiness' && readiness.status === 'PASS' && readiness.exactConnected === true &&
-        readiness.bootCompleted === true && readiness.sceneBoardStable === true &&
-        readiness.targetKind === candidate.targetKind &&
-        (candidate.targetKind !== 'vm' || readiness.emulatorLog?.bootMarker === true &&
-          readiness.emulatorLog.instabilityAfterMarker === false) &&
-        readiness.hdcServer === candidate.hdcServer, 'Unverified target, emulator boot, or SceneBoard');
+      if (candidate.remoteGuestReadiness || readiness?.vmLocation === 'remote') {
+        requireEvidence(guardedFocus, 'Remote VM collection lacks the normal startup and action focus guards');
+        assertRemoteCollectionReadiness(readiness, candidate, contract);
+      } else {
+        requireEvidence(readiness?.event === 'readiness' && readiness.status === 'PASS' && readiness.exactConnected === true &&
+          readiness.bootCompleted === true && readiness.sceneBoardStable === true &&
+          readiness.targetKind === candidate.targetKind &&
+          (candidate.targetKind !== 'vm' || readiness.emulatorLog?.bootMarker === true &&
+            readiness.emulatorLog.instabilityAfterMarker === false) &&
+          readiness.hdcServer === candidate.hdcServer, 'Unverified target, emulator boot, or SceneBoard');
+      }
       assertInstalled(requireCommand(records, entry.installed, installedCommand), candidate);
-      requireCommand(records, entry.start, startCommand);
+      const startupCommand = remoteEmptyShelfFixture(candidate, contract, publicFixtureScope) ?
+        remoteEmptyShelfStartCommand : startCommand;
+      requireCommand(records, entry.start, startupCommand);
       const baseline = checkpoint(requireCommand(records, entry.baselineLog, logCommand));
       const floor = latestProbeEvent(requireCommand(records, entry.startFloor, logCommand));
       const initial = checkpoint(requireCommand(records, entry.initialLog, logCommand), session.instanceId);

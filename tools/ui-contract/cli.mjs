@@ -33,9 +33,9 @@ async function main() {
   requireEvidence(Object.keys(values).every(key => required.includes(key) || key === 'vm-log' ||
     key === 'guest-scheduling-trace' || key.startsWith('runner-')) &&
     required.every(key => values[key]) &&
-    values.server === '127.0.0.1:8710' &&
+    ['127.0.0.1:8710','192.168.1.10:8710'].includes(values.server) &&
     /^[A-Za-z0-9._:\[\]-]{1,256}$/.test(values.target) && !values.target.startsWith('-'),
-  'Live collection requires the case, exact local HDC server and target, signed manifest/deployment and public fixture (plus the current log for a VM); remote VM collection is not permitted');
+  'Live collection requires the case, exact HDC server and target, signed manifest/deployment, and current public fixture');
   const { collectHarmony } = await import('./collectors/harmonyos/run.mjs');
   const optionalPath = name => values[name] ? resolve(values[name]) : undefined;
   const collectOptions = {

@@ -17,6 +17,10 @@ export function guestSchedulingLocalTarget(server, target) {
   return server === '127.0.0.1:8710' && /^(?:127\.0\.0\.1|\[::1\]):\d{1,5}$/u.test(target);
 }
 
+export function guestSchedulingRemoteTarget(server, target) {
+  return server === '192.168.1.10:8710' && /^(?:127\.0\.0\.1|\[::1\]):\d{1,5}$/u.test(target);
+}
+
 export function guestSchedulingClick(contract, step, operation) {
   return contract.id === guestSchedulingCase && step.kind === 'action' &&
     step.id === 'playback-launch' && step.target === 'reader-control-tts-transport-toggle' && operation.op === 'click';
@@ -69,7 +73,7 @@ export function guestSchedulingCommands(nonce, bundle) {
     'trace_waiting() {',
     '  [ "$(cat /proc/$collector/comm 2>/dev/null)" = hitrace ] || return 1',
     '  case "$(cat /proc/$collector/wchan 2>/dev/null)" in',
-    '    __arm64_sys_nanosleep|poll_schedule_timeout|hrtimer_nanosleep|do_nanosleep) return 0 ;;',
+    '    *nanosleep|poll_schedule_timeout) return 0 ;;',
     '    *) return 1 ;;',
     '  esac',
     '}',
@@ -178,7 +182,10 @@ export function guestSchedulingCoverage(trace, readerPid, startTimeMs, frames) {
       (index === 0 || frame.frameTimeNs > frames[index - 1].frameTimeNs))) return { status:'NO_ACTION_FRAME_WINDOW' };
 
   const ring = /^# entries-in-buffer\/entries-written:\s*(\d+)\/(\d+)\s+#P:(\d+)\r?$/mu.exec(trace);
-  if (!ring || ring[1] !== ring[2] || Number(ring[3]) !== 4) return { status:'INCOMPLETE_KERNEL_RING' };
+  const expectedCpus = Number(ring?.[3]);
+  if (!ring || ring[1] !== ring[2] || !Number.isSafeInteger(expectedCpus) || expectedCpus <= 0) {
+    return {status:'INCOMPLETE_KERNEL_RING'};
+  }
   const firstFrame = frames[0];
   const lastFrame = frames.at(-1);
   const endpoints = new Set([String(firstFrame.frameTimeNs), String(lastFrame.frameTimeNs)]);
@@ -208,7 +215,8 @@ export function guestSchedulingCoverage(trace, readerPid, startTimeMs, frames) {
     const receivedPts = receive.exec(payload)?.[1];
     if (endpoints.has(receivedPts)) received.set(receivedPts, Math.min(received.get(receivedPts) ?? Infinity, timestampMs));
   }
-  if (entries !== Number(ring[1]) || cpus.size !== 4) return {status:'INCOMPLETE_KERNEL_RING'};
+  if (entries !== Number(ring[1]) || cpus.size !== expectedCpus ||
+    [...cpus].some(cpu => !Number.isSafeInteger(cpu) || cpu < 0 || cpu >= expectedCpus)) return {status:'INCOMPLETE_KERNEL_RING'};
   const clockMatches = [firstFrame, lastFrame].filter(frame => {
     const pts = String(frame.frameTimeNs);
     return sent.get(pts) <= received.get(pts) && received.get(pts) < frame.captureStartMs + 1;
@@ -217,6 +225,6 @@ export function guestSchedulingCoverage(trace, readerPid, startTimeMs, frames) {
     startTimeMs <= firstFrame.captureStartMs;
   return {
     status:clockMatches === 2 && windowCovered && switches > 0 ? 'COVERED' : 'ACTION_OUTSIDE_TRACE',
-    clockMatches, entries, mainThreadSwitches:switches, frames:frames.length,
+    clockMatches, entries, cpus:expectedCpus, mainThreadSwitches:switches, frames:frames.length,
   };
 }
