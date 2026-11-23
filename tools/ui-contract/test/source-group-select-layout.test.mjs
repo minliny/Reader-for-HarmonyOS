@@ -35,9 +35,7 @@ test('source group trigger centers its measured label and chevron in the actual 
   }
 });
 
-test('Source Management opens from the measured group box and scrolls down within the keyboard-safe height', () => {
-  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 366, 600));
-  metrics.ready = true;
+function selectSdk(metrics) {
   const uiContext = {
     getFont: () => ({}), px2vp: value => value,
     animateTo(_params, apply) { apply(); },
@@ -46,7 +44,13 @@ test('Source Management opens from the measured group box and scrolls down withi
       measureTextSize: ({ textContent }) => ({ width: textContent.length * 15, height: 24 }),
     }),
   };
-  const sdk = inlineSelectSdk({ uiContext, dependencies: { readerWindowMetrics: () => metrics } });
+  return inlineSelectSdk({ uiContext, dependencies: { readerWindowMetrics: () => metrics } });
+}
+
+test('Source Management opens from the measured group box and scrolls down within the keyboard-safe height', () => {
+  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 366, 600));
+  metrics.ready = true;
+  const sdk = selectSdk(metrics);
   const { ReaderSelectPanel, ReaderChoiceRow } = sdk.dependencies;
   const constants = selectedProductionValues(pagePath, ['GROUP_ICON_WIDTH', 'GROUP_LABEL_GAP', 'GROUP_TRIGGER_GAP']);
   const { owner } = createReaderBuilderProbe(readFileSync(pagePath, 'utf8'), [
@@ -125,4 +129,85 @@ test('Source Management opens from the measured group box and scrolls down withi
   owner.toggleGroupSelection();
   assert.equal(owner.groupClosingAnchor, undefined);
   assert.equal(owner.groupY, 200, 'the next opening retains current trigger layout');
+});
+
+test('capped source group menus avoid serializing or publishing native option heights', () => {
+  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 366, 844));
+  const sdk = selectSdk(metrics);
+  const { ReaderSelectPanel, ReaderChoiceRow } = sdk.dependencies;
+  for (const count of [314, 316]) {
+    const options = Array.from({ length: count }, (_, index) => `测试书源分组 ${index}`);
+    const value = count === 314 ? options[0] : '此前选择的分组';
+    const panel = new ReaderSelectPanel(undefined, {
+      variant: 'sourceGroup', value, options, x: 100, y: 176, controlWidth: 160,
+      hostTopVp: 176, hostBottomVp: 620, hostRightVp: 320, reduceMotion: true, selectionId: `large:${count}`,
+    });
+    let optionListSerializations = 0;
+    const stringify = JSON.stringify;
+    JSON.stringify = function (input, ...args) {
+      if (Array.isArray(input) && input[1] === 'sourceGroup' && Array.isArray(input[5])) optionListSerializations += 1;
+      return stringify(input, ...args);
+    };
+    try {
+      panel.aboutToAppear();
+      panel.initialRender();
+      const nodes = sdk.nodes(panel);
+      nodes.find(node => node.type === 'Column' && node.onAppear).onAppear();
+      const rows = sdk.walk(panel).filter(row => row instanceof ReaderChoiceRow);
+      assert.equal(rows.length, count + (value === options[0] ? 0 : 1));
+      assert.equal(rows[0].label, value);
+      assert.ok(rows.every(row => row.wrapLabel));
+      for (const row of rows) {
+        sdk.nodes(row).find(node => node.type === 'Button').onAreaChange({}, { height: 72 });
+      }
+      sdk.properties.flush();
+      const frame = nodes.find(node => node.type === 'Column' && node.position !== undefined);
+      assert.equal(frame.height, 330);
+      assert.equal(nodes.filter(node => node.type === 'Scroll').length, 1);
+      panel.maxPanelHeight = 280;
+      sdk.properties.flush();
+      assert.equal(frame.height, 280);
+      panel.hostBottomVp = 270;
+      sdk.properties.flush();
+      assert.equal(frame.height, 94);
+      assert.deepEqual(frame.position, { x: 100, y: 176 });
+    } finally {
+      JSON.stringify = stringify;
+    }
+    assert.equal(optionListSerializations, 0, 'capped rows and host changes never serialize every group per row');
+    assert.equal(panel.measuredHeightRevision, 0, 'capped option height reports never publish a new layout');
+  }
+});
+
+test('short source group menus retain wrapped row heights when the keyboard leaves more room', () => {
+  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 366, 844));
+  const sdk = selectSdk(metrics);
+  const { ReaderSelectPanel, ReaderChoiceRow } = sdk.dependencies;
+  const panel = new ReaderSelectPanel(undefined, {
+    variant: 'sourceGroup', value: '全部分组', options: ['全部分组', '很长的选项'], x: 100, y: 176, controlWidth: 160,
+    hostTopVp: 176, hostBottomVp: 251, hostRightVp: 320, reduceMotion: true, selectionId: 'short',
+  });
+  panel.aboutToAppear();
+  panel.initialRender();
+  const nodes = sdk.nodes(panel);
+  nodes.find(node => node.type === 'Column' && node.onAppear).onAppear();
+  const frame = nodes.find(node => node.type === 'Column' && node.position !== undefined);
+  const rows = sdk.walk(panel).filter(row => row instanceof ReaderChoiceRow);
+  const reports = rows.map(row => sdk.nodes(row).find(node => node.type === 'Button').onAreaChange);
+  reports[0]({}, { height: 60 });
+  reports[1]({}, { height: 90 });
+  sdk.properties.flush();
+  assert.equal(frame.height, 75);
+  assert.equal(panel.measuredHeightRevision, 0, 'short-host receipts do not publish until they change the panel height');
+  panel.hostBottomVp = 430;
+  sdk.properties.flush();
+  assert.equal(frame.height, 152, 'removing the keyboard uses the actual height of both rows');
+
+  metrics.systemFontScale = 2;
+  panel.readerWindowMetricsRevision += 1;
+  reports[1]({}, { height: 120 });
+  assert.equal(panel.optionHeights.size, 0, 'a prior-font area callback cannot fill the current height cache');
+  panel.optionHeightHandler('很长的选项', false)(120);
+  sdk.properties.flush();
+  assert.equal(frame.height, 166, 'uncapped height changes still publish');
 });

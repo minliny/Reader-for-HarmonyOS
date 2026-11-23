@@ -165,20 +165,29 @@ export struct ReaderSelectPanel {
     if (!this.mounted || this.closeInFlight || !Number.isFinite(height) || height <= 0) return;
     this.invalidateOptionHeights();
     const key = `${this.variant}:${selected}:${option}`;
-    if (Math.abs((this.optionHeights.get(key) ?? 0) - height) < .1) return;
-    this.optionHeights.set(key, height);
+    const measuredGroup = this.variant === 'sourceGroup' && this.controlWidth > 0;
+    const nextHeight = measuredGroup ? Math.max(44, height) : height;
+    if (Math.abs((this.optionHeights.get(key) ?? 0) - nextHeight) < .1) return;
+    const previousPanelHeight = measuredGroup ? this.fullPanelHeight() : -1;
+    this.optionHeights.set(key, nextHeight);
+    if (measuredGroup && previousPanelHeight === this.fullPanelHeight()) return;
     this.measuredHeightRevision += 1;
     this.expandPanel();
   }
 
   private optionHeightHandler(option: string, selected: boolean): (height: number) => void {
+    // Even a future host expansion cannot make these menus need row receipts.
+    if (this.fillsMeasuredSourceGroupHeight(330)) return this.ignoreOptionHeight;
     const generation = this.generation;
     const identity = this.optionMeasurementIdentity();
     return (height: number): void => {
+      if (this.fillsMeasuredSourceGroupHeight(330)) return;
       if (generation === this.generation && identity === this.optionMeasurementIdentity())
         this.recordOptionHeight(option, selected, height);
     };
   }
+
+  private ignoreOptionHeight(_height: number): void {}
 
   private optionMeasurementIdentity(): string {
     this.readerWindowMetricsRevision;
@@ -195,6 +204,11 @@ export struct ReaderSelectPanel {
   }
 
   private invalidateOptionHeights(): void {
+    if (this.fillsMeasuredSourceGroupHeight(330)) {
+      this.optionHeights.clear();
+      this.optionHeightsLayoutIdentity = '';
+      return;
+    }
     const identity = this.optionMeasurementIdentity();
     if (identity === this.optionHeightsLayoutIdentity) return;
     this.optionHeights.clear();
@@ -525,6 +539,7 @@ export struct ReaderSelectPanel {
       const configured = Number.isFinite(this.maxPanelHeight) && this.maxPanelHeight > 0 ? Math.min(330, this.maxPanelHeight) : 330;
       const maximum = this.hostBottomVp >= 0 ?
         Math.min(configured, Math.max(0, this.hostBottomVp - this.hostTopVp)) : configured;
+      if (this.fillsMeasuredSourceGroupHeight(maximum)) return maximum;
       const appearance = this.variant === 'appearanceLibrary';
       const minimum = appearance ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
       let height = appearance ? 8 : TOK_BORDER_W * 2;
@@ -550,5 +565,17 @@ export struct ReaderSelectPanel {
       }
     }
     return OPTION_H * (1 + unselectedCount);
+  }
+
+  private fillsMeasuredSourceGroupHeight(maximum: number): boolean {
+    if (this.variant !== 'sourceGroup' || this.controlWidth <= 0) return false;
+    // The selected row is always present, even if its value left the option list.
+    let minimum = 44 + TOK_BORDER_W * 2;
+    const selected = this.renderedValue();
+    for (const option of this.renderedOptions()) {
+      if (minimum >= maximum) return true;
+      if (option !== selected) minimum += 44;
+    }
+    return minimum >= maximum;
   }
 }
