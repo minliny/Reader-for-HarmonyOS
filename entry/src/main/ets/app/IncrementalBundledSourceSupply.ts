@@ -1,5 +1,5 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
-import { BUNDLED_SOURCE_INDEX_SHA256 } from './BundledSourceIndexIdentity';
+import { BUNDLED_SOURCE_BUNDLE_ID, BUNDLED_SOURCE_INDEX_SHA256 } from './BundledSourceIndexIdentity';
 import { sha256Hex } from './BundledBookSourceSupply';
 
 type IndexItem = { sourceId: string; itemDigest: string; file: string };
@@ -20,7 +20,7 @@ export type SupplyResources = {
 
 /** Host owns resource I/O only. Core owns rule edits, suppression and receipts. */
 export async function supplyBundledSources(resources: SupplyResources): Promise<IncrementalSupplySummary> {
-  const bundleId = 'reader-tested-book-sources';
+  const bundleId = BUNDLED_SOURCE_BUNDLE_ID;
   // A policy/schema change must invalidate an older completed receipt.
   const supplyDigest = `${resources.digest}:supply-v1:storage24`;
   const summary: IncrementalSupplySummary = {
@@ -68,13 +68,14 @@ export async function supplyBundledSources(resources: SupplyResources): Promise<
     // Each item has its own durable boundary; yield before the next resource.
     await new Promise<void>((resolve: () => void): void => { setTimeout(resolve, 0); });
   }
-  const retired = new Set<string>([...receipts.keys(), ...legacy]);
-  for (const sourceId of retired) {
+  // The current curated collection owns only its own receipts. Legacy IDs
+  // still protect previously deleted entries during apply, and do not grant
+  // this collection ownership of items from the larger historical bundle.
+  for (const [sourceId, receipt] of receipts) {
     if (seen.has(sourceId)) continue;
     if (!resources.current()) { summary.interrupted = true; return summary; }
-    const receipt = receipts.get(sourceId);
     expected.push({ sourceId, itemDigest: 'withdrawn' });
-    if (receipt?.itemDigest === 'withdrawn' && !receipt.dirty) continue;
+    if (receipt.itemDigest === 'withdrawn' && !receipt.dirty) continue;
     try {
       const result = await resources.request({ operation: 'withdraw', bundleId, sourceId, legacyManaged: legacy.has(sourceId) });
       if (result.data['accepted'] !== true) throw new Error('Core rejected withdrawal');

@@ -6,6 +6,16 @@
 // entry/src/main/ets/app/BundledBookSourceSupply.ts and must stay byte-identical.
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { classifyReaderSource } from '../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
+
+export function isExternalBundledSource(source) {
+  return classifyReaderSource({
+    bookSourceType: source.bookSourceType,
+    name: source.bookSourceName,
+    group: source.bookSourceGroup,
+    sourceId: source.bookSourceUrl,
+  }) === 'external';
+}
 
 export const SUITE_VERSION = 'reader-tested-corpus/1';
 export const BUILTIN_VERSION = 6;

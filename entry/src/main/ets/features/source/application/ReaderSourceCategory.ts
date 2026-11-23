@@ -66,7 +66,9 @@ export function classifyReaderSource(input: ReaderSourceCategoryInput): ReaderSo
   const comic = containsAny(haystack, ['漫画', '漫客', 'comic', 'manga', 'manhua', 'cartoon', 'ac.qq.com', 'mkzhan', 'baozimh', 'pixiv', '图站', '写真']);
   const music = containsAny(haystack, ['音乐', '有声', '听书', 'audio', 'music', 'ximalaya', 'missevan', 'lrts', '5sing']);
   const download = containsAny(haystack, ['下载', '书盘', 'download']) || /(?:^|[/:.])files?[./:]/.test(url);
-  const external = containsAny(haystack, ['视频', 'video', 'vod', 'game', '游戏', 'player.', '动漫', 'gugu3', 'yikm.net']);
+  // A bare "vod" anywhere in a URL also matches unrelated novel addresses.
+  const external = containsAny(haystack, ['视频', 'video', 'game', '游戏', 'player.', '动漫', 'gugu3', 'yikm.net']) ||
+    /\bvod\b/.test(name);
   // Ambiguous mixed-media sources must never silently enter novel results.
   const mediaCount = Number(comic) + Number(music) + Number(download) + Number(external);
   if (mediaCount > 1 || (mediaCount > 0 && /小说\s*[\/、+&]\s*(?:漫画|音乐|有声|视频)|(?:漫画|音乐|有声|视频)\s*[\/、+&]\s*小说/.test(name))) return 'other';

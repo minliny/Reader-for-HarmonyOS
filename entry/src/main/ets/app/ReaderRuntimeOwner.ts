@@ -96,7 +96,7 @@ const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
 const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
-const BUNDLED_RAW_FILE_SHA256 = 'b2abb67815534e9d58efebba27025fc6be4336cbbc8dfb485904e8bb76c73f18';
+const BUNDLED_RAW_FILE_SHA256 = '405661f1a7308c95e922eddea876ec10888563fde36d7e814064f585bb2142b9';
 // END bundled-source-integrity
 
 type CoreBuildIdentity = {

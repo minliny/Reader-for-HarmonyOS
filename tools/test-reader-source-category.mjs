@@ -52,6 +52,7 @@ assert.equal(classifyReaderSource({ bookSourceType: 1 }), 'music');
 assert.equal(classifyReaderSource({ bookSourceType: '2' }), 'comic');
 assert.equal(classifyReaderSource({ bookSourceType: 3 }), 'download');
 assert.equal(classifyReaderSource({ bookSourceType: 4 }), 'external');
+assert.equal(classifyReaderSource({ bookSourceType: 0, name: '小说来源', baseUrl: 'https://library.example.test/novodbooks' }), 'novel');
 assert.equal(classifyReaderSource({ bookSourceType: 99, name: '小说' }), 'other');
 assert.equal(classifyReaderSource({ group: '漫画' }), 'comic');
 assert.equal(classifyReaderSource({ name: '有声听书' }), 'music');
