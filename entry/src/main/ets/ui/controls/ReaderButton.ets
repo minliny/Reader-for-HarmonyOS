@@ -33,8 +33,7 @@ class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
       instance.maxFontScale(Math.max(1, this.fontScale));
     }
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
-    // Only search-field variants have a leading slot. Split the line leading
-    // above/below CJK glyphs so the label centers with the native indicator.
+    // Split the line leading above/below CJK glyphs to center them beside the icon.
     if (spec.leadingSlot) instance.halfLeading(true);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     instance.fontColor(readerAppColor(this.primary ? spec.primaryText : spec.secondaryText, this.scheme));
@@ -178,7 +177,7 @@ export struct ReaderButton {
   private emptyLeading() {}
   build() {
     if (this.specId === 'search-filter-option' || this.specId === 'source-management-category' ||
-      this.specId === 'source-management-detect' || this.specId === 'source-management-login') {
+      this.specId === 'source-management-login') {
       // The capsule keeps its compact visual size inside a separate native
       // target. Its 44vp slot belongs to layout instead of an outer response
       // region, so adjacent filter targets never overlap.
@@ -202,7 +201,8 @@ export struct ReaderButton {
         Stack({ alignContent: resolveReaderButtonSpec(this.specId).leadingSlot ? Alignment.End : Alignment.Center }) {
           if (resolveReaderButtonSpec(this.specId).leadingSlot) {
             Row({ space: 5 }) { this.leading(); Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale())); }
-              .width('100%').justifyContent(FlexAlign.End).alignItems(VerticalAlign.Center);
+              .width('100%').justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+              .translate({ y: this.specId === 'source-management-detect' ? 8 : 0 });
           } else {
             Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()));
           }

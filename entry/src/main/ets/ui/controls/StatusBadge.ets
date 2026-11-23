@@ -11,15 +11,22 @@ export struct StatusBadge {
   @Prop status: ReaderStatusBadgeStatus = 'unknown';
   @Prop label: string = '';
   @Prop verificationId: string = '';
+  @Prop symbolOnly: boolean = false;
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
+      if (this.symbolOnly && this.status !== 'pending') {
+        Row().width(14).height(14).borderRadius(7).border({ width: 1, color: this.symbolColor() })
+          .accessibilityLevel('no');
+      }
       Path().width(12).height(12).commands(this.symbolPath())
         .fill(Color.Transparent).stroke(this.symbolColor()).strokeWidth(1.6)
         .strokeLineCap(LineCapStyle.Round).strokeLineJoin(LineJoinStyle.Round)
         .accessibilityLevel('no');
-    }.width(24).height(18).borderRadius(9).backgroundColor(this.surfaceColor())
+    }.width(this.symbolOnly ? 14 : 24).height(18).borderRadius(9)
+      .backgroundColor(this.symbolOnly ? Color.Transparent : this.surfaceColor())
       .id(this.verificationId)
+      .accessibilityLevel(this.symbolOnly ? 'no' : 'auto')
       .accessibilityGroup(true).accessibilityText(this.label.trim().length > 0 ? this.label : '状态未知');
   }
 

@@ -22,6 +22,7 @@ import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import * as safe from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { SOURCE_GROUP_SELECT_RADIUS } from '../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
 import { consumeReaderControlKeyboardBack } from '../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts';
 import { actualSourceManagementGeometry } from './lib/source-management-owner-probe.mjs';
 import { SOURCE_CHROME_VISUAL as visual } from '../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
@@ -80,7 +81,7 @@ function context(value) {
   const toggles = { dependencies: { ReaderToggle: createReaderBuilderProbe(toggleSource, boundedMembers(toggleSource), toggleDeps, toggleHooks).Component }, hooks: toggleHooks };
   const messages = boundedSurfaceSdk({ properties: foundation.properties, windowMetrics: () => value, allowEmptyBranchAdmission: true });
   const deps = { ...messages.deps, ...labeled.dependencies, ...toggles.dependencies, ...readerTypographyRoles, ...readerFoundationTokens,
-    ...nativeEnums, ...safe, readerAppColor, readerReadableFontScale, readerScaledControlHeight,
+    ...nativeEnums, ...safe, SOURCE_GROUP_SELECT_RADIUS, readerAppColor, readerReadableFontScale, readerScaledControlHeight,
     ReaderWindowCoordinator: { metrics: () => value }, readerWindowMetrics: () => value,
     readerPageAreaLength: x => Number.parseFloat(x), uiContext: uiContext(), LengthMetrics: { vp: x => x },
     LazyForEach: { create() {}, pop() {} }, registerReaderFonts() {} };
@@ -122,19 +123,21 @@ function selectHost() {
     if (height === 0) assert.equal(frame.height, 0, 'zero host never restores the330vp default');
     results.push({ case: 'select-host', height, y: frame.position.y, panelHeight: frame.height });
   }
-  const parent = createReaderBuilderProbe(read('features/source/ui/SourceManagementPage.ets'), ['groupOverlay', 'groupOverlayTop', 'recordGroupTrigger', 'numericAreaLength', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
+  const parent = createReaderBuilderProbe(read('features/source/ui/SourceManagementPage.ets'), ['groupOverlay', 'groupOverlayTop',
+    'recordGroupTrigger', 'numericAreaLength', 'visibleGroupOptions', 'groupSearchQuery', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
     { ...inline.dependencies, ...safe, ReaderWindowCoordinator: { metrics: () => value } }, inline.hooks).owner;
   Object.assign(parent, { mounted: true, groupOpen: true, groupValue: '全部分组', groupSelectionId: 'source:1',
     originX: 0, originY: 0, viewportWidth: 320, viewportHeight: 180, reduceMotion: true, groupClosing: false,
     groupOptions: () => Array.from({ length: 8 }, (_, index) => `组${index}`),
-    groupCloseAction: () => () => {}, groupPanelFocusPrefix: () => '', groupPanelLayoutAction: () => () => {} });
-  parent.recordGroupTrigger({ width: 100, globalPosition: { x: 180, y: 90 } });
+    groupCloseAction: () => () => {}, groupPanelFocusPrefix: () => '', groupPanelLayoutAction: () => () => {}, groupSearchField() {} });
+  parent.recordGroupTrigger({ width: 100, height: 44, globalPosition: { x: 180, y: 90 } });
   parent.groupOverlay();
   const mounted = inline.walk(parent).find(actor => actor instanceof Panel);
   assert.ok(mounted);
   assert.equal(mounted.hostBottomVp, 180);
   assert.equal(mounted.hostTopVp, 90, 'Source caller reserves only the space below the measured anchor');
   assert.equal(mounted.controlWidth, 100);
+  assert.equal(mounted.menuHeaderHeight, 44);
   function heightReceipts(Component) {
     value.systemFontScale = 1; value.windowRect.width = 320;
     const panel = new Component(undefined, { variant: 'sourceGroup', value: '全部分组', options: ['全部分组', '甲组', '乙组'],
@@ -634,13 +637,14 @@ function supplementalSelectTargets() {
   const inline = inlineSelectSdk({ uiContext: selectTextContext(value), dependencies: { readerWindowMetrics: () => value } });
   const rel = 'features/source/ui/SourceManagementPage.ets', source = read(rel);
   function sourcePanel(width, definition = source) {
-    const parent = createReaderBuilderProbe(definition, ['groupOverlay', 'groupOverlayTop', 'recordGroupTrigger', 'numericAreaLength', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
+    const parent = createReaderBuilderProbe(definition, ['groupOverlay', 'groupOverlayTop', 'recordGroupTrigger', 'numericAreaLength',
+      'visibleGroupOptions', 'groupSearchQuery', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight'],
       { ...inline.dependencies, ...safe, ReaderWindowCoordinator: { metrics: () => value } }, inline.hooks).owner;
     Object.assign(parent, { mounted: true, groupOpen: true, groupValue: '全部分组', groupSelectionId: `embedded:${width}`,
       originX: 23, originY: 24, viewportWidth: width, viewportHeight: 360,
       reduceMotion: true, groupClosing: false, groupOptions: () => ['全部分组', '甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未'],
-      groupCloseAction: () => () => {}, groupPanelFocusPrefix: () => '', groupPanelLayoutAction: () => () => {} });
-    parent.recordGroupTrigger({ width: 160, globalPosition: { x: 123, y: 200 } });
+      groupCloseAction: () => () => {}, groupPanelFocusPrefix: () => '', groupPanelLayoutAction: () => () => {}, groupSearchField() {} });
+    parent.recordGroupTrigger({ width: 160, height: 44, globalPosition: { x: 123, y: 200 } });
     parent.groupOverlay();
     const panel = inline.walk(parent).find(actor => actor instanceof inline.dependencies.ReaderSelectPanel);
     const frame = inline.nodes(panel).find(node => node.type === 'Column' && node.position !== undefined);

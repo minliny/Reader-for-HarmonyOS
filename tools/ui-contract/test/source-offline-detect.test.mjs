@@ -48,6 +48,16 @@ test('Offline Source Detect aliases the native Button only from its exact normal
   assert.ok(selectLayoutNode(sample,sourceOfflineDetectReady));
   assert.equal(JSON.stringify(sample).includes(fixture.bookSourceUrl),false);
   assert.throws(()=>selectLayoutNode(normalize(false),sourceOfflineDetectButton),/missing/u);
+
+  const host = new URL(fixture.bookSourceUrl).hostname;
+  row.children[1].attributes.originalText = host;
+  const button = row.children[2];
+  const bounds = button.attributes.bounds;
+  button.children = [raw('Stack','',bounds,[raw('Row','',bounds,button.children)])];
+  const merged = normalize(true);
+  assert.equal(selectLayoutNode(merged,sourceOfflineDetectButton).type,'Button');
+  assert.equal(JSON.stringify(merged).includes(host),false);
+
   row.children[1].attributes.originalText = 'https://unrelated.invalid/';
   assert.throws(()=>selectLayoutNode(normalize(true),sourceOfflineDetectButton),/missing/u);
 });

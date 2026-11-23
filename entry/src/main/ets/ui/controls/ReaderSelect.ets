@@ -5,7 +5,8 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
-import { readerSelectAvailableWidth, readerSelectTriggerWidth } from '../foundation/ReaderSelectGeometry';
+import { readerSelectAvailableWidth, readerSelectTriggerWidth, SOURCE_GROUP_SELECT_ARROW_END, SOURCE_GROUP_SELECT_ARROW_SIZE,
+  SOURCE_GROUP_SELECT_PAINT_INSET, SOURCE_GROUP_SELECT_RADIUS, SOURCE_GROUP_SELECT_TEXT_INSET } from '../foundation/ReaderSelectGeometry';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -100,7 +101,8 @@ export struct ReaderSelect {
     .height(this.triggerHeight())
     .padding(0)
     .backgroundColor(Color.Transparent)
-    .borderRadius(this.variant === 'appearanceLibrary' ? Math.min(this.resolvedWidth(), this.triggerHeight()) / 2 : this.variant === 'sourceGroup' ? 8 : this.variant === 'settingsPhone' ? 7 : 6)
+    .borderRadius(this.variant === 'appearanceLibrary' ? Math.min(this.resolvedWidth(), this.triggerHeight()) / 2 :
+      this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : this.variant === 'settingsPhone' ? 7 : 6)
     .responseRegion({ x: 0, y: this.variant === 'appearanceLibrary' ? -APPEARANCE_HIT_OUTSET : 0,
       width: '100%', height: this.variant === 'appearanceLibrary' ?
         this.triggerHeight() + APPEARANCE_HIT_OUTSET * 2 : this.triggerHeight() })
@@ -225,6 +227,16 @@ export struct ReaderSelect {
   @Builder
   private sourceGroupTrigger(valueHeight: number) {
     Stack({ alignContent: Alignment.TopStart }) {
+      Row()
+        .id(this.focusId.length > 0 ? `${this.focusId}:frame` : '')
+        .width('100%')
+        .height(this.triggerHeight() - SOURCE_GROUP_SELECT_PAINT_INSET * 2)
+        .position({ x: 0, y: SOURCE_GROUP_SELECT_PAINT_INSET })
+        .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.sourceGroup', this.appThemeScheme) })
+        .borderRadius(SOURCE_GROUP_SELECT_RADIUS)
+        .hitTestBehavior(HitTestMode.None)
+        .accessibilityLevel('no');
       Text(this.value)
         .width(Math.max(0, this.resolvedWidth() - 42))
         .height(valueHeight)
@@ -235,19 +247,17 @@ export struct ReaderSelect {
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 14, y: (this.triggerHeight() - valueHeight) / 2 });
+        .position({ x: SOURCE_GROUP_SELECT_TEXT_INSET, y: (this.triggerHeight() - valueHeight) / 2 });
       Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron')))
-        .width(12)
-        .height(12)
+        .width(SOURCE_GROUP_SELECT_ARROW_SIZE)
+        .height(SOURCE_GROUP_SELECT_ARROW_SIZE)
         .rotate({ angle: this.isOpen ? 180 : 0 })
         .animation(this.dropdownAnimation())
-        .position({ x: this.resolvedWidth() - 21, y: (this.triggerHeight() - 12) / 2 });
+        .position({ x: this.resolvedWidth() - SOURCE_GROUP_SELECT_ARROW_SIZE - SOURCE_GROUP_SELECT_ARROW_END,
+          y: (this.triggerHeight() - SOURCE_GROUP_SELECT_ARROW_SIZE) / 2 });
     }
     .width('100%')
-    .height(this.triggerHeight())
-    .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.sourceGroup', this.appThemeScheme) })
-    .borderRadius(8);
+    .height(this.triggerHeight());
   }
 
   @Builder

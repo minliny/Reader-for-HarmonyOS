@@ -111,6 +111,40 @@ test('source row actions alias only real buttons from the current public fixture
   assert.equal(loginCarrier.visibleRectPx.height,121);
 });
 
+test('source row action aliases admit the hostname and merged Detect label only in their native carriers', () => {
+  const row = sourceRow();
+  const host = new URL(fixture.bookSourceUrl).hostname;
+  row.children[1].attributes.originalText = host;
+  const button = row.children[2];
+  const [label] = button.children;
+  const bounds = button.attributes.bounds;
+  const line = actor('Row','',bounds,[actor('Stack','',bounds), label]);
+  const content = actor('Stack','',bounds,[line]);
+  button.children = [content];
+
+  const scope = {ancestors:[listId,rowId]};
+  const current = observe({row});
+  assert.equal(selectLayoutNode(current,{id:detect,...scope}).type,'Button');
+  assert.equal(selectLayoutNode(current,{id:login,...scope}).type,'Button');
+  assert.equal(JSON.stringify(current).includes(host),false);
+
+  row.children[1].attributes.originalText = 'other.'+host;
+  assert.throws(() => selectLayoutNode(observe({row}),{id:detect,...scope}),/missing/u);
+  row.children[1].attributes.originalText = host;
+  line.children.push(structuredClone(label));
+  assert.throws(() => selectLayoutNode(observe({row}),{id:detect,...scope}),/missing/u);
+  line.children.pop();
+  line.attributes.hostWindowId = 'other';
+  assert.throws(() => selectLayoutNode(observe({row}),{id:detect,...scope}),/missing/u);
+  line.attributes.hostWindowId = readerWindow;
+  label.attributes.originalText = '登录';
+  assert.throws(() => selectLayoutNode(observe({row}),{id:detect,...scope}),/missing/u);
+  assert.equal(selectLayoutNode(observe({row}),{id:login,...scope}).type,'Button');
+  label.attributes.originalText = '检测';
+  content.children = [actor('Column','',bounds,[line])];
+  assert.throws(() => selectLayoutNode(observe({row}),{id:detect,...scope}),/missing/u);
+});
+
 test('source row actions admit only the exact disabled public production row', ()=>{
   const source = {sourceId:fixture.bookSourceUrl,baseUrl:fixture.bookSourceUrl,name:fixture.bookSourceName,
     group:fixture.bookSourceGroup,category:'novel',loginUrl:fixture.loginUrl,

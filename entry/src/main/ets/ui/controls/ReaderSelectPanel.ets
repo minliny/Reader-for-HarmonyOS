@@ -5,7 +5,9 @@ import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
-import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth } from '../foundation/ReaderSelectGeometry';
+import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth, SOURCE_GROUP_SELECT_ARROW_END,
+  SOURCE_GROUP_SELECT_ARROW_SIZE, SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_PAINT_INSET,
+  SOURCE_GROUP_SELECT_RADIUS } from '../foundation/ReaderSelectGeometry';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -64,6 +66,10 @@ export struct ReaderSelectPanel {
   @Prop @Watch('onIdentityChanged') selectionId: string = '';
   // 书源分组使用实测触发条宽。default 菜单独立测量选项。
   @Prop @Watch('onGeometryChanged') controlWidth: number = 0;
+  @Prop @Watch('onGeometryChanged') menuHeaderHeight: number = 0;
+  @Prop emptyOptionsText: string = '';
+  @BuilderParam menuHeader: () => void = this.emptyMenuHeader;
+  onMenuHeaderCollapse: ((identity: string) => void) | undefined = undefined;
   /** Optional current appearance host budget. Zero keeps the original menu contract. */
   @Prop @Watch('onGeometryChanged') maxPanelHeight: number = 0;
   /** Overlay coordinates, or a popup's local height budget from its window owner. */
@@ -101,6 +107,11 @@ export struct ReaderSelectPanel {
 
   private renderedValue(): string { return this.closeInFlight ? this.closingValue : this.value; }
   private renderedOptions(): string[] { return this.closeInFlight ? this.closingOptions : this.options; }
+  private showsSelectedRow(): boolean {
+    return this.menuHeaderHeight === 0 || this.renderedOptions().includes(this.renderedValue());
+  }
+
+  private collapsedHeight(): number { return this.menuHeaderHeight > 0 ? this.menuHeaderHeight : OPTION_H; }
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -130,7 +141,7 @@ export struct ReaderSelectPanel {
     if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
     this.getUIContext().animateTo(readerMotionAnimateParam(
       this.closeInFlight ? 'dropdown.menu.collapse' : 'dropdown.menu.expand', true), (): void => {
-      this.expandedHeight = this.closeInFlight ? OPTION_H : this.fullPanelHeight();
+      this.expandedHeight = this.closeInFlight ? this.collapsedHeight() : this.fullPanelHeight();
       this.chevronAngle = this.closeInFlight ? 0 : -180;
     });
     if (this.closeInFlight) this.finishCollapse(generation, true);
@@ -216,7 +227,8 @@ export struct ReaderSelectPanel {
   }
 
   private panelHeight(): number {
-    return this.hostBottomVp >= 0 ? Math.min(this.expandedHeight, Math.max(0, this.hostBottomVp - this.hostTopVp)) : this.expandedHeight;
+    const height = Math.max(this.menuHeaderHeight, this.expandedHeight);
+    return this.hostBottomVp >= 0 ? Math.min(height, Math.max(0, this.hostBottomVp - this.hostTopVp)) : height;
   }
 
   build() {
@@ -230,8 +242,15 @@ export struct ReaderSelectPanel {
   }
 
   @Builder
+  private emptyMenuHeader() {}
+
+  @Builder
   private panelBody() {
     Column({ space: 0 }) {
+      if (this.menuHeaderHeight > 0) {
+        this.searchableFrame();
+        this.searchableHeader(this.selectionId);
+      }
       if (this.wrapsOptions()) {
         Scroll() {
           Column({ space: 0 }) { this.optionContent(); }.width('100%');
@@ -244,12 +263,53 @@ export struct ReaderSelectPanel {
     .height(this.panelHeight())
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
     .zIndex(10)
-    .backgroundColor(this.panelBackgroundColor())
-    .border({ width: TOK_BORDER_W, color: this.panelBorderColor() })
-    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? 8 : 6))
+    .backgroundColor(this.menuHeaderHeight > 0 ? Color.Transparent : this.panelBackgroundColor())
+    .border({ width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
+    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 6))
     .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
       color: this.variant === 'appearanceLibrary' ? readerAppColor('app.shadow.select', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
     .clip(true).onAppear((): void => this.expandPanel());
+  }
+
+  @Builder
+  private searchableFrame() {
+    Row()
+      .id(`${this.selectionId}:frame`)
+      .width('100%').height(this.searchablePaintHeight())
+      .position({ x: 0, y: SOURCE_GROUP_SELECT_PAINT_INSET })
+      .backgroundColor(this.panelBackgroundColor())
+      .border({ width: TOK_BORDER_W, color: this.panelBorderColor() })
+      .borderRadius(SOURCE_GROUP_SELECT_RADIUS)
+      .hitTestBehavior(HitTestMode.None)
+      .accessibilityLevel('no');
+  }
+
+  private searchablePaintHeight(): number {
+    const height = this.panelHeight();
+    const shownBelowHeader = Math.max(0, height - this.menuHeaderHeight);
+    const bottomInset = Math.max(0, SOURCE_GROUP_SELECT_PAINT_INSET - shownBelowHeader);
+    return Math.max(0, height - SOURCE_GROUP_SELECT_PAINT_INSET - bottomInset);
+  }
+
+  @Builder
+  private searchableHeader(identity: string) {
+    Stack({ alignContent: Alignment.End }) {
+      this.menuHeader();
+      if (this.onMenuHeaderCollapse !== undefined) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Stack({ alignContent: Alignment.TopStart }) {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron'))
+              .width(SOURCE_GROUP_SELECT_ARROW_SIZE).height(SOURCE_GROUP_SELECT_ARROW_SIZE)
+              .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - SOURCE_GROUP_SELECT_ARROW_SIZE - SOURCE_GROUP_SELECT_ARROW_END,
+                y: (SOURCE_GROUP_SELECT_ARROW_TARGET - SOURCE_GROUP_SELECT_ARROW_SIZE) / 2 })
+              .rotate({ angle: this.chevronAngle }).accessibilityLevel('no');
+          }.width('100%').height('100%');
+        }.width(SOURCE_GROUP_SELECT_ARROW_TARGET).height(SOURCE_GROUP_SELECT_ARROW_TARGET)
+          .padding(0).borderRadius(SOURCE_GROUP_SELECT_RADIUS).backgroundColor(Color.Transparent)
+          .id('reader-source-group-collapse').accessibilityText('收起分组')
+          .onClick((): void => this.onMenuHeaderCollapse?.(identity));
+      }
+    }.width('100%').height(this.menuHeaderHeight);
   }
 
   @Builder
@@ -259,7 +319,15 @@ export struct ReaderSelectPanel {
           this.appearanceLibraryOption(opt);
         }, (opt: string): string => `ropt-${opt}`);
       } else {
-        this.selectedRow();
+        if (this.showsSelectedRow()) {
+          this.selectedRow();
+        } else if (this.renderedOptions().length === 0) {
+          Text(this.emptyOptionsText).width('100%').height(44).padding({ left: 14, right: 14 })
+            .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
+            .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
+            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
         ForEach(this.renderedOptions().filter((o: string): boolean => o !== this.renderedValue()), (opt: string) => {
           this.optionRow(opt);
         }, (opt: string): string => `ropt-${opt}`);
@@ -285,6 +353,7 @@ export struct ReaderSelectPanel {
       specId: this.variant === 'sourceGroup' ? 'source-group-selected' : 'default-selected',
       label: this.renderedValue(), selected: true, scheme: this.appThemeScheme,
       chevronAngle: this.chevronAngle,
+      hideIcon: this.menuHeaderHeight > 0,
       actionEnabled: !this.closeInFlight,
       wrapLabel: this.wrapsOptions(),
       focusId: this.optionFocusId('selected'),
@@ -390,7 +459,7 @@ export struct ReaderSelectPanel {
   private panelBackgroundColor(): ResourceColor {
     if (this.variant === 'appearanceLibrary') return readerAppColor('app.appearance.selectSurface', this.appThemeScheme);
     if (this.variant === 'sourceGroup') {
-      return readerAppColor('app.select.panelSolid', this.appThemeScheme);
+      return readerAppColor(this.menuHeaderHeight > 0 ? 'app.surface.menuSolid' : 'app.select.panelSolid', this.appThemeScheme);
     }
     return readerAppColor(this.variant === 'default' ? 'app.select.menuSurface' : 'TOK_FIELD_SURFACE', this.appThemeScheme);
   }
@@ -466,7 +535,7 @@ export struct ReaderSelectPanel {
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
-      this.expandedHeight = OPTION_H;
+      this.expandedHeight = this.collapsedHeight();
       this.chevronAngle = 0;
       this.finishCollapse(generation, deferParent);
       return;
@@ -478,7 +547,7 @@ export struct ReaderSelectPanel {
         this.finishCollapse(generation);
       }),
       (): void => {
-        this.expandedHeight = OPTION_H;
+        this.expandedHeight = this.collapsedHeight();
         this.chevronAngle = 0;
       },
     );
@@ -538,17 +607,22 @@ export struct ReaderSelectPanel {
       if (this.measuredHeightRevision < 0) return 0;
       const configured = Number.isFinite(this.maxPanelHeight) && this.maxPanelHeight > 0 ? Math.min(330, this.maxPanelHeight) : 330;
       const maximum = this.hostBottomVp >= 0 ?
-        Math.min(configured, Math.max(0, this.hostBottomVp - this.hostTopVp)) : configured;
-      if (this.fillsMeasuredSourceGroupHeight(maximum)) return maximum;
+        Math.min(configured + this.menuHeaderHeight, Math.max(0, this.hostBottomVp - this.hostTopVp)) :
+        configured + this.menuHeaderHeight;
+      if (this.fillsMeasuredSourceGroupHeight(maximum - this.menuHeaderHeight)) return maximum;
       const appearance = this.variant === 'appearanceLibrary';
       const minimum = appearance ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
-      let height = appearance ? 8 : TOK_BORDER_W * 2;
+      let height = this.menuHeaderHeight + (appearance ? 8 : TOK_BORDER_W * 2);
       if (height >= maximum) return maximum;
       const selected = this.renderedValue();
       // The identity includes the complete option list. Resolve it once per
       // panel height, since native row measurement can run this for every row.
       const heights = this.optionHeightsLayoutIdentity === this.optionMeasurementIdentity() ? this.optionHeights : undefined;
-      if (!appearance) height += heights?.get(`${this.variant}:true:${selected}`) ?? minimum;
+      if (!appearance && this.showsSelectedRow()) {
+        height += heights?.get(`${this.variant}:true:${selected}`) ?? minimum;
+      } else if (this.menuHeaderHeight > 0 && this.renderedOptions().length === 0) {
+        height += minimum;
+      }
       for (const option of this.renderedOptions()) {
         if (height >= maximum) return maximum;
         if (appearance || option !== selected) {
@@ -569,6 +643,7 @@ export struct ReaderSelectPanel {
 
   private fillsMeasuredSourceGroupHeight(maximum: number): boolean {
     if (this.variant !== 'sourceGroup' || this.controlWidth <= 0) return false;
+    if (this.menuHeaderHeight > 0) return Math.max(1, this.renderedOptions().length) * 44 + TOK_BORDER_W * 2 >= maximum;
     // The selected row is always present, even if its value left the option list.
     let minimum = 44 + TOK_BORDER_W * 2;
     const selected = this.renderedValue();

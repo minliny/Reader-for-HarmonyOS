@@ -3,6 +3,12 @@
 export type ReaderSelectMenuKind = 'standard' | 'source';
 
 export const READER_SELECT_TRIGGER_CHROME: number = 42;
+export const SOURCE_GROUP_SELECT_RADIUS: number = 8;
+export const SOURCE_GROUP_SELECT_TEXT_INSET: number = 14;
+export const SOURCE_GROUP_SELECT_ARROW_SIZE: number = 12;
+export const SOURCE_GROUP_SELECT_ARROW_END: number = 9;
+export const SOURCE_GROUP_SELECT_ARROW_TARGET: number = 44;
+export const SOURCE_GROUP_SELECT_PAINT_INSET: number = 2;
 
 function nonNegative(value: number): number {
   return Number.isFinite(value) ? Math.max(0, value) : 0;

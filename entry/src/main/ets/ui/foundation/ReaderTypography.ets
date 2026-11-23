@@ -555,6 +555,8 @@ export const TYPE_SOURCE_STATE_TITLE = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 22, undefined, 'system', 'appBaseline');
 export const TYPE_SOURCE_MANAGEMENT_TITLE = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 700, 13, 15.34, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_MANAGEMENT_ROW_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 600, 16, 22, undefined, 'system', 'appBaseline');
 export const TYPE_SOURCE_SWITCH_HEADING = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_REGULAR, 500, 11, 12.32, undefined, 'system', 'appBaseline');
 export const TYPE_SOURCE_SWITCH_SORT = new ReaderTextStyle(

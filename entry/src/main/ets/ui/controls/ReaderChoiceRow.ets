@@ -234,6 +234,7 @@ export struct ReaderChoiceRow {
   @Prop showDivider: boolean = false;
   @Prop scheme: string = 'day';
   @Prop chevronAngle: number = 0;
+  @Prop hideIcon: boolean = false;
   @Prop actionEnabled: boolean = true;
   @Prop wrapLabel: boolean = false;
   /** Optional focus address on the wrapping option row. */
@@ -381,7 +382,9 @@ export struct ReaderChoiceRow {
     return this.selected && this.spec().selectedBackground !== undefined ?
       readerAppColor(this.spec().selectedBackground!, this.scheme) : Color.Transparent;
   }
-  private hasIcon(): boolean { return this.spec().showIcon === 'always' || (this.spec().showIcon === 'selected' && this.selected); }
+  private hasIcon(): boolean {
+    return !this.hideIcon && (this.spec().showIcon === 'always' || (this.spec().showIcon === 'selected' && this.selected));
+  }
   private icon(): Resource { return $r(this.scheme === 'night' ? this.spec().iconNight : this.spec().iconDay); }
   private accessibilityLabel(): string { return this.specId === 'appearance-library' ? `${this.label}${this.selected ? '，已选择' : ''}` : this.label; }
   private choose(): void { if (this.mounted && this.actionEnabled) this.onChoose(this.optionId || this.label); }

@@ -42,8 +42,10 @@ const searchResultPrefix = 'reader-search-result:';
 const sourceReadHosts = new Set(['reader-source-empty-state', 'reader-source-filter-block', 'reader-source-pending-recovery']);
 const sourceRowActionTitle = 'Reader Phase 1 Row Actions';
 const sourceRowActionUrl = 'https://row-actions.reader-phase1.invalid/';
+const sourceRowActionHost = new URL(sourceRowActionUrl).hostname;
 const sourceOfflineDetectTitle = 'Reader Phase 1 Offline Detect';
 const sourceOfflineDetectUrl = 'https://offline-detect.reader-phase1.invalid/';
+const sourceOfflineDetectHost = new URL(sourceOfflineDetectUrl).hostname;
 const sourceRowActionLabels = [
   ['检测', 'reader-source-row-detect-control'],
   ['登录', 'reader-source-row-login-control'],
@@ -98,6 +100,22 @@ function matchesNativeText(attributes, windowId, title) {
   return attributes?.type === 'Text' && String(attributes.hostWindowId) === windowId &&
     boolean(attributes.visible) === true && positive(finiteNumber(attributes.opacity)) &&
     [attributes.originalText, attributes.text].includes(title);
+}
+
+function sourceRowButtonLabels(button, windowId) {
+  const visibleContainer = (node, type) => node.attributes?.type === type &&
+    String(node.attributes.hostWindowId) === windowId && boolean(node.attributes.visible) === true &&
+    positive(finiteNumber(node.attributes.opacity));
+  const children = button.children ?? [];
+  // Compact buttons expose a direct Text. Detect may instead put its label
+  // beside the status glyph inside the compact native Stack and Row.
+  const compound = children.filter(child => visibleContainer(child,'Stack'))
+    .flatMap(child => (child.children ?? []).filter(row => visibleContainer(row,'Row')))
+    .flatMap(row => row.children ?? []);
+  const directLabels = children.flatMap(child => sourceRowActionLabels.filter(([title]) =>
+    matchesNativeText(child.attributes,windowId,title)));
+  const detect = sourceRowActionLabels[0];
+  return [...directLabels,...compound.filter(child => matchesNativeText(child.attributes,windowId,detect[0])).map(() => detect)];
 }
 
 function quickAutoPageSpeedRow(node, path, windowId) {
@@ -337,15 +355,16 @@ export function normalizeHarmonyLayout({
       a.id === 'reader-source-list' : parentSourceList === true);
     let sourceActionRow = sourceList ? parentSourceActionRow : undefined;
     if (sourceList && a.type === 'Column' && /^reader-source-row-[1-9]\d*$/u.test(a.id ?? '')) {
-      sourceActionRow = { titles:0, urls:0, buttons:[] };
+      sourceActionRow = { titles:0, locators:0, buttons:[] };
       sourceActionRows.push(sourceActionRow);
     }
     if (sourceActionRow) {
       if (matchesNativeText(a,id,observeSourceOfflineDetect ? sourceOfflineDetectTitle : sourceRowActionTitle)) sourceActionRow.titles += 1;
-      if (matchesNativeText(a,id,observeSourceOfflineDetect ? sourceOfflineDetectUrl : sourceRowActionUrl)) sourceActionRow.urls += 1;
+      const locator = observeSourceOfflineDetect ? sourceOfflineDetectUrl : sourceRowActionUrl;
+      const hostname = observeSourceOfflineDetect ? sourceOfflineDetectHost : sourceRowActionHost;
+      if (matchesNativeText(a,id,locator) || matchesNativeText(a,id,hostname)) sourceActionRow.locators += 1;
       if (a.type === 'Button') {
-        const labels = (node.children ?? []).flatMap(child => sourceRowActionLabels.filter(([title]) =>
-          matchesNativeText(child.attributes,id,title)));
+        const labels = sourceRowButtonLabels(node,id);
         if (labels.length === 1) sourceActionRow.buttons.push({index:nodes.length,alias:labels[0][1]});
       }
     }
@@ -527,7 +546,7 @@ export function normalizeHarmonyLayout({
   if (observeReadingSearchResults) addReadingSearchAliases(nodes);
   if (observeQuickAutoPageSpeed && metrics.keyboardArea?.available === true && metrics.keyboardArea.visible === false)
     addQuickAutoPageSpeedAliases(nodes,quickSpeedRows);
-  const actionFixtures = sourceActionRows.filter(row => row.titles === 1 && row.urls === 1);
+  const actionFixtures = sourceActionRows.filter(row => row.titles === 1 && row.locators === 1);
   if (actionFixtures.length === 1) {
     for (const {index,alias} of actionFixtures[0].buttons) nodes[index].alias = alias;
   }
